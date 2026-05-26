@@ -1,0 +1,286 @@
+name: staging-validation
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_runtime_smoke:
+        description: "Run docker compose up runtime smoke. Safe defaults keep Telegram/payment/3x-ui/provisioning live calls disabled."
+        type: boolean
+        default: false
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  ASPNETCORE_ENVIRONMENT: Development
+  ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=vpnplatform_ci;Username=vpnplatform;Password=vpnplatform
+  Jwt__Issuer: vpn-platform
+  Jwt__Audience: vpn-platform
+  Jwt__SigningKey: ci-validation-signing-key-000000000000000000000000
+  Security__SecretEncryptionKey: ci-validation-secret-encryption-key-00000000000000000000
+  Database__ApplyMigrationsOnStartup: "false"
+  Database__SeedDemoData: "false"
+  AdminBootstrap__Enabled: "false"
+  Auth__RefreshTokenDays: "30"
+  Auth__PasswordReset__ExpiryMinutes: "30"
+  Auth__PasswordReset__ReturnTokenForValidation: "false"
+  Provisioning__LiveExecutionEnabled: "false"
+  Provisioning__AllowLiveDeploy: "false"
+  TelegramBot__Enabled: "false"
+  TelegramBot__BotToken: ""
+  TelegramBot__WebhookUrl: ""
+  TelegramBot__SecretToken: ""
+  Vpn__X3Ui__Mode: Sandbox
+  X3UI_BASE_URL: ""
+  X3UI_USERNAME: ""
+  X3UI_PASSWORD: ""
+  Payments__YooMoney__Mode: Disabled
+  Payments__YooKassa__Mode: Disabled
+  Payments__RoboKassa__Mode: Disabled
+  Payments__TelegramStars__Mode: Disabled
+  Payments__CloudPayments__Mode: Disabled
+  Payments__TBankAcquiring__Mode: Disabled
+  Payments__Prodamus__Mode: Disabled
+  Payments__Stripe__Mode: Disabled
+  Payments__PayPal__Mode: Disabled
+
+jobs:
+  backend:
+    name: backend restore, build, test, EF drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Show .NET environment
+        run: dotnet --info
+
+      - name: Restore backend
+        run: dotnet restore backend/VpnPlatform.sln
+
+      - name: Build backend
+        run: dotnet build backend/VpnPlatform.sln --configuration Release --no-restore
+
+      - name: Test backend
+        run: |
+          mkdir -p backend/TestResults
+          dotnet test backend/VpnPlatform.sln \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory backend/TestResults
+
+      - name: Restore dotnet tools
+        working-directory: backend
+        run: dotnet tool restore
+
+      - name: EF migrations list without database connection
+        working-directory: backend
+        run: |
+          dotnet ef migrations list \
+            --project src/VpnPlatform.Infrastructure \
+            --startup-project src/VpnPlatform.Api \
+            --context ApplicationDbContext \
+            --no-connect
+
+      - name: EF model drift check
+        run: ./scripts/check-ef-drift.sh
+
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-backend-test-results
+          path: backend/TestResults/**/*.trx
+          if-no-files-found: ignore
+
+  frontend:
+    name: frontend install, typecheck, build, test, audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Show Node/npm environment
+        working-directory: frontend
+        run: |
+          node --version
+          npm --version
+          npm config get registry
+
+      - name: Verify frontend lockfile safety
+        run: ./scripts/check-frontend-lockfile.sh
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm run test
+
+      - name: Audit frontend dependencies for high severity issues
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      - name: Upload frontend build output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-frontend-dist
+          path: |
+            frontend/apps/public-web/dist
+            frontend/apps/cabinet/dist
+            frontend/apps/admin-panel/dist
+          if-no-files-found: ignore
+
+  docker-build:
+    name: docker compose config and image build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker environment
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Docker compose config with validation overrides
+        run: docker compose -f docker-compose.yml -f docker-compose.validation.yml config
+
+      - name: Build application images
+        run: docker compose -f docker-compose.yml -f docker-compose.validation.yml build backend-api telegram-bot public-web cabinet admin-panel
+
+  static-and-provisioning:
+    name: static config, scripts, provisioning runner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Shell scripts parse
+        run: bash -n scripts/*.sh
+
+      - name: Validation safety defaults
+        run: ./scripts/check-validation-safety.sh
+
+      - name: Install Ansible and YAML parser
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ansible-core PyYAML
+          ansible-playbook --version
+
+      - name: JSON and YAML config parse
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          json_files = [
+              "backend/src/VpnPlatform.Api/appsettings.json",
+              "backend/src/VpnPlatform.Api/appsettings.Development.json",
+              "backend/src/VpnPlatform.Api/appsettings.Production.example.json",
+              "backend/src/VpnPlatform.TelegramBot/appsettings.json",
+              "backend/src/VpnPlatform.TelegramBot/appsettings.Development.json",
+              "backend/src/VpnPlatform.TelegramBot/appsettings.Production.example.json",
+              ".config/dotnet-tools.json",
+          ]
+          for name in json_files:
+              with open(name, "r", encoding="utf-8") as fh:
+                  json.load(fh)
+              print(f"[OK] JSON {name}")
+          try:
+              import yaml
+          except ImportError:
+              raise SystemExit("PyYAML is required in this job")
+          yaml_files = [
+              "docker-compose.yml",
+              "docker-compose.validation.yml",
+              "infra/prometheus/prometheus.yml",
+              "infra/grafana/provisioning/datasources/datasource.yml",
+              "infra/loki/loki-config.yml",
+              "infra/ansible/playbooks/precheck-node.yml",
+              "infra/ansible/playbooks/provision-node.yml",
+          ]
+          for name in yaml_files:
+              with open(name, "r", encoding="utf-8") as fh:
+                  yaml.safe_load(fh)
+              print(f"[OK] YAML {name}")
+          PY
+
+      - name: Provisioning runner unit tests
+        run: python -m unittest discover -s infra/ansible/runner/tests -v
+
+      - name: Ansible syntax check
+        run: |
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          printf '[vpn_nodes]\nlocal ansible_connection=local ansible_python_interpreter=/usr/bin/python3\n' > "$tmp_dir/inventory.ini"
+          ansible-playbook --syntax-check -i "$tmp_dir/inventory.ini" infra/ansible/playbooks/precheck-node.yml
+          ansible-playbook --syntax-check -i "$tmp_dir/inventory.ini" infra/ansible/playbooks/provision-node.yml
+
+  docker-runtime-smoke:
+    name: optional docker compose runtime smoke
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_runtime_smoke }}
+    needs: [backend, frontend, docker-build, static-and-provisioning]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker environment
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Run safe Docker runtime validation
+        run: KEEP_STACK=1 ./scripts/validate-docker.sh
+
+      - name: Show compose status
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.validation.yml ps || true
+
+      - name: Show runtime logs
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.validation.yml logs backend-api --tail=200 || true
+          docker compose -f docker-compose.yml -f docker-compose.validation.yml logs telegram-bot --tail=200 || true
+
+      - name: Stop compose stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.validation.yml down --remove-orphans || true

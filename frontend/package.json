@@ -1,0 +1,21 @@
+{
+  "name": "vpn-platform-frontend",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:public": "npm run dev --workspace apps/public-web",
+    "dev:cabinet": "npm run dev --workspace apps/cabinet",
+    "dev:admin": "npm run dev --workspace apps/admin-panel",
+    "build": "npm run build --workspace apps/public-web && npm run build --workspace apps/cabinet && npm run build --workspace apps/admin-panel",
+    "typecheck": "npm run typecheck --workspace apps/public-web && npm run typecheck --workspace apps/cabinet && npm run typecheck --workspace apps/admin-panel",
+    "test": "npx --yes tsx@4.19.2 --test tests/**/*.test.ts tests/**/*.test.tsx"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.0.2",
+    "@rollup/rollup-win32-x64-msvc": "^4.60.4",
+    "lightningcss-win32-x64-msvc": "^1.32.0"
+  }
+}

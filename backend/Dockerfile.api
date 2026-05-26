@@ -1,0 +1,21 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY backend ./backend
+COPY infra/ansible ./infra/ansible
+RUN dotnet restore backend/VpnPlatform.sln
+RUN dotnet publish backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 ansible curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /app/publish .
+COPY --from=build /src/infra/ansible /opt/vpnplatform/infra/ansible
+ENV ASPNETCORE_URLS=http://+:8080
+ENV Provisioning__RunnerScriptPath=/opt/vpnplatform/infra/ansible/runner/run_playbook.py
+ENV Provisioning__ProvisionPlaybookPath=/opt/vpnplatform/infra/ansible/playbooks/provision-node.yml
+ENV Provisioning__PrecheckPlaybookPath=/opt/vpnplatform/infra/ansible/playbooks/precheck-node.yml
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD curl -fsS http://localhost:8080/health/live || exit 1
+ENTRYPOINT ["dotnet", "VpnPlatform.Api.dll"]

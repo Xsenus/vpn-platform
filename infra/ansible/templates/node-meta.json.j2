@@ -1,0 +1,11 @@
+{
+  "nodeName": "{{ node_name | default(inventory_hostname) }}",
+  "region": "{{ node_region | default('unknown') }}",
+  "country": "{{ node_country | default('unknown') }}",
+  "provider": "{{ node_provider | default('unknown') }}",
+  "panelBaseUrl": "{{ panel_base_url | default('') }}",
+  "panelUsername": "{{ panel_username | default('admin') }}",
+  "panelInboundId": "{{ panel_inbound_id | default('') }}",
+  "publicHostname": "{{ public_hostname | default('') }}",
+  "publicPort": "{{ public_port | default(443) }}"
+}

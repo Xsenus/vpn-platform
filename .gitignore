@@ -1,0 +1,125 @@
+# OS / filesystem
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDE / editors
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.swp
+*.tmp
+*.bak
+
+# Codex / local assistant state
+.serena/
+.playwright-mcp/
+.codex-*.log
+.codex-*.err
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.mp4
+/*.webm
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+*.local.env
+*.secret
+*.secrets
+*.pfx
+*.p12
+*.pem
+*.key
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+.npmrc
+!.npmrc.example
+
+# ASP.NET local-only overrides
+appsettings.Local.private.json
+appsettings.*.private.json
+appsettings.Secrets.json
+appsettings.*.Secrets.json
+
+# Local runtime data
+data/
+logs/
+*.log
+*.pid
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# .NET build/test artifacts
+bin/
+obj/
+TestResults/
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coverage-*/
+artifacts/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+.turbo/
+.next/
+.nuxt/
+.svelte-kit/
+storybook-static/
+playwright-report/
+test-results/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker / compose local overrides
+docker-compose.override.yml
+docker-compose.*.override.yml
+
+# Python / Ansible helper artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.retry
+
+# Terraform / infra local state
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Archives and local exports
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar

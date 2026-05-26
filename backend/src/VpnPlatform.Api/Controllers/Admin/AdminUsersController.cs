@@ -1,0 +1,237 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
+using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
+
+namespace VpnPlatform.Api.Controllers.Admin;
+
+[ApiController]
+[Authorize(Policy = AdminPolicies.AdminRead)]
+[Route("api/admin/users")]
+public class AdminUsersController : ControllerBase
+{
+    private readonly IApplicationDbContext _db;
+
+    public AdminUsersController(IApplicationDbContext db)
+    {
+        _db = db;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetList([FromQuery] string? search, [FromQuery] string? status, [FromQuery] string? role, CancellationToken cancellationToken)
+    {
+        var query = _db.Users.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalized = search.Trim().ToLowerInvariant();
+            query = query.Where(x =>
+                x.Email != null && x.Email.ToLower().Contains(normalized)
+                || x.DisplayName.ToLower().Contains(normalized)
+                || x.ReferralCode.ToLower().Contains(normalized));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<UserStatus>(status, true, out var parsedStatus))
+        {
+            query = query.Where(x => x.Status == parsedStatus);
+        }
+
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            var normalizedRole = role.Trim();
+            query = query.Where(x => x.RolesCsv.Contains(normalizedRole));
+        }
+
+        var users = await query.ToListAsync(cancellationToken);
+        users = users.OrderByDescending(x => x.CreatedAt).Take(300).ToList();
+        return Ok(users.Select(MapUser).ToList());
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        return user is null ? NotFound() : Ok(MapUser(user));
+    }
+
+    [HttpGet("{id:guid}/overview")]
+    public async Task<IActionResult> GetOverview(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (user is null) return NotFound();
+
+        var telegramAccounts = await _db.TelegramAccounts.AsNoTracking()
+            .Where(x => x.UserId == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.TelegramUserId,
+                x.Username,
+                x.FirstName,
+                x.LastName,
+                x.LanguageCode,
+                x.IsBlocked,
+                x.LinkedAt,
+                x.LastSeenAt,
+                x.RegistrationCompletedAt
+            })
+            .ToListAsync(cancellationToken);
+        telegramAccounts = telegramAccounts.OrderByDescending(x => x.LastSeenAt ?? x.LinkedAt).ToList();
+
+        var orders = await _db.Orders.AsNoTracking()
+            .Where(x => x.UserId == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.TariffId,
+                TariffName = x.Tariff != null ? x.Tariff.Name : string.Empty,
+                x.Amount,
+                x.Currency,
+                Status = x.Status.ToString(),
+                Type = x.Type.ToString(),
+                Channel = x.Channel.ToString(),
+                PaymentProvider = x.PaymentProvider.ToString(),
+                x.PaidAt,
+                x.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+        orders = orders.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
+
+        var payments = await _db.Payments.AsNoTracking()
+            .Where(x => x.Order != null && x.Order.UserId == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.OrderId,
+                Provider = x.Provider.ToString(),
+                Status = x.Status.ToString(),
+                x.Amount,
+                x.Currency,
+                x.ProviderPaymentId,
+                x.PaidAt,
+                x.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+        payments = payments.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
+
+        var subscriptions = await _db.Subscriptions.AsNoTracking()
+            .Where(x => x.UserId == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.TariffId,
+                TariffName = x.Tariff != null ? x.Tariff.Name : string.Empty,
+                Status = x.Status.ToString(),
+                x.StartAt,
+                x.EndAt,
+                x.CurrentAccessId,
+                x.CurrentServerId,
+                SourceChannel = x.SourceChannel.ToString()
+            })
+            .ToListAsync(cancellationToken);
+        subscriptions = subscriptions.OrderByDescending(x => x.StartAt).Take(20).ToList();
+
+        var accesses = await _db.AccessCredentials.AsNoTracking()
+            .Where(x => x.Subscription != null && x.Subscription.UserId == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.SubscriptionId,
+                x.ProviderType,
+                x.ProviderAccessId,
+                x.ServerId,
+                ServerName = x.Server != null ? x.Server.Name : string.Empty,
+                Status = x.Status.ToString(),
+                x.AccessUri,
+                QrCodePayload = x.QrCodePath,
+                x.IssuedAt,
+                x.DisabledAt,
+                x.LastSyncedAt
+            })
+            .ToListAsync(cancellationToken);
+        accesses = accesses.OrderByDescending(x => x.IssuedAt).Take(20).ToList();
+
+        var telegramUserIds = telegramAccounts.Select(t => t.TelegramUserId).ToList();
+
+        var supportConversations = await _db.SupportConversations.AsNoTracking()
+            .Where(x => x.UserId == id || (x.TelegramUserId.HasValue && telegramUserIds.Contains(x.TelegramUserId.Value)))
+            .Select(x => new
+            {
+                x.Id,
+                x.TelegramUserId,
+                x.Channel,
+                x.Status,
+                x.Subject,
+                x.AssignedToUserId,
+                x.ClosedAt,
+                x.CreatedAt,
+                x.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+        supportConversations = supportConversations.OrderByDescending(x => x.UpdatedAt).Take(20).ToList();
+
+        return Ok(new
+        {
+            User = MapUser(user),
+            TelegramAccounts = telegramAccounts,
+            Orders = orders,
+            Payments = payments,
+            Subscriptions = subscriptions,
+            AccessCredentials = accesses,
+            SupportConversations = supportConversations
+        });
+    }
+
+    [HttpPatch("{id:guid}")]
+    [Authorize(Policy = AdminPolicies.AdminWrite)]
+    public async Task<IActionResult> Patch(Guid id, [FromBody] JsonElement payload, CancellationToken cancellationToken)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (user is null) return NotFound();
+
+        if (payload.TryGetProperty("displayName", out var displayName)) user.DisplayName = displayName.GetString() ?? user.DisplayName;
+        if (payload.TryGetProperty("isBlocked", out var isBlocked)) user.IsBlocked = isBlocked.GetBoolean();
+        if (payload.TryGetProperty("status", out var status) && Enum.TryParse<UserStatus>(status.GetString(), true, out var parsed)) user.Status = parsed;
+
+        user.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(MapUser(user));
+    }
+
+    private static AdminUserDto MapUser(User user)
+        => new(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            user.RolesCsv,
+            user.Status.ToString(),
+            user.IsBlocked,
+            user.PreferredLanguage,
+            user.ReferralCode,
+            user.AuthSource.ToString(),
+            user.EmailConfirmed,
+            user.LastLoginAt,
+            user.TelegramRegistrationCompletedAt,
+            user.CreatedAt,
+            user.UpdatedAt);
+
+    private sealed record AdminUserDto(
+        Guid Id,
+        string? Email,
+        string DisplayName,
+        string RolesCsv,
+        string Status,
+        bool IsBlocked,
+        string PreferredLanguage,
+        string ReferralCode,
+        string AuthSource,
+        bool EmailConfirmed,
+        DateTimeOffset? LastLoginAt,
+        DateTimeOffset? TelegramRegistrationCompletedAt,
+        DateTimeOffset CreatedAt,
+        DateTimeOffset UpdatedAt);
+}

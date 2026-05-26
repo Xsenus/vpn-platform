@@ -1,0 +1,14 @@
+{
+  "name": "@vpn-platform/ui",
+  "version": "0.1.0",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.2"
+  }
+}

@@ -1,0 +1,13 @@
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY . .
+ARG VITE_API_BASE_URL=http://localhost:8080
+ARG VITE_PUBLIC_WEB_URL=http://localhost:5173
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_PUBLIC_WEB_URL=$VITE_PUBLIC_WEB_URL
+RUN npm ci
+RUN npm run build --workspace apps/cabinet
+
+FROM nginx:1.27-alpine
+COPY --from=build /app/apps/cabinet/dist /usr/share/nginx/html
+EXPOSE 80

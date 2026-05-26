@@ -1,0 +1,63 @@
+# Safe validation overrides for CI/server smoke runs.
+# This file intentionally disables live Telegram, payment provider, 3x-ui, and provisioning side effects.
+
+services:
+  backend-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Database__ApplyMigrationsOnStartup: "true"
+      Database__SeedDemoData: "true"
+      AdminBootstrap__Enabled: "false"
+      Auth__RefreshTokenDays: "30"
+      Auth__PasswordReset__ExpiryMinutes: "30"
+      Auth__PasswordReset__ReturnTokenForValidation: "false"
+      Provisioning__LiveExecutionEnabled: "false"
+      Provisioning__AllowLiveDeploy: "false"
+      TelegramBot__Enabled: "false"
+      TelegramBot__BotToken: ""
+      TelegramBot__WebhookUrl: ""
+      TelegramBot__SecretToken: ""
+      Vpn__X3Ui__Mode: Sandbox
+      X3UI_BASE_URL: ""
+      X3UI_USERNAME: ""
+      X3UI_PASSWORD: ""
+      Payments__YooMoney__Mode: Disabled
+      Payments__YooKassa__Mode: Disabled
+      Payments__RoboKassa__Mode: Disabled
+      Payments__TelegramStars__Mode: Disabled
+      Payments__CloudPayments__Mode: Disabled
+      Payments__TBankAcquiring__Mode: Disabled
+      Payments__Prodamus__Mode: Disabled
+      Payments__Stripe__Mode: Disabled
+      Payments__PayPal__Mode: Disabled
+
+  telegram-bot:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Database__ApplyMigrationsOnStartup: "false"
+      Database__SeedDemoData: "false"
+      AdminBootstrap__Enabled: "false"
+      Auth__RefreshTokenDays: "30"
+      Auth__PasswordReset__ExpiryMinutes: "30"
+      Auth__PasswordReset__ReturnTokenForValidation: "false"
+      Provisioning__LiveExecutionEnabled: "false"
+      Provisioning__AllowLiveDeploy: "false"
+      TelegramBot__Enabled: "false"
+      TelegramBot__BotToken: ""
+      TelegramBot__WebhookUrl: ""
+      TelegramBot__SecretToken: ""
+      Vpn__X3Ui__Mode: Sandbox
+      X3UI_BASE_URL: ""
+      X3UI_USERNAME: ""
+      X3UI_PASSWORD: ""
+      Payments__YooMoney__Mode: Disabled
+      Payments__YooKassa__Mode: Disabled
+      Payments__RoboKassa__Mode: Disabled
+      Payments__TelegramStars__Mode: Disabled
+      Payments__CloudPayments__Mode: Disabled
+      Payments__TBankAcquiring__Mode: Disabled
+      Payments__Prodamus__Mode: Disabled
+      Payments__Stripe__Mode: Disabled
+      Payments__PayPal__Mode: Disabled

@@ -1,0 +1,116 @@
+---
+- name: Provision VPN node
+  hosts: vpn_nodes
+  become: true
+  gather_facts: true
+  vars:
+    vpn_platform_user: "{{ vpn_platform_user | default('vpnplatform') }}"
+    x3ui_port: "{{ x3ui_port | default(2053) }}"
+    install_xui: "{{ install_xui | default(true) }}"
+    xui_install_script_url: "https://raw.githubusercontent.com/MHSanaei/3x-ui/main/install.sh"
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - unzip
+          - ufw
+          - jq
+          - ca-certificates
+          - cron
+          - tar
+        state: present
+
+    - name: Create platform user
+      ansible.builtin.user:
+        name: "{{ vpn_platform_user }}"
+        shell: /bin/bash
+        create_home: true
+
+    - name: Create platform directories
+      ansible.builtin.file:
+        path: "/opt/vpnplatform/{{ item }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ vpn_platform_user }}"
+        group: "{{ vpn_platform_user }}"
+      loop:
+        - x3ui
+        - backups
+        - logs
+        - monitoring
+        - provisioning
+
+    - name: Install 3x-ui from official install script
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl -Ls {{ xui_install_script_url }} | bash
+      args:
+        executable: /bin/bash
+        creates: /usr/local/x-ui/x-ui
+      when: install_xui | bool
+
+    - name: Persist node metadata for operators
+      ansible.builtin.copy:
+        dest: /opt/vpnplatform/provisioning/node-meta.json
+        mode: "0640"
+        owner: "{{ vpn_platform_user }}"
+        group: "{{ vpn_platform_user }}"
+        content: |
+          {
+            "nodeName": "{{ node_name | default(inventory_hostname) }}",
+            "region": "{{ node_region | default('unknown') }}",
+            "country": "{{ node_country | default('unknown') }}",
+            "provider": "{{ node_provider | default('unknown') }}",
+            "panelBaseUrl": "{{ panel_base_url | default('') }}",
+            "panelUsername": "{{ panel_username | default('admin') }}",
+            "panelInboundId": "{{ panel_inbound_id | default('') }}",
+            "publicHostname": "{{ public_hostname | default('') }}",
+            "publicPort": "{{ public_port | default(443) }}"
+          }
+
+    - name: Install monitoring bootstrap note
+      ansible.builtin.copy:
+        dest: /opt/vpnplatform/monitoring/README.txt
+        mode: "0644"
+        content: |
+          Install node exporter, promtail and backup agent from your golden image or secondary playbook.
+          This node has been prepared by the platform provisioning pipeline.
+
+    - name: Allow SSH in ufw
+      ansible.builtin.command: ufw allow 22
+      register: ufw_ssh
+      changed_when: "'Skipping adding existing rule' not in (ufw_ssh.stdout | default(''))"
+      failed_when: false
+
+    - name: Allow HTTPS in ufw
+      ansible.builtin.command: ufw allow 443
+      register: ufw_https
+      changed_when: "'Skipping adding existing rule' not in (ufw_https.stdout | default(''))"
+      failed_when: false
+
+    - name: Allow x3-ui panel port in ufw
+      ansible.builtin.command: "ufw allow {{ x3ui_port }}"
+      register: ufw_panel
+      changed_when: "'Skipping adding existing rule' not in (ufw_panel.stdout | default(''))"
+      failed_when: false
+
+    - name: Wait for x3-ui panel port to listen
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ x3ui_port | int }}"
+        delay: 2
+        timeout: 45
+      when: install_xui | bool
+
+    - name: Provision summary
+      ansible.builtin.debug:
+        msg:
+          - "Node {{ inventory_hostname }} prepared by VPN platform provisioning pipeline."
+          - "Panel port: {{ x3ui_port }}"
+          - "Metadata file: /opt/vpnplatform/provisioning/node-meta.json"

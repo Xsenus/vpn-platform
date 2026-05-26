@@ -1,0 +1,200 @@
+name: validation
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend restore, build, test, EF
+    runs-on: ubuntu-latest
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=vpnplatform_ci;Username=vpnplatform;Password=vpnplatform
+      Jwt__Issuer: vpn-platform
+      Jwt__Audience: vpn-platform
+      Jwt__SigningKey: ci-validation-signing-key-000000000000000000000000
+      Security__SecretEncryptionKey: ci-validation-secret-encryption-key-00000000000000000000
+      Database__ApplyMigrationsOnStartup: "false"
+      Database__SeedDemoData: "false"
+      AdminBootstrap__Enabled: "false"
+      TelegramBot__Enabled: "false"
+      TelegramBot__BotToken: ""
+      TelegramBot__WebhookUrl: ""
+      TelegramBot__SecretToken: ""
+      Vpn__X3Ui__Mode: Sandbox
+      X3UI_BASE_URL: ""
+      X3UI_USERNAME: ""
+      X3UI_PASSWORD: ""
+      Payments__YooMoney__Mode: Disabled
+      Payments__YooKassa__Mode: Disabled
+      Payments__RoboKassa__Mode: Disabled
+      Payments__TelegramStars__Mode: Disabled
+      Payments__CloudPayments__Mode: Disabled
+      Payments__TBankAcquiring__Mode: Disabled
+      Payments__Prodamus__Mode: Disabled
+      Payments__Stripe__Mode: Disabled
+      Payments__PayPal__Mode: Disabled
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Show .NET environment
+        run: |
+          dotnet --info
+          dotnet --list-sdks
+
+      - name: Restore backend
+        run: dotnet restore backend/VpnPlatform.sln
+
+      - name: Build backend
+        run: dotnet build backend/VpnPlatform.sln --configuration Release --no-restore
+
+      - name: Test backend
+        run: |
+          mkdir -p backend/TestResults
+          dotnet test backend/VpnPlatform.sln \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory backend/TestResults
+
+      - name: Restore dotnet tools
+        working-directory: backend
+        run: dotnet tool restore
+
+      - name: List EF migrations
+        working-directory: backend
+        run: |
+          dotnet ef migrations list \
+            --project src/VpnPlatform.Infrastructure \
+            --startup-project src/VpnPlatform.Api \
+            --context ApplicationDbContext \
+            --no-connect
+
+      - name: EF model drift check
+        run: ./scripts/check-ef-drift.sh
+
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/TestResults/**/*.trx
+          if-no-files-found: ignore
+
+  frontend:
+    name: frontend install, typecheck, build, test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Show Node/npm environment
+        working-directory: frontend
+        run: |
+          node --version
+          npm --version
+          npm config get registry
+
+      - name: Verify frontend lockfile safety
+        run: ./scripts/check-frontend-lockfile.sh
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm run test
+
+      - name: Audit frontend dependencies for high severity issues
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      - name: Upload frontend build output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: |
+            frontend/apps/public-web/dist
+            frontend/apps/cabinet/dist
+            frontend/apps/admin-panel/dist
+          if-no-files-found: ignore
+
+  provisioning:
+    name: provisioning runner and Ansible syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ansible-core
+          ansible-playbook --version
+
+      - name: Runner unit tests
+        run: python -m unittest discover -s infra/ansible/runner/tests -v
+
+      - name: Ansible syntax check
+        run: |
+          mkdir -p /tmp/vpnplatform-ci
+          printf '[vpn_nodes]\nlocal ansible_connection=local ansible_python_interpreter=/usr/bin/python3\n' > /tmp/vpnplatform-ci/inventory.ini
+          ansible-playbook --syntax-check -i /tmp/vpnplatform-ci/inventory.ini infra/ansible/playbooks/precheck-node.yml
+          ansible-playbook --syntax-check -i /tmp/vpnplatform-ci/inventory.ini infra/ansible/playbooks/provision-node.yml
+
+
+  docker-build:
+    name: docker compose config and image build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker environment
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Docker compose config with validation overrides
+        run: docker compose -f docker-compose.yml -f docker-compose.validation.yml config
+
+      - name: Build application images
+        run: docker compose -f docker-compose.yml -f docker-compose.validation.yml build backend-api telegram-bot public-web cabinet admin-panel

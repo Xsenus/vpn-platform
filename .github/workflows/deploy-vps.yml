@@ -1,0 +1,188 @@
+name: deploy-vps
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-vps-production
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  ASPNETCORE_ENVIRONMENT: Development
+  Database__ApplyMigrationsOnStartup: "true"
+  Database__SeedDemoData: "true"
+  Provisioning__LiveExecutionEnabled: "false"
+  Provisioning__AllowLiveDeploy: "false"
+  Vpn__X3Ui__Mode: Sandbox
+  TelegramBot__Enabled: "false"
+  Payments__YooMoney__Mode: Disabled
+  Payments__YooKassa__Mode: Disabled
+  Payments__RoboKassa__Mode: Disabled
+  Payments__TelegramStars__Mode: Disabled
+  Payments__CloudPayments__Mode: Disabled
+  Payments__TBankAcquiring__Mode: Disabled
+  Payments__Prodamus__Mode: Disabled
+  Payments__Stripe__Mode: Disabled
+  Payments__PayPal__Mode: Disabled
+
+jobs:
+  validate:
+    name: validate before deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Restore backend
+        run: dotnet restore backend/VpnPlatform.sln
+
+      - name: Build backend
+        run: dotnet build backend/VpnPlatform.sln --configuration Release --no-restore
+
+      - name: Test backend
+        run: dotnet test backend/VpnPlatform.sln --configuration Release --no-restore --no-build
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Docker compose config
+        run: docker compose -f docker-compose.yml -f docker-compose.validation.yml config
+
+  deploy:
+    name: deploy to VPS
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: production
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_APP_DIR: ${{ secrets.VPS_APP_DIR || '/opt/vpn-platform' }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check required deployment secrets
+        run: |
+          missing=0
+          for name in VPS_HOST VPS_USER VPS_PORT VPS_APP_DIR VPS_SSH_KEY PRODUCTION_ENV_FILE; do
+            if [ -z "${!name}" ]; then
+              echo "::error::GitHub secret $name is required for deployment."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Build deployment archive
+        run: |
+          tar \
+            --exclude-vcs \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='.serena' \
+            --exclude='.playwright-mcp' \
+            --exclude='.codex-*' \
+            --exclude='artifacts' \
+            --exclude='data' \
+            --exclude='logs' \
+            --exclude='**/node_modules' \
+            --exclude='**/dist' \
+            --exclude='**/build' \
+            --exclude='**/bin' \
+            --exclude='**/obj' \
+            --exclude='*.log' \
+            --exclude='*.err' \
+            --exclude='*.png' \
+            --exclude='*.jpg' \
+            --exclude='*.jpeg' \
+            --exclude='*.webp' \
+            --exclude='*.mp4' \
+            --exclude='*.webm' \
+            -czf release.tar.gz .
+
+      - name: Upload release and environment file
+        run: |
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$VPS_APP_DIR/shared' '$VPS_APP_DIR/releases/$GITHUB_SHA'"
+          scp -P "$VPS_PORT" release.tar.gz "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/releases/$GITHUB_SHA/release.tar.gz"
+          printf '%s\n' "$PRODUCTION_ENV_FILE" > production.env
+          scp -P "$VPS_PORT" production.env "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/shared/.env"
+
+      - name: Start production stack
+        run: |
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "APP_DIR='$VPS_APP_DIR' RELEASE_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          command -v docker >/dev/null
+          docker compose version >/dev/null
+
+          release_dir="$APP_DIR/releases/$RELEASE_SHA"
+          cd "$release_dir"
+          tar -xzf release.tar.gz
+          cp "$APP_DIR/shared/.env" .env
+
+          docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml config >/tmp/vpnplatform-compose.yml
+          docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml up -d --build --remove-orphans
+
+          for endpoint in /health/live /health/ready; do
+            ok=0
+            for _ in $(seq 1 60); do
+              if curl -fsS "http://127.0.0.1:8080${endpoint}" >/dev/null; then
+                ok=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ok" != "1" ]; then
+              docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml ps
+              docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml logs --tail=200 backend-api telegram-bot
+              echo "Health check failed: ${endpoint}" >&2
+              exit 1
+            fi
+          done
+
+          ln -sfn "$release_dir" "$APP_DIR/current"
+          find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d | sort | head -n -5 | xargs -r rm -rf
+          docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml ps
+          REMOTE

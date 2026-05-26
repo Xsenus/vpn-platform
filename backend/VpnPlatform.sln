@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34928.147
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnPlatform.Domain", "src\VpnPlatform.Domain\VpnPlatform.Domain.csproj", "{22A8C611-712A-49D3-AFD7-A1AA3220E760}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnPlatform.Application", "src\VpnPlatform.Application\VpnPlatform.Application.csproj", "{2D31DF47-851A-493D-BA1B-A5E7A430A3D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnPlatform.Infrastructure", "src\VpnPlatform.Infrastructure\VpnPlatform.Infrastructure.csproj", "{57A87DF7-E4BC-4B26-B357-24231564EAA8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnPlatform.Api", "src\VpnPlatform.Api\VpnPlatform.Api.csproj", "{C9765D13-9B09-49DA-B482-D1B9431A5922}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnPlatform.TelegramBot", "src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj", "{6BA9BB76-FCF4-4D6A-B145-349DE6D47001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnPlatform.UnitTests", "tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj", "{2BFF4E33-1C51-4495-908F-B0356F60AAB0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{22A8C611-712A-49D3-AFD7-A1AA3220E760}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22A8C611-712A-49D3-AFD7-A1AA3220E760}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22A8C611-712A-49D3-AFD7-A1AA3220E760}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22A8C611-712A-49D3-AFD7-A1AA3220E760}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D31DF47-851A-493D-BA1B-A5E7A430A3D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D31DF47-851A-493D-BA1B-A5E7A430A3D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D31DF47-851A-493D-BA1B-A5E7A430A3D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D31DF47-851A-493D-BA1B-A5E7A430A3D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57A87DF7-E4BC-4B26-B357-24231564EAA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57A87DF7-E4BC-4B26-B357-24231564EAA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57A87DF7-E4BC-4B26-B357-24231564EAA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57A87DF7-E4BC-4B26-B357-24231564EAA8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9765D13-9B09-49DA-B482-D1B9431A5922}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9765D13-9B09-49DA-B482-D1B9431A5922}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9765D13-9B09-49DA-B482-D1B9431A5922}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9765D13-9B09-49DA-B482-D1B9431A5922}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BA9BB76-FCF4-4D6A-B145-349DE6D47001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BA9BB76-FCF4-4D6A-B145-349DE6D47001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BA9BB76-FCF4-4D6A-B145-349DE6D47001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BA9BB76-FCF4-4D6A-B145-349DE6D47001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BFF4E33-1C51-4495-908F-B0356F60AAB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BFF4E33-1C51-4495-908F-B0356F60AAB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BFF4E33-1C51-4495-908F-B0356F60AAB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BFF4E33-1C51-4495-908F-B0356F60AAB0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
