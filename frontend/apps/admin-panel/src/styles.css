@@ -1,1 +1,48 @@
 @import "../../../packages/ui/src/styles.css";
+
+.admin-login-shell {
+  min-height: calc(100vh - 190px);
+  display: grid;
+  place-items: center;
+  padding: 28px 0;
+}
+
+.admin-login-shell > .card {
+  width: min(100%, 520px);
+}
+
+.login-panel-header,
+.admin-session-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.admin-session-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-main > [hidden] {
+  display: none !important;
+}
+
+.admin-sidebar a {
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .login-panel-header,
+  .admin-session-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

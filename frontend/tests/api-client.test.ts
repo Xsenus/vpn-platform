@@ -578,7 +578,7 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(stylesSource, /\.form-field/)
   assert.match(publicSource + cabinetSource + adminSource, /PasswordField/)
   assert.match(adminSource, /aria-current/)
-  assert.match(adminSource, /IntersectionObserver/)
+  assert.match(adminSource, /hidden=\{activeSection !==/)
   assert.match(publicSource + cabinetSource, /role="tabpanel"/)
   assert.match(publicSource + cabinetSource, /aria-controls=\{authPanelId\}/)
   assert.match(publicSource + cabinetSource, /onKeyDown=\{handleAuthTabsKeyDown\}/)

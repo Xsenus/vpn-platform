@@ -286,6 +286,7 @@ export function App() {
   const [inboundForm, setInboundForm] = useState<CreateVpnInboundPayload>(defaultInboundForm)
   const [subscriptionExtendDays, setSubscriptionExtendDays] = useState<Record<string, number>>({})
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
+  const activeSectionLabel = adminSections.find(([id]) => id === activeSection)?.[1] ?? 'Раздел'
 
   const derivedSummary = useMemo(() => ({
     totalUsers: summary?.totalUsers ?? users.length,
@@ -400,23 +401,8 @@ export function App() {
     syncActiveSection()
     window.addEventListener('hashchange', syncActiveSection)
 
-    const sections = adminSections
-      .map(([id]) => document.getElementById(id))
-      .filter((section): section is HTMLElement => Boolean(section))
-    const observer = typeof IntersectionObserver === 'undefined'
-      ? null
-      : new IntersectionObserver((entries) => {
-        const visibleSection = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-        if (visibleSection?.target.id) setActiveSection(visibleSection.target.id as AdminSectionId)
-      }, { rootMargin: '-20% 0px -65% 0px', threshold: [0, 0.15, 0.35] })
-
-    sections.forEach((section) => observer?.observe(section))
-
     return () => {
       window.removeEventListener('hashchange', syncActiveSection)
-      observer?.disconnect()
     }
   }, [])
 
@@ -820,6 +806,34 @@ export function App() {
     setNotice('Тексты Telegram-бота сохранены. Токен остается скрытым и здесь не редактируется.')
   })
 
+  if (!token) {
+    return (
+      <PageShell title="Админ-панель VPN Platform">
+        <SkipLink href="#admin-login" />
+        <main id="admin-login" className="admin-login-shell" tabIndex={-1}>
+          <Card>
+            <div className="login-panel-header">
+              <div>
+                <p className="eyebrow">Управление платформой</p>
+                <h2 className="page-heading">Вход администратора</h2>
+              </div>
+              <ValidationModeBadge label="Доступ только для администраторов" />
+            </div>
+            <form className="admin-login-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleLogin() }}>
+              <label><span>Email</span><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" type="email" autoComplete="email" required /></label>
+              <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Пароль администратора" autoComplete="current-password" minLength={8} required />
+              <PrimaryButton type="submit" disabled={busy || !email || !password} aria-busy={busy}>{busy ? 'Входим...' : 'Войти в админку'}</PrimaryButton>
+            </form>
+            <p className="safe-note" role="status">{adminAuthRequiredMessage}</p>
+            {busy && <LoadingBlock label="Проверяем доступ..." />}
+            {notice && <p className="toast-success" role="status" aria-live="polite">{notice}</p>}
+            {error && <ErrorBlock message={error} />}
+          </Card>
+        </main>
+      </PageShell>
+    )
+  }
+
   return (
     <PageShell title="Админ-панель VPN Platform">
       <SkipLink href="#admin-content" />
@@ -843,32 +857,23 @@ export function App() {
         <div id="admin-content" className="admin-main" tabIndex={-1}>
       <div className="page-intro">
         <div>
-          <h2 className="page-heading">Операционная панель</h2>
-          <p className="muted no-margin-bottom">Пользователи, оплаты, VPN-доступы, подготовка серверов и поддержка в безопасном проверочном режиме.</p>
+          <p className="eyebrow">Администрирование</p>
+          <h2 className="page-heading">{activeSectionLabel}</h2>
+          <p className="muted no-margin-bottom">В каждой вкладке показаны только настройки и действия выбранного раздела.</p>
         </div>
-        <ValidationModeBadge label="Внешние Telegram, оплаты, 3x-ui и VPS отключены" />
+        <div className="admin-session-actions">
+          <ValidationModeBadge label="Внешние Telegram, оплаты, 3x-ui и VPS отключены" />
+          <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={() => void loadAll(token)}>Обновить данные</PrimaryButton>
+          <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={clearAdminSession}>Завершить сессию</PrimaryButton>
+        </div>
       </div>
 
-      <div className="section">
-        <Card>
-          <h3>Вход администратора</h3>
-          <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleLogin() }}>
-            <label><span>Email</span><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" type="email" autoComplete="email" required /></label>
-            <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Пароль администратора" autoComplete="current-password" minLength={8} required />
-            <PrimaryButton type="submit" disabled={busy || !email || !password} aria-busy={busy}>{busy ? 'Входим...' : 'Войти'}</PrimaryButton>
-            <PrimaryButton type="button" disabled={!token || busy} title={adminDisabledTitle} aria-busy={busy} className="button-secondary" onClick={() => void loadAll(token)}>Обновить данные</PrimaryButton>
-            {token && <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={clearAdminSession}>Завершить сессию</PrimaryButton>}
-          </form>
-          {!token && <p className="safe-note" role="status">{adminAuthRequiredMessage}</p>}
-          {token && <p className="muted">Сессия администратора активна. Токен скрыт и хранится в sessionStorage.</p>}
-          {busy && <LoadingBlock label="Загружаем данные admin-panel..." />}
-          {notice && <p className="toast-success" role="status" aria-live="polite">{notice}</p>}
-          {error && <ErrorBlock message={error} />}
-          {loadErrors.length > 0 && <CodeBlock>{loadErrors.map((item) => `${item.area}: ${item.message}`).join('\n')}</CodeBlock>}
-        </Card>
-      </div>
+      {busy && <LoadingBlock label="Загружаем данные admin-panel..." />}
+      {notice && <p className="toast-success" role="status" aria-live="polite">{notice}</p>}
+      {error && <ErrorBlock message={error} />}
+      {loadErrors.length > 0 && <CodeBlock>{loadErrors.map((item) => `${item.area}: ${item.message}`).join('\n')}</CodeBlock>}
 
-      <div id="dashboard" className="grid section">
+      <div id="dashboard" className="grid section" hidden={activeSection !== 'dashboard'}>
         <StatTile label="Всего пользователей" value={derivedSummary.totalUsers} />
         <StatTile label="Telegram-пользователи" value={derivedSummary.telegramUsers} />
         <StatTile label="Активные подписки" value={derivedSummary.activeSubscriptions} />
@@ -883,7 +888,7 @@ export function App() {
         <StatTile label="Ошибки подготовки" value={derivedSummary.provisioningErrors} />
       </div>
 
-      <div className="section card-list-two">
+      <div className="section card-list-two" hidden={activeSection !== 'dashboard'}>
         <SectionCard title="Последние заказы" description="Последние заказы с оплатой и связанной подпиской.">
           {orders.length === 0 ? <EmptyState title="Заказов пока нет" description="После покупок на сайте или в Telegram здесь появятся заказы." /> : (
             <div className="list-stack">
@@ -901,7 +906,7 @@ export function App() {
         </SectionCard>
       </div>
 
-      <div id="users" className="section card-list-two">
+      <div id="users" className="section card-list-two" hidden={activeSection !== 'users'}>
         <Card>
           <h3>Пользователи</h3>
           <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void loadUsers() }}>
@@ -944,7 +949,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="payments" className="section card-list-two">
+      <div id="payments" className="section card-list-two" hidden={activeSection !== 'payments'}>
         <Card>
           <h3>Способы оплаты</h3>
           <p className="muted">Добавьте платежный аккаунт, включите его и проверьте готовность к оплатам. Секреты сохраняются скрыто.</p>
@@ -1022,7 +1027,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="tariffs" className="section card-list-two">
+      <div id="tariffs" className="section card-list-two" hidden={activeSection !== 'tariffs'}>
         <Card>
           <h3>Тарифы</h3>
           <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleCreateTariff() }}>
@@ -1060,7 +1065,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="subscriptions" className="section card-list-two">
+      <div id="subscriptions" className="section card-list-two" hidden={activeSection !== 'subscriptions'}>
         <Card>
           <h3>Подписки</h3>
           <div className="list-stack">
@@ -1068,7 +1073,10 @@ export function App() {
             {subscriptions.slice(0, 12).map((subscription) => <div key={subscription.id} className="list-item-vertical"><div className="item-head"><strong>{subscription.tariffName || shortId(subscription.tariffId)}</strong><StatusBadge value={subscription.status} /></div><div className="muted">Пользователь: {shortId(subscription.userId)} · источник: {subscription.sourceChannel ?? '—'} · действует до: {formatDate(subscription.endAt)}</div><div className="muted">Доступ: {shortId(subscription.currentAccessId)} · заказ/платеж: {shortId(subscription.lastPaymentId)} · продлений: {subscription.renewalCount ?? 0}</div><div className="toolbar"><label className="inline-number-field"><span>Дней</span><input value={subscriptionExtendDays[subscription.id] ?? 30} onChange={(e) => setSubscriptionExtendDays((current) => ({ ...current, [subscription.id]: Number(e.target.value) || 0 }))} type="number" min={1} step="1" inputMode="numeric" /></label><PrimaryButton onClick={() => void handleSubscriptionAction(subscription, 'extend')}>Продлить</PrimaryButton><ConfirmButton className="button-secondary" message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => void handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton><ConfirmButton className="button-danger" message="Отменить подписку? Пользователь может потерять доступ после обработки." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton></div></div>)}
           </div>
         </Card>
-        <Card id="vpn">
+      </div>
+
+      <div id="vpn" className="section card-list-two" hidden={activeSection !== 'vpn'}>
+        <Card>
           <h3>VPN-доступы</h3>
           <div className="list-stack">
             {accessCredentials.length === 0 && <EmptyState title="VPN-доступы пока не созданы" description="После оплаты здесь появится ссылка подключения, статус и история синхронизаций." />}
@@ -1077,7 +1085,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="nodes" className="section card-list-two">
+      <div id="nodes" className="section card-list-two" hidden={activeSection !== 'nodes'}>
         <Card>
           <h3>VPN-серверы</h3>
           <div className="list-stack">
@@ -1126,7 +1134,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="panels" className="section card-list-two">
+      <div id="panels" className="section card-list-two" hidden={activeSection !== 'panels'}>
         <Card>
           <h3>3x-ui панели</h3>
           <p className="safe-note">В проверочном режиме тест и синхронизация идут через безопасный путь без реального подключения к 3x-ui.</p>
@@ -1177,7 +1185,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="support" className="section card-list-two">
+      <div id="support" className="section card-list-two" hidden={activeSection !== 'support'}>
         <Card>
           <h3>Обращения в поддержку</h3>
           <div className="list-stack">{supportConversations.length === 0 && <EmptyState title="Нет обращений" description="Сообщения из Telegram support появятся в этом списке." />}{supportConversations.slice(0, 12).map((conversation) => <div key={conversation.id} className={`list-item-vertical${selectedSupportConversationId === conversation.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{conversation.subject || 'Обращение в поддержку'}</strong><div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · пользователь:{shortId(conversation.userId)}</div><div className="muted">Ответственный: {shortId(conversation.assignedToUserId)} · заметка: {conversation.internalNote || '—'}</div></div><StatusBadge value={conversation.status} /></div><div className="toolbar"><PrimaryButton className={selectedSupportConversationId === conversation.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedSupportConversationId(conversation.id)}>{selectedSupportConversationId === conversation.id ? 'Открыто' : 'Открыть'}</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleSupportStatus('pending', conversation.id)}>В ожидание</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleSupportStatus(conversation.status === 'closed' ? 'open' : 'closed', conversation.id)}>{conversation.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}</PrimaryButton></div></div>)}</div>
@@ -1197,7 +1205,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="bot" className="section card-list-two">
+      <div id="bot" className="section card-list-two" hidden={activeSection !== 'bot'}>
         <Card>
           <h3>Настройки Telegram-бота</h3>
           <div className="list-item-vertical">
@@ -1218,7 +1226,10 @@ export function App() {
             </div>
           </form>
         </Card>
-        <Card id="provisioning">
+      </div>
+
+      <div id="provisioning" className="section card-list-two" hidden={activeSection !== 'provisioning'}>
+        <Card>
           <h3>Подготовка VPS</h3>
           <p className="safe-note">В проверочном режиме реальный SSH/Ansible-деплой выключен, пока это явно не разрешено настройками сервера.</p>
           <div className="list-stack">{provisioningRuns.length === 0 && <EmptyState title="Запусков подготовки нет" description="Проверки и подготовки VPS появятся здесь после Telegram или админ-сценария." />}{provisioningRuns.slice(0, 12).map((run) => <div key={run.id} className="list-item-vertical"><div className="item-head"><strong>{run.nodeName || shortId(run.nodeId)}</strong><StatusBadge value={run.status} /></div><div className="muted">Запуск: {shortId(run.id)} · источник {run.source || '—'} · владелец {run.owner || '—'} · шаг {run.currentStep || run.status}</div><div className="muted">Цель: {run.targetHost || shortId(run.nodeId)}:{run.sshPort ?? 22} · пользователь {run.username || 'root'} · авторизация {run.authMethod || '—'} · доступы {run.credentialsConfigured ? 'заданы' : 'не заданы'} · {run.validationMode ? 'режим проверки' : 'рабочий кандидат'}</div><div className="muted">{run.dryRun ? 'проверка без изменений' : 'развертывание'} · старт {formatDate(run.startedAt)} · финиш {formatDate(run.finishedAt)}</div><div className="muted">{run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div><div className="toolbar"><PrimaryButton disabled={!token || actionBusyId === `retry-${run.id}`} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton><ConfirmButton disabled={!token || actionBusyId === `deploy-run-${run.id}` || !['ReadyToDeploy', 'Succeeded'].includes(run.status)} className="button-danger" message="Развернуть VPS? В рабочем режиме это может выполнить реальные SSH/Ansible-действия." onConfirm={() => void handleDeployProvisioningRun(run.id)}>Развернуть</ConfirmButton><ConfirmButton disabled={!token || actionBusyId === `cancel-run-${run.id}` || ['Failed', 'PrecheckFailed', 'Deployed', 'Succeeded', 'Cancelled'].includes(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => void handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton><PrimaryButton disabled={!token || actionBusyId === `support-run-${run.id}`} onClick={() => void handleProvisioningSupportNeeded(run.id)}>Нужна поддержка</PrimaryButton></div></div>)}</div>
