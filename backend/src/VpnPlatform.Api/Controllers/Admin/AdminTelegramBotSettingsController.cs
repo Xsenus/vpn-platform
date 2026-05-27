@@ -18,6 +18,9 @@ public class AdminTelegramBotSettingsController : ControllerBase
     private const string InstructionKey = "telegram.instruction";
     private const string SupportKey = "telegram.support";
     private const string AfterPaymentKey = "telegram.after_payment";
+    private const string RenewalKey = "telegram.renewal";
+    private const string PaymentFailedKey = "telegram.payment_failed";
+    private const string SubscriptionExpiredKey = "telegram.subscription_expired";
     private const string SettingsGroup = "telegram_bot";
     private const string EnabledKey = "telegram_bot.enabled";
     private const string ModeKey = "telegram_bot.mode";
@@ -69,6 +72,9 @@ public class AdminTelegramBotSettingsController : ControllerBase
             FindTemplate(templates, InstructionKey, "Инструкция появится после выдачи VPN-доступа."),
             FindTemplate(templates, SupportKey, "Опишите проблему одним сообщением, оператор ответит в Telegram."),
             FindTemplate(templates, AfterPaymentKey, "Оплата получена. Ваш VPN-доступ готов."),
+            FindTemplate(templates, RenewalKey, "Продление оформлено. После оплаты подписка будет продлена автоматически."),
+            FindTemplate(templates, PaymentFailedKey, "Оплата не прошла. Проверьте способ оплаты или попробуйте другой вариант."),
+            FindTemplate(templates, SubscriptionExpiredKey, "Срок подписки истек. Продлите тариф, чтобы восстановить VPN-доступ."),
             DateTimeOffset.UtcNow));
     }
 
@@ -96,6 +102,9 @@ public class AdminTelegramBotSettingsController : ControllerBase
         await UpsertTemplateAsync(InstructionKey, "Instruction text", request.InstructionText, cancellationToken);
         await UpsertTemplateAsync(SupportKey, "Support text", request.SupportText, cancellationToken);
         await UpsertTemplateAsync(AfterPaymentKey, "After payment text", request.AfterPaymentTextTemplate, cancellationToken);
+        await UpsertTemplateAsync(RenewalKey, "Renewal text", request.RenewalTextTemplate, cancellationToken);
+        await UpsertTemplateAsync(PaymentFailedKey, "Payment failed text", request.PaymentFailedTextTemplate, cancellationToken);
+        await UpsertTemplateAsync(SubscriptionExpiredKey, "Subscription expired text", request.SubscriptionExpiredTextTemplate, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetSettings(cancellationToken);
     }

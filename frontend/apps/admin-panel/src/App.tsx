@@ -266,7 +266,7 @@ const defaultWorkScenarioForm: WorkScenarioUpsertPayload = {
 
 const defaultBotSettings: AdminTelegramBotSettingsDto = {
   enabled: false,
-  mode: 'Polling',
+  mode: 'LongPolling',
   publicBotUsername: '',
   hasBotToken: false,
   botTokenMasked: '',
@@ -278,6 +278,9 @@ const defaultBotSettings: AdminTelegramBotSettingsDto = {
   instructionText: '',
   supportText: '',
   afterPaymentTextTemplate: '',
+  renewalTextTemplate: '',
+  paymentFailedTextTemplate: '',
+  subscriptionExpiredTextTemplate: '',
   generatedAt: ''
 }
 
@@ -547,7 +550,10 @@ export function App() {
       welcomeText: nextBotSettings.welcomeText,
       instructionText: nextBotSettings.instructionText,
       supportText: nextBotSettings.supportText,
-      afterPaymentTextTemplate: nextBotSettings.afterPaymentTextTemplate
+      afterPaymentTextTemplate: nextBotSettings.afterPaymentTextTemplate,
+      renewalTextTemplate: nextBotSettings.renewalTextTemplate,
+      paymentFailedTextTemplate: nextBotSettings.paymentFailedTextTemplate,
+      subscriptionExpiredTextTemplate: nextBotSettings.subscriptionExpiredTextTemplate
     })
     setLoadErrors(errors)
     if (!selectedSupportConversationId && nextSupportConversations.length > 0) setSelectedSupportConversationId(nextSupportConversations[0].id)
@@ -1906,6 +1912,9 @@ export function App() {
               <label><span>Инструкция</span><textarea value={botSettingsForm.instructionText ?? ''} onChange={(e) => updateBotForm('instructionText', e.target.value)} rows={3} /></label>
               <label><span>Текст поддержки</span><textarea value={botSettingsForm.supportText ?? ''} onChange={(e) => updateBotForm('supportText', e.target.value)} rows={3} /></label>
               <label><span>Шаблон после оплаты</span><textarea value={botSettingsForm.afterPaymentTextTemplate ?? ''} onChange={(e) => updateBotForm('afterPaymentTextTemplate', e.target.value)} rows={3} /></label>
+              <label><span>Шаблон продления</span><textarea value={botSettingsForm.renewalTextTemplate ?? ''} onChange={(e) => updateBotForm('renewalTextTemplate', e.target.value)} rows={3} /></label>
+              <label><span>Шаблон ошибки оплаты</span><textarea value={botSettingsForm.paymentFailedTextTemplate ?? ''} onChange={(e) => updateBotForm('paymentFailedTextTemplate', e.target.value)} rows={3} /></label>
+              <label><span>Шаблон окончания подписки</span><textarea value={botSettingsForm.subscriptionExpiredTextTemplate ?? ''} onChange={(e) => updateBotForm('subscriptionExpiredTextTemplate', e.target.value)} rows={3} /></label>
             </fieldset>
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить настройки бота</PrimaryButton>

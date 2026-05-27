@@ -215,6 +215,9 @@ public sealed record AdminTelegramBotSettingsDto(
     string InstructionText,
     string SupportText,
     string AfterPaymentTextTemplate,
+    string RenewalTextTemplate,
+    string PaymentFailedTextTemplate,
+    string SubscriptionExpiredTextTemplate,
     DateTimeOffset GeneratedAt);
 
 public sealed record UpdateTelegramBotSettingsCommand(
@@ -229,7 +232,10 @@ public sealed record UpdateTelegramBotSettingsCommand(
     string? WelcomeText,
     string? InstructionText,
     string? SupportText,
-    string? AfterPaymentTextTemplate);
+    string? AfterPaymentTextTemplate,
+    string? RenewalTextTemplate,
+    string? PaymentFailedTextTemplate,
+    string? SubscriptionExpiredTextTemplate);
 
 public sealed record PaymentProviderSettingDto(Guid Id, Guid PaymentProviderAccountId, string Key, string? Value, bool IsSecret, string Description);
 public sealed record PaymentWebhookEventDto(Guid Id, PaymentProvider Provider, Guid? PaymentAttemptId, Guid? PaymentProviderAccountId, string ProviderPaymentId, string ExternalEventId, string EventType, string Status, bool SignatureValidated, DateTimeOffset ReceivedAt, DateTimeOffset? ProcessedAt, string ErrorText);

@@ -653,6 +653,9 @@ export type AdminTelegramBotSettingsDto = {
   instructionText: string
   supportText: string
   afterPaymentTextTemplate: string
+  renewalTextTemplate: string
+  paymentFailedTextTemplate: string
+  subscriptionExpiredTextTemplate: string
   generatedAt: string
 }
 
@@ -669,6 +672,9 @@ export type UpdateTelegramBotSettingsPayload = {
   instructionText?: string | null
   supportText?: string | null
   afterPaymentTextTemplate?: string | null
+  renewalTextTemplate?: string | null
+  paymentFailedTextTemplate?: string | null
+  subscriptionExpiredTextTemplate?: string | null
 }
 
 export type AdminUserOverviewDto = {

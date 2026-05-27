@@ -355,11 +355,17 @@ public class AdminAutomationMvpTests
             WelcomeText: "Welcome",
             InstructionText: "Instruction",
             SupportText: "Support",
-            AfterPaymentTextTemplate: "After payment"), CancellationToken.None);
+            AfterPaymentTextTemplate: "After payment",
+            RenewalTextTemplate: "Renewal",
+            PaymentFailedTextTemplate: "Payment failed",
+            SubscriptionExpiredTextTemplate: "Subscription expired"), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(after);
         Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.welcome" && x.Body == "Welcome");
         Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.instruction" && x.Body == "Instruction");
+        Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.renewal" && x.Body == "Renewal");
+        Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.payment_failed" && x.Body == "Payment failed");
+        Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.subscription_expired" && x.Body == "Subscription expired");
         Assert.Contains(await db.SiteContentBlocks.ToListAsync(), x => x.Key == "telegram_bot.public_bot_username" && x.Value == "managed_bot");
         Assert.Contains(await db.SiteContentBlocks.ToListAsync(), x => x.Key == "telegram_bot.mode" && x.Value == "Webhook");
         Assert.Contains(await db.SiteContentBlocks.ToListAsync(), x => x.Key == "telegram_bot.enabled" && x.Value == "true");
