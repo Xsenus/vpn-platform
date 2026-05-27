@@ -179,6 +179,31 @@ public class DbInitializer : IHostedService
             );
         }
 
+        if (!await db.WorkScenarios.AnyAsync(cancellationToken))
+        {
+            db.WorkScenarios.Add(new WorkScenario
+            {
+                Name = "Автоматическая выдача VPN",
+                Key = "auto",
+                IsActive = true,
+                AllowedTariffIdsJson = "[]",
+                VpnProtocol = "vless",
+                ServerSelectionRule = "least-loaded",
+                InboundSelectionRule = "default",
+                ProvisioningMode = "auto",
+                OnPaymentSucceeded = "create_subscription_and_access",
+                OnPaymentFailed = "keep_order_pending",
+                OnRefund = "disable_access",
+                OnSubscriptionExpired = "disable_access_after_grace",
+                OnRenewal = "extend_subscription",
+                CabinetText = "После успешной оплаты VPN-доступ появится в личном кабинете вместе со ссылкой и QR-кодом.",
+                TelegramText = "Оплата получена. VPN-доступ готов, ссылка подключения доступна в личном кабинете.",
+                GenerateQrCode = true,
+                MaxDevices = 3,
+                SortOrder = 10
+            });
+        }
+
         if (!await db.FaqEntries.AnyAsync(cancellationToken))
         {
             db.FaqEntries.AddRange(

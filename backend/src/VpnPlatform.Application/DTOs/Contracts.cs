@@ -38,6 +38,51 @@ public sealed record FaqEntryUpsertRequest(string Question, string Answer, strin
 public sealed record SiteContentBlockDto(Guid Id, string Key, string Value, string Group, string Label, string Description, string InputType, bool IsActive, int SortOrder, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 public sealed record SiteContentBlockUpsertRequest(string Key, string Value, string? Group, string? Label, string? Description, string? InputType, bool IsActive, int SortOrder);
 
+public sealed record WorkScenarioDto(
+    Guid Id,
+    string Name,
+    string Key,
+    bool IsActive,
+    string AllowedTariffIdsJson,
+    string VpnProtocol,
+    string ServerSelectionRule,
+    string InboundSelectionRule,
+    string ProvisioningMode,
+    string OnPaymentSucceeded,
+    string OnPaymentFailed,
+    string OnRefund,
+    string OnSubscriptionExpired,
+    string OnRenewal,
+    string CabinetText,
+    string TelegramText,
+    bool GenerateQrCode,
+    int MaxDevices,
+    long? TrafficLimit,
+    int SortOrder,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record WorkScenarioUpsertRequest(
+    string Name,
+    string Key,
+    bool IsActive,
+    string? AllowedTariffIdsJson,
+    string? VpnProtocol,
+    string? ServerSelectionRule,
+    string? InboundSelectionRule,
+    string? ProvisioningMode,
+    string? OnPaymentSucceeded,
+    string? OnPaymentFailed,
+    string? OnRefund,
+    string? OnSubscriptionExpired,
+    string? OnRenewal,
+    string? CabinetText,
+    string? TelegramText,
+    bool GenerateQrCode,
+    int MaxDevices,
+    long? TrafficLimit,
+    int SortOrder);
+
 public sealed record AppReleaseItemDto(Guid? Id, string Type, string Text, int SortOrder);
 public sealed record AppReleaseDto(
     Guid Id,

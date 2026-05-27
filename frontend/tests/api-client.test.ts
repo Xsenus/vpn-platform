@@ -108,6 +108,31 @@ test('ApiClient site content endpoints cover public and admin CRUD', async () =>
   assert.equal(new Headers(calls[4]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
+test('ApiClient work scenario endpoints cover admin CRUD', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  const scenario = { id: 'scenario-1', name: 'Auto', key: 'auto', isActive: true, allowedTariffIdsJson: '[]', vpnProtocol: 'vless', serverSelectionRule: 'least-loaded', inboundSelectionRule: 'default', provisioningMode: 'auto', onPaymentSucceeded: 'create_subscription_and_access', onPaymentFailed: 'keep_order_pending', onRefund: 'disable_access', onSubscriptionExpired: 'disable_access_after_grace', onRenewal: 'extend_subscription', cabinetText: 'ready', telegramText: 'ready', generateQrCode: true, maxDevices: 3, trafficLimit: null, sortOrder: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    if (init?.method === 'DELETE') {
+      return new Response(JSON.stringify({ id: 'scenario-1', deleted: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    return new Response(JSON.stringify(init?.method ? scenario : [scenario]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await client.getAdminWorkScenarios('admin-token')
+  await client.createAdminWorkScenario('admin-token', scenario)
+  await client.updateAdminWorkScenario('admin-token', 'scenario-1', { ...scenario, name: 'Auto updated' })
+  await client.deleteAdminWorkScenario('admin-token', 'scenario-1')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/work-scenarios')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.equal(calls[2]?.init?.method, 'PUT')
+  assert.equal(calls[3]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
 test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
@@ -763,6 +788,10 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /getAdminSiteContent/)
   assert.match(adminSource, /id="content"/)
   assert.match(adminSource, /Контент сайта/)
+  assert.match(adminSource, /getAdminWorkScenarios/)
+  assert.match(adminSource, /id="scenarios"/)
+  assert.match(adminSource, /Сценарии/)
+  assert.match(adminSource, /provisioningScenario/)
   assert.match(adminSource, /getAdminUserOverview/)
   assert.match(adminSource, /getAdminAccessQrSvg/)
   assert.match(adminSource, /credentialsConfigured/i)

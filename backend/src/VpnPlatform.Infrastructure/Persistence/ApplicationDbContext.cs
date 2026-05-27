@@ -16,6 +16,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
     public DbSet<FaqEntry> FaqEntries => Set<FaqEntry>();
     public DbSet<SiteContentBlock> SiteContentBlocks => Set<SiteContentBlock>();
+    public DbSet<WorkScenario> WorkScenarios => Set<WorkScenario>();
     public DbSet<CheckoutSession> CheckoutSessions => Set<CheckoutSession>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<PaymentProviderAccount> PaymentProviderAccounts => Set<PaymentProviderAccount>();
@@ -79,6 +80,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.Category, x.SortOrder });
         modelBuilder.Entity<SiteContentBlock>().HasIndex(x => x.Key).IsUnique();
         modelBuilder.Entity<SiteContentBlock>().HasIndex(x => new { x.Group, x.IsActive, x.SortOrder });
+        modelBuilder.Entity<WorkScenario>().HasIndex(x => x.Key).IsUnique();
+        modelBuilder.Entity<WorkScenario>().HasIndex(x => new { x.IsActive, x.SortOrder });
         modelBuilder.Entity<PromoCode>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<CheckoutSession>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PaymentProviderAccount>().HasIndex(x => new { x.Provider, x.Mode, x.Name }).IsUnique();
@@ -435,6 +438,20 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<SiteContentBlock>().Property(x => x.Description).HasColumnType("text");
         modelBuilder.Entity<SiteContentBlock>().Property(x => x.InputType).HasMaxLength(40);
         modelBuilder.Entity<SiteContentBlock>().Property(x => x.Value).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.Name).HasMaxLength(200);
+        modelBuilder.Entity<WorkScenario>().Property(x => x.Key).HasMaxLength(120);
+        modelBuilder.Entity<WorkScenario>().Property(x => x.AllowedTariffIdsJson).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.VpnProtocol).HasMaxLength(40);
+        modelBuilder.Entity<WorkScenario>().Property(x => x.ServerSelectionRule).HasMaxLength(120);
+        modelBuilder.Entity<WorkScenario>().Property(x => x.InboundSelectionRule).HasMaxLength(120);
+        modelBuilder.Entity<WorkScenario>().Property(x => x.ProvisioningMode).HasMaxLength(40);
+        modelBuilder.Entity<WorkScenario>().Property(x => x.OnPaymentSucceeded).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.OnPaymentFailed).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.OnRefund).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.OnSubscriptionExpired).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.OnRenewal).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.CabinetText).HasColumnType("text");
+        modelBuilder.Entity<WorkScenario>().Property(x => x.TelegramText).HasColumnType("text");
         modelBuilder.Entity<Tariff>().Property(x => x.Description).HasColumnType("text");
         modelBuilder.Entity<Tariff>().Property(x => x.FullDescription).HasColumnType("text");
         modelBuilder.Entity<Tariff>().Property(x => x.FeaturesJson).HasColumnType("text");

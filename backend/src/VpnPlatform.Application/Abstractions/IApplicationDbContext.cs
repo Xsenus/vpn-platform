@@ -13,6 +13,7 @@ public interface IApplicationDbContext
     DbSet<PromoCode> PromoCodes { get; }
     DbSet<FaqEntry> FaqEntries { get; }
     DbSet<SiteContentBlock> SiteContentBlocks { get; }
+    DbSet<WorkScenario> WorkScenarios { get; }
     DbSet<CheckoutSession> CheckoutSessions { get; }
     DbSet<Order> Orders { get; }
     DbSet<PaymentProviderAccount> PaymentProviderAccounts { get; }

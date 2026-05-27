@@ -707,6 +707,33 @@ export type SiteContentBlockUpsertPayload = {
   sortOrder: number
 }
 
+export type WorkScenarioDto = {
+  id: string
+  name: string
+  key: string
+  isActive: boolean
+  allowedTariffIdsJson: string
+  vpnProtocol: string
+  serverSelectionRule: string
+  inboundSelectionRule: string
+  provisioningMode: string
+  onPaymentSucceeded: string
+  onPaymentFailed: string
+  onRefund: string
+  onSubscriptionExpired: string
+  onRenewal: string
+  cabinetText: string
+  telegramText: string
+  generateQrCode: boolean
+  maxDevices: number
+  trafficLimit?: number | null
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type WorkScenarioUpsertPayload = Omit<WorkScenarioDto, 'id' | 'createdAt' | 'updatedAt'>
+
 export type CreateCheckoutSessionPayload = {
   tariffId: string
   type: OrderType
@@ -1333,6 +1360,36 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: 'Failed to delete site content block'
+    })
+  }
+
+  getAdminWorkScenarios(token: string): Promise<WorkScenarioDto[]> {
+    return this.request<WorkScenarioDto[]>('/api/admin/work-scenarios', { token, errorMessage: 'Failed to load work scenarios' })
+  }
+
+  createAdminWorkScenario(token: string, payload: WorkScenarioUpsertPayload): Promise<WorkScenarioDto> {
+    return this.request<WorkScenarioDto>('/api/admin/work-scenarios', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to create work scenario'
+    })
+  }
+
+  updateAdminWorkScenario(token: string, id: string, payload: WorkScenarioUpsertPayload): Promise<WorkScenarioDto> {
+    return this.request<WorkScenarioDto>(`/api/admin/work-scenarios/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to update work scenario'
+    })
+  }
+
+  deleteAdminWorkScenario(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/admin/work-scenarios/${id}`, {
+      method: 'DELETE',
+      token,
+      errorMessage: 'Failed to delete work scenario'
     })
   }
 

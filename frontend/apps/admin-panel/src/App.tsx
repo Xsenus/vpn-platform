@@ -33,6 +33,8 @@ import {
   VpnInboundDto,
   VpnNodeDto,
   VpnPanelDto,
+  WorkScenarioDto,
+  WorkScenarioUpsertPayload,
   PanelHealthCheckDto,
   PanelSyncRunDto
 } from '@vpn-platform/api-client'
@@ -83,6 +85,7 @@ const adminSections = [
   ['releases', 'Что нового'],
   ['faq', 'FAQ'],
   ['content', 'Контент сайта'],
+  ['scenarios', 'Сценарии'],
   ['provisioning', 'Подготовка VPS']
 ] as const
 
@@ -227,6 +230,28 @@ const defaultSiteContentForm: SiteContentBlockUpsertPayload = {
   sortOrder: 100
 }
 
+const defaultWorkScenarioForm: WorkScenarioUpsertPayload = {
+  name: '',
+  key: '',
+  isActive: true,
+  allowedTariffIdsJson: '[]',
+  vpnProtocol: 'vless',
+  serverSelectionRule: 'least-loaded',
+  inboundSelectionRule: 'default',
+  provisioningMode: 'auto',
+  onPaymentSucceeded: 'create_subscription_and_access',
+  onPaymentFailed: 'keep_order_pending',
+  onRefund: 'disable_access',
+  onSubscriptionExpired: 'disable_access_after_grace',
+  onRenewal: 'extend_subscription',
+  cabinetText: '',
+  telegramText: '',
+  generateQrCode: true,
+  maxDevices: 3,
+  trafficLimit: null,
+  sortOrder: 100
+}
+
 const defaultBotSettings: AdminTelegramBotSettingsDto = {
   enabled: false,
   mode: 'Polling',
@@ -363,6 +388,9 @@ export function App() {
   const [siteContentBlocks, setSiteContentBlocks] = useState<SiteContentBlockDto[]>([])
   const [siteContentForm, setSiteContentForm] = useState<SiteContentBlockUpsertPayload>(defaultSiteContentForm)
   const [editingSiteContentId, setEditingSiteContentId] = useState('')
+  const [workScenarios, setWorkScenarios] = useState<WorkScenarioDto[]>([])
+  const [workScenarioForm, setWorkScenarioForm] = useState<WorkScenarioUpsertPayload>(defaultWorkScenarioForm)
+  const [editingWorkScenarioId, setEditingWorkScenarioId] = useState('')
   const [servers, setServers] = useState<VpnNodeDto[]>([])
   const [provisioningRuns, setProvisioningRuns] = useState<ProvisioningRunDto[]>([])
   const [vpnPanels, setVpnPanels] = useState<VpnPanelDto[]>([])
@@ -443,6 +471,7 @@ export function App() {
       nextAppReleases,
       nextFaqEntries,
       nextSiteContent,
+      nextWorkScenarios,
       nextServers,
       nextRuns,
       nextVpnPanels,
@@ -462,6 +491,7 @@ export function App() {
       safeLoad('Что нового', () => api.getAdminAppReleases(currentToken), [], errors),
       safeLoad('FAQ', () => api.getAdminFaq(currentToken), [], errors),
       safeLoad('контент сайта', () => api.getAdminSiteContent(currentToken, 'home'), [], errors),
+      safeLoad('сценарии работы', () => api.getAdminWorkScenarios(currentToken), [], errors),
       safeLoad('servers', () => api.getAdminServers(currentToken), [], errors),
       safeLoad('подготовка серверов', () => api.getAdminProvisioningRuns(currentToken), [], errors),
       safeLoad('VPN-панели', () => api.getAdminVpnPanels(currentToken), [], errors),
@@ -482,6 +512,7 @@ export function App() {
     setAppReleases(nextAppReleases)
     setFaqEntries(nextFaqEntries)
     setSiteContentBlocks(nextSiteContent)
+    setWorkScenarios(nextWorkScenarios)
     setServers(nextServers)
     setProvisioningRuns(nextRuns)
     setVpnPanels(nextVpnPanels)
@@ -533,6 +564,7 @@ export function App() {
   const updateReleaseForm = <K extends keyof AppReleaseUpsertPayload>(key: K, value: AppReleaseUpsertPayload[K]) => setReleaseForm((current) => ({ ...current, [key]: value }))
   const updateFaqForm = <K extends keyof FaqUpsertPayload>(key: K, value: FaqUpsertPayload[K]) => setFaqForm((current) => ({ ...current, [key]: value }))
   const updateSiteContentForm = <K extends keyof SiteContentBlockUpsertPayload>(key: K, value: SiteContentBlockUpsertPayload[K]) => setSiteContentForm((current) => ({ ...current, [key]: value }))
+  const updateWorkScenarioForm = <K extends keyof WorkScenarioUpsertPayload>(key: K, value: WorkScenarioUpsertPayload[K]) => setWorkScenarioForm((current) => ({ ...current, [key]: value }))
   const updateReleaseItem = (index: number, patch: Partial<AppReleaseUpsertPayload['items'][number]>) => setReleaseForm((current) => ({
     ...current,
     items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item)
@@ -591,6 +623,9 @@ export function App() {
     setSiteContentBlocks([])
     setSiteContentForm(defaultSiteContentForm)
     setEditingSiteContentId('')
+    setWorkScenarios([])
+    setWorkScenarioForm(defaultWorkScenarioForm)
+    setEditingWorkScenarioId('')
     setServers([])
     setProvisioningRuns([])
     setVpnPanels([])
@@ -959,6 +994,76 @@ export function App() {
       await api.deleteAdminSiteContent(token, block.id)
       if (editingSiteContentId === block.id) resetSiteContentForm()
       setNotice('Блок контента удален.')
+      await loadAll(token)
+    })
+  }
+
+  const resetWorkScenarioForm = () => {
+    setWorkScenarioForm(defaultWorkScenarioForm)
+    setEditingWorkScenarioId('')
+  }
+
+  const editWorkScenario = (scenario: WorkScenarioDto) => {
+    setEditingWorkScenarioId(scenario.id)
+    setWorkScenarioForm({
+      name: scenario.name,
+      key: scenario.key,
+      isActive: scenario.isActive,
+      allowedTariffIdsJson: scenario.allowedTariffIdsJson,
+      vpnProtocol: scenario.vpnProtocol,
+      serverSelectionRule: scenario.serverSelectionRule,
+      inboundSelectionRule: scenario.inboundSelectionRule,
+      provisioningMode: scenario.provisioningMode,
+      onPaymentSucceeded: scenario.onPaymentSucceeded,
+      onPaymentFailed: scenario.onPaymentFailed,
+      onRefund: scenario.onRefund,
+      onSubscriptionExpired: scenario.onSubscriptionExpired,
+      onRenewal: scenario.onRenewal,
+      cabinetText: scenario.cabinetText,
+      telegramText: scenario.telegramText,
+      generateQrCode: scenario.generateQrCode,
+      maxDevices: scenario.maxDevices,
+      trafficLimit: scenario.trafficLimit ?? null,
+      sortOrder: scenario.sortOrder
+    })
+    setActiveSection('scenarios')
+    if (typeof window !== 'undefined') window.location.hash = 'scenarios'
+  }
+
+  const handleSaveWorkScenario = async () => {
+    if (!token) return
+    if (!workScenarioForm.name.trim() || !workScenarioForm.key.trim()) {
+      setError('Сценарий: заполните название и ключ.')
+      return
+    }
+
+    const payload: WorkScenarioUpsertPayload = {
+      ...workScenarioForm,
+      name: workScenarioForm.name.trim(),
+      key: workScenarioForm.key.trim(),
+      allowedTariffIdsJson: workScenarioForm.allowedTariffIdsJson || '[]',
+      maxDevices: Number(workScenarioForm.maxDevices) || 1,
+      sortOrder: Number(workScenarioForm.sortOrder) || 0
+    }
+
+    await runAction(editingWorkScenarioId ? `scenario-update-${editingWorkScenarioId}` : 'scenario-create', async () => {
+      if (editingWorkScenarioId) {
+        await api.updateAdminWorkScenario(token, editingWorkScenarioId, payload)
+        setNotice('Сценарий работы обновлен.')
+      } else {
+        await api.createAdminWorkScenario(token, payload)
+        setNotice('Сценарий работы создан.')
+      }
+      resetWorkScenarioForm()
+      await loadAll(token)
+    })
+  }
+
+  const handleDeleteWorkScenario = async (scenario: WorkScenarioDto) => {
+    await runAction(`scenario-delete-${scenario.id}`, async () => {
+      await api.deleteAdminWorkScenario(token, scenario.id)
+      if (editingWorkScenarioId === scenario.id) resetWorkScenarioForm()
+      setNotice('Сценарий работы удален.')
       await loadAll(token)
     })
   }
@@ -1429,7 +1534,7 @@ export function App() {
                 <label><span>Порядок</span><input value={tariffForm.sortOrder ?? 100} onChange={(e) => updateTariffForm('sortOrder', Number(e.target.value) || 0)} type="number" min={0} step="1" placeholder="100" /></label>
                 <label><span>Категория</span><input value={tariffForm.category ?? 'default'} onChange={(e) => updateTariffForm('category', e.target.value)} placeholder="default" /></label>
                 <label><span>Бейдж</span><input value={tariffForm.badge ?? ''} onChange={(e) => updateTariffForm('badge', e.target.value)} placeholder="Популярный, Выгодно, Семейный" /></label>
-                <label><span>Сценарий выдачи</span><input value={tariffForm.provisioningScenario ?? 'auto'} onChange={(e) => updateTariffForm('provisioningScenario', e.target.value)} placeholder="auto, manual, premium-auto" /></label>
+                <label><span>Сценарий выдачи</span><select value={tariffForm.provisioningScenario ?? 'auto'} onChange={(e) => updateTariffForm('provisioningScenario', e.target.value)}><option value="auto">auto</option>{workScenarios.map((scenario) => <option key={scenario.id} value={scenario.key}>{scenario.name} ({scenario.key})</option>)}</select></label>
               </div>
               <label><span>Короткое описание</span><textarea value={tariffForm.description ?? ''} onChange={(e) => updateTariffForm('description', e.target.value)} placeholder="Коротко для карточки тарифа" rows={3} /></label>
               <label><span>Полное описание</span><textarea value={tariffForm.fullDescription ?? ''} onChange={(e) => updateTariffForm('fullDescription', e.target.value)} placeholder="Подробное описание для публичной страницы" rows={4} /></label>
@@ -1810,6 +1915,72 @@ export function App() {
                 <div className="toolbar">
                   <PrimaryButton className="button-secondary" onClick={() => editSiteContent(block)}>Редактировать</PrimaryButton>
                   <ConfirmButton className="button-danger" disabled={actionBusyId === `content-delete-${block.id}`} message={`Удалить блок "${block.label}"? На сайте будет использован fallback-текст из приложения.`} onConfirm={() => void handleDeleteSiteContent(block)}>Удалить</ConfirmButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div id="scenarios" className="section card-list-two" hidden={activeSection !== 'scenarios'}>
+        <Card>
+          <h3>{editingWorkScenarioId ? 'Редактировать сценарий' : 'Создать сценарий работы'}</h3>
+          <p className="muted">Сценарий описывает выдачу VPN после оплаты, поведение при ошибке, возврате, продлении и окончании подписки. Тариф выбирает сценарий по ключу.</p>
+          <form aria-busy={actionBusyId === 'scenario-create' || actionBusyId === `scenario-update-${editingWorkScenarioId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveWorkScenario() }}>
+            <fieldset className="form-section">
+              <legend>Основные параметры</legend>
+              <div className="form-grid">
+                <label><span>Название</span><input value={workScenarioForm.name} onChange={(e) => updateWorkScenarioForm('name', e.target.value)} placeholder="Автоматическая выдача VPN" required /></label>
+                <label><span>Ключ</span><input value={workScenarioForm.key} onChange={(e) => updateWorkScenarioForm('key', e.target.value)} placeholder="auto" required /></label>
+                <label><span>VPN-протокол</span><input value={workScenarioForm.vpnProtocol} onChange={(e) => updateWorkScenarioForm('vpnProtocol', e.target.value)} placeholder="vless" /></label>
+                <label><span>Режим выдачи</span><select value={workScenarioForm.provisioningMode} onChange={(e) => updateWorkScenarioForm('provisioningMode', e.target.value)}><option value="auto">auto</option><option value="manual">manual</option><option value="hybrid">hybrid</option></select></label>
+                <label><span>Правило сервера</span><input value={workScenarioForm.serverSelectionRule} onChange={(e) => updateWorkScenarioForm('serverSelectionRule', e.target.value)} placeholder="least-loaded" /></label>
+                <label><span>Правило inbound</span><input value={workScenarioForm.inboundSelectionRule} onChange={(e) => updateWorkScenarioForm('inboundSelectionRule', e.target.value)} placeholder="default" /></label>
+                <label><span>Устройств</span><input value={workScenarioForm.maxDevices} onChange={(e) => updateWorkScenarioForm('maxDevices', Number(e.target.value) || 1)} type="number" min={1} step="1" /></label>
+                <label><span>Лимит трафика, ГБ</span><input value={workScenarioForm.trafficLimit ? Math.round(workScenarioForm.trafficLimit / 1024 / 1024 / 1024) : ''} onChange={(e) => updateWorkScenarioForm('trafficLimit', e.target.value ? Number(e.target.value) * 1024 * 1024 * 1024 : null)} type="number" min={0} step="1" placeholder="Без лимита" /></label>
+                <label><span>Порядок</span><input value={workScenarioForm.sortOrder} onChange={(e) => updateWorkScenarioForm('sortOrder', Number(e.target.value) || 0)} type="number" step="1" /></label>
+              </div>
+              <label><span>Связанные тарифы JSON</span><textarea value={workScenarioForm.allowedTariffIdsJson} onChange={(e) => updateWorkScenarioForm('allowedTariffIdsJson', e.target.value)} rows={2} placeholder='["tariff-guid"] или []' /></label>
+              <label className="checkbox-row"><input checked={workScenarioForm.isActive} onChange={(e) => updateWorkScenarioForm('isActive', e.target.checked)} type="checkbox" /> Активен</label>
+              <label className="checkbox-row"><input checked={workScenarioForm.generateQrCode} onChange={(e) => updateWorkScenarioForm('generateQrCode', e.target.checked)} type="checkbox" /> Генерировать QR-код</label>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Поведение системы</legend>
+              <label><span>После успешной оплаты</span><textarea value={workScenarioForm.onPaymentSucceeded} onChange={(e) => updateWorkScenarioForm('onPaymentSucceeded', e.target.value)} rows={2} /></label>
+              <label><span>После ошибки оплаты</span><textarea value={workScenarioForm.onPaymentFailed} onChange={(e) => updateWorkScenarioForm('onPaymentFailed', e.target.value)} rows={2} /></label>
+              <label><span>После возврата</span><textarea value={workScenarioForm.onRefund} onChange={(e) => updateWorkScenarioForm('onRefund', e.target.value)} rows={2} /></label>
+              <label><span>После окончания подписки</span><textarea value={workScenarioForm.onSubscriptionExpired} onChange={(e) => updateWorkScenarioForm('onSubscriptionExpired', e.target.value)} rows={2} /></label>
+              <label><span>После продления</span><textarea value={workScenarioForm.onRenewal} onChange={(e) => updateWorkScenarioForm('onRenewal', e.target.value)} rows={2} /></label>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Тексты для пользователя</legend>
+              <label><span>Текст для кабинета</span><textarea value={workScenarioForm.cabinetText} onChange={(e) => updateWorkScenarioForm('cabinetText', e.target.value)} rows={3} /></label>
+              <label><span>Текст для Telegram</span><textarea value={workScenarioForm.telegramText} onChange={(e) => updateWorkScenarioForm('telegramText', e.target.value)} rows={3} /></label>
+            </fieldset>
+            <div className="form-footer">
+              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !workScenarioForm.name || !workScenarioForm.key} title={adminDisabledTitle}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
+              {editingWorkScenarioId && <PrimaryButton type="button" className="button-secondary" onClick={resetWorkScenarioForm}>Отменить редактирование</PrimaryButton>}
+            </div>
+          </form>
+        </Card>
+        <Card>
+          <h3>Сценарии работы</h3>
+          <div className="list-stack">
+            {workScenarios.length === 0 && <EmptyState title="Сценарии не настроены" description="Создайте сценарий, затем выберите его в тарифе по ключу." />}
+            {workScenarios.map((scenario) => (
+              <div key={scenario.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{scenario.name}</strong>
+                    <div className="muted">{scenario.key} · {scenario.vpnProtocol} · {scenario.provisioningMode} · сервер {scenario.serverSelectionRule}</div>
+                    <div className="muted">Оплата: {scenario.onPaymentSucceeded} · продление: {scenario.onRenewal}</div>
+                    <div className="muted">Тарифы: {tariffs.filter((tariff) => tariff.provisioningScenario === scenario.key).map((tariff) => tariff.name).join(', ') || 'не выбраны'}</div>
+                  </div>
+                  <div className="item-status"><StatusBadge value={scenario.isActive ? 'Active' : 'Hidden'} /><StatusBadge value={scenario.generateQrCode ? 'QR' : 'No QR'} /></div>
+                </div>
+                <div className="toolbar">
+                  <PrimaryButton className="button-secondary" onClick={() => editWorkScenario(scenario)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={actionBusyId === `scenario-delete-${scenario.id}`} message={`Удалить сценарий "${scenario.name}"? Если он выбран в тарифе, API не даст удалить его.`} onConfirm={() => void handleDeleteWorkScenario(scenario)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}
