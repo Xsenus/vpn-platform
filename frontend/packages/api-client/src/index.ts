@@ -339,6 +339,13 @@ export type SupportMessageDto = {
   createdAt: string
 }
 
+export type CreateMySupportConversationPayload = {
+  subject: string
+  text: string
+  orderId?: string | null
+  subscriptionId?: string | null
+}
+
 export type AccessCredentialHistoryDto = {
   id: string
   accessCredentialId: string
@@ -1078,6 +1085,46 @@ export class ApiClient {
 
   getMyPayment(token: string, paymentId: string): Promise<PaymentAttemptDto> {
     return this.request<PaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: 'Failed to load payment' })
+  }
+
+  getMySupportConversations(token: string): Promise<SupportConversationDto[]> {
+    return this.request<SupportConversationDto[]>('/api/me/support/conversations', { token, errorMessage: 'Failed to load support conversations' })
+  }
+
+  getMySupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
+    return this.request<SupportMessageDto[]>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: 'Failed to load support messages' })
+  }
+
+  createMySupportConversation(token: string, payload: CreateMySupportConversationPayload): Promise<SupportConversationDto> {
+    return this.request<SupportConversationDto>('/api/me/support/conversations', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        subject: payload.subject,
+        text: payload.text,
+        orderId: payload.orderId ?? null,
+        subscriptionId: payload.subscriptionId ?? null
+      }),
+      errorMessage: 'Failed to create support conversation'
+    })
+  }
+
+  replyMySupportConversation(token: string, conversationId: string, text: string): Promise<SupportMessageDto> {
+    return this.request<SupportMessageDto>(`/api/me/support/conversations/${conversationId}/reply`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ text }),
+      errorMessage: 'Failed to send support message'
+    })
+  }
+
+  updateMySupportConversationStatus(token: string, conversationId: string, status: 'open' | 'closed'): Promise<{ conversationId: string; status: string }> {
+    return this.request<{ conversationId: string; status: string }>(`/api/me/support/conversations/${conversationId}/status`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify({ status }),
+      errorMessage: 'Failed to update support status'
+    })
   }
 
 

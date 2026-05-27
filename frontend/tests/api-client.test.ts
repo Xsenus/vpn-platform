@@ -245,6 +245,47 @@ test('ApiClient.initMyPayment calls tokenized endpoint', async () => {
   assert.equal(result.redirectUrl, 'https://example.test/pay-1')
 })
 
+test('ApiClient cabinet support endpoints are tokenized and link order context', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  const conversation = { id: 'support-1', userId: 'user-1', channel: 'web', status: 'open', subject: 'Оплата', internalNote: 'Связано: заказ order-1.', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  const message = { id: 'message-1', supportConversationId: 'support-1', userId: 'user-1', direction: 'inbound', text: 'Нужна помощь', attachmentsJson: '[]', isInternalNote: false, createdAt: new Date().toISOString() }
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    const path = String(url)
+    if (path.endsWith('/api/me/support/conversations') && !init?.method) {
+      return new Response(JSON.stringify([conversation]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (path.endsWith('/api/me/support/conversations') && init?.method === 'POST') {
+      return new Response(JSON.stringify(conversation), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (path.endsWith('/api/me/support/conversations/support-1/messages') && !init?.method) {
+      return new Response(JSON.stringify([message]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (path.endsWith('/api/me/support/conversations/support-1/reply') && init?.method === 'POST') {
+      return new Response(JSON.stringify(message), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (path.endsWith('/api/me/support/conversations/support-1/status') && init?.method === 'PATCH') {
+      return new Response(JSON.stringify({ conversationId: 'support-1', status: 'closed' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    throw new Error(`Unexpected URL ${path}`)
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await client.getMySupportConversations('user-token')
+  await client.createMySupportConversation('user-token', { subject: 'Оплата', text: 'Нужна помощь', orderId: 'order-1', subscriptionId: null })
+  await client.getMySupportMessages('user-token', 'support-1')
+  await client.replyMySupportConversation('user-token', 'support-1', 'Спасибо')
+  await client.updateMySupportConversationStatus('user-token', 'support-1', 'closed')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/me/support/conversations')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.match(String(calls[1]?.init?.body), /order-1/)
+  assert.equal(calls[3]?.init?.method, 'POST')
+  assert.equal(calls[4]?.init?.method, 'PATCH')
+  assert.equal(new Headers(calls[4]?.init?.headers).get('Authorization'), 'Bearer user-token')
+})
+
 test('ApiClient admin server create and update send full safe payload with auth token', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {

@@ -10,6 +10,8 @@ import {
   PublicPaymentProviderDto,
   RewardLedgerDto,
   SubscriptionDto,
+  SupportConversationDto,
+  SupportMessageDto,
   TelegramLinkTokenDto,
   TelegramStatusDto,
   UserProfileDto,
@@ -23,6 +25,7 @@ import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, Page
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary } from './cabinet-dashboard'
 import { buildOrderExportText, canRetryOrderPayment, formatPaymentMoney, getLatestPaymentForOrder, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
+import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const configuredPublicWebUrl = import.meta.env.VITE_PUBLIC_WEB_URL?.replace(/\/$/, '')
@@ -68,6 +71,15 @@ export function App() {
   const [payments, setPayments] = useState<PaymentAttemptDto[]>([])
   const [accesses, setAccesses] = useState<AccessCredentialDto[]>([])
   const [referrals, setReferrals] = useState<RewardLedgerDto[]>([])
+  const [supportConversations, setSupportConversations] = useState<SupportConversationDto[]>([])
+  const [supportMessages, setSupportMessages] = useState<SupportMessageDto[]>([])
+  const [selectedSupportConversationId, setSelectedSupportConversationId] = useState('')
+  const [supportSubject, setSupportSubject] = useState('')
+  const [supportText, setSupportText] = useState('')
+  const [supportReplyText, setSupportReplyText] = useState('')
+  const [supportOrderId, setSupportOrderId] = useState('')
+  const [supportSubscriptionId, setSupportSubscriptionId] = useState('')
+  const [supportLoading, setSupportLoading] = useState(false)
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatusDto | null>(null)
   const [telegramLink, setTelegramLink] = useState<TelegramLinkTokenDto | null>(null)
   const [paymentProviders, setPaymentProviders] = useState<PublicPaymentProviderDto[]>([])
@@ -121,6 +133,14 @@ export function App() {
     () => groupPaymentsByOrderId(payments),
     [payments]
   )
+  const selectedSupportConversation = useMemo(
+    () => selectCurrentSupportConversation(supportConversations, selectedSupportConversationId),
+    [supportConversations, selectedSupportConversationId]
+  )
+  const openSupportConversations = useMemo(
+    () => countOpenSupportConversations(supportConversations),
+    [supportConversations]
+  )
   const currentConnectionLink = cabinetSummary.currentAccess?.accessUri ?? cabinetSummary.currentSubscription?.accessUri ?? ''
   const currentAccessId = cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
 
@@ -133,6 +153,9 @@ export function App() {
     setPayments([])
     setAccesses([])
     setReferrals([])
+    setSupportConversations([])
+    setSupportMessages([])
+    setSelectedSupportConversationId('')
     setTelegramStatus(null)
     setTelegramLink(null)
     setRenewalState(null)
@@ -156,13 +179,14 @@ export function App() {
     setError('')
 
     try {
-      const [nextProfile, nextSubscriptions, nextOrders, nextPayments, nextAccesses, nextReferrals, nextTelegramStatus] = await Promise.all([
+      const [nextProfile, nextSubscriptions, nextOrders, nextPayments, nextAccesses, nextReferrals, nextSupportConversations, nextTelegramStatus] = await Promise.all([
         api.getMe(currentToken),
         api.getMySubscriptions(currentToken),
         api.getMyOrders(currentToken),
         api.getMyPayments(currentToken),
         api.getMyAccesses(currentToken),
         api.getMyReferrals(currentToken),
+        api.getMySupportConversations(currentToken),
         api.getTelegramStatus(currentToken)
       ])
 
@@ -172,6 +196,10 @@ export function App() {
       setPayments(nextPayments)
       setAccesses(nextAccesses)
       setReferrals(nextReferrals)
+      setSupportConversations(nextSupportConversations)
+      if (!selectedSupportConversationId && nextSupportConversations.length > 0) {
+        setSelectedSupportConversationId(nextSupportConversations[0].id)
+      }
       setTelegramStatus(nextTelegramStatus)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить кабинет')
@@ -180,9 +208,34 @@ export function App() {
     }
   }
 
+  const loadSupportMessages = async (conversationId: string) => {
+    if (!token || !conversationId) {
+      setSupportMessages([])
+      return
+    }
+
+    setSupportLoading(true)
+    try {
+      setSupportMessages(await api.getMySupportMessages(token, conversationId))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось загрузить переписку поддержки')
+    } finally {
+      setSupportLoading(false)
+    }
+  }
+
   useEffect(() => {
     void loadAll(token)
   }, [token])
+
+  useEffect(() => {
+    if (!token || !selectedSupportConversation?.id) {
+      setSupportMessages([])
+      return
+    }
+
+    void loadSupportMessages(selectedSupportConversation.id)
+  }, [token, selectedSupportConversation?.id])
 
   useEffect(() => {
     if (!token) {
@@ -386,6 +439,79 @@ export function App() {
     }
   }
 
+  const handleCreateSupportConversation = async () => {
+    if (!token) return
+    const validationErrors = validateSupportRequest(supportSubject, supportText)
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' '))
+      return
+    }
+
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const conversation = await api.createMySupportConversation(token, {
+        subject: supportSubject.trim(),
+        text: supportText.trim(),
+        orderId: supportOrderId || null,
+        subscriptionId: supportSubscriptionId || null
+      })
+      setSupportConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)])
+      setSelectedSupportConversationId(conversation.id)
+      setSupportSubject('')
+      setSupportText('')
+      setSupportOrderId('')
+      setSupportSubscriptionId('')
+      await loadSupportMessages(conversation.id)
+      setNotice('Обращение в поддержку создано.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось создать обращение в поддержку')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleReplySupportConversation = async () => {
+    if (!token || !selectedSupportConversation) return
+    const validationErrors = validateSupportReply(supportReplyText)
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' '))
+      return
+    }
+
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const message = await api.replyMySupportConversation(token, selectedSupportConversation.id, supportReplyText.trim())
+      setSupportMessages((current) => [...current, message])
+      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: 'open', updatedAt: new Date().toISOString(), closedAt: null } : item))
+      setSupportReplyText('')
+      setNotice('Сообщение отправлено в поддержку.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось отправить сообщение в поддержку')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleSupportConversationStatus = async (status: 'open' | 'closed') => {
+    if (!token || !selectedSupportConversation) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await api.updateMySupportConversationStatus(token, selectedSupportConversation.id, status)
+      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: result.status, closedAt: result.status === 'closed' ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : item))
+      setNotice(result.status === 'closed' ? 'Обращение закрыто.' : 'Обращение переоткрыто.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось изменить статус обращения')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleRetryOrderPayment = async (order: OrderDto) => {
     if (!token) return
     if (!provider) {
@@ -464,6 +590,7 @@ export function App() {
         <StatTile label="Активных подписок" value={activeSubscriptions} />
         <StatTile label="Всего заказов" value={orders.length} />
         <StatTile label="Реферальных начислений" value={referrals.length} />
+        <StatTile label="Открытых обращений" value={openSupportConversations} />
       </div>
 
       {token && (
@@ -807,6 +934,109 @@ export function App() {
           </div>
         </Card>
       </div>
+
+      {profile && (
+        <div className="section card-list-two">
+          <Card>
+            <div className="section-header">
+              <div>
+                <h3>Поддержка</h3>
+                <p className="muted">Создайте обращение из кабинета. Telegram не нужен: ответ появится в этой переписке.</p>
+              </div>
+              <StatusBadge value={`${openSupportConversations} open`} />
+            </div>
+            <form className="form-grid" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleCreateSupportConversation() }}>
+              <label>
+                <span>Тема</span>
+                <input value={supportSubject} onChange={(e) => setSupportSubject(e.target.value)} placeholder="Например, не прошла оплата" maxLength={160} required />
+              </label>
+              <label>
+                <span>Связанный заказ</span>
+                <select value={supportOrderId} onChange={(e) => setSupportOrderId(e.target.value)}>
+                  <option value="">Без привязки к заказу</option>
+                  {orders.map((order) => (
+                    <option key={order.id} value={order.id}>{order.tariffName || order.tariffId} · {formatPaymentMoney(order.amount, order.currency)} · {order.status}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Связанная подписка</span>
+                <select value={supportSubscriptionId} onChange={(e) => setSupportSubscriptionId(e.target.value)}>
+                  <option value="">Без привязки к подписке</option>
+                  {subscriptions.map((subscription) => (
+                    <option key={subscription.id} value={subscription.id}>{subscription.tariffName || subscription.tariffId} · {subscription.status}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="full-width">
+                <span>Сообщение</span>
+                <textarea value={supportText} onChange={(e) => setSupportText(e.target.value)} rows={4} placeholder="Опишите проблему: что делали, какой тариф или платеж проверяли, что увидели на экране." maxLength={4000} required />
+              </label>
+              <div className="form-actions">
+                <PrimaryButton type="submit" disabled={busy || validateSupportRequest(supportSubject, supportText).length > 0} aria-busy={busy}>Создать обращение</PrimaryButton>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <div className="section-header">
+              <div>
+                <h3>Мои обращения</h3>
+                {selectedSupportConversation && <p className="muted no-margin-bottom">{getSupportStatusMessage(selectedSupportConversation.status)}</p>}
+              </div>
+              {selectedSupportConversation && <StatusBadge value={selectedSupportConversation.status} />}
+            </div>
+            <div className="support-layout">
+              <div className="list-stack">
+                {supportConversations.length === 0 && <EmptyState title="Обращений нет" description="Когда вы напишете в поддержку, переписка появится здесь." />}
+                {supportConversations.map((conversation) => (
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    className={`support-ticket${selectedSupportConversation?.id === conversation.id ? ' selected-item' : ''}`}
+                    onClick={() => setSelectedSupportConversationId(conversation.id)}
+                  >
+                    <span>
+                      <strong>{conversation.subject || 'Обращение в поддержку'}</strong>
+                      <small>{conversation.channel} · {new Date(conversation.updatedAt).toLocaleString()}</small>
+                    </span>
+                    <StatusBadge value={conversation.status} />
+                  </button>
+                ))}
+              </div>
+
+              <div className="support-thread">
+                {supportLoading && <LoadingBlock label="Загружаем переписку..." />}
+                {!supportLoading && selectedSupportConversation && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Переписка появится после первого сообщения." />}
+                {!selectedSupportConversation && supportConversations.length > 0 && <EmptyState title="Выберите обращение" description="Откройте обращение из списка, чтобы увидеть переписку." />}
+                {supportMessages.map((message) => (
+                  <div key={message.id} className={`support-message support-message-${message.direction}`}>
+                    <div className="card-head">
+                      <strong>{message.direction === 'outbound' ? 'Поддержка' : 'Вы'}</strong>
+                      <span className="muted">{new Date(message.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p>{message.text}</p>
+                  </div>
+                ))}
+                {selectedSupportConversation && (
+                  <form className="mt-12" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleReplySupportConversation() }}>
+                    <label>
+                      <span>Ответ</span>
+                      <textarea value={supportReplyText} onChange={(e) => setSupportReplyText(e.target.value)} rows={3} placeholder="Напишите уточнение или ответ поддержке" maxLength={4000} />
+                    </label>
+                    <div className="toolbar compact mt-12">
+                      <PrimaryButton type="submit" disabled={busy || validateSupportReply(supportReplyText).length > 0} aria-busy={busy}>Отправить</PrimaryButton>
+                      {selectedSupportConversation.status === 'closed'
+                        ? <PrimaryButton type="button" className="button-secondary" disabled={busy} aria-busy={busy} onClick={() => void handleSupportConversationStatus('open')}>Переоткрыть</PrimaryButton>
+                        : <PrimaryButton type="button" className="button-ghost" disabled={busy} aria-busy={busy} onClick={() => void handleSupportConversationStatus('closed')}>Закрыть</PrimaryButton>}
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="section card-list-two">
         <Card>

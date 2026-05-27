@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -6,12 +7,16 @@ using Microsoft.Extensions.Configuration;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
+using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Controllers.Me;
 
 public sealed record CreateMeOrderHttpRequest(Guid TariffId, string Type, string Channel, string PaymentProvider, string? PromoCode, bool IsFirstPurchase);
 public sealed record InitMePaymentHttpRequest(string? ReturnUrl);
+public sealed record CreateMeSupportConversationHttpRequest(string Subject, string Text, Guid? OrderId, Guid? SubscriptionId);
+public sealed record MeSupportReplyHttpRequest(string Text);
+public sealed record MeSupportStatusHttpRequest(string Status);
 
 [ApiController]
 [Authorize]
@@ -147,6 +152,154 @@ public class MeController : ControllerBase
         return payment is null ? NotFound() : Ok(payment);
     }
 
+    [HttpGet("support/conversations")]
+    public async Task<IActionResult> GetSupportConversations(CancellationToken cancellationToken)
+    {
+        var userId = ResolveUserId();
+        var conversations = await _db.SupportConversations
+            .AsNoTracking()
+            .Where(x => x.UserId == userId)
+            .Select(x => new SupportConversationDto(x.Id, x.UserId, x.TelegramUserId, x.Channel, x.Status, x.Subject, x.AssignedToUserId, string.Empty, x.ClosedAt, x.CreatedAt, x.UpdatedAt))
+            .ToListAsync(cancellationToken);
+
+        return Ok(conversations.OrderByDescending(x => x.UpdatedAt).Take(100).ToList());
+    }
+
+    [HttpGet("support/conversations/{id:guid}/messages")]
+    public async Task<IActionResult> GetSupportMessages(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = ResolveUserId();
+        var ownsConversation = await _db.SupportConversations
+            .AnyAsync(x => x.Id == id && x.UserId == userId, cancellationToken);
+        if (!ownsConversation)
+        {
+            return NotFound(new { error = "Support conversation not found." });
+        }
+
+        var messages = await _db.SupportMessages
+            .AsNoTracking()
+            .Where(x => x.SupportConversationId == id && !x.IsInternalNote)
+            .Select(x => new SupportMessageDto(x.Id, x.SupportConversationId, x.UserId, x.TelegramUserId, x.Direction, x.Text, x.AttachmentsJson, x.IsInternalNote, x.CreatedAt))
+            .ToListAsync(cancellationToken);
+
+        return Ok(messages.OrderBy(x => x.CreatedAt).ToList());
+    }
+
+    [HttpPost("support/conversations")]
+    public async Task<IActionResult> CreateSupportConversation([FromBody] CreateMeSupportConversationHttpRequest request, CancellationToken cancellationToken)
+    {
+        var userId = ResolveUserId();
+        var subject = NormalizeSupportText(request.Subject, 160);
+        var text = NormalizeSupportText(request.Text, 4000);
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            return BadRequest(new { error = "Subject is required." });
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return BadRequest(new { error = "Message text is required." });
+        }
+
+        if (request.OrderId.HasValue && !await _db.Orders.AnyAsync(x => x.Id == request.OrderId.Value && x.UserId == userId, cancellationToken))
+        {
+            return BadRequest(new { error = "Linked order was not found." });
+        }
+
+        if (request.SubscriptionId.HasValue && !await _db.Subscriptions.AnyAsync(x => x.Id == request.SubscriptionId.Value && x.UserId == userId, cancellationToken))
+        {
+            return BadRequest(new { error = "Linked subscription was not found." });
+        }
+
+        var contextJson = JsonSerializer.Serialize(new
+        {
+            source = "cabinet",
+            request.OrderId,
+            request.SubscriptionId
+        });
+        var conversation = new SupportConversation
+        {
+            UserId = userId,
+            Channel = "web",
+            Status = "open",
+            Subject = subject,
+            InternalNote = BuildSupportContextNote(request.OrderId, request.SubscriptionId)
+        };
+        var message = new SupportMessage
+        {
+            SupportConversationId = conversation.Id,
+            UserId = userId,
+            Direction = "inbound",
+            Text = text,
+            RawPayload = contextJson,
+            AttachmentsJson = "[]"
+        };
+
+        _db.SupportConversations.Add(conversation);
+        _db.SupportMessages.Add(message);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new SupportConversationDto(conversation.Id, conversation.UserId, conversation.TelegramUserId, conversation.Channel, conversation.Status, conversation.Subject, conversation.AssignedToUserId, string.Empty, conversation.ClosedAt, conversation.CreatedAt, conversation.UpdatedAt));
+    }
+
+    [HttpPost("support/conversations/{id:guid}/reply")]
+    public async Task<IActionResult> ReplySupportConversation(Guid id, [FromBody] MeSupportReplyHttpRequest request, CancellationToken cancellationToken)
+    {
+        var userId = ResolveUserId();
+        var text = NormalizeSupportText(request.Text, 4000);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return BadRequest(new { error = "Message text is required." });
+        }
+
+        var conversation = await _db.SupportConversations.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, cancellationToken);
+        if (conversation is null)
+        {
+            return NotFound(new { error = "Support conversation not found." });
+        }
+
+        var message = new SupportMessage
+        {
+            SupportConversationId = conversation.Id,
+            UserId = userId,
+            Direction = "inbound",
+            Text = text,
+            AttachmentsJson = "[]"
+        };
+
+        _db.SupportMessages.Add(message);
+        conversation.Status = "open";
+        conversation.ClosedAt = null;
+        conversation.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new SupportMessageDto(message.Id, message.SupportConversationId, message.UserId, message.TelegramUserId, message.Direction, message.Text, message.AttachmentsJson, message.IsInternalNote, message.CreatedAt));
+    }
+
+    [HttpPatch("support/conversations/{id:guid}/status")]
+    public async Task<IActionResult> UpdateSupportConversationStatus(Guid id, [FromBody] MeSupportStatusHttpRequest request, CancellationToken cancellationToken)
+    {
+        var userId = ResolveUserId();
+        var conversation = await _db.SupportConversations.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, cancellationToken);
+        if (conversation is null)
+        {
+            return NotFound(new { error = "Support conversation not found." });
+        }
+
+        var status = request.Status.Trim().ToLowerInvariant();
+        if (status is not ("open" or "closed"))
+        {
+            return BadRequest(new { error = "Status must be open or closed." });
+        }
+
+        conversation.Status = status;
+        conversation.ClosedAt = status == "closed" ? DateTimeOffset.UtcNow : null;
+        conversation.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { conversationId = conversation.Id, conversation.Status });
+    }
+
 
     [HttpPost("telegram/link-token")]
     public async Task<IActionResult> CreateTelegramLinkToken(CancellationToken cancellationToken)
@@ -217,5 +370,27 @@ public class MeController : ControllerBase
     {
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return Guid.TryParse(sub, out var value) ? value : Guid.Empty;
+    }
+
+    private static string NormalizeSupportText(string? value, int maxLength)
+    {
+        var text = (value ?? string.Empty).Trim();
+        return text.Length <= maxLength ? text : text[..maxLength];
+    }
+
+    private static string BuildSupportContextNote(Guid? orderId, Guid? subscriptionId)
+    {
+        var parts = new List<string>();
+        if (orderId.HasValue)
+        {
+            parts.Add($"заказ {orderId.Value}");
+        }
+
+        if (subscriptionId.HasValue)
+        {
+            parts.Add($"подписка {subscriptionId.Value}");
+        }
+
+        return parts.Count == 0 ? string.Empty : $"Связано: {string.Join(", ", parts)}.";
     }
 }
