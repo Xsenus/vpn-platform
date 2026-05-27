@@ -25,6 +25,8 @@ public class SiteContentControllerTests
             Block("home.seo.title", "SEO заголовок", sortOrder: 40),
             Block("home.features.item1", "Преимущество", sortOrder: 50),
             Block("home.footer.text", "Футер главной", sortOrder: 60),
+            Block("home.errors.checkoutCreate", "Ошибка покупки", sortOrder: 70),
+            Block("home.checkout.afterPaymentText", "После оплаты", sortOrder: 80),
             Block("hidden", "Скрыто", isActive: false),
             Block("footer.text", "Футер", group: "footer"));
         await db.SaveChangesAsync();
@@ -32,7 +34,7 @@ public class SiteContentControllerTests
 
         var response = AssertOk<List<SiteContentBlockDto>>(await controller.GetHomeContent(CancellationToken.None));
 
-        Assert.Equal(new[] { "home.hero.title", "home.hero.subtitle", "home.seo.title", "home.features.item1", "home.footer.text" }, response.Select(x => x.Key).ToArray());
+        Assert.Equal(new[] { "home.hero.title", "home.hero.subtitle", "home.seo.title", "home.features.item1", "home.footer.text", "home.errors.checkoutCreate", "home.checkout.afterPaymentText" }, response.Select(x => x.Key).ToArray());
     }
 
     [Fact]

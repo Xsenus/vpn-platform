@@ -194,7 +194,22 @@ public class DbInitializer : IHostedService
                 SiteContent("home.finalCta.title", "Готовы проверить покупку VPN?", "Финальный CTA", "Заголовок финального призыва", 510),
                 SiteContent("home.finalCta.subtitle", "Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.", "Описание финального CTA", "Текст финального призыва", 520, "textarea"),
                 SiteContent("home.footer.text", "VPN Platform объединяет продажи, оплату, выдачу и поддержку VPN-доступов в одном интерфейсе.", "Footer text", "Основной текст footer главной страницы", 610, "textarea"),
-                SiteContent("home.footer.support", "Поддержка доступна через личный кабинет и Telegram-бота.", "Footer support", "Короткая подпись поддержки в footer", 620)
+                SiteContent("home.footer.support", "Поддержка доступна через личный кабинет и Telegram-бота.", "Footer support", "Короткая подпись поддержки в footer", 620),
+                SiteContent("home.errors.tariffsLoad", "Не удалось загрузить тарифы. Обновите страницу или попробуйте позже.", "Ошибка загрузки тарифов", "Сообщение на публичной странице тарифов", 710, "textarea"),
+                SiteContent("home.errors.paymentProvidersLoad", "Не удалось загрузить способы оплаты. Покупка временно недоступна.", "Ошибка загрузки способов оплаты", "Сообщение при ошибке public providers API", 720, "textarea"),
+                SiteContent("home.errors.noPaymentProviders", "Нет доступных платежных провайдеров. Попробуйте позже или обратитесь в поддержку.", "Нет платежных провайдеров", "Сообщение при попытке купить без доступного провайдера", 730, "textarea"),
+                SiteContent("home.errors.checkoutCreate", "Не удалось создать покупку.", "Ошибка создания покупки", "Fallback-сообщение при ошибке checkout flow", 740, "textarea"),
+                SiteContent("home.checkout.unavailable.loading", "Загружаем способы оплаты...", "Checkout loading", "Подсказка на кнопке покупки во время загрузки провайдеров", 750),
+                SiteContent("home.checkout.unavailable.noProviders", "Оплата временно недоступна: нет включенных способов оплаты.", "Checkout no providers", "Подсказка на кнопке покупки без провайдеров", 760, "textarea"),
+                SiteContent("home.checkout.unavailable.chooseProvider", "Выберите способ оплаты перед покупкой.", "Checkout choose provider", "Подсказка на кнопке покупки без выбранного провайдера", 770, "textarea"),
+                SiteContent("home.checkout.providersEmptyTitle", "Нет доступных способов оплаты", "Заголовок пустого списка оплат", "Empty state title для способов оплаты", 780),
+                SiteContent("home.checkout.providersEmptyDescription", "Покупка временно недоступна: нет включенного и настроенного способа оплаты.", "Описание пустого списка оплат", "Empty state description для способов оплаты", 790, "textarea"),
+                SiteContent("home.checkout.settingsHint", "Если вы еще не вошли, мы сохраним выбранный тариф и попросим авторизоваться перед оплатой.", "Подсказка оформления", "Текст под настройками оформления покупки", 800, "textarea"),
+                SiteContent("home.checkout.pendingAuthNotice", "Покупка создана. Войдите или зарегистрируйтесь, чтобы привязать заказ и перейти к оплате.", "Покупка ожидает входа", "Сообщение после создания checkout session без авторизации", 810, "textarea"),
+                SiteContent("home.checkout.resultTitle", "Последняя покупка", "Заголовок результата покупки", "Заголовок блока с созданным платежом", 820),
+                SiteContent("home.checkout.afterPaymentText", "После оплаты вернитесь в кабинет: статус заказа обновится автоматически, а VPN-доступ появится после подтверждения платежа.", "Текст после оплаты", "Инструкция в блоке созданной покупки", 830, "textarea"),
+                SiteContent("home.checkout.openPaymentCta", "Открыть оплату", "CTA оплаты", "Текст кнопки перехода на оплату", 840),
+                SiteContent("home.checkout.copyPaymentLink", "Скопировать ссылку", "Copy payment link", "Текст кнопки копирования ссылки оплаты", 850)
             );
         }
 

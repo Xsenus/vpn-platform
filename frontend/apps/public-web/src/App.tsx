@@ -133,7 +133,22 @@ const defaultHomeContent: Record<string, string> = {
   'home.finalCta.title': 'Готовы проверить покупку VPN?',
   'home.finalCta.subtitle': 'Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.',
   'home.footer.text': 'VPN Platform объединяет продажи, оплату, выдачу и поддержку VPN-доступов в одном интерфейсе.',
-  'home.footer.support': 'Поддержка доступна через личный кабинет и Telegram-бота.'
+  'home.footer.support': 'Поддержка доступна через личный кабинет и Telegram-бота.',
+  'home.errors.tariffsLoad': 'Не удалось загрузить тарифы. Обновите страницу или попробуйте позже.',
+  'home.errors.paymentProvidersLoad': 'Не удалось загрузить способы оплаты. Покупка временно недоступна.',
+  'home.errors.noPaymentProviders': 'Нет доступных платежных провайдеров. Попробуйте позже или обратитесь в поддержку.',
+  'home.errors.checkoutCreate': 'Не удалось создать покупку.',
+  'home.checkout.unavailable.loading': 'Загружаем способы оплаты...',
+  'home.checkout.unavailable.noProviders': 'Оплата временно недоступна: нет включенных способов оплаты.',
+  'home.checkout.unavailable.chooseProvider': 'Выберите способ оплаты перед покупкой.',
+  'home.checkout.providersEmptyTitle': 'Нет доступных способов оплаты',
+  'home.checkout.providersEmptyDescription': 'Покупка временно недоступна: нет включенного и настроенного способа оплаты.',
+  'home.checkout.settingsHint': 'Если вы еще не вошли, мы сохраним выбранный тариф и попросим авторизоваться перед оплатой.',
+  'home.checkout.pendingAuthNotice': 'Покупка создана. Войдите или зарегистрируйтесь, чтобы привязать заказ и перейти к оплате.',
+  'home.checkout.resultTitle': 'Последняя покупка',
+  'home.checkout.afterPaymentText': 'После оплаты вернитесь в кабинет: статус заказа обновится автоматически, а VPN-доступ появится после подтверждения платежа.',
+  'home.checkout.openPaymentCta': 'Открыть оплату',
+  'home.checkout.copyPaymentLink': 'Скопировать ссылку'
 }
 
 function mapContent(blocks: SiteContentBlockDto[]) {
@@ -401,28 +416,31 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
   const [provider, setProvider] = useState<PaymentProvider | ''>('')
   const [pendingTariffId, setPendingTariffId] = useState<string>('')
   const [checkoutState, setCheckoutState] = useState<CheckoutState>(null)
+  const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
   const navigate = useNavigate()
+  const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
   const checkoutUnavailableReason = paymentProvidersLoading
-    ? 'Загружаем способы оплаты...'
+    ? content('home.checkout.unavailable.loading')
     : paymentProviders.length === 0
-      ? 'Оплата временно недоступна: нет включенных способов оплаты.'
+      ? content('home.checkout.unavailable.noProviders')
       : !provider
-        ? 'Выберите способ оплаты перед покупкой.'
+        ? content('home.checkout.unavailable.chooseProvider')
         : ''
 
   useEffect(() => {
+    api.getHomeContent().then((items) => setPageContent({ ...defaultHomeContent, ...mapContent(items) })).catch(() => setPageContent(defaultHomeContent))
     setTariffsLoading(true)
-    api.getTariffs().then(setTariffs).catch((e: Error) => setError(e.message)).finally(() => setTariffsLoading(false))
+    api.getTariffs().then(setTariffs).catch(() => setError(content('home.errors.tariffsLoad'))).finally(() => setTariffsLoading(false))
     setPaymentProvidersLoading(true)
     api.getPublicPaymentProviders()
       .then((items) => {
         setPaymentProviders(items)
         setProvider((current) => current && items.some((item) => item.provider === current) ? current : (items[0]?.provider ?? ''))
       })
-      .catch((e: Error) => {
+      .catch(() => {
         setPaymentProviders([])
         setProvider('')
-        setError(e.message)
+        setError(content('home.errors.paymentProvidersLoad'))
       })
       .finally(() => setPaymentProvidersLoading(false))
   }, [])
@@ -433,7 +451,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
     setPendingTariffId(tariff.id)
 
     if (!provider) {
-      setError('Нет доступных платежных провайдеров. Попробуйте позже или обратитесь в поддержку.')
+      setError(content('home.errors.noPaymentProviders'))
       setPendingTariffId('')
       return
     }
@@ -455,7 +473,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       onPendingCheckout(pending)
 
       if (!token) {
-        setNotice('Покупка создана. Войдите или зарегистрируйтесь, чтобы привязать заказ и перейти к оплате.')
+        setNotice(content('home.checkout.pendingAuthNotice'))
         navigate('/account')
         return
       }
@@ -467,7 +485,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       setCheckoutState(nextState)
       onCheckoutComplete(nextState)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать покупку')
+      setError(e instanceof Error ? e.message : content('home.errors.checkoutCreate'))
     } finally {
       setPendingTariffId('')
     }
@@ -500,9 +518,9 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
               <input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="Например, WELCOME10" />
             </label>
           </div>
-          {paymentProvidersLoading && <LoadingBlock label="Загружаем доступные способы оплаты..." />}
-          {!paymentProvidersLoading && paymentProviders.length === 0 && <EmptyState title="Нет доступных способов оплаты" description="Покупка временно недоступна: нет включенного и настроенного способа оплаты." />}
-          <p className="muted">Если вы еще не вошли, мы сохраним выбранный тариф и попросим авторизоваться перед оплатой.</p>
+          {paymentProvidersLoading && <LoadingBlock label={content('home.checkout.unavailable.loading')} />}
+          {!paymentProvidersLoading && paymentProviders.length === 0 && <EmptyState title={content('home.checkout.providersEmptyTitle')} description={content('home.checkout.providersEmptyDescription')} />}
+          <p className="muted">{content('home.checkout.settingsHint')}</p>
         </Card>
       </div>
 
@@ -560,17 +578,18 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       {checkoutState && (
         <div className="section">
           <Card>
-            <h3>Последняя покупка</h3>
+            <h3>{content('home.checkout.resultTitle')}</h3>
             <p>Тариф: <strong>{checkoutState.tariffName}</strong></p>
             <p>Способ оплаты: {checkoutState.provider}</p>
             <p>Заказ: <StatusBadge value={checkoutState.order.status} /></p>
             <p>ID заказа: {checkoutState.order.id}</p>
             <p>Платеж: {checkoutState.payment.paymentId}</p>
+            <p className="muted">{content('home.checkout.afterPaymentText')}</p>
             <div className="copy-row">
               <a href={checkoutState.payment.redirectUrl} target="_blank" rel="noreferrer" className="button" aria-label="Открыть оплату в новой вкладке">
-                Открыть оплату
+                {content('home.checkout.openPaymentCta')}
               </a>
-              <CopyButton value={checkoutState.payment.redirectUrl} label="Скопировать ссылку" />
+              <CopyButton value={checkoutState.payment.redirectUrl} label={content('home.checkout.copyPaymentLink')} />
             </div>
             <div className="mt-16">
               <CodeBlock>{checkoutState.payment.redirectUrl}</CodeBlock>
