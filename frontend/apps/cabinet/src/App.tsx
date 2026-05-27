@@ -21,6 +21,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
+import { buildCabinetSummary } from './cabinet-dashboard'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const configuredPublicWebUrl = import.meta.env.VITE_PUBLIC_WEB_URL?.replace(/\/$/, '')
@@ -111,6 +112,12 @@ export function App() {
     () => subscriptions.filter((item) => item.status === 'Active' || item.status === 'GracePeriod').length,
     [subscriptions]
   )
+  const cabinetSummary = useMemo(
+    () => buildCabinetSummary(subscriptions, accesses),
+    [subscriptions, accesses]
+  )
+  const currentConnectionLink = cabinetSummary.currentAccess?.accessUri ?? cabinetSummary.currentSubscription?.accessUri ?? ''
+  const currentAccessId = cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
 
   const clearSession = () => {
     setToken('')
@@ -454,6 +461,58 @@ export function App() {
         <StatTile label="Реферальных начислений" value={referrals.length} />
       </div>
 
+      {token && (
+        <div className="section">
+          <Card className="cabinet-current-card">
+            <div className="cabinet-current-main">
+              <p className="eyebrow">Текущий VPN-доступ</p>
+              {cabinetSummary.currentSubscription ? (
+                <>
+                  <div className="card-head">
+                    <div>
+                      <h3>{cabinetSummary.currentSubscription.tariffName || 'Активная подписка'}</h3>
+                      <p className="muted">
+                        Действует до {new Date(cabinetSummary.currentSubscription.endAt).toLocaleString()}
+                        {cabinetSummary.daysLeft !== null ? ` · осталось ${cabinetSummary.daysLeft} дн.` : ''}
+                      </p>
+                      <p className="muted">Сервер: {cabinetSummary.currentSubscription.nodeName ?? cabinetSummary.currentAccess?.serverName ?? 'ожидает назначения'}</p>
+                    </div>
+                    <StatusBadge value={cabinetSummary.currentSubscription.status} />
+                  </div>
+                  {currentConnectionLink ? (
+                    <>
+                      <CodeBlock>{currentConnectionLink}</CodeBlock>
+                      <div className="toolbar mt-12">
+                        <CopyButton value={currentConnectionLink} label="Скопировать ссылку" />
+                        {currentAccessId && <PrimaryButton disabled={busy} aria-busy={busy} onClick={() => void handleLoadQr(currentAccessId)}>Показать QR-код</PrimaryButton>}
+                        <PrimaryButton disabled={busy || !provider} aria-busy={busy} className="button-secondary" onClick={() => void handleRenew(cabinetSummary.currentSubscription!)}>Продлить</PrimaryButton>
+                      </div>
+                      {currentAccessId && qrSvgs[currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[currentAccessId] }} />}
+                    </>
+                  ) : (
+                    <EmptyState title="Ключ ещё готовится" description="После подтверждения оплаты ссылка подключения и QR-код появятся здесь автоматически." />
+                  )}
+                </>
+              ) : (
+                <EmptyState
+                  title="Подписки пока нет"
+                  description="Выберите тариф, оплатите заказ и вернитесь в кабинет: здесь появятся статус подписки, ссылка и QR-код."
+                  action={<a className="button" href={`${publicWebUrl}/tariffs`}>Выбрать тариф</a>}
+                />
+              )}
+            </div>
+            <div className="cabinet-current-guide">
+              <strong>Как подключиться</strong>
+              <ol>
+                <li>Скопируйте ссылку или откройте QR-код.</li>
+                <li>Импортируйте ключ в VLESS/Xray-совместимый клиент.</li>
+                <li>Не пересылайте ключ другим людям.</li>
+              </ol>
+            </div>
+          </Card>
+        </div>
+      )}
+
       <div className="section">
         <Card>
           {!token ? (
@@ -597,7 +656,13 @@ export function App() {
 
       <div className="section">
         <h2>Мои подписки</h2>
-        {subscriptions.length === 0 && <EmptyState title="Подписок пока нет" description="Купите VPN в Telegram или на странице покупки — активная подписка появится здесь." />}
+        {subscriptions.length === 0 && (
+          <EmptyState
+            title="Подписок пока нет"
+            description="Купите VPN на странице тарифов — активная подписка появится здесь."
+            action={<a className="button" href={`${publicWebUrl}/tariffs`}>Перейти к тарифам</a>}
+          />
+        )}
         <div className="card-list">
           {subscriptions.map((subscription) => (
             <div className="card" key={subscription.id}>

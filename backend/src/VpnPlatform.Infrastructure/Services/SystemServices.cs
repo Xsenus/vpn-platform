@@ -74,6 +74,11 @@ public class DbInitializer : IHostedService
             if (DatabaseProviderConfigurator.IsSqlite(databaseOptions.Provider) && databaseOptions.UseEnsureCreatedForLocalSqlite)
             {
                 await db.Database.EnsureCreatedAsync(cancellationToken);
+                var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, cancellationToken);
+                if (repairedColumns > 0)
+                {
+                    _logger.LogInformation("Local SQLite schema repaired. ColumnsAdded={ColumnsAdded}", repairedColumns);
+                }
             }
             else
             {
