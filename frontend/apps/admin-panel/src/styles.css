@@ -3,12 +3,72 @@
 .admin-login-shell {
   min-height: calc(100vh - 190px);
   display: grid;
-  place-items: center;
-  padding: 28px 0;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 520px);
+  gap: clamp(20px, 5vw, 54px);
+  align-items: center;
+  padding: clamp(28px, 6vw, 72px) 0;
 }
 
 .admin-login-shell > .card {
-  width: min(100%, 520px);
+  width: 100%;
+  padding: clamp(20px, 4vw, 34px);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
+}
+
+.admin-login-intro {
+  min-height: 520px;
+  display: grid;
+  align-content: end;
+  padding: clamp(28px, 5vw, 54px);
+  border-radius: 8px;
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(7, 12, 20, 0.06), rgba(7, 12, 20, 0.82)),
+    url("https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1500&q=84") center/cover;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+}
+
+.admin-login-intro h2 {
+  max-width: 620px;
+  color: #fff;
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1.04;
+}
+
+.admin-login-intro p {
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.admin-login-intro .eyebrow {
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-login-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.admin-login-metrics span {
+  display: grid;
+  gap: 4px;
+  min-height: 78px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-login-metrics strong {
+  color: #fff;
+  font-size: 24px;
 }
 
 .login-panel-header,
@@ -31,6 +91,29 @@
   justify-content: flex-end;
 }
 
+.admin-shell {
+  grid-template-columns: 268px minmax(0, 1fr);
+}
+
+.admin-sidebar {
+  border-color: rgba(219, 227, 239, 0.86);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+}
+
+.admin-sidebar strong {
+  padding: 8px 10px 4px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ef4444;
+}
+
+.admin-sidebar a {
+  min-height: 42px;
+  border: 1px solid transparent;
+}
+
 .admin-main > [hidden] {
   display: none !important;
 }
@@ -40,6 +123,19 @@
 }
 
 @media (max-width: 640px) {
+  .admin-login-shell {
+    grid-template-columns: 1fr;
+    padding-top: 18px;
+  }
+
+  .admin-login-intro {
+    min-height: 360px;
+  }
+
+  .admin-login-metrics {
+    grid-template-columns: 1fr;
+  }
+
   .login-panel-header,
   .admin-session-actions {
     align-items: stretch;

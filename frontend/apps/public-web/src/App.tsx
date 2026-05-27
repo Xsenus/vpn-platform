@@ -66,6 +66,205 @@ function readPendingCheckout(): PendingCheckout | null {
   }
 }
 
+const landingFeatures = [
+  'Автоматическая выдача VPN-доступа после подтверждения оплаты.',
+  'Тарифы, платежи, Telegram-боты и серверы управляются из админки.',
+  'Поддержка нескольких платежных провайдеров и безопасного sandbox-режима.',
+  'Личный кабинет хранит заказы, ссылки подключения и статус подписки.'
+]
+
+const landingPlans = [
+  {
+    name: 'Start',
+    price: 'от 299 ₽',
+    description: 'Для одного пользователя и быстрой проверки сервиса.',
+    features: ['1-2 устройства', 'Автовыдача доступа', 'Личный кабинет']
+  },
+  {
+    name: 'Standard',
+    price: 'от 490 ₽',
+    description: 'Оптимальный тариф для регулярного использования.',
+    features: ['До 3 устройств', 'Telegram-уведомления', 'Промокоды и продления']
+  },
+  {
+    name: 'Premium',
+    price: 'от 790 ₽',
+    description: 'Для семьи, команды или нескольких устройств.',
+    features: ['До 5 устройств', 'Приоритетные серверы', 'Быстрая поддержка']
+  }
+]
+
+const landingTestimonials = [
+  {
+    name: 'Алексей',
+    role: 'предприниматель',
+    text: 'Оплатил тариф, получил ссылку подключения и сразу добавил ее на телефон и ноутбук.'
+  },
+  {
+    name: 'Марина',
+    role: 'удаленная работа',
+    text: 'Понравилось, что не нужно писать в поддержку после оплаты: доступ появляется автоматически.'
+  },
+  {
+    name: 'Игорь',
+    role: 'администратор сервиса',
+    text: 'В админке видно пользователей, платежи, тарифы и состояние VPN-серверов в одном месте.'
+  }
+]
+
+function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
+  return (
+    <PageShell title="VPN Platform">
+      <section className="landing-hero" id="about">
+        <div className="landing-hero-copy">
+          <p className="eyebrow">VPN Platform</p>
+          <h2>Быстрый VPN-доступ с оплатой и автоматической выдачей</h2>
+          <p>
+            Выберите тариф, оплатите удобным способом и получите готовую ссылку подключения.
+            Платформа объединяет витрину, личный кабинет, Telegram-бота, платежи, тарифы и управление серверами.
+          </p>
+          <div className="hero-actions">
+            <Link to="/tariffs" className="button">Выбрать тариф</Link>
+            <Link to="/account" className="button button-ghost">{profile ? 'Открыть кабинет' : 'Войти или зарегистрироваться'}</Link>
+          </div>
+        </div>
+        <div className="landing-hero-visual" aria-label="Схема автоматической выдачи VPN">
+          <div className="network-orbit">
+            <span className="network-node node-main">VPN</span>
+            <span className="network-node node-a">EU</span>
+            <span className="network-node node-b">US</span>
+            <span className="network-node node-c">TR</span>
+            <span className="network-node node-d">SG</span>
+          </div>
+          <div className="connection-card">
+            <span className="status-dot" />
+            <div>
+              <strong>Доступ готов</strong>
+              <small>оплата {'>'} подписка {'>'} ссылка</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-stats" aria-label="Показатели платформы">
+        <StatTile label="Пользователи" value="390+" hint="готовая модель витрины и кабинета" />
+        <StatTile label="Локации" value="20+" hint="серверы и панели управляются централизованно" />
+        <StatTile label="Серверы" value="50+" hint="подготовка VPS и 3x-ui через админку" />
+      </section>
+
+      {profile && (
+        <section className="section">
+          <Card className="account-highlight">
+            <div>
+              <p className="eyebrow">Текущий аккаунт</p>
+              <h3>{profile.displayName}</h3>
+              <p>{profile.email ?? 'email не указан'}</p>
+              <p>Реферальный код: <strong>{profile.referralCode}</strong></p>
+            </div>
+            <StatusBadge value={profile.status} />
+          </Card>
+        </section>
+      )}
+
+      <section className="landing-section landing-feature-section" id="features">
+        <div className="landing-illustration" aria-hidden="true">
+          <div className="device-card device-card-primary">
+            <strong>WireGuard / VLESS</strong>
+            <span>подключение в один клик</span>
+          </div>
+          <div className="device-card device-card-secondary">
+            <strong>Telegram Bot</strong>
+            <span>покупка, продление, поддержка</span>
+          </div>
+          <div className="device-card device-card-tertiary">
+            <strong>Admin</strong>
+            <span>тарифы, платежи, серверы</span>
+          </div>
+        </div>
+        <div className="landing-section-copy">
+          <p className="eyebrow">Возможности</p>
+          <h2>Все ключевые сценарии продажи VPN в одной системе</h2>
+          <p>
+            Лендинг ведет пользователя к тарифу, кабинет помогает завершить покупку,
+            а админка дает контроль над тарифами, провайдерами, ботами, серверами и выдачей доступа.
+          </p>
+          <ul className="feature-check-list">
+            {landingFeatures.map((feature) => <li key={feature}>{feature}</li>)}
+          </ul>
+        </div>
+      </section>
+
+      <section className="landing-section landing-pricing-preview" id="pricing">
+        <div className="landing-section-heading">
+          <p className="eyebrow">Тарифы</p>
+          <h2>Понятные планы для разных сценариев</h2>
+          <p>Реальные цены и доступные способы оплаты подтягиваются из API на странице тарифов.</p>
+        </div>
+        <div className="plan-grid">
+          {landingPlans.map((plan, index) => (
+            <Card key={plan.name} className={index === 1 ? 'plan-card plan-card-featured' : 'plan-card'}>
+              <div className="plan-icon">{plan.name.slice(0, 1)}</div>
+              <h3>{plan.name}</h3>
+              <p className="muted">{plan.description}</p>
+              <ul className="feature-check-list compact">
+                {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
+              </ul>
+              <p className="plan-price">{plan.price}<span>/ месяц</span></p>
+              <Link to="/tariffs" className={index === 1 ? 'button' : 'button button-ghost'}>Смотреть тарифы</Link>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-section network-section">
+        <div className="landing-section-heading">
+          <p className="eyebrow">Сеть</p>
+          <h2>Глобальная логика VPN-сервиса без ручной рутины</h2>
+          <p>Подключайте свои VPS, панели 3x-ui и правила выдачи доступов. Пользователь видит простой продукт, администратор управляет инфраструктурой.</p>
+        </div>
+        <div className="coverage-map" aria-label="Карта покрытия VPN-сети">
+          <span className="map-point point-eu">EU</span>
+          <span className="map-point point-us">US</span>
+          <span className="map-point point-tr">TR</span>
+          <span className="map-point point-sg">SG</span>
+          <span className="map-line line-a" />
+          <span className="map-line line-b" />
+          <span className="map-line line-c" />
+        </div>
+      </section>
+
+      <section className="landing-section testimonials-section" id="testimonials">
+        <div className="landing-section-heading">
+          <p className="eyebrow">Отзывы</p>
+          <h2>Пользовательский путь остается простым</h2>
+        </div>
+        <div className="testimonial-grid">
+          {landingTestimonials.map((item) => (
+            <Card key={item.name} className="testimonial-card">
+              <div className="testimonial-head">
+                <span className="avatar">{item.name.slice(0, 1)}</span>
+                <div>
+                  <strong>{item.name}</strong>
+                  <small>{item.role}</small>
+                </div>
+              </div>
+              <p>{item.text}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-cta">
+        <div>
+          <h2>Готовы проверить покупку VPN?</h2>
+          <p>Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.</p>
+        </div>
+        <Link to="/tariffs" className="button">Перейти к тарифам</Link>
+      </section>
+    </PageShell>
+  )
+}
+
 function HomePage({ profile }: { profile: UserProfileDto | null }) {
   return (
     <PageShell title="VPN Platform">
@@ -627,7 +826,7 @@ export function App() {
       </header>
 
       <Routes>
-        <Route path="/" element={<HomePage profile={profile} />} />
+        <Route path="/" element={<LandingHomePage profile={profile} />} />
         <Route
           path="/tariffs"
           element={(

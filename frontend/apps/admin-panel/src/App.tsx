@@ -811,6 +811,16 @@ export function App() {
       <PageShell title="Админ-панель VPN Platform">
         <SkipLink href="#admin-login" />
         <main id="admin-login" className="admin-login-shell" tabIndex={-1}>
+          <section className="admin-login-intro" aria-label="Возможности админ-панели">
+            <p className="eyebrow">VPN Platform Admin</p>
+            <h2>Единый центр управления продажей VPN</h2>
+            <p>Настраивайте тарифы, платежных провайдеров, Telegram-ботов, VPN-серверы, панели 3x-ui и выдачу доступов из одной панели.</p>
+            <div className="admin-login-metrics">
+              <span><strong>11</strong> разделов</span>
+              <span><strong>9</strong> провайдеров</span>
+              <span><strong>24/7</strong> контроль</span>
+            </div>
+          </section>
           <Card>
             <div className="login-panel-header">
               <div>
