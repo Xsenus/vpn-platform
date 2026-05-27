@@ -176,6 +176,7 @@ public class PaymentProviderAccount : AuditableEntity
     public string ShopId { get; set; } = string.Empty;
     public string ApiBaseUrl { get; set; } = string.Empty;
     public string ReturnUrl { get; set; } = string.Empty;
+    public string WebhookUrl { get; set; } = string.Empty;
     public string SecretKeyProtected { get; set; } = string.Empty;
     public string WebhookSecretProtected { get; set; } = string.Empty;
     public bool UseWebhookIpAllowList { get; set; } = true;

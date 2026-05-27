@@ -15,6 +15,7 @@ import {
   OrderDto,
   PaymentAttemptDto,
   PaymentProvider,
+  PaymentProviderAccountCheckResultDto,
   PaymentProviderAccountDto,
   PaymentProviderMode,
   PaymentWebhookEventDto,
@@ -141,6 +142,7 @@ const defaultProviderForm: UpsertPaymentProviderAccountPayload = {
   shopId: '',
   apiBaseUrl: 'https://api.yookassa.ru/v3',
   returnUrl: '',
+  webhookUrl: '',
   secretKey: '',
   webhookSecret: '',
   useWebhookIpAllowList: true,
@@ -368,6 +370,7 @@ export function App() {
   const [orders, setOrders] = useState<OrderDto[]>([])
   const [payments, setPayments] = useState<PaymentAttemptDto[]>([])
   const [paymentProviderAccounts, setPaymentProviderAccounts] = useState<PaymentProviderAccountDto[]>([])
+  const [providerCheckResults, setProviderCheckResults] = useState<Record<string, PaymentProviderAccountCheckResultDto>>({})
   const [paymentWebhookEvents, setPaymentWebhookEvents] = useState<PaymentWebhookEventDto[]>([])
   const [refunds, setRefunds] = useState<RefundDto[]>([])
   const [supportConversations, setSupportConversations] = useState<SupportConversationDto[]>([])
@@ -606,6 +609,7 @@ export function App() {
     setOrders([])
     setPayments([])
     setPaymentProviderAccounts([])
+    setProviderCheckResults({})
     setPaymentWebhookEvents([])
     setRefunds([])
     setSupportConversations([])
@@ -713,6 +717,7 @@ export function App() {
       shopId: account.shopId ?? '',
       apiBaseUrl: account.apiBaseUrl ?? '',
       returnUrl: account.returnUrl ?? '',
+      webhookUrl: account.webhookUrl ?? '',
       secretKey: '',
       webhookSecret: '',
       useWebhookIpAllowList: account.useWebhookIpAllowList,
@@ -747,6 +752,15 @@ export function App() {
       await api.setAdminPaymentProviderAccountEnabled(token, account.id, enabled)
       setNotice(`${account.name}: ${enabled ? 'включен' : 'выключен'}`)
       await loadAll(token)
+    })
+  }
+
+  const handleCheckProviderAccount = async (account: PaymentProviderAccountDto) => {
+    await runAction(`provider-check-${account.id}`, async () => {
+      const result = await api.checkAdminPaymentProviderAccount(token, account.id)
+      setProviderCheckResults((current) => ({ ...current, [account.id]: result }))
+      setPaymentProviderAccounts((current) => current.map((item) => item.id === account.id ? result.account : item))
+      setNotice(`${account.name}: ${result.isReady ? 'проверка пройдена' : 'проверка нашла проблемы'}.`)
     })
   }
 
@@ -1486,6 +1500,7 @@ export function App() {
                 <SecretField label="Секретный ключ" value={providerForm.secretKey ?? ''} onChange={(value) => updateProviderForm('secretKey', value)} />
                 <SecretField label="Секрет webhook" value={providerForm.webhookSecret ?? ''} onChange={(value) => updateProviderForm('webhookSecret', value)} />
                 <label><span>Адрес возврата после оплаты</span><input value={providerForm.returnUrl} onChange={(e) => updateProviderForm('returnUrl', e.target.value)} placeholder="https://example.com/checkout" type="url" inputMode="url" /></label>
+                <label><span>Webhook URL</span><input value={providerForm.webhookUrl} onChange={(e) => updateProviderForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/webhooks/payments/provider" type="url" inputMode="url" /></label>
                 <label><span>Allowed IP ranges</span><input value={providerForm.allowedWebhookIpRangesCsv} onChange={(e) => updateProviderForm('allowedWebhookIpRangesCsv', e.target.value)} placeholder="185.71.76.0/27, 185.71.77.0/27" /></label>
               </div>
               <label><span>Extra settings JSON</span><textarea value={providerForm.extraSettingsJson} onChange={(e) => updateProviderForm('extraSettingsJson', e.target.value)} placeholder={editingProviderAccountId ? 'Оставьте пустым, чтобы сохранить текущий JSON' : '{"hostedCheckoutUrl":"https://pay.example.test/widget"}'} rows={4} /></label>
@@ -1513,9 +1528,10 @@ export function App() {
                     <strong>{account.publicName}</strong>
                     <div className="muted">{account.provider} · {account.mode} · {account.name}</div>
                     <div className="muted">shopId: {account.shopId || '—'} · секрет: {account.hasSecretKey ? 'задан' : 'пусто'} · webhook: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
-                    <div className="muted">API: {account.apiBaseUrl || '—'} · return: {account.returnUrl || '—'}</div>
+                    <div className="muted">API: {account.apiBaseUrl || '—'} · return: {account.returnUrl || '—'} · webhook URL: {account.webhookUrl || '—'}</div>
                     <div className="muted">IP allow list: {account.useWebhookIpAllowList ? (account.allowedWebhookIpRangesCsv || 'включен, список пуст') : 'не используется'} · extra: {account.extraSettingsJson && account.extraSettingsJson !== '{}' ? 'задан' : 'пусто'}</div>
                     <div className="muted">Capabilities: {capabilities(account).join(', ') || '—'}</div>
+                    {providerCheckResults[account.id] && <div className="muted">Последняя проверка: {providerCheckResults[account.id].healthStatus} · {providerCheckResults[account.id].details.join(' · ')}</div>}
                   </div>
                   <div className="status-stack">
                     <StatusBadge value={account.isEnabled ? 'Enabled' : 'Disabled'} />
@@ -1525,6 +1541,7 @@ export function App() {
                 <div className="muted">{providerIssue(account)}</div>
                 <div className="toolbar">
                   <PrimaryButton className="button-secondary" onClick={() => editProviderAccount(account)}>Редактировать</PrimaryButton>
+                  <PrimaryButton className="button-secondary" disabled={actionBusyId === `provider-check-${account.id}`} onClick={() => void handleCheckProviderAccount(account)}>Проверить</PrimaryButton>
                   {account.isEnabled ? <ConfirmButton className="button-danger" disabled={actionBusyId === account.id} message={`Отключить способ оплаты "${account.publicName}"? Пользователи больше не увидят его при оплате.`} onConfirm={() => void handleSetProviderEnabled(account, false)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === account.id} onClick={() => void handleSetProviderEnabled(account, true)}>Включить</PrimaryButton>}
                 </div>
               </div>

@@ -190,8 +190,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
   align-items: flex-start;
 }
+.card-head > *,
+.split-row > * { min-width: 0; }
 .status-stack {
   display: grid;
   gap: 8px;
@@ -542,7 +545,11 @@ form { display: grid; gap: 12px; max-width: 560px; }
   align-items: center;
 }
 .list-item > * { min-width: 0; }
-.list-item strong, .list-item span, .list-item-vertical strong { overflow-wrap: anywhere; }
+.list-item strong,
+.list-item span,
+.list-item .muted,
+.list-item-vertical strong,
+.list-item-vertical .muted { overflow-wrap: anywhere; }
 .list-item-vertical { display: grid; gap: 10px; }
 .list-item:hover, .list-item-vertical:hover {
   border-color: var(--line-strong);

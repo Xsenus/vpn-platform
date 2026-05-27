@@ -425,11 +425,11 @@
 - [x] Secret key.
 - [x] Webhook secret.
 - [x] Return URL.
-- [ ] Webhook URL.
+- [x] Webhook URL.
 - [x] Allowed IP ranges, если нужно.
 - [x] Extra settings JSON.
 - [x] Проверка готовности.
-- [ ] Тестовый платеж или тест API.
+- [x] Тестовый платеж или тест API.
 
 Критерий готовности: все провайдеры можно настроить и проверить из админки.
 

@@ -138,6 +138,7 @@ public class AdminAutomationMvpTests
             "stripe-shop-updated",
             "https://api.stripe.com",
             "https://cabinet.example.test/payment-return",
+            "https://api.example.test/api/webhooks/payments/stripe",
             null,
             "",
             false,
@@ -174,6 +175,7 @@ public class AdminAutomationMvpTests
             "public-id",
             "",
             "https://cabinet.example.test/payment-return",
+            "https://api.example.test/api/webhooks/payments/cloudpayments",
             "",
             "",
             false,
@@ -184,6 +186,29 @@ public class AdminAutomationMvpTests
         var json = JsonSerializer.Serialize(badRequest.Value);
         Assert.Contains("ExtraSettingsJson", json, StringComparison.Ordinal);
         Assert.Empty(await db.PaymentProviderAccounts.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Provider_Account_Check_Should_Update_Health_And_Return_Details()
+    {
+        await using var db = CreateDbContext();
+        var account = PaymentAccount(PaymentProvider.YooKassa, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "shop-ok", secret: "protected-secret");
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        var controller = CreateOperationsController(db);
+        var result = await controller.CheckPaymentProviderAccount(account.Id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
+        Assert.True(check.IsReady);
+        Assert.Equal("Healthy", check.HealthStatus);
+        Assert.Contains(check.Details, x => x.Contains("ready", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("https://api.example.test/webhooks/payments", check.Account.WebhookUrl);
+
+        var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
+        Assert.Equal(HealthStatus.Healthy, saved.HealthStatus);
+        Assert.NotNull(saved.LastHealthCheckAt);
     }
 
     [Fact]
@@ -354,6 +379,7 @@ public class AdminAutomationMvpTests
             ShopId = shopId,
             ApiBaseUrl = "https://payment.example.test",
             ReturnUrl = "https://cabinet.example.test/payments/return",
+            WebhookUrl = "https://api.example.test/webhooks/payments",
             SecretKeyProtected = secret,
             WebhookSecretProtected = secret,
             ExtraSettingsJson = extraSettingsJson

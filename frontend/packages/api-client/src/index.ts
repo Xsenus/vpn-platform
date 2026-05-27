@@ -225,6 +225,7 @@ export type PaymentProviderAccountDto = {
   shopId: string
   apiBaseUrl: string
   returnUrl: string
+  webhookUrl: string
   hasSecretKey: boolean
   hasWebhookSecret: boolean
   useWebhookIpAllowList: boolean
@@ -248,11 +249,24 @@ export type UpsertPaymentProviderAccountPayload = {
   shopId: string
   apiBaseUrl: string
   returnUrl: string
+  webhookUrl: string
   secretKey?: string | null
   webhookSecret?: string | null
   useWebhookIpAllowList: boolean
   allowedWebhookIpRangesCsv: string
   extraSettingsJson: string
+}
+
+export type PaymentProviderAccountCheckResultDto = {
+  accountId: string
+  provider: PaymentProvider
+  mode: PaymentProviderMode
+  isReady: boolean
+  healthStatus: string
+  message: string
+  details: string[]
+  checkedAt: string
+  account: PaymentProviderAccountDto
 }
 
 export type PaymentWebhookEventDto = {
@@ -1186,6 +1200,14 @@ export class ApiClient {
       token,
       body: JSON.stringify({ enabled }),
       errorMessage: 'Failed to change payment provider account state'
+    })
+  }
+
+  checkAdminPaymentProviderAccount(token: string, id: string): Promise<PaymentProviderAccountCheckResultDto> {
+    return this.request<PaymentProviderAccountCheckResultDto>(`/api/admin/payment-providers/accounts/${id}/check`, {
+      method: 'POST',
+      token,
+      errorMessage: 'Failed to check payment provider account'
     })
   }
 

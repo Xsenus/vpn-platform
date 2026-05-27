@@ -514,6 +514,14 @@ public class AdminOperationsController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
+    [HttpPost("payment-providers/accounts/{id:guid}/check")]
+    [Authorize(Policy = AdminPolicies.FinanceWrite)]
+    public async Task<IActionResult> CheckPaymentProviderAccount(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _paymentProviderAccounts.CheckAsync(id, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
+
 
     [HttpGet("support/conversations")]
     [Authorize(Policy = AdminPolicies.SupportRead)]

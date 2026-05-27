@@ -58,6 +58,7 @@ public class PaymentProviderAccountService
         var shopId = Normalize(command.ShopId);
         var apiBaseUrl = Normalize(command.ApiBaseUrl);
         var returnUrl = Normalize(command.ReturnUrl);
+        var webhookUrl = Normalize(command.WebhookUrl);
         var allowedWebhookIpRangesCsv = Normalize(command.AllowedWebhookIpRangesCsv);
         var replaceExtraSettings = !id.HasValue || !string.IsNullOrWhiteSpace(command.ExtraSettingsJson);
         var extraSettingsJson = string.IsNullOrWhiteSpace(command.ExtraSettingsJson) ? "{}" : command.ExtraSettingsJson.Trim();
@@ -98,6 +99,7 @@ public class PaymentProviderAccountService
         account.ShopId = shopId;
         account.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBaseUrl) ? DefaultApiBaseUrl(command.Provider) : apiBaseUrl.TrimEnd('/');
         account.ReturnUrl = returnUrl;
+        account.WebhookUrl = webhookUrl;
         account.UseWebhookIpAllowList = command.UseWebhookIpAllowList;
         account.AllowedWebhookIpRangesCsv = allowedWebhookIpRangesCsv;
         if (replaceExtraSettings)
@@ -144,6 +146,64 @@ public class PaymentProviderAccountService
         return Result<PaymentProviderAccountDto>.Success(MapToDto(account));
     }
 
+    public async Task<Result<PaymentProviderAccountCheckResultDto>> CheckAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var account = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (account is null)
+        {
+            return Result<PaymentProviderAccountCheckResultDto>.Failure("Payment provider account not found.");
+        }
+
+        var details = new List<string>();
+        var readinessIssue = PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account);
+        if (readinessIssue is null)
+        {
+            details.Add("Checkout configuration is ready.");
+        }
+        else
+        {
+            details.Add(readinessIssue);
+        }
+
+        AddUrlCheck(details, account.ApiBaseUrl, "API base URL", required: account.Provider != PaymentProvider.TelegramStars);
+        AddUrlCheck(details, account.ReturnUrl, "Return URL", required: false);
+        AddUrlCheck(details, account.WebhookUrl, "Webhook URL", required: false);
+
+        if (account.UseWebhookIpAllowList && string.IsNullOrWhiteSpace(account.AllowedWebhookIpRangesCsv))
+        {
+            details.Add("Webhook IP allow list is enabled, but allowed IP ranges are empty.");
+        }
+
+        var extraSettingsIssue = ValidateExtraSettingsJson(string.IsNullOrWhiteSpace(account.ExtraSettingsJson) ? "{}" : account.ExtraSettingsJson);
+        if (extraSettingsIssue is not null)
+        {
+            details.Add(extraSettingsIssue);
+        }
+
+        var hasBlockingIssue = readinessIssue is not null
+            || details.Any(x =>
+                x.Contains("invalid", StringComparison.OrdinalIgnoreCase)
+                || x.Contains("required", StringComparison.OrdinalIgnoreCase)
+                || x.Contains("must be", StringComparison.OrdinalIgnoreCase));
+
+        account.LastHealthCheckAt = _clock.UtcNow;
+        account.HealthStatus = hasBlockingIssue ? HealthStatus.Unhealthy : HealthStatus.Healthy;
+        account.UpdatedAt = _clock.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var dto = MapToDto(account);
+        return Result<PaymentProviderAccountCheckResultDto>.Success(new(
+            account.Id,
+            account.Provider,
+            account.Mode,
+            !hasBlockingIssue,
+            account.HealthStatus.ToString(),
+            hasBlockingIssue ? "Payment provider account check failed." : "Payment provider account check passed.",
+            details,
+            account.LastHealthCheckAt.Value,
+            dto));
+    }
+
     public async Task<Result<PaymentProviderAccountDto>> SetEnabledAsync(Guid id, bool enabled, CancellationToken cancellationToken = default)
     {
         var account = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -176,6 +236,7 @@ public class PaymentProviderAccountService
             account.ShopId,
             account.ApiBaseUrl,
             account.ReturnUrl,
+            account.WebhookUrl,
             !string.IsNullOrWhiteSpace(account.SecretKeyProtected),
             !string.IsNullOrWhiteSpace(account.WebhookSecretProtected),
             account.UseWebhookIpAllowList,
@@ -230,6 +291,24 @@ public class PaymentProviderAccountService
     }
 
     private static string Normalize(string? value) => value?.Trim() ?? string.Empty;
+
+    private static void AddUrlCheck(List<string> details, string value, string fieldName, bool required)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            if (required)
+            {
+                details.Add($"{fieldName} is required.");
+            }
+
+            return;
+        }
+
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            details.Add($"{fieldName} is invalid. Use an absolute http/https URL.");
+        }
+    }
 
     private static string? ValidateExtraSettingsJson(string extraSettingsJson)
     {

@@ -139,6 +139,7 @@ public sealed record PaymentProviderAccountDto(
     string ShopId,
     string ApiBaseUrl,
     string ReturnUrl,
+    string WebhookUrl,
     bool HasSecretKey,
     bool HasWebhookSecret,
     bool UseWebhookIpAllowList,
@@ -161,11 +162,23 @@ public sealed record UpsertPaymentProviderAccountCommand(
     string ShopId,
     string ApiBaseUrl,
     string ReturnUrl,
+    string WebhookUrl,
     string? SecretKey,
     string? WebhookSecret,
     bool UseWebhookIpAllowList,
     string AllowedWebhookIpRangesCsv,
     string ExtraSettingsJson);
+
+public sealed record PaymentProviderAccountCheckResultDto(
+    Guid AccountId,
+    PaymentProvider Provider,
+    PaymentProviderMode Mode,
+    bool IsReady,
+    string HealthStatus,
+    string Message,
+    IReadOnlyCollection<string> Details,
+    DateTimeOffset CheckedAt,
+    PaymentProviderAccountDto Account);
 
 
 public sealed record AdminDashboardSummaryDto(

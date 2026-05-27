@@ -461,7 +461,7 @@ test('ApiClient admin payment providers expose readiness fields without secrets'
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify([{ id: 'account-1', provider: 'YooKassa', mode: 'Sandbox', name: 'Yoo', publicName: 'Yoo', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: '', returnUrl: '', hasSecretKey: true, hasWebhookSecret: false, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{"apiSecret":"***"}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }]), {
+    return new Response(JSON.stringify([{ id: 'account-1', provider: 'YooKassa', mode: 'Sandbox', name: 'Yoo', publicName: 'Yoo', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: '', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', hasSecretKey: true, hasWebhookSecret: false, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{"apiSecret":"***"}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }]), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -474,23 +474,26 @@ test('ApiClient admin payment providers expose readiness fields without secrets'
   assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(response[0]?.isCheckoutConfigured, true)
   assert.equal(response[0]?.extraSettingsJson, '{"apiSecret":"***"}')
+  assert.equal(response[0]?.webhookUrl, 'https://api.example.test/webhooks/payments/yookassa')
 })
 
 test('ApiClient admin payment providers can create, update and toggle accounts', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'account-1', provider: 'Stripe', mode: 'Sandbox', name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', hasSecretKey: true, hasWebhookSecret: true, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }), {
+    const body = { id: 'account-1', provider: 'Stripe', mode: 'Sandbox', name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/stripe', hasSecretKey: true, hasWebhookSecret: true, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }
+    return new Response(JSON.stringify(String(url).endsWith('/check') ? { accountId: 'account-1', provider: 'Stripe', mode: 'Sandbox', isReady: true, healthStatus: 'Healthy', message: 'Payment provider account check passed.', details: ['Checkout configuration is ready.'], checkedAt: new Date().toISOString(), account: body } : body), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
   }) as typeof fetch
 
-  const payload = { provider: 'Stripe' as const, mode: 'Sandbox' as const, name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', secretKey: 'sk_test', webhookSecret: 'whsec_test', useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}' }
+  const payload = { provider: 'Stripe' as const, mode: 'Sandbox' as const, name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/stripe', secretKey: 'sk_test', webhookSecret: 'whsec_test', useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}' }
   const client = new ApiClient('http://localhost:8080')
   await client.createAdminPaymentProviderAccount('admin-token', payload)
   await client.updateAdminPaymentProviderAccount('admin-token', 'account-1', { ...payload, publicName: 'Stripe cards', secretKey: '', webhookSecret: '', extraSettingsJson: '' })
   await client.setAdminPaymentProviderAccountEnabled('admin-token', 'account-1', false)
+  const check = await client.checkAdminPaymentProviderAccount('admin-token', 'account-1')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/payment-providers/accounts')
   assert.equal(calls[0]?.init?.method, 'POST')
@@ -498,8 +501,11 @@ test('ApiClient admin payment providers can create, update and toggle accounts',
   assert.equal(calls[1]?.init?.method, 'PATCH')
   assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/payment-providers/accounts/account-1/enabled')
   assert.equal(calls[2]?.init?.method, 'POST')
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/payment-providers/accounts/account-1/check')
+  assert.equal(calls[3]?.init?.method, 'POST')
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(JSON.parse(String(calls[1]?.init?.body)).extraSettingsJson, '')
+  assert.equal(check.isReady, true)
 })
 
 test('ApiClient admin subscription and VPN access actions are confirmation-friendly POST calls', async () => {
@@ -738,7 +744,7 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
       return new Response(JSON.stringify({ run: { id: 'run-1', targetHost: 'vps.example.test', credentialsConfigured: true, executionLog: 'credential=***', linkedAccessId: 'access-1' }, steps: [{ stepName: 'Validate input', output: 'secret=***' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/payment-providers/accounts')) {
-      return new Response(JSON.stringify([{ id: 'ppa-1', provider: 'YooKassa', mode: 'Sandbox', isCheckoutConfigured: true, extraSettingsJson: '{"apiSecret":"***"}' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([{ id: 'ppa-1', provider: 'YooKassa', mode: 'Sandbox', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', isCheckoutConfigured: true, extraSettingsJson: '{"apiSecret":"***"}' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/telegram-bot/settings')) {
       return new Response(JSON.stringify({ enabled: false, hasBotToken: true, botTokenMasked: '1234***7890', hasSecretToken: true, welcomeText: 'Welcome' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -856,7 +862,10 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /сохраняются скрыто|SecretField/i)
   assert.match(adminSource, /editProviderAccount/)
   assert.match(adminSource, /handleSaveProviderAccount/)
+  assert.match(adminSource, /handleCheckProviderAccount/)
   assert.match(adminSource, /updateAdminPaymentProviderAccount/)
+  assert.match(adminSource, /checkAdminPaymentProviderAccount/)
+  assert.match(adminSource, /Webhook URL/)
   assert.match(adminSource, /Extra settings JSON/)
   assert.match(adminSource, /Оставьте пустым, чтобы сохранить текущий JSON/)
   assert.match(adminSource, /botTokenMasked|hasBotToken/)
