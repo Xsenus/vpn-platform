@@ -161,6 +161,15 @@ public class DbInitializer : IHostedService
                 Body = "Подписка активирована. Данные подключения доступны в личном кабинете."
             });
         }
+
+        if (!await db.FaqEntries.AnyAsync(cancellationToken))
+        {
+            db.FaqEntries.AddRange(
+                new FaqEntry { Question = "Как подключиться?", Answer = "После оплаты вы получите ссылку, QR-код и инструкцию в личном кабинете.", Category = "Подключение", SortOrder = 10 },
+                new FaqEntry { Question = "Можно ли продлить заранее?", Answer = "Да. При продлении срок подписки увеличивается корректно и не теряет уже оплаченные дни.", Category = "Оплата", SortOrder = 20 },
+                new FaqEntry { Question = "Что делать, если доступ перестал работать?", Answer = "Откройте обращение в поддержку или проверьте актуальную ссылку подключения в кабинете.", Category = "Поддержка", SortOrder = 30 }
+            );
+        }
     }
 
     private static string NormalizeEmail(string? email) => (email ?? string.Empty).Trim().ToLowerInvariant();

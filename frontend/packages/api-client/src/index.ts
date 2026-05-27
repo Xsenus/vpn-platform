@@ -653,7 +653,28 @@ export type AdminUserOverviewDto = {
 
 export type UpdateTariffPayload = Partial<Pick<TariffDto, 'name' | 'slug' | 'description' | 'price' | 'currency' | 'durationDays' | 'maxDevices' | 'trafficLimit' | 'isActive' | 'sortOrder' | 'category' | 'allowedRegionsCsv' | 'allowedNodeGroupsCsv'>>
 
-export type FaqItem = { question: string; answer: string }
+export type FaqItem = {
+  id?: string
+  question: string
+  answer: string
+  category?: string
+  isActive?: boolean
+  showOnHome?: boolean
+  showOnFaqPage?: boolean
+  sortOrder?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type FaqUpsertPayload = {
+  question: string
+  answer: string
+  category?: string | null
+  isActive: boolean
+  showOnHome: boolean
+  showOnFaqPage: boolean
+  sortOrder: number
+}
 
 export type CreateCheckoutSessionPayload = {
   tariffId: string
@@ -771,6 +792,10 @@ export class ApiClient {
 
   getFaq(): Promise<FaqItem[]> {
     return this.request<FaqItem[]>('/api/public/content/faq', { errorMessage: 'Failed to load faq' })
+  }
+
+  getHomeFaq(): Promise<FaqItem[]> {
+    return this.request<FaqItem[]>('/api/public/content/faq?home=true', { errorMessage: 'Failed to load faq' })
   }
 
   getPublicPaymentProviders(): Promise<PublicPaymentProviderDto[]> {
@@ -1239,6 +1264,36 @@ export class ApiClient {
 
   getAdminAppReleases(token: string): Promise<AppReleaseDto[]> {
     return this.request<AppReleaseDto[]>('/api/app-version/admin/releases', { token, errorMessage: 'Failed to load app releases' })
+  }
+
+  getAdminFaq(token: string): Promise<FaqItem[]> {
+    return this.request<FaqItem[]>('/api/admin/faq', { token, errorMessage: 'Failed to load FAQ' })
+  }
+
+  createAdminFaq(token: string, payload: FaqUpsertPayload): Promise<FaqItem> {
+    return this.request<FaqItem>('/api/admin/faq', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to create FAQ item'
+    })
+  }
+
+  updateAdminFaq(token: string, id: string, payload: FaqUpsertPayload): Promise<FaqItem> {
+    return this.request<FaqItem>(`/api/admin/faq/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to update FAQ item'
+    })
+  }
+
+  deleteAdminFaq(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/admin/faq/${id}`, {
+      method: 'DELETE',
+      token,
+      errorMessage: 'Failed to delete FAQ item'
+    })
   }
 
   createAdminAppRelease(token: string, payload: AppReleaseUpsertPayload): Promise<AppReleaseDto> {

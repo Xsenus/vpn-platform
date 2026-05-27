@@ -113,6 +113,12 @@ const landingTestimonials = [
 ]
 
 function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
+  const [homeFaq, setHomeFaq] = useState<FaqItem[]>([])
+
+  useEffect(() => {
+    api.getHomeFaq().then((items) => setHomeFaq(items.slice(0, 4))).catch(() => setHomeFaq([]))
+  }, [])
+
   return (
     <PageShell title="VPN Platform">
       <section className="landing-hero" id="about">
@@ -252,6 +258,25 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
             </Card>
           ))}
         </div>
+      </section>
+
+      <section className="landing-section faq-preview-section">
+        <div className="landing-section-heading">
+          <p className="eyebrow">FAQ</p>
+          <h2>Коротко о покупке и подключении</h2>
+          <p>Ответы управляются из админки и сразу обновляются на публичной странице.</p>
+        </div>
+        <div className="faq-preview-grid">
+          {homeFaq.length === 0 && <EmptyState title="FAQ скоро появится" description="Администратор может добавить вопросы в разделе FAQ." />}
+          {homeFaq.map((item) => (
+            <Card key={item.id ?? item.question} className="faq-preview-card">
+              <span>{item.category ?? 'Общее'}</span>
+              <h3>{item.question}</h3>
+              <p>{item.answer}</p>
+            </Card>
+          ))}
+        </div>
+        <Link to="/faq" className="button button-ghost">Открыть все вопросы</Link>
       </section>
 
       <section className="landing-cta">
@@ -498,21 +523,51 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
 function FaqPage() {
   const [items, setItems] = useState<FaqItem[]>([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('Все')
 
   useEffect(() => {
-    api.getFaq().then(setItems).catch((e: Error) => setError(e.message))
+    setLoading(true)
+    api.getFaq().then(setItems).catch((e: Error) => setError(e.message)).finally(() => setLoading(false))
   }, [])
+
+  const categories = useMemo(() => ['Все', ...Array.from(new Set(items.map((item) => item.category ?? 'Общее')))], [items])
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return items.filter((item) => {
+      const matchesCategory = category === 'Все' || (item.category ?? 'Общее') === category
+      const text = `${item.question} ${item.answer} ${item.category ?? ''}`.toLowerCase()
+      return matchesCategory && (!query || text.includes(query))
+    })
+  }, [items, category, search])
 
   return (
     <PageShell title="FAQ">
       {error && <ErrorBlock message={error} />}
-      <div className="card-list">
-        {items.length === 0 && !error && <EmptyState title="FAQ пока пуст" description="Базовые инструкции доступны в Telegram-боте и личном кабинете." />}
-        {items.map((item) => (
-          <div className="card" key={item.question}>
-            <h3>{item.question}</h3>
+      <div className="faq-toolbar">
+        <label>
+          <span>Поиск</span>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Оплата, подключение, продление" />
+        </label>
+        <label>
+          <span>Категория</span>
+          <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+      </div>
+      {loading && <LoadingBlock label="Загружаем FAQ" />}
+      <div className="card-list faq-list">
+        {filteredItems.length === 0 && !error && !loading && <EmptyState title="FAQ пока пуст" description="Администратор может добавить вопросы в разделе FAQ." />}
+        {filteredItems.map((item) => (
+          <details className="faq-item" key={item.id ?? item.question}>
+            <summary>
+              <span>{item.question}</span>
+              <small>{item.category ?? 'Общее'}</small>
+            </summary>
             <p>{item.answer}</p>
-          </div>
+          </details>
         ))}
       </div>
     </PageShell>

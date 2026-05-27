@@ -43,6 +43,40 @@ test('ApiClient.getPublicPaymentProviders calls public providers endpoint', asyn
   assert.equal(response[0]?.publicName, 'YooKassa sandbox')
 })
 
+test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    if (String(url).includes('/api/public/content/faq') || String(url).endsWith('/api/admin/faq')) {
+      return new Response(JSON.stringify([{ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(JSON.stringify({ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await client.getFaq()
+  await client.getHomeFaq()
+  await client.getAdminFaq('admin-token')
+  await client.createAdminFaq('admin-token', { question: 'Как?', answer: 'Так', category: 'Общее', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 })
+  await client.updateAdminFaq('admin-token', 'faq-1', { question: 'Как?', answer: 'Так', category: 'Общее', isActive: true, showOnHome: false, showOnFaqPage: true, sortOrder: 20 })
+  await client.deleteAdminFaq('admin-token', 'faq-1')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/content/faq')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/public/content/faq?home=true')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/faq')
+  assert.equal(calls[3]?.init?.method, 'POST')
+  assert.equal(calls[4]?.init?.method, 'PUT')
+  assert.equal(calls[5]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
 test('ApiClient.createMyOrder sends auth header and payload', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
@@ -521,6 +555,21 @@ test('frontend sources include app version gate and admin release editor', () =>
   assert.match(adminSource, /createAdminAppRelease/)
   assert.match(adminSource, /updateAdminAppRelease/)
   assert.match(adminSource, /deleteAdminAppRelease/)
+})
+
+test('frontend sources include managed FAQ surfaces', () => {
+  const publicSource = readFileSync(new URL('../apps/public-web/src/App.tsx', import.meta.url), 'utf8')
+  const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
+
+  assert.match(publicSource, /getFaq/)
+  assert.match(publicSource, /getHomeFaq/)
+  assert.match(publicSource, /faq-toolbar/)
+  assert.match(publicSource, /category/)
+  assert.match(adminSource, /id="faq"/)
+  assert.match(adminSource, /getAdminFaq/)
+  assert.match(adminSource, /createAdminFaq/)
+  assert.match(adminSource, /updateAdminFaq/)
+  assert.match(adminSource, /deleteAdminFaq/)
 })
 
 

@@ -10,6 +10,8 @@ import {
   CreateServerPayload,
   CreateVpnInboundPayload,
   CreateVpnPanelPayload,
+  FaqItem,
+  FaqUpsertPayload,
   OrderDto,
   PaymentAttemptDto,
   PaymentProvider,
@@ -77,6 +79,7 @@ const adminSections = [
   ['support', 'Поддержка'],
   ['bot', 'Telegram-бот'],
   ['releases', 'Что нового'],
+  ['faq', 'FAQ'],
   ['provisioning', 'Подготовка VPS']
 ] as const
 
@@ -190,6 +193,16 @@ const defaultReleaseForm: AppReleaseUpsertPayload = {
   ]
 }
 
+const defaultFaqForm: FaqUpsertPayload = {
+  question: '',
+  answer: '',
+  category: 'Общее',
+  isActive: true,
+  showOnHome: true,
+  showOnFaqPage: true,
+  sortOrder: 100
+}
+
 const defaultBotSettings: AdminTelegramBotSettingsDto = {
   enabled: false,
   mode: 'Polling',
@@ -296,6 +309,9 @@ export function App() {
   const [appReleases, setAppReleases] = useState<AppReleaseDto[]>([])
   const [releaseForm, setReleaseForm] = useState<AppReleaseUpsertPayload>(defaultReleaseForm)
   const [editingReleaseId, setEditingReleaseId] = useState('')
+  const [faqEntries, setFaqEntries] = useState<FaqItem[]>([])
+  const [faqForm, setFaqForm] = useState<FaqUpsertPayload>(defaultFaqForm)
+  const [editingFaqId, setEditingFaqId] = useState('')
   const [servers, setServers] = useState<VpnNodeDto[]>([])
   const [provisioningRuns, setProvisioningRuns] = useState<ProvisioningRunDto[]>([])
   const [vpnPanels, setVpnPanels] = useState<VpnPanelDto[]>([])
@@ -374,6 +390,7 @@ export function App() {
       nextSupportConversations,
       nextTariffs,
       nextAppReleases,
+      nextFaqEntries,
       nextServers,
       nextRuns,
       nextVpnPanels,
@@ -391,6 +408,7 @@ export function App() {
       safeLoad('обращения поддержки', () => api.getAdminSupportConversations(currentToken), [], errors),
       safeLoad('tariffs', () => api.getAdminTariffs(currentToken), [], errors),
       safeLoad('Что нового', () => api.getAdminAppReleases(currentToken), [], errors),
+      safeLoad('FAQ', () => api.getAdminFaq(currentToken), [], errors),
       safeLoad('servers', () => api.getAdminServers(currentToken), [], errors),
       safeLoad('подготовка серверов', () => api.getAdminProvisioningRuns(currentToken), [], errors),
       safeLoad('VPN-панели', () => api.getAdminVpnPanels(currentToken), [], errors),
@@ -409,6 +427,7 @@ export function App() {
     setSupportConversations(nextSupportConversations)
     setTariffs(nextTariffs)
     setAppReleases(nextAppReleases)
+    setFaqEntries(nextFaqEntries)
     setServers(nextServers)
     setProvisioningRuns(nextRuns)
     setVpnPanels(nextVpnPanels)
@@ -458,6 +477,7 @@ export function App() {
   const updateInboundForm = <K extends keyof CreateVpnInboundPayload>(key: K, value: CreateVpnInboundPayload[K]) => setInboundForm((current) => ({ ...current, [key]: value }))
   const updateTariffForm = <K extends keyof UpdateTariffPayload>(key: K, value: UpdateTariffPayload[K]) => setTariffForm((current) => ({ ...current, [key]: value }))
   const updateReleaseForm = <K extends keyof AppReleaseUpsertPayload>(key: K, value: AppReleaseUpsertPayload[K]) => setReleaseForm((current) => ({ ...current, [key]: value }))
+  const updateFaqForm = <K extends keyof FaqUpsertPayload>(key: K, value: FaqUpsertPayload[K]) => setFaqForm((current) => ({ ...current, [key]: value }))
   const updateReleaseItem = (index: number, patch: Partial<AppReleaseUpsertPayload['items'][number]>) => setReleaseForm((current) => ({
     ...current,
     items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item)
@@ -507,6 +527,9 @@ export function App() {
     setAppReleases([])
     setReleaseForm(defaultReleaseForm)
     setEditingReleaseId('')
+    setFaqEntries([])
+    setFaqForm(defaultFaqForm)
+    setEditingFaqId('')
     setServers([])
     setProvisioningRuns([])
     setVpnPanels([])
@@ -705,6 +728,66 @@ export function App() {
       await api.deleteAdminAppRelease(token, release.id)
       if (editingReleaseId === release.id) resetReleaseForm()
       setNotice(`Релиз ${release.version} удален.`)
+      await loadAll(token)
+    })
+  }
+
+  const resetFaqForm = () => {
+    setFaqForm(defaultFaqForm)
+    setEditingFaqId('')
+  }
+
+  const editFaq = (entry: FaqItem) => {
+    if (!entry.id) return
+    setEditingFaqId(entry.id)
+    setFaqForm({
+      question: entry.question,
+      answer: entry.answer,
+      category: entry.category ?? 'Общее',
+      isActive: entry.isActive !== false,
+      showOnHome: entry.showOnHome !== false,
+      showOnFaqPage: entry.showOnFaqPage !== false,
+      sortOrder: entry.sortOrder ?? 100
+    })
+    setActiveSection('faq')
+    if (typeof window !== 'undefined') window.location.hash = 'faq'
+  }
+
+  const handleSaveFaq = async () => {
+    if (!token) return
+    const payload: FaqUpsertPayload = {
+      ...faqForm,
+      question: faqForm.question.trim(),
+      answer: faqForm.answer.trim(),
+      category: faqForm.category?.trim() || 'Общее',
+      sortOrder: Number(faqForm.sortOrder) || 0
+    }
+
+    if (!payload.question || !payload.answer) {
+      setError('FAQ: заполните вопрос и ответ.')
+      return
+    }
+
+    await runAction(editingFaqId ? `faq-update-${editingFaqId}` : 'faq-create', async () => {
+      if (editingFaqId) {
+        await api.updateAdminFaq(token, editingFaqId, payload)
+        setNotice('Вопрос FAQ обновлен.')
+      } else {
+        await api.createAdminFaq(token, payload)
+        setNotice('Вопрос FAQ создан.')
+      }
+      resetFaqForm()
+      await loadAll(token)
+    })
+  }
+
+  const handleDeleteFaq = async (entry: FaqItem) => {
+    const faqId = entry.id
+    if (!faqId) return
+    await runAction(`faq-delete-${faqId}`, async () => {
+      await api.deleteAdminFaq(token, faqId)
+      if (editingFaqId === faqId) resetFaqForm()
+      setNotice('Вопрос FAQ удален.')
       await loadAll(token)
     })
   }
@@ -1416,6 +1499,62 @@ export function App() {
                 <div className="toolbar">
                   <PrimaryButton className="button-secondary" onClick={() => editRelease(release)}>Редактировать</PrimaryButton>
                   <ConfirmButton className="button-danger" disabled={actionBusyId === `release-delete-${release.id}`} message={`Удалить релиз "${release.title}"? Пользователи больше не увидят его в истории.`} onConfirm={() => void handleDeleteRelease(release)}>Удалить</ConfirmButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div id="faq" className="section card-list-two" hidden={activeSection !== 'faq'}>
+        <Card>
+          <h3>{editingFaqId ? 'Редактировать вопрос' : 'Создать вопрос FAQ'}</h3>
+          <p className="muted">Эти вопросы показываются на публичной странице FAQ. Неактивные записи остаются в админке, но скрываются от пользователей.</p>
+          <form aria-busy={actionBusyId === 'faq-create' || actionBusyId === `faq-update-${editingFaqId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveFaq() }}>
+            <fieldset className="form-section">
+              <legend>Содержание</legend>
+              <label><span>Вопрос</span><input value={faqForm.question} onChange={(e) => updateFaqForm('question', e.target.value)} placeholder="Как подключиться?" maxLength={300} required /></label>
+              <label><span>Ответ</span><textarea value={faqForm.answer} onChange={(e) => updateFaqForm('answer', e.target.value)} rows={5} placeholder="Короткий и понятный ответ для пользователя" required /></label>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Публикация</legend>
+              <div className="form-grid">
+                <label><span>Категория</span><input value={faqForm.category ?? ''} onChange={(e) => updateFaqForm('category', e.target.value)} placeholder="Оплата" maxLength={120} /></label>
+                <label><span>Порядок</span><input value={faqForm.sortOrder} onChange={(e) => updateFaqForm('sortOrder', Number(e.target.value) || 0)} type="number" step="1" /></label>
+              </div>
+              <label className="checkbox-row"><input checked={faqForm.isActive} onChange={(e) => updateFaqForm('isActive', e.target.checked)} type="checkbox" /> Активен</label>
+              <label className="checkbox-row"><input checked={faqForm.showOnHome} onChange={(e) => updateFaqForm('showOnHome', e.target.checked)} type="checkbox" /> Показывать на главной</label>
+              <label className="checkbox-row"><input checked={faqForm.showOnFaqPage} onChange={(e) => updateFaqForm('showOnFaqPage', e.target.checked)} type="checkbox" /> Показывать на странице FAQ</label>
+            </fieldset>
+            <div className="form-footer">
+              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !faqForm.question || !faqForm.answer} title={adminDisabledTitle}>
+                {editingFaqId ? 'Сохранить вопрос' : 'Создать вопрос'}
+              </PrimaryButton>
+              {editingFaqId && <PrimaryButton type="button" className="button-secondary" onClick={resetFaqForm}>Отменить редактирование</PrimaryButton>}
+            </div>
+          </form>
+        </Card>
+        <Card>
+          <h3>Вопросы FAQ</h3>
+          <div className="list-stack">
+            {faqEntries.length === 0 && <EmptyState title="FAQ пока пуст" description="Создайте первый вопрос, чтобы он появился на публичной странице." />}
+            {faqEntries.map((entry) => (
+              <div key={entry.id ?? entry.question} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{entry.question}</strong>
+                    <div className="muted">{entry.category ?? 'Общее'} · порядок {entry.sortOrder ?? 0}</div>
+                    <div className="muted">{entry.answer}</div>
+                  </div>
+                  <div className="item-status">
+                    <StatusBadge value={entry.isActive === false ? 'Hidden' : 'Active'} />
+                    {entry.showOnHome && <StatusBadge value="Home" />}
+                    {entry.showOnFaqPage && <StatusBadge value="FAQ" />}
+                  </div>
+                </div>
+                <div className="toolbar">
+                  <PrimaryButton className="button-secondary" onClick={() => editFaq(entry)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={actionBusyId === `faq-delete-${entry.id}`} message={`Удалить вопрос "${entry.question}"?`} onConfirm={() => void handleDeleteFaq(entry)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}

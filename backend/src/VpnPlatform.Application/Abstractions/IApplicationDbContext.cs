@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     DbSet<ChannelProfile> ChannelProfiles { get; }
     DbSet<Tariff> Tariffs { get; }
     DbSet<PromoCode> PromoCodes { get; }
+    DbSet<FaqEntry> FaqEntries { get; }
     DbSet<CheckoutSession> CheckoutSessions { get; }
     DbSet<Order> Orders { get; }
     DbSet<PaymentProviderAccount> PaymentProviderAccounts { get; }

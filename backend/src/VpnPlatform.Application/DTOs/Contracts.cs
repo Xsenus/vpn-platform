@@ -5,6 +5,9 @@ namespace VpnPlatform.Application.DTOs;
 
 public sealed record TariffDto(Guid Id, string Name, string Slug, string Description, int DurationDays, decimal Price, string Currency, int MaxDevices, string Category);
 
+public sealed record FaqEntryDto(Guid Id, string Question, string Answer, string Category, bool IsActive, bool ShowOnHome, bool ShowOnFaqPage, int SortOrder, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record FaqEntryUpsertRequest(string Question, string Answer, string? Category, bool IsActive, bool ShowOnHome, bool ShowOnFaqPage, int SortOrder);
+
 public sealed record AppReleaseItemDto(Guid? Id, string Type, string Text, int SortOrder);
 public sealed record AppReleaseDto(
     Guid Id,

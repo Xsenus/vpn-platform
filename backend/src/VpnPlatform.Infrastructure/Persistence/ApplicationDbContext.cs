@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<ChannelProfile> ChannelProfiles => Set<ChannelProfile>();
     public DbSet<Tariff> Tariffs => Set<Tariff>();
     public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
+    public DbSet<FaqEntry> FaqEntries => Set<FaqEntry>();
     public DbSet<CheckoutSession> CheckoutSessions => Set<CheckoutSession>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<PaymentProviderAccount> PaymentProviderAccounts => Set<PaymentProviderAccount>();
@@ -73,6 +74,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => new { x.UserId, x.ExpiresAt });
         modelBuilder.Entity<ChannelProfile>().HasIndex(x => new { x.ProviderType, x.ExternalUserId }).IsUnique();
         modelBuilder.Entity<Tariff>().HasIndex(x => x.Slug).IsUnique();
+        modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.IsActive, x.ShowOnFaqPage, x.SortOrder });
+        modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.Category, x.SortOrder });
         modelBuilder.Entity<PromoCode>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<CheckoutSession>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PaymentProviderAccount>().HasIndex(x => new { x.Provider, x.Mode, x.Name }).IsUnique();
@@ -420,5 +423,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<AppRelease>().Property(x => x.Summary).HasColumnType("text");
         modelBuilder.Entity<AppReleaseItem>().Property(x => x.Type).HasMaxLength(40);
         modelBuilder.Entity<AppReleaseItem>().Property(x => x.Text).HasColumnType("text");
+        modelBuilder.Entity<FaqEntry>().Property(x => x.Question).HasMaxLength(300);
+        modelBuilder.Entity<FaqEntry>().Property(x => x.Answer).HasColumnType("text");
+        modelBuilder.Entity<FaqEntry>().Property(x => x.Category).HasMaxLength(120);
     }
 }
