@@ -6,6 +6,16 @@ on:
       - main
       - master
   workflow_dispatch:
+    inputs:
+      deploy_mode:
+        description: "Deployment mode: auto detects docker compose on VPS, systemd deploys without Docker."
+        type: choice
+        required: false
+        default: auto
+        options:
+          - auto
+          - docker
+          - systemd
 
 permissions:
   contents: read
@@ -93,6 +103,9 @@ jobs:
       VPS_APP_DIR: ${{ secrets.VPS_APP_DIR || '/opt/vpn-platform' }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
       PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+      REQUESTED_DEPLOY_MODE: ${{ github.event.inputs.deploy_mode || secrets.VPS_DEPLOY_MODE || 'auto' }}
+      VITE_API_BASE_URL_SECRET: ${{ secrets.VITE_API_BASE_URL }}
+      VITE_PUBLIC_WEB_URL_SECRET: ${{ secrets.VITE_PUBLIC_WEB_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -115,7 +128,48 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
 
-      - name: Build deployment archive
+      - name: Detect deployment mode
+        id: deploy_mode
+        run: |
+          set -euo pipefail
+          requested="${REQUESTED_DEPLOY_MODE:-auto}"
+          case "$requested" in
+            auto|docker|systemd) ;;
+            *)
+              echo "::error::Unsupported VPS_DEPLOY_MODE: $requested. Use auto, docker or systemd."
+              exit 1
+              ;;
+          esac
+
+          if [ "$requested" = "auto" ]; then
+            if ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1"; then
+              mode="docker"
+            else
+              mode="systemd"
+            fi
+          else
+            mode="$requested"
+          fi
+
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Selected deployment mode: $mode"
+
+      - name: Setup .NET SDK for systemd release
+        if: steps.deploy_mode.outputs.mode == 'systemd'
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Node.js for systemd release
+        if: steps.deploy_mode.outputs.mode == 'systemd'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Docker deployment archive
+        if: steps.deploy_mode.outputs.mode == 'docker'
         run: |
           tar \
             --exclude-vcs \
@@ -142,14 +196,51 @@ jobs:
             --exclude='*.webm' \
             -czf release.tar.gz .
 
-      - name: Upload release and environment file
+      - name: Build systemd deployment archive
+        if: steps.deploy_mode.outputs.mode == 'systemd'
+        run: |
+          set -euo pipefail
+          export VITE_API_BASE_URL="${VITE_API_BASE_URL_SECRET:-http://$VPS_HOST:8080}"
+          export VITE_PUBLIC_WEB_URL="${VITE_PUBLIC_WEB_URL_SECRET:-http://$VPS_HOST}"
+
+          rm -rf artifacts/systemd
+          mkdir -p \
+            artifacts/systemd/api \
+            artifacts/systemd/web/public \
+            artifacts/systemd/web/cabinet \
+            artifacts/systemd/web/admin
+
+          dotnet publish backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output artifacts/systemd/api
+
+          npm ci --prefix frontend
+          npm run build --prefix frontend
+
+          cp -a frontend/apps/public-web/dist/. artifacts/systemd/web/public/
+          cp -a frontend/apps/cabinet/dist/. artifacts/systemd/web/cabinet/
+          cp -a frontend/apps/admin-panel/dist/. artifacts/systemd/web/admin/
+
+          {
+            echo "mode=systemd"
+            echo "sha=$GITHUB_SHA"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > artifacts/systemd/DEPLOYMENT_INFO
+
+          tar -czf systemd-release.tar.gz -C artifacts/systemd .
+
+      - name: Upload Docker release and environment file
+        if: steps.deploy_mode.outputs.mode == 'docker'
         run: |
           ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$VPS_APP_DIR/shared' '$VPS_APP_DIR/releases/$GITHUB_SHA'"
           scp -P "$VPS_PORT" release.tar.gz "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/releases/$GITHUB_SHA/release.tar.gz"
           printf '%s\n' "$PRODUCTION_ENV_FILE" > production.env
           scp -P "$VPS_PORT" production.env "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/shared/.env"
 
-      - name: Start production stack
+      - name: Start Docker production stack
+        if: steps.deploy_mode.outputs.mode == 'docker'
         run: |
           ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "APP_DIR='$VPS_APP_DIR' RELEASE_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
           set -euo pipefail
@@ -185,4 +276,111 @@ jobs:
           ln -sfn "$release_dir" "$APP_DIR/current"
           find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d | sort | head -n -5 | xargs -r rm -rf
           docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml ps
+          REMOTE
+
+      - name: Upload systemd release and environment file
+        if: steps.deploy_mode.outputs.mode == 'systemd'
+        run: |
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$VPS_APP_DIR/shared' '$VPS_APP_DIR/releases/$GITHUB_SHA'"
+          scp -P "$VPS_PORT" systemd-release.tar.gz "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/releases/$GITHUB_SHA/systemd-release.tar.gz"
+          printf '%s\n' "$PRODUCTION_ENV_FILE" > production.env
+          scp -P "$VPS_PORT" production.env "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/shared/.env"
+
+      - name: Start systemd production release
+        if: steps.deploy_mode.outputs.mode == 'systemd'
+        run: |
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "APP_DIR='$VPS_APP_DIR' RELEASE_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          release_dir="$APP_DIR/releases/$RELEASE_SHA"
+          mkdir -p "$release_dir" "$APP_DIR/shared"
+          cd "$release_dir"
+          tar -xzf systemd-release.tar.gz
+
+          if ! systemctl cat vpn-platform-api.service >/dev/null 2>&1; then
+            cat > /etc/systemd/system/vpn-platform-api.service <<SERVICE
+          [Unit]
+          Description=VPN Platform API
+          After=network.target postgresql.service
+
+          [Service]
+          Type=simple
+          WorkingDirectory=$APP_DIR/api
+          ExecStart=$APP_DIR/api/VpnPlatform.Api
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICE
+          fi
+
+          mkdir -p /etc/systemd/system/vpn-platform-api.service.d
+          cat > /etc/systemd/system/vpn-platform-api.service.d/10-github-actions.conf <<SERVICE
+          [Service]
+          WorkingDirectory=$APP_DIR/api
+          EnvironmentFile=
+          EnvironmentFile=-$APP_DIR/shared/.env
+          Environment=ASPNETCORE_URLS=http://0.0.0.0:8080
+          ExecStart=
+          ExecStart=$APP_DIR/api/VpnPlatform.Api
+          Restart=always
+          RestartSec=5
+          SERVICE
+
+          rollback() {
+            echo "Rolling back systemd release..." >&2
+            systemctl stop vpn-platform-api >/dev/null 2>&1 || true
+            if [ -d "$APP_DIR/api.previous" ]; then
+              rm -rf "$APP_DIR/api"
+              mv "$APP_DIR/api.previous" "$APP_DIR/api"
+            fi
+            if [ -d "$APP_DIR/web.previous" ]; then
+              rm -rf "$APP_DIR/web"
+              mv "$APP_DIR/web.previous" "$APP_DIR/web"
+            fi
+            systemctl daemon-reload || true
+            systemctl restart vpn-platform-api || true
+            systemctl reload nginx || true
+          }
+
+          rm -rf "$APP_DIR/api.next" "$APP_DIR/web.next" "$APP_DIR/api.previous" "$APP_DIR/web.previous"
+          mkdir -p "$APP_DIR/api.next" "$APP_DIR/web.next"
+          cp -a "$release_dir/api/." "$APP_DIR/api.next/"
+          cp -a "$release_dir/web/." "$APP_DIR/web.next/"
+
+          systemctl stop vpn-platform-api >/dev/null 2>&1 || true
+          if [ -d "$APP_DIR/api" ]; then mv "$APP_DIR/api" "$APP_DIR/api.previous"; fi
+          if [ -d "$APP_DIR/web" ]; then mv "$APP_DIR/web" "$APP_DIR/web.previous"; fi
+          mv "$APP_DIR/api.next" "$APP_DIR/api"
+          mv "$APP_DIR/web.next" "$APP_DIR/web"
+          chmod +x "$APP_DIR/api/VpnPlatform.Api" || true
+
+          systemctl daemon-reload
+          systemctl enable vpn-platform-api >/dev/null 2>&1 || true
+          systemctl restart vpn-platform-api
+          systemctl reload nginx || true
+
+          for endpoint in /health/live /health/ready; do
+            ok=0
+            for _ in $(seq 1 60); do
+              if curl -fsS "http://127.0.0.1:8080${endpoint}" >/dev/null; then
+                ok=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ok" != "1" ]; then
+              systemctl status vpn-platform-api --no-pager || true
+              journalctl -u vpn-platform-api -n 200 --no-pager || true
+              rollback
+              echo "Health check failed: ${endpoint}" >&2
+              exit 1
+            fi
+          done
+
+          rm -rf "$APP_DIR/api.previous" "$APP_DIR/web.previous"
+          ln -sfn "$release_dir" "$APP_DIR/current"
+          find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d -name '[0-9a-f]*' | sort | head -n -5 | xargs -r rm -rf
+          systemctl --no-pager --full status vpn-platform-api
           REMOTE
