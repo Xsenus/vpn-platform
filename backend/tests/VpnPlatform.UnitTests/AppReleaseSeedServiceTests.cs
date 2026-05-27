@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -122,6 +123,62 @@ public class AppReleaseSeedServiceTests
 
         var releaseIds = await db.AppReleases.OrderBy(x => x.ReleaseId).Select(x => x.ReleaseId).ToListAsync();
         Assert.Equal(new[] { "manual-release", "new-agent" }, releaseIds);
+    }
+
+    [Fact]
+    public async Task SyncAsync_Should_Rewrite_Items_On_Sqlite_Without_Concurrency_Error()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var firstRoot = CreateSeedRoot("""
+        [
+          {
+            "releaseId": "sqlite-release",
+            "version": "1.0.0",
+            "releasedAt": "2026-05-27T09:00:00Z",
+            "title": "Первый релиз",
+            "summary": "Первое описание",
+            "isActive": true,
+            "source": "agent",
+            "items": [
+              { "type": "new", "text": "Первый пункт", "sortOrder": 10 },
+              { "type": "fixed", "text": "Второй пункт", "sortOrder": 20 }
+            ]
+          }
+        ]
+        """);
+        await CreateService(firstRoot).SyncAsync(db, firstRoot);
+
+        var secondRoot = CreateSeedRoot("""
+        [
+          {
+            "releaseId": "sqlite-release",
+            "version": "1.1.0",
+            "releasedAt": "2026-05-27T10:00:00Z",
+            "title": "Обновленный релиз",
+            "summary": "Новое описание",
+            "isActive": true,
+            "source": "agent",
+            "items": [
+              { "type": "improved", "text": "Новый единственный пункт", "sortOrder": 10 }
+            ]
+          }
+        ]
+        """);
+
+        await CreateService(secondRoot).SyncAsync(db, secondRoot);
+
+        var release = await db.AppReleases.Include(x => x.Items).SingleAsync();
+        Assert.Equal("1.1.0", release.Version);
+        var item = Assert.Single(release.Items);
+        Assert.Equal("improved", item.Type);
+        Assert.Equal("Новый единственный пункт", item.Text);
     }
 
     private static ApplicationDbContext CreateDb()

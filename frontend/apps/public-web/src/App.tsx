@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import {
   ApiClient,
@@ -13,6 +13,7 @@ import {
   UserProfileDto
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-public-token'
@@ -606,30 +607,50 @@ function FaqPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('Все')
+  const [category, setCategory] = useState(FAQ_ALL_CATEGORY)
 
-  useEffect(() => {
+  const loadFaq = useCallback(() => {
     setLoading(true)
-    api.getFaq().then(setItems).catch((e: Error) => setError(e.message)).finally(() => setLoading(false))
+    setError('')
+    api.getFaq()
+      .then(setItems)
+      .catch(() => setError('Не удалось загрузить FAQ. Проверьте подключение к API и попробуйте еще раз.'))
+      .finally(() => setLoading(false))
   }, [])
 
-  const categories = useMemo(() => ['Все', ...Array.from(new Set(items.map((item) => item.category ?? 'Общее')))], [items])
-  const filteredItems = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return items.filter((item) => {
-      const matchesCategory = category === 'Все' || (item.category ?? 'Общее') === category
-      const text = `${item.question} ${item.answer} ${item.category ?? ''}`.toLowerCase()
-      return matchesCategory && (!query || text.includes(query))
-    })
-  }, [items, category, search])
+  useEffect(() => {
+    loadFaq()
+  }, [loadFaq])
+
+  const categories = useMemo(() => getFaqCategories(items), [items])
+  const filteredItems = useMemo(() => filterFaqItems(items, category, search), [items, category, search])
+  const filtersActive = search.trim().length > 0 || category !== FAQ_ALL_CATEGORY
+  const emptyTitle = filtersActive ? 'Ничего не найдено' : 'FAQ пока пуст'
+  const emptyDescription = filtersActive
+    ? 'Измените поисковый запрос или выберите другую категорию.'
+    : 'Администратор может добавить вопросы в разделе FAQ.'
 
   return (
     <PageShell title="FAQ">
-      {error && <ErrorBlock message={error} />}
+      <div className="page-intro">
+        <div>
+          <h2 className="page-heading">Вопросы и ответы</h2>
+          <p className="muted no-margin-bottom">Ответы загружаются из админки и обновляются без деплоя сайта.</p>
+        </div>
+        <StatusBadge value={loading ? 'Pending' : `${filteredItems.length} из ${items.length}`} />
+      </div>
+      {error && (
+        <Card className="faq-error-card">
+          <ErrorBlock message={error} />
+          <PrimaryButton type="button" className="button-secondary" onClick={loadFaq} disabled={loading}>
+            Повторить загрузку
+          </PrimaryButton>
+        </Card>
+      )}
       <div className="faq-toolbar">
         <label>
           <span>Поиск</span>
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Оплата, подключение, продление" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Оплата, подключение, продление" aria-label="Поиск по FAQ" />
         </label>
         <label>
           <span>Категория</span>
@@ -640,12 +661,12 @@ function FaqPage() {
       </div>
       {loading && <LoadingBlock label="Загружаем FAQ" />}
       <div className="card-list faq-list">
-        {filteredItems.length === 0 && !error && !loading && <EmptyState title="FAQ пока пуст" description="Администратор может добавить вопросы в разделе FAQ." />}
-        {filteredItems.map((item) => (
-          <details className="faq-item" key={item.id ?? item.question}>
+        {filteredItems.length === 0 && !error && !loading && <EmptyState title={emptyTitle} description={emptyDescription} />}
+        {filteredItems.map((item, index) => (
+          <details className="faq-item" key={item.id ?? item.question} open={filtersActive && index === 0 ? true : undefined}>
             <summary>
               <span>{item.question}</span>
-              <small>{item.category ?? 'Общее'}</small>
+              <small>{normalizeFaqCategory(item.category)}</small>
             </summary>
             <p>{item.answer}</p>
           </details>

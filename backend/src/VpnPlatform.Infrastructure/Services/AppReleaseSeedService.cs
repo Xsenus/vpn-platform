@@ -80,8 +80,11 @@ public sealed class AppReleaseSeedService
             release.Source = string.IsNullOrWhiteSpace(seed.Source) ? "agent" : seed.Source.Trim();
             release.UpdatedAt = DateTimeOffset.UtcNow;
 
-            db.AppReleaseItems.RemoveRange(release.Items);
-            release.Items = seed.Items
+            var currentItems = release.Items.ToList();
+            db.AppReleaseItems.RemoveRange(currentItems);
+            release.Items.Clear();
+
+            var seedItemsToAdd = seed.Items
                 .Where(x => !string.IsNullOrWhiteSpace(x.Text))
                 .Select((x, index) => new AppReleaseItem
                 {
@@ -91,6 +94,12 @@ public sealed class AppReleaseSeedService
                     SortOrder = x.SortOrder ?? (index + 1) * 10
                 })
                 .ToList();
+
+            foreach (var item in seedItemsToAdd)
+            {
+                release.Items.Add(item);
+                db.AppReleaseItems.Add(item);
+            }
 
             changed++;
         }
