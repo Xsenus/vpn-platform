@@ -297,5 +297,28 @@
         "text": "Roadmap-блок 8.1 закрыт: маркетинговые тексты, ошибки и after-payment сообщения доступны через раздел «Контент сайта»."
       }
     ]
+  },
+  {
+    "releaseId": "2026-05-27-ef-model-drift-check",
+    "version": "0.15.0",
+    "releasedAt": "2026-05-27T21:30:00+07:00",
+    "title": "Добавлена проверка EF model drift",
+    "summary": "Backend test suite теперь автоматически проверяет, что текущая EF-модель совпадает с последним migration snapshot.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен unit-тест EfModelDriftTests для сравнения ApplicationDbContext с ApplicationDbContextModelSnapshot."
+      },
+      {
+        "type": "important",
+        "text": "Если модель изменится без миграции, тест упадет и покажет типы найденных отличий."
+      },
+      {
+        "type": "improved",
+        "text": "Roadmap-пункт 13.2 «Проверка EF drift» закрыт автоматической проверкой без подключения к реальной БД."
+      }
+    ]
   }
 ]
