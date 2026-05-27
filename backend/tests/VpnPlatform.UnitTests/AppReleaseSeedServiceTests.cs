@@ -43,6 +43,32 @@ public class AppReleaseSeedServiceTests
     }
 
     [Fact]
+    public async Task SyncAsync_Should_Normalize_Release_Date_To_Utc()
+    {
+        await using var db = CreateDb();
+        var root = CreateSeedRoot("""
+        [
+          {
+            "releaseId": "timezone-release",
+            "version": "1.0.0",
+            "releasedAt": "2026-05-27T22:08:00+07:00",
+            "title": "Релиз с часовым поясом",
+            "summary": "Дата должна сохраниться в UTC для PostgreSQL",
+            "isActive": true,
+            "source": "agent",
+            "items": [{ "type": "new", "text": "Пункт" }]
+          }
+        ]
+        """);
+
+        await CreateService(root).SyncAsync(db, root);
+
+        var release = await db.AppReleases.SingleAsync();
+        Assert.Equal(TimeSpan.Zero, release.ReleasedAt.Offset);
+        Assert.Equal(new DateTimeOffset(2026, 5, 27, 15, 8, 0, TimeSpan.Zero), release.ReleasedAt);
+    }
+
+    [Fact]
     public async Task SyncAsync_Should_Not_Overwrite_Manual_Release_With_Same_ReleaseId()
     {
         await using var db = CreateDb();

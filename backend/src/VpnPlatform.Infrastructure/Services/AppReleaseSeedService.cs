@@ -73,7 +73,7 @@ public sealed class AppReleaseSeedService
             }
 
             release.Version = seed.Version.Trim();
-            release.ReleasedAt = seed.ReleasedAt;
+            release.ReleasedAt = seed.ReleasedAt.ToUniversalTime();
             release.Title = seed.Title.Trim();
             release.Summary = seed.Summary.Trim();
             release.IsActive = seed.IsActive;
