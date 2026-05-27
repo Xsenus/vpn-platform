@@ -108,6 +108,98 @@ public class SecurityHardeningMvpTests
     }
 
     [Fact]
+    public async Task Admin_UpdateServer_Should_Edit_Metadata_And_Preserve_WriteOnly_Secrets()
+    {
+        await using var db = CreateDbContext();
+        var protector = CreateSecretProtector();
+        var controller = CreateOperationsController(db, protector);
+
+        var create = Assert.IsType<OkObjectResult>(await controller.AddServer(new CreateServerHttpRequest(
+            Name: "Edit node",
+            Host: "edit-node.example.test",
+            IpAddress: "",
+            Provider: "admin-vps",
+            Region: "EU",
+            Country: "NL",
+            Datacenter: "AMS",
+            Capacity: 100,
+            SupportedProtocolsCsv: "vless",
+            Priority: 100,
+            TagsCsv: "tier:standard",
+            SshUser: "root",
+            SshPort: 22,
+            SshPrivateKeyPath: null,
+            SkipHostKeyChecking: true,
+            PanelBaseUrl: "https://panel.example.test",
+            PanelUsername: "admin",
+            PanelPassword: "initial-panel-secret",
+            PanelInboundId: 1,
+            PublicHostname: "edit-node.example.test",
+            PublicPort: 443,
+            NodeGroupId: null,
+            SshAuthMethod: "password",
+            SshCredential: "initial-ssh-secret",
+            ValidationMode: true,
+            OwnerType: "admin"), CancellationToken.None));
+
+        var node = await db.VpnNodes.SingleAsync();
+        var originalPanelSecret = node.ProtectedPanelPassword;
+        var originalSshSecret = node.ProtectedSshCredential;
+
+        var update = await controller.UpdateServer(node.Id, new CreateServerHttpRequest(
+            Name: "Edited node",
+            Host: "edited-node.example.test",
+            IpAddress: "203.0.113.20",
+            Provider: "hetzner",
+            Region: "eu-west",
+            Country: "DE",
+            Datacenter: "fsn1",
+            Capacity: 200,
+            SupportedProtocolsCsv: "vless,vmess",
+            Priority: 250,
+            TagsCsv: "tier:premium,source:manual,validation-mode:false",
+            SshUser: "ubuntu",
+            SshPort: 2222,
+            SshPrivateKeyPath: null,
+            SkipHostKeyChecking: false,
+            PanelBaseUrl: "https://edited-panel.example.test",
+            PanelUsername: "root-admin",
+            PanelPassword: "",
+            PanelInboundId: 7,
+            PublicHostname: "vpn-edited.example.test",
+            PublicPort: 8443,
+            NodeGroupId: null,
+            SshAuthMethod: "password",
+            SshCredential: "",
+            ValidationMode: false,
+            OwnerType: "ops"), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(update);
+        Assert.Equal("Edited node", node.Name);
+        Assert.Equal("fsn1", node.Datacenter);
+        Assert.Equal(250, node.Priority);
+        Assert.Equal("vless,vmess", node.SupportedProtocolsCsv);
+        Assert.Equal("ubuntu", node.SshUser);
+        Assert.Equal(2222, node.SshPort);
+        Assert.Equal("https://edited-panel.example.test", node.PanelBaseUrl);
+        Assert.Equal("root-admin", node.PanelUsername);
+        Assert.Equal(7, node.PanelInboundId);
+        Assert.Equal(originalPanelSecret, node.ProtectedPanelPassword);
+        Assert.Equal(originalSshSecret, node.ProtectedSshCredential);
+        Assert.Contains("tier:premium", node.TagsCsv, StringComparison.Ordinal);
+        Assert.Contains("source:admin", node.TagsCsv, StringComparison.Ordinal);
+        Assert.Contains("owner:ops", node.TagsCsv, StringComparison.Ordinal);
+        Assert.Contains("validation-mode:false", node.TagsCsv, StringComparison.Ordinal);
+        Assert.DoesNotContain("source:manual", node.TagsCsv, StringComparison.Ordinal);
+
+        var json = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(update).Value);
+        Assert.DoesNotContain("initial-panel-secret", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("initial-ssh-secret", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("v1:", json, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(create.Value);
+    }
+
+    [Fact]
     public async Task Auth_Login_Refresh_Logout_Should_Rotate_And_Revoke_Hashed_Refresh_Tokens()
     {
         await using var db = CreateDbContext();

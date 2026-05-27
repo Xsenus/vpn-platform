@@ -217,7 +217,7 @@ test('ApiClient.initMyPayment calls tokenized endpoint', async () => {
   assert.equal(result.redirectUrl, 'https://example.test/pay-1')
 })
 
-test('ApiClient.createAdminServer posts server payload with auth token', async () => {
+test('ApiClient admin server create and update send full safe payload with auth token', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
@@ -228,7 +228,7 @@ test('ApiClient.createAdminServer posts server payload with auth token', async (
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
-  await client.createAdminServer('admin-token', {
+  const payload = {
     name: 'nl-01',
     host: 'nl-01.example.com',
     ipAddress: '203.0.113.10',
@@ -255,7 +255,10 @@ test('ApiClient.createAdminServer posts server payload with auth token', async (
     publicHostname: 'vpn.example.com',
     publicPort: 443,
     nodeGroupId: null
-  })
+  }
+
+  await client.createAdminServer('admin-token', payload)
+  await client.updateAdminServer('admin-token', 'node-1', { ...payload, name: 'nl-01-edited', priority: 200, tagsCsv: 'tier:premium' })
 
   const headers = new Headers(calls[0]?.init?.headers)
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers')
@@ -264,6 +267,10 @@ test('ApiClient.createAdminServer posts server payload with auth token', async (
   assert.match(String(calls[0]?.init?.body), /nl-01/)
   assert.match(String(calls[0]?.init?.body), /sshCredential/)
   assert.match(String(calls[0]?.init?.body), /validationMode/)
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/servers/node-1')
+  assert.equal(calls[1]?.init?.method, 'PUT')
+  assert.match(String(calls[1]?.init?.body), /nl-01-edited/)
+  assert.match(String(calls[1]?.init?.body), /tier:premium/)
 })
 
 test('ApiClient provisioning run details and actions are tokenized', async () => {
@@ -833,6 +840,11 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /clearAdminSession/)
   assert.match(adminSource, /Завершить сессию/)
   assert.match(adminSource, /fieldset className="form-section"/)
+  assert.match(adminSource, /editServer/)
+  assert.match(adminSource, /handleSaveServer/)
+  assert.match(adminSource, /Редактировать VPN-сервер/)
+  assert.match(adminSource, /Datacenter/)
+  assert.match(adminSource, /Приоритет/)
   assert.match(adminSource, /Идентификация сервера|Подключение и безопасность|Тексты сценариев/)
   assert.match(adminSource, /editTariff/)
   assert.match(adminSource, /handleDeleteTariff/)

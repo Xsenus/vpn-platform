@@ -103,6 +103,16 @@ type GenericUser = Record<string, unknown>
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
 
+function readTagValue(tagsCsv: string | null | undefined, key: string): string | null {
+  const normalizedKey = key.toLowerCase()
+  for (const rawTag of (tagsCsv ?? '').split(',')) {
+    const [rawKey, ...rawValue] = rawTag.split(':')
+    if (rawKey?.trim().toLowerCase() === normalizedKey) return rawValue.join(':').trim()
+  }
+
+  return null
+}
+
 const defaultServerForm: ServerFormState = {
   name: '',
   host: '',
@@ -411,6 +421,7 @@ export function App() {
   const [busy, setBusy] = useState(false)
   const [actionBusyId, setActionBusyId] = useState('')
   const [serverForm, setServerForm] = useState<ServerFormState>(defaultServerForm)
+  const [editingServerId, setEditingServerId] = useState<string | null>(null)
   const [providerForm, setProviderForm] = useState<UpsertPaymentProviderAccountPayload>(defaultProviderForm)
   const [vpnPanelForm, setVpnPanelForm] = useState<CreateVpnPanelPayload>(defaultVpnPanelForm)
   const [inboundForm, setInboundForm] = useState<CreateVpnInboundPayload>(defaultInboundForm)
@@ -632,6 +643,8 @@ export function App() {
     setWorkScenarioForm(defaultWorkScenarioForm)
     setEditingWorkScenarioId('')
     setServers([])
+    setServerForm(defaultServerForm)
+    setEditingServerId(null)
     setProvisioningRuns([])
     setVpnPanels([])
     setSelectedVpnPanelId('')
@@ -1249,17 +1262,58 @@ export function App() {
     await loadVpnPanelDetails(selectedVpnPanelId)
   })
 
-  const handleCreateServer = async () => {
+  const editServer = (server: VpnNodeDto) => {
+    setEditingServerId(server.id)
+    setServerForm({
+      ...defaultServerForm,
+      name: server.name,
+      host: server.host,
+      ipAddress: server.ipAddress,
+      provider: server.provider,
+      region: server.region,
+      country: server.country,
+      datacenter: server.datacenter,
+      capacity: server.capacity,
+      supportedProtocolsCsv: server.supportedProtocolsCsv,
+      priority: server.priority,
+      tagsCsv: server.tagsCsv,
+      sshUser: server.sshUser ?? 'root',
+      sshPort: server.sshPort ?? 22,
+      sshPrivateKeyPath: '',
+      sshAuthMethod: server.sshAuthMethod ?? 'ssh_key',
+      sshCredential: '',
+      validationMode: readTagValue(server.tagsCsv, 'validation-mode') !== 'false',
+      ownerType: readTagValue(server.tagsCsv, 'owner') ?? 'admin',
+      skipHostKeyChecking: server.skipHostKeyChecking ?? true,
+      panelBaseUrl: server.panelBaseUrl ?? '',
+      panelUsername: server.panelUsername ?? 'admin',
+      panelPassword: '',
+      panelInboundId: server.panelInboundId ?? 1,
+      publicHostname: server.publicHostname ?? '',
+      publicPort: server.publicPort ?? 443,
+      nodeGroupId: server.nodeGroupId ?? null
+    })
+  }
+
+  const cancelServerEdit = () => {
+    setEditingServerId(null)
+    setServerForm(defaultServerForm)
+  }
+
+  const handleSaveServer = async () => {
     if (!token) return
     setBusy(true)
     setError('')
     try {
-      const created = await api.createAdminServer(token, serverForm)
-      setNotice(`Сервер ${created.name} создан. Пароль панели не возвращается из API.`)
+      const saved = editingServerId
+        ? await api.updateAdminServer(token, editingServerId, serverForm)
+        : await api.createAdminServer(token, serverForm)
+      setNotice(`Сервер ${saved.name} ${editingServerId ? 'обновлен' : 'создан'}. Секреты не возвращаются из API.`)
+      setEditingServerId(null)
       setServerForm((current) => ({ ...defaultServerForm, provider: current.provider, region: current.region, country: current.country, datacenter: current.datacenter }))
       await loadAll(token)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать сервер')
+      setError(e instanceof Error ? e.message : 'Не удалось сохранить сервер')
     } finally {
       setBusy(false)
     }
@@ -1660,12 +1714,12 @@ export function App() {
           <h3>VPN-серверы</h3>
           <div className="list-stack">
             {servers.length === 0 && <EmptyState title="VPN-серверы не добавлены" description="Добавьте сервер или запустите проверку собственного VPS." />}
-            {servers.map((server) => <div key={server.id} className="list-item-vertical"><div className="item-head"><div><strong>{server.name}</strong><div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div><div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div><div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div></div><div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /></div></div><div className="toolbar"><PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Проверить</PrimaryButton><ConfirmButton className="button-danger" message="Запустить подготовку сервера? В рабочем режиме это может затронуть инфраструктуру." onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton><ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton><PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton><ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton></div></div>)}
+            {servers.map((server) => <div key={server.id} className="list-item-vertical"><div className="item-head"><div><strong>{server.name}</strong><div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div><div className="muted">Datacenter: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div><div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div><div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div></div><div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton><PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Проверить</PrimaryButton><ConfirmButton className="button-danger" message="Запустить подготовку сервера? В рабочем режиме это может затронуть инфраструктуру." onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton><ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton><PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton><ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton></div></div>)}
           </div>
         </Card>
         <Card>
-          <h3>Добавить VPN-сервер</h3>
-          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleCreateServer() }}>
+          <h3>{editingServerId ? 'Редактировать VPN-сервер' : 'Добавить VPN-сервер'}</h3>
+          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveServer() }}>
             <fieldset className="form-section">
               <legend>Идентификация сервера</legend>
               <div className="form-grid">
@@ -1675,7 +1729,11 @@ export function App() {
                 <label><span>Провайдер</span><input value={serverForm.provider} onChange={(e) => updateServerForm('provider', e.target.value)} placeholder="hetzner" /></label>
                 <label><span>Регион</span><input value={serverForm.region} onChange={(e) => updateServerForm('region', e.target.value)} placeholder="eu" /></label>
                 <label><span>Страна</span><input value={serverForm.country} onChange={(e) => updateServerForm('country', e.target.value)} placeholder="NL" /></label>
+                <label><span>Datacenter</span><input value={serverForm.datacenter} onChange={(e) => updateServerForm('datacenter', e.target.value)} placeholder="fsn1" /></label>
                 <label><span>Емкость</span><input value={serverForm.capacity} onChange={(e) => updateServerForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
+                <label><span>Приоритет</span><input value={serverForm.priority} onChange={(e) => updateServerForm('priority', Number(e.target.value) || 0)} placeholder="100" type="number" min={1} step="1" /></label>
+                <label><span>Протоколы</span><input value={serverForm.supportedProtocolsCsv ?? ''} onChange={(e) => updateServerForm('supportedProtocolsCsv', e.target.value)} placeholder="vless,vmess,trojan" /></label>
+                <label><span>Теги</span><input value={serverForm.tagsCsv ?? ''} onChange={(e) => updateServerForm('tagsCsv', e.target.value)} placeholder="tier:premium,city:amsterdam" /></label>
               </div>
             </fieldset>
             <fieldset className="form-section">
@@ -1698,7 +1756,8 @@ export function App() {
             </fieldset>
             <p className="muted">SSH-доступ защищается API и не возвращается обратно. Проверочный режим не выполняет реальный SSH-деплой.</p>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || !serverForm.name || !serverForm.host} title={adminDisabledTitle} aria-busy={busy}>Создать сервер</PrimaryButton>
+              <PrimaryButton type="submit" disabled={busy || !token || !serverForm.name || !serverForm.host} title={adminDisabledTitle} aria-busy={busy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
+              {editingServerId && <PrimaryButton type="button" className="button-ghost" onClick={cancelServerEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
         </Card>

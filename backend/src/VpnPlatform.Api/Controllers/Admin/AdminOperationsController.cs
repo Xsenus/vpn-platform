@@ -706,16 +706,7 @@ public class AdminOperationsController : ControllerBase
                 ? _secretProtector.Protect(request.PanelPassword.Trim())
                 : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(request.PanelPassword.Trim()))).ToLowerInvariant();
 
-        var tags = string.Join(',', new[]
-        {
-            request.TagsCsv ?? string.Empty,
-            $"source:admin",
-            $"owner:{owner}",
-            $"ssh-auth:{authMethod}",
-            $"credentials:{(string.IsNullOrWhiteSpace(protectedCredential) ? "missing" : "protected")}",
-            $"validation-mode:{request.ValidationMode.ToString().ToLowerInvariant()}",
-            $"autodeploy-after-precheck:false"
-        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        var tags = NormalizeServerTags(request.TagsCsv, owner, authMethod, string.IsNullOrWhiteSpace(protectedCredential) ? "missing" : "protected", request.ValidationMode);
 
         var node = new VpnNode
         {
@@ -753,6 +744,121 @@ public class AdminOperationsController : ControllerBase
 
         _db.VpnNodes.Add(node);
         AddAuditLog("server.create", "VpnNode", node.Id, "{}", JsonSerializer.Serialize(new { node.Name, node.Host, node.PanelBaseUrl, PanelPasswordConfigured = ProvisioningService.PanelPasswordConfigured(node), SshCredentialConfigured = ProvisioningService.CredentialsConfigured(node), authMethod, owner, request.ValidationMode }));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(MapVpnNode(node));
+    }
+
+    [HttpPut("servers/{id:guid}")]
+    [Authorize(Policy = AdminPolicies.ProvisioningManage)]
+    public async Task<IActionResult> UpdateServer(Guid id, [FromBody] CreateServerHttpRequest request, CancellationToken cancellationToken)
+    {
+        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (node is null)
+        {
+            return NotFound(new { error = "Server not found." });
+        }
+
+        var host = ProvisioningService.NormalizeHost(string.IsNullOrWhiteSpace(request.Host) ? request.IpAddress : request.Host);
+        if (string.IsNullOrWhiteSpace(host) || !ProvisioningService.IsValidHost(host))
+        {
+            return BadRequest(new { error = "Invalid server host/IP." });
+        }
+
+        if (request.SshPort <= 0 || request.SshPort > 65535)
+        {
+            return BadRequest(new { error = "SSH port must be between 1 and 65535." });
+        }
+
+        var authMethod = ProvisioningService.NormalizeAuthMethod(request.SshAuthMethod ?? ProvisioningService.GetSshAuthMethod(node));
+        if (!string.IsNullOrWhiteSpace(request.SshCredential) && authMethod != "password" && authMethod != "ssh_key")
+        {
+            return BadRequest(new { error = "Unsupported SSH auth method." });
+        }
+
+        var owner = string.IsNullOrWhiteSpace(request.OwnerType)
+            ? ProvisioningService.ExtractTag(node.TagsCsv, "owner") ?? "admin"
+            : request.OwnerType.Trim().ToLowerInvariant();
+
+        var oldSnapshot = new
+        {
+            node.Name,
+            node.Host,
+            node.Provider,
+            node.Region,
+            node.Country,
+            node.Datacenter,
+            node.Capacity,
+            node.Priority,
+            node.TagsCsv,
+            node.PanelBaseUrl,
+            PanelPasswordConfigured = ProvisioningService.PanelPasswordConfigured(node),
+            SshCredentialConfigured = ProvisioningService.CredentialsConfigured(node)
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.SshCredential))
+        {
+            node.ProtectedSshCredential = _secretProtector is not null
+                ? _secretProtector.Protect(request.SshCredential.Trim())
+                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(request.SshCredential.Trim()))).ToLowerInvariant();
+            node.SshCredentialRef = string.IsNullOrWhiteSpace(node.SshCredentialRef) ? $"secretref:ssh:{Guid.NewGuid():N}" : node.SshCredentialRef;
+            node.SshPrivateKeyPath = string.Empty;
+        }
+        else if (!string.IsNullOrWhiteSpace(request.SshPrivateKeyPath))
+        {
+            node.SshPrivateKeyPath = request.SshPrivateKeyPath.Trim();
+            node.ProtectedSshCredential = string.Empty;
+            node.SshCredentialRef = string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PanelPassword))
+        {
+            node.ProtectedPanelPassword = _secretProtector is not null
+                ? _secretProtector.Protect(request.PanelPassword.Trim())
+                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(request.PanelPassword.Trim()))).ToLowerInvariant();
+            node.PanelSecretRef = string.IsNullOrWhiteSpace(node.PanelSecretRef) ? $"secretref:panel:{Guid.NewGuid():N}" : node.PanelSecretRef;
+            node.PanelPassword = string.Empty;
+        }
+
+        node.Name = request.Name.Trim();
+        node.Host = string.IsNullOrWhiteSpace(request.Host) ? host : request.Host.Trim();
+        node.IpAddress = request.IpAddress.Trim();
+        node.Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim();
+        node.Region = request.Region.Trim();
+        node.Country = request.Country.Trim();
+        node.Datacenter = request.Datacenter.Trim();
+        node.Capacity = request.Capacity > 0 ? request.Capacity : 5000;
+        node.SupportedProtocolsCsv = string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv) ? "vless,vmess,trojan" : request.SupportedProtocolsCsv.Trim();
+        node.Priority = request.Priority > 0 ? request.Priority : 100;
+        node.SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim();
+        node.SshPort = request.SshPort > 0 ? request.SshPort : 22;
+        node.SkipHostKeyChecking = request.SkipHostKeyChecking;
+        node.PanelBaseUrl = request.PanelBaseUrl?.Trim() ?? string.Empty;
+        node.PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername.Trim();
+        node.PanelInboundId = request.PanelInboundId;
+        node.PublicHostname = request.PublicHostname?.Trim() ?? string.Empty;
+        node.PublicPort = request.PublicPort > 0 ? request.PublicPort : 443;
+        node.NodeGroupId = request.NodeGroupId;
+        node.TagsCsv = NormalizeServerTags(request.TagsCsv, owner, authMethod, ProvisioningService.CredentialsConfigured(node) ? "protected" : "missing", request.ValidationMode);
+        node.UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddAuditLog("server.update", "VpnNode", node.Id, JsonSerializer.Serialize(oldSnapshot), JsonSerializer.Serialize(new
+        {
+            node.Name,
+            node.Host,
+            node.Provider,
+            node.Region,
+            node.Country,
+            node.Datacenter,
+            node.Capacity,
+            node.Priority,
+            node.TagsCsv,
+            node.PanelBaseUrl,
+            PanelPasswordConfigured = ProvisioningService.PanelPasswordConfigured(node),
+            SshCredentialConfigured = ProvisioningService.CredentialsConfigured(node),
+            authMethod,
+            owner,
+            request.ValidationMode
+        }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapVpnNode(node));
     }
@@ -1264,6 +1370,30 @@ public class AdminOperationsController : ControllerBase
 
     private static string RedactSensitiveText(string? value, int maxLength)
         => SensitiveDataRedactor.Redact(value, maxLength: maxLength);
+
+    private static string NormalizeServerTags(string? tagsCsv, string owner, string authMethod, string credentialsStatus, bool validationMode)
+    {
+        var systemTags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["source"] = "admin",
+            ["owner"] = string.IsNullOrWhiteSpace(owner) ? "admin" : owner.Trim().ToLowerInvariant(),
+            ["ssh-auth"] = authMethod,
+            ["credentials"] = credentialsStatus,
+            ["validation-mode"] = validationMode.ToString().ToLowerInvariant(),
+            ["autodeploy-after-precheck"] = "false"
+        };
+
+        var userTags = (tagsCsv ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(tag =>
+            {
+                var separator = tag.IndexOf(':', StringComparison.Ordinal);
+                var key = separator > 0 ? tag[..separator].Trim() : tag.Trim();
+                return !systemTags.ContainsKey(key);
+            });
+
+        return string.Join(',', userTags.Concat(systemTags.Select(tag => $"{tag.Key}:{tag.Value}")));
+    }
 
     private static object MapVpnNode(VpnNode node)
         => new

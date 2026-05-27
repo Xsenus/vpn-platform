@@ -1506,6 +1506,15 @@ export class ApiClient {
     })
   }
 
+  updateAdminServer(token: string, serverId: string, payload: CreateServerPayload): Promise<VpnNodeDto> {
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to update server'
+    })
+  }
+
   enableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
     return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to enable allocation' })
   }
