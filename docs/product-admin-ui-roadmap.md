@@ -459,22 +459,22 @@
 
 ### 11.2 3x-ui панели
 
-- [ ] URL панели.
-- [ ] Логин.
-- [ ] Пароль.
-- [ ] Регион.
-- [ ] Емкость.
-- [ ] SSL verification mode.
-- [ ] API variant.
-- [ ] Health status.
-- [ ] Sync status.
-- [ ] Inbounds.
-- [ ] Clients.
-- [ ] Default inbound.
-- [ ] Создание inbound.
-- [ ] Синхронизация.
+- [x] URL панели.
+- [x] Логин.
+- [x] Пароль.
+- [x] Регион.
+- [x] Емкость.
+- [x] SSL verification mode.
+- [x] API variant.
+- [x] Health status.
+- [x] Sync status.
+- [x] Inbounds.
+- [x] Clients.
+- [x] Default inbound.
+- [x] Создание inbound.
+- [x] Синхронизация.
 
-Критерий готовности: система видит реальные панели и может создавать VPN-клиентов.
+Критерий готовности: система видит реальные панели, позволяет редактировать подключение и может создавать VPN-клиентов.
 
 ## 12. Telegram-бот
 

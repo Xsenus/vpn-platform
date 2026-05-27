@@ -424,17 +424,44 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (String(url).includes('/test-connection') || String(url).includes('/health-checks')) {
+      return new Response(JSON.stringify(String(url).includes('/health-checks') ? [] : { id: 'health-1', vpnPanelId: 'panel-1', status: 'Healthy', version: '2.4.12', latencyMs: 12, checkedAt: new Date().toISOString(), errorMessage: '' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (String(url).includes('/sync')) {
+      return new Response(JSON.stringify({ id: 'sync-1', vpnPanelId: 'panel-1', status: 'Succeeded', startedAt: new Date().toISOString(), summaryJson: '{}', errorMessage: '' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (String(url).includes('/inbounds')) {
+      return new Response(JSON.stringify(String(init?.method ?? 'GET') === 'POST' ? { id: 'inbound-1', vpnPanelId: 'panel-1', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 5000, usedCapacity: 0 } : []), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (String(url).includes('/clients')) {
+      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    return new Response(JSON.stringify({ id: 'panel-1', name: 'panel', baseUrl: 'https://panel.example.test', region: 'eu', status: 'Active', healthStatus: 'Healthy', login: 'admin', sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', capacity: 5000, usedCapacity: 0, autoCreateInbound: false, defaultInboundTemplateJson: '{}', version: '2.4.12', lastError: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
   await client.getAdminVpnPanels('admin-token')
+  await client.createAdminVpnPanel('admin-token', { name: 'panel', baseUrl: 'https://panel.example.test', login: 'admin', password: 'secret', region: 'eu', capacity: 5000, sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', autoCreateInbound: false, defaultInboundTemplateJson: '{}' })
+  await client.updateAdminVpnPanel('admin-token', 'panel-1', { name: 'edited-panel', password: '', sslVerificationMode: 'AllowSelfSigned', apiVariant: 'ThreeXUi', autoCreateInbound: true })
+  await client.testAdminVpnPanel('admin-token', 'panel-1')
+  await client.syncAdminVpnPanel('admin-token', 'panel-1')
+  await client.getAdminVpnPanelInbounds('admin-token', 'panel-1')
+  await client.createAdminVpnPanelInbound('admin-token', 'panel-1', { name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{}', sniffingJson: '{}', isDefault: true, capacity: 5000 })
   await client.getAdminVpnPanelClients('admin-token', 'panel-1')
   await client.getAdminVpnPanelHealthChecks('admin-token', 'panel-1')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/vpn-panels')
-  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/clients')
-  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/vpn-panels')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
+  assert.equal(calls[2]?.init?.method, 'PATCH')
+  assert.match(String(calls[2]?.init?.body), /AllowSelfSigned/)
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/test-connection')
+  assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/sync')
+  assert.equal(calls[5]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/inbounds')
+  assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/inbounds')
+  assert.equal(calls[7]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/clients')
+  assert.equal(calls[8]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
   assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
@@ -845,6 +872,11 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /Редактировать VPN-сервер/)
   assert.match(adminSource, /Datacenter/)
   assert.match(adminSource, /Приоритет/)
+  assert.match(adminSource, /editVpnPanel/)
+  assert.match(adminSource, /handleSaveVpnPanel/)
+  assert.match(adminSource, /Редактировать 3x-ui панель/)
+  assert.match(adminSource, /SSL verification/)
+  assert.match(adminSource, /API variant/)
   assert.match(adminSource, /Идентификация сервера|Подключение и безопасность|Тексты сценариев/)
   assert.match(adminSource, /editTariff/)
   assert.match(adminSource, /handleDeleteTariff/)

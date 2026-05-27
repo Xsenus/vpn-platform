@@ -65,6 +65,57 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Update_Should_Edit_Settings_And_Preserve_Empty_Password()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+
+        var created = await service.CreatePanelAsync(new CreateVpnPanelCommand(
+            "main-panel",
+            "https://panel.example.test:2053/",
+            "admin",
+            "initial-secret",
+            "eu",
+            100,
+            "Strict",
+            "X3UiOfficial",
+            false,
+            "{}"), CancellationToken.None);
+
+        Assert.True(created.IsSuccess, created.Error);
+        var panel = await db.VpnPanels.SingleAsync();
+        var originalPassword = panel.EncryptedPassword;
+
+        var updated = await service.UpdatePanelAsync(panel.Id, new UpdateVpnPanelCommand(
+            Name: "edited-panel",
+            BaseUrl: "https://edited-panel.example.test:2053/",
+            Login: "root-admin",
+            Password: "",
+            Region: "us",
+            Capacity: 250,
+            SslVerificationMode: "AllowSelfSigned",
+            ApiVariant: "ThreeXUi",
+            AutoCreateInbound: true,
+            DefaultInboundTemplateJson: "{\"remark\":\"auto-vless\"}",
+            Status: "Active"), CancellationToken.None);
+
+        Assert.True(updated.IsSuccess, updated.Error);
+        Assert.Equal("edited-panel", panel.Name);
+        Assert.Equal("https://edited-panel.example.test:2053", panel.BaseUrl);
+        Assert.Equal("root-admin", panel.Login);
+        Assert.Equal("us", panel.Region);
+        Assert.Equal(250, panel.Capacity);
+        Assert.Equal(VpnSslVerificationMode.AllowSelfSigned, panel.SslVerificationMode);
+        Assert.Equal(X3UiApiVariant.ThreeXUi, panel.ApiVariant);
+        Assert.True(panel.AutoCreateInbound);
+        Assert.Equal("{\"remark\":\"auto-vless\"}", panel.DefaultInboundTemplateJson);
+        Assert.Equal(VpnPanelStatus.Active, panel.Status);
+        Assert.Equal(originalPassword, panel.EncryptedPassword);
+        Assert.Equal("edited-panel", updated.Value!.Name);
+    }
+
+    [Fact]
     public async Task Real_Vpn_Provider_Should_Auto_Create_Inbound_And_Client()
     {
         await using var db = CreateDbContext();

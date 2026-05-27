@@ -424,6 +424,7 @@ export function App() {
   const [editingServerId, setEditingServerId] = useState<string | null>(null)
   const [providerForm, setProviderForm] = useState<UpsertPaymentProviderAccountPayload>(defaultProviderForm)
   const [vpnPanelForm, setVpnPanelForm] = useState<CreateVpnPanelPayload>(defaultVpnPanelForm)
+  const [editingVpnPanelId, setEditingVpnPanelId] = useState<string | null>(null)
   const [inboundForm, setInboundForm] = useState<CreateVpnInboundPayload>(defaultInboundForm)
   const [subscriptionExtendDays, setSubscriptionExtendDays] = useState<Record<string, number>>({})
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
@@ -652,6 +653,8 @@ export function App() {
     setVpnClients([])
     setVpnHealthChecks([])
     setVpnSyncRuns([])
+    setVpnPanelForm(defaultVpnPanelForm)
+    setEditingVpnPanelId(null)
     setBotSettings(defaultBotSettings)
     setBotSettingsForm({})
     setLoadErrors([])
@@ -1217,14 +1220,39 @@ export function App() {
     })
   }
 
-  const handleCreateVpnPanel = async () => {
+  const editVpnPanel = (panel: VpnPanelDto) => {
+    setEditingVpnPanelId(panel.id)
+    setSelectedVpnPanelId(panel.id)
+    setVpnPanelForm({
+      name: panel.name,
+      baseUrl: panel.baseUrl,
+      login: panel.login,
+      password: '',
+      region: panel.region,
+      capacity: panel.capacity,
+      sslVerificationMode: panel.sslVerificationMode || 'Strict',
+      apiVariant: panel.apiVariant || 'X3UiOfficial',
+      autoCreateInbound: panel.autoCreateInbound,
+      defaultInboundTemplateJson: panel.defaultInboundTemplateJson || '{}'
+    })
+  }
+
+  const cancelVpnPanelEdit = () => {
+    setEditingVpnPanelId(null)
+    setVpnPanelForm(defaultVpnPanelForm)
+  }
+
+  const handleSaveVpnPanel = async () => {
     if (!token) return
     setBusy(true)
     setError('')
     try {
-      const saved = await api.createAdminVpnPanel(token, vpnPanelForm)
-      setNotice(`VPN-панель ${saved.name} сохранена.`)
+      const saved = editingVpnPanelId
+        ? await api.updateAdminVpnPanel(token, editingVpnPanelId, vpnPanelForm)
+        : await api.createAdminVpnPanel(token, vpnPanelForm)
+      setNotice(`VPN-панель ${saved.name} ${editingVpnPanelId ? 'обновлена' : 'сохранена'}. Пароль не возвращается из API.`)
       setSelectedVpnPanelId(saved.id)
+      setEditingVpnPanelId(null)
       setVpnPanelForm({ ...defaultVpnPanelForm, region: vpnPanelForm.region })
       await loadAll(token)
       await loadVpnPanelDetails(saved.id)
@@ -1765,16 +1793,16 @@ export function App() {
 
       <div id="panels" className="section card-list-two" hidden={activeSection !== 'panels'}>
         <Card>
-          <h3>3x-ui панели</h3>
+          <h3>{editingVpnPanelId ? 'Редактировать 3x-ui панель' : '3x-ui панели'}</h3>
           <p className="safe-note">В проверочном режиме тест и синхронизация идут через безопасный путь без реального подключения к 3x-ui.</p>
-          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleCreateVpnPanel() }}>
+          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveVpnPanel() }}>
             <fieldset className="form-section">
               <legend>Доступ к панели</legend>
               <div className="form-grid">
                 <label><span>Название панели</span><input value={vpnPanelForm.name} onChange={(e) => updateVpnPanelForm('name', e.target.value)} placeholder="main-3xui" required /></label>
                 <label><span>Адрес панели</span><input value={vpnPanelForm.baseUrl} onChange={(e) => updateVpnPanelForm('baseUrl', e.target.value)} placeholder="https://panel.example.com:2053" type="url" inputMode="url" required /></label>
                 <label><span>Логин</span><input value={vpnPanelForm.login} onChange={(e) => updateVpnPanelForm('login', e.target.value)} placeholder="admin" /></label>
-                <PasswordField label="Пароль панели" value={vpnPanelForm.password ?? ''} onChange={(value) => updateVpnPanelForm('password', value)} placeholder="Хранится зашифрованным" autoComplete="new-password" />
+                <PasswordField label="Пароль панели" value={vpnPanelForm.password ?? ''} onChange={(value) => updateVpnPanelForm('password', value)} placeholder={editingVpnPanelId ? 'Оставьте пустым, чтобы сохранить текущий пароль' : 'Хранится зашифрованным'} autoComplete="new-password" />
               </div>
             </fieldset>
             <fieldset className="form-section">
@@ -1782,13 +1810,18 @@ export function App() {
               <div className="form-grid">
                 <label><span>Регион</span><input value={vpnPanelForm.region} onChange={(e) => updateVpnPanelForm('region', e.target.value)} placeholder="eu" /></label>
                 <label><span>Емкость</span><input value={vpnPanelForm.capacity} onChange={(e) => updateVpnPanelForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
+                <label><span>SSL verification</span><select value={vpnPanelForm.sslVerificationMode} onChange={(e) => updateVpnPanelForm('sslVerificationMode', e.target.value)}><option value="Strict">Strict</option><option value="AllowSelfSigned">AllowSelfSigned</option><option value="Disabled">Disabled</option></select></label>
+                <label><span>API variant</span><select value={vpnPanelForm.apiVariant} onChange={(e) => updateVpnPanelForm('apiVariant', e.target.value)}><option value="X3UiOfficial">X3UiOfficial</option><option value="ThreeXUi">ThreeXUi</option><option value="LegacyXUi">LegacyXUi</option><option value="Custom">Custom</option></select></label>
               </div>
+              <label className="checkbox-row"><input checked={vpnPanelForm.autoCreateInbound} onChange={(e) => updateVpnPanelForm('autoCreateInbound', e.target.checked)} type="checkbox" /> Автоматически создавать inbound при выдаче доступа</label>
+              <label><span>Шаблон inbound JSON</span><textarea value={vpnPanelForm.defaultInboundTemplateJson} onChange={(e) => updateVpnPanelForm('defaultInboundTemplateJson', e.target.value)} rows={4} placeholder='{"remark":"default-vless","protocol":"vless","port":443}' /></label>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || !vpnPanelForm.name || !vpnPanelForm.baseUrl} title={adminDisabledTitle} aria-busy={busy}>Добавить панель</PrimaryButton>
+              <PrimaryButton type="submit" disabled={busy || !token || !vpnPanelForm.name || !vpnPanelForm.baseUrl} title={adminDisabledTitle} aria-busy={busy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
+              {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
-          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · версия {panel.version || 'неизвестна'} · синхронизация {formatDate(panel.lastSyncAt)}</div></div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedVpnPanelId(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton></div></div>)}</div>
+          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · синхронизация {formatDate(panel.lastSyncAt)}</div></div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedVpnPanelId(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton></div></div>)}</div>
         </Card>
         <Card>
           <h3>Детали панели</h3>
