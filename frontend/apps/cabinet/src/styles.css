@@ -49,6 +49,49 @@
   color: var(--muted);
 }
 
+.payment-record {
+  align-content: start;
+}
+
+.payment-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.payment-meta-grid div,
+.payment-related {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.payment-meta-grid dt,
+.payment-related span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payment-meta-grid dd {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.payment-related {
+  display: grid;
+  gap: 4px;
+}
+
+.payment-related strong {
+  overflow-wrap: anywhere;
+}
+
 .app-version-overlay {
   position: fixed;
   inset: 0;

@@ -22,6 +22,7 @@ import {
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary } from './cabinet-dashboard'
+import { buildOrderExportText, canRetryOrderPayment, formatPaymentMoney, getLatestPaymentForOrder, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const configuredPublicWebUrl = import.meta.env.VITE_PUBLIC_WEB_URL?.replace(/\/$/, '')
@@ -115,6 +116,10 @@ export function App() {
   const cabinetSummary = useMemo(
     () => buildCabinetSummary(subscriptions, accesses),
     [subscriptions, accesses]
+  )
+  const paymentsByOrderId = useMemo(
+    () => groupPaymentsByOrderId(payments),
+    [payments]
   )
   const currentConnectionLink = cabinetSummary.currentAccess?.accessUri ?? cabinetSummary.currentSubscription?.accessUri ?? ''
   const currentAccessId = cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
@@ -725,20 +730,47 @@ export function App() {
           <h3>История заказов</h3>
           <div className="list-stack">
             {orders.length === 0 && <EmptyState title="Заказов нет" description="Ваши покупки и продления появятся здесь." />}
-            {orders.map((order) => (
-              <div key={order.id} className="list-item">
-                <div>
-                  <strong>{order.amount} {order.currency}</strong>
-                  <div className="muted">Тариф: {order.tariffId}</div>
-                </div>
-                <div className="status-stack">
-                  <StatusBadge value={order.status} />
-                  {(order.status === 'PendingPayment' || order.status === 'Failed') && (
-                    <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRetryOrderPayment(order)}>Повторить оплату</PrimaryButton>
+            {orders.map((order) => {
+              const orderPayments = paymentsByOrderId.get(order.id) ?? []
+              const latestPayment = getLatestPaymentForOrder(order, orderPayments)
+              const exportText = buildOrderExportText(order, orderPayments)
+              const exportHref = `data:application/json;charset=utf-8,${encodeURIComponent(exportText)}`
+
+              return (
+                <div key={order.id} className="list-item-vertical payment-record">
+                  <div className="card-head">
+                    <div>
+                      <strong>{formatPaymentMoney(order.amount, order.currency)}</strong>
+                      <div className="muted">Тариф: {order.tariffName || order.tariffId}</div>
+                    </div>
+                    <StatusBadge value={order.status} />
+                  </div>
+                  <p className="muted no-margin-bottom">{getOrderStatusMessage(order.status)}</p>
+                  <dl className="payment-meta-grid">
+                    <div><dt>Тип</dt><dd>{order.type ?? '—'}</dd></div>
+                    <div><dt>Канал</dt><dd>{order.channel ?? '—'}</dd></div>
+                    <div><dt>Провайдер</dt><dd>{(order.paymentProvider ?? provider) || '—'}</dd></div>
+                    <div><dt>Истекает</dt><dd>{new Date(order.expiresAt).toLocaleString()}</dd></div>
+                    <div><dt>Оплачен</dt><dd>{order.paidAt ? new Date(order.paidAt).toLocaleString() : '—'}</dd></div>
+                    <div><dt>Попыток оплаты</dt><dd>{order.paymentAttemptsCount ?? orderPayments.length}</dd></div>
+                  </dl>
+                  {latestPayment && (
+                    <div className="payment-related">
+                      <span>Последний платеж</span>
+                      <strong>{latestPayment.provider} · {formatPaymentMoney(latestPayment.amount, latestPayment.currency)}</strong>
+                      <p className="muted no-margin-bottom">{getPaymentStatusMessage(latestPayment.status)}</p>
+                    </div>
                   )}
+                  <div className="toolbar compact">
+                    {canRetryOrderPayment(order.status) && (
+                      <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRetryOrderPayment(order)}>Повторить оплату</PrimaryButton>
+                    )}
+                    <CopyButton value={exportText} label="Скопировать данные" />
+                    <a className="button button-ghost" download={`order-${order.id}.json`} href={exportHref}>Скачать JSON</a>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
 
@@ -747,12 +779,29 @@ export function App() {
           <div className="list-stack">
             {payments.length === 0 && <EmptyState title="Платежей нет" description="История попыток оплаты появится после покупки или продления." />}
             {payments.map((payment) => (
-              <div key={payment.id} className="list-item">
-                <div>
-                  <strong>{payment.provider}</strong>
-                  <div className="muted">{payment.providerPaymentId}</div>
+              <div key={payment.id} className="list-item-vertical payment-record">
+                <div className="card-head">
+                  <div>
+                    <strong>{payment.provider} · {formatPaymentMoney(payment.amount, payment.currency)}</strong>
+                    <div className="muted">Заказ: {payment.orderId}</div>
+                  </div>
+                  <StatusBadge value={payment.status} />
                 </div>
-                <StatusBadge value={payment.status} />
+                <p className="muted no-margin-bottom">{getPaymentStatusMessage(payment.status)}</p>
+                <dl className="payment-meta-grid">
+                  <div><dt>ID у провайдера</dt><dd>{payment.providerPaymentId || '—'}</dd></div>
+                  <div><dt>Режим</dt><dd>{payment.providerMode ?? '—'}</dd></div>
+                  <div><dt>Создан</dt><dd>{new Date(payment.createdAt).toLocaleString()}</dd></div>
+                  <div><dt>Оплачен</dt><dd>{payment.paidAt ? new Date(payment.paidAt).toLocaleString() : '—'}</dd></div>
+                  <div><dt>Ошибка</dt><dd>{payment.failedAt ? new Date(payment.failedAt).toLocaleString() : payment.statusReason ?? '—'}</dd></div>
+                  <div><dt>Активация</dt><dd>{payment.isActivationProcessed ? 'обработана' : 'ожидает'}</dd></div>
+                </dl>
+                {payment.confirmationUrl && (
+                  <div className="toolbar compact">
+                    <a className="button" href={payment.confirmationUrl} target="_blank" rel="noreferrer">Открыть оплату</a>
+                    <CopyButton value={payment.confirmationUrl} label="Скопировать ссылку" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
