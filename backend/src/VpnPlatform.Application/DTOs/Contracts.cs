@@ -3,7 +3,34 @@ using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Application.DTOs;
 
-public sealed record TariffDto(Guid Id, string Name, string Slug, string Description, int DurationDays, decimal Price, string Currency, int MaxDevices, string Category);
+public sealed record TariffDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string Description,
+    string FullDescription,
+    IReadOnlyList<string> Features,
+    string FeaturesJson,
+    string Badge,
+    int DurationDays,
+    decimal Price,
+    string Currency,
+    int MaxDevices,
+    long? TrafficLimit,
+    bool IsTrial,
+    bool IsActive,
+    int SortOrder,
+    DateTimeOffset? VisibleFrom,
+    DateTimeOffset? VisibleTo,
+    string TariffType,
+    string Category,
+    string AllowedRegionsCsv,
+    string AllowedNodeGroupsCsv,
+    bool IsReferralEligible,
+    string ProvisioningScenario,
+    string AfterPaymentText,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
 
 public sealed record FaqEntryDto(Guid Id, string Question, string Answer, string Category, bool IsActive, bool ShowOnHome, bool ShowOnFaqPage, int SortOrder, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 public sealed record FaqEntryUpsertRequest(string Question, string Answer, string? Category, bool IsActive, bool ShowOnHome, bool ShowOnFaqPage, int SortOrder);

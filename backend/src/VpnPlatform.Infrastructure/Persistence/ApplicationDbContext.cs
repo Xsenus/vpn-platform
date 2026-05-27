@@ -426,5 +426,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<FaqEntry>().Property(x => x.Question).HasMaxLength(300);
         modelBuilder.Entity<FaqEntry>().Property(x => x.Answer).HasColumnType("text");
         modelBuilder.Entity<FaqEntry>().Property(x => x.Category).HasMaxLength(120);
+        modelBuilder.Entity<Tariff>().Property(x => x.Description).HasColumnType("text");
+        modelBuilder.Entity<Tariff>().Property(x => x.FullDescription).HasColumnType("text");
+        modelBuilder.Entity<Tariff>().Property(x => x.FeaturesJson).HasColumnType("text");
+        modelBuilder.Entity<Tariff>().Property(x => x.Badge).HasMaxLength(80);
+        modelBuilder.Entity<Tariff>().Property(x => x.ProvisioningScenario).HasMaxLength(120);
+        modelBuilder.Entity<Tariff>().Property(x => x.AfterPaymentText).HasColumnType("text");
     }
 }

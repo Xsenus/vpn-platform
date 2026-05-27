@@ -77,6 +77,44 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
   assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
+test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    if (String(url).endsWith('/api/admin/tariffs') && init?.method !== 'POST') {
+      return new Response(JSON.stringify([{ id: 'tariff-1', name: 'Premium', features: ['Автовыдача'], badge: 'Популярный' }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (init?.method === 'DELETE') {
+      return new Response(JSON.stringify({ id: 'tariff-1', deleted: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(JSON.stringify({ id: 'tariff-1', name: 'Premium', features: ['Автовыдача'], badge: 'Выгодно' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await client.getAdminTariffs('admin-token')
+  await client.createAdminTariff('admin-token', { name: 'Premium', featuresJson: '["Автовыдача"]', badge: 'Популярный', afterPaymentText: 'После оплаты доступ появится в кабинете.' })
+  await client.updateAdminTariff('admin-token', 'tariff-1', { badge: 'Выгодно', provisioningScenario: 'premium-auto' })
+  await client.deleteAdminTariff('admin-token', 'tariff-1')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/tariffs')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.equal(calls[2]?.init?.method, 'PATCH')
+  assert.equal(calls[3]?.init?.method, 'DELETE')
+  assert.match(String(calls[1]?.init?.body), /featuresJson|afterPaymentText/)
+  assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
 test('ApiClient.createMyOrder sends auth header and payload', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
@@ -675,6 +713,9 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(publicSource, /getPublicPaymentProviders/)
   assert.match(publicSource, /paymentProvidersLoading/)
   assert.match(publicSource, /Нет доступных способов оплаты|paymentProvidersLoading/)
+  assert.match(publicSource, /tariffFeatures/)
+  assert.match(publicSource, /afterPaymentText/)
+  assert.match(publicSource, /feature-list compact-list/)
   assert.match(cabinetSource, /getPublicPaymentProviders/)
   assert.match(cabinetSource, /paymentProvidersLoading/)
   assert.match(cabinetSource, /getMyAccessQrSvg/)
@@ -696,6 +737,10 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /Завершить сессию/)
   assert.match(adminSource, /fieldset className="form-section"/)
   assert.match(adminSource, /Идентификация сервера|Подключение и безопасность|Тексты сценариев/)
+  assert.match(adminSource, /editTariff/)
+  assert.match(adminSource, /handleDeleteTariff/)
+  assert.match(adminSource, /featuresTextToJson/)
+  assert.match(adminSource, /Предпросмотр|tariff-preview/)
   assert.match(stylesSource, /form:has\(\.form-section\)/)
   assert.match(stylesSource, /form\.form-grid/)
   assert.match(stylesSource, /label:has\(textarea\)/)

@@ -66,6 +66,21 @@ function readPendingCheckout(): PendingCheckout | null {
   }
 }
 
+function tariffFeatures(tariff: TariffDto) {
+  if (Array.isArray(tariff.features) && tariff.features.length > 0) return tariff.features
+
+  if (tariff.featuresJson) {
+    try {
+      const parsed = JSON.parse(tariff.featuresJson)
+      if (Array.isArray(parsed)) return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
 const landingFeatures = [
   'Автоматическая выдача VPN-доступа после подтверждения оплаты.',
   'Тарифы, платежи, Telegram-боты и серверы управляются из админки.',
@@ -476,23 +491,37 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       <div className="section card-list">
         {tariffsLoading && <LoadingBlock label="Загружаем тарифы..." />}
         {!tariffsLoading && tariffs.length === 0 && <EmptyState title="Тарифы пока не опубликованы" description="Администратор должен включить тариф для public/Telegram витрины." />}
-        {tariffs.map((tariff) => (
+        {tariffs.map((tariff) => {
+          const features = tariffFeatures(tariff)
+
+          return (
           <div className="card" key={tariff.id}>
             <div className="card-head">
               <div>
                 <h3>{tariff.name}</h3>
                 <p>{tariff.description}</p>
               </div>
-              <StatusBadge value={tariff.category} />
+              <div className="status-stack">
+                {tariff.badge && <StatusBadge value={tariff.badge} />}
+                <StatusBadge value={tariff.category} />
+              </div>
             </div>
+            {tariff.fullDescription && <p>{tariff.fullDescription}</p>}
             <p><strong>{tariff.price} {tariff.currency}</strong> / {tariff.durationDays} дней</p>
-            <p>Устройств: {tariff.maxDevices}</p>
+            <p>Устройств: {tariff.maxDevices}{tariff.trafficLimit ? ` · трафик ${(tariff.trafficLimit / 1024 / 1024 / 1024).toFixed(0)} ГБ` : ''}</p>
+            {features.length > 0 && (
+              <ul className="feature-list compact-list">
+                {features.map((feature) => <li key={feature}>{feature}</li>)}
+              </ul>
+            )}
+            {tariff.afterPaymentText && <p className="muted">{tariff.afterPaymentText}</p>}
             <PrimaryButton disabled={pendingTariffId === tariff.id || paymentProvidersLoading || !provider || paymentProviders.length === 0} aria-busy={pendingTariffId === tariff.id} title={checkoutUnavailableReason || undefined} onClick={() => void handleCheckout(tariff)}>
               {pendingTariffId === tariff.id ? 'Создаем заказ...' : 'Купить'}
             </PrimaryButton>
             {checkoutUnavailableReason && <p className="muted">{checkoutUnavailableReason}</p>}
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {checkoutState && (

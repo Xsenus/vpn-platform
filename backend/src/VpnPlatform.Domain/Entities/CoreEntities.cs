@@ -81,6 +81,9 @@ public class Tariff : AuditableEntity
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string FullDescription { get; set; } = string.Empty;
+    public string FeaturesJson { get; set; } = "[]";
+    public string Badge { get; set; } = string.Empty;
     public int DurationDays { get; set; }
     public decimal Price { get; set; }
     public string Currency { get; set; } = "RUB";
@@ -96,6 +99,8 @@ public class Tariff : AuditableEntity
     public string AllowedRegionsCsv { get; set; } = string.Empty;
     public string AllowedNodeGroupsCsv { get; set; } = string.Empty;
     public bool IsReferralEligible { get; set; } = true;
+    public string ProvisioningScenario { get; set; } = "auto";
+    public string AfterPaymentText { get; set; } = string.Empty;
 }
 
 public class PromoCode : AuditableEntity

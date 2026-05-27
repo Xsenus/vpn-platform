@@ -24,6 +24,10 @@ export type TariffDto = {
   name: string
   slug: string
   description: string
+  fullDescription?: string
+  features?: string[]
+  featuresJson?: string
+  badge?: string
   durationDays: number
   price: number
   currency: string
@@ -39,6 +43,8 @@ export type TariffDto = {
   allowedRegionsCsv?: string
   allowedNodeGroupsCsv?: string
   isReferralEligible?: boolean
+  provisioningScenario?: string
+  afterPaymentText?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -651,7 +657,7 @@ export type AdminUserOverviewDto = {
   supportConversations: SupportConversationDto[]
 }
 
-export type UpdateTariffPayload = Partial<Pick<TariffDto, 'name' | 'slug' | 'description' | 'price' | 'currency' | 'durationDays' | 'maxDevices' | 'trafficLimit' | 'isActive' | 'sortOrder' | 'category' | 'allowedRegionsCsv' | 'allowedNodeGroupsCsv'>>
+export type UpdateTariffPayload = Partial<Pick<TariffDto, 'name' | 'slug' | 'description' | 'fullDescription' | 'featuresJson' | 'badge' | 'price' | 'currency' | 'durationDays' | 'maxDevices' | 'trafficLimit' | 'isTrial' | 'isActive' | 'sortOrder' | 'category' | 'allowedRegionsCsv' | 'allowedNodeGroupsCsv' | 'isReferralEligible' | 'provisioningScenario' | 'afterPaymentText'>>
 
 export type FaqItem = {
   id?: string
@@ -1337,6 +1343,14 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: 'Failed to update tariff'
+    })
+  }
+
+  deleteAdminTariff(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/admin/tariffs/${id}`, {
+      method: 'DELETE',
+      token,
+      errorMessage: 'Failed to delete tariff'
     })
   }
 

@@ -974,55 +974,28 @@ public class AdminOperationsController : ControllerBase
 
     [HttpGet("tariffs")]
     public async Task<IActionResult> GetTariffs(CancellationToken cancellationToken)
-        => Ok(await _db.Tariffs.AsNoTracking()
+    {
+        var tariffs = await _db.Tariffs.AsNoTracking()
             .OrderBy(x => x.SortOrder)
-            .Select(x => new
-            {
-                x.Id,
-                x.Name,
-                x.Slug,
-                x.Description,
-                x.DurationDays,
-                x.Price,
-                x.Currency,
-                x.MaxDevices,
-                x.TrafficLimit,
-                x.IsTrial,
-                x.IsActive,
-                x.SortOrder,
-                x.VisibleFrom,
-                x.VisibleTo,
-                TariffType = x.TariffType.ToString(),
-                x.Category,
-                x.AllowedRegionsCsv,
-                x.AllowedNodeGroupsCsv,
-                x.IsReferralEligible,
-                x.CreatedAt,
-                x.UpdatedAt
-            })
-            .ToListAsync(cancellationToken));
+            .ToListAsync(cancellationToken);
+
+        return Ok(tariffs.Select(MapTariffDto).ToList());
+    }
 
     [HttpPost("tariffs")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> CreateTariff([FromBody] Tariff tariff, CancellationToken cancellationToken)
     {
-        if (tariff.Price < 0 || tariff.DurationDays <= 0)
+        var validationError = NormalizeTariff(tariff);
+        if (validationError is not null)
         {
-            return BadRequest(new { error = "Tariff price must be non-negative and durationDays must be positive." });
+            return BadRequest(new { error = validationError });
         }
 
-        if (string.IsNullOrWhiteSpace(tariff.Name))
-        {
-            return BadRequest(new { error = "Tariff name is required." });
-        }
-
-        tariff.Name = tariff.Name.Trim();
-        tariff.Slug = string.IsNullOrWhiteSpace(tariff.Slug) ? tariff.Name.ToLowerInvariant().Replace(' ', '-') : tariff.Slug.Trim();
-        tariff.Currency = string.IsNullOrWhiteSpace(tariff.Currency) ? "RUB" : tariff.Currency.Trim().ToUpperInvariant();
         _db.Tariffs.Add(tariff);
         AddAuditLog("tariff.create", "Tariff", tariff.Id, "{}", JsonSerializer.Serialize(new { tariff.Name, tariff.Price, tariff.Currency, tariff.DurationDays, tariff.IsActive }));
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(tariff);
+        return Ok(MapTariffDto(tariff));
     }
 
     [HttpPatch("tariffs/{id:guid}")]
@@ -1032,29 +1005,61 @@ public class AdminOperationsController : ControllerBase
         var tariff = await _db.Tariffs.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (tariff is null) return NotFound();
 
-        var before = JsonSerializer.Serialize(new { tariff.Name, tariff.Price, tariff.Currency, tariff.DurationDays, tariff.IsActive, tariff.SortOrder });
+        var before = JsonSerializer.Serialize(MapTariffDto(tariff));
         if (payload.TryGetProperty("name", out var name)) tariff.Name = name.GetString()?.Trim() ?? tariff.Name;
+        if (payload.TryGetProperty("slug", out var slug)) tariff.Slug = slug.GetString()?.Trim() ?? tariff.Slug;
         if (payload.TryGetProperty("description", out var description)) tariff.Description = description.GetString() ?? tariff.Description;
+        if (payload.TryGetProperty("fullDescription", out var fullDescription)) tariff.FullDescription = fullDescription.GetString() ?? tariff.FullDescription;
+        if (payload.TryGetProperty("featuresJson", out var featuresJson)) tariff.FeaturesJson = featuresJson.GetString() ?? tariff.FeaturesJson;
+        if (payload.TryGetProperty("badge", out var badge)) tariff.Badge = badge.GetString() ?? tariff.Badge;
         if (payload.TryGetProperty("price", out var price)) tariff.Price = price.GetDecimal();
         if (payload.TryGetProperty("currency", out var currency)) tariff.Currency = (currency.GetString() ?? tariff.Currency).Trim().ToUpperInvariant();
         if (payload.TryGetProperty("durationDays", out var durationDays)) tariff.DurationDays = durationDays.GetInt32();
         if (payload.TryGetProperty("maxDevices", out var maxDevices)) tariff.MaxDevices = maxDevices.GetInt32();
-        if (payload.TryGetProperty("trafficLimit", out var trafficLimit) && trafficLimit.ValueKind != JsonValueKind.Null) tariff.TrafficLimit = trafficLimit.GetInt64();
+        if (payload.TryGetProperty("trafficLimit", out var trafficLimit)) tariff.TrafficLimit = trafficLimit.ValueKind == JsonValueKind.Null ? null : trafficLimit.GetInt64();
+        if (payload.TryGetProperty("isTrial", out var isTrial)) tariff.IsTrial = isTrial.GetBoolean();
         if (payload.TryGetProperty("isActive", out var isActive)) tariff.IsActive = isActive.GetBoolean();
         if (payload.TryGetProperty("sortOrder", out var sortOrder)) tariff.SortOrder = sortOrder.GetInt32();
         if (payload.TryGetProperty("category", out var category)) tariff.Category = category.GetString() ?? tariff.Category;
         if (payload.TryGetProperty("allowedRegionsCsv", out var regions)) tariff.AllowedRegionsCsv = regions.GetString() ?? tariff.AllowedRegionsCsv;
         if (payload.TryGetProperty("allowedNodeGroupsCsv", out var nodeGroups)) tariff.AllowedNodeGroupsCsv = nodeGroups.GetString() ?? tariff.AllowedNodeGroupsCsv;
+        if (payload.TryGetProperty("isReferralEligible", out var referralEligible)) tariff.IsReferralEligible = referralEligible.GetBoolean();
+        if (payload.TryGetProperty("provisioningScenario", out var provisioningScenario)) tariff.ProvisioningScenario = provisioningScenario.GetString() ?? tariff.ProvisioningScenario;
+        if (payload.TryGetProperty("afterPaymentText", out var afterPaymentText)) tariff.AfterPaymentText = afterPaymentText.GetString() ?? tariff.AfterPaymentText;
+        if (payload.TryGetProperty("visibleFrom", out var visibleFrom)) tariff.VisibleFrom = ReadNullableDate(visibleFrom);
+        if (payload.TryGetProperty("visibleTo", out var visibleTo)) tariff.VisibleTo = ReadNullableDate(visibleTo);
 
-        if (tariff.Price < 0 || tariff.DurationDays <= 0)
+        var validationError = NormalizeTariff(tariff);
+        if (validationError is not null)
         {
-            return BadRequest(new { error = "Tariff price must be non-negative and durationDays must be positive." });
+            return BadRequest(new { error = validationError });
         }
 
         tariff.UpdatedAt = DateTimeOffset.UtcNow;
-        AddAuditLog("tariff.update", "Tariff", id, before, JsonSerializer.Serialize(new { tariff.Name, tariff.Price, tariff.Currency, tariff.DurationDays, tariff.IsActive, tariff.SortOrder }));
+        AddAuditLog("tariff.update", "Tariff", id, before, JsonSerializer.Serialize(MapTariffDto(tariff)));
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(tariff);
+        return Ok(MapTariffDto(tariff));
+    }
+
+    [HttpDelete("tariffs/{id:guid}")]
+    [Authorize(Policy = AdminPolicies.AdminWrite)]
+    public async Task<IActionResult> DeleteTariff(Guid id, CancellationToken cancellationToken)
+    {
+        var tariff = await _db.Tariffs.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (tariff is null) return NotFound();
+
+        var hasLinkedOrders = await _db.Orders.AnyAsync(x => x.TariffId == id, cancellationToken);
+        var hasLinkedSubscriptions = await _db.Subscriptions.AnyAsync(x => x.TariffId == id, cancellationToken);
+        if (hasLinkedOrders || hasLinkedSubscriptions)
+        {
+            return BadRequest(new { error = "Нельзя удалить тариф, к которому уже привязаны заказы или подписки. Отключите его вместо удаления." });
+        }
+
+        var before = JsonSerializer.Serialize(MapTariffDto(tariff));
+        _db.Tariffs.Remove(tariff);
+        AddAuditLog("tariff.delete", "Tariff", id, before, "{}");
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(new { id, deleted = true });
     }
 
     [HttpGet("referrals")]
@@ -1089,6 +1094,125 @@ public class AdminOperationsController : ControllerBase
         return Ok(program);
     }
 
+
+    private static TariffDto MapTariffDto(Tariff tariff)
+        => new(
+            tariff.Id,
+            tariff.Name,
+            tariff.Slug,
+            tariff.Description,
+            tariff.FullDescription,
+            ParseTariffFeatures(tariff.FeaturesJson),
+            tariff.FeaturesJson,
+            tariff.Badge,
+            tariff.DurationDays,
+            tariff.Price,
+            tariff.Currency,
+            tariff.MaxDevices,
+            tariff.TrafficLimit,
+            tariff.IsTrial,
+            tariff.IsActive,
+            tariff.SortOrder,
+            tariff.VisibleFrom,
+            tariff.VisibleTo,
+            tariff.TariffType.ToString(),
+            tariff.Category,
+            tariff.AllowedRegionsCsv,
+            tariff.AllowedNodeGroupsCsv,
+            tariff.IsReferralEligible,
+            tariff.ProvisioningScenario,
+            tariff.AfterPaymentText,
+            tariff.CreatedAt,
+            tariff.UpdatedAt);
+
+    private static string? NormalizeTariff(Tariff tariff)
+    {
+        if (string.IsNullOrWhiteSpace(tariff.Name))
+        {
+            return "Tariff name is required.";
+        }
+
+        if (tariff.Price < 0 || tariff.DurationDays <= 0)
+        {
+            return "Tariff price must be non-negative and durationDays must be positive.";
+        }
+
+        if (tariff.MaxDevices <= 0)
+        {
+            return "Tariff maxDevices must be positive.";
+        }
+
+        tariff.Name = tariff.Name.Trim();
+        tariff.Slug = Slugify(string.IsNullOrWhiteSpace(tariff.Slug) ? tariff.Name : tariff.Slug);
+        tariff.Description = tariff.Description.Trim();
+        tariff.FullDescription = tariff.FullDescription.Trim();
+        tariff.FeaturesJson = NormalizeTariffFeaturesJson(tariff.FeaturesJson);
+        tariff.Badge = tariff.Badge.Trim();
+        tariff.Currency = string.IsNullOrWhiteSpace(tariff.Currency) ? "RUB" : tariff.Currency.Trim().ToUpperInvariant();
+        tariff.Category = string.IsNullOrWhiteSpace(tariff.Category) ? "default" : tariff.Category.Trim();
+        tariff.AllowedRegionsCsv = tariff.AllowedRegionsCsv.Trim();
+        tariff.AllowedNodeGroupsCsv = tariff.AllowedNodeGroupsCsv.Trim();
+        tariff.ProvisioningScenario = string.IsNullOrWhiteSpace(tariff.ProvisioningScenario) ? "auto" : tariff.ProvisioningScenario.Trim();
+        tariff.AfterPaymentText = tariff.AfterPaymentText.Trim();
+
+        if (tariff.VisibleFrom is not null && tariff.VisibleTo is not null && tariff.VisibleFrom > tariff.VisibleTo)
+        {
+            return "Tariff visibleFrom must be earlier than visibleTo.";
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> ParseTariffFeatures(string? featuresJson)
+    {
+        if (string.IsNullOrWhiteSpace(featuresJson)) return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(featuresJson)?
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList() ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static string NormalizeTariffFeaturesJson(string? featuresJson)
+    {
+        if (string.IsNullOrWhiteSpace(featuresJson)) return "[]";
+
+        try
+        {
+            var items = JsonSerializer.Deserialize<List<string>>(featuresJson) ?? [];
+            return JsonSerializer.Serialize(items
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(), JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return "[]";
+        }
+    }
+
+    private static string Slugify(string value)
+    {
+        var slug = Regex.Replace(value.Trim().ToLowerInvariant(), @"\s+", "-");
+        slug = Regex.Replace(slug, @"[^a-z0-9а-яё\-_]+", "-");
+        slug = Regex.Replace(slug, @"-+", "-").Trim('-');
+        return string.IsNullOrWhiteSpace(slug) ? Guid.NewGuid().ToString("N")[..12] : slug;
+    }
+
+    private static DateTimeOffset? ReadNullableDate(JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Null) return null;
+        var raw = value.GetString();
+        return DateTimeOffset.TryParse(raw, out var parsed) ? parsed : null;
+    }
 
     private static string ResolveCurrentProvisioningStep(ProvisioningRunStatus status)
         => status switch

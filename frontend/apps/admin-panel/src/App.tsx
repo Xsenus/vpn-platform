@@ -171,13 +171,23 @@ const defaultTariffForm: UpdateTariffPayload = {
   name: '',
   slug: '',
   description: '',
+  fullDescription: '',
+  featuresJson: '[]',
+  badge: '',
   durationDays: 30,
   price: 490,
   currency: 'RUB',
   maxDevices: 3,
+  trafficLimit: null,
+  isTrial: false,
   isActive: true,
   sortOrder: 100,
-  category: 'default'
+  category: 'default',
+  allowedRegionsCsv: '',
+  allowedNodeGroupsCsv: '',
+  isReferralEligible: true,
+  provisioningScenario: 'auto',
+  afterPaymentText: ''
 }
 
 const defaultReleaseForm: AppReleaseUpsertPayload = {
@@ -234,6 +244,28 @@ function formatDate(value?: string | null) {
   if (!value) return '—'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+}
+
+function parseTariffFeatures(tariff: Pick<TariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
+  const directFeatures = 'features' in tariff ? tariff.features : undefined
+  if (Array.isArray(directFeatures) && directFeatures.length > 0) return directFeatures
+
+  if (!tariff.featuresJson) return []
+
+  try {
+    const parsed = JSON.parse(tariff.featuresJson)
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
+  } catch {
+    return []
+  }
+}
+
+function featuresTextToJson(value: string) {
+  return JSON.stringify(value.split('\n').map((item) => item.trim()).filter(Boolean))
+}
+
+function featuresToText(tariff: Pick<TariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
+  return parseTariffFeatures(tariff).join('\n')
 }
 
 function toDateTimeLocalValue(value: string) {
@@ -306,6 +338,8 @@ export function App() {
   const [supportNoteText, setSupportNoteText] = useState('')
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
   const [tariffForm, setTariffForm] = useState<UpdateTariffPayload>(defaultTariffForm)
+  const [tariffFeaturesText, setTariffFeaturesText] = useState('')
+  const [editingTariffId, setEditingTariffId] = useState('')
   const [appReleases, setAppReleases] = useState<AppReleaseDto[]>([])
   const [releaseForm, setReleaseForm] = useState<AppReleaseUpsertPayload>(defaultReleaseForm)
   const [editingReleaseId, setEditingReleaseId] = useState('')
@@ -524,6 +558,9 @@ export function App() {
     setSelectedSupportConversationId('')
     setSupportMessages([])
     setTariffs([])
+    setTariffForm(defaultTariffForm)
+    setTariffFeaturesText('')
+    setEditingTariffId('')
     setAppReleases([])
     setReleaseForm(defaultReleaseForm)
     setEditingReleaseId('')
@@ -638,21 +675,62 @@ export function App() {
     })
   }
 
-  const handleCreateTariff = async () => {
+  const resetTariffForm = () => {
+    setTariffForm(defaultTariffForm)
+    setTariffFeaturesText('')
+    setEditingTariffId('')
+  }
+
+  const editTariff = (tariff: TariffDto) => {
+    setEditingTariffId(tariff.id)
+    setTariffForm({
+      name: tariff.name,
+      slug: tariff.slug,
+      description: tariff.description,
+      fullDescription: tariff.fullDescription ?? '',
+      featuresJson: tariff.featuresJson ?? JSON.stringify(tariff.features ?? []),
+      badge: tariff.badge ?? '',
+      durationDays: tariff.durationDays,
+      price: tariff.price,
+      currency: tariff.currency,
+      maxDevices: tariff.maxDevices,
+      trafficLimit: tariff.trafficLimit ?? null,
+      isTrial: tariff.isTrial ?? false,
+      isActive: tariff.isActive !== false,
+      sortOrder: tariff.sortOrder ?? 100,
+      category: tariff.category,
+      allowedRegionsCsv: tariff.allowedRegionsCsv ?? '',
+      allowedNodeGroupsCsv: tariff.allowedNodeGroupsCsv ?? '',
+      isReferralEligible: tariff.isReferralEligible !== false,
+      provisioningScenario: tariff.provisioningScenario ?? 'auto',
+      afterPaymentText: tariff.afterPaymentText ?? ''
+    })
+    setTariffFeaturesText(featuresToText(tariff))
+    setActiveSection('tariffs')
+    if (typeof window !== 'undefined') window.location.hash = 'tariffs'
+  }
+
+  const handleSaveTariff = async () => {
     if (!token) return
     if (!tariffForm.name || n(tariffForm.price) < 0 || n(tariffForm.durationDays) <= 0) {
       setError('Тариф: название обязательно, цена >= 0, срок > 0 дней.')
       return
     }
+    const payload = { ...tariffForm, featuresJson: featuresTextToJson(tariffFeaturesText) }
     setBusy(true)
     setError('')
     try {
-      await api.createAdminTariff(token, tariffForm)
-      setTariffForm(defaultTariffForm)
-      setNotice('Тариф создан.')
+      if (editingTariffId) {
+        await api.updateAdminTariff(token, editingTariffId, payload)
+        setNotice('Тариф обновлён.')
+      } else {
+        await api.createAdminTariff(token, payload)
+        setNotice('Тариф создан.')
+      }
+      resetTariffForm()
       await loadAll(token)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать тариф')
+      setError(e instanceof Error ? e.message : 'Не удалось сохранить тариф')
     } finally {
       setBusy(false)
     }
@@ -662,6 +740,15 @@ export function App() {
     await runAction(tariff.id, async () => {
       await api.updateAdminTariff(token, tariff.id, { isActive: tariff.isActive === false })
       setNotice(`Тариф ${tariff.name} обновлён.`)
+      await loadAll(token)
+    })
+  }
+
+  const handleDeleteTariff = async (tariff: TariffDto) => {
+    await runAction(`delete-${tariff.id}`, async () => {
+      await api.deleteAdminTariff(token, tariff.id)
+      if (editingTariffId === tariff.id) resetTariffForm()
+      setNotice(`Тариф ${tariff.name} удалён.`)
       await loadAll(token)
     })
   }
@@ -1238,8 +1325,8 @@ export function App() {
 
       <div id="tariffs" className="section card-list-two" hidden={activeSection !== 'tariffs'}>
         <Card>
-          <h3>Тарифы</h3>
-          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleCreateTariff() }}>
+          <h3>{editingTariffId ? 'Редактирование тарифа' : 'Новый тариф'}</h3>
+          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveTariff() }}>
             <fieldset className="form-section">
               <legend>Цена и срок</legend>
               <div className="form-grid">
@@ -1249,6 +1336,7 @@ export function App() {
                 <label><span>Валюта</span><input value={tariffForm.currency ?? 'RUB'} onChange={(e) => updateTariffForm('currency', e.target.value)} placeholder="RUB" /></label>
                 <label><span>Срок, дней</span><input value={tariffForm.durationDays ?? 30} onChange={(e) => updateTariffForm('durationDays', Number(e.target.value) || 0)} type="number" min={1} step="1" placeholder="30" /></label>
                 <label><span>Устройств</span><input value={tariffForm.maxDevices ?? 3} onChange={(e) => updateTariffForm('maxDevices', Number(e.target.value) || 0)} type="number" min={1} step="1" placeholder="3" /></label>
+                <label><span>Лимит трафика, ГБ</span><input value={tariffForm.trafficLimit ? Math.round(tariffForm.trafficLimit / 1024 / 1024 / 1024) : ''} onChange={(e) => updateTariffForm('trafficLimit', e.target.value ? Number(e.target.value) * 1024 * 1024 * 1024 : null)} type="number" min={0} step="1" placeholder="Без лимита" /></label>
               </div>
             </fieldset>
             <fieldset className="form-section">
@@ -1256,12 +1344,39 @@ export function App() {
               <div className="form-grid">
                 <label><span>Порядок</span><input value={tariffForm.sortOrder ?? 100} onChange={(e) => updateTariffForm('sortOrder', Number(e.target.value) || 0)} type="number" min={0} step="1" placeholder="100" /></label>
                 <label><span>Категория</span><input value={tariffForm.category ?? 'default'} onChange={(e) => updateTariffForm('category', e.target.value)} placeholder="default" /></label>
+                <label><span>Бейдж</span><input value={tariffForm.badge ?? ''} onChange={(e) => updateTariffForm('badge', e.target.value)} placeholder="Популярный, Выгодно, Семейный" /></label>
+                <label><span>Сценарий выдачи</span><input value={tariffForm.provisioningScenario ?? 'auto'} onChange={(e) => updateTariffForm('provisioningScenario', e.target.value)} placeholder="auto, manual, premium-auto" /></label>
               </div>
-              <label><span>Описание</span><textarea value={tariffForm.description ?? ''} onChange={(e) => updateTariffForm('description', e.target.value)} placeholder="Что получит пользователь" rows={3} /></label>
+              <label><span>Короткое описание</span><textarea value={tariffForm.description ?? ''} onChange={(e) => updateTariffForm('description', e.target.value)} placeholder="Коротко для карточки тарифа" rows={3} /></label>
+              <label><span>Полное описание</span><textarea value={tariffForm.fullDescription ?? ''} onChange={(e) => updateTariffForm('fullDescription', e.target.value)} placeholder="Подробное описание для публичной страницы" rows={4} /></label>
+              <label><span>Преимущества, по одному в строке</span><textarea value={tariffFeaturesText} onChange={(e) => setTariffFeaturesText(e.target.value)} placeholder={'3 устройства\nАвтоматическая выдача\nQR-код в кабинете'} rows={5} /></label>
+              <label><span>Текст после оплаты</span><textarea value={tariffForm.afterPaymentText ?? ''} onChange={(e) => updateTariffForm('afterPaymentText', e.target.value)} placeholder="Что увидит пользователь после покупки" rows={3} /></label>
+              <div className="form-grid">
+                <label><span>Разрешенные регионы</span><input value={tariffForm.allowedRegionsCsv ?? ''} onChange={(e) => updateTariffForm('allowedRegionsCsv', e.target.value)} placeholder="eu,us" /></label>
+                <label><span>Группы серверов</span><input value={tariffForm.allowedNodeGroupsCsv ?? ''} onChange={(e) => updateTariffForm('allowedNodeGroupsCsv', e.target.value)} placeholder="default,premium" /></label>
+              </div>
               <label className="checkbox-row"><input checked={tariffForm.isActive !== false} onChange={(e) => updateTariffForm('isActive', e.target.checked)} type="checkbox" /> Показывать пользователям</label>
+              <label className="checkbox-row"><input checked={tariffForm.isTrial === true} onChange={(e) => updateTariffForm('isTrial', e.target.checked)} type="checkbox" /> Пробный тариф</label>
+              <label className="checkbox-row"><input checked={tariffForm.isReferralEligible !== false} onChange={(e) => updateTariffForm('isReferralEligible', e.target.checked)} type="checkbox" /> Участвует в реферальной программе</label>
             </fieldset>
+            <div className="tariff-preview">
+              <div className="card-head">
+                <div>
+                  <strong>{tariffForm.name || 'Название тарифа'}</strong>
+                  <div className="muted">{tariffForm.description || 'Короткое описание тарифа'}</div>
+                </div>
+                <div className="status-stack">
+                  {tariffForm.badge && <StatusBadge value={tariffForm.badge} />}
+                  <StatusBadge value={tariffForm.isActive === false ? 'Disabled' : 'Enabled'} />
+                </div>
+              </div>
+              <div><strong>{tariffForm.price ?? 0} {tariffForm.currency ?? 'RUB'}</strong> / {tariffForm.durationDays ?? 0} дней</div>
+              <div className="muted">{tariffForm.maxDevices ?? 0} устройств · сценарий {tariffForm.provisioningScenario || 'auto'}</div>
+              {tariffFeaturesText && <ul className="feature-list compact-list">{tariffFeaturesText.split('\n').filter(Boolean).map((feature) => <li key={feature}>{feature}</li>)}</ul>}
+            </div>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || busy || !tariffForm.name} title={adminDisabledTitle} aria-busy={busy}>Создать тариф</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || busy || !tariffForm.name} title={adminDisabledTitle} aria-busy={busy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
+              {editingTariffId && <PrimaryButton type="button" className="button-ghost" onClick={resetTariffForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
         </Card>
@@ -1269,7 +1384,7 @@ export function App() {
           <h3>Список тарифов</h3>
           <div className="list-stack">
             {tariffs.length === 0 && <EmptyState title="Тарифов нет" description="Создайте первый тариф, чтобы он появился на странице покупки." />}
-            {tariffs.map((tariff) => <div key={tariff.id} className="list-item"><div><strong>{tariff.name}</strong><div className="muted">{tariff.description || '—'}</div><div className="muted">{tariff.durationDays} дней · порядок {tariff.sortOrder ?? 0} · выключенный тариф скрыт на сайте и в Telegram</div></div><div className="item-status"><strong>{tariff.price} {tariff.currency}</strong><StatusBadge value={tariff.isActive === false ? 'Disabled' : 'Enabled'} />{tariff.isActive === false ? <PrimaryButton className="button-ghost" disabled={actionBusyId === tariff.id} onClick={() => void handleToggleTariff(tariff)}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === tariff.id} message={`Выключить тариф "${tariff.name}"? Он исчезнет с публичной витрины и из Telegram.`} onConfirm={() => void handleToggleTariff(tariff)}>Выключить</ConfirmButton>}</div></div>)}
+            {tariffs.map((tariff) => <div key={tariff.id} className="list-item-vertical"><div className="item-head"><div><strong>{tariff.name}</strong><div className="muted">{tariff.description || '—'}</div><div className="muted">{tariff.durationDays} дней · {tariff.maxDevices} устройств · порядок {tariff.sortOrder ?? 0} · сценарий {tariff.provisioningScenario || 'auto'}</div><div className="muted">{parseTariffFeatures(tariff).join(' · ') || 'Преимущества не заполнены'}</div></div><div className="item-status"><strong>{tariff.price} {tariff.currency}</strong>{tariff.badge && <StatusBadge value={tariff.badge} />}<StatusBadge value={tariff.isActive === false ? 'Disabled' : 'Enabled'} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editTariff(tariff)}>Редактировать</PrimaryButton>{tariff.isActive === false ? <PrimaryButton className="button-ghost" disabled={actionBusyId === tariff.id} onClick={() => void handleToggleTariff(tariff)}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === tariff.id} message={`Выключить тариф "${tariff.name}"? Он исчезнет с публичной витрины и из Telegram.`} onConfirm={() => void handleToggleTariff(tariff)}>Выключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `delete-${tariff.id}`} message={`Удалить тариф "${tariff.name}"? Если есть заказы или подписки, API не даст удалить его.`} onConfirm={() => void handleDeleteTariff(tariff)}>Удалить</ConfirmButton></div></div>)}
           </div>
         </Card>
       </div>
