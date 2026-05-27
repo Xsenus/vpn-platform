@@ -476,6 +476,32 @@ test('ApiClient admin payment providers expose readiness fields without secrets'
   assert.equal(response[0]?.extraSettingsJson, '{"apiSecret":"***"}')
 })
 
+test('ApiClient admin payment providers can create, update and toggle accounts', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify({ id: 'account-1', provider: 'Stripe', mode: 'Sandbox', name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', hasSecretKey: true, hasWebhookSecret: true, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const payload = { provider: 'Stripe' as const, mode: 'Sandbox' as const, name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', secretKey: 'sk_test', webhookSecret: 'whsec_test', useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}' }
+  const client = new ApiClient('http://localhost:8080')
+  await client.createAdminPaymentProviderAccount('admin-token', payload)
+  await client.updateAdminPaymentProviderAccount('admin-token', 'account-1', { ...payload, publicName: 'Stripe cards', secretKey: '', webhookSecret: '', extraSettingsJson: '' })
+  await client.setAdminPaymentProviderAccountEnabled('admin-token', 'account-1', false)
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/payment-providers/accounts')
+  assert.equal(calls[0]?.init?.method, 'POST')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/payment-providers/accounts/account-1')
+  assert.equal(calls[1]?.init?.method, 'PATCH')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/payment-providers/accounts/account-1/enabled')
+  assert.equal(calls[2]?.init?.method, 'POST')
+  assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(JSON.parse(String(calls[1]?.init?.body)).extraSettingsJson, '')
+})
+
 test('ApiClient admin subscription and VPN access actions are confirmation-friendly POST calls', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
@@ -828,6 +854,11 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.doesNotMatch(adminSource + uiSource, /window\.confirm|window\.prompt/)
   assert.doesNotMatch(publicSource + cabinetSource, /<(?:Link|a)\b[^>]*>\s*<PrimaryButton/s)
   assert.match(adminSource, /сохраняются скрыто|SecretField/i)
+  assert.match(adminSource, /editProviderAccount/)
+  assert.match(adminSource, /handleSaveProviderAccount/)
+  assert.match(adminSource, /updateAdminPaymentProviderAccount/)
+  assert.match(adminSource, /Extra settings JSON/)
+  assert.match(adminSource, /Оставьте пустым, чтобы сохранить текущий JSON/)
   assert.match(adminSource, /botTokenMasked|hasBotToken/)
   assert.match(adminSource, /panelPasswordConfigured|Пароль панели/i)
   assert.doesNotMatch(publicSource + cabinetSource + adminSource, /sk_live_|ghp_|BEGIN PRIVATE KEY/i)

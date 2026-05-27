@@ -59,6 +59,7 @@ public class PaymentProviderAccountService
         var apiBaseUrl = Normalize(command.ApiBaseUrl);
         var returnUrl = Normalize(command.ReturnUrl);
         var allowedWebhookIpRangesCsv = Normalize(command.AllowedWebhookIpRangesCsv);
+        var replaceExtraSettings = !id.HasValue || !string.IsNullOrWhiteSpace(command.ExtraSettingsJson);
         var extraSettingsJson = string.IsNullOrWhiteSpace(command.ExtraSettingsJson) ? "{}" : command.ExtraSettingsJson.Trim();
 
         if (command.Mode == PaymentProviderMode.Production && string.IsNullOrWhiteSpace(shopId))
@@ -99,7 +100,16 @@ public class PaymentProviderAccountService
         account.ReturnUrl = returnUrl;
         account.UseWebhookIpAllowList = command.UseWebhookIpAllowList;
         account.AllowedWebhookIpRangesCsv = allowedWebhookIpRangesCsv;
-        account.ExtraSettingsJson = extraSettingsJson;
+        if (replaceExtraSettings)
+        {
+            var extraSettingsValidationError = ValidateExtraSettingsJson(extraSettingsJson);
+            if (!string.IsNullOrWhiteSpace(extraSettingsValidationError))
+            {
+                return Result<PaymentProviderAccountDto>.Failure(extraSettingsValidationError);
+            }
+
+            account.ExtraSettingsJson = extraSettingsJson;
+        }
         account.UpdatedAt = _clock.UtcNow;
 
         if (!string.IsNullOrWhiteSpace(command.SecretKey))
@@ -220,6 +230,21 @@ public class PaymentProviderAccountService
     }
 
     private static string Normalize(string? value) => value?.Trim() ?? string.Empty;
+
+    private static string? ValidateExtraSettingsJson(string extraSettingsJson)
+    {
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(extraSettingsJson);
+            return document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                ? null
+                : "ExtraSettingsJson must be a JSON object.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return "ExtraSettingsJson must be a valid JSON object.";
+        }
+    }
 
     private static string? ValidateProviderCredentials(PaymentProviderAccount account)
     {

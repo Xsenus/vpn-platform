@@ -379,6 +379,7 @@ export function App() {
   const [tariffForm, setTariffForm] = useState<UpdateTariffPayload>(defaultTariffForm)
   const [tariffFeaturesText, setTariffFeaturesText] = useState('')
   const [editingTariffId, setEditingTariffId] = useState('')
+  const [editingProviderAccountId, setEditingProviderAccountId] = useState('')
   const [appReleases, setAppReleases] = useState<AppReleaseDto[]>([])
   const [releaseForm, setReleaseForm] = useState<AppReleaseUpsertPayload>(defaultReleaseForm)
   const [editingReleaseId, setEditingReleaseId] = useState('')
@@ -695,15 +696,44 @@ export function App() {
     }
   }
 
-  const handleCreateProviderAccount = async () => {
+  const resetProviderForm = () => {
+    setProviderForm(defaultProviderForm)
+    setEditingProviderAccountId('')
+  }
+
+  const editProviderAccount = (account: PaymentProviderAccountDto) => {
+    setEditingProviderAccountId(account.id)
+    setProviderForm({
+      provider: account.provider,
+      mode: account.mode,
+      name: account.name,
+      publicName: account.publicName,
+      isEnabled: account.isEnabled,
+      isDefault: account.isDefault,
+      shopId: account.shopId ?? '',
+      apiBaseUrl: account.apiBaseUrl ?? '',
+      returnUrl: account.returnUrl ?? '',
+      secretKey: '',
+      webhookSecret: '',
+      useWebhookIpAllowList: account.useWebhookIpAllowList,
+      allowedWebhookIpRangesCsv: account.allowedWebhookIpRangesCsv ?? '',
+      extraSettingsJson: ''
+    })
+    setActiveSection('payments')
+    if (typeof window !== 'undefined') window.location.hash = 'payments'
+  }
+
+  const handleSaveProviderAccount = async () => {
     if (!token) return
     setBusy(true)
     setError('')
     setNotice('')
     try {
-      const saved = await api.createAdminPaymentProviderAccount(token, providerForm)
-      setNotice(`Способ оплаты ${saved.name} сохранен. Секреты не отображаются.`)
-      setProviderForm({ ...defaultProviderForm, mode: providerForm.mode, returnUrl: providerForm.returnUrl })
+      const saved = editingProviderAccountId
+        ? await api.updateAdminPaymentProviderAccount(token, editingProviderAccountId, providerForm)
+        : await api.createAdminPaymentProviderAccount(token, providerForm)
+      setNotice(`Способ оплаты ${saved.name} ${editingProviderAccountId ? 'обновлен' : 'сохранен'}. Секреты не отображаются.`)
+      resetProviderForm()
       await loadAll(token)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось сохранить способ оплаты')
@@ -1436,9 +1466,9 @@ export function App() {
 
       <div id="payments" className="section card-list-two" hidden={activeSection !== 'payments'}>
         <Card>
-          <h3>Способы оплаты</h3>
+          <h3>{editingProviderAccountId ? 'Редактирование способа оплаты' : 'Способы оплаты'}</h3>
           <p className="muted">Добавьте платежный аккаунт, включите его и проверьте готовность к оплатам. Секреты сохраняются скрыто.</p>
-          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleCreateProviderAccount() }}>
+          <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveProviderAccount() }}>
             <fieldset className="form-section">
               <legend>Основные параметры</legend>
               <div className="form-grid">
@@ -1452,10 +1482,14 @@ export function App() {
               <legend>Подключение и безопасность</legend>
               <div className="form-grid">
                 <label><span>ShopId / MerchantLogin</span><input value={providerForm.shopId} onChange={(e) => updateProviderForm('shopId', e.target.value)} placeholder="Идентификатор магазина" /></label>
+                <label><span>API base URL</span><input value={providerForm.apiBaseUrl} onChange={(e) => updateProviderForm('apiBaseUrl', e.target.value)} placeholder="https://api.provider.example" type="url" inputMode="url" /></label>
                 <SecretField label="Секретный ключ" value={providerForm.secretKey ?? ''} onChange={(value) => updateProviderForm('secretKey', value)} />
                 <SecretField label="Секрет webhook" value={providerForm.webhookSecret ?? ''} onChange={(value) => updateProviderForm('webhookSecret', value)} />
                 <label><span>Адрес возврата после оплаты</span><input value={providerForm.returnUrl} onChange={(e) => updateProviderForm('returnUrl', e.target.value)} placeholder="https://example.com/checkout" type="url" inputMode="url" /></label>
+                <label><span>Allowed IP ranges</span><input value={providerForm.allowedWebhookIpRangesCsv} onChange={(e) => updateProviderForm('allowedWebhookIpRangesCsv', e.target.value)} placeholder="185.71.76.0/27, 185.71.77.0/27" /></label>
               </div>
+              <label><span>Extra settings JSON</span><textarea value={providerForm.extraSettingsJson} onChange={(e) => updateProviderForm('extraSettingsJson', e.target.value)} placeholder={editingProviderAccountId ? 'Оставьте пустым, чтобы сохранить текущий JSON' : '{"hostedCheckoutUrl":"https://pay.example.test/widget"}'} rows={4} /></label>
+              {editingProviderAccountId && <p className="muted">При редактировании пустые поля секретов и Extra settings JSON сохраняют текущие значения. Чтобы заменить их, введите новые значения явно.</p>}
               <div className="toolbar">
                 <label className="checkbox-row"><input checked={providerForm.isEnabled} onChange={(e) => updateProviderForm('isEnabled', e.target.checked)} type="checkbox" /> Включен</label>
                 <label className="checkbox-row"><input checked={providerForm.isDefault} onChange={(e) => updateProviderForm('isDefault', e.target.checked)} type="checkbox" /> По умолчанию</label>
@@ -1463,7 +1497,8 @@ export function App() {
               </div>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || !providerForm.name} title={adminDisabledTitle} aria-busy={busy}>Сохранить способ оплаты</PrimaryButton>
+              <PrimaryButton type="submit" disabled={busy || !token || !providerForm.name} title={adminDisabledTitle} aria-busy={busy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
+              {editingProviderAccountId && <PrimaryButton type="button" className="button-ghost" onClick={resetProviderForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
         </Card>
@@ -1477,7 +1512,9 @@ export function App() {
                   <div>
                     <strong>{account.publicName}</strong>
                     <div className="muted">{account.provider} · {account.mode} · {account.name}</div>
-                  <div className="muted">shopId: {account.shopId || '—'} · секрет: {account.hasSecretKey ? 'задан' : 'пусто'} · webhook: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
+                    <div className="muted">shopId: {account.shopId || '—'} · секрет: {account.hasSecretKey ? 'задан' : 'пусто'} · webhook: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
+                    <div className="muted">API: {account.apiBaseUrl || '—'} · return: {account.returnUrl || '—'}</div>
+                    <div className="muted">IP allow list: {account.useWebhookIpAllowList ? (account.allowedWebhookIpRangesCsv || 'включен, список пуст') : 'не используется'} · extra: {account.extraSettingsJson && account.extraSettingsJson !== '{}' ? 'задан' : 'пусто'}</div>
                     <div className="muted">Capabilities: {capabilities(account).join(', ') || '—'}</div>
                   </div>
                   <div className="status-stack">
@@ -1486,14 +1523,17 @@ export function App() {
                   </div>
                 </div>
                 <div className="muted">{providerIssue(account)}</div>
-                {account.isEnabled ? <ConfirmButton className="button-danger" disabled={actionBusyId === account.id} message={`Отключить способ оплаты "${account.publicName}"? Пользователи больше не увидят его при оплате.`} onConfirm={() => void handleSetProviderEnabled(account, false)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === account.id} onClick={() => void handleSetProviderEnabled(account, true)}>Включить</PrimaryButton>}
+                <div className="toolbar">
+                  <PrimaryButton className="button-secondary" onClick={() => editProviderAccount(account)}>Редактировать</PrimaryButton>
+                  {account.isEnabled ? <ConfirmButton className="button-danger" disabled={actionBusyId === account.id} message={`Отключить способ оплаты "${account.publicName}"? Пользователи больше не увидят его при оплате.`} onConfirm={() => void handleSetProviderEnabled(account, false)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === account.id} onClick={() => void handleSetProviderEnabled(account, true)}>Включить</PrimaryButton>}
+                </div>
               </div>
             ))}
           </div>
         </Card>
       </div>
 
-      <div className="section card-list-two">
+      <div className="section card-list-two" hidden={activeSection !== 'payments'}>
         <Card>
           <h3>Заказы</h3>
           <div className="list-stack">

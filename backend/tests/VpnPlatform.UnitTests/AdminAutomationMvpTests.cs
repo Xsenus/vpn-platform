@@ -114,6 +114,79 @@ public class AdminAutomationMvpTests
     }
 
     [Fact]
+    public async Task Provider_Account_Update_Should_Preserve_Secrets_And_Extra_Settings_When_Left_Blank()
+    {
+        await using var db = CreateDbContext();
+        var account = PaymentAccount(
+            PaymentProvider.Stripe,
+            PaymentProviderMode.Sandbox,
+            isEnabled: true,
+            shopId: "stripe-shop",
+            secret: "protected-secret",
+            extraSettingsJson: "{\"apiToken\":\"must-stay-secret\",\"region\":\"eu\"}");
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        var controller = CreateOperationsController(db);
+        var result = await controller.UpdatePaymentProviderAccount(account.Id, new UpsertPaymentProviderAccountCommand(
+            PaymentProvider.Stripe,
+            PaymentProviderMode.Sandbox,
+            "stripe-main",
+            "Stripe card",
+            true,
+            true,
+            "stripe-shop-updated",
+            "https://api.stripe.com",
+            "https://cabinet.example.test/payment-return",
+            null,
+            "",
+            false,
+            "",
+            ""), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var dto = Assert.IsType<PaymentProviderAccountDto>(ok.Value);
+        Assert.Equal("Stripe card", dto.PublicName);
+        Assert.True(dto.HasSecretKey);
+        Assert.True(dto.HasWebhookSecret);
+
+        var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
+        Assert.Equal("protected-secret", saved.SecretKeyProtected);
+        Assert.Equal("protected-secret", saved.WebhookSecretProtected);
+        Assert.Contains("must-stay-secret", saved.ExtraSettingsJson, StringComparison.Ordinal);
+        Assert.Equal("stripe-shop-updated", saved.ShopId);
+        Assert.False(saved.UseWebhookIpAllowList);
+    }
+
+    [Fact]
+    public async Task Provider_Account_Create_Should_Reject_Invalid_Extra_Settings_Json()
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateOperationsController(db);
+
+        var result = await controller.CreatePaymentProviderAccount(new UpsertPaymentProviderAccountCommand(
+            PaymentProvider.CloudPayments,
+            PaymentProviderMode.Sandbox,
+            "cloudpayments-test",
+            "CloudPayments",
+            true,
+            true,
+            "public-id",
+            "",
+            "https://cabinet.example.test/payment-return",
+            "",
+            "",
+            false,
+            "",
+            "[\"not-object\"]"), CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var json = JsonSerializer.Serialize(badRequest.Value);
+        Assert.Contains("ExtraSettingsJson", json, StringComparison.Ordinal);
+        Assert.Empty(await db.PaymentProviderAccounts.ToListAsync());
+    }
+
+    [Fact]
     public async Task Subscription_Extend_Should_Audit_Manual_Action()
     {
         await using var db = CreateDbContext();

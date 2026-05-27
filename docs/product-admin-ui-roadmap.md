@@ -406,29 +406,29 @@
 
 ### 10.1 Поддерживаемые провайдеры
 
-- [ ] YooKassa.
-- [ ] RoboKassa.
-- [ ] YooMoney.
-- [ ] Telegram Stars.
-- [ ] CloudPayments.
-- [ ] TBank Acquiring.
-- [ ] Prodamus.
-- [ ] Stripe.
-- [ ] PayPal.
+- [x] YooKassa.
+- [x] RoboKassa.
+- [x] YooMoney.
+- [x] Telegram Stars.
+- [x] CloudPayments.
+- [x] TBank Acquiring.
+- [x] Prodamus.
+- [x] Stripe.
+- [x] PayPal.
 
 ### 10.2 Настройки провайдера
 
-- [ ] Включен/выключен.
-- [ ] Sandbox/live.
-- [ ] Публичное название.
-- [ ] Public key/shop id.
-- [ ] Secret key.
-- [ ] Webhook secret.
-- [ ] Return URL.
+- [x] Включен/выключен.
+- [x] Sandbox/live.
+- [x] Публичное название.
+- [x] Public key/shop id.
+- [x] Secret key.
+- [x] Webhook secret.
+- [x] Return URL.
 - [ ] Webhook URL.
-- [ ] Allowed IP ranges, если нужно.
-- [ ] Extra settings JSON.
-- [ ] Проверка готовности.
+- [x] Allowed IP ranges, если нужно.
+- [x] Extra settings JSON.
+- [x] Проверка готовности.
 - [ ] Тестовый платеж или тест API.
 
 Критерий готовности: все провайдеры можно настроить и проверить из админки.
