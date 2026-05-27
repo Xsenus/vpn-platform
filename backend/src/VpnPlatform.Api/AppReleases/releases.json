@@ -205,5 +205,28 @@
         "text": "Пароль панели остается write-only: пустое поле при редактировании сохраняет текущий защищенный пароль."
       }
     ]
+  },
+  {
+    "releaseId": "2026-05-27-managed-telegram-bot-settings",
+    "version": "0.11.0",
+    "releasedAt": "2026-05-27T19:00:00+07:00",
+    "title": "Настройки Telegram-бота управляются из админки",
+    "summary": "Администратор может менять режим Telegram-бота, username, webhook, WebApp URL, admin chat id, токены и основные тексты прямо из панели.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "В разделе «Telegram-бот» появились настройки включения, режима LongPolling/Webhook, public username, webhook URL, admin chat id и WebApp URL."
+      },
+      {
+        "type": "important",
+        "text": "Bot token и Secret token остаются write-only: API показывает только наличие секрета и маску токена."
+      },
+      {
+        "type": "improved",
+        "text": "Deep link для привязки Telegram в личном кабинете использует public username, сохраненный из админки."
+      }
+    ]
   }
 ]

@@ -209,6 +209,8 @@ public sealed record AdminTelegramBotSettingsDto(
     string BotTokenMasked,
     string WebhookUrl,
     bool HasSecretToken,
+    string AdminChatId,
+    string WebAppUrl,
     string WelcomeText,
     string InstructionText,
     string SupportText,
@@ -216,6 +218,14 @@ public sealed record AdminTelegramBotSettingsDto(
     DateTimeOffset GeneratedAt);
 
 public sealed record UpdateTelegramBotSettingsCommand(
+    bool? Enabled,
+    string? Mode,
+    string? PublicBotUsername,
+    string? BotToken,
+    string? WebhookUrl,
+    string? SecretToken,
+    string? AdminChatId,
+    string? WebAppUrl,
     string? WelcomeText,
     string? InstructionText,
     string? SupportText,

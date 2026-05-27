@@ -272,6 +272,8 @@ const defaultBotSettings: AdminTelegramBotSettingsDto = {
   botTokenMasked: '',
   webhookUrl: '',
   hasSecretToken: false,
+  adminChatId: '',
+  webAppUrl: '',
   welcomeText: '',
   instructionText: '',
   supportText: '',
@@ -534,6 +536,14 @@ export function App() {
     setVpnPanels(nextVpnPanels)
     setBotSettings(nextBotSettings)
     setBotSettingsForm({
+      enabled: nextBotSettings.enabled,
+      mode: nextBotSettings.mode,
+      publicBotUsername: nextBotSettings.publicBotUsername,
+      botToken: '',
+      webhookUrl: nextBotSettings.webhookUrl,
+      secretToken: '',
+      adminChatId: nextBotSettings.adminChatId,
+      webAppUrl: nextBotSettings.webAppUrl,
       welcomeText: nextBotSettings.welcomeText,
       instructionText: nextBotSettings.instructionText,
       supportText: nextBotSettings.supportText,
@@ -1404,7 +1414,8 @@ export function App() {
   const handleSaveBotSettings = () => runAction('bot-settings', async () => {
     const saved = await api.updateAdminTelegramBotSettings(token, botSettingsForm)
     setBotSettings(saved)
-    setNotice('Тексты Telegram-бота сохранены. Токен остается скрытым и здесь не редактируется.')
+    setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+    setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
   })
 
   if (!token) {
@@ -1872,10 +1883,23 @@ export function App() {
           <h3>Настройки Telegram-бота</h3>
           <div className="list-item-vertical">
             <div className="card-head"><strong>@{botSettings.publicBotUsername || 'не настроен'}</strong><StatusBadge value={botSettings.enabled ? 'Enabled' : 'Disabled'} /></div>
-            <div className="muted">Режим {botSettings.mode} · bot token {botSettings.hasBotToken ? botSettings.botTokenMasked || 'скрыт' : 'пусто'} · secret token {botSettings.hasSecretToken ? 'задан' : 'пусто'}</div>
-            <div className="muted">Webhook: {botSettings.webhookUrl || '—'} · исходный token никогда не возвращается API.</div>
+            <div className="muted">Режим {botSettings.mode} · bot token {botSettings.hasBotToken ? botSettings.botTokenMasked || 'скрыт' : 'пусто'} · secret token {botSettings.hasSecretToken ? 'задан' : 'пусто'} · admin chat {botSettings.adminChatId || '—'}</div>
+            <div className="muted">Webhook: {botSettings.webhookUrl || '—'} · WebApp: {botSettings.webAppUrl || '—'} · исходные токены никогда не возвращаются API.</div>
           </div>
           <form aria-busy={actionBusyId === 'bot-settings'} onSubmit={(event) => { event.preventDefault(); void handleSaveBotSettings() }}>
+            <fieldset className="form-section">
+              <legend>Подключение Telegram</legend>
+              <div className="form-grid">
+                <label><span>Состояние</span><select value={botSettingsForm.enabled ? 'true' : 'false'} onChange={(e) => updateBotForm('enabled', e.target.value === 'true')}><option value="false">Выключен</option><option value="true">Включен</option></select></label>
+                <label><span>Режим</span><select value={botSettingsForm.mode ?? 'LongPolling'} onChange={(e) => updateBotForm('mode', e.target.value)}><option value="LongPolling">Long polling</option><option value="Webhook">Webhook</option></select></label>
+                <label><span>Public bot username</span><input value={botSettingsForm.publicBotUsername ?? ''} onChange={(e) => updateBotForm('publicBotUsername', e.target.value)} placeholder="vpnplatform_bot" /></label>
+                <label><span>Webhook URL</span><input value={botSettingsForm.webhookUrl ?? ''} onChange={(e) => updateBotForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/channels/telegram/webhook" type="url" inputMode="url" /></label>
+                <label><span>Admin chat id</span><input value={botSettingsForm.adminChatId ?? ''} onChange={(e) => updateBotForm('adminChatId', e.target.value)} placeholder="-1001234567890" /></label>
+                <label><span>WebApp URL</span><input value={botSettingsForm.webAppUrl ?? ''} onChange={(e) => updateBotForm('webAppUrl', e.target.value)} placeholder="https://cabinet.example.com" type="url" inputMode="url" /></label>
+                <SecretField label="Bot token" configured={botSettings.hasBotToken} value={botSettingsForm.botToken ?? ''} onChange={(value) => updateBotForm('botToken', value)} />
+                <SecretField label="Secret token" configured={botSettings.hasSecretToken} value={botSettingsForm.secretToken ?? ''} onChange={(value) => updateBotForm('secretToken', value)} />
+              </div>
+            </fieldset>
             <fieldset className="form-section">
               <legend>Тексты сценариев</legend>
               <label><span>Приветствие</span><textarea value={botSettingsForm.welcomeText ?? ''} onChange={(e) => updateBotForm('welcomeText', e.target.value)} rows={3} /></label>
@@ -1884,7 +1908,7 @@ export function App() {
               <label><span>Шаблон после оплаты</span><textarea value={botSettingsForm.afterPaymentTextTemplate ?? ''} onChange={(e) => updateBotForm('afterPaymentTextTemplate', e.target.value)} rows={3} /></label>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить тексты бота</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить настройки бота</PrimaryButton>
             </div>
           </form>
         </Card>

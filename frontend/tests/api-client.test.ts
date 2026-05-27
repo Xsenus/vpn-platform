@@ -575,7 +575,7 @@ test('ApiClient admin Telegram bot settings masks token at API boundary', async 
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ enabled: false, mode: 'Polling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: false, welcomeText: 'Welcome', instructionText: 'Instruction', supportText: 'Support', afterPaymentTextTemplate: 'After', generatedAt: new Date().toISOString() }), {
+    return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: false, adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', instructionText: 'Instruction', supportText: 'Support', afterPaymentTextTemplate: 'After', generatedAt: new Date().toISOString() }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -583,12 +583,15 @@ test('ApiClient admin Telegram bot settings masks token at API boundary', async 
 
   const client = new ApiClient('http://localhost:8080')
   const settings = await client.getAdminTelegramBotSettings('admin-token')
-  await client.updateAdminTelegramBotSettings('admin-token', { welcomeText: 'Welcome' })
+  await client.updateAdminTelegramBotSettings('admin-token', { enabled: true, mode: 'Webhook', publicBotUsername: '@managed_bot', botToken: 'new-token', webhookUrl: 'https://api.example.test/api/channels/telegram/webhook', secretToken: 'new-secret', adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome' })
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/telegram-bot/settings')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/telegram-bot/settings')
   assert.equal(calls[1]?.init?.method, 'PATCH')
   assert.equal(settings.botTokenMasked, '1234***7890')
+  assert.equal(settings.webAppUrl, 'https://cabinet.example.test')
+  assert.match(String(calls[1]?.init?.body), /managed_bot/)
+  assert.match(String(calls[1]?.init?.body), /botToken/)
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
@@ -781,7 +784,7 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
       return new Response(JSON.stringify([{ id: 'ppa-1', provider: 'YooKassa', mode: 'Sandbox', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', isCheckoutConfigured: true, extraSettingsJson: '{"apiSecret":"***"}' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/telegram-bot/settings')) {
-      return new Response(JSON.stringify({ enabled: false, hasBotToken: true, botTokenMasked: '1234***7890', hasSecretToken: true, welcomeText: 'Welcome' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: true, adminChatId: '', webAppUrl: 'http://localhost:5174', welcomeText: 'Welcome', instructionText: '', supportText: '', afterPaymentTextTemplate: '', generatedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/public/payments/providers')) {
       return new Response(JSON.stringify([{ provider: 'YooKassa', publicName: 'YooKassa Sandbox', mode: 'Sandbox' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -913,6 +916,10 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /Extra settings JSON/)
   assert.match(adminSource, /Оставьте пустым, чтобы сохранить текущий JSON/)
   assert.match(adminSource, /botTokenMasked|hasBotToken/)
+  assert.match(adminSource, /Public bot username/)
+  assert.match(adminSource, /Bot token/)
+  assert.match(adminSource, /Secret token/)
+  assert.match(adminSource, /WebApp URL/)
   assert.match(adminSource, /panelPasswordConfigured|Пароль панели/i)
   assert.doesNotMatch(publicSource + cabinetSource + adminSource, /sk_live_|ghp_|BEGIN PRIVATE KEY/i)
 })

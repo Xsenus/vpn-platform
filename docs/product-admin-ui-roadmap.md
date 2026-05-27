@@ -480,21 +480,21 @@
 
 ### 12.1 Настройки бота
 
-- [ ] Включен/выключен.
-- [ ] Long polling/webhook.
-- [ ] Bot token.
-- [ ] Public bot username.
-- [ ] Webhook URL.
-- [ ] Secret token.
-- [ ] Admin chat id.
-- [ ] WebApp URL.
+- [x] Включен/выключен.
+- [x] Long polling/webhook.
+- [x] Bot token.
+- [x] Public bot username.
+- [x] Webhook URL.
+- [x] Secret token.
+- [x] Admin chat id.
+- [x] WebApp URL.
 
 ### 12.2 Тексты бота
 
-- [ ] Welcome text.
-- [ ] Инструкция подключения.
-- [ ] Текст поддержки.
-- [ ] Текст после оплаты.
+- [x] Welcome text.
+- [x] Инструкция подключения.
+- [x] Текст поддержки.
+- [x] Текст после оплаты.
 - [ ] Текст продления.
 - [ ] Текст ошибки оплаты.
 - [ ] Текст окончания подписки.

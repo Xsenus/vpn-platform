@@ -151,7 +151,13 @@ public class MeController : ControllerBase
     [HttpPost("telegram/link-token")]
     public async Task<IActionResult> CreateTelegramLinkToken(CancellationToken cancellationToken)
     {
-        var username = _configuration["TelegramBot:PublicBotUsername"] ?? string.Empty;
+        var username = await _db.SiteContentBlocks
+            .AsNoTracking()
+            .Where(x => x.Key == "telegram_bot.public_bot_username" && x.Group == "telegram_bot" && x.IsActive)
+            .Select(x => x.Value)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? _configuration["TelegramBot:PublicBotUsername"]
+            ?? string.Empty;
         var result = await _telegramBotService.CreateLinkTokenAsync(ResolveUserId(), username, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }

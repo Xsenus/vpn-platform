@@ -330,10 +330,11 @@ public class AdminAutomationMvpTests
                 ["TelegramBot:Mode"] = "Polling",
                 ["TelegramBot:PublicBotUsername"] = "vpn_test_bot",
                 ["TelegramBot:BotToken"] = "123456789:super-secret-token",
-                ["TelegramBot:SecretToken"] = "webhook-secret"
+                ["TelegramBot:SecretToken"] = "webhook-secret",
+                ["TelegramBot:WebAppUrl"] = "http://localhost:5174"
             })
             .Build();
-        var controller = new AdminTelegramBotSettingsController(db, configuration);
+        var controller = new AdminTelegramBotSettingsController(db, configuration, new TestSecretProtector());
 
         var before = await controller.GetSettings(CancellationToken.None);
         var okBefore = Assert.IsType<OkObjectResult>(before);
@@ -342,11 +343,30 @@ public class AdminAutomationMvpTests
         Assert.DoesNotContain("super-secret-token", jsonBefore, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("webhook-secret", jsonBefore, StringComparison.OrdinalIgnoreCase);
 
-        var after = await controller.UpdateSettings(new UpdateTelegramBotSettingsCommand("Welcome", "Instruction", "Support", "After payment"), CancellationToken.None);
+        var after = await controller.UpdateSettings(new UpdateTelegramBotSettingsCommand(
+            Enabled: true,
+            Mode: "Webhook",
+            PublicBotUsername: "@managed_bot",
+            BotToken: "987654321:new-secret-token",
+            WebhookUrl: "https://api.example.test/api/channels/telegram/webhook",
+            SecretToken: "new-webhook-secret",
+            AdminChatId: "-100123456",
+            WebAppUrl: "https://cabinet.example.test",
+            WelcomeText: "Welcome",
+            InstructionText: "Instruction",
+            SupportText: "Support",
+            AfterPaymentTextTemplate: "After payment"), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(after);
         Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.welcome" && x.Body == "Welcome");
         Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.instruction" && x.Body == "Instruction");
+        Assert.Contains(await db.SiteContentBlocks.ToListAsync(), x => x.Key == "telegram_bot.public_bot_username" && x.Value == "managed_bot");
+        Assert.Contains(await db.SiteContentBlocks.ToListAsync(), x => x.Key == "telegram_bot.mode" && x.Value == "Webhook");
+        Assert.Contains(await db.SiteContentBlocks.ToListAsync(), x => x.Key == "telegram_bot.enabled" && x.Value == "true");
+        var jsonAfter = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(after).Value);
+        Assert.Contains("managed_bot", jsonAfter, StringComparison.Ordinal);
+        Assert.DoesNotContain("new-secret-token", jsonAfter, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("new-webhook-secret", jsonAfter, StringComparison.OrdinalIgnoreCase);
     }
 
     private static AdminOperationsController CreateOperationsController(ApplicationDbContext db)

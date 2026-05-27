@@ -647,6 +647,8 @@ export type AdminTelegramBotSettingsDto = {
   botTokenMasked: string
   webhookUrl: string
   hasSecretToken: boolean
+  adminChatId: string
+  webAppUrl: string
   welcomeText: string
   instructionText: string
   supportText: string
@@ -655,6 +657,14 @@ export type AdminTelegramBotSettingsDto = {
 }
 
 export type UpdateTelegramBotSettingsPayload = {
+  enabled?: boolean | null
+  mode?: string | null
+  publicBotUsername?: string | null
+  botToken?: string | null
+  webhookUrl?: string | null
+  secretToken?: string | null
+  adminChatId?: string | null
+  webAppUrl?: string | null
   welcomeText?: string | null
   instructionText?: string | null
   supportText?: string | null
