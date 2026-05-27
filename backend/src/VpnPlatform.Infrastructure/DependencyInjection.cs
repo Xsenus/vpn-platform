@@ -97,6 +97,7 @@ public static class DependencyInjection
         services.AddScoped<IVpnProvider, X3UiVpnProvider>();
         services.AddScoped<IVpnProviderFactory, VpnProviderFactory>();
         services.AddScoped<IProvisioningExecutor, AnsibleProvisioningExecutor>();
+        services.AddScoped<AppReleaseSeedService>();
 
         if (includeHostedServices)
         {

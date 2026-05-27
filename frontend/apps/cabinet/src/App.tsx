@@ -15,6 +15,7 @@ import {
   UserProfileDto
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { AppVersionGate } from './AppVersion'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const configuredPublicWebUrl = import.meta.env.VITE_PUBLIC_WEB_URL?.replace(/\/$/, '')
@@ -78,6 +79,7 @@ export function App() {
   const [resetEmail, setResetEmail] = useState('')
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [appVersionOpenSignal, setAppVersionOpenSignal] = useState(0)
   const authPanelId = 'cabinet-auth-panel'
   const activeAuthTabId = authMode === 'login' ? 'cabinet-auth-login-tab' : 'cabinet-auth-register-tab'
   const publicWebUrl = useMemo(() => {
@@ -408,6 +410,7 @@ export function App() {
           <a href={`${publicWebUrl}/tariffs`}>Тарифы</a>
           <a href={`${publicWebUrl}/faq`}>Помощь</a>
           <a className="active" href="/" aria-current="page">Кабинет</a>
+          {token && <button type="button" className="nav-button" onClick={() => setAppVersionOpenSignal((value) => value + 1)}>Что нового</button>}
         </nav>
       </header>
 
@@ -700,6 +703,13 @@ export function App() {
         </Card>
       </div>
       </PageShell>
+      <AppVersionGate
+        api={api}
+        token={token}
+        userId={profile?.id}
+        manualOpenSignal={appVersionOpenSignal}
+        onManualOpenHandled={() => setAppVersionOpenSignal(0)}
+      />
     </>
   )
 }

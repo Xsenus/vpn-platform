@@ -447,6 +447,82 @@ test('ApiClient QR SVG endpoints return text with auth headers', async () => {
   assert.match(adminQr, /vless/)
 })
 
+test('ApiClient app version endpoints are tokenized and mapped', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    if (String(url).endsWith('/latest')) {
+      return new Response(JSON.stringify({ currentVersion: '0.2.0', release: null, seen: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+    if (String(url).endsWith('/history') || String(url).endsWith('/admin/releases')) {
+      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    return new Response(JSON.stringify({ id: 'release-1', releaseId: 'release-1', version: '0.2.0', items: [] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await client.getLatestAppVersion('user-token')
+  await client.getAppVersionHistory('user-token')
+  await client.markAppVersionSeen('user-token', 'release-1')
+  await client.getAdminAppReleases('admin-token')
+  await client.createAdminAppRelease('admin-token', {
+    releaseId: 'release-1',
+    version: '0.2.0',
+    releasedAt: new Date().toISOString(),
+    title: 'Что нового',
+    summary: 'Описание',
+    isActive: true,
+    source: 'manual',
+    items: [{ type: 'new', text: 'Пункт релиза', sortOrder: 10 }]
+  })
+  await client.updateAdminAppRelease('admin-token', 'release-guid', {
+    releaseId: 'release-1',
+    version: '0.2.1',
+    releasedAt: new Date().toISOString(),
+    title: 'Что нового',
+    summary: 'Описание',
+    isActive: true,
+    source: 'manual',
+    items: [{ type: 'fixed', text: 'Исправление', sortOrder: 10 }]
+  })
+  await client.deleteAdminAppRelease('admin-token', 'release-guid')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/app-version/latest')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/app-version/history')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/app-version/mark-seen')
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/app-version/admin/releases')
+  assert.equal(calls[4]?.init?.method, 'POST')
+  assert.equal(calls[5]?.init?.method, 'PUT')
+  assert.equal(calls[6]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer user-token')
+  assert.equal(new Headers(calls[6]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
+test('frontend sources include app version gate and admin release editor', () => {
+  const cabinetSource = readFileSync(new URL('../apps/cabinet/src/AppVersion.tsx', import.meta.url), 'utf8')
+  const cabinetAppSource = readFileSync(new URL('../apps/cabinet/src/App.tsx', import.meta.url), 'utf8')
+  const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
+
+  assert.match(cabinetSource, /appVersion\.dismissed/)
+  assert.match(cabinetSource, /markAppVersionSeen/)
+  assert.match(cabinetSource, /getAppVersionHistory/)
+  assert.match(cabinetSource, /Показать текущее/)
+  assert.match(cabinetAppSource, /AppVersionGate/)
+  assert.match(cabinetAppSource, /Что нового/)
+  assert.match(adminSource, /id="releases"/)
+  assert.match(adminSource, /getAdminAppReleases/)
+  assert.match(adminSource, /createAdminAppRelease/)
+  assert.match(adminSource, /updateAdminAppRelease/)
+  assert.match(adminSource, /deleteAdminAppRelease/)
+})
+
 
 test('admin UI source keeps secret fields write-only and validation mode visible', () => {
   const source = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')

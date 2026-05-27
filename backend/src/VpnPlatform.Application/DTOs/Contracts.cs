@@ -5,6 +5,36 @@ namespace VpnPlatform.Application.DTOs;
 
 public sealed record TariffDto(Guid Id, string Name, string Slug, string Description, int DurationDays, decimal Price, string Currency, int MaxDevices, string Category);
 
+public sealed record AppReleaseItemDto(Guid? Id, string Type, string Text, int SortOrder);
+public sealed record AppReleaseDto(
+    Guid Id,
+    string ReleaseId,
+    string Version,
+    DateTimeOffset ReleasedAt,
+    string Title,
+    string Summary,
+    bool IsActive,
+    string Source,
+    IReadOnlyList<AppReleaseItemDto> Items,
+    Guid? CreatedByUserId,
+    string CreatedByUserName,
+    Guid? UpdatedByUserId,
+    string UpdatedByUserName,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record AppVersionLatestResponse(string? CurrentVersion, AppReleaseDto? LatestRelease, bool SeenByCurrentUser);
+public sealed record AppReleaseUpsertRequest(
+    string ReleaseId,
+    string Version,
+    DateTimeOffset ReleasedAt,
+    string Title,
+    string Summary,
+    bool IsActive,
+    string? Source,
+    IReadOnlyList<AppReleaseItemDto> Items);
+public sealed record AppReleaseMarkSeenRequest(string ReleaseId);
+
 public sealed record CreateCheckoutSessionCommand(Guid TariffId, OrderType Type, ChannelType Channel, PaymentProvider PaymentProvider, string? PromoCode, bool IsFirstPurchase, string? EmailHint, string? ReturnUrl);
 public sealed record CheckoutSessionDto(Guid Id, string Token, Guid TariffId, Guid? UserId, Guid? OrderId, string Status, DateTimeOffset ExpiresAt, string? EmailHint);
 public sealed record ClaimCheckoutSessionCommand(string Token, Guid UserId);

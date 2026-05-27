@@ -86,6 +86,8 @@ public class DbInitializer : IHostedService
             await BootstrapAdminAsync(scope.ServiceProvider, db, adminOptions, cancellationToken);
         }
 
+        await scope.ServiceProvider.GetRequiredService<AppReleaseSeedService>().SyncAsync(db, cancellationToken);
+
         if (databaseOptions.SeedDemoData)
         {
             await SeedDemoDataAsync(db, cancellationToken);

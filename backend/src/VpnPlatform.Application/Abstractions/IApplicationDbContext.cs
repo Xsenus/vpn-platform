@@ -54,6 +54,9 @@ public interface IApplicationDbContext
     DbSet<MigrationJob> MigrationJobs { get; }
     DbSet<MigrationItem> MigrationItems { get; }
     DbSet<NodeHealthCheck> NodeHealthChecks { get; }
+    DbSet<AppRelease> AppReleases { get; }
+    DbSet<AppReleaseItem> AppReleaseItems { get; }
+    DbSet<AppReleaseSeen> AppReleaseSeen { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

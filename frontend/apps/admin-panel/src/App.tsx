@@ -5,6 +5,8 @@ import {
   AdminTelegramBotSettingsDto,
   AdminUserOverviewDto,
   ApiClient,
+  AppReleaseDto,
+  AppReleaseUpsertPayload,
   CreateServerPayload,
   CreateVpnInboundPayload,
   CreateVpnPanelPayload,
@@ -74,6 +76,7 @@ const adminSections = [
   ['panels', '3x-ui панели'],
   ['support', 'Поддержка'],
   ['bot', 'Telegram-бот'],
+  ['releases', 'Что нового'],
   ['provisioning', 'Подготовка VPS']
 ] as const
 
@@ -174,6 +177,19 @@ const defaultTariffForm: UpdateTariffPayload = {
   category: 'default'
 }
 
+const defaultReleaseForm: AppReleaseUpsertPayload = {
+  releaseId: '',
+  version: '0.1.0',
+  releasedAt: new Date().toISOString(),
+  title: '',
+  summary: '',
+  isActive: true,
+  source: 'manual',
+  items: [
+    { type: 'new', text: '', sortOrder: 10 }
+  ]
+}
+
 const defaultBotSettings: AdminTelegramBotSettingsDto = {
   enabled: false,
   mode: 'Polling',
@@ -205,6 +221,18 @@ function formatDate(value?: string | null) {
   if (!value) return '—'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+}
+
+function toDateTimeLocalValue(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const offset = date.getTimezoneOffset()
+  const local = new Date(date.getTime() - offset * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
+function fromDateTimeLocalValue(value: string) {
+  return value ? new Date(value).toISOString() : new Date().toISOString()
 }
 
 function providerConfigured(account: PaymentProviderAccountDto) {
@@ -265,6 +293,9 @@ export function App() {
   const [supportNoteText, setSupportNoteText] = useState('')
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
   const [tariffForm, setTariffForm] = useState<UpdateTariffPayload>(defaultTariffForm)
+  const [appReleases, setAppReleases] = useState<AppReleaseDto[]>([])
+  const [releaseForm, setReleaseForm] = useState<AppReleaseUpsertPayload>(defaultReleaseForm)
+  const [editingReleaseId, setEditingReleaseId] = useState('')
   const [servers, setServers] = useState<VpnNodeDto[]>([])
   const [provisioningRuns, setProvisioningRuns] = useState<ProvisioningRunDto[]>([])
   const [vpnPanels, setVpnPanels] = useState<VpnPanelDto[]>([])
@@ -342,6 +373,7 @@ export function App() {
       nextRefunds,
       nextSupportConversations,
       nextTariffs,
+      nextAppReleases,
       nextServers,
       nextRuns,
       nextVpnPanels,
@@ -358,6 +390,7 @@ export function App() {
       safeLoad('refunds', () => api.getAdminRefunds(currentToken), [], errors),
       safeLoad('обращения поддержки', () => api.getAdminSupportConversations(currentToken), [], errors),
       safeLoad('tariffs', () => api.getAdminTariffs(currentToken), [], errors),
+      safeLoad('Что нового', () => api.getAdminAppReleases(currentToken), [], errors),
       safeLoad('servers', () => api.getAdminServers(currentToken), [], errors),
       safeLoad('подготовка серверов', () => api.getAdminProvisioningRuns(currentToken), [], errors),
       safeLoad('VPN-панели', () => api.getAdminVpnPanels(currentToken), [], errors),
@@ -375,6 +408,7 @@ export function App() {
     setRefunds(nextRefunds)
     setSupportConversations(nextSupportConversations)
     setTariffs(nextTariffs)
+    setAppReleases(nextAppReleases)
     setServers(nextServers)
     setProvisioningRuns(nextRuns)
     setVpnPanels(nextVpnPanels)
@@ -423,6 +457,19 @@ export function App() {
   const updateVpnPanelForm = <K extends keyof CreateVpnPanelPayload>(key: K, value: CreateVpnPanelPayload[K]) => setVpnPanelForm((current) => ({ ...current, [key]: value }))
   const updateInboundForm = <K extends keyof CreateVpnInboundPayload>(key: K, value: CreateVpnInboundPayload[K]) => setInboundForm((current) => ({ ...current, [key]: value }))
   const updateTariffForm = <K extends keyof UpdateTariffPayload>(key: K, value: UpdateTariffPayload[K]) => setTariffForm((current) => ({ ...current, [key]: value }))
+  const updateReleaseForm = <K extends keyof AppReleaseUpsertPayload>(key: K, value: AppReleaseUpsertPayload[K]) => setReleaseForm((current) => ({ ...current, [key]: value }))
+  const updateReleaseItem = (index: number, patch: Partial<AppReleaseUpsertPayload['items'][number]>) => setReleaseForm((current) => ({
+    ...current,
+    items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item)
+  }))
+  const addReleaseItem = () => setReleaseForm((current) => ({
+    ...current,
+    items: [...current.items, { type: 'new', text: '', sortOrder: (current.items.length + 1) * 10 }]
+  }))
+  const removeReleaseItem = (index: number) => setReleaseForm((current) => ({
+    ...current,
+    items: current.items.length <= 1 ? current.items : current.items.filter((_, itemIndex) => itemIndex !== index)
+  }))
   const updateBotForm = <K extends keyof UpdateTelegramBotSettingsPayload>(key: K, value: UpdateTelegramBotSettingsPayload[K]) => setBotSettingsForm((current) => ({ ...current, [key]: value }))
 
   const runAction = async (id: string, action: () => Promise<void>) => {
@@ -457,6 +504,9 @@ export function App() {
     setSelectedSupportConversationId('')
     setSupportMessages([])
     setTariffs([])
+    setAppReleases([])
+    setReleaseForm(defaultReleaseForm)
+    setEditingReleaseId('')
     setServers([])
     setProvisioningRuns([])
     setVpnPanels([])
@@ -589,6 +639,72 @@ export function App() {
     await runAction(tariff.id, async () => {
       await api.updateAdminTariff(token, tariff.id, { isActive: tariff.isActive === false })
       setNotice(`Тариф ${tariff.name} обновлён.`)
+      await loadAll(token)
+    })
+  }
+
+  const resetReleaseForm = () => {
+    setReleaseForm({ ...defaultReleaseForm, releasedAt: new Date().toISOString(), items: [{ type: 'new', text: '', sortOrder: 10 }] })
+    setEditingReleaseId('')
+  }
+
+  const editRelease = (release: AppReleaseDto) => {
+    setEditingReleaseId(release.id)
+    setReleaseForm({
+      releaseId: release.releaseId,
+      version: release.version,
+      releasedAt: release.releasedAt,
+      title: release.title,
+      summary: release.summary,
+      isActive: release.isActive,
+      source: release.source,
+      items: release.items.length > 0 ? release.items.map((item, index) => ({
+        id: item.id ?? null,
+        type: item.type,
+        text: item.text,
+        sortOrder: item.sortOrder || (index + 1) * 10
+      })) : [{ type: 'new', text: '', sortOrder: 10 }]
+    })
+    setActiveSection('releases')
+    if (typeof window !== 'undefined') window.location.hash = 'releases'
+  }
+
+  const handleSaveRelease = async () => {
+    if (!token) return
+    const payload = {
+      ...releaseForm,
+      releaseId: releaseForm.releaseId.trim(),
+      version: releaseForm.version.trim(),
+      title: releaseForm.title.trim(),
+      summary: releaseForm.summary.trim(),
+      items: releaseForm.items
+        .filter((item) => item.text.trim())
+        .map((item, index) => ({ ...item, text: item.text.trim(), sortOrder: item.sortOrder || (index + 1) * 10 }))
+    }
+
+    if (!payload.releaseId || !payload.version || !payload.title || !payload.summary || payload.items.length === 0) {
+      setError('Заполните releaseId, версию, заголовок, описание и хотя бы один пункт релиза.')
+      return
+    }
+
+    await runAction(editingReleaseId ? `release-update-${editingReleaseId}` : 'release-create', async () => {
+      if (editingReleaseId) {
+        await api.updateAdminAppRelease(token, editingReleaseId, payload)
+        setNotice('Релиз обновлен.')
+      } else {
+        await api.createAdminAppRelease(token, payload)
+        setNotice('Релиз создан.')
+      }
+      resetReleaseForm()
+      await loadAll(token)
+    })
+  }
+
+  const handleDeleteRelease = async (release: AppReleaseDto) => {
+    await runAction(`release-delete-${release.id}`, async () => {
+      await api.deleteAdminAppRelease(token, release.id)
+      if (editingReleaseId === release.id) resetReleaseForm()
+      setNotice(`Релиз ${release.version} удален.`)
       await loadAll(token)
     })
   }
@@ -1235,6 +1351,75 @@ export function App() {
               <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить тексты бота</PrimaryButton>
             </div>
           </form>
+        </Card>
+      </div>
+
+      <div id="releases" className="section card-list-two" hidden={activeSection !== 'releases'}>
+        <Card>
+          <h3>{editingReleaseId ? 'Редактировать релиз' : 'Создать релиз'}</h3>
+          <p className="muted">Эти записи показываются пользователям в окне «Что нового» после входа в личный кабинет. Будущие даты публикации не показываются до наступления времени.</p>
+          <form aria-busy={actionBusyId === 'release-create' || actionBusyId === `release-update-${editingReleaseId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveRelease() }}>
+            <fieldset className="form-section">
+              <legend>Публикация</legend>
+              <div className="form-grid">
+                <label><span>Release ID</span><input value={releaseForm.releaseId} onChange={(e) => updateReleaseForm('releaseId', e.target.value)} placeholder="2026-05-27-whats-new-module" required /></label>
+                <label><span>Версия</span><input value={releaseForm.version} onChange={(e) => updateReleaseForm('version', e.target.value)} placeholder="0.2.0" required /></label>
+                <label><span>Дата публикации</span><input value={toDateTimeLocalValue(releaseForm.releasedAt)} onChange={(e) => updateReleaseForm('releasedAt', fromDateTimeLocalValue(e.target.value))} type="datetime-local" required /></label>
+                <label><span>Источник</span><select value={releaseForm.source ?? 'manual'} onChange={(e) => updateReleaseForm('source', e.target.value)}><option value="manual">manual</option><option value="agent">agent</option></select></label>
+              </div>
+              <label className="checkbox-row"><input checked={releaseForm.isActive} onChange={(e) => updateReleaseForm('isActive', e.target.checked)} type="checkbox" /> Опубликован и виден пользователям</label>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Описание для пользователей</legend>
+              <label><span>Заголовок</span><input value={releaseForm.title} onChange={(e) => updateReleaseForm('title', e.target.value)} placeholder="Что изменилось" maxLength={200} required /></label>
+              <label><span>Короткое описание</span><textarea value={releaseForm.summary} onChange={(e) => updateReleaseForm('summary', e.target.value)} rows={3} placeholder="Коротко объясните, где пользователь увидит изменения" required /></label>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Пункты релиза</legend>
+              <div className="list-stack">
+                {releaseForm.items.map((item, index) => (
+                  <div key={index} className="release-item-editor">
+                    <label><span>Тип</span><select value={item.type} onChange={(e) => updateReleaseItem(index, { type: e.target.value })}><option value="new">Новое</option><option value="improved">Улучшено</option><option value="fixed">Исправлено</option><option value="important">Важно</option></select></label>
+                    <label><span>Порядок</span><input value={item.sortOrder} onChange={(e) => updateReleaseItem(index, { sortOrder: Number(e.target.value) || 0 })} type="number" min={0} step="1" /></label>
+                    <label className="release-item-text"><span>Текст</span><textarea value={item.text} onChange={(e) => updateReleaseItem(index, { text: e.target.value })} rows={2} placeholder="Пишите для пользователя, без названий файлов и коммитов" required /></label>
+                    <PrimaryButton type="button" className="button-ghost" disabled={releaseForm.items.length <= 1} onClick={() => removeReleaseItem(index)}>Убрать</PrimaryButton>
+                  </div>
+                ))}
+              </div>
+              <PrimaryButton type="button" className="button-secondary mt-12" onClick={addReleaseItem}>Добавить пункт</PrimaryButton>
+            </fieldset>
+            <div className="form-footer">
+              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !releaseForm.releaseId || !releaseForm.title || !releaseForm.summary} title={adminDisabledTitle}>
+                {editingReleaseId ? 'Сохранить релиз' : 'Создать релиз'}
+              </PrimaryButton>
+              {editingReleaseId && <PrimaryButton type="button" className="button-secondary" onClick={resetReleaseForm}>Отменить редактирование</PrimaryButton>}
+            </div>
+          </form>
+        </Card>
+        <Card>
+          <h3>История релизов</h3>
+          <div className="list-stack">
+            {appReleases.length === 0 && <EmptyState title="Релизов пока нет" description="Создайте первый релиз или проверьте seed-файл AppReleases/releases.json." />}
+            {appReleases.map((release) => (
+              <div key={release.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{release.title}</strong>
+                    <div className="muted">Версия {release.version} · {release.releaseId} · публикация {formatDate(release.releasedAt)}</div>
+                    <div className="muted">{release.summary}</div>
+                  </div>
+                  <div className="item-status"><StatusBadge value={release.isActive ? 'Published' : 'Hidden'} /><StatusBadge value={release.source} /></div>
+                </div>
+                <div className="list-stack mt-12">
+                  {release.items.map((item, index) => <div key={`${release.id}-${index}`} className="list-item"><span>{item.type}: {item.text}</span></div>)}
+                </div>
+                <div className="toolbar">
+                  <PrimaryButton className="button-secondary" onClick={() => editRelease(release)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={actionBusyId === `release-delete-${release.id}`} message={`Удалить релиз "${release.title}"? Пользователи больше не увидят его в истории.`} onConfirm={() => void handleDeleteRelease(release)}>Удалить</ConfirmButton>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       </div>
 

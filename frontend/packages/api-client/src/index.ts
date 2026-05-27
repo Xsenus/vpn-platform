@@ -43,6 +43,50 @@ export type TariffDto = {
   updatedAt?: string
 }
 
+export type AppReleaseItemType = 'new' | 'improved' | 'fixed' | 'important'
+
+export type AppReleaseItemDto = {
+  id?: string | null
+  type: AppReleaseItemType | string
+  text: string
+  sortOrder: number
+}
+
+export type AppReleaseDto = {
+  id: string
+  releaseId: string
+  version: string
+  releasedAt: string
+  title: string
+  summary: string
+  isActive: boolean
+  source: string
+  items: AppReleaseItemDto[]
+  createdByUserId?: string | null
+  createdByUserName?: string | null
+  updatedByUserId?: string | null
+  updatedByUserName?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type AppVersionLatestResponse = {
+  currentVersion?: string | null
+  latestRelease?: AppReleaseDto | null
+  seenByCurrentUser: boolean
+}
+
+export type AppReleaseUpsertPayload = {
+  releaseId: string
+  version: string
+  releasedAt: string
+  title: string
+  summary: string
+  isActive: boolean
+  source?: string | null
+  items: AppReleaseItemDto[]
+}
+
 export type UserProfileDto = {
   id: string
   email?: string | null
@@ -897,6 +941,23 @@ export class ApiClient {
     return this.request<RewardLedgerDto[]>('/api/me/referrals', { token, errorMessage: 'Failed to load referrals' })
   }
 
+  getLatestAppVersion(token: string): Promise<AppVersionLatestResponse> {
+    return this.request<AppVersionLatestResponse>('/api/app-version/latest', { token, errorMessage: 'Failed to load latest app version' })
+  }
+
+  getAppVersionHistory(token: string): Promise<AppReleaseDto[]> {
+    return this.request<AppReleaseDto[]>('/api/app-version/history', { token, errorMessage: 'Failed to load app version history' })
+  }
+
+  markAppVersionSeen(token: string, releaseId: string): Promise<{ releaseId: string; seen: boolean }> {
+    return this.request<{ releaseId: string; seen: boolean }>('/api/app-version/mark-seen', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ releaseId }),
+      errorMessage: 'Failed to mark app version as seen'
+    })
+  }
+
   getAdminDashboardSummary(token: string): Promise<AdminDashboardSummaryDto> {
     return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: 'Failed to load dashboard summary' })
   }
@@ -1174,6 +1235,36 @@ export class ApiClient {
 
   getAdminTariffs(token: string): Promise<TariffDto[]> {
     return this.request<TariffDto[]>('/api/admin/tariffs', { token, errorMessage: 'Failed to load tariffs' })
+  }
+
+  getAdminAppReleases(token: string): Promise<AppReleaseDto[]> {
+    return this.request<AppReleaseDto[]>('/api/app-version/admin/releases', { token, errorMessage: 'Failed to load app releases' })
+  }
+
+  createAdminAppRelease(token: string, payload: AppReleaseUpsertPayload): Promise<AppReleaseDto> {
+    return this.request<AppReleaseDto>('/api/app-version/admin/releases', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to create app release'
+    })
+  }
+
+  updateAdminAppRelease(token: string, id: string, payload: AppReleaseUpsertPayload): Promise<AppReleaseDto> {
+    return this.request<AppReleaseDto>(`/api/app-version/admin/releases/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to update app release'
+    })
+  }
+
+  deleteAdminAppRelease(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/app-version/admin/releases/${id}`, {
+      method: 'DELETE',
+      token,
+      errorMessage: 'Failed to delete app release'
+    })
   }
 
   createAdminTariff(token: string, payload: UpdateTariffPayload): Promise<TariffDto> {

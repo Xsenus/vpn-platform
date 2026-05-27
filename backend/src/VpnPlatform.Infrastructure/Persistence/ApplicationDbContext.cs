@@ -57,6 +57,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<MigrationJob> MigrationJobs => Set<MigrationJob>();
     public DbSet<MigrationItem> MigrationItems => Set<MigrationItem>();
     public DbSet<NodeHealthCheck> NodeHealthChecks => Set<NodeHealthCheck>();
+    public DbSet<AppRelease> AppReleases => Set<AppRelease>();
+    public DbSet<AppReleaseItem> AppReleaseItems => Set<AppReleaseItem>();
+    public DbSet<AppReleaseSeen> AppReleaseSeen => Set<AppReleaseSeen>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +104,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<AccessCredentialHistory>().HasIndex(x => new { x.AccessCredentialId, x.CreatedAt });
         modelBuilder.Entity<InboxMessage>().HasIndex(x => new { x.Source, x.ExternalKey }).IsUnique();
         modelBuilder.Entity<OutboxMessage>().HasIndex(x => new { x.Type, x.CorrelationId });
+        modelBuilder.Entity<AppRelease>().HasIndex(x => x.ReleaseId).IsUnique();
+        modelBuilder.Entity<AppRelease>().HasIndex(x => new { x.IsActive, x.ReleasedAt });
+        modelBuilder.Entity<AppReleaseItem>().HasIndex(x => new { x.AppReleaseId, x.SortOrder });
+        modelBuilder.Entity<AppReleaseSeen>().HasIndex(x => new { x.UserId, x.AppReleaseId }).IsUnique();
 
         modelBuilder.Entity<UserRefreshToken>()
             .HasOne(x => x.User)
@@ -319,6 +326,24 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .HasForeignKey(x => x.SubscriptionId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<AppReleaseItem>()
+            .HasOne(x => x.AppRelease)
+            .WithMany(x => x.Items)
+            .HasForeignKey(x => x.AppReleaseId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AppReleaseSeen>()
+            .HasOne(x => x.AppRelease)
+            .WithMany(x => x.SeenByUsers)
+            .HasForeignKey(x => x.AppReleaseId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AppReleaseSeen>()
+            .HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<VpnNode>()
             .HasOne(x => x.NodeGroup)
             .WithMany(x => x.Nodes)
@@ -386,5 +411,14 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PanelHealthCheck>().Property(x => x.ErrorMessage).HasColumnType("text");
         modelBuilder.Entity<AccessCredentialHistory>().Property(x => x.OldValueJson).HasColumnType("text");
         modelBuilder.Entity<AccessCredentialHistory>().Property(x => x.NewValueJson).HasColumnType("text");
+        modelBuilder.Entity<AppRelease>().Property(x => x.ReleaseId).HasMaxLength(160);
+        modelBuilder.Entity<AppRelease>().Property(x => x.Version).HasMaxLength(40);
+        modelBuilder.Entity<AppRelease>().Property(x => x.Title).HasMaxLength(200);
+        modelBuilder.Entity<AppRelease>().Property(x => x.Source).HasMaxLength(40);
+        modelBuilder.Entity<AppRelease>().Property(x => x.CreatedByUserName).HasMaxLength(200);
+        modelBuilder.Entity<AppRelease>().Property(x => x.UpdatedByUserName).HasMaxLength(200);
+        modelBuilder.Entity<AppRelease>().Property(x => x.Summary).HasColumnType("text");
+        modelBuilder.Entity<AppReleaseItem>().Property(x => x.Type).HasMaxLength(40);
+        modelBuilder.Entity<AppReleaseItem>().Property(x => x.Text).HasColumnType("text");
     }
 }
