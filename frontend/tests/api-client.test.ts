@@ -1,7 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { ApiClient, buildAuthHeaders, normalizeApiError } from '../packages/api-client/src/index.ts'
+import {
+  ApiClient,
+  buildAuthHeaders,
+  isValidEmail,
+  normalizeApiError,
+  translateAuthError,
+  translateAuthMessage,
+  validateAuthInput,
+  validatePasswordResetConfirm,
+  validatePasswordResetRequest
+} from '../packages/api-client/src/index.ts'
 
 test('buildAuthHeaders returns bearer header when token exists', () => {
   assert.deepEqual(buildAuthHeaders('abc'), { Authorization: 'Bearer abc' })
@@ -12,6 +22,24 @@ test('normalizeApiError prefers error field and message field', () => {
   assert.equal(normalizeApiError({ error: 'boom' }, 'fallback'), 'boom')
   assert.equal(normalizeApiError({ message: 'denied' }, 'fallback'), 'denied')
   assert.equal(normalizeApiError(null, 'fallback'), 'fallback')
+})
+
+test('auth helpers validate forms and translate backend codes to Russian text', () => {
+  assert.equal(isValidEmail('user@example.test'), true)
+  assert.equal(isValidEmail('broken-email'), false)
+  assert.deepEqual(validateAuthInput('login', 'user@example.test', 'Password123!'), [])
+  assert.deepEqual(validateAuthInput('register', 'bad-email', 'short'), [
+    'Введите корректный email.',
+    'Пароль должен быть не короче 8 символов.'
+  ])
+  assert.deepEqual(validatePasswordResetRequest('user@example.test'), [])
+  assert.deepEqual(validatePasswordResetConfirm('token', 'NewPassword123!'), [])
+  assert.equal(translateAuthError(new Error('invalid_credentials')), 'Неверный email или пароль.')
+  assert.equal(translateAuthError(new Error('email_exists')), 'Аккаунт с таким email уже зарегистрирован. Войдите или восстановите пароль.')
+  assert.equal(
+    translateAuthMessage('If the account exists, a password reset instruction has been queued for the configured delivery channel.'),
+    'Если аккаунт существует, инструкция по сбросу пароля поставлена в очередь отправки.'
+  )
 })
 
 test('ApiClient.getTariffs calls public endpoint', async () => {

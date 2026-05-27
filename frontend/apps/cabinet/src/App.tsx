@@ -12,7 +12,12 @@ import {
   SubscriptionDto,
   TelegramLinkTokenDto,
   TelegramStatusDto,
-  UserProfileDto
+  UserProfileDto,
+  translateAuthError,
+  translateAuthMessage,
+  validateAuthInput,
+  validatePasswordResetConfirm,
+  validatePasswordResetRequest
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
@@ -82,6 +87,11 @@ export function App() {
   const [appVersionOpenSignal, setAppVersionOpenSignal] = useState(0)
   const authPanelId = 'cabinet-auth-panel'
   const activeAuthTabId = authMode === 'login' ? 'cabinet-auth-login-tab' : 'cabinet-auth-register-tab'
+  const authValidationErrors = validateAuthInput(authMode, authEmail, authPassword, authDisplayName)
+  const resetRequestErrors = validatePasswordResetRequest(resetEmail)
+  const resetConfirmErrors = validatePasswordResetConfirm(resetToken, newPassword)
+  const showAuthValidation = authValidationErrors.length > 0 && Boolean(authEmail || authPassword || authDisplayName)
+  const showResetValidation = Boolean(resetEmail || resetToken || newPassword)
   const publicWebUrl = useMemo(() => {
     if (configuredPublicWebUrl) return configuredPublicWebUrl
     if (typeof window === 'undefined') return 'http://localhost:5173'
@@ -189,6 +199,11 @@ export function App() {
 
   const handleAuthSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (authValidationErrors.length > 0) {
+      setError(authValidationErrors.join(' '))
+      return
+    }
+
     setBusy(true)
     setError('')
     setNotice('')
@@ -200,7 +215,7 @@ export function App() {
       setAuthPassword('')
       setNotice(authMode === 'login' ? 'Вход выполнен.' : 'Аккаунт создан.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : authMode === 'login' ? 'Не удалось войти' : 'Не удалось зарегистрироваться')
+      setError(translateAuthError(e, authMode === 'login' ? 'Не удалось войти' : 'Не удалось зарегистрироваться'))
     } finally {
       setBusy(false)
     }
@@ -270,21 +285,31 @@ export function App() {
   }
 
   const handleForgotPassword = async () => {
+    if (resetRequestErrors.length > 0) {
+      setError(resetRequestErrors.join(' '))
+      return
+    }
+
     setBusy(true)
     setError('')
     setNotice('')
     try {
       const response = await api.forgotPassword(resetEmail)
       if (response.validationResetToken) setResetToken(response.validationResetToken)
-      setNotice(response.message)
+      setNotice(translateAuthMessage(response.message))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось запросить сброс пароля')
+      setError(translateAuthError(e, 'Не удалось запросить сброс пароля'))
     } finally {
       setBusy(false)
     }
   }
 
   const handleResetPassword = async () => {
+    if (resetConfirmErrors.length > 0) {
+      setError(resetConfirmErrors.join(' '))
+      return
+    }
+
     setBusy(true)
     setError('')
     setNotice('')
@@ -293,7 +318,7 @@ export function App() {
       setNewPassword('')
       setNotice('Пароль изменён. Войдите с новым паролем.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сбросить пароль')
+      setError(translateAuthError(e, 'Не удалось сбросить пароль'))
     } finally {
       setBusy(false)
     }
@@ -456,8 +481,13 @@ export function App() {
                   <small>На этот email будут привязаны покупки и продления.</small>
                 </label>
                 <PasswordField label="Пароль" value={authPassword} onChange={setAuthPassword} placeholder="Минимум 8 символов" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} minLength={8} required help="Сессия хранится только в этом браузере." />
+                {showAuthValidation && (
+                  <ul className="validation-list" aria-live="polite">
+                    {authValidationErrors.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                )}
                 <div className="form-actions">
-                  <PrimaryButton type="submit" disabled={busy || !authEmail || !authPassword} aria-busy={busy}>
+                  <PrimaryButton type="submit" disabled={busy || authValidationErrors.length > 0} aria-busy={busy}>
                     {busy ? 'Проверяем...' : authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}
                   </PrimaryButton>
                 </div>
@@ -501,9 +531,14 @@ export function App() {
             <label><span>Email</span><input value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /></label>
             <PasswordField label="Код сброса" value={resetToken} onChange={setResetToken} placeholder="Одноразовый код" autoComplete="one-time-code" />
             <PasswordField label="Новый пароль" value={newPassword} onChange={setNewPassword} placeholder="Новый пароль" autoComplete="new-password" minLength={8} />
+            {showResetValidation && [...resetRequestErrors, ...resetConfirmErrors].length > 0 && (
+              <ul className="validation-list" aria-live="polite">
+                {[...resetRequestErrors, ...resetConfirmErrors].map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            )}
             <div className="form-actions">
-              <PrimaryButton type="button" className="button-ghost" disabled={!resetEmail || busy} aria-busy={busy} onClick={() => void handleForgotPassword()}>Запросить код</PrimaryButton>
-              <PrimaryButton type="submit" disabled={!resetToken || !newPassword || busy} aria-busy={busy}>Сохранить пароль</PrimaryButton>
+              <PrimaryButton type="button" className="button-ghost" disabled={resetRequestErrors.length > 0 || busy} aria-busy={busy} onClick={() => void handleForgotPassword()}>Запросить код</PrimaryButton>
+              <PrimaryButton type="submit" disabled={resetConfirmErrors.length > 0 || busy} aria-busy={busy}>Сохранить пароль</PrimaryButton>
             </div>
           </form>
         </Card>

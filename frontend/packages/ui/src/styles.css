@@ -158,6 +158,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .card > form.form-grid { max-width: none; }
 .form-grid > .form-actions,
+.form-grid > .validation-list,
 .form-grid > label:has(textarea) {
   grid-column: 1 / -1;
 }
@@ -530,6 +531,18 @@ form { display: grid; gap: 12px; max-width: 560px; }
 .empty-state strong { color: var(--text); }
 .loading-block { border: 1px solid var(--line); background: #f8fafc; color: var(--muted); }
 .error-block { border: 1px solid #fecaca; background: #fef2f2; color: var(--danger); }
+
+.validation-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 12px 14px 12px 32px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 14px;
+}
 
 .list-stack { display: grid; gap: 12px; }
 .list-item, .list-item-vertical {

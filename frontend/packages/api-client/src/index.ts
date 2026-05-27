@@ -109,6 +109,8 @@ export type AuthResponse = {
   displayName: string
 }
 
+export type AuthFormMode = 'login' | 'register'
+
 export type ForgotPasswordResponse = {
   accepted: boolean
   message: string
@@ -796,6 +798,60 @@ export type CreateMyOrderPayload = {
 
 export function buildAuthHeaders(token?: string | null): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+const authErrorMessages: Record<string, string> = {
+  invalid_credentials: 'Неверный email или пароль.',
+  invalid_registration_request: 'Проверьте email и пароль: пароль должен быть не короче 8 символов.',
+  email_exists: 'Аккаунт с таким email уже зарегистрирован. Войдите или восстановите пароль.',
+  invalid_refresh_token: 'Сессия не найдена. Войдите заново.',
+  refresh_token_reuse_detected: 'Сессия была отозвана из-за повторного использования старого токена. Войдите заново.',
+  refresh_token_expired: 'Сессия истекла. Войдите заново.',
+  user_not_active: 'Аккаунт недоступен. Обратитесь в поддержку.',
+  invalid_reset_request: 'Проверьте код сброса и новый пароль: пароль должен быть не короче 8 символов.',
+  invalid_or_expired_reset_token: 'Код сброса неверный или уже истек. Запросите новый код.'
+}
+
+const authErrorFallbacks: Record<string, string> = {
+  'Password reset request failed': 'Не удалось запросить код сброса пароля.',
+  'Password reset failed': 'Не удалось изменить пароль.',
+  'Request failed': 'Запрос не выполнен. Попробуйте еще раз.'
+}
+
+export function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+}
+
+export function validateAuthInput(mode: AuthFormMode, email: string, password: string, displayName = '') {
+  const errors: string[] = []
+  if (!isValidEmail(email)) errors.push('Введите корректный email.')
+  if (password.trim().length < 8) errors.push('Пароль должен быть не короче 8 символов.')
+  if (mode === 'register' && displayName.trim().length > 80) errors.push('Имя должно быть короче 80 символов.')
+  return errors
+}
+
+export function validatePasswordResetRequest(email: string) {
+  return isValidEmail(email) ? [] : ['Введите корректный email для восстановления пароля.']
+}
+
+export function validatePasswordResetConfirm(resetToken: string, newPassword: string) {
+  const errors: string[] = []
+  if (!resetToken.trim()) errors.push('Введите код сброса пароля.')
+  if (newPassword.trim().length < 8) errors.push('Новый пароль должен быть не короче 8 символов.')
+  return errors
+}
+
+export function translateAuthError(error: unknown, fallback = 'Ошибка авторизации') {
+  const raw = error instanceof Error ? error.message : String(error ?? '')
+  return authErrorMessages[raw] ?? authErrorFallbacks[raw] ?? (raw || fallback)
+}
+
+export function translateAuthMessage(message: string) {
+  if (message === 'If the account exists, a password reset instruction has been queued for the configured delivery channel.') {
+    return 'Если аккаунт существует, инструкция по сбросу пароля поставлена в очередь отправки.'
+  }
+
+  return message
 }
 
 async function readJsonOrText(response: Response) {

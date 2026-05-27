@@ -10,7 +10,12 @@ import {
   PublicPaymentProviderDto,
   SiteContentBlockDto,
   TariffDto,
-  UserProfileDto
+  UserProfileDto,
+  translateAuthError,
+  translateAuthMessage,
+  validateAuthInput,
+  validatePasswordResetConfirm,
+  validatePasswordResetRequest
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
@@ -713,6 +718,11 @@ function AccountPage({
   const submitLabel = mode === 'login' ? 'Войти' : 'Создать аккаунт'
   const authPanelId = 'public-auth-panel'
   const activeAuthTabId = mode === 'login' ? 'public-auth-login-tab' : 'public-auth-register-tab'
+  const authValidationErrors = validateAuthInput(mode, email, password, displayName)
+  const resetRequestErrors = validatePasswordResetRequest(resetEmail)
+  const resetConfirmErrors = validatePasswordResetConfirm(resetToken, newPassword)
+  const showAuthValidation = authValidationErrors.length > 0 && Boolean(email || password || displayName)
+  const showResetValidation = Boolean(resetEmail || resetToken || newPassword)
 
   const switchAuthMode = (nextMode: 'login' | 'register') => {
     setMode(nextMode)
@@ -741,20 +751,30 @@ function AccountPage({
   }
 
   const handleForgotPassword = async () => {
+    if (resetRequestErrors.length > 0) {
+      setError(resetRequestErrors.join(' '))
+      return
+    }
+
     setBusy(true)
     setError('')
     try {
       const response = await api.forgotPassword(resetEmail)
       if (response.validationResetToken) setResetToken(response.validationResetToken)
-      setResetMessage(response.message)
+      setResetMessage(translateAuthMessage(response.message))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось запросить сброс пароля')
+      setError(translateAuthError(e, 'Не удалось запросить сброс пароля'))
     } finally {
       setBusy(false)
     }
   }
 
   const handleResetPassword = async () => {
+    if (resetConfirmErrors.length > 0) {
+      setError(resetConfirmErrors.join(' '))
+      return
+    }
+
     setBusy(true)
     setError('')
     try {
@@ -762,7 +782,7 @@ function AccountPage({
       setNewPassword('')
       setResetMessage('Пароль изменён. Войдите с новым паролем.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось изменить пароль')
+      setError(translateAuthError(e, 'Не удалось изменить пароль'))
     } finally {
       setBusy(false)
     }
@@ -863,15 +883,20 @@ function AccountPage({
               aria-busy={busy}
               onSubmit={async (e) => {
                 e.preventDefault()
+                if (authValidationErrors.length > 0) {
+                  setError(authValidationErrors.join(' '))
+                  return
+                }
+
                 setBusy(true)
                 setError('')
                 try {
                   const response = mode === 'login'
                     ? await api.login(email, password)
-                    : await api.register(email, password, displayName)
+                    : await api.register(email, password, displayName.trim() || email.trim())
                   onAuthenticated(response)
                 } catch (e) {
-                  setError(e instanceof Error ? e.message : 'Ошибка авторизации')
+                  setError(translateAuthError(e, 'Ошибка авторизации'))
                 } finally {
                   setBusy(false)
                 }
@@ -880,8 +905,13 @@ function AccountPage({
               {mode === 'register' && <label><span>Имя</span><input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" /></label>}
               <label><span>Email</span><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /><small>Используется для входа и привязки покупок.</small></label>
               <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Минимум 8 символов" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required help="Минимум 8 символов." />
+              {showAuthValidation && (
+                <ul className="validation-list" aria-live="polite">
+                  {authValidationErrors.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
               <div className="form-actions">
-                <PrimaryButton type="submit" disabled={busy || !email || !password} aria-busy={busy}>{busy ? 'Сохраняем...' : submitLabel}</PrimaryButton>
+                <PrimaryButton type="submit" disabled={busy || authValidationErrors.length > 0} aria-busy={busy}>{busy ? 'Сохраняем...' : submitLabel}</PrimaryButton>
               </div>
             </form>
             {busy && <LoadingBlock label="Обрабатываем запрос..." />}
@@ -895,9 +925,14 @@ function AccountPage({
               <label><span>Email</span><input value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /></label>
               <PasswordField label="Код сброса" value={resetToken} onChange={setResetToken} placeholder="Одноразовый код" autoComplete="one-time-code" />
               <PasswordField label="Новый пароль" value={newPassword} onChange={setNewPassword} placeholder="Новый пароль" autoComplete="new-password" minLength={8} />
+              {showResetValidation && [...resetRequestErrors, ...resetConfirmErrors].length > 0 && (
+                <ul className="validation-list" aria-live="polite">
+                  {[...resetRequestErrors, ...resetConfirmErrors].map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
               <div className="form-actions">
-                <PrimaryButton type="button" className="button-ghost" disabled={!resetEmail || busy} aria-busy={busy} onClick={() => void handleForgotPassword()}>Запросить код</PrimaryButton>
-                <PrimaryButton type="submit" disabled={!resetToken || !newPassword || busy} aria-busy={busy}>Изменить пароль</PrimaryButton>
+                <PrimaryButton type="button" className="button-ghost" disabled={resetRequestErrors.length > 0 || busy} aria-busy={busy} onClick={() => void handleForgotPassword()}>Запросить код</PrimaryButton>
+                <PrimaryButton type="submit" disabled={resetConfirmErrors.length > 0 || busy} aria-busy={busy}>Изменить пароль</PrimaryButton>
               </div>
             </form>
           </Card>
