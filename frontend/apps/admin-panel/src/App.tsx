@@ -20,6 +20,8 @@ import {
   PaymentWebhookEventDto,
   ProvisioningRunDto,
   RefundDto,
+  SiteContentBlockDto,
+  SiteContentBlockUpsertPayload,
   SubscriptionDto,
   SupportConversationDto,
   SupportMessageDto,
@@ -80,6 +82,7 @@ const adminSections = [
   ['bot', 'Telegram-бот'],
   ['releases', 'Что нового'],
   ['faq', 'FAQ'],
+  ['content', 'Контент сайта'],
   ['provisioning', 'Подготовка VPS']
 ] as const
 
@@ -210,6 +213,17 @@ const defaultFaqForm: FaqUpsertPayload = {
   isActive: true,
   showOnHome: true,
   showOnFaqPage: true,
+  sortOrder: 100
+}
+
+const defaultSiteContentForm: SiteContentBlockUpsertPayload = {
+  key: '',
+  value: '',
+  group: 'home',
+  label: '',
+  description: '',
+  inputType: 'text',
+  isActive: true,
   sortOrder: 100
 }
 
@@ -346,6 +360,9 @@ export function App() {
   const [faqEntries, setFaqEntries] = useState<FaqItem[]>([])
   const [faqForm, setFaqForm] = useState<FaqUpsertPayload>(defaultFaqForm)
   const [editingFaqId, setEditingFaqId] = useState('')
+  const [siteContentBlocks, setSiteContentBlocks] = useState<SiteContentBlockDto[]>([])
+  const [siteContentForm, setSiteContentForm] = useState<SiteContentBlockUpsertPayload>(defaultSiteContentForm)
+  const [editingSiteContentId, setEditingSiteContentId] = useState('')
   const [servers, setServers] = useState<VpnNodeDto[]>([])
   const [provisioningRuns, setProvisioningRuns] = useState<ProvisioningRunDto[]>([])
   const [vpnPanels, setVpnPanels] = useState<VpnPanelDto[]>([])
@@ -425,6 +442,7 @@ export function App() {
       nextTariffs,
       nextAppReleases,
       nextFaqEntries,
+      nextSiteContent,
       nextServers,
       nextRuns,
       nextVpnPanels,
@@ -443,6 +461,7 @@ export function App() {
       safeLoad('tariffs', () => api.getAdminTariffs(currentToken), [], errors),
       safeLoad('Что нового', () => api.getAdminAppReleases(currentToken), [], errors),
       safeLoad('FAQ', () => api.getAdminFaq(currentToken), [], errors),
+      safeLoad('контент сайта', () => api.getAdminSiteContent(currentToken, 'home'), [], errors),
       safeLoad('servers', () => api.getAdminServers(currentToken), [], errors),
       safeLoad('подготовка серверов', () => api.getAdminProvisioningRuns(currentToken), [], errors),
       safeLoad('VPN-панели', () => api.getAdminVpnPanels(currentToken), [], errors),
@@ -462,6 +481,7 @@ export function App() {
     setTariffs(nextTariffs)
     setAppReleases(nextAppReleases)
     setFaqEntries(nextFaqEntries)
+    setSiteContentBlocks(nextSiteContent)
     setServers(nextServers)
     setProvisioningRuns(nextRuns)
     setVpnPanels(nextVpnPanels)
@@ -512,6 +532,7 @@ export function App() {
   const updateTariffForm = <K extends keyof UpdateTariffPayload>(key: K, value: UpdateTariffPayload[K]) => setTariffForm((current) => ({ ...current, [key]: value }))
   const updateReleaseForm = <K extends keyof AppReleaseUpsertPayload>(key: K, value: AppReleaseUpsertPayload[K]) => setReleaseForm((current) => ({ ...current, [key]: value }))
   const updateFaqForm = <K extends keyof FaqUpsertPayload>(key: K, value: FaqUpsertPayload[K]) => setFaqForm((current) => ({ ...current, [key]: value }))
+  const updateSiteContentForm = <K extends keyof SiteContentBlockUpsertPayload>(key: K, value: SiteContentBlockUpsertPayload[K]) => setSiteContentForm((current) => ({ ...current, [key]: value }))
   const updateReleaseItem = (index: number, patch: Partial<AppReleaseUpsertPayload['items'][number]>) => setReleaseForm((current) => ({
     ...current,
     items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item)
@@ -567,6 +588,9 @@ export function App() {
     setFaqEntries([])
     setFaqForm(defaultFaqForm)
     setEditingFaqId('')
+    setSiteContentBlocks([])
+    setSiteContentForm(defaultSiteContentForm)
+    setEditingSiteContentId('')
     setServers([])
     setProvisioningRuns([])
     setVpnPanels([])
@@ -875,6 +899,66 @@ export function App() {
       await api.deleteAdminFaq(token, faqId)
       if (editingFaqId === faqId) resetFaqForm()
       setNotice('Вопрос FAQ удален.')
+      await loadAll(token)
+    })
+  }
+
+  const resetSiteContentForm = () => {
+    setSiteContentForm(defaultSiteContentForm)
+    setEditingSiteContentId('')
+  }
+
+  const editSiteContent = (block: SiteContentBlockDto) => {
+    setEditingSiteContentId(block.id)
+    setSiteContentForm({
+      key: block.key,
+      value: block.value,
+      group: block.group,
+      label: block.label,
+      description: block.description,
+      inputType: block.inputType,
+      isActive: block.isActive,
+      sortOrder: block.sortOrder
+    })
+    setActiveSection('content')
+    if (typeof window !== 'undefined') window.location.hash = 'content'
+  }
+
+  const handleSaveSiteContent = async () => {
+    if (!token) return
+    const key = siteContentForm.key.trim()
+    const label = siteContentForm.label?.trim() || key
+    if (!key || !label) {
+      setError('Контент сайта: заполните ключ и название поля.')
+      return
+    }
+    const payload: SiteContentBlockUpsertPayload = {
+      ...siteContentForm,
+      key,
+      label,
+      group: siteContentForm.group?.trim() || 'home',
+      inputType: siteContentForm.inputType?.trim() || 'text',
+      sortOrder: Number(siteContentForm.sortOrder) || 0
+    }
+
+    await runAction(editingSiteContentId ? `content-update-${editingSiteContentId}` : 'content-create', async () => {
+      if (editingSiteContentId) {
+        await api.updateAdminSiteContent(token, editingSiteContentId, payload)
+        setNotice('Блок контента обновлен.')
+      } else {
+        await api.createAdminSiteContent(token, payload)
+        setNotice('Блок контента создан.')
+      }
+      resetSiteContentForm()
+      await loadAll(token)
+    })
+  }
+
+  const handleDeleteSiteContent = async (block: SiteContentBlockDto) => {
+    await runAction(`content-delete-${block.id}`, async () => {
+      await api.deleteAdminSiteContent(token, block.id)
+      if (editingSiteContentId === block.id) resetSiteContentForm()
+      setNotice('Блок контента удален.')
       await loadAll(token)
     })
   }
@@ -1670,6 +1754,62 @@ export function App() {
                 <div className="toolbar">
                   <PrimaryButton className="button-secondary" onClick={() => editFaq(entry)}>Редактировать</PrimaryButton>
                   <ConfirmButton className="button-danger" disabled={actionBusyId === `faq-delete-${entry.id}`} message={`Удалить вопрос "${entry.question}"?`} onConfirm={() => void handleDeleteFaq(entry)}>Удалить</ConfirmButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div id="content" className="section card-list-two" hidden={activeSection !== 'content'}>
+        <Card>
+          <h3>{editingSiteContentId ? 'Редактировать блок контента' : 'Создать блок контента'}</h3>
+          <p className="muted">Эти поля используются публичной главной страницей. Неактивные блоки остаются в админке, но не попадают в public API.</p>
+          <form aria-busy={actionBusyId === 'content-create' || actionBusyId === `content-update-${editingSiteContentId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveSiteContent() }}>
+            <fieldset className="form-section">
+              <legend>Идентификация</legend>
+              <div className="form-grid">
+                <label><span>Ключ</span><input value={siteContentForm.key} onChange={(e) => updateSiteContentForm('key', e.target.value)} placeholder="home.hero.title" required /></label>
+                <label><span>Группа</span><input value={siteContentForm.group ?? 'home'} onChange={(e) => updateSiteContentForm('group', e.target.value)} placeholder="home" /></label>
+                <label><span>Название поля</span><input value={siteContentForm.label ?? ''} onChange={(e) => updateSiteContentForm('label', e.target.value)} placeholder="Hero title" required /></label>
+                <label><span>Тип поля</span><select value={siteContentForm.inputType ?? 'text'} onChange={(e) => updateSiteContentForm('inputType', e.target.value)}><option value="text">text</option><option value="textarea">textarea</option><option value="url">url</option></select></label>
+                <label><span>Порядок</span><input value={siteContentForm.sortOrder} onChange={(e) => updateSiteContentForm('sortOrder', Number(e.target.value) || 0)} type="number" step="1" /></label>
+              </div>
+              <label><span>Описание для администратора</span><textarea value={siteContentForm.description ?? ''} onChange={(e) => updateSiteContentForm('description', e.target.value)} rows={2} placeholder="Где используется этот текст" /></label>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Текст</legend>
+              <label><span>Значение</span><textarea value={siteContentForm.value} onChange={(e) => updateSiteContentForm('value', e.target.value)} rows={siteContentForm.inputType === 'textarea' ? 5 : 3} placeholder="Текст для сайта" /></label>
+              <label className="checkbox-row"><input checked={siteContentForm.isActive} onChange={(e) => updateSiteContentForm('isActive', e.target.checked)} type="checkbox" /> Активен и опубликован</label>
+            </fieldset>
+            <div className="tariff-preview">
+              <div className="muted">{siteContentForm.key || 'content.key'}</div>
+              <strong>{siteContentForm.label || 'Название поля'}</strong>
+              <p>{siteContentForm.value || 'Предпросмотр текста'}</p>
+            </div>
+            <div className="form-footer">
+              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !siteContentForm.key} title={adminDisabledTitle}>{editingSiteContentId ? 'Сохранить блок' : 'Создать блок'}</PrimaryButton>
+              {editingSiteContentId && <PrimaryButton type="button" className="button-secondary" onClick={resetSiteContentForm}>Отменить редактирование</PrimaryButton>}
+            </div>
+          </form>
+        </Card>
+        <Card>
+          <h3>Контент главной</h3>
+          <div className="list-stack">
+            {siteContentBlocks.length === 0 && <EmptyState title="Контент не настроен" description="Запустите seed или создайте первый блок для главной страницы." />}
+            {siteContentBlocks.map((block) => (
+              <div key={block.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{block.label}</strong>
+                    <div className="muted">{block.key} · {block.group} · порядок {block.sortOrder}</div>
+                    <div className="muted">{block.value || '—'}</div>
+                  </div>
+                  <div className="item-status"><StatusBadge value={block.isActive ? 'Published' : 'Hidden'} /><StatusBadge value={block.inputType} /></div>
+                </div>
+                <div className="toolbar">
+                  <PrimaryButton className="button-secondary" onClick={() => editSiteContent(block)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={actionBusyId === `content-delete-${block.id}`} message={`Удалить блок "${block.label}"? На сайте будет использован fallback-текст из приложения.`} onConfirm={() => void handleDeleteSiteContent(block)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}

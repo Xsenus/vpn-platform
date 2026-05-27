@@ -15,6 +15,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Tariff> Tariffs => Set<Tariff>();
     public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
     public DbSet<FaqEntry> FaqEntries => Set<FaqEntry>();
+    public DbSet<SiteContentBlock> SiteContentBlocks => Set<SiteContentBlock>();
     public DbSet<CheckoutSession> CheckoutSessions => Set<CheckoutSession>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<PaymentProviderAccount> PaymentProviderAccounts => Set<PaymentProviderAccount>();
@@ -76,6 +77,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Tariff>().HasIndex(x => x.Slug).IsUnique();
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.IsActive, x.ShowOnFaqPage, x.SortOrder });
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.Category, x.SortOrder });
+        modelBuilder.Entity<SiteContentBlock>().HasIndex(x => x.Key).IsUnique();
+        modelBuilder.Entity<SiteContentBlock>().HasIndex(x => new { x.Group, x.IsActive, x.SortOrder });
         modelBuilder.Entity<PromoCode>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<CheckoutSession>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PaymentProviderAccount>().HasIndex(x => new { x.Provider, x.Mode, x.Name }).IsUnique();
@@ -426,6 +429,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<FaqEntry>().Property(x => x.Question).HasMaxLength(300);
         modelBuilder.Entity<FaqEntry>().Property(x => x.Answer).HasColumnType("text");
         modelBuilder.Entity<FaqEntry>().Property(x => x.Category).HasMaxLength(120);
+        modelBuilder.Entity<SiteContentBlock>().Property(x => x.Key).HasMaxLength(160);
+        modelBuilder.Entity<SiteContentBlock>().Property(x => x.Group).HasMaxLength(80);
+        modelBuilder.Entity<SiteContentBlock>().Property(x => x.Label).HasMaxLength(200);
+        modelBuilder.Entity<SiteContentBlock>().Property(x => x.Description).HasColumnType("text");
+        modelBuilder.Entity<SiteContentBlock>().Property(x => x.InputType).HasMaxLength(40);
+        modelBuilder.Entity<SiteContentBlock>().Property(x => x.Value).HasColumnType("text");
         modelBuilder.Entity<Tariff>().Property(x => x.Description).HasColumnType("text");
         modelBuilder.Entity<Tariff>().Property(x => x.FullDescription).HasColumnType("text");
         modelBuilder.Entity<Tariff>().Property(x => x.FeaturesJson).HasColumnType("text");

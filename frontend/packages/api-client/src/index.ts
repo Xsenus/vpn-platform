@@ -682,6 +682,31 @@ export type FaqUpsertPayload = {
   sortOrder: number
 }
 
+export type SiteContentBlockDto = {
+  id: string
+  key: string
+  value: string
+  group: string
+  label: string
+  description: string
+  inputType: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type SiteContentBlockUpsertPayload = {
+  key: string
+  value: string
+  group?: string | null
+  label?: string | null
+  description?: string | null
+  inputType?: string | null
+  isActive: boolean
+  sortOrder: number
+}
+
 export type CreateCheckoutSessionPayload = {
   tariffId: string
   type: OrderType
@@ -802,6 +827,10 @@ export class ApiClient {
 
   getHomeFaq(): Promise<FaqItem[]> {
     return this.request<FaqItem[]>('/api/public/content/faq?home=true', { errorMessage: 'Failed to load faq' })
+  }
+
+  getHomeContent(): Promise<SiteContentBlockDto[]> {
+    return this.request<SiteContentBlockDto[]>('/api/public/content/home', { errorMessage: 'Failed to load home content' })
   }
 
   getPublicPaymentProviders(): Promise<PublicPaymentProviderDto[]> {
@@ -1274,6 +1303,37 @@ export class ApiClient {
 
   getAdminFaq(token: string): Promise<FaqItem[]> {
     return this.request<FaqItem[]>('/api/admin/faq', { token, errorMessage: 'Failed to load FAQ' })
+  }
+
+  getAdminSiteContent(token: string, group = 'home'): Promise<SiteContentBlockDto[]> {
+    const suffix = group ? `?group=${encodeURIComponent(group)}` : ''
+    return this.request<SiteContentBlockDto[]>(`/api/admin/site-content${suffix}`, { token, errorMessage: 'Failed to load site content' })
+  }
+
+  createAdminSiteContent(token: string, payload: SiteContentBlockUpsertPayload): Promise<SiteContentBlockDto> {
+    return this.request<SiteContentBlockDto>('/api/admin/site-content', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to create site content block'
+    })
+  }
+
+  updateAdminSiteContent(token: string, id: string, payload: SiteContentBlockUpsertPayload): Promise<SiteContentBlockDto> {
+    return this.request<SiteContentBlockDto>(`/api/admin/site-content/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: 'Failed to update site content block'
+    })
+  }
+
+  deleteAdminSiteContent(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/admin/site-content/${id}`, {
+      method: 'DELETE',
+      token,
+      errorMessage: 'Failed to delete site content block'
+    })
   }
 
   createAdminFaq(token: string, payload: FaqUpsertPayload): Promise<FaqItem> {

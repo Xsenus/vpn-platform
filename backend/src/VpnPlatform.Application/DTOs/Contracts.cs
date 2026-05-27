@@ -35,6 +35,9 @@ public sealed record TariffDto(
 public sealed record FaqEntryDto(Guid Id, string Question, string Answer, string Category, bool IsActive, bool ShowOnHome, bool ShowOnFaqPage, int SortOrder, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 public sealed record FaqEntryUpsertRequest(string Question, string Answer, string? Category, bool IsActive, bool ShowOnHome, bool ShowOnFaqPage, int SortOrder);
 
+public sealed record SiteContentBlockDto(Guid Id, string Key, string Value, string Group, string Label, string Description, string InputType, bool IsActive, int SortOrder, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record SiteContentBlockUpsertRequest(string Key, string Value, string? Group, string? Label, string? Description, string? InputType, bool IsActive, int SortOrder);
+
 public sealed record AppReleaseItemDto(Guid? Id, string Type, string Text, int SortOrder);
 public sealed record AppReleaseDto(
     Guid Id,

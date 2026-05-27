@@ -77,6 +77,37 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
   assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
+test('ApiClient site content endpoints cover public and admin CRUD', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    if (String(url).includes('/api/public/content/home') || String(url).includes('/api/admin/site-content')) {
+      if (init?.method === 'DELETE') {
+        return new Response(JSON.stringify({ id: 'content-1', deleted: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+
+      const payload = { id: 'content-1', key: 'home.hero.title', value: 'VPN title', group: 'home', label: 'Hero title', description: '', inputType: 'text', isActive: true, sortOrder: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+      return new Response(JSON.stringify(init?.method ? payload : [payload]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    throw new Error(`Unexpected URL ${String(url)}`)
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await client.getHomeContent()
+  await client.getAdminSiteContent('admin-token', 'home')
+  await client.createAdminSiteContent('admin-token', { key: 'home.hero.title', value: 'VPN title', group: 'home', label: 'Hero title', inputType: 'text', isActive: true, sortOrder: 10 })
+  await client.updateAdminSiteContent('admin-token', 'content-1', { key: 'home.hero.title', value: 'New title', group: 'home', label: 'Hero title', inputType: 'text', isActive: true, sortOrder: 10 })
+  await client.deleteAdminSiteContent('admin-token', 'content-1')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/content/home')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/site-content?group=home')
+  assert.equal(calls[2]?.init?.method, 'POST')
+  assert.equal(calls[3]?.init?.method, 'PUT')
+  assert.equal(calls[4]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[4]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
 test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
@@ -713,6 +744,8 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(publicSource, /getPublicPaymentProviders/)
   assert.match(publicSource, /paymentProvidersLoading/)
   assert.match(publicSource, /Нет доступных способов оплаты|paymentProvidersLoading/)
+  assert.match(publicSource, /getHomeContent/)
+  assert.match(publicSource, /defaultHomeContent/)
   assert.match(publicSource, /tariffFeatures/)
   assert.match(publicSource, /afterPaymentText/)
   assert.match(publicSource, /feature-list compact-list/)
@@ -727,6 +760,9 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(cabinetSource, /Доступы не выдавались|Ключ ещё не готов/)
   assert.doesNotMatch(cabinetSource, /Перевыпуск ключа скоро/)
   assert.match(adminSource, /getAdminDashboardSummary/)
+  assert.match(adminSource, /getAdminSiteContent/)
+  assert.match(adminSource, /id="content"/)
+  assert.match(adminSource, /Контент сайта/)
   assert.match(adminSource, /getAdminUserOverview/)
   assert.match(adminSource, /getAdminAccessQrSvg/)
   assert.match(adminSource, /credentialsConfigured/i)

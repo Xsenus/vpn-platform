@@ -162,6 +162,23 @@ public class DbInitializer : IHostedService
             });
         }
 
+        if (!await db.SiteContentBlocks.AnyAsync(cancellationToken))
+        {
+            db.SiteContentBlocks.AddRange(
+                SiteContent("home.hero.eyebrow", "VPN Platform", "Hero eyebrow", "Надзаголовок первого экрана", 10),
+                SiteContent("home.hero.title", "Быстрый VPN-доступ с оплатой и автоматической выдачей", "Hero title", "Главный заголовок лендинга", 20),
+                SiteContent("home.hero.subtitle", "Выберите тариф, оплатите удобным способом и получите готовую ссылку подключения. Платформа объединяет витрину, личный кабинет, Telegram-бота, платежи, тарифы и управление серверами.", "Hero subtitle", "Текст под главным заголовком", 30, "textarea"),
+                SiteContent("home.hero.primaryCta", "Выбрать тариф", "Основная CTA", "Текст кнопки перехода к тарифам", 40),
+                SiteContent("home.hero.secondaryCta", "Войти или зарегистрироваться", "Вторичная CTA", "Текст кнопки перехода в аккаунт", 50),
+                SiteContent("home.features.title", "Все ключевые сценарии продажи VPN в одной системе", "Заголовок возможностей", "Заголовок блока возможностей", 110),
+                SiteContent("home.features.subtitle", "Лендинг ведет пользователя к тарифу, кабинет помогает завершить покупку, а админка дает контроль над тарифами, провайдерами, ботами, серверами и выдачей доступа.", "Описание возможностей", "Описание блока возможностей", 120, "textarea"),
+                SiteContent("home.pricing.title", "Понятные планы для разных сценариев", "Заголовок тарифов", "Заголовок preview-блока тарифов", 210),
+                SiteContent("home.network.title", "Глобальная логика VPN-сервиса без ручной рутины", "Заголовок сети", "Заголовок блока сети", 310),
+                SiteContent("home.finalCta.title", "Готовы проверить покупку VPN?", "Финальный CTA", "Заголовок финального призыва", 510),
+                SiteContent("home.finalCta.subtitle", "Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.", "Описание финального CTA", "Текст финального призыва", 520, "textarea")
+            );
+        }
+
         if (!await db.FaqEntries.AnyAsync(cancellationToken))
         {
             db.FaqEntries.AddRange(
@@ -171,6 +188,19 @@ public class DbInitializer : IHostedService
             );
         }
     }
+
+    private static SiteContentBlock SiteContent(string key, string value, string label, string description, int sortOrder, string inputType = "text")
+        => new()
+        {
+            Key = key,
+            Value = value,
+            Group = "home",
+            Label = label,
+            Description = description,
+            InputType = inputType,
+            SortOrder = sortOrder,
+            IsActive = true
+        };
 
     private static string NormalizeEmail(string? email) => (email ?? string.Empty).Trim().ToLowerInvariant();
 }

@@ -33,6 +33,22 @@ public class ContentController : ControllerBase
             .ToList());
     }
 
+    [HttpGet("home")]
+    public async Task<IActionResult> GetHomeContent(CancellationToken cancellationToken = default)
+    {
+        var blocks = await _db.SiteContentBlocks
+            .AsNoTracking()
+            .Where(x => x.IsActive && x.Group == "home")
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Key)
+            .ToListAsync(cancellationToken);
+
+        return Ok(blocks.Select(MapSiteContent).ToList());
+    }
+
     private static FaqEntryDto MapFaq(FaqEntry entry)
         => new(entry.Id, entry.Question, entry.Answer, entry.Category, entry.IsActive, entry.ShowOnHome, entry.ShowOnFaqPage, entry.SortOrder, entry.CreatedAt, entry.UpdatedAt);
+
+    private static SiteContentBlockDto MapSiteContent(SiteContentBlock block)
+        => new(block.Id, block.Key, block.Value, block.Group, block.Label, block.Description, block.InputType, block.IsActive, block.SortOrder, block.CreatedAt, block.UpdatedAt);
 }

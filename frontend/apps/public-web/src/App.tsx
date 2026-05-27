@@ -8,6 +8,7 @@ import {
   PaymentInitResult,
   PaymentProvider,
   PublicPaymentProviderDto,
+  SiteContentBlockDto,
   TariffDto,
   UserProfileDto
 } from '@vpn-platform/api-client'
@@ -127,26 +128,48 @@ const landingTestimonials = [
   }
 ]
 
+const defaultHomeContent: Record<string, string> = {
+  'home.hero.eyebrow': 'VPN Platform',
+  'home.hero.title': 'Быстрый VPN-доступ с оплатой и автоматической выдачей',
+  'home.hero.subtitle': 'Выберите тариф, оплатите удобным способом и получите готовую ссылку подключения. Платформа объединяет витрину, личный кабинет, Telegram-бота, платежи, тарифы и управление серверами.',
+  'home.hero.primaryCta': 'Выбрать тариф',
+  'home.hero.secondaryCta': 'Войти или зарегистрироваться',
+  'home.features.title': 'Все ключевые сценарии продажи VPN в одной системе',
+  'home.features.subtitle': 'Лендинг ведет пользователя к тарифу, кабинет помогает завершить покупку, а админка дает контроль над тарифами, провайдерами, ботами, серверами и выдачей доступа.',
+  'home.pricing.title': 'Понятные планы для разных сценариев',
+  'home.network.title': 'Глобальная логика VPN-сервиса без ручной рутины',
+  'home.finalCta.title': 'Готовы проверить покупку VPN?',
+  'home.finalCta.subtitle': 'Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.'
+}
+
+function mapContent(blocks: SiteContentBlockDto[]) {
+  return blocks.reduce<Record<string, string>>((acc, block) => {
+    if (block.key && block.value) acc[block.key] = block.value
+    return acc
+  }, {})
+}
+
 function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
   const [homeFaq, setHomeFaq] = useState<FaqItem[]>([])
+  const [homeContent, setHomeContent] = useState<Record<string, string>>(defaultHomeContent)
 
   useEffect(() => {
     api.getHomeFaq().then((items) => setHomeFaq(items.slice(0, 4))).catch(() => setHomeFaq([]))
+    api.getHomeContent().then((items) => setHomeContent({ ...defaultHomeContent, ...mapContent(items) })).catch(() => setHomeContent(defaultHomeContent))
   }, [])
+
+  const content = (key: string) => homeContent[key] ?? defaultHomeContent[key] ?? ''
 
   return (
     <PageShell title="VPN Platform">
       <section className="landing-hero" id="about">
         <div className="landing-hero-copy">
-          <p className="eyebrow">VPN Platform</p>
-          <h2>Быстрый VPN-доступ с оплатой и автоматической выдачей</h2>
-          <p>
-            Выберите тариф, оплатите удобным способом и получите готовую ссылку подключения.
-            Платформа объединяет витрину, личный кабинет, Telegram-бота, платежи, тарифы и управление серверами.
-          </p>
+          <p className="eyebrow">{content('home.hero.eyebrow')}</p>
+          <h2>{content('home.hero.title')}</h2>
+          <p>{content('home.hero.subtitle')}</p>
           <div className="hero-actions">
-            <Link to="/tariffs" className="button">Выбрать тариф</Link>
-            <Link to="/account" className="button button-ghost">{profile ? 'Открыть кабинет' : 'Войти или зарегистрироваться'}</Link>
+            <Link to="/tariffs" className="button">{content('home.hero.primaryCta')}</Link>
+            <Link to="/account" className="button button-ghost">{profile ? 'Открыть кабинет' : content('home.hero.secondaryCta')}</Link>
           </div>
         </div>
         <div className="landing-hero-visual" aria-label="Схема автоматической выдачи VPN">
@@ -204,11 +227,8 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
         </div>
         <div className="landing-section-copy">
           <p className="eyebrow">Возможности</p>
-          <h2>Все ключевые сценарии продажи VPN в одной системе</h2>
-          <p>
-            Лендинг ведет пользователя к тарифу, кабинет помогает завершить покупку,
-            а админка дает контроль над тарифами, провайдерами, ботами, серверами и выдачей доступа.
-          </p>
+          <h2>{content('home.features.title')}</h2>
+          <p>{content('home.features.subtitle')}</p>
           <ul className="feature-check-list">
             {landingFeatures.map((feature) => <li key={feature}>{feature}</li>)}
           </ul>
@@ -218,7 +238,7 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
       <section className="landing-section landing-pricing-preview" id="pricing">
         <div className="landing-section-heading">
           <p className="eyebrow">Тарифы</p>
-          <h2>Понятные планы для разных сценариев</h2>
+          <h2>{content('home.pricing.title')}</h2>
           <p>Реальные цены и доступные способы оплаты подтягиваются из API на странице тарифов.</p>
         </div>
         <div className="plan-grid">
@@ -240,7 +260,7 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
       <section className="landing-section network-section">
         <div className="landing-section-heading">
           <p className="eyebrow">Сеть</p>
-          <h2>Глобальная логика VPN-сервиса без ручной рутины</h2>
+          <h2>{content('home.network.title')}</h2>
           <p>Подключайте свои VPS, панели 3x-ui и правила выдачи доступов. Пользователь видит простой продукт, администратор управляет инфраструктурой.</p>
         </div>
         <div className="coverage-map" aria-label="Карта покрытия VPN-сети">
@@ -296,8 +316,8 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
 
       <section className="landing-cta">
         <div>
-          <h2>Готовы проверить покупку VPN?</h2>
-          <p>Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.</p>
+          <h2>{content('home.finalCta.title')}</h2>
+          <p>{content('home.finalCta.subtitle')}</p>
         </div>
         <Link to="/tariffs" className="button">Перейти к тарифам</Link>
       </section>
