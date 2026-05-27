@@ -82,13 +82,6 @@ function tariffFeatures(tariff: TariffDto) {
   return []
 }
 
-const landingFeatures = [
-  'Автоматическая выдача VPN-доступа после подтверждения оплаты.',
-  'Тарифы, платежи, Telegram-боты и серверы управляются из админки.',
-  'Поддержка нескольких платежных провайдеров и безопасного sandbox-режима.',
-  'Личный кабинет хранит заказы, ссылки подключения и статус подписки.'
-]
-
 const landingPlans = [
   {
     name: 'Start',
@@ -110,36 +103,37 @@ const landingPlans = [
   }
 ]
 
-const landingTestimonials = [
-  {
-    name: 'Алексей',
-    role: 'предприниматель',
-    text: 'Оплатил тариф, получил ссылку подключения и сразу добавил ее на телефон и ноутбук.'
-  },
-  {
-    name: 'Марина',
-    role: 'удаленная работа',
-    text: 'Понравилось, что не нужно писать в поддержку после оплаты: доступ появляется автоматически.'
-  },
-  {
-    name: 'Игорь',
-    role: 'администратор сервиса',
-    text: 'В админке видно пользователей, платежи, тарифы и состояние VPN-серверов в одном месте.'
-  }
-]
-
 const defaultHomeContent: Record<string, string> = {
   'home.hero.eyebrow': 'VPN Platform',
   'home.hero.title': 'Быстрый VPN-доступ с оплатой и автоматической выдачей',
   'home.hero.subtitle': 'Выберите тариф, оплатите удобным способом и получите готовую ссылку подключения. Платформа объединяет витрину, личный кабинет, Telegram-бота, платежи, тарифы и управление серверами.',
   'home.hero.primaryCta': 'Выбрать тариф',
   'home.hero.secondaryCta': 'Войти или зарегистрироваться',
+  'home.seo.title': 'VPN Platform — быстрый VPN-доступ с автоматической выдачей',
+  'home.seo.description': 'Купите VPN-доступ онлайн: тарифы, оплата, личный кабинет, Telegram-бот и автоматическая выдача подключения.',
   'home.features.title': 'Все ключевые сценарии продажи VPN в одной системе',
   'home.features.subtitle': 'Лендинг ведет пользователя к тарифу, кабинет помогает завершить покупку, а админка дает контроль над тарифами, провайдерами, ботами, серверами и выдачей доступа.',
+  'home.features.item1': 'Автоматическая выдача VPN-доступа после подтверждения оплаты.',
+  'home.features.item2': 'Тарифы, платежи, Telegram-боты и серверы управляются из админки.',
+  'home.features.item3': 'Поддержка нескольких платежных провайдеров и безопасного sandbox-режима.',
+  'home.features.item4': 'Личный кабинет хранит заказы, ссылки подключения и статус подписки.',
   'home.pricing.title': 'Понятные планы для разных сценариев',
   'home.network.title': 'Глобальная логика VPN-сервиса без ручной рутины',
+  'home.network.subtitle': 'Подключайте свои VPS, панели 3x-ui и правила выдачи доступов. Пользователь видит простой продукт, администратор управляет инфраструктурой.',
+  'home.testimonials.title': 'Пользовательский путь остается простым',
+  'home.testimonials.item1.name': 'Алексей',
+  'home.testimonials.item1.role': 'предприниматель',
+  'home.testimonials.item1.text': 'Оплатил тариф, получил ссылку подключения и сразу добавил ее на телефон и ноутбук.',
+  'home.testimonials.item2.name': 'Марина',
+  'home.testimonials.item2.role': 'удаленная работа',
+  'home.testimonials.item2.text': 'Понравилось, что не нужно писать в поддержку после оплаты: доступ появляется автоматически.',
+  'home.testimonials.item3.name': 'Игорь',
+  'home.testimonials.item3.role': 'администратор сервиса',
+  'home.testimonials.item3.text': 'В админке видно пользователей, платежи, тарифы и состояние VPN-серверов в одном месте.',
   'home.finalCta.title': 'Готовы проверить покупку VPN?',
-  'home.finalCta.subtitle': 'Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.'
+  'home.finalCta.subtitle': 'Начните с тарифа или войдите в кабинет, чтобы привязать заказ и получить ссылку подключения.',
+  'home.footer.text': 'VPN Platform объединяет продажи, оплату, выдачу и поддержку VPN-доступов в одном интерфейсе.',
+  'home.footer.support': 'Поддержка доступна через личный кабинет и Telegram-бота.'
 }
 
 function mapContent(blocks: SiteContentBlockDto[]) {
@@ -159,6 +153,20 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
   }, [])
 
   const content = (key: string) => homeContent[key] ?? defaultHomeContent[key] ?? ''
+  const featureItems = [1, 2, 3, 4].map((index) => content(`home.features.item${index}`)).filter(Boolean)
+  const testimonialItems = [1, 2, 3].map((index) => ({
+    name: content(`home.testimonials.item${index}.name`),
+    role: content(`home.testimonials.item${index}.role`),
+    text: content(`home.testimonials.item${index}.text`)
+  })).filter((item) => item.name && item.text)
+
+  useEffect(() => {
+    document.title = content('home.seo.title') || 'VPN Platform'
+    const description = content('home.seo.description')
+    const meta = document.querySelector('meta[name="description"]') ?? document.head.appendChild(document.createElement('meta'))
+    meta.setAttribute('name', 'description')
+    meta.setAttribute('content', description)
+  }, [homeContent])
 
   return (
     <PageShell title="VPN Platform">
@@ -230,7 +238,7 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
           <h2>{content('home.features.title')}</h2>
           <p>{content('home.features.subtitle')}</p>
           <ul className="feature-check-list">
-            {landingFeatures.map((feature) => <li key={feature}>{feature}</li>)}
+            {featureItems.map((feature) => <li key={feature}>{feature}</li>)}
           </ul>
         </div>
       </section>
@@ -261,7 +269,7 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
         <div className="landing-section-heading">
           <p className="eyebrow">Сеть</p>
           <h2>{content('home.network.title')}</h2>
-          <p>Подключайте свои VPS, панели 3x-ui и правила выдачи доступов. Пользователь видит простой продукт, администратор управляет инфраструктурой.</p>
+          <p>{content('home.network.subtitle')}</p>
         </div>
         <div className="coverage-map" aria-label="Карта покрытия VPN-сети">
           <span className="map-point point-eu">EU</span>
@@ -277,10 +285,10 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
       <section className="landing-section testimonials-section" id="testimonials">
         <div className="landing-section-heading">
           <p className="eyebrow">Отзывы</p>
-          <h2>Пользовательский путь остается простым</h2>
+          <h2>{content('home.testimonials.title')}</h2>
         </div>
         <div className="testimonial-grid">
-          {landingTestimonials.map((item) => (
+          {testimonialItems.map((item) => (
             <Card key={item.name} className="testimonial-card">
               <div className="testimonial-head">
                 <span className="avatar">{item.name.slice(0, 1)}</span>
@@ -321,6 +329,11 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
         </div>
         <Link to="/tariffs" className="button">Перейти к тарифам</Link>
       </section>
+
+      <footer className="landing-footer">
+        <p>{content('home.footer.text')}</p>
+        <span>{content('home.footer.support')}</span>
+      </footer>
     </PageShell>
   )
 }

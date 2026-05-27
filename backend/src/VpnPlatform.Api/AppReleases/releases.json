@@ -251,5 +251,28 @@
         "text": "Шаблоны сохраняются как Telegram notification templates в базе и проверяются backend/frontend тестами."
       }
     ]
+  },
+  {
+    "releaseId": "2026-05-27-managed-home-content",
+    "version": "0.13.0",
+    "releasedAt": "2026-05-27T20:20:00+07:00",
+    "title": "Контент главной страницы расширен",
+    "summary": "Публичная главная теперь использует управляемые блоки для преимуществ, отзывов, footer и SEO-метаданных.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "В управляемый контент добавлены SEO title, SEO description, преимущества, отзывы и footer главной страницы."
+      },
+      {
+        "type": "improved",
+        "text": "Публичная главная применяет эти блоки из public API и обновляет title/description без правки frontend-кода."
+      },
+      {
+        "type": "important",
+        "text": "Админка продолжает редактировать эти поля через раздел «Контент сайта» в группе home."
+      }
+    ]
   }
 ]

@@ -22,6 +22,9 @@ public class SiteContentControllerTests
         db.SiteContentBlocks.AddRange(
             Block("home.hero.title", "Главный заголовок", sortOrder: 20),
             Block("home.hero.subtitle", "Описание", sortOrder: 30),
+            Block("home.seo.title", "SEO заголовок", sortOrder: 40),
+            Block("home.features.item1", "Преимущество", sortOrder: 50),
+            Block("home.footer.text", "Футер главной", sortOrder: 60),
             Block("hidden", "Скрыто", isActive: false),
             Block("footer.text", "Футер", group: "footer"));
         await db.SaveChangesAsync();
@@ -29,7 +32,7 @@ public class SiteContentControllerTests
 
         var response = AssertOk<List<SiteContentBlockDto>>(await controller.GetHomeContent(CancellationToken.None));
 
-        Assert.Equal(new[] { "home.hero.title", "home.hero.subtitle" }, response.Select(x => x.Key).ToArray());
+        Assert.Equal(new[] { "home.hero.title", "home.hero.subtitle", "home.seo.title", "home.features.item1", "home.footer.text" }, response.Select(x => x.Key).ToArray());
     }
 
     [Fact]
