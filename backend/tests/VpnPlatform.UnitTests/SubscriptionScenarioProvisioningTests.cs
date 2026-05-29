@@ -116,6 +116,50 @@ public class SubscriptionScenarioProvisioningTests
         Assert.Empty(await db.AccessCredentials.ToListAsync());
     }
 
+    [Fact]
+    public async Task ActivateOrRenewFromOrderAsync_Should_Create_Sandbox_Node_For_Sandbox_Payment()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2026, 5, 30, 12, 0, 0, TimeSpan.Zero);
+        var provider = new TrackingVpnProvider();
+        var tariffId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        db.Users.Add(new User { Id = userId, Email = "sandbox-buyer@example.test", DisplayName = "Sandbox Buyer", PasswordHash = "hash", ReferralCode = "sandbox" });
+        db.Tariffs.Add(new Tariff
+        {
+            Id = tariffId,
+            Name = "Sandbox",
+            Slug = "sandbox",
+            DurationDays = 30,
+            Price = 100m,
+            Currency = "RUB",
+            MaxDevices = 3
+        });
+        var order = new Order { Id = Guid.NewGuid(), UserId = userId, TariffId = tariffId, Type = OrderType.NewSubscription, Channel = ChannelType.Web, PaymentProvider = PaymentProvider.YooKassa, Status = OrderStatus.PaymentReceived, Amount = 100m, Currency = "RUB", ExpiresAt = now.AddMinutes(15) };
+        var payment = new PaymentAttempt { Id = Guid.NewGuid(), OrderId = order.Id, Provider = PaymentProvider.YooKassa, ProviderMode = PaymentProviderMode.Sandbox, Status = PaymentStatus.Succeeded, Amount = 100m, Currency = "RUB", ProviderPaymentId = "sandbox-pay-1", PaidAt = now };
+        db.Orders.Add(order);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var service = new SubscriptionService(db, new FixedClock(now), new NodeAllocationService(db), new SingleVpnProviderFactory(provider));
+
+        var result = await service.ActivateOrRenewFromOrderAsync(order, payment);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.NotNull(provider.LastRequest);
+        Assert.True(provider.LastRequest!.UseSandboxProvisioning);
+        Assert.Equal("vless", provider.LastRequest.Protocol);
+
+        var node = await db.VpnNodes.SingleAsync();
+        Assert.Equal("sandbox-vpn-node", node.Name);
+        Assert.Equal("sandbox", node.Region);
+        Assert.Equal(NodeStatus.Ready, node.Status);
+
+        var access = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(node.Id, access.ServerId);
+    }
+
     private static VpnNode Node(Guid id, string name, string region, int priority, string protocol)
         => new()
         {

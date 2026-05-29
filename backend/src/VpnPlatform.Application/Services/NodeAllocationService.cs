@@ -92,6 +92,61 @@ public class NodeAllocationService
         throw new InvalidOperationException(NoAvailableNodeError);
     }
 
+    public async Task<VpnNode> SelectOrCreateSandboxNodeAsync(string? protocol, CancellationToken cancellationToken = default)
+    {
+        var requiredProtocol = NormalizeProtocol(protocol);
+        var sandboxNode = await _db.VpnNodes
+            .Where(x =>
+                x.Provider == "x3ui" &&
+                x.Region == "sandbox" &&
+                x.Status == NodeStatus.Ready &&
+                x.IsAvailableForNewUsers &&
+                x.HealthStatus != HealthStatus.Unhealthy &&
+                x.UsedCapacity < x.Capacity &&
+                (string.IsNullOrWhiteSpace(x.SupportedProtocolsCsv) || x.SupportedProtocolsCsv.ToLower().Contains(requiredProtocol)))
+            .OrderBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity))
+            .ThenBy(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (sandboxNode is not null)
+        {
+            return sandboxNode;
+        }
+
+        sandboxNode = new VpnNode
+        {
+            Name = "sandbox-vpn-node",
+            Host = "sandbox-node.local",
+            IpAddress = "sandbox-node.local",
+            Provider = "x3ui",
+            Region = "sandbox",
+            Country = "sandbox",
+            Datacenter = "local",
+            Status = NodeStatus.Ready,
+            Capacity = 100000,
+            UsedCapacity = 0,
+            SupportedProtocolsCsv = requiredProtocol,
+            HealthStatus = HealthStatus.Healthy,
+            LastHealthCheckAt = DateTimeOffset.UtcNow,
+            ProvisioningStatus = ProvisioningRunStatus.Succeeded,
+            InstalledVersion = "sandbox",
+            BackupStatus = "disabled",
+            MonitoringStatus = "sandbox",
+            LoggingStatus = "sandbox",
+            TagsCsv = "sandbox,auto-created",
+            Priority = 1000,
+            IsAvailableForNewUsers = true,
+            PanelBaseUrl = "https://sandbox-node.local",
+            PanelUsername = "sandbox",
+            PublicHostname = "sandbox-node.local",
+            PublicPort = 443
+        };
+
+        _db.VpnNodes.Add(sandboxNode);
+        await _db.SaveChangesAsync(cancellationToken);
+        return sandboxNode;
+    }
+
     private static string[] SplitHints(string? value)
         => (value ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

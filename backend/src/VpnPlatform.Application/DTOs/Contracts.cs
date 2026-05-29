@@ -255,7 +255,8 @@ public sealed record VpnProvisionRequest(
     long? TrafficLimit = null,
     bool GenerateQrCode = true,
     string ScenarioKey = "auto",
-    string InboundSelectionRule = "default");
+    string InboundSelectionRule = "default",
+    bool UseSandboxProvisioning = false);
 public sealed record VpnProvisionResult(string ProviderAccessId, string AccessUri, string QrCodePath, string ConfigPath);
 public sealed record VpnUsageSnapshot(string ProviderAccessId, long? UsedTrafficBytes, int? ActiveConnections, DateTimeOffset SyncedAt);
 public sealed record AdminAccessActionResult(Guid Id, string Status, DateTimeOffset? DisabledAt, DateTimeOffset? LastSyncedAt, int Revision, long? UsedTrafficBytes = null, string? Message = null);

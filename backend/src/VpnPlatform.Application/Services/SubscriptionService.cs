@@ -46,6 +46,7 @@ public class SubscriptionService
         var protocol = string.IsNullOrWhiteSpace(scenario?.VpnProtocol) ? "vless" : scenario.VpnProtocol.Trim().ToLowerInvariant();
         var inboundSelectionRule = string.IsNullOrWhiteSpace(scenario?.InboundSelectionRule) ? "default" : scenario.InboundSelectionRule.Trim().ToLowerInvariant();
         var generateQrCode = scenario?.GenerateQrCode ?? true;
+        var useSandboxProvisioning = payment.ProviderMode == PaymentProviderMode.Sandbox;
 
         var existing = await _db.Subscriptions
             .Include(x => x.CurrentAccess)
@@ -94,12 +95,14 @@ public class SubscriptionService
 
             if (node is null || node.Status is NodeStatus.Maintenance or NodeStatus.Draining or NodeStatus.Disabled or NodeStatus.Archived || !node.IsAvailableForNewUsers)
             {
-                node = await _nodeAllocationService.SelectNodeAsync(tariff, scenario, cancellationToken);
+                node = useSandboxProvisioning
+                    ? await _nodeAllocationService.SelectOrCreateSandboxNodeAsync(protocol, cancellationToken)
+                    : await _nodeAllocationService.SelectNodeAsync(tariff, scenario, cancellationToken);
             }
 
             var access = subscription.CurrentAccess ?? await _db.AccessCredentials.FirstOrDefaultAsync(x => x.SubscriptionId == subscription.Id, cancellationToken);
             var provider = _vpnProviderFactory.Get(string.IsNullOrWhiteSpace(access?.ProviderType) ? "x3ui" : access.ProviderType);
-            var request = new VpnProvisionRequest(subscription.Id, subscription.UserId, tariff.Id, node.Id, subscription.EndAt, maxDevices, protocol, trafficLimit, generateQrCode, scenarioKey, inboundSelectionRule);
+            var request = new VpnProvisionRequest(subscription.Id, subscription.UserId, tariff.Id, node.Id, subscription.EndAt, maxDevices, protocol, trafficLimit, generateQrCode, scenarioKey, inboundSelectionRule, useSandboxProvisioning);
 
             if (access is null)
             {

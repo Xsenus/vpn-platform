@@ -32,7 +32,7 @@ public class X3UiVpnProvider : IVpnProvider
 
     public async Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
     {
-        if (IsSandboxMode())
+        if (IsSandboxProvisioning(request))
         {
             return await CreateOrUpdateSandboxAccessAsync(request, cancellationToken);
         }
@@ -42,7 +42,7 @@ public class X3UiVpnProvider : IVpnProvider
 
     public async Task<VpnProvisionResult> UpdateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
     {
-        if (IsSandboxMode())
+        if (IsSandboxProvisioning(request))
         {
             return await CreateOrUpdateSandboxAccessAsync(request, cancellationToken);
         }
@@ -55,14 +55,15 @@ public class X3UiVpnProvider : IVpnProvider
         var vpnClient = await _db.VpnClients.Include(x => x.VpnPanel).Include(x => x.VpnInbound).FirstOrDefaultAsync(x => x.ExternalClientId == providerAccessId || x.Id.ToString() == providerAccessId, cancellationToken);
         if (vpnClient is null) return;
 
-        if (!IsSandboxMode() && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
+        var isSandboxClient = IsSandboxClient(vpnClient);
+        if (!isSandboxClient && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
         {
             var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
             await _client.DisableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
         }
 
         vpnClient.Enable = false;
-        vpnClient.SyncStatus = IsSandboxMode() ? "sandbox-disabled" : "disabled";
+        vpnClient.SyncStatus = isSandboxClient ? "sandbox-disabled" : "disabled";
         vpnClient.LastSyncedAt = _clock.UtcNow;
         vpnClient.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -73,14 +74,15 @@ public class X3UiVpnProvider : IVpnProvider
         var vpnClient = await _db.VpnClients.Include(x => x.VpnPanel).Include(x => x.VpnInbound).FirstOrDefaultAsync(x => x.ExternalClientId == providerAccessId || x.Id.ToString() == providerAccessId, cancellationToken);
         if (vpnClient is null) return;
 
-        if (!IsSandboxMode() && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
+        var isSandboxClient = IsSandboxClient(vpnClient);
+        if (!isSandboxClient && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
         {
             var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
             await _client.EnableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
         }
 
         vpnClient.Enable = true;
-        vpnClient.SyncStatus = IsSandboxMode() ? "sandbox-enabled" : "enabled";
+        vpnClient.SyncStatus = isSandboxClient ? "sandbox-enabled" : "enabled";
         vpnClient.LastSyncedAt = _clock.UtcNow;
         vpnClient.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -91,7 +93,7 @@ public class X3UiVpnProvider : IVpnProvider
         var vpnClient = await _db.VpnClients.Include(x => x.VpnPanel).Include(x => x.VpnInbound).FirstOrDefaultAsync(x => x.ExternalClientId == providerAccessId || x.Id.ToString() == providerAccessId, cancellationToken);
         if (vpnClient is null) return;
 
-        if (!IsSandboxMode() && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
+        if (!IsSandboxClient(vpnClient) && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
         {
             var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
             await _client.DeleteClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
@@ -108,7 +110,7 @@ public class X3UiVpnProvider : IVpnProvider
         if (vpnClient is not null)
         {
             vpnClient.LastSyncedAt = usage.SyncedAt;
-            vpnClient.SyncStatus = IsSandboxMode() ? "sandbox-synced" : "synced";
+            vpnClient.SyncStatus = IsSandboxClient(vpnClient) ? "sandbox-synced" : "synced";
             vpnClient.UpdatedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -120,13 +122,14 @@ public class X3UiVpnProvider : IVpnProvider
         var vpnClient = await _db.VpnClients.Include(x => x.VpnPanel).Include(x => x.VpnInbound).FirstOrDefaultAsync(x => x.ExternalClientId == providerAccessId || x.Id.ToString() == providerAccessId, cancellationToken);
         if (vpnClient is null) return;
 
-        if (!IsSandboxMode() && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
+        var isSandboxClient = IsSandboxClient(vpnClient);
+        if (!isSandboxClient && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
         {
             var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
             await _client.ResetClientTrafficAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
         }
 
-        vpnClient.SyncStatus = IsSandboxMode() ? "sandbox-traffic-reset" : "traffic-reset";
+        vpnClient.SyncStatus = isSandboxClient ? "sandbox-traffic-reset" : "traffic-reset";
         vpnClient.LastSyncedAt = _clock.UtcNow;
         vpnClient.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -134,7 +137,7 @@ public class X3UiVpnProvider : IVpnProvider
 
     public async Task<VpnUsageSnapshot> GetUsageAsync(string providerAccessId, CancellationToken cancellationToken)
     {
-        if (IsSandboxMode())
+        if (IsSandboxMode() || IsSandboxProviderAccessId(providerAccessId))
         {
             var used = providerAccessId.Sum(c => (long)c) * 1024;
             return new VpnUsageSnapshot(providerAccessId, used, 1, _clock.UtcNow);
@@ -234,13 +237,13 @@ public class X3UiVpnProvider : IVpnProvider
 
     private async Task<VpnProvisionResult> CreateOrUpdateSandboxAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
     {
-        var (panel, inbound) = await EnsureSandboxPanelAndInboundAsync(cancellationToken);
+        var protocol = string.IsNullOrWhiteSpace(request.Protocol) ? "vless" : request.Protocol.Trim().ToLowerInvariant();
+        var (panel, inbound) = await EnsureSandboxPanelAndInboundAsync(protocol, cancellationToken);
         var accessId = $"x3ui-sandbox-{request.SubscriptionId:N}";
         var uuid = request.SubscriptionId.ToString("D");
         var email = $"sandbox-{request.UserId:N}-{request.SubscriptionId:N}";
         var publicHost = _configuration["Vpn:X3Ui:SandboxPublicHost"] ?? "sandbox-node.local";
         var publicPort = int.TryParse(_configuration["Vpn:X3Ui:SandboxPublicPort"], out var port) ? port : 443;
-        var protocol = string.IsNullOrWhiteSpace(request.Protocol) ? "vless" : request.Protocol.Trim().ToLowerInvariant();
         var uri = $"{protocol}://{uuid}@{publicHost}:{publicPort}?security=reality&type=tcp#vpn-{request.SubscriptionId:N}";
         var qr = request.GenerateQrCode
             ? _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{request.SubscriptionId:N}")
@@ -379,13 +382,13 @@ public class X3UiVpnProvider : IVpnProvider
             throw new InvalidOperationException("Invalid inbound: no active inbound is available and AutoCreateInbound is disabled.");
         }
 
-        if (IsSandboxMode())
+        if (IsSandboxProvisioning(request))
         {
             var sandboxInbound = new VpnInbound
             {
                 VpnPanelId = panel.Id,
                 ExternalInboundId = $"sandbox-inbound-{Guid.NewGuid():N}",
-                Name = "Sandbox VLESS",
+                Name = $"Sandbox {protocol.ToUpperInvariant()}",
                 Protocol = protocol,
                 Port = 443,
                 Listen = string.Empty,
@@ -424,8 +427,9 @@ public class X3UiVpnProvider : IVpnProvider
         return inbound;
     }
 
-    private async Task<(VpnPanel Panel, VpnInbound Inbound)> EnsureSandboxPanelAndInboundAsync(CancellationToken cancellationToken)
+    private async Task<(VpnPanel Panel, VpnInbound Inbound)> EnsureSandboxPanelAndInboundAsync(string protocol, CancellationToken cancellationToken)
     {
+        protocol = string.IsNullOrWhiteSpace(protocol) ? "vless" : protocol.Trim().ToLowerInvariant();
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Name == "sandbox-x3ui-panel", cancellationToken);
         if (panel is null)
         {
@@ -448,15 +452,16 @@ public class X3UiVpnProvider : IVpnProvider
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        var inbound = await _db.VpnInbounds.FirstOrDefaultAsync(x => x.VpnPanelId == panel.Id && x.ExternalInboundId == "sandbox-default-vless", cancellationToken);
+        var inboundId = $"sandbox-default-{protocol}";
+        var inbound = await _db.VpnInbounds.FirstOrDefaultAsync(x => x.VpnPanelId == panel.Id && x.ExternalInboundId == inboundId, cancellationToken);
         if (inbound is null)
         {
             inbound = new VpnInbound
             {
                 VpnPanelId = panel.Id,
-                ExternalInboundId = "sandbox-default-vless",
-                Name = "Sandbox VLESS",
-                Protocol = "vless",
+                ExternalInboundId = inboundId,
+                Name = $"Sandbox {protocol.ToUpperInvariant()}",
+                Protocol = protocol,
                 Port = 443,
                 Listen = string.Empty,
                 SettingsJson = "{\"clients\":[]}",
@@ -521,7 +526,18 @@ public class X3UiVpnProvider : IVpnProvider
         return string.Empty;
     }
 
+    private bool IsSandboxProvisioning(VpnProvisionRequest request) => request.UseSandboxProvisioning || IsSandboxMode();
+
+    private bool IsSandboxClient(VpnClient vpnClient)
+        => IsSandboxMode()
+           || IsSandboxProviderAccessId(vpnClient.ExternalClientId)
+           || string.Equals(vpnClient.VpnPanel?.Name, "sandbox-x3ui-panel", StringComparison.OrdinalIgnoreCase);
+
     private bool IsSandboxMode() => string.Equals(_configuration["Vpn:X3Ui:Mode"], "Sandbox", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSandboxProviderAccessId(string? providerAccessId)
+        => !string.IsNullOrWhiteSpace(providerAccessId)
+           && providerAccessId.StartsWith("x3ui-sandbox-", StringComparison.OrdinalIgnoreCase);
 
     private static string ReadString(JsonElement root, string propertyName, string fallback)
         => root.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? fallback : fallback;
