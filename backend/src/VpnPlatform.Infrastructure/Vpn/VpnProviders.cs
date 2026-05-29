@@ -168,13 +168,13 @@ public class X3UiVpnProvider : IVpnProvider
     private async Task<VpnProvisionResult> CreateOrUpdateRealAccessAsync(VpnProvisionRequest request, bool updateExisting, CancellationToken cancellationToken)
     {
         var panel = await SelectPanelAsync(request, cancellationToken);
-        var inbound = await SelectInboundAsync(panel, cancellationToken);
+        var inbound = await SelectInboundAsync(panel, request, cancellationToken);
         var password = _secretProtector.Unprotect(panel.EncryptedPassword);
         var existing = await _db.VpnClients.FirstOrDefaultAsync(x => x.SubscriptionId == request.SubscriptionId, cancellationToken);
         var uuid = existing?.Uuid ?? Guid.NewGuid().ToString();
         var email = existing?.Email ?? $"u-{request.UserId:N}-{request.SubscriptionId:N}";
         var flow = existing?.Flow ?? ReadFlow(inbound);
-        var totalGb = await ResolveTrafficLimitAsync(request.TariffId, cancellationToken);
+        var totalGb = request.TrafficLimit ?? await ResolveTrafficLimitAsync(request.TariffId, cancellationToken);
 
         if (existing is null)
         {
@@ -221,13 +221,15 @@ public class X3UiVpnProvider : IVpnProvider
             throw new InvalidOperationException("Inbound settings are insufficient to generate VLESS config URI. Access requires admin review.");
         }
 
-        var qr = _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{existing.Id:N}");
+        var qr = request.GenerateQrCode
+            ? _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{existing.Id:N}")
+            : new QrCodeGenerationResult(uri, null, false, _clock.UtcNow);
         existing.ConfigUri = uri;
-        existing.QrCodePayload = qr.Payload;
+        existing.QrCodePayload = request.GenerateQrCode ? qr.Payload : string.Empty;
         existing.SyncStatus = "synced";
         await QueueAccessReadyNotificationAsync(existing, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
-        return new VpnProvisionResult(existing.ExternalClientId, uri, qr.Payload, qr.ImagePath ?? string.Empty);
+        return new VpnProvisionResult(existing.ExternalClientId, uri, request.GenerateQrCode ? qr.Payload : string.Empty, qr.ImagePath ?? string.Empty);
     }
 
     private async Task<VpnProvisionResult> CreateOrUpdateSandboxAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
@@ -238,8 +240,11 @@ public class X3UiVpnProvider : IVpnProvider
         var email = $"sandbox-{request.UserId:N}-{request.SubscriptionId:N}";
         var publicHost = _configuration["Vpn:X3Ui:SandboxPublicHost"] ?? "sandbox-node.local";
         var publicPort = int.TryParse(_configuration["Vpn:X3Ui:SandboxPublicPort"], out var port) ? port : 443;
-        var uri = $"vless://{uuid}@{publicHost}:{publicPort}?security=reality&type=tcp#vpn-{request.SubscriptionId:N}";
-        var qr = _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{request.SubscriptionId:N}");
+        var protocol = string.IsNullOrWhiteSpace(request.Protocol) ? "vless" : request.Protocol.Trim().ToLowerInvariant();
+        var uri = $"{protocol}://{uuid}@{publicHost}:{publicPort}?security=reality&type=tcp#vpn-{request.SubscriptionId:N}";
+        var qr = request.GenerateQrCode
+            ? _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{request.SubscriptionId:N}")
+            : new QrCodeGenerationResult(uri, null, false, _clock.UtcNow);
 
         var existing = await _db.VpnClients.FirstOrDefaultAsync(x => x.SubscriptionId == request.SubscriptionId, cancellationToken);
         if (existing is null)
@@ -255,11 +260,11 @@ public class X3UiVpnProvider : IVpnProvider
                 Uuid = uuid,
                 Flow = string.Empty,
                 LimitIp = request.MaxDevices,
-                TotalGb = await ResolveTrafficLimitAsync(request.TariffId, cancellationToken),
+                TotalGb = request.TrafficLimit ?? await ResolveTrafficLimitAsync(request.TariffId, cancellationToken),
                 ExpiryTime = request.EndsAt,
                 Enable = true,
                 ConfigUri = uri,
-                QrCodePayload = qr.Payload,
+                QrCodePayload = request.GenerateQrCode ? qr.Payload : string.Empty,
                 LastSyncedAt = _clock.UtcNow,
                 SyncStatus = "sandbox-synced"
             };
@@ -275,11 +280,11 @@ public class X3UiVpnProvider : IVpnProvider
             existing.Email = email;
             existing.Uuid = uuid;
             existing.LimitIp = request.MaxDevices;
-            existing.TotalGb = await ResolveTrafficLimitAsync(request.TariffId, cancellationToken);
+            existing.TotalGb = request.TrafficLimit ?? await ResolveTrafficLimitAsync(request.TariffId, cancellationToken);
             existing.ExpiryTime = request.EndsAt;
             existing.Enable = true;
             existing.ConfigUri = uri;
-            existing.QrCodePayload = qr.Payload;
+            existing.QrCodePayload = request.GenerateQrCode ? qr.Payload : string.Empty;
             existing.LastSyncedAt = _clock.UtcNow;
             existing.SyncStatus = "sandbox-synced";
             existing.UpdatedAt = _clock.UtcNow;
@@ -287,7 +292,7 @@ public class X3UiVpnProvider : IVpnProvider
 
         await QueueAccessReadyNotificationAsync(existing, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
-        return new VpnProvisionResult(accessId, uri, qr.Payload, $"/artifacts/configs/{accessId}.json");
+        return new VpnProvisionResult(accessId, uri, request.GenerateQrCode ? qr.Payload : string.Empty, $"/artifacts/configs/{accessId}.json");
     }
 
     private async Task QueueAccessReadyNotificationAsync(VpnClient vpnClient, CancellationToken cancellationToken)
@@ -354,12 +359,15 @@ public class X3UiVpnProvider : IVpnProvider
         return await SelectPanelAsync(cancellationToken);
     }
 
-    private async Task<VpnInbound> SelectInboundAsync(VpnPanel panel, CancellationToken cancellationToken)
+    private async Task<VpnInbound> SelectInboundAsync(VpnPanel panel, VpnProvisionRequest request, CancellationToken cancellationToken)
     {
+        var protocol = string.IsNullOrWhiteSpace(request.Protocol) ? "vless" : request.Protocol.Trim().ToLowerInvariant();
+        var inboundSelectionRule = string.IsNullOrWhiteSpace(request.InboundSelectionRule) ? "default" : request.InboundSelectionRule.Trim().ToLowerInvariant();
         var inbound = await _db.VpnInbounds
-            .Where(x => x.VpnPanelId == panel.Id && x.IsActive && x.UsedCapacity < x.Capacity)
-            .OrderByDescending(x => x.IsDefault)
+            .Where(x => x.VpnPanelId == panel.Id && x.IsActive && x.UsedCapacity < x.Capacity && x.Protocol.ToLower() == protocol)
+            .OrderByDescending(x => inboundSelectionRule == "default" && x.IsDefault)
             .ThenBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity))
+            .ThenBy(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
         if (inbound is not null)
         {
@@ -378,7 +386,7 @@ public class X3UiVpnProvider : IVpnProvider
                 VpnPanelId = panel.Id,
                 ExternalInboundId = $"sandbox-inbound-{Guid.NewGuid():N}",
                 Name = "Sandbox VLESS",
-                Protocol = "vless",
+                Protocol = protocol,
                 Port = 443,
                 Listen = string.Empty,
                 SettingsJson = "{\"clients\":[]}",

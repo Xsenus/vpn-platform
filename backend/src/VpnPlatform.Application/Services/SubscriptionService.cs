@@ -33,6 +33,19 @@ public class SubscriptionService
     public async Task<Result<ActivationResult>> ActivateOrRenewFromOrderAsync(Order order, PaymentAttempt payment, CancellationToken cancellationToken = default)
     {
         var tariff = await _db.Tariffs.FirstAsync(x => x.Id == order.TariffId, cancellationToken);
+        var scenarioResult = await ResolveScenarioAsync(tariff, cancellationToken);
+        if (!scenarioResult.IsSuccess)
+        {
+            return Result<ActivationResult>.Failure(scenarioResult.Error ?? "Provisioning scenario is not configured.");
+        }
+
+        var scenario = scenarioResult.Value;
+        var scenarioKey = scenario?.Key ?? NormalizeScenarioKey(tariff.ProvisioningScenario);
+        var maxDevices = ResolveMaxDevices(tariff, scenario);
+        var trafficLimit = tariff.TrafficLimit ?? scenario?.TrafficLimit;
+        var protocol = string.IsNullOrWhiteSpace(scenario?.VpnProtocol) ? "vless" : scenario.VpnProtocol.Trim().ToLowerInvariant();
+        var inboundSelectionRule = string.IsNullOrWhiteSpace(scenario?.InboundSelectionRule) ? "default" : scenario.InboundSelectionRule.Trim().ToLowerInvariant();
+        var generateQrCode = scenario?.GenerateQrCode ?? true;
 
         var existing = await _db.Subscriptions
             .Include(x => x.CurrentAccess)
@@ -81,12 +94,12 @@ public class SubscriptionService
 
             if (node is null || node.Status is NodeStatus.Maintenance or NodeStatus.Draining or NodeStatus.Disabled or NodeStatus.Archived || !node.IsAvailableForNewUsers)
             {
-                node = await _nodeAllocationService.SelectNodeAsync(tariff, cancellationToken);
+                node = await _nodeAllocationService.SelectNodeAsync(tariff, scenario, cancellationToken);
             }
 
             var access = subscription.CurrentAccess ?? await _db.AccessCredentials.FirstOrDefaultAsync(x => x.SubscriptionId == subscription.Id, cancellationToken);
             var provider = _vpnProviderFactory.Get(string.IsNullOrWhiteSpace(access?.ProviderType) ? "x3ui" : access.ProviderType);
-            var request = new VpnProvisionRequest(subscription.Id, subscription.UserId, tariff.Id, node.Id, subscription.EndAt, tariff.MaxDevices);
+            var request = new VpnProvisionRequest(subscription.Id, subscription.UserId, tariff.Id, node.Id, subscription.EndAt, maxDevices, protocol, trafficLimit, generateQrCode, scenarioKey, inboundSelectionRule);
 
             if (access is null)
             {
@@ -114,7 +127,7 @@ public class SubscriptionService
                     SubscriptionId = subscription.Id,
                     EventType = "AccessCreated",
                     OldValueJson = "{}",
-                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt })
+                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt, scenarioKey, maxDevices, protocol, trafficLimit })
                 });
             }
             else
@@ -141,7 +154,7 @@ public class SubscriptionService
                     SubscriptionId = subscription.Id,
                     EventType = wasDisabled ? "AccessRenewedAndEnabled" : "AccessUpdated",
                     OldValueJson = before,
-                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt, access.Revision })
+                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt, access.Revision, scenarioKey, maxDevices, protocol, trafficLimit })
                 });
             }
 
@@ -166,7 +179,8 @@ public class SubscriptionService
                   "userId": "{{order.UserId}}",
                   "templateKey": "subscription_activated",
                   "subscriptionId": "{{subscription.Id}}",
-                  "accessId": "{{access.Id}}"
+                  "accessId": "{{access.Id}}",
+                  "scenarioKey": "{{scenarioKey}}"
                 }
                 """
             });
@@ -190,7 +204,7 @@ public class SubscriptionService
                 EntityType = "Subscription",
                 EntityId = subscription.Id.ToString(),
                 BeforeJson = "{}",
-                AfterJson = JsonSerializer.Serialize(new { error = safeError, orderId = order.Id, tariffId = tariff.Id }),
+                AfterJson = JsonSerializer.Serialize(new { error = safeError, orderId = order.Id, tariffId = tariff.Id, scenarioKey }),
                 CreatedAt = now
             });
             await QueueVpnAccessFailedNotificationAsync(subscription, tariff, safeError, cancellationToken);
@@ -295,4 +309,64 @@ public class SubscriptionService
         => string.IsNullOrWhiteSpace(value)
             ? "VPN access provisioning failed."
             : SensitiveDataRedactor.Redact(value, maxLength: 500);
+
+    private async Task<Result<WorkScenario?>> ResolveScenarioAsync(Tariff tariff, CancellationToken cancellationToken)
+    {
+        var key = NormalizeScenarioKey(tariff.ProvisioningScenario);
+        if (key == "auto")
+        {
+            return Result<WorkScenario?>.Success(await _db.WorkScenarios.AsNoTracking().FirstOrDefaultAsync(x => x.Key == key && x.IsActive, cancellationToken));
+        }
+
+        var scenario = await _db.WorkScenarios.AsNoTracking().FirstOrDefaultAsync(x => x.Key == key, cancellationToken);
+        if (scenario is null)
+        {
+            return Result<WorkScenario?>.Failure($"Provisioning scenario '{key}' is not configured.");
+        }
+
+        if (!scenario.IsActive)
+        {
+            return Result<WorkScenario?>.Failure($"Provisioning scenario '{key}' is disabled.");
+        }
+
+        if (!IsTariffAllowedByScenario(tariff.Id, scenario.AllowedTariffIdsJson))
+        {
+            return Result<WorkScenario?>.Failure($"Provisioning scenario '{key}' is not allowed for tariff '{tariff.Slug}'.");
+        }
+
+        if (!string.Equals(NormalizeScenarioAction(scenario.OnPaymentSucceeded), "create_subscription_and_access", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(NormalizeScenarioAction(scenario.ProvisioningMode), "auto", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<WorkScenario?>.Failure($"Provisioning scenario '{key}' does not allow automatic VPN access creation.");
+        }
+
+        return Result<WorkScenario?>.Success(scenario);
+    }
+
+    private static int ResolveMaxDevices(Tariff tariff, WorkScenario? scenario)
+        => Math.Max(1, tariff.MaxDevices > 0 ? tariff.MaxDevices : scenario?.MaxDevices ?? 1);
+
+    private static string NormalizeScenarioKey(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "auto" : value.Trim().ToLowerInvariant();
+
+    private static string NormalizeScenarioAction(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
+
+    private static bool IsTariffAllowedByScenario(Guid tariffId, string? allowedTariffIdsJson)
+    {
+        if (string.IsNullOrWhiteSpace(allowedTariffIdsJson) || allowedTariffIdsJson.Trim() == "[]")
+        {
+            return true;
+        }
+
+        try
+        {
+            var values = JsonSerializer.Deserialize<List<Guid>>(allowedTariffIdsJson);
+            return values is null || values.Count == 0 || values.Contains(tariffId);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 }

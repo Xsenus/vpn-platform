@@ -16,11 +16,12 @@ public class NodeAllocationService
         _db = db;
     }
 
-    public async Task<VpnNode> SelectNodeAsync(Tariff tariff, CancellationToken cancellationToken = default)
+    public async Task<VpnNode> SelectNodeAsync(Tariff tariff, WorkScenario? scenario = null, CancellationToken cancellationToken = default)
     {
         var regionHints = SplitHints(tariff.AllowedRegionsCsv);
         var nodeGroupHints = SplitHints(tariff.AllowedNodeGroupsCsv);
-        const string requiredProtocol = "vless";
+        var requiredProtocol = NormalizeProtocol(scenario?.VpnProtocol);
+        var serverSelectionRule = NormalizeRule(scenario?.ServerSelectionRule, "least-loaded");
 
         var query = _db.VpnNodes
             .Include(x => x.NodeGroup)
@@ -41,11 +42,7 @@ public class NodeAllocationService
             query = query.Where(x => x.NodeGroup != null && nodeGroupHints.Contains(x.NodeGroup.Code));
         }
 
-        var selected = await query
-            .OrderBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity))
-            .ThenByDescending(x => x.Priority)
-            .ThenBy(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        var selected = await ApplyNodeOrdering(query, serverSelectionRule).FirstOrDefaultAsync(cancellationToken);
 
         if (selected is not null)
         {
@@ -62,10 +59,7 @@ public class NodeAllocationService
             panelQuery = panelQuery.Where(x => regionHints.Contains(x.Region));
         }
 
-        var panel = await panelQuery
-            .OrderBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity))
-            .ThenBy(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        var panel = await ApplyPanelOrdering(panelQuery, serverSelectionRule).FirstOrDefaultAsync(cancellationToken);
 
         if (panel is not null)
         {
@@ -84,7 +78,7 @@ public class NodeAllocationService
                 UsedCapacity = panel.UsedCapacity,
                 HealthStatus = panel.HealthStatus,
                 IsAvailableForNewUsers = true,
-                SupportedProtocolsCsv = "vless",
+                SupportedProtocolsCsv = requiredProtocol,
                 PanelBaseUrl = panel.BaseUrl,
                 PanelUsername = panel.Login,
                 PublicHostname = host,
@@ -101,4 +95,25 @@ public class NodeAllocationService
     private static string[] SplitHints(string? value)
         => (value ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static string NormalizeProtocol(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "vless" : value.Trim().ToLowerInvariant();
+
+    private static string NormalizeRule(string? value, string fallback)
+        => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();
+
+    private static IOrderedQueryable<VpnNode> ApplyNodeOrdering(IQueryable<VpnNode> query, string rule)
+        => rule switch
+        {
+            "priority-first" => query.OrderByDescending(x => x.Priority).ThenBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity)).ThenBy(x => x.CreatedAt),
+            "newest" => query.OrderByDescending(x => x.CreatedAt),
+            _ => query.OrderBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity)).ThenByDescending(x => x.Priority).ThenBy(x => x.CreatedAt)
+        };
+
+    private static IOrderedQueryable<VpnPanel> ApplyPanelOrdering(IQueryable<VpnPanel> query, string rule)
+        => rule switch
+        {
+            "newest" => query.OrderByDescending(x => x.CreatedAt),
+            _ => query.OrderBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity)).ThenBy(x => x.CreatedAt)
+        };
 }

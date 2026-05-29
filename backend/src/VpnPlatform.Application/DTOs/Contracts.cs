@@ -244,7 +244,18 @@ public sealed record RefundDto(Guid Id, Guid PaymentAttemptId, PaymentProvider P
 public sealed record SubscriptionDto(Guid Id, Guid UserId, Guid TariffId, string Status, DateTimeOffset StartAt, DateTimeOffset EndAt, string? AccessUri, string? QrCodePath, string? ConfigPath, string? NodeName);
 public sealed record ActivationResult(Guid SubscriptionId, Guid? AccessId);
 
-public sealed record VpnProvisionRequest(Guid SubscriptionId, Guid UserId, Guid TariffId, Guid NodeId, DateTimeOffset EndsAt, int MaxDevices);
+public sealed record VpnProvisionRequest(
+    Guid SubscriptionId,
+    Guid UserId,
+    Guid TariffId,
+    Guid NodeId,
+    DateTimeOffset EndsAt,
+    int MaxDevices,
+    string Protocol = "vless",
+    long? TrafficLimit = null,
+    bool GenerateQrCode = true,
+    string ScenarioKey = "auto",
+    string InboundSelectionRule = "default");
 public sealed record VpnProvisionResult(string ProviderAccessId, string AccessUri, string QrCodePath, string ConfigPath);
 public sealed record VpnUsageSnapshot(string ProviderAccessId, long? UsedTrafficBytes, int? ActiveConnections, DateTimeOffset SyncedAt);
 public sealed record AdminAccessActionResult(Guid Id, string Status, DateTimeOffset? DisabledAt, DateTimeOffset? LastSyncedAt, int Revision, long? UsedTrafficBytes = null, string? Message = null);
