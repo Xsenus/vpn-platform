@@ -645,7 +645,21 @@ export type AdminDashboardSummaryDto = {
   supportConversationsCount: number
   openSupportConversations: number
   provisioningErrors: number
+  productionReadiness?: AdminProductionReadinessDto
   generatedAt: string
+}
+
+export type AdminProductionReadinessDto = {
+  isReady: boolean
+  status: string
+  checks: AdminProductionReadinessCheckDto[]
+}
+
+export type AdminProductionReadinessCheckDto = {
+  key: string
+  label: string
+  status: string
+  message: string
 }
 
 export type AdminTelegramBotSettingsDto = {

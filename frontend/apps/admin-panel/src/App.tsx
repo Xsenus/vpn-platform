@@ -1739,6 +1739,28 @@ export function App() {
         <StatTile label="Ошибки подготовки" value={derivedSummary.provisioningErrors} />
       </div>
 
+      {summary?.productionReadiness && (
+        <div className="section" hidden={activeSection !== 'dashboard'}>
+          <SectionCard
+            title="Готовность к live-продажам"
+            description="Проверка показывает, можно ли принимать production-платежи и автоматически выдавать реальный VPN-доступ через 3x-ui."
+            actions={<StatusBadge value={summary.productionReadiness.status} />}
+          >
+            <div className="list-stack">
+              {summary.productionReadiness.checks.map((check) => (
+                <div key={check.key} className="list-item">
+                  <div>
+                    <strong>{check.label}</strong>
+                    <div className="muted">{check.message}</div>
+                  </div>
+                  <StatusBadge value={check.status} />
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
       <div className="section card-list-two" hidden={activeSection !== 'dashboard'}>
         <SectionCard title="Последние заказы" description="Последние заказы с оплатой и связанной подпиской.">
           {orders.length === 0 ? <EmptyState title="Заказов пока нет" description="После покупок на сайте или в Telegram здесь появятся заказы." /> : (

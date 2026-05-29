@@ -199,7 +199,19 @@ public sealed record AdminDashboardSummaryDto(
     int SupportConversationsCount,
     int OpenSupportConversations,
     int ProvisioningErrors,
+    AdminProductionReadinessDto ProductionReadiness,
     DateTimeOffset GeneratedAt);
+
+public sealed record AdminProductionReadinessDto(
+    bool IsReady,
+    string Status,
+    IReadOnlyCollection<AdminProductionReadinessCheckDto> Checks);
+
+public sealed record AdminProductionReadinessCheckDto(
+    string Key,
+    string Label,
+    string Status,
+    string Message);
 
 public sealed record AdminTelegramBotSettingsDto(
     bool Enabled,

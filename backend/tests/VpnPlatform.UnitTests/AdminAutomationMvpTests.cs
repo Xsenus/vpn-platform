@@ -51,9 +51,95 @@ public class AdminAutomationMvpTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var json = JsonSerializer.Serialize(ok.Value);
         Assert.Contains("TotalUsers", json, StringComparison.Ordinal);
+        Assert.Contains("ProductionReadiness", json, StringComparison.Ordinal);
         Assert.DoesNotContain("hash-must-not-leak", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("panel-password-must-not-leak", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("payment-secret-must-not-leak", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Dashboard_Summary_Should_Report_Production_Readiness_And_Ignore_Sandbox_Infrastructure()
+    {
+        await using var db = CreateDbContext();
+        db.Tariffs.Add(new Tariff { Id = Guid.NewGuid(), Name = "Live", Slug = "live", IsActive = true, IsTrial = false, Price = 490m, Currency = "RUB", DurationDays = 30 });
+        db.PaymentProviderAccounts.Add(PaymentAccount(PaymentProvider.YooKassa, PaymentProviderMode.Production, isEnabled: true, shopId: "shop-1", secret: "protected-secret"));
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Name = "sandbox-x3ui-panel",
+            BaseUrl = "https://sandbox-node.local",
+            Region = "sandbox",
+            Status = VpnPanelStatus.Active,
+            HealthStatus = HealthStatus.Healthy,
+            Capacity = 100000,
+            UsedCapacity = 0
+        });
+        db.VpnNodes.Add(new VpnNode
+        {
+            Id = Guid.NewGuid(),
+            Name = "sandbox-vpn-node",
+            Host = "sandbox-node.local",
+            Provider = "x3ui",
+            Region = "sandbox",
+            Status = NodeStatus.Ready,
+            HealthStatus = HealthStatus.Healthy,
+            IsAvailableForNewUsers = true,
+            Capacity = 100000,
+            UsedCapacity = 0,
+            TagsCsv = "sandbox"
+        });
+        await db.SaveChangesAsync();
+
+        var blocked = Assert.IsType<OkObjectResult>(await new AdminDashboardController(db).GetSummary(CancellationToken.None));
+        var blockedSummary = Assert.IsType<AdminDashboardSummaryDto>(blocked.Value);
+        Assert.False(blockedSummary.ProductionReadiness.IsReady);
+        Assert.Contains(blockedSummary.ProductionReadiness.Checks, x => x.Key == "vpn-node" && x.Status == "Blocked");
+        Assert.Contains(blockedSummary.ProductionReadiness.Checks, x => x.Key == "vpn-panel" && x.Status == "Blocked");
+
+        var panel = new VpnPanel
+        {
+            Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Name = "live-panel",
+            BaseUrl = "https://panel.example.test",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            HealthStatus = HealthStatus.Healthy,
+            Login = "admin",
+            Capacity = 5000,
+            UsedCapacity = 0
+        };
+        db.VpnPanels.Add(panel);
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            Id = Guid.NewGuid(),
+            VpnPanelId = panel.Id,
+            ExternalInboundId = "1",
+            Name = "VLESS",
+            Protocol = "vless",
+            IsActive = true,
+            Capacity = 5000,
+            UsedCapacity = 0
+        });
+        db.VpnNodes.Add(new VpnNode
+        {
+            Id = Guid.NewGuid(),
+            Name = "live-node",
+            Host = "node.example.test",
+            Provider = "x3ui",
+            Region = "eu",
+            Status = NodeStatus.Ready,
+            HealthStatus = HealthStatus.Healthy,
+            IsAvailableForNewUsers = true,
+            Capacity = 5000,
+            UsedCapacity = 0,
+            PanelBaseUrl = panel.BaseUrl
+        });
+        await db.SaveChangesAsync();
+
+        var ready = Assert.IsType<OkObjectResult>(await new AdminDashboardController(db).GetSummary(CancellationToken.None));
+        var readySummary = Assert.IsType<AdminDashboardSummaryDto>(ready.Value);
+        Assert.True(readySummary.ProductionReadiness.IsReady);
+        Assert.All(readySummary.ProductionReadiness.Checks, check => Assert.Equal("Ready", check.Status));
     }
 
     [Fact]
