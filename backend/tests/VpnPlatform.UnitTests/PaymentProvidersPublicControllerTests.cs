@@ -19,6 +19,7 @@ public class PaymentProvidersPublicControllerTests
             Account(PaymentProvider.RoboKassa, PaymentProviderMode.Sandbox, isEnabled: false, publicName: "Robo disabled", secret: "protected-secret"),
             Account(PaymentProvider.YooMoney, PaymentProviderMode.Disabled, isEnabled: true, publicName: "YooMoney disabled-mode", secret: "protected-secret"),
             Account(PaymentProvider.Stripe, PaymentProviderMode.Sandbox, isEnabled: true, publicName: "Stripe without shop", secret: "sandbox-secret", shopId: ""),
+            Account(PaymentProvider.TelegramStars, PaymentProviderMode.Sandbox, isEnabled: true, publicName: "Telegram Stars", secret: ""),
             Account(PaymentProvider.TBankAcquiring, PaymentProviderMode.Production, isEnabled: true, publicName: "TBank live", secret: "live-secret"));
         await db.SaveChangesAsync();
 
@@ -31,6 +32,7 @@ public class PaymentProvidersPublicControllerTests
         Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.RoboKassa));
         Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.YooMoney));
         Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.Stripe));
+        Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.TelegramStars));
         var serialized = System.Text.Json.JsonSerializer.Serialize(ok.Value);
         Assert.DoesNotContain("protected-secret", serialized, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("live-secret", serialized, StringComparison.OrdinalIgnoreCase);

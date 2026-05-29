@@ -515,7 +515,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
               <span>Способ оплаты</span>
               <select value={provider} disabled={paymentProvidersLoading || paymentProviders.length === 0} onChange={(e) => setProvider(e.target.value as PaymentProvider)}>
                 {paymentProviders.map((item) => (
-                  <option key={item.provider} value={item.provider}>{item.publicName || item.provider}</option>
+                  <option key={item.provider} value={item.provider}>{item.publicName || item.provider}{item.mode === 'Sandbox' ? ' · проверка' : ''}</option>
                 ))}
               </select>
             </label>
@@ -526,6 +526,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
           </div>
           {paymentProvidersLoading && <LoadingBlock label={content('home.checkout.unavailable.loading')} />}
           {!paymentProvidersLoading && paymentProviders.length === 0 && <EmptyState title={content('home.checkout.providersEmptyTitle')} description={content('home.checkout.providersEmptyDescription')} />}
+          {!paymentProvidersLoading && paymentProviders.length > 0 && <p className="muted">Доступно способов оплаты: {paymentProviders.length}. Показываются только включенные и готовые web-провайдеры.</p>}
           <p className="muted">{content('home.checkout.settingsHint')}</p>
         </Card>
       </div>

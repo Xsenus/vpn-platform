@@ -47,6 +47,236 @@ const yookassaAllowedIps = '185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.1
 const paymentProviderOptions: PaymentProvider[] = ['YooKassa', 'RoboKassa', 'YooMoney', 'TelegramStars', 'CloudPayments', 'TBankAcquiring', 'Prodamus', 'Stripe', 'PayPal']
 const adminAuthRequiredMessage = 'Войдите как администратор, чтобы включить загрузку данных и действия в разделах.'
 
+type PaymentProviderSetup = {
+  title: string
+  userName: string
+  channel: 'web' | 'telegram'
+  summary: string
+  shopIdLabel: string
+  shopIdPlaceholder: string
+  secretLabel: string
+  secretPlaceholder: string
+  webhookSecretLabel: string
+  webhookSecretPlaceholder: string
+  apiBaseUrl: string
+  apiBaseUrlLabel: string
+  returnUrlLabel: string
+  webhookUrlLabel: string
+  extraSettingsPlaceholder: string
+  extraSettingsHint: string
+  allowedIps: string
+  useWebhookIpAllowList: boolean
+}
+
+const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
+  YooKassa: {
+    title: 'YooKassa',
+    userName: 'YooKassa',
+    channel: 'web',
+    summary: 'Карты, СБП и кошельки через редирект YooKassa. Для production нужны shopId и secret key.',
+    shopIdLabel: 'Shop ID',
+    shopIdPlaceholder: 'Например, 123456',
+    secretLabel: 'Secret key',
+    secretPlaceholder: 'Ключ API из кабинета YooKassa',
+    webhookSecretLabel: 'Webhook secret',
+    webhookSecretPlaceholder: 'Обычно не нужен: статус перепроверяется через API',
+    apiBaseUrl: 'https://api.yookassa.ru/v3',
+    apiBaseUrlLabel: 'API YooKassa',
+    returnUrlLabel: 'URL возврата после оплаты',
+    webhookUrlLabel: 'URL webhook в YooKassa',
+    extraSettingsPlaceholder: '{}',
+    extraSettingsHint: 'Дополнительные настройки не обязательны.',
+    allowedIps: yookassaAllowedIps,
+    useWebhookIpAllowList: true
+  },
+  RoboKassa: {
+    title: 'RoboKassa',
+    userName: 'RoboKassa',
+    channel: 'web',
+    summary: 'Редирект на Robokassa. Для production нужны MerchantLogin, Password #1 и Password #2 для ResultURL.',
+    shopIdLabel: 'MerchantLogin',
+    shopIdPlaceholder: 'Логин магазина Robokassa',
+    secretLabel: 'Password #1',
+    secretPlaceholder: 'Пароль для формирования ссылки оплаты',
+    webhookSecretLabel: 'Password #2',
+    webhookSecretPlaceholder: 'Пароль для проверки ResultURL',
+    apiBaseUrl: 'https://auth.robokassa.ru/Merchant/Index.aspx',
+    apiBaseUrlLabel: 'URL формы оплаты',
+    returnUrlLabel: 'Success/Fail URL на сайте',
+    webhookUrlLabel: 'ResultURL в Robokassa',
+    extraSettingsPlaceholder: '{"hashAlgorithm":"MD5"}',
+    extraSettingsHint: 'Можно задать hashAlgorithm: MD5 или SHA256.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  },
+  YooMoney: {
+    title: 'YooMoney',
+    userName: 'YooMoney',
+    channel: 'web',
+    summary: 'Quickpay-форма YooMoney. Для production нужен receiver wallet и notification secret.',
+    shopIdLabel: 'Receiver / кошелек',
+    shopIdPlaceholder: 'Например, 410011234567890',
+    secretLabel: 'OAuth/API token',
+    secretPlaceholder: 'Не обязателен для quickpay-ссылки',
+    webhookSecretLabel: 'Notification secret',
+    webhookSecretPlaceholder: 'Секрет HTTP-уведомлений YooMoney',
+    apiBaseUrl: 'https://yoomoney.ru/quickpay/confirm',
+    apiBaseUrlLabel: 'URL quickpay',
+    returnUrlLabel: 'Success URL',
+    webhookUrlLabel: 'HTTP notification URL',
+    extraSettingsPlaceholder: '{}',
+    extraSettingsHint: 'Для локального sandbox ключи не нужны.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  },
+  TelegramStars: {
+    title: 'Telegram Stars',
+    userName: 'Telegram Stars',
+    channel: 'telegram',
+    summary: 'Работает только в Telegram-боте через invoice. На публичном сайте и в кабинете скрывается.',
+    shopIdLabel: 'Bot username',
+    shopIdPlaceholder: '@your_vpn_bot',
+    secretLabel: 'Bot token',
+    secretPlaceholder: 'Хранится в настройках Telegram-бота',
+    webhookSecretLabel: 'Telegram secret token',
+    webhookSecretPlaceholder: 'Опциональный secret token webhook',
+    apiBaseUrl: '',
+    apiBaseUrlLabel: 'Telegram API',
+    returnUrlLabel: 'Не используется для Stars',
+    webhookUrlLabel: 'Webhook бота',
+    extraSettingsPlaceholder: '{"status":"bot-only"}',
+    extraSettingsHint: 'Включайте только после настройки Telegram-бота и BotToken.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  },
+  CloudPayments: {
+    title: 'CloudPayments',
+    userName: 'CloudPayments',
+    channel: 'web',
+    summary: 'Для безопасного server-side flow нужен merchant-hosted widget URL в Extra settings.',
+    shopIdLabel: 'Public ID',
+    shopIdPlaceholder: 'Public ID из CloudPayments',
+    secretLabel: 'API password',
+    secretPlaceholder: 'Пароль API CloudPayments',
+    webhookSecretLabel: 'Webhook password',
+    webhookSecretPlaceholder: 'Пароль для проверки уведомлений',
+    apiBaseUrl: '',
+    apiBaseUrlLabel: 'API URL',
+    returnUrlLabel: 'URL возврата после оплаты',
+    webhookUrlLabel: 'URL уведомлений CloudPayments',
+    extraSettingsPlaceholder: '{"hostedCheckoutUrl":"https://pay.example.com/cloudpayments"}',
+    extraSettingsHint: 'Обязательно для production: hostedCheckoutUrl со страницей виджета магазина.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  },
+  TBankAcquiring: {
+    title: 'TBank Acquiring',
+    userName: 'TBank',
+    channel: 'web',
+    summary: 'Эквайринг TBank через Init/Confirm/Cancel API. Нужны TerminalKey и Password.',
+    shopIdLabel: 'TerminalKey',
+    shopIdPlaceholder: 'TerminalKey магазина',
+    secretLabel: 'Password',
+    secretPlaceholder: 'Пароль терминала TBank',
+    webhookSecretLabel: 'Webhook secret',
+    webhookSecretPlaceholder: 'Обычно совпадает с Password или не используется',
+    apiBaseUrl: 'https://securepay.tinkoff.ru',
+    apiBaseUrlLabel: 'API TBank',
+    returnUrlLabel: 'Success URL',
+    webhookUrlLabel: 'Notification URL',
+    extraSettingsPlaceholder: '{}',
+    extraSettingsHint: 'Для sandbox можно оставить ключи пустыми.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  },
+  Prodamus: {
+    title: 'Prodamus',
+    userName: 'Prodamus',
+    channel: 'web',
+    summary: 'Payform Prodamus. Нужны адрес payform и секрет подписи.',
+    shopIdLabel: 'Shop / account',
+    shopIdPlaceholder: 'Идентификатор магазина',
+    secretLabel: 'Secret key',
+    secretPlaceholder: 'Секрет подписи формы',
+    webhookSecretLabel: 'Webhook secret',
+    webhookSecretPlaceholder: 'Секрет проверки уведомлений',
+    apiBaseUrl: 'https://demo.payform.ru',
+    apiBaseUrlLabel: 'Payform URL',
+    returnUrlLabel: 'Success URL',
+    webhookUrlLabel: 'Webhook URL',
+    extraSettingsPlaceholder: '{}',
+    extraSettingsHint: 'API возвратов и recheck включаются отдельно под конкретный аккаунт.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  },
+  Stripe: {
+    title: 'Stripe',
+    userName: 'Stripe',
+    channel: 'web',
+    summary: 'Stripe Checkout Sessions. Для production нужны secret key и webhook endpoint secret.',
+    shopIdLabel: 'Account / merchant id',
+    shopIdPlaceholder: 'acct_... или внутреннее имя',
+    secretLabel: 'Secret key',
+    secretPlaceholder: 'Secret key из Stripe Dashboard',
+    webhookSecretLabel: 'Webhook endpoint secret',
+    webhookSecretPlaceholder: 'whsec_...',
+    apiBaseUrl: 'https://api.stripe.com',
+    apiBaseUrlLabel: 'Stripe API',
+    returnUrlLabel: 'Success/cancel URL',
+    webhookUrlLabel: 'Stripe webhook endpoint',
+    extraSettingsPlaceholder: '{}',
+    extraSettingsHint: 'Webhook должен отправлять checkout.session.completed и checkout.session.expired.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  },
+  PayPal: {
+    title: 'PayPal',
+    userName: 'PayPal',
+    channel: 'web',
+    summary: 'PayPal Orders API. Для production нужны client id, secret и webhook id.',
+    shopIdLabel: 'Client ID',
+    shopIdPlaceholder: 'PayPal REST app client id',
+    secretLabel: 'Client secret',
+    secretPlaceholder: 'PayPal REST app secret',
+    webhookSecretLabel: 'Webhook ID',
+    webhookSecretPlaceholder: 'ID webhook из PayPal Developer',
+    apiBaseUrl: 'https://api-m.paypal.com',
+    apiBaseUrlLabel: 'PayPal API',
+    returnUrlLabel: 'Return URL',
+    webhookUrlLabel: 'PayPal webhook URL',
+    extraSettingsPlaceholder: '{}',
+    extraSettingsHint: 'Для sandbox используйте https://api-m.sandbox.paypal.com.',
+    allowedIps: '',
+    useWebhookIpAllowList: false
+  }
+}
+
+function providerSetup(provider: PaymentProvider) {
+  return paymentProviderSetup[provider]
+}
+
+function buildProviderForm(provider: PaymentProvider): UpsertPaymentProviderAccountPayload {
+  const setup = providerSetup(provider)
+  const slug = provider.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
+  return {
+    provider,
+    mode: setup.channel === 'telegram' ? 'Disabled' : 'Sandbox',
+    name: `${slug}-sandbox`,
+    publicName: setup.userName,
+    isEnabled: setup.channel !== 'telegram',
+    isDefault: true,
+    shopId: '',
+    apiBaseUrl: setup.apiBaseUrl,
+    returnUrl: '',
+    webhookUrl: '',
+    secretKey: '',
+    webhookSecret: '',
+    useWebhookIpAllowList: setup.useWebhookIpAllowList,
+    allowedWebhookIpRangesCsv: setup.allowedIps,
+    extraSettingsJson: setup.extraSettingsPlaceholder === '{}' ? '{}' : setup.extraSettingsPlaceholder
+  }
+}
+
 function readSessionStorageItem(key: string) {
   try {
     return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(key)
@@ -142,23 +372,7 @@ const defaultServerForm: ServerFormState = {
   nodeGroupId: null
 }
 
-const defaultProviderForm: UpsertPaymentProviderAccountPayload = {
-  provider: 'YooKassa',
-  mode: 'Sandbox',
-  name: 'yookassa-sandbox',
-  publicName: 'YooKassa',
-  isEnabled: true,
-  isDefault: true,
-  shopId: '',
-  apiBaseUrl: 'https://api.yookassa.ru/v3',
-  returnUrl: '',
-  webhookUrl: '',
-  secretKey: '',
-  webhookSecret: '',
-  useWebhookIpAllowList: true,
-  allowedWebhookIpRangesCsv: yookassaAllowedIps,
-  extraSettingsJson: '{}'
-}
+const defaultProviderForm: UpsertPaymentProviderAccountPayload = buildProviderForm('YooKassa')
 
 const defaultVpnPanelForm: CreateVpnPanelPayload = {
   name: '',
@@ -590,6 +804,13 @@ export function App() {
 
   const updateServerForm = <K extends keyof ServerFormState>(key: K, value: ServerFormState[K]) => setServerForm((current) => ({ ...current, [key]: value }))
   const updateProviderForm = <K extends keyof UpsertPaymentProviderAccountPayload>(key: K, value: UpsertPaymentProviderAccountPayload[K]) => setProviderForm((current) => ({ ...current, [key]: value }))
+  const selectProviderForForm = (provider: PaymentProvider) => {
+    setProviderForm((current) => ({
+      ...buildProviderForm(provider),
+      returnUrl: current.returnUrl,
+      webhookUrl: current.webhookUrl
+    }))
+  }
   const updateVpnPanelForm = <K extends keyof CreateVpnPanelPayload>(key: K, value: CreateVpnPanelPayload[K]) => setVpnPanelForm((current) => ({ ...current, [key]: value }))
   const updateInboundForm = <K extends keyof CreateVpnInboundPayload>(key: K, value: CreateVpnInboundPayload[K]) => setInboundForm((current) => ({ ...current, [key]: value }))
   const updateTariffForm = <K extends keyof UpdateTariffPayload>(key: K, value: UpdateTariffPayload[K]) => setTariffForm((current) => ({ ...current, [key]: value }))
@@ -1424,6 +1645,8 @@ export function App() {
     setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
   })
 
+  const providerFormSetup = providerSetup(providerForm.provider)
+
   if (!token) {
     return (
       <PageShell title="Админ-панель VPN Platform">
@@ -1584,8 +1807,13 @@ export function App() {
           <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveProviderAccount() }}>
             <fieldset className="form-section">
               <legend>Основные параметры</legend>
+              <div className="provider-setup-note">
+                <strong>{providerFormSetup.title}</strong>
+                <span>{providerFormSetup.summary}</span>
+                <StatusBadge value={providerFormSetup.channel === 'web' ? 'Web checkout' : 'Только Telegram'} />
+              </div>
               <div className="form-grid">
-                <label><span>Платежная система</span><select value={providerForm.provider} onChange={(e) => updateProviderForm('provider', e.target.value as PaymentProvider)}>{paymentProviderOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                <label><span>Платежная система</span><select value={providerForm.provider} onChange={(e) => selectProviderForForm(e.target.value as PaymentProvider)}>{paymentProviderOptions.map((item) => <option key={item} value={item}>{providerSetup(item).title}</option>)}</select></label>
                 <label><span>Режим</span><select value={providerForm.mode} onChange={(e) => updateProviderForm('mode', e.target.value as PaymentProviderMode)}><option value="Disabled">Выключено</option><option value="Sandbox">Проверка</option><option value="Production">Рабочий</option></select></label>
                 <label><span>Внутреннее имя</span><input value={providerForm.name} onChange={(e) => updateProviderForm('name', e.target.value)} placeholder="yookassa-sandbox" required /></label>
                 <label><span>Название для пользователя</span><input value={providerForm.publicName} onChange={(e) => updateProviderForm('publicName', e.target.value)} placeholder="YooKassa" required /></label>
@@ -1594,15 +1822,16 @@ export function App() {
             <fieldset className="form-section">
               <legend>Подключение и безопасность</legend>
               <div className="form-grid">
-                <label><span>ShopId / MerchantLogin</span><input value={providerForm.shopId} onChange={(e) => updateProviderForm('shopId', e.target.value)} placeholder="Идентификатор магазина" /></label>
-                <label><span>API base URL</span><input value={providerForm.apiBaseUrl} onChange={(e) => updateProviderForm('apiBaseUrl', e.target.value)} placeholder="https://api.provider.example" type="url" inputMode="url" /></label>
-                <SecretField label="Секретный ключ" value={providerForm.secretKey ?? ''} onChange={(value) => updateProviderForm('secretKey', value)} />
-                <SecretField label="Секрет webhook" value={providerForm.webhookSecret ?? ''} onChange={(value) => updateProviderForm('webhookSecret', value)} />
-                <label><span>Адрес возврата после оплаты</span><input value={providerForm.returnUrl} onChange={(e) => updateProviderForm('returnUrl', e.target.value)} placeholder="https://example.com/checkout" type="url" inputMode="url" /></label>
-                <label><span>Webhook URL</span><input value={providerForm.webhookUrl} onChange={(e) => updateProviderForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/webhooks/payments/provider" type="url" inputMode="url" /></label>
+                <label><span>{providerFormSetup.shopIdLabel}</span><input value={providerForm.shopId} onChange={(e) => updateProviderForm('shopId', e.target.value)} placeholder={providerFormSetup.shopIdPlaceholder} /></label>
+                <label><span>{providerFormSetup.apiBaseUrlLabel}</span><input value={providerForm.apiBaseUrl} onChange={(e) => updateProviderForm('apiBaseUrl', e.target.value)} placeholder={providerFormSetup.apiBaseUrl || 'https://api.provider.example'} type="url" inputMode="url" /></label>
+                <SecretField label={providerFormSetup.secretLabel} placeholder={providerFormSetup.secretPlaceholder} value={providerForm.secretKey ?? ''} onChange={(value) => updateProviderForm('secretKey', value)} />
+                <SecretField label={providerFormSetup.webhookSecretLabel} placeholder={providerFormSetup.webhookSecretPlaceholder} value={providerForm.webhookSecret ?? ''} onChange={(value) => updateProviderForm('webhookSecret', value)} />
+                <label><span>{providerFormSetup.returnUrlLabel}</span><input value={providerForm.returnUrl} onChange={(e) => updateProviderForm('returnUrl', e.target.value)} placeholder="https://example.com/checkout" type="url" inputMode="url" /></label>
+                <label><span>{providerFormSetup.webhookUrlLabel}</span><input value={providerForm.webhookUrl} onChange={(e) => updateProviderForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/webhooks/payments/provider" type="url" inputMode="url" /></label>
                 <label><span>Allowed IP ranges</span><input value={providerForm.allowedWebhookIpRangesCsv} onChange={(e) => updateProviderForm('allowedWebhookIpRangesCsv', e.target.value)} placeholder="185.71.76.0/27, 185.71.77.0/27" /></label>
               </div>
-              <label><span>Extra settings JSON</span><textarea value={providerForm.extraSettingsJson} onChange={(e) => updateProviderForm('extraSettingsJson', e.target.value)} placeholder={editingProviderAccountId ? 'Оставьте пустым, чтобы сохранить текущий JSON' : '{"hostedCheckoutUrl":"https://pay.example.test/widget"}'} rows={4} /></label>
+              <label><span>Extra settings JSON</span><textarea value={providerForm.extraSettingsJson} onChange={(e) => updateProviderForm('extraSettingsJson', e.target.value)} placeholder={editingProviderAccountId ? 'Оставьте пустым, чтобы сохранить текущий JSON' : providerFormSetup.extraSettingsPlaceholder} rows={4} /></label>
+              <p className="muted">{providerFormSetup.extraSettingsHint}</p>
               {editingProviderAccountId && <p className="muted">При редактировании пустые поля секретов и Extra settings JSON сохраняют текущие значения. Чтобы заменить их, введите новые значения явно.</p>}
               <div className="toolbar">
                 <label className="checkbox-row"><input checked={providerForm.isEnabled} onChange={(e) => updateProviderForm('isEnabled', e.target.checked)} type="checkbox" /> Включен</label>
@@ -1625,8 +1854,8 @@ export function App() {
                 <div className="card-head">
                   <div>
                     <strong>{account.publicName}</strong>
-                    <div className="muted">{account.provider} · {account.mode} · {account.name}</div>
-                    <div className="muted">shopId: {account.shopId || '—'} · секрет: {account.hasSecretKey ? 'задан' : 'пусто'} · webhook: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
+                    <div className="muted">{providerSetup(account.provider).title} · {account.mode} · {providerSetup(account.provider).channel === 'web' ? 'показывается в web после готовности' : 'только Telegram-бот'} · {account.name}</div>
+                    <div className="muted">{providerSetup(account.provider).shopIdLabel}: {account.shopId || '—'} · {providerSetup(account.provider).secretLabel}: {account.hasSecretKey ? 'задан' : 'пусто'} · {providerSetup(account.provider).webhookSecretLabel}: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
                     <div className="muted">API: {account.apiBaseUrl || '—'} · return: {account.returnUrl || '—'} · webhook URL: {account.webhookUrl || '—'}</div>
                     <div className="muted">IP allow list: {account.useWebhookIpAllowList ? (account.allowedWebhookIpRangesCsv || 'включен, список пуст') : 'не используется'} · extra: {account.extraSettingsJson && account.extraSettingsJson !== '{}' ? 'задан' : 'пусто'}</div>
                     <div className="muted">Capabilities: {capabilities(account).join(', ') || '—'}</div>
@@ -1634,6 +1863,7 @@ export function App() {
                   </div>
                   <div className="status-stack">
                     <StatusBadge value={account.isEnabled ? 'Enabled' : 'Disabled'} />
+                    <StatusBadge value={providerSetup(account.provider).channel === 'web' ? 'Web' : 'Telegram'} />
                     <StatusBadge value={providerConfigured(account) ? 'Checkout ready' : 'Not configured'} />
                   </div>
                 </div>

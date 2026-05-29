@@ -1430,7 +1430,7 @@ public class TelegramBotService
             .ToListAsync(cancellationToken);
 
         return accounts
-            .Where(PaymentProviderConfigurationRules.IsCheckoutConfigured)
+            .Where(PaymentProviderConfigurationRules.IsBotCheckoutConfigured)
             .Select(x => x.Provider)
             .Distinct()
             .OrderBy(PaymentProviderSortOrder)
@@ -1444,7 +1444,7 @@ public class TelegramBotService
             .Where(x => x.Provider == provider)
             .ToListAsync(cancellationToken);
 
-        return accounts.Any(PaymentProviderConfigurationRules.IsCheckoutConfigured);
+        return accounts.Any(PaymentProviderConfigurationRules.IsBotCheckoutConfigured);
     }
 
     private static int PaymentProviderSortOrder(PaymentProvider provider)

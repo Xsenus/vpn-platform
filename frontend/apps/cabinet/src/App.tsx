@@ -692,7 +692,7 @@ export function App() {
                   <span>Способ оплаты для продления</span>
                   <select value={provider} disabled={paymentProvidersLoading || paymentProviders.length === 0} onChange={(e) => setProvider(e.target.value as PaymentProvider)}>
                     {paymentProviders.map((item) => (
-                      <option key={item.provider} value={item.provider}>{item.publicName || item.provider}</option>
+                      <option key={item.provider} value={item.provider}>{item.publicName || item.provider}{item.mode === 'Sandbox' ? ' · проверка' : ''}</option>
                     ))}
                   </select>
                 </label>
@@ -706,6 +706,7 @@ export function App() {
               {paymentProvidersLoading && <p className="muted">Загружаем доступные способы оплаты...</p>}
               {paymentProvidersError && <p className="toast-error" role="alert">Не удалось загрузить способы оплаты: {paymentProvidersError}</p>}
               {!paymentProvidersLoading && paymentProviders.length === 0 && <p className="toast-error" role="alert">Нет включенных способов оплаты для оплат из кабинета.</p>}
+              {!paymentProvidersLoading && paymentProviders.length > 0 && <p className="muted">Доступно способов оплаты: {paymentProviders.length}. В списке только включенные и готовые web-провайдеры.</p>}
             </>
           )}
           {busy && <LoadingBlock label="Загружаем кабинет..." />}

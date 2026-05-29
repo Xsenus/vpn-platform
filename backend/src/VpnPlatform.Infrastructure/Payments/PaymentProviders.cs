@@ -643,6 +643,11 @@ public sealed class YooMoneyPaymentProvider : IPaymentProvider, IPaymentWebhookV
     public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
     {
         EnsureEnabled(request.Account, Provider);
+        if (IsLocalSandboxEnvironment() && request.Account.Mode == PaymentProviderMode.Sandbox && string.IsNullOrWhiteSpace(request.Account.SecretKeyProtected))
+        {
+            return Task.FromResult(RemainingPaymentProviderShared.LocalSandboxInit(request, "yoomoney", Provider));
+        }
+
         if (string.IsNullOrWhiteSpace(request.Account.ShopId))
         {
             throw new InvalidOperationException("YooMoney receiver wallet is required in ShopId.");

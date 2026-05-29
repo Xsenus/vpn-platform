@@ -167,6 +167,39 @@ public class DbInitializer : IHostedService
             });
         }
 
+        if (!await db.PaymentProviderAccounts.AnyAsync(cancellationToken))
+        {
+            var now = DateTimeOffset.UtcNow;
+            db.PaymentProviderAccounts.AddRange(
+                LocalSandboxProvider(PaymentProvider.YooKassa, "yookassa-local", "YooKassa Sandbox", "local-yookassa-shop", "https://api.yookassa.ru/v3", now, yookassaIps: true),
+                LocalSandboxProvider(PaymentProvider.RoboKassa, "robokassa-local", "RoboKassa Sandbox", "local-robokassa-merchant", "https://auth.robokassa.ru/Merchant/Index.aspx", now),
+                LocalSandboxProvider(PaymentProvider.YooMoney, "yoomoney-local", "YooMoney Sandbox", "410000000000000", "https://yoomoney.ru/quickpay/confirm", now),
+                LocalSandboxProvider(PaymentProvider.CloudPayments, "cloudpayments-local", "CloudPayments Sandbox", "local-cloudpayments-public-id", string.Empty, now, extraSettingsJson: """{"hostedCheckoutUrl":"http://localhost:5174/payments/cloudpayments-widget"}"""),
+                LocalSandboxProvider(PaymentProvider.TBankAcquiring, "tbank-local", "TBank Sandbox", "local-tbank-terminal", "https://securepay.tinkoff.ru", now),
+                LocalSandboxProvider(PaymentProvider.Prodamus, "prodamus-local", "Prodamus Sandbox", "local-prodamus-shop", "https://demo.payform.ru", now),
+                LocalSandboxProvider(PaymentProvider.Stripe, "stripe-local", "Stripe Sandbox", "local-stripe-account", "https://api.stripe.com", now),
+                LocalSandboxProvider(PaymentProvider.PayPal, "paypal-local", "PayPal Sandbox", "local-paypal-client", "https://api-m.sandbox.paypal.com", now),
+                new PaymentProviderAccount
+                {
+                    Provider = PaymentProvider.TelegramStars,
+                    Mode = PaymentProviderMode.Disabled,
+                    Name = "telegram-stars-bot-only",
+                    PublicName = "Telegram Stars (только Telegram-бот)",
+                    IsEnabled = false,
+                    IsDefault = false,
+                    ShopId = string.Empty,
+                    ApiBaseUrl = string.Empty,
+                    ReturnUrl = string.Empty,
+                    WebhookUrl = string.Empty,
+                    SecretKeyProtected = string.Empty,
+                    WebhookSecretProtected = string.Empty,
+                    ExtraSettingsJson = """{"status":"bot-only"}""",
+                    HealthStatus = HealthStatus.Unknown,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+        }
+
         if (!await db.SiteContentBlocks.AnyAsync(cancellationToken))
         {
             db.SiteContentBlocks.AddRange(
@@ -264,6 +297,37 @@ public class DbInitializer : IHostedService
             InputType = inputType,
             SortOrder = sortOrder,
             IsActive = true
+        };
+
+    private static PaymentProviderAccount LocalSandboxProvider(
+        PaymentProvider provider,
+        string name,
+        string publicName,
+        string shopId,
+        string apiBaseUrl,
+        DateTimeOffset now,
+        bool yookassaIps = false,
+        string extraSettingsJson = "{}")
+        => new()
+        {
+            Provider = provider,
+            Mode = PaymentProviderMode.Sandbox,
+            Name = name,
+            PublicName = publicName,
+            IsEnabled = true,
+            IsDefault = true,
+            ShopId = shopId,
+            ApiBaseUrl = apiBaseUrl,
+            ReturnUrl = "http://localhost:5174/payments",
+            WebhookUrl = $"http://localhost:8080/api/webhooks/payments/{provider.ToString().ToLowerInvariant()}",
+            SecretKeyProtected = string.Empty,
+            WebhookSecretProtected = string.Empty,
+            UseWebhookIpAllowList = yookassaIps,
+            AllowedWebhookIpRangesCsv = yookassaIps ? "185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32" : string.Empty,
+            ExtraSettingsJson = extraSettingsJson,
+            HealthStatus = HealthStatus.Unknown,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
     private static string NormalizeEmail(string? email) => (email ?? string.Empty).Trim().ToLowerInvariant();
