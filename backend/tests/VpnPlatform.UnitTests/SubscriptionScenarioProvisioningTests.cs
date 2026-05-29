@@ -160,6 +160,45 @@ public class SubscriptionScenarioProvisioningTests
         Assert.Equal(node.Id, access.ServerId);
     }
 
+    [Fact]
+    public async Task ActivateOrRenewFromOrderAsync_Should_Not_Use_Sandbox_Node_For_Production_Payment()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2026, 5, 30, 12, 0, 0, TimeSpan.Zero);
+        var provider = new TrackingVpnProvider();
+        var tariffId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        db.Users.Add(new User { Id = userId, Email = "live-buyer@example.test", DisplayName = "Live Buyer", PasswordHash = "hash", ReferralCode = "live" });
+        db.Tariffs.Add(new Tariff
+        {
+            Id = tariffId,
+            Name = "Live",
+            Slug = "live",
+            DurationDays = 30,
+            Price = 490m,
+            Currency = "RUB",
+            MaxDevices = 3
+        });
+        db.VpnNodes.Add(Node(Guid.NewGuid(), "sandbox-vpn-node", "sandbox", priority: 1000, protocol: "vless"));
+        var order = new Order { Id = Guid.NewGuid(), UserId = userId, TariffId = tariffId, Type = OrderType.NewSubscription, Channel = ChannelType.Web, PaymentProvider = PaymentProvider.YooKassa, Status = OrderStatus.PaymentReceived, Amount = 490m, Currency = "RUB", ExpiresAt = now.AddMinutes(15) };
+        var payment = new PaymentAttempt { Id = Guid.NewGuid(), OrderId = order.Id, Provider = PaymentProvider.YooKassa, ProviderMode = PaymentProviderMode.Production, Status = PaymentStatus.Succeeded, Amount = 490m, Currency = "RUB", ProviderPaymentId = "live-pay-1", PaidAt = now };
+        db.Orders.Add(order);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var service = new SubscriptionService(db, new FixedClock(now), new NodeAllocationService(db), new SingleVpnProviderFactory(provider));
+
+        var result = await service.ActivateOrRenewFromOrderAsync(order, payment);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(NodeAllocationService.NoAvailableNodeError, result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(provider.LastRequest);
+        Assert.Empty(await db.AccessCredentials.ToListAsync());
+        var subscription = await db.Subscriptions.SingleAsync();
+        Assert.Equal(SubscriptionStatus.PendingActivation, subscription.Status);
+    }
+
     private static VpnNode Node(Guid id, string name, string region, int priority, string protocol)
         => new()
         {

@@ -93,7 +93,10 @@ public class SubscriptionService
                 ? await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == subscription.CurrentServerId.Value, cancellationToken)
                 : null;
 
-            if (node is null || node.Status is NodeStatus.Maintenance or NodeStatus.Draining or NodeStatus.Disabled or NodeStatus.Archived || !node.IsAvailableForNewUsers)
+            if (node is null
+                || node.Status is NodeStatus.Maintenance or NodeStatus.Draining or NodeStatus.Disabled or NodeStatus.Archived
+                || !node.IsAvailableForNewUsers
+                || (!useSandboxProvisioning && NodeAllocationService.IsSandboxNode(node)))
             {
                 node = useSandboxProvisioning
                     ? await _nodeAllocationService.SelectOrCreateSandboxNodeAsync(protocol, cancellationToken)

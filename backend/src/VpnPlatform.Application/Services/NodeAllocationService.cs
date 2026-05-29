@@ -30,6 +30,9 @@ public class NodeAllocationService
                 x.IsAvailableForNewUsers &&
                 x.HealthStatus != HealthStatus.Unhealthy &&
                 x.UsedCapacity < x.Capacity &&
+                x.Region != "sandbox" &&
+                x.Name != "sandbox-vpn-node" &&
+                !x.TagsCsv.ToLower().Contains("sandbox") &&
                 (string.IsNullOrWhiteSpace(x.SupportedProtocolsCsv) || x.SupportedProtocolsCsv.ToLower().Contains(requiredProtocol)));
 
         if (regionHints.Length > 0)
@@ -53,6 +56,9 @@ public class NodeAllocationService
             .Where(x =>
                 x.Status == VpnPanelStatus.Active &&
                 x.HealthStatus != HealthStatus.Unhealthy &&
+                x.Region != "sandbox" &&
+                x.Name != "sandbox-x3ui-panel" &&
+                x.BaseUrl != "https://sandbox-node.local" &&
                 x.UsedCapacity < x.Capacity);
         if (regionHints.Length > 0)
         {
@@ -146,6 +152,13 @@ public class NodeAllocationService
         await _db.SaveChangesAsync(cancellationToken);
         return sandboxNode;
     }
+
+    public static bool IsSandboxNode(VpnNode? node)
+        => node is not null
+           && (string.Equals(node.Region, "sandbox", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(node.Name, "sandbox-vpn-node", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(node.PanelBaseUrl, "https://sandbox-node.local", StringComparison.OrdinalIgnoreCase)
+               || SplitHints(node.TagsCsv).Any(x => string.Equals(x, "sandbox", StringComparison.OrdinalIgnoreCase)));
 
     private static string[] SplitHints(string? value)
         => (value ?? string.Empty)
