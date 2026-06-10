@@ -19,6 +19,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
+import { canStartCheckout, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-public-token'
@@ -71,21 +72,6 @@ function readPendingCheckout(): PendingCheckout | null {
     removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
     return null
   }
-}
-
-function tariffFeatures(tariff: TariffDto) {
-  if (Array.isArray(tariff.features) && tariff.features.length > 0) return tariff.features
-
-  if (tariff.featuresJson) {
-    try {
-      const parsed = JSON.parse(tariff.featuresJson)
-      if (Array.isArray(parsed)) return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-    } catch {
-      return []
-    }
-  }
-
-  return []
 }
 
 const landingPlans = [
@@ -425,13 +411,12 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
   const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
   const navigate = useNavigate()
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
-  const checkoutUnavailableReason = paymentProvidersLoading
-    ? content('home.checkout.unavailable.loading')
-    : paymentProviders.length === 0
-      ? content('home.checkout.unavailable.noProviders')
-      : !provider
-        ? content('home.checkout.unavailable.chooseProvider')
-        : ''
+  const checkoutUnavailableReason = getCheckoutUnavailableReason(paymentProvidersLoading, paymentProviders, provider, {
+    loading: content('home.checkout.unavailable.loading'),
+    noProviders: content('home.checkout.unavailable.noProviders'),
+    chooseProvider: content('home.checkout.unavailable.chooseProvider')
+  })
+  const tariffsState = getPublicListState(tariffsLoading, error, tariffs.length)
 
   useEffect(() => {
     api.getHomeContent().then((items) => setPageContent({ ...defaultHomeContent, ...mapContent(items) })).catch(() => setPageContent(defaultHomeContent))
@@ -547,10 +532,11 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       )}
 
       <div className="section card-list">
-        {tariffsLoading && <LoadingBlock label="Загружаем тарифы..." />}
-        {!tariffsLoading && tariffs.length === 0 && <EmptyState title="Тарифы пока не опубликованы" description="Администратор должен включить тариф для public/Telegram витрины." />}
+        {tariffsState === 'loading' && <LoadingBlock label="Загружаем тарифы..." />}
+        {tariffsState === 'empty' && <EmptyState title="Тарифы пока не опубликованы" description="Администратор должен включить тариф для public/Telegram витрины." />}
         {tariffs.map((tariff) => {
           const features = tariffFeatures(tariff)
+          const checkoutAvailable = canStartCheckout(pendingTariffId, tariff.id, paymentProvidersLoading, paymentProviders, provider)
 
           return (
           <div className="card" key={tariff.id}>
@@ -573,7 +559,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
               </ul>
             )}
             {tariff.afterPaymentText && <p className="muted">{tariff.afterPaymentText}</p>}
-            <PrimaryButton disabled={pendingTariffId === tariff.id || paymentProvidersLoading || !provider || paymentProviders.length === 0} aria-busy={pendingTariffId === tariff.id} title={checkoutUnavailableReason || undefined} onClick={() => void handleCheckout(tariff)}>
+            <PrimaryButton disabled={!checkoutAvailable} aria-busy={pendingTariffId === tariff.id} title={checkoutUnavailableReason || undefined} onClick={() => void handleCheckout(tariff)}>
               {pendingTariffId === tariff.id ? 'Создаем заказ...' : 'Купить'}
             </PrimaryButton>
             {checkoutUnavailableReason && <p className="muted">{checkoutUnavailableReason}</p>}

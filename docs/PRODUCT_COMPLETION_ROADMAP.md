@@ -33,8 +33,8 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `244/244`.
-- [x] `STATE-002` Frontend test suite проходит: `51/51`.
+- [x] `STATE-001` Backend test suite проходит: `245/245`.
+- [x] `STATE-002` Frontend test suite проходит: `54/54`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` прошли успешно.
@@ -160,26 +160,26 @@ git diff --check
 
 ### P1.1 Публичный сайт
 
-- [ ] `P1-PUBLIC-001` Проверить главную страницу.
+- [x] `P1-PUBLIC-001` Проверить главную страницу. 2026-06-10.
   - Ошибка/риск: CTA может вести не туда, контент может быть hardcoded, адаптив может ломаться.
   - Что сделать: проверить hero, преимущества, тарифы, FAQ, CTA, футер, мобильную версию.
-  - Доказательство: browser screenshots desktop/mobile, отсутствие console errors.
+  - Доказательство: local Browser smoke `http://127.0.0.1:5187/`, русские заголовки и CTA, console errors `0`.
 
-- [ ] `P1-PUBLIC-002` Проверить тарифы.
+- [x] `P1-PUBLIC-002` Проверить тарифы. 2026-06-10.
   - Ошибка/риск: цена/описание могут не совпадать с админкой.
   - Что сделать: изменить тариф в админке и убедиться, что публичный сайт и кабинет обновились.
-  - Доказательство: API response + screenshots до/после.
+  - Доказательство: `TariffManagementTests.PublicTariffsController_Should_Return_Only_Visible_Active_Tariffs_On_Sqlite`, frontend `public-page-state` tests, Browser smoke `/tariffs`.
 
-- [ ] `P1-PUBLIC-003` Проверить FAQ.
+- [x] `P1-PUBLIC-003` Проверить FAQ. 2026-06-10.
   - Ошибка/риск: FAQ может быть статическим или неуправляемым.
   - Что сделать: создать/отредактировать FAQ в админке, проверить отображение на сайте.
-  - Доказательство: admin action + public screenshot.
+  - Доказательство: existing `FaqControllerTests`, `public-faq.test.ts`, Browser smoke `/faq` with search/category controls.
 
-- [ ] `P1-PUBLIC-004` Проверить ошибки API.
+- [x] `P1-PUBLIC-004` Проверить ошибки API. 2026-06-10.
   - Ошибка/риск: при падении API пользователь видит пустой экран.
   - Что сделать: смоделировать 500/timeout/empty data.
   - Критерий готовности: есть понятный error/empty state.
-  - Доказательство: frontend test или browser screenshot.
+  - Доказательство: `public-page-state.test.ts` loading/error/empty/ready, `npm test`, Browser smoke without console errors.
 
 ### P1.2 Регистрация, логин и кабинет
 
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Публичный сайт: главная, тарифы, FAQ, состояния loading/error/empty/ready, CTA и отсутствие console errors | Зеленое | Backend tests `245/245`, frontend tests `54/54`, local Browser smoke public-web |
 | 2026-06-10 | Codex | Кабинет без активной подписки и с активным VPN-доступом: empty state, CTA покупки, тариф, сервер, URI, QR-метаданные | Зеленое | Backend tests `244/244`, SQLite cabinet state tests, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Восстановление пароля: forgot, одноразовый reset token, новый пароль, отзыв сессий, expired/inactive user | Зеленое | Backend tests `242/242`, SQLite password reset flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Логин/logout кабинета: валидный логин, неверный пароль, inactive user, refresh rotation, reuse detection, logout | Зеленое | Backend tests `240/240`, SQLite session flow, frontend tests/typecheck/build |

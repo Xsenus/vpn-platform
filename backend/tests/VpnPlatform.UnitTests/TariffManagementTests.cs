@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
+using VpnPlatform.Api.Controllers.Public;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
@@ -34,6 +35,35 @@ public class TariffManagementTests
         Assert.Contains("Автоматическая выдача", tariff.Features);
         Assert.Equal("auto", tariff.ProvisioningScenario);
         Assert.Contains("После оплаты", tariff.AfterPaymentText);
+    }
+
+    [Fact]
+    public async Task PublicTariffsController_Should_Return_Only_Visible_Active_Tariffs_On_Sqlite()
+    {
+        await using var db = CreateDb();
+        var now = DateTimeOffset.UtcNow;
+        var future = Tariff("future", isActive: true, sortOrder: 2);
+        future.VisibleFrom = now.AddDays(1);
+        var expired = Tariff("expired", isActive: true, sortOrder: 3);
+        expired.VisibleTo = now.AddDays(-1);
+        db.Tariffs.AddRange(
+            Tariff("inactive", isActive: false, sortOrder: 1),
+            future,
+            expired,
+            Tariff("standard", isActive: true, sortOrder: 20),
+            Tariff("start", isActive: true, sortOrder: 10));
+        await db.SaveChangesAsync();
+        var controller = new TariffsController(new CatalogService(db));
+
+        var response = AssertOk<List<TariffDto>>(await controller.Get(CancellationToken.None));
+
+        Assert.Equal(new[] { "start", "standard" }, response.Select(x => x.Slug).ToArray());
+        Assert.All(response, x =>
+        {
+            Assert.True(x.IsActive);
+            Assert.NotEmpty(x.Features);
+            Assert.Equal("RUB", x.Currency);
+        });
     }
 
     [Fact]
