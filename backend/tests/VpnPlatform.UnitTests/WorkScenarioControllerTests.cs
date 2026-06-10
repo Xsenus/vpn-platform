@@ -35,6 +35,24 @@ public class WorkScenarioControllerTests
     }
 
     [Fact]
+    public async Task AdminWorkScenarios_Should_Reject_Duplicate_Key_On_Create_And_Update()
+    {
+        await using var db = CreateDb();
+        db.WorkScenarios.AddRange(Scenario("auto"), Scenario("premium-auto"));
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+
+        var duplicateCreate = await controller.Create(Request("auto"), CancellationToken.None);
+        var premium = await db.WorkScenarios.SingleAsync(x => x.Key == "premium-auto");
+        var duplicateUpdate = await controller.Update(premium.Id, Request("auto") with { Name = "Duplicate" }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(duplicateCreate);
+        Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
+        await db.Entry(premium).ReloadAsync();
+        Assert.Equal("premium-auto", premium.Key);
+    }
+
+    [Fact]
     public async Task AdminWorkScenarios_Should_Reject_Delete_When_Tariff_Uses_Scenario()
     {
         await using var db = CreateDb();
@@ -69,6 +87,42 @@ public class WorkScenarioControllerTests
         var result = await controller.Create(Request("") with { Name = "", MaxDevices = 0 }, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Theory]
+    [InlineData("{\"tariff\":\"bad\"}", "Allowed tariff ids must be a JSON array")]
+    [InlineData("[\"not-a-guid\"]", "Allowed tariff ids must contain only tariff GUID strings")]
+    [InlineData("[", "Allowed tariff ids must be valid JSON")]
+    public async Task AdminWorkScenarios_Should_Reject_Invalid_Allowed_Tariff_Ids(string allowedTariffIdsJson, string expectedError)
+    {
+        await using var db = CreateDb();
+        var controller = CreateController(db);
+
+        var result = await controller.Create(Request("json-check") with { AllowedTariffIdsJson = allowedTariffIdsJson }, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains(expectedError, System.Text.Json.JsonSerializer.Serialize(badRequest.Value));
+        Assert.Empty(await db.WorkScenarios.ToListAsync());
+    }
+
+    [Fact]
+    public async Task AdminWorkScenarios_Should_Normalize_Allowed_Tariff_Ids_And_Mode()
+    {
+        await using var db = CreateDb();
+        var controller = CreateController(db);
+        var tariffId = Guid.NewGuid();
+
+        var created = AssertOk<WorkScenarioDto>(await controller.Create(
+            Request("Premium Auto") with
+            {
+                AllowedTariffIdsJson = $"[\"{tariffId}\",\"{tariffId}\"]",
+                ProvisioningMode = " Auto "
+            },
+            CancellationToken.None));
+
+        Assert.Equal("premium-auto", created.Key);
+        Assert.Equal("auto", created.ProvisioningMode);
+        Assert.Equal($"[\"{tariffId}\"]", created.AllowedTariffIdsJson);
     }
 
     private static WorkScenarioUpsertRequest Request(string key)

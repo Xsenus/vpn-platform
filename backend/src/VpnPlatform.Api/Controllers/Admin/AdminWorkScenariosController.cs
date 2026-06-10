@@ -42,6 +42,11 @@ public class AdminWorkScenariosController : ControllerBase
         var error = Apply(scenario, request);
         if (error is not null) return BadRequest(new { error });
 
+        if (await _db.WorkScenarios.AnyAsync(x => x.Key == scenario.Key, cancellationToken))
+        {
+            return BadRequest(new { error = "Scenario key already exists." });
+        }
+
         _db.WorkScenarios.Add(scenario);
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(Map(scenario));
@@ -56,6 +61,11 @@ public class AdminWorkScenariosController : ControllerBase
 
         var error = Apply(scenario, request);
         if (error is not null) return BadRequest(new { error });
+
+        if (await _db.WorkScenarios.AnyAsync(x => x.Id != id && x.Key == scenario.Key, cancellationToken))
+        {
+            return BadRequest(new { error = "Scenario key already exists." });
+        }
 
         scenario.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -89,11 +99,14 @@ public class AdminWorkScenariosController : ControllerBase
         scenario.Name = request.Name.Trim();
         scenario.Key = NormalizeKey(request.Key);
         scenario.IsActive = request.IsActive;
-        scenario.AllowedTariffIdsJson = NormalizeJsonArray(request.AllowedTariffIdsJson);
+        var allowedTariffIds = NormalizeGuidArrayJson(request.AllowedTariffIdsJson);
+        if (allowedTariffIds.Error is not null) return allowedTariffIds.Error;
+
+        scenario.AllowedTariffIdsJson = allowedTariffIds.Json;
         scenario.VpnProtocol = string.IsNullOrWhiteSpace(request.VpnProtocol) ? "vless" : request.VpnProtocol.Trim();
         scenario.ServerSelectionRule = string.IsNullOrWhiteSpace(request.ServerSelectionRule) ? "least-loaded" : request.ServerSelectionRule.Trim();
         scenario.InboundSelectionRule = string.IsNullOrWhiteSpace(request.InboundSelectionRule) ? "default" : request.InboundSelectionRule.Trim();
-        scenario.ProvisioningMode = string.IsNullOrWhiteSpace(request.ProvisioningMode) ? "auto" : request.ProvisioningMode.Trim();
+        scenario.ProvisioningMode = NormalizeScenarioToken(request.ProvisioningMode, "auto");
         scenario.OnPaymentSucceeded = NormalizeText(request.OnPaymentSucceeded, "create_subscription_and_access");
         scenario.OnPaymentFailed = NormalizeText(request.OnPaymentFailed, "keep_order_pending");
         scenario.OnRefund = NormalizeText(request.OnRefund, "disable_access");
@@ -111,6 +124,9 @@ public class AdminWorkScenariosController : ControllerBase
     private static string NormalizeText(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
+    private static string NormalizeScenarioToken(string? value, string fallback)
+        => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();
+
     private static string NormalizeKey(string value)
     {
         var key = Regex.Replace(value.Trim().ToLowerInvariant(), @"\s+", "-");
@@ -119,18 +135,37 @@ public class AdminWorkScenariosController : ControllerBase
         return string.IsNullOrWhiteSpace(key) ? "scenario" : key;
     }
 
-    private static string NormalizeJsonArray(string? value)
+    private static (string Json, string? Error) NormalizeGuidArrayJson(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return "[]";
+        if (string.IsNullOrWhiteSpace(value)) return ("[]", null);
 
         try
         {
             using var document = JsonDocument.Parse(value);
-            return document.RootElement.ValueKind == JsonValueKind.Array ? value : "[]";
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return ("[]", "Allowed tariff ids must be a JSON array.");
+            }
+
+            var ids = new List<Guid>();
+            foreach (var item in document.RootElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.String || !Guid.TryParse(item.GetString(), out var id))
+                {
+                    return ("[]", "Allowed tariff ids must contain only tariff GUID strings.");
+                }
+
+                if (!ids.Contains(id))
+                {
+                    ids.Add(id);
+                }
+            }
+
+            return (JsonSerializer.Serialize(ids), null);
         }
         catch (JsonException)
         {
-            return "[]";
+            return ("[]", "Allowed tariff ids must be valid JSON.");
         }
     }
 

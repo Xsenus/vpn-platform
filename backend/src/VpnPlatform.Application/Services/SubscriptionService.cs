@@ -148,7 +148,7 @@ public class SubscriptionService
                     SubscriptionId = subscription.Id,
                     EventType = "AccessCreated",
                     OldValueJson = "{}",
-                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt, scenarioKey, maxDevices, protocol, trafficLimit })
+                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt, scenarioKey, maxDevices, protocol, trafficLimit, scenarioCabinetText = scenario?.CabinetText ?? string.Empty, scenarioTelegramText = scenario?.TelegramText ?? string.Empty })
                 });
             }
             else
@@ -175,7 +175,7 @@ public class SubscriptionService
                     SubscriptionId = subscription.Id,
                     EventType = wasDisabled ? "AccessRenewedAndEnabled" : "AccessUpdated",
                     OldValueJson = before,
-                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt, access.Revision, scenarioKey, maxDevices, protocol, trafficLimit })
+                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.AccessUri, access.Status, subscription.EndAt, access.Revision, scenarioKey, maxDevices, protocol, trafficLimit, scenarioCabinetText = scenario?.CabinetText ?? string.Empty, scenarioTelegramText = scenario?.TelegramText ?? string.Empty })
                 });
             }
 
@@ -201,13 +201,15 @@ public class SubscriptionService
                   "templateKey": "subscription_activated",
                   "subscriptionId": "{{subscription.Id}}",
                   "accessId": "{{access.Id}}",
-                  "scenarioKey": "{{scenarioKey}}"
+                  "scenarioKey": "{{scenarioKey}}",
+                  "scenarioCabinetText": {{JsonSerializer.Serialize(scenario?.CabinetText ?? string.Empty)}},
+                  "scenarioTelegramText": {{JsonSerializer.Serialize(scenario?.TelegramText ?? string.Empty)}}
                 }
                 """
             });
 
             await _db.SaveChangesAsync(cancellationToken);
-            return Result<ActivationResult>.Success(new ActivationResult(subscription.Id, access.Id));
+            return Result<ActivationResult>.Success(new ActivationResult(subscription.Id, access.Id, scenarioKey, scenario?.CabinetText ?? string.Empty, scenario?.TelegramText ?? string.Empty));
         }
         catch (Exception ex)
         {

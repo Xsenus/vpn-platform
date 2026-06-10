@@ -559,6 +559,34 @@ function validateTariffForm(form: UpdateTariffPayload) {
   return errors
 }
 
+function parseWorkScenarioTariffIds(value?: string | null) {
+  if (!value) return []
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
+  } catch {
+    return []
+  }
+}
+
+function scenarioTariffIdsToJson(ids: string[]) {
+  return JSON.stringify(Array.from(new Set(ids.filter(Boolean))))
+}
+
+function validateWorkScenarioForm(form: WorkScenarioUpsertPayload) {
+  const errors: string[] = []
+  const key = form.key.trim()
+
+  if (!form.name.trim()) errors.push('Укажите название сценария.')
+  if (!key) errors.push('Укажите ключ сценария.')
+  if (key && !/^[a-z0-9_-]+(?:-[a-z0-9_-]+)*$/i.test(key)) errors.push('Ключ может содержать латинские буквы, цифры, дефис и подчёркивание.')
+  if (Number(form.maxDevices) <= 0) errors.push('Количество устройств должно быть больше 0.')
+  if (!['auto', 'manual', 'hybrid'].includes(String(form.provisioningMode || '').trim().toLowerCase())) errors.push('Режим выдачи должен быть auto, manual или hybrid.')
+
+  return errors
+}
+
 function toDateTimeLocalValue(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -849,6 +877,12 @@ export function App() {
   const updateFaqForm = <K extends keyof FaqUpsertPayload>(key: K, value: FaqUpsertPayload[K]) => setFaqForm((current) => ({ ...current, [key]: value }))
   const updateSiteContentForm = <K extends keyof SiteContentBlockUpsertPayload>(key: K, value: SiteContentBlockUpsertPayload[K]) => setSiteContentForm((current) => ({ ...current, [key]: value }))
   const updateWorkScenarioForm = <K extends keyof WorkScenarioUpsertPayload>(key: K, value: WorkScenarioUpsertPayload[K]) => setWorkScenarioForm((current) => ({ ...current, [key]: value }))
+  const updateWorkScenarioTariffLink = (tariffId: string, checked: boolean) => setWorkScenarioForm((current) => {
+    const currentIds = parseWorkScenarioTariffIds(current.allowedTariffIdsJson)
+    const nextIds = checked ? [...currentIds, tariffId] : currentIds.filter((id) => id !== tariffId)
+    return { ...current, allowedTariffIdsJson: scenarioTariffIdsToJson(nextIds) }
+  })
+  const isWorkScenarioTariffSelected = (tariffId: string) => parseWorkScenarioTariffIds(workScenarioForm.allowedTariffIdsJson).includes(tariffId)
   const updateReleaseItem = (index: number, patch: Partial<AppReleaseUpsertPayload['items'][number]>) => setReleaseForm((current) => ({
     ...current,
     items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item)
@@ -1368,16 +1402,18 @@ export function App() {
 
   const handleSaveWorkScenario = async () => {
     if (!token) return
-    if (!workScenarioForm.name.trim() || !workScenarioForm.key.trim()) {
-      setError('Сценарий: заполните название и ключ.')
+    const validationErrors = validateWorkScenarioForm(workScenarioForm)
+    if (validationErrors.length > 0) {
+      setError(`Сценарий: ${validationErrors.join(' ')}`)
       return
     }
 
     const payload: WorkScenarioUpsertPayload = {
       ...workScenarioForm,
       name: workScenarioForm.name.trim(),
-      key: workScenarioForm.key.trim(),
-      allowedTariffIdsJson: workScenarioForm.allowedTariffIdsJson || '[]',
+      key: workScenarioForm.key.trim().toLowerCase(),
+      allowedTariffIdsJson: scenarioTariffIdsToJson(parseWorkScenarioTariffIds(workScenarioForm.allowedTariffIdsJson)),
+      provisioningMode: workScenarioForm.provisioningMode.trim().toLowerCase(),
       maxDevices: Number(workScenarioForm.maxDevices) || 1,
       sortOrder: Number(workScenarioForm.sortOrder) || 0
     }
@@ -2459,7 +2495,20 @@ export function App() {
                 <label><span>Лимит трафика, ГБ</span><input value={workScenarioForm.trafficLimit ? Math.round(workScenarioForm.trafficLimit / 1024 / 1024 / 1024) : ''} onChange={(e) => updateWorkScenarioForm('trafficLimit', e.target.value ? Number(e.target.value) * 1024 * 1024 * 1024 : null)} type="number" min={0} step="1" placeholder="Без лимита" /></label>
                 <label><span>Порядок</span><input value={workScenarioForm.sortOrder} onChange={(e) => updateWorkScenarioForm('sortOrder', Number(e.target.value) || 0)} type="number" step="1" /></label>
               </div>
-              <label><span>Связанные тарифы JSON</span><textarea value={workScenarioForm.allowedTariffIdsJson} onChange={(e) => updateWorkScenarioForm('allowedTariffIdsJson', e.target.value)} rows={2} placeholder='["tariff-guid"] или []' /></label>
+              <div className="scenario-tariff-picker">
+                <span className="form-label">Тарифы, которым разрешен сценарий</span>
+                <div className="checkbox-list">
+                  {tariffs.length === 0 && <p className="muted">Сначала создайте тарифы. Без выбранных тарифов сценарий будет доступен для всех тарифов.</p>}
+                  {tariffs.map((tariff) => (
+                    <label key={tariff.id} className="checkbox-row">
+                      <input checked={isWorkScenarioTariffSelected(tariff.id)} onChange={(e) => updateWorkScenarioTariffLink(tariff.id, e.target.checked)} type="checkbox" />
+                      <span>{tariff.name}</span>
+                      <small>{tariff.slug}</small>
+                    </label>
+                  ))}
+                </div>
+                <small>Если ничего не выбрано, сценарий доступен для всех тарифов. Тариф также может выбрать основной сценарий в своем редакторе.</small>
+              </div>
               <label className="checkbox-row"><input checked={workScenarioForm.isActive} onChange={(e) => updateWorkScenarioForm('isActive', e.target.checked)} type="checkbox" /> Активен</label>
               <label className="checkbox-row"><input checked={workScenarioForm.generateQrCode} onChange={(e) => updateWorkScenarioForm('generateQrCode', e.target.checked)} type="checkbox" /> Генерировать QR-код</label>
             </fieldset>

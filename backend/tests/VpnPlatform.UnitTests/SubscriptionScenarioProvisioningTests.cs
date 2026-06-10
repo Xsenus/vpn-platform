@@ -46,6 +46,8 @@ public class SubscriptionScenarioProvisioningTests
             InboundSelectionRule = "least-loaded",
             ProvisioningMode = "auto",
             OnPaymentSucceeded = "create_subscription_and_access",
+            CabinetText = "Кабинет: доступ premium готов.",
+            TelegramText = "Telegram: premium доступ готов.",
             GenerateQrCode = false,
             MaxDevices = 2,
             TrafficLimit = 50L * 1024 * 1024 * 1024
@@ -64,6 +66,9 @@ public class SubscriptionScenarioProvisioningTests
         var result = await service.ActivateOrRenewFromOrderAsync(order, payment);
 
         Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("premium-auto", result.Value!.ScenarioKey);
+        Assert.Equal("Кабинет: доступ premium готов.", result.Value.CabinetText);
+        Assert.Equal("Telegram: premium доступ готов.", result.Value.TelegramText);
         Assert.NotNull(provider.LastRequest);
         Assert.Equal(highPriorityNodeId, provider.LastRequest!.NodeId);
         Assert.Equal("trojan", provider.LastRequest.Protocol);
@@ -78,8 +83,25 @@ public class SubscriptionScenarioProvisioningTests
         Assert.Empty(access.QrCodePath);
         Assert.Contains("trojan://", access.AccessUri, StringComparison.OrdinalIgnoreCase);
         var history = await db.AccessCredentialHistories.SingleAsync();
-        Assert.Contains("premium-auto", history.NewValueJson, StringComparison.Ordinal);
-        Assert.Contains("trojan", history.NewValueJson, StringComparison.Ordinal);
+        using var historyJson = System.Text.Json.JsonDocument.Parse(history.NewValueJson);
+        Assert.Equal("premium-auto", historyJson.RootElement.GetProperty("scenarioKey").GetString());
+        Assert.Equal("trojan", historyJson.RootElement.GetProperty("protocol").GetString());
+        Assert.Equal("Кабинет: доступ premium готов.", historyJson.RootElement.GetProperty("scenarioCabinetText").GetString());
+        Assert.Equal("Telegram: premium доступ готов.", historyJson.RootElement.GetProperty("scenarioTelegramText").GetString());
+        var outbox = await db.OutboxMessages.SingleAsync(x => x.Type == "NotificationRequested");
+        using var outboxJson = System.Text.Json.JsonDocument.Parse(outbox.PayloadJson);
+        Assert.Equal("premium-auto", outboxJson.RootElement.GetProperty("scenarioKey").GetString());
+        Assert.Equal("Кабинет: доступ premium готов.", outboxJson.RootElement.GetProperty("scenarioCabinetText").GetString());
+        Assert.Equal("Telegram: premium доступ готов.", outboxJson.RootElement.GetProperty("scenarioTelegramText").GetString());
+
+        var orchestrator = new PaymentOrchestrator(db, null!, Array.Empty<IPaymentWebhookVerifier>(), null!, null!, new FixedClock(now));
+        var payloadMethod = typeof(PaymentOrchestrator).GetMethod("BuildPaymentSucceededTelegramPayloadAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(payloadMethod);
+        var payloadTask = Assert.IsAssignableFrom<Task<string>>(payloadMethod.Invoke(orchestrator, new object[] { order, result.Value, CancellationToken.None }));
+        var payload = await payloadTask;
+        using var payloadJson = System.Text.Json.JsonDocument.Parse(payload);
+        Assert.Contains("Telegram: premium доступ готов.", payloadJson.RootElement.GetProperty("text").GetString(), StringComparison.Ordinal);
+        Assert.Equal("Telegram: premium доступ готов.", payloadJson.RootElement.GetProperty("scenarioText").GetString());
     }
 
     [Fact]

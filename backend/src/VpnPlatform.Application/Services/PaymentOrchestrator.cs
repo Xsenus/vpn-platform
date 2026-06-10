@@ -597,14 +597,22 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         var qrPayload = access is null || string.IsNullOrWhiteSpace(access.QrCodePath)
             ? "QR payload пока не создан."
             : access.QrCodePath;
-        var text = $"Оплата получена ✅\nЗаказ: {order.Id}\nТариф: {tariffName}\nПодписка действует до: {expiresAt}\n\nVPN URI:\n{accessUri}\n\nQR payload:\n{qrPayload}\n\nИнструкция: импортируйте VPN URI в VLESS/Xray-compatible клиент. Если возникнут проблемы — нажмите «Поддержка».";
+        var scenarioText = string.IsNullOrWhiteSpace(activation.TelegramText)
+            ? activation.CabinetText
+            : activation.TelegramText;
+        var scenarioBlock = string.IsNullOrWhiteSpace(scenarioText)
+            ? string.Empty
+            : $"\n\n{scenarioText.Trim()}";
+        var text = $"Оплата получена ✅\nЗаказ: {order.Id}\nТариф: {tariffName}\nПодписка действует до: {expiresAt}{scenarioBlock}\n\nVPN URI:\n{accessUri}\n\nQR payload:\n{qrPayload}\n\nИнструкция: импортируйте VPN URI в VLESS/Xray-compatible клиент. Если возникнут проблемы — нажмите «Поддержка».";
         return JsonSerializer.Serialize(new
         {
             text,
             replyMarkupJson = BuildPostPaymentReplyMarkupJson(),
             orderId = order.Id,
             activation.SubscriptionId,
-            activation.AccessId
+            activation.AccessId,
+            activation.ScenarioKey,
+            scenarioText = scenarioText ?? string.Empty
         }, JsonOptions);
     }
 

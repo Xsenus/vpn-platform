@@ -305,7 +305,7 @@ public sealed record SubscriptionDto(
     DateTimeOffset? CancelledAt = null,
     DateTimeOffset? CreatedAt = null,
     DateTimeOffset? UpdatedAt = null);
-public sealed record ActivationResult(Guid SubscriptionId, Guid? AccessId);
+public sealed record ActivationResult(Guid SubscriptionId, Guid? AccessId, string ScenarioKey = "auto", string CabinetText = "", string TelegramText = "");
 
 public sealed record VpnProvisionRequest(
     Guid SubscriptionId,

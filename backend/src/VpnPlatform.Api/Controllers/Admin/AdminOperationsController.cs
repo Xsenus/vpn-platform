@@ -384,7 +384,6 @@ public class AdminOperationsController : ControllerBase
             .Include(x => x.User)
             .Include(x => x.Tariff)
             .Include(x => x.PaymentAttempts)
-            .OrderByDescending(x => x.CreatedAt)
             .Take(300)
             .ToListAsync(cancellationToken);
 
@@ -411,6 +410,7 @@ public class AdminOperationsController : ControllerBase
                 x.CreatedAt,
                 x.UpdatedAt
             })
+            .OrderByDescending(x => x.CreatedAt)
             .ToList());
     }
 

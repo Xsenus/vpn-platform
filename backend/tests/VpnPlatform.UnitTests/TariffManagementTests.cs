@@ -123,6 +123,49 @@ public class TariffManagementTests
     }
 
     [Fact]
+    public async Task AdminOrders_Should_Load_On_Sqlite_And_Sort_In_Memory()
+    {
+        await using var db = CreateDb();
+        var userId = Guid.NewGuid();
+        var tariff = Tariff("orders");
+        var olderOrderId = Guid.NewGuid();
+        var newerOrderId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = "orders@test.local", DisplayName = "Orders User", PasswordHash = "hash" });
+        db.Tariffs.Add(tariff);
+        db.Orders.AddRange(
+            new Order
+            {
+                Id = olderOrderId,
+                UserId = userId,
+                TariffId = tariff.Id,
+                Amount = tariff.Price,
+                Currency = tariff.Currency,
+                Status = OrderStatus.PendingPayment,
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15),
+                CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-10)
+            },
+            new Order
+            {
+                Id = newerOrderId,
+                UserId = userId,
+                TariffId = tariff.Id,
+                Amount = tariff.Price,
+                Currency = tariff.Currency,
+                Status = OrderStatus.Completed,
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15),
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+
+        var ok = Assert.IsType<OkObjectResult>(await controller.GetOrders(CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        var first = json.RootElement.EnumerateArray().First();
+
+        Assert.Equal(newerOrderId, first.GetProperty("Id").GetGuid());
+    }
+
+    [Fact]
     public async Task AdminTariffs_Should_Delete_Unused_Tariff()
     {
         await using var db = CreateDb();

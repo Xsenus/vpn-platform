@@ -270,18 +270,21 @@ git diff --check
 
 ### P2.3 Сценарии работы
 
-- [ ] `P2-ADM-SCN-001` Проверить CRUD сценариев.
+- [x] `P2-ADM-SCN-001` Проверить CRUD сценариев.
   - Что сделать: создать сценарий покупки/продления/ошибки/окончания.
   - Критерий готовности: сценарий реально влияет на выдачу VPN и уведомления.
-  - Доказательство: backend tests + smoke.
+  - Что сделано: CRUD сценариев защищен от дублей ключей, некорректного JSON и некорректных GUID тарифов; тексты сценария попадают в историю доступа, outbox и Telegram payload после оплаты.
+  - Доказательство: `WorkScenarioControllerTests.AdminWorkScenarios_Should_Reject_Duplicate_Key_On_Create_And_Update`, `AdminWorkScenarios_Should_Reject_Invalid_Allowed_Tariff_Ids`, `SubscriptionScenarioProvisioningTests.ActivateOrRenewFromOrderAsync_Should_Apply_WorkScenario_To_Vpn_Provisioning`, локальный SQLite smoke.
 
-- [ ] `P2-ADM-SCN-002` Привязка сценария к тарифу.
+- [x] `P2-ADM-SCN-002` Привязка сценария к тарифу.
   - Что сделать: админ выбирает, какой сценарий используется для конкретного тарифа.
-  - Доказательство: заказ по тарифу применяет нужный protocol/node selection/notifications.
+  - Что сделано: редактор сценария позволяет выбрать разрешенные тарифы чекбоксами, backend нормализует список GUID без дублей, а тариф продолжает выбирать основной сценарий по ключу.
+  - Доказательство: заказ по тарифу применяет нужный `protocol`, `serverSelectionRule`, `inboundSelectionRule`, `maxDevices`, `trafficLimit`, тексты уведомлений и `scenarioKey`; frontend source test проверяет `scenario-tariff-picker`.
 
-- [ ] `P2-ADM-SCN-003` UX редактора сценариев.
+- [x] `P2-ADM-SCN-003` UX редактора сценариев.
   - Что сделать: заменить технические поля на понятные блоки: "после оплаты", "при продлении", "при ошибке", "при окончании".
-  - Доказательство: screenshot + usability review.
+  - Что сделано: редактор разделен на основные параметры, поведение системы и тексты для пользователя; ручное поле `Связанные тарифы JSON` заменено списком тарифов с чекбоксами и подсказкой; сохранение сценария валидирует форму до запроса.
+  - Доказательство: frontend source contract test на `validateWorkScenarioForm`, `scenario-tariff-picker`, `updateWorkScenarioTariffLink`, отсутствие `Связанные тарифы JSON`, browser smoke админки.
 
 ### P2.4 Платежи
 
