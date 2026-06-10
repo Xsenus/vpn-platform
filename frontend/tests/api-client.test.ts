@@ -334,6 +334,20 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
       })
     }
 
+    if (String(url).endsWith('/health-check') && init?.method === 'POST') {
+      return new Response(JSON.stringify({ id: 'check-1', nodeId: 'node-1', status: 'Healthy', checkedAt: new Date().toISOString(), latencyMs: 12, metadataJson: '{}', errorText: '' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (String(url).endsWith('/health-checks')) {
+      return new Response(JSON.stringify([{ id: 'check-1', nodeId: 'node-1', status: 'Healthy', checkedAt: new Date().toISOString(), latencyMs: 12, metadataJson: '{}', errorText: '' }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     return new Response(JSON.stringify({ id: 'node-1', name: 'nl-01', host: 'nl-01.example.com', ipAddress: '203.0.113.10', provider: 'hetzner', region: 'eu', country: 'NL', datacenter: 'fsn1', status: 'New', capacity: 5000, usedCapacity: 0, supportedProtocolsCsv: 'vless,vmess,trojan', healthStatus: 'Unknown', installedVersion: '', backupStatus: 'unknown', monitoringStatus: 'unknown', loggingStatus: 'unknown', tagsCsv: '', priority: 100, isAvailableForNewUsers: false }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -373,6 +387,8 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   await client.createAdminServer('admin-token', payload)
   await client.updateAdminServer('admin-token', 'node-1', { ...payload, name: 'nl-01-edited', priority: 200, tagsCsv: 'tier:premium' })
   await client.disableAdminServer('admin-token', 'node-1')
+  await client.checkAdminServerHealth('admin-token', 'node-1')
+  await client.getAdminServerHealthChecks('admin-token', 'node-1')
   await client.deleteAdminServer('admin-token', 'node-1')
 
   const headers = new Headers(calls[0]?.init?.headers)
@@ -388,9 +404,13 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   assert.match(String(calls[1]?.init?.body), /tier:premium/)
   assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/servers/node-1/disable')
   assert.equal(calls[2]?.init?.method, 'POST')
-  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/servers/node-1')
-  assert.equal(calls[3]?.init?.method, 'DELETE')
-  assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/servers/node-1/health-check')
+  assert.equal(calls[3]?.init?.method, 'POST')
+  assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/servers/node-1/health-checks')
+  assert.equal(calls[4]?.init?.method, undefined)
+  assert.equal(calls[5]?.url, 'http://localhost:8080/api/admin/servers/node-1')
+  assert.equal(calls[5]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
 test('ApiClient provisioning run details and actions are tokenized', async () => {

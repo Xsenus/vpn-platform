@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
@@ -102,6 +103,67 @@ public class AdminServerManagementTests
         Assert.Contains(db.AuditLogs, x => x.Action == "server.archive" && x.EntityId == node.Id.ToString());
     }
 
+    [Fact]
+    public async Task CheckServerHealth_Should_Save_Healthy_Result_And_Update_Node()
+    {
+        await using var db = CreateDbContext();
+        var provider = new TestVpnProvider(HealthStatus.Healthy);
+        var controller = CreateController(db, provider);
+        var node = NewNode("healthy-node");
+        node.Provider = provider.Name;
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = await controller.CheckServerHealth(node.Id, CancellationToken.None);
+
+        var check = Assert.IsType<NodeHealthCheckDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("Healthy", check.Status);
+        Assert.Equal(node.Id, check.NodeId);
+        Assert.Equal(HealthStatus.Healthy, node.HealthStatus);
+        Assert.NotNull(node.LastHealthCheckAt);
+        Assert.True(await db.NodeHealthChecks.AnyAsync(x => x.NodeId == node.Id && x.Status == HealthStatus.Healthy));
+        Assert.Contains(db.AuditLogs, x => x.Action == "server.health-check" && x.EntityId == node.Id.ToString());
+    }
+
+    [Fact]
+    public async Task CheckServerHealth_Should_Report_Maintenance_As_Degraded_With_Clear_Reason()
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateController(db, new TestVpnProvider(HealthStatus.Healthy));
+        var node = NewNode("maintenance-node");
+        node.Status = NodeStatus.Maintenance;
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = await controller.CheckServerHealth(node.Id, CancellationToken.None);
+
+        var check = Assert.IsType<NodeHealthCheckDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("Degraded", check.Status);
+        Assert.Contains("Сервер в обслуживании", check.ErrorText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HealthStatus.Degraded, node.HealthStatus);
+    }
+
+    [Fact]
+    public async Task CheckServerHealth_Should_Save_Unhealthy_Result_When_Provider_Fails()
+    {
+        await using var db = CreateDbContext();
+        var provider = new TestVpnProvider(HealthStatus.Healthy, new InvalidOperationException("panel password secret failed"));
+        var controller = CreateController(db, provider);
+        var node = NewNode("failed-node");
+        node.Provider = provider.Name;
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = await controller.CheckServerHealth(node.Id, CancellationToken.None);
+
+        var check = Assert.IsType<NodeHealthCheckDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("Unhealthy", check.Status);
+        Assert.Contains("InvalidOperationException", check.ErrorText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("panel password", check.ErrorText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("secret", check.ErrorText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HealthStatus.Unhealthy, node.HealthStatus);
+    }
+
     private static VpnNode NewNode(string name)
         => new()
         {
@@ -119,7 +181,7 @@ public class AdminServerManagementTests
             IsAvailableForNewUsers = true
         };
 
-    private static AdminOperationsController CreateController(ApplicationDbContext db)
+    private static AdminOperationsController CreateController(ApplicationDbContext db, IVpnProvider? vpnProvider = null)
     {
         var protector = CreateSecretProtector();
         var provisioning = new ProvisioningService(db, new TestClock(), protector);
@@ -130,7 +192,8 @@ public class AdminServerManagementTests
             paymentProviderAccounts: new PaymentProviderAccountService(db, protector, new TestClock()),
             vpnAccessLifecycleService: null,
             secretProtector: protector,
-            qrCodeGenerator: new SvgQrCodeGenerator(new TestClock()));
+            qrCodeGenerator: new SvgQrCodeGenerator(new TestClock()),
+            vpnProviderFactory: new TestVpnProviderFactory(vpnProvider ?? new TestVpnProvider(HealthStatus.Healthy)));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         return controller;
     }
@@ -165,5 +228,43 @@ public class AdminServerManagementTests
         public string ApplicationName { get; set; } = "VpnPlatform.UnitTests";
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
         public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
+    }
+
+    private sealed class TestVpnProviderFactory : IVpnProviderFactory
+    {
+        private readonly IVpnProvider _provider;
+
+        public TestVpnProviderFactory(IVpnProvider provider) => _provider = provider;
+
+        public IVpnProvider Get(string providerName) => _provider;
+    }
+
+    private sealed class TestVpnProvider : IVpnProvider
+    {
+        private readonly HealthStatus _healthStatus;
+        private readonly Exception? _exception;
+
+        public TestVpnProvider(HealthStatus healthStatus, Exception? exception = null)
+        {
+            _healthStatus = healthStatus;
+            _exception = exception;
+        }
+
+        public string Name => "x3ui";
+        public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<VpnProvisionResult> UpdateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DeleteAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<VpnUsageSnapshot> GetUsageAsync(string providerAccessId, CancellationToken cancellationToken) => Task.FromResult(new VpnUsageSnapshot(providerAccessId, null, null, DateTimeOffset.UtcNow));
+
+        public Task<HealthStatus> GetNodeHealthAsync(VpnNode node, CancellationToken cancellationToken)
+        {
+            if (_exception is not null)
+            {
+                throw _exception;
+            }
+
+            return Task.FromResult(_healthStatus);
+        }
     }
 }

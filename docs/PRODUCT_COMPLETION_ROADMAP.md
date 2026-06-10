@@ -316,9 +316,10 @@ git diff --check
   - Что сделано: API и админка поддерживают создание, редактирование, отключение, закрытие/открытие распределения, обслуживание и безопасное удаление VPN-сервера; сервер без связей удаляется, сервер с подписками, VPN-доступами или provisioning-запусками архивируется без потери истории.
   - Доказательство: `AdminServerManagementTests`, frontend typecheck/build, локальный SQLite HTTP-smoke `/api/admin/servers`.
 
-- [ ] `P2-ADM-VPN-002` Health-check серверов.
+- [x] `P2-ADM-VPN-002` Health-check серверов. 2026-06-10.
   - Что сделать: показывать online/offline/maintenance/draining и причину.
-  - Доказательство: backend test + screenshot.
+  - Что сделано: добавлен admin endpoint ручной проверки VPN-сервера, история `NodeHealthChecks`, обновление `HealthStatus/LastHealthCheckAt`, причины для disabled/archived/maintenance/draining/provider errors и вывод последней проверки в списке серверов.
+  - Доказательство: `AdminServerManagementTests`, frontend tests/typecheck/build, локальный SQLite HTTP-smoke `/api/admin/servers/{id}/health-check`.
 
 - [ ] `P2-ADM-VPN-003` CRUD 3x-ui панелей.
   - Что сделать: создать, проверить подключение, синхронизировать inbound-ы, отключить.
@@ -607,6 +608,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Health-check VPN-серверов: Healthy, Degraded для обслуживания, Unhealthy при ошибке провайдера, история проверок и SQLite endpoint | Зеленое | Backend tests `271/271`, frontend tests `55/55`, typecheck/build, Local SQLite HTTP-smoke `/api/admin/servers/{id}/health-check` |
 | 2026-06-10 | Codex | CRUD VPN-серверов: создание, редактирование, отключение, удаление чистого сервера и архивирование сервера с историей | Зеленое | Backend tests `268/268`, frontend tests `55/55`, typecheck/build, Local SQLite HTTP-smoke `/api/admin/servers` delete/archive |
 | 2026-06-10 | Codex | Admin dashboard readiness: платежи, webhook, тарифы, VPN, 3x-ui, Telegram, VPS, CI/CD и быстрые переходы | Зеленое | Targeted backend tests `11/11`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Telegram-уведомления: pending/succeeded/failed платежи, активация, выдача VPN-доступа и lifecycle подписок | Зеленое | Backend tests `250/250`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |

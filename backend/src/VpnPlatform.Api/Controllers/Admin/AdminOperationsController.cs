@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Diagnostics;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -52,6 +53,7 @@ public sealed record AdminSubscriptionExtendHttpRequest(int Days, string? Reason
 public sealed record AdminAccessActionHttpRequest(string? Reason = null);
 public sealed record SetNodeAllocationHttpRequest(bool Available);
 public sealed record DeleteServerHttpResponse(Guid Id, bool Deleted, bool Archived, int LinkedSubscriptions, int LinkedAccesses, int LinkedProvisioningRuns);
+public sealed record NodeHealthCheckDto(Guid Id, Guid NodeId, string Status, DateTimeOffset CheckedAt, long LatencyMs, string MetadataJson, string ErrorText);
 
 [ApiController]
 [Authorize(Policy = AdminPolicies.AdminRead)]
@@ -70,6 +72,7 @@ public class AdminOperationsController : ControllerBase
     private readonly VpnAccessLifecycleService? _vpnAccessLifecycleService;
     private readonly ISecretProtector? _secretProtector;
     private readonly IQrCodeGenerator? _qrCodeGenerator;
+    private readonly IVpnProviderFactory? _vpnProviderFactory;
 
     public AdminOperationsController(
         IApplicationDbContext db,
@@ -78,7 +81,8 @@ public class AdminOperationsController : ControllerBase
         PaymentProviderAccountService paymentProviderAccounts,
         VpnAccessLifecycleService? vpnAccessLifecycleService = null,
         ISecretProtector? secretProtector = null,
-        IQrCodeGenerator? qrCodeGenerator = null)
+        IQrCodeGenerator? qrCodeGenerator = null,
+        IVpnProviderFactory? vpnProviderFactory = null)
     {
         _db = db;
         _provisioningService = provisioningService;
@@ -87,6 +91,7 @@ public class AdminOperationsController : ControllerBase
         _vpnAccessLifecycleService = vpnAccessLifecycleService;
         _secretProtector = secretProtector;
         _qrCodeGenerator = qrCodeGenerator;
+        _vpnProviderFactory = vpnProviderFactory;
     }
 
     [HttpGet("subscriptions")]
@@ -671,8 +676,15 @@ public class AdminOperationsController : ControllerBase
             .ThenBy(x => x.Name)
             .Take(300)
             .ToListAsync(cancellationToken);
+        var nodeIds = nodes.Select(x => x.Id).ToList();
+        var latestChecks = await _db.NodeHealthChecks.AsNoTracking()
+            .Where(x => nodeIds.Contains(x.NodeId))
+            .ToListAsync(cancellationToken);
+        var latestByNode = latestChecks
+            .GroupBy(x => x.NodeId)
+            .ToDictionary(x => x.Key, x => x.OrderByDescending(check => check.CheckedAt).First());
 
-        return Ok(nodes.Select(MapVpnNode).ToList());
+        return Ok(nodes.Select(node => MapVpnNode(node, latestByNode.GetValueOrDefault(node.Id))).ToList());
     }
 
     [HttpPost("servers")]
@@ -948,6 +960,99 @@ public class AdminOperationsController : ControllerBase
         AddAuditLog("server.delete", "VpnNode", id, before, "{}");
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new DeleteServerHttpResponse(id, Deleted: true, Archived: false, linkedSubscriptions, linkedAccesses, linkedRuns));
+    }
+
+    [HttpPost("servers/{id:guid}/health-check")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> CheckServerHealth(Guid id, CancellationToken cancellationToken)
+    {
+        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (node is null)
+        {
+            return NotFound(new { error = "Server not found." });
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        var status = HealthStatus.Unknown;
+        var errorText = string.Empty;
+        var reason = "Проверка выполнена.";
+
+        if (node.Status is NodeStatus.Archived or NodeStatus.Disabled)
+        {
+            status = HealthStatus.Unhealthy;
+            reason = node.Status == NodeStatus.Archived ? "Сервер архивирован." : "Сервер отключен.";
+            errorText = reason;
+        }
+        else if (node.Status is NodeStatus.Maintenance or NodeStatus.Draining)
+        {
+            status = HealthStatus.Degraded;
+            reason = node.Status == NodeStatus.Maintenance ? "Сервер в обслуживании." : "Набор новых пользователей закрыт.";
+            errorText = reason;
+        }
+        else
+        {
+            try
+            {
+                var providerName = string.IsNullOrWhiteSpace(node.Provider) ? "x3ui" : node.Provider.Trim();
+                if (_vpnProviderFactory is null)
+                {
+                    throw new InvalidOperationException("VPN provider factory is not configured.");
+                }
+
+                status = await _vpnProviderFactory.Get(providerName).GetNodeHealthAsync(node, cancellationToken);
+                reason = status == HealthStatus.Healthy ? "VPN-сервер отвечает." : "VPN-сервер не прошел проверку провайдера.";
+                errorText = status == HealthStatus.Healthy ? string.Empty : reason;
+            }
+            catch (Exception ex)
+            {
+                status = HealthStatus.Unhealthy;
+                reason = "Проверка VPN-сервера завершилась ошибкой.";
+                errorText = $"Проверка провайдера завершилась ошибкой: {ex.GetType().Name}.";
+            }
+        }
+
+        stopwatch.Stop();
+        var check = new NodeHealthCheck
+        {
+            NodeId = node.Id,
+            CheckedAt = DateTimeOffset.UtcNow,
+            Status = status,
+            LatencyMs = Math.Max(0, stopwatch.ElapsedMilliseconds),
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                node.Name,
+                node.Host,
+                node.Provider,
+                NodeStatus = node.Status.ToString(),
+                Reason = reason
+            }, JsonOptions),
+            ErrorText = errorText
+        };
+
+        _db.NodeHealthChecks.Add(check);
+        var before = JsonSerializer.Serialize(new { node.HealthStatus, node.LastHealthCheckAt }, JsonOptions);
+        node.HealthStatus = status;
+        node.LastHealthCheckAt = check.CheckedAt;
+        node.UpdatedAt = DateTimeOffset.UtcNow;
+        AddAuditLog("server.health-check", "VpnNode", node.Id, before, JsonSerializer.Serialize(new { node.HealthStatus, node.LastHealthCheckAt, check.ErrorText }, JsonOptions));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(MapNodeHealthCheck(check));
+    }
+
+    [HttpGet("servers/{id:guid}/health-checks")]
+    [Authorize(Policy = AdminPolicies.AdminRead)]
+    public async Task<IActionResult> GetServerHealthChecks(Guid id, CancellationToken cancellationToken)
+    {
+        var exists = await _db.VpnNodes.AsNoTracking().AnyAsync(x => x.Id == id, cancellationToken);
+        if (!exists)
+        {
+            return NotFound(new { error = "Server not found." });
+        }
+
+        var checks = await _db.NodeHealthChecks.AsNoTracking()
+            .Where(x => x.NodeId == id)
+            .ToListAsync(cancellationToken);
+        return Ok(checks.OrderByDescending(x => x.CheckedAt).Take(20).Select(MapNodeHealthCheck).ToList());
     }
 
     [HttpGet("provisioning-runs")]
@@ -1489,7 +1594,17 @@ public class AdminOperationsController : ControllerBase
         return string.Join(',', userTags.Concat(systemTags.Select(tag => $"{tag.Key}:{tag.Value}")));
     }
 
-    private static object MapVpnNode(VpnNode node)
+    private static NodeHealthCheckDto MapNodeHealthCheck(NodeHealthCheck check)
+        => new(
+            check.Id,
+            check.NodeId,
+            check.Status.ToString(),
+            check.CheckedAt,
+            check.LatencyMs,
+            check.MetadataJson,
+            RedactSensitiveText(check.ErrorText, 1000));
+
+    private static object MapVpnNode(VpnNode node, NodeHealthCheck? latestHealthCheck = null)
         => new
         {
             node.Id,
@@ -1506,6 +1621,9 @@ public class AdminOperationsController : ControllerBase
             node.SupportedProtocolsCsv,
             HealthStatus = node.HealthStatus.ToString(),
             node.LastHealthCheckAt,
+            LastHealthLatencyMs = latestHealthCheck?.LatencyMs,
+            LastHealthError = latestHealthCheck is null ? string.Empty : RedactSensitiveText(latestHealthCheck.ErrorText, 1000),
+            LastHealthMetadataJson = latestHealthCheck?.MetadataJson ?? string.Empty,
             ProvisioningStatus = node.ProvisioningStatus.ToString(),
             node.InstalledVersion,
             node.BackupStatus,

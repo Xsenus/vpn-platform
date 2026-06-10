@@ -436,6 +436,9 @@ export type VpnNodeDto = {
   supportedProtocolsCsv: string
   healthStatus: string
   lastHealthCheckAt?: string | null
+  lastHealthLatencyMs?: number | null
+  lastHealthError?: string | null
+  lastHealthMetadataJson?: string | null
   provisioningStatus?: string
   installedVersion: string
   backupStatus: string
@@ -480,6 +483,16 @@ export type ProvisioningRunDto = {
   executionLog: string
   executionLogPreview?: string | null
   createdAt: string
+}
+
+export type NodeHealthCheckDto = {
+  id: string
+  nodeId: string
+  status: string
+  checkedAt: string
+  latencyMs: number
+  metadataJson: string
+  errorText: string
 }
 
 
@@ -1690,6 +1703,19 @@ export class ApiClient {
 
   disableAdminServer(token: string, serverId: string): Promise<VpnNodeDto> {
     return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to disable server' })
+  }
+
+  checkAdminServerHealth(token: string, serverId: string): Promise<NodeHealthCheckDto> {
+    return this.request<NodeHealthCheckDto>(`/api/admin/servers/${serverId}/health-check`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to check server health'
+    })
+  }
+
+  getAdminServerHealthChecks(token: string, serverId: string): Promise<NodeHealthCheckDto[]> {
+    return this.request<NodeHealthCheckDto[]>(`/api/admin/servers/${serverId}/health-checks`, { token, errorMessage: 'Failed to load server health checks' })
   }
 
   enableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
