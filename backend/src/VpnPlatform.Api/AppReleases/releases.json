@@ -876,5 +876,28 @@
         "text": "Пустые дополнительные параметры при редактировании сохраняют текущие значения, как и write-only секреты."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-10-payment-provider-connection-check",
+    "version": "0.40.0",
+    "releasedAt": "2026-06-10T20:25:28+07:00",
+    "title": "Проверка платежных провайдеров стала диагностической",
+    "summary": "Кнопка проверки в админке теперь показывает понятный результат подключения, список заполненных полей, блокеры и подсказки по конкретному провайдеру.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "В разделе «Платежи» результат проверки отображается отдельным блоком со статусом, временем проверки и подробными пунктами диагностики."
+      },
+      {
+        "type": "fixed",
+        "text": "CloudPayments больше не требует API base URL, если настроен hostedCheckoutUrl для merchant-hosted checkout страницы."
+      },
+      {
+        "type": "new",
+        "text": "Backend проверяет обязательные поля, URL, ExtraSettingsJson, IP allow-list и особенности YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe, PayPal и Telegram Stars."
+      }
+    ]
   }
 ]

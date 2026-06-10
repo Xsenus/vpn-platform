@@ -188,6 +188,47 @@
   margin: 0;
 }
 
+.provider-check-result {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.provider-check-result-ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.provider-check-result-problem {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.provider-check-result-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.provider-check-result-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.provider-check-result-list li {
+  overflow-wrap: anywhere;
+}
+
 .release-item-editor {
   display: grid;
   grid-template-columns: 130px 96px minmax(0, 1fr) auto;

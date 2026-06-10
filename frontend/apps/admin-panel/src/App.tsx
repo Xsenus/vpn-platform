@@ -688,6 +688,10 @@ function requiredFieldSummary(account: PaymentProviderAccountDto) {
   return account.requiredFields?.filter((item) => item.required) ?? []
 }
 
+function providerCheckResultClass(result: PaymentProviderAccountCheckResultDto) {
+  return result.isReady ? 'provider-check-result provider-check-result-ok' : 'provider-check-result provider-check-result-problem'
+}
+
 async function copyToClipboard(text: string, setNotice: (value: string) => void) {
   await navigator.clipboard?.writeText(text)
   setNotice('Скопировано в буфер обмена.')
@@ -2059,7 +2063,18 @@ export function App() {
                     {unsupportedCapabilities(account).length > 0 && <div className="muted">Не поддерживается сейчас: {unsupportedCapabilities(account).join(', ')}</div>}
                     {requiredFieldSummary(account).length > 0 && <div className="muted">Обязательные поля: {requiredFieldSummary(account).map((field) => `${field.label}: ${field.configured ? 'заполнено' : 'не заполнено'}`).join(' · ')}</div>}
                     {account.readinessBlockers && account.readinessBlockers.length > 0 && <div className="safe-note">Блокеры: {account.readinessBlockers.join(' · ')}</div>}
-                    {providerCheckResults[account.id] && <div className="muted">Последняя проверка: {providerCheckResults[account.id].healthStatus} · {providerCheckResults[account.id].details.join(' · ')}</div>}
+                    {providerCheckResults[account.id] && (
+                      <div className={providerCheckResultClass(providerCheckResults[account.id])} role="status" aria-live="polite">
+                        <div className="provider-check-result-head">
+                          <strong>{providerCheckResults[account.id].isReady ? 'Подключение готово' : 'Нужно исправить настройки'}</strong>
+                          <StatusBadge value={providerCheckResults[account.id].healthStatus} />
+                        </div>
+                        <div className="muted">{providerCheckResults[account.id].message} · проверено {formatDate(providerCheckResults[account.id].checkedAt)}</div>
+                        <ul className="provider-check-result-list">
+                          {providerCheckResults[account.id].details.map((detail, index) => <li key={`${account.id}-check-${index}`}>{detail}</li>)}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                   <div className="status-stack">
                     <StatusBadge value={account.isEnabled ? 'Enabled' : 'Disabled'} />

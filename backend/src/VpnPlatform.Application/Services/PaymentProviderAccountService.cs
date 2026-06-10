@@ -158,36 +158,67 @@ public class PaymentProviderAccountService
         }
 
         var details = new List<string>();
+        var blockingIssues = new List<string>();
         var readinessIssue = PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account);
         if (readinessIssue is null)
         {
-            details.Add("Checkout configuration is ready.");
+            details.Add("Готово: базовая конфигурация checkout заполнена.");
         }
         else
         {
-            details.Add(readinessIssue);
+            details.Add($"Проблема: {readinessIssue}");
+            blockingIssues.Add(readinessIssue);
         }
 
-        AddUrlCheck(details, account.ApiBaseUrl, "API base URL", required: account.Provider != PaymentProvider.TelegramStars);
-        AddUrlCheck(details, account.ReturnUrl, "Return URL", required: false);
-        AddUrlCheck(details, account.WebhookUrl, "Webhook URL", required: false);
+        var requiredFields = BuildRequiredFields(account);
+        foreach (var field in requiredFields.Where(x => x.Required))
+        {
+            if (field.Configured)
+            {
+                details.Add($"Заполнено: {field.Label}.");
+                continue;
+            }
+
+            var issue = string.IsNullOrWhiteSpace(field.Issue)
+                ? $"Поле {field.Label} обязательно для этого провайдера."
+                : field.Issue;
+            details.Add($"Не заполнено: {field.Label}. {issue}");
+            blockingIssues.Add(issue);
+        }
+
+        AddUrlCheck(
+            details,
+            blockingIssues,
+            account.ApiBaseUrl,
+            "API base URL",
+            required: requiredFields.Any(x => x.Key == "apiBaseUrl" && x.Required));
+        AddUrlCheck(details, blockingIssues, account.ReturnUrl, "Return URL", required: false);
+        AddUrlCheck(details, blockingIssues, account.WebhookUrl, "Webhook URL", required: false);
+
+        var hostedCheckoutUrl = PaymentProviderConfigurationRules.ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl");
+        if (account.Provider == PaymentProvider.CloudPayments)
+        {
+            AddUrlCheck(details, blockingIssues, hostedCheckoutUrl ?? string.Empty, "CloudPayments hosted checkout URL", required: false);
+        }
 
         if (account.UseWebhookIpAllowList && string.IsNullOrWhiteSpace(account.AllowedWebhookIpRangesCsv))
         {
-            details.Add("Webhook IP allow list is enabled, but allowed IP ranges are empty.");
+            const string issue = "Webhook IP allow list включен, но список разрешенных IP пуст.";
+            details.Add(issue);
+            blockingIssues.Add(issue);
         }
 
         var extraSettingsIssue = ValidateExtraSettingsJson(string.IsNullOrWhiteSpace(account.ExtraSettingsJson) ? "{}" : account.ExtraSettingsJson);
         if (extraSettingsIssue is not null)
         {
-            details.Add(extraSettingsIssue);
+            details.Add($"ExtraSettingsJson: {extraSettingsIssue}");
+            blockingIssues.Add(extraSettingsIssue);
         }
 
-        var hasBlockingIssue = readinessIssue is not null
-            || details.Any(x =>
-                x.Contains("invalid", StringComparison.OrdinalIgnoreCase)
-                || x.Contains("required", StringComparison.OrdinalIgnoreCase)
-                || x.Contains("must be", StringComparison.OrdinalIgnoreCase));
+        details.AddRange(GetProviderCheckGuidance(account.Provider));
+
+        var distinctDetails = details.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var hasBlockingIssue = blockingIssues.Distinct(StringComparer.OrdinalIgnoreCase).Any();
 
         account.LastHealthCheckAt = _clock.UtcNow;
         account.HealthStatus = hasBlockingIssue ? HealthStatus.Unhealthy : HealthStatus.Healthy;
@@ -201,8 +232,8 @@ public class PaymentProviderAccountService
             account.Mode,
             !hasBlockingIssue,
             account.HealthStatus.ToString(),
-            hasBlockingIssue ? "Payment provider account check failed." : "Payment provider account check passed.",
-            details,
+            hasBlockingIssue ? "Проверка подключения нашла проблемы." : "Проверка подключения прошла.",
+            distinctDetails,
             account.LastHealthCheckAt.Value,
             dto));
     }
@@ -345,13 +376,15 @@ public class PaymentProviderAccountService
 
     private static string Normalize(string? value) => value?.Trim() ?? string.Empty;
 
-    private static void AddUrlCheck(List<string> details, string value, string fieldName, bool required)
+    private static void AddUrlCheck(List<string> details, List<string> blockingIssues, string value, string fieldName, bool required)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             if (required)
             {
-                details.Add($"{fieldName} is required.");
+                var issue = $"{fieldName} обязателен для этого провайдера.";
+                details.Add(issue);
+                blockingIssues.Add(issue);
             }
 
             return;
@@ -359,8 +392,57 @@ public class PaymentProviderAccountService
 
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            details.Add($"{fieldName} is invalid. Use an absolute http/https URL.");
+            var issue = $"{fieldName} указан неверно. Используйте абсолютный http/https URL.";
+            details.Add(issue);
+            blockingIssues.Add(issue);
+            return;
         }
+
+        details.Add($"URL корректен: {fieldName}.");
+    }
+
+    private static IReadOnlyCollection<string> GetProviderCheckGuidance(PaymentProvider provider)
+    {
+        return provider switch
+        {
+            PaymentProvider.YooKassa => new[]
+            {
+                "YooKassa: для sandbox достаточно ShopId и API URL; в production проверьте secret key и webhook в кабинете YooKassa."
+            },
+            PaymentProvider.RoboKassa => new[]
+            {
+                "RoboKassa: проверьте MerchantLogin, Password #1 для создания платежа, Password #2 для уведомлений и ResultURL."
+            },
+            PaymentProvider.YooMoney => new[]
+            {
+                "YooMoney: проверьте receiver/shopId, notification secret для production и URL уведомлений."
+            },
+            PaymentProvider.CloudPayments => new[]
+            {
+                "CloudPayments: публичный сценарий использует merchant-hosted widget page из ExtraSettingsJson.hostedCheckoutUrl."
+            },
+            PaymentProvider.TBankAcquiring => new[]
+            {
+                "TBank: проверьте TerminalKey, password/API token и рабочий API URL терминала."
+            },
+            PaymentProvider.Prodamus => new[]
+            {
+                "Prodamus: проверьте payform URL, secret key подписи и webhook URL для уведомлений."
+            },
+            PaymentProvider.Stripe => new[]
+            {
+                "Stripe: проверьте publishable/secret данные, webhook endpoint secret для production и события checkout.session.completed."
+            },
+            PaymentProvider.PayPal => new[]
+            {
+                "PayPal: проверьте client id, client secret, webhook id и соответствие sandbox/production окружения."
+            },
+            PaymentProvider.TelegramStars => new[]
+            {
+                "Telegram Stars: web checkout скрыт; оплата должна идти через Telegram invoice flow внутри бота."
+            },
+            _ => Array.Empty<string>()
+        };
     }
 
     private static string? ValidateExtraSettingsJson(string extraSettingsJson)

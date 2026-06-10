@@ -297,14 +297,96 @@ public class AdminAutomationMvpTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
-        Assert.True(check.IsReady);
+        Assert.True(check.IsReady, string.Join(Environment.NewLine, check.Details));
         Assert.Equal("Healthy", check.HealthStatus);
-        Assert.Contains(check.Details, x => x.Contains("ready", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("Проверка подключения прошла.", check.Message);
+        Assert.Contains(check.Details, x => x.Contains("Готово", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(check.Details, x => x.Contains("YooKassa", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("https://api.example.test/webhooks/payments", check.Account.WebhookUrl);
 
         var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
         Assert.Equal(HealthStatus.Healthy, saved.HealthStatus);
         Assert.NotNull(saved.LastHealthCheckAt);
+    }
+
+    [Fact]
+    public async Task Provider_Account_Check_Should_Return_Clear_Readiness_For_All_Web_Providers()
+    {
+        await using var db = CreateDbContext();
+        var accounts = new[]
+        {
+            PaymentAccount(PaymentProvider.YooMoney, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "410011111111111", secret: "protected-secret"),
+            PaymentAccount(PaymentProvider.YooKassa, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "shop-ok", secret: "protected-secret"),
+            PaymentAccount(PaymentProvider.RoboKassa, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "demo-merchant", secret: "protected-secret"),
+            PaymentAccount(PaymentProvider.CloudPayments, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "public-id", secret: "protected-secret", extraSettingsJson: "{\"hostedCheckoutUrl\":\"https://pay.example.test/cloudpayments\"}"),
+            PaymentAccount(PaymentProvider.TBankAcquiring, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "terminal-key", secret: "protected-secret"),
+            PaymentAccount(PaymentProvider.Prodamus, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "payform", secret: "protected-secret"),
+            PaymentAccount(PaymentProvider.Stripe, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "pk_test_demo", secret: "protected-secret"),
+            PaymentAccount(PaymentProvider.PayPal, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "client-id", secret: "protected-secret")
+        };
+
+        accounts.Single(x => x.Provider == PaymentProvider.CloudPayments).ApiBaseUrl = string.Empty;
+        db.PaymentProviderAccounts.AddRange(accounts);
+        await db.SaveChangesAsync();
+
+        var controller = CreateOperationsController(db);
+        foreach (var account in accounts)
+        {
+            var result = await controller.CheckPaymentProviderAccount(account.Id, CancellationToken.None);
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
+
+            Assert.True(check.IsReady, $"{account.Provider}: {string.Join(Environment.NewLine, check.Details)}");
+            Assert.Equal("Healthy", check.HealthStatus);
+            Assert.Contains(check.Details, x => x.Contains("Готово", StringComparison.OrdinalIgnoreCase));
+            var providerLabel = account.Provider == PaymentProvider.TBankAcquiring ? "TBank" : account.Provider.ToString();
+            Assert.Contains(check.Details, x => x.Contains(providerLabel, StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(check.Details, x => x.Contains("обязателен", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    [Fact]
+    public async Task Provider_Account_Check_Should_Report_CloudPayments_Hosted_Checkout_Problem()
+    {
+        await using var db = CreateDbContext();
+        var account = PaymentAccount(PaymentProvider.CloudPayments, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "public-id", secret: "protected-secret");
+        account.ApiBaseUrl = string.Empty;
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        var controller = CreateOperationsController(db);
+        var result = await controller.CheckPaymentProviderAccount(account.Id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
+        Assert.False(check.IsReady);
+        Assert.Equal("Unhealthy", check.HealthStatus);
+        Assert.Equal("Проверка подключения нашла проблемы.", check.Message);
+        Assert.Contains(check.Details, x => x.Contains("hostedCheckoutUrl", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(check.Details, x => x.Contains("CloudPayments", StringComparison.OrdinalIgnoreCase));
+
+        var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
+        Assert.Equal(HealthStatus.Unhealthy, saved.HealthStatus);
+    }
+
+    [Fact]
+    public async Task Provider_Account_Check_Should_Show_TelegramStars_As_Bot_Only()
+    {
+        await using var db = CreateDbContext();
+        var account = PaymentAccount(PaymentProvider.TelegramStars, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "vpnplatform_bot", secret: "protected-secret");
+        account.ApiBaseUrl = string.Empty;
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        var controller = CreateOperationsController(db);
+        var result = await controller.CheckPaymentProviderAccount(account.Id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
+        Assert.False(check.IsReady);
+        Assert.Equal("Unhealthy", check.HealthStatus);
+        Assert.Contains(check.Details, x => x.Contains("Telegram invoice flow", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(check.Details, x => x.Contains("web checkout скрыт", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -504,6 +586,7 @@ public class AdminAutomationMvpTests
             WebhookUrl = "https://api.example.test/webhooks/payments",
             SecretKeyProtected = secret,
             WebhookSecretProtected = secret,
+            UseWebhookIpAllowList = false,
             ExtraSettingsJson = extraSettingsJson
         };
 

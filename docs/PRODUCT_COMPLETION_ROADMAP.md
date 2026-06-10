@@ -294,9 +294,10 @@ git diff --check
   - Что сделано: общие поля получили провайдерские названия и подсказки, ручное поле `Extra settings JSON` заменено блоком дополнительных параметров провайдера; CloudPayments настраивает `hostedCheckoutUrl`, RoboKassa - `hashAlgorithm`, Telegram Stars - служебный статус invoice-сценария.
   - Доказательство: frontend source contract test на `provider-extra-settings`, `Hosted checkout URL`, `Алгоритм подписи` и отсутствие `Extra settings JSON`; SQLite smoke сохранения provider-specific настроек; browser smoke формы платежей.
 
-- [ ] `P2-ADM-PAY-002` Проверка подключения.
+- [x] `P2-ADM-PAY-002` Проверка подключения. 2026-06-10.
   - Что сделать: кнопка "Проверить подключение" должна возвращать понятный результат и список проблем.
-  - Доказательство: backend tests для readiness каждого провайдера.
+  - Что сделано: backend проверяет обязательные поля, URL, IP allow-list, ExtraSettingsJson и провайдерские особенности; админка показывает результат отдельным блоком со статусом, временем проверки и списком диагностических пунктов.
+  - Доказательство: `AdminAutomationMvpTests.Provider_Account_Check_Should_Return_Clear_Readiness_For_All_Web_Providers`, `Provider_Account_Check_Should_Report_CloudPayments_Hosted_Checkout_Problem`, `Provider_Account_Check_Should_Show_TelegramStars_As_Bot_Only`, frontend source contract test, локальный SQLite smoke.
 
 - [ ] `P2-ADM-PAY-003` Секреты write-only.
   - Что сделать: убедиться, что API никогда не возвращает secret/webhook secret/private credentials.
