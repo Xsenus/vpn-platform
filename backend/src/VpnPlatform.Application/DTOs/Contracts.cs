@@ -409,7 +409,8 @@ public sealed record CreateVpnInboundCommand(
     string StreamSettingsJson,
     string SniffingJson,
     bool IsDefault,
-    int Capacity);
+    int Capacity,
+    bool IsActive = true);
 
 public sealed record VpnClientDto(
     Guid Id,

@@ -259,6 +259,92 @@ public class X3UiIntegrationTests
         Assert.Contains("disabled", panel.LastError, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("shadowsocks", "{\"network\":\"tcp\",\"security\":\"tls\"}", true, 443, "protocol")]
+    [InlineData("vless", "{}", true, 443, "network")]
+    [InlineData("vless", "{\"network\":\"tcp\",\"security\":\"tls\"}", false, 0, "port")]
+    [InlineData("vless", "{\"network\":\"tcp\",\"security\":\"tls\"}", false, 443, "default")]
+    public async Task Inbound_Create_Should_Validate_Protocol_Stream_Active_Default_And_Port(string protocol, string streamSettingsJson, bool isActive, int port, string expectedError)
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "panel",
+            BaseUrl = "https://panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        });
+        await db.SaveChangesAsync();
+
+        var result = await service.CreateInboundAsync(panelId, NewInboundCommand(
+            protocol: protocol,
+            port: port,
+            streamSettingsJson: streamSettingsJson,
+            isDefault: !isActive,
+            isActive: isActive), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(expectedError, result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(await db.VpnInbounds.AnyAsync());
+    }
+
+    [Fact]
+    public async Task Inbound_Management_Should_Create_Edit_Toggle_And_Protect_Inactive_Default()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var client = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, client, new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "panel",
+            BaseUrl = "https://panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        });
+        await db.SaveChangesAsync();
+
+        var first = await service.CreateInboundAsync(panelId, NewInboundCommand(name: "main-vless", isDefault: true), CancellationToken.None);
+        var second = await service.CreateInboundAsync(panelId, NewInboundCommand(name: "backup-vmess", protocol: "VMESS", port: 8443, isDefault: true), CancellationToken.None);
+
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal(2, client.CreateInboundCalls);
+        Assert.False((await db.VpnInbounds.SingleAsync(x => x.Id == first.Value!.Id)).IsDefault);
+        var secondInbound = await db.VpnInbounds.SingleAsync(x => x.Id == second.Value!.Id);
+        Assert.True(secondInbound.IsDefault);
+        Assert.Equal("vmess", secondInbound.Protocol);
+
+        var disabled = await service.PatchInboundAsync(secondInbound.Id, NewInboundCommand(
+            name: "backup-disabled",
+            protocol: "vmess",
+            port: 8443,
+            isDefault: false,
+            isActive: false), CancellationToken.None);
+
+        Assert.True(disabled.IsSuccess, disabled.Error);
+        Assert.False(disabled.Value!.IsActive);
+        Assert.False(disabled.Value.IsDefault);
+        Assert.False((await db.VpnInbounds.SingleAsync(x => x.Id == secondInbound.Id)).IsDefault);
+
+        var defaultResult = await service.SetDefaultInboundAsync(secondInbound.Id, CancellationToken.None);
+
+        Assert.False(defaultResult.IsSuccess);
+        Assert.Contains("Inactive", defaultResult.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task Real_Vpn_Provider_Should_Auto_Create_Inbound_And_Client()
     {
@@ -449,6 +535,18 @@ public class X3UiIntegrationTests
             ["Vpn:X3Ui:SandboxPublicPort"] = "443"
         }).Build();
 
+    private static CreateVpnInboundCommand NewInboundCommand(
+        string name = "default-vless",
+        string protocol = "vless",
+        int port = 443,
+        string settingsJson = "{\"clients\":[]}",
+        string streamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}",
+        string sniffingJson = "{}",
+        bool isDefault = true,
+        int capacity = 100,
+        bool isActive = true)
+        => new(name, protocol, port, string.Empty, settingsJson, streamSettingsJson, sniffingJson, isDefault, capacity, isActive);
+
     private static async Task<(Guid PanelId, Guid InboundId, Guid ClientId, Guid SubscriptionId, Guid UserId, Guid TariffId)> SeedPanelWithLocalClientAsync(ApplicationDbContext db, DateTimeOffset now)
     {
         var panelId = Guid.NewGuid();
@@ -496,7 +594,7 @@ public class X3UiIntegrationTests
         public Task<X3UiInboundDto> CreateInboundAsync(VpnPanel panel, string password, X3UiCreateInboundRequest request, CancellationToken cancellationToken)
         {
             CreateInboundCalls += 1;
-            return Task.FromResult(new X3UiInboundDto("1", request.Remark, request.Protocol, request.Port, request.Listen, request.SettingsJson, request.StreamSettingsJson, request.SniffingJson, true));
+            return Task.FromResult(new X3UiInboundDto("1", request.Remark, request.Protocol, request.Port, request.Listen, request.SettingsJson, request.StreamSettingsJson, request.SniffingJson, request.Enable));
         }
 
         public Task<X3UiInboundDto> UpdateInboundAsync(VpnPanel panel, string password, X3UiUpdateInboundRequest request, CancellationToken cancellationToken)

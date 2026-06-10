@@ -326,6 +326,12 @@ public class X3UiPanelService
 
     public async Task<Result<VpnInboundDto>> CreateInboundAsync(Guid panelId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
     {
+        var validationError = ValidateInboundCommand(command);
+        if (validationError is not null)
+        {
+            return Result<VpnInboundDto>.Failure(validationError);
+        }
+
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == panelId, cancellationToken);
         if (panel is null)
         {
@@ -336,7 +342,7 @@ public class X3UiPanelService
         if (IsSandboxMode())
         {
             var nextNumber = await _db.VpnInbounds.CountAsync(x => x.VpnPanelId == panel.Id, cancellationToken) + 1;
-            remote = new X3UiInboundDto($"sandbox-inbound-{nextNumber}", command.Name, command.Protocol, command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, true);
+            remote = new X3UiInboundDto($"sandbox-inbound-{nextNumber}", command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive);
         }
         else
         {
@@ -345,7 +351,7 @@ public class X3UiPanelService
                 return Result<VpnInboundDto>.Failure("Panel not configured: base URL, login and password are required.");
             }
             var password = _secretProtector.Unprotect(panel.EncryptedPassword);
-            remote = await _client.CreateInboundAsync(panel, password, new X3UiCreateInboundRequest(command.Name, command.Protocol, command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, true), cancellationToken);
+            remote = await _client.CreateInboundAsync(panel, password, new X3UiCreateInboundRequest(command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive), cancellationToken);
         }
 
         var inbound = new VpnInbound
@@ -381,6 +387,12 @@ public class X3UiPanelService
 
     public async Task<Result<VpnInboundDto>> PatchInboundAsync(Guid inboundId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
     {
+        var validationError = ValidateInboundCommand(command);
+        if (validationError is not null)
+        {
+            return Result<VpnInboundDto>.Failure(validationError);
+        }
+
         var inbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == inboundId, cancellationToken);
         if (inbound?.VpnPanel is null)
         {
@@ -390,7 +402,7 @@ public class X3UiPanelService
         X3UiInboundDto remote;
         if (IsSandboxMode())
         {
-            remote = new X3UiInboundDto(inbound.ExternalInboundId, command.Name, command.Protocol, command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, true);
+            remote = new X3UiInboundDto(inbound.ExternalInboundId, command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive);
         }
         else
         {
@@ -399,7 +411,7 @@ public class X3UiPanelService
                 return Result<VpnInboundDto>.Failure("Panel not configured: base URL, login and password are required.");
             }
             var password = _secretProtector.Unprotect(inbound.VpnPanel.EncryptedPassword);
-            remote = await _client.UpdateInboundAsync(inbound.VpnPanel, password, new X3UiUpdateInboundRequest(inbound.ExternalInboundId, command.Name, command.Protocol, command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, true), cancellationToken);
+            remote = await _client.UpdateInboundAsync(inbound.VpnPanel, password, new X3UiUpdateInboundRequest(inbound.ExternalInboundId, command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive), cancellationToken);
         }
 
         inbound.Name = remote.Remark;
@@ -410,8 +422,19 @@ public class X3UiPanelService
         inbound.StreamSettingsJson = remote.StreamSettingsJson;
         inbound.SniffingJson = remote.SniffingJson;
         inbound.IsActive = remote.Enable;
+        inbound.IsDefault = command.IsDefault && inbound.IsActive;
         inbound.Capacity = command.Capacity > 0 ? command.Capacity : inbound.Capacity;
         inbound.UpdatedAt = _clock.UtcNow;
+        if (inbound.IsDefault)
+        {
+            var defaults = await _db.VpnInbounds.Where(x => x.VpnPanelId == inbound.VpnPanelId && x.Id != inbound.Id && x.IsDefault).ToListAsync(cancellationToken);
+            foreach (var item in defaults)
+            {
+                item.IsDefault = false;
+                item.UpdatedAt = _clock.UtcNow;
+            }
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnInboundDto>.Success(MapInbound(inbound));
     }
@@ -423,6 +446,10 @@ public class X3UiPanelService
         {
             return Result<VpnInboundDto>.Failure("VPN inbound not found.");
         }
+        if (!inbound.IsActive)
+        {
+            return Result<VpnInboundDto>.Failure("Inactive inbound cannot be default.");
+        }
 
         var all = await _db.VpnInbounds.Where(x => x.VpnPanelId == inbound.VpnPanelId).ToListAsync(cancellationToken);
         foreach (var item in all)
@@ -433,6 +460,69 @@ public class X3UiPanelService
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnInboundDto>.Success(MapInbound(inbound));
     }
+
+    private static string? ValidateInboundCommand(CreateVpnInboundCommand command)
+    {
+        if (string.IsNullOrWhiteSpace(command.Name))
+        {
+            return "Inbound name is required.";
+        }
+        if (!IsSupportedInboundProtocol(command.Protocol))
+        {
+            return "Inbound protocol must be vless, vmess or trojan.";
+        }
+        if (command.Port is < 1 or > 65535)
+        {
+            return "Inbound port must be between 1 and 65535.";
+        }
+        if (command.Capacity < 1)
+        {
+            return "Inbound capacity must be greater than zero.";
+        }
+        if (command.IsDefault && !command.IsActive)
+        {
+            return "Inactive inbound cannot be default.";
+        }
+
+        var settingsError = ValidateJsonObject(command.SettingsJson, "settingsJson");
+        if (settingsError is not null) return settingsError;
+        var streamError = ValidateJsonObject(command.StreamSettingsJson, "streamSettingsJson");
+        if (streamError is not null) return streamError;
+        var sniffingError = ValidateJsonObject(command.SniffingJson, "sniffingJson");
+        if (sniffingError is not null) return sniffingError;
+
+        using var streamSettings = JsonDocument.Parse(command.StreamSettingsJson);
+        if (!streamSettings.RootElement.TryGetProperty("network", out var network) || network.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(network.GetString()))
+        {
+            return "streamSettingsJson must contain a non-empty network value.";
+        }
+
+        return null;
+    }
+
+    private static string? ValidateJsonObject(string json, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return $"{fieldName} must be a JSON object.";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind == JsonValueKind.Object ? null : $"{fieldName} must be a JSON object.";
+        }
+        catch (JsonException)
+        {
+            return $"{fieldName} must be a valid JSON object.";
+        }
+    }
+
+    private static bool IsSupportedInboundProtocol(string protocol)
+        => NormalizeProtocol(protocol) is "vless" or "vmess" or "trojan";
+
+    private static string NormalizeProtocol(string protocol)
+        => string.IsNullOrWhiteSpace(protocol) ? string.Empty : protocol.Trim().ToLowerInvariant();
 
     public async Task<IReadOnlyCollection<VpnClientDto>> GetClientsAsync(Guid panelId, CancellationToken cancellationToken = default)
     {

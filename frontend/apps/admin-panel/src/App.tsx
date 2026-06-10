@@ -455,8 +455,23 @@ const defaultInboundForm: CreateVpnInboundPayload = {
   streamSettingsJson: '{"network":"tcp","security":"tls"}',
   sniffingJson: '{}',
   isDefault: true,
-  capacity: 5000
+  capacity: 5000,
+  isActive: true
 }
+
+const inboundToForm = (inbound: VpnInboundDto, patch: Partial<CreateVpnInboundPayload> = {}): CreateVpnInboundPayload => ({
+  name: inbound.name,
+  protocol: inbound.protocol,
+  port: inbound.port,
+  listen: inbound.listen ?? '',
+  settingsJson: inbound.settingsJson || '{"clients":[]}',
+  streamSettingsJson: inbound.streamSettingsJson || '{"network":"tcp","security":"tls"}',
+  sniffingJson: inbound.sniffingJson || '{}',
+  isDefault: inbound.isDefault,
+  capacity: inbound.capacity,
+  isActive: inbound.isActive,
+  ...patch
+})
 
 const defaultTariffForm: UpdateTariffPayload = {
   name: '',
@@ -761,6 +776,7 @@ export function App() {
   const [vpnPanelForm, setVpnPanelForm] = useState<CreateVpnPanelPayload>(defaultVpnPanelForm)
   const [editingVpnPanelId, setEditingVpnPanelId] = useState<string | null>(null)
   const [inboundForm, setInboundForm] = useState<CreateVpnInboundPayload>(defaultInboundForm)
+  const [editingInboundId, setEditingInboundId] = useState<string | null>(null)
   const [subscriptionExtendDays, setSubscriptionExtendDays] = useState<Record<string, number>>({})
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
   const activeSectionLabel = adminSections.find(([id]) => id === activeSection)?.[1] ?? 'Раздел'
@@ -907,6 +923,8 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    setEditingInboundId(null)
+    setInboundForm(defaultInboundForm)
     if (token && selectedVpnPanelId) void loadVpnPanelDetails(selectedVpnPanelId)
   }, [token, selectedVpnPanelId])
 
@@ -1664,10 +1682,14 @@ export function App() {
     await loadAll(token)
   })
 
-  const handleCreateInbound = () => runAction('create-inbound', async () => {
+  const handleSaveInbound = () => runAction(editingInboundId ? `update-inbound-${editingInboundId}` : 'create-inbound', async () => {
     if (!selectedVpnPanelId) return
-    const saved = await api.createAdminVpnPanelInbound(token, selectedVpnPanelId, inboundForm)
-    setNotice(`Inbound-правило ${saved.name} создано.`)
+    const saved = editingInboundId
+      ? await api.updateAdminVpnInbound(token, editingInboundId, inboundForm)
+      : await api.createAdminVpnPanelInbound(token, selectedVpnPanelId, inboundForm)
+    setNotice(editingInboundId ? `Inbound-правило ${saved.name} обновлено.` : `Inbound-правило ${saved.name} создано.`)
+    setEditingInboundId(null)
+    setInboundForm(defaultInboundForm)
     await loadVpnPanelDetails(selectedVpnPanelId)
   })
 
@@ -1676,6 +1698,30 @@ export function App() {
     setNotice('Основное inbound-правило обновлено.')
     await loadVpnPanelDetails(selectedVpnPanelId)
   })
+
+  const handleToggleInboundActive = (inbound: VpnInboundDto) => runAction(`toggle-inbound-${inbound.id}`, async () => {
+    const nextIsActive = !inbound.isActive
+    const saved = await api.updateAdminVpnInbound(token, inbound.id, inboundToForm(inbound, {
+      isActive: nextIsActive,
+      isDefault: nextIsActive ? inbound.isDefault : false
+    }))
+    setNotice(nextIsActive ? `Inbound-правило ${saved.name} включено.` : `Inbound-правило ${saved.name} выключено.`)
+    if (editingInboundId === inbound.id) {
+      setEditingInboundId(null)
+      setInboundForm(defaultInboundForm)
+    }
+    await loadVpnPanelDetails(selectedVpnPanelId)
+  })
+
+  const editInbound = (inbound: VpnInboundDto) => {
+    setEditingInboundId(inbound.id)
+    setInboundForm(inboundToForm(inbound))
+  }
+
+  const cancelInboundEdit = () => {
+    setEditingInboundId(null)
+    setInboundForm(defaultInboundForm)
+  }
 
   const editServer = (server: VpnNodeDto) => {
     setEditingServerId(server.id)
@@ -2325,21 +2371,30 @@ export function App() {
           <h3>Детали панели</h3>
           <label><span>Панель</span><select value={selectedVpnPanelId} onChange={(e) => setSelectedVpnPanelId(e.target.value)}><option value="">Не выбрана</option>{vpnPanels.map((panel) => <option key={panel.id} value={panel.id}>{panel.name}</option>)}</select></label>
           <h4>Inbound-правила</h4>
-          <form aria-busy={actionBusyId === 'create-inbound'} onSubmit={(event) => { event.preventDefault(); void handleCreateInbound() }}>
+          <form aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveInbound() }}>
             <fieldset className="form-section">
-              <legend>Параметры правила</legend>
+              <legend>{editingInboundId ? 'Редактирование inbound-правила' : 'Параметры нового inbound-правила'}</legend>
               <div className="form-grid">
                 <label><span>Название inbound-правила</span><input value={inboundForm.name} onChange={(e) => updateInboundForm('name', e.target.value)} placeholder="default-vless" required /></label>
-                <label><span>Протокол</span><input value={inboundForm.protocol} onChange={(e) => updateInboundForm('protocol', e.target.value)} placeholder="vless" /></label>
+                <label><span>Протокол</span><select value={inboundForm.protocol} onChange={(e) => updateInboundForm('protocol', e.target.value)}><option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option></select></label>
                 <label><span>Порт</span><input value={inboundForm.port} onChange={(e) => updateInboundForm('port', Number(e.target.value) || 0)} placeholder="443" type="number" min={1} max={65535} step="1" /></label>
+                <label><span>Listen</span><input value={inboundForm.listen} onChange={(e) => updateInboundForm('listen', e.target.value)} placeholder="0.0.0.0 или пусто" /></label>
                 <label><span>Емкость</span><input value={inboundForm.capacity} onChange={(e) => updateInboundForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
               </div>
+              <div className="form-grid mt-12">
+                <label className="checkbox-row"><input checked={inboundForm.isActive} onChange={(e) => setInboundForm((current) => ({ ...current, isActive: e.target.checked, isDefault: e.target.checked ? current.isDefault : false }))} type="checkbox" /> Активен и доступен для выдачи</label>
+                <label className="checkbox-row"><input checked={inboundForm.isDefault} disabled={!inboundForm.isActive} onChange={(e) => updateInboundForm('isDefault', e.target.checked)} type="checkbox" /> Основной inbound для панели</label>
+              </div>
+              <label className="mt-12"><span>settingsJson</span><textarea value={inboundForm.settingsJson} onChange={(e) => updateInboundForm('settingsJson', e.target.value)} rows={4} spellCheck={false} placeholder='{"clients":[]}' /></label>
+              <label><span>streamSettingsJson</span><textarea value={inboundForm.streamSettingsJson} onChange={(e) => updateInboundForm('streamSettingsJson', e.target.value)} rows={4} spellCheck={false} placeholder='{"network":"tcp","security":"tls"}' /></label>
+              <label><span>sniffingJson</span><textarea value={inboundForm.sniffingJson} onChange={(e) => updateInboundForm('sniffingJson', e.target.value)} rows={3} spellCheck={false} placeholder="{}" /></label>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!selectedVpnPanelId || actionBusyId === 'create-inbound'} aria-busy={actionBusyId === 'create-inbound'}>Создать inbound-правило</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!selectedVpnPanelId || actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`}>{editingInboundId ? 'Сохранить inbound-правило' : 'Создать inbound-правило'}</PrimaryButton>
+              {editingInboundId && <PrimaryButton type="button" className="button-ghost" onClick={cancelInboundEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
-          <div className="list-stack mt-12">{vpnInbounds.map((inbound) => <div key={inbound.id} className="list-item"><div><strong>{inbound.name}</strong><div className="muted">{inbound.protocol}:{inbound.port} · внешний ID {inbound.externalInboundId} · {inbound.usedCapacity}/{inbound.capacity}</div></div><div className="item-status"><StatusBadge value={inbound.isActive ? 'Active' : 'Inactive'} />{inbound.isDefault ? <StatusBadge value="Default" /> : <PrimaryButton disabled={actionBusyId === inbound.id} onClick={() => void handleSetDefaultInbound(inbound.id)}>Сделать основным</PrimaryButton>}</div></div>)}</div>
+          <div className="list-stack mt-12">{vpnInbounds.map((inbound) => <div key={inbound.id} className="list-item-vertical"><div className="item-head"><div><strong>{inbound.name}</strong><div className="muted">{inbound.protocol}:{inbound.port} · внешний ID {inbound.externalInboundId} · емкость {inbound.usedCapacity}/{inbound.capacity}</div><div className="muted">stream: {inbound.streamSettingsJson}</div></div><div className="item-status"><StatusBadge value={inbound.isActive ? 'Active' : 'Inactive'} />{inbound.isDefault && <StatusBadge value="Default" />}</div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editInbound(inbound)}>Редактировать</PrimaryButton>{!inbound.isDefault && inbound.isActive && <PrimaryButton disabled={actionBusyId === inbound.id} onClick={() => void handleSetDefaultInbound(inbound.id)}>Сделать основным</PrimaryButton>}{inbound.isActive ? <ConfirmButton className="button-secondary" disabled={actionBusyId === `toggle-inbound-${inbound.id}`} message={`Выключить inbound-правило "${inbound.name}"? Новые VPN-доступы не будут использовать его для выдачи.`} onConfirm={() => void handleToggleInboundActive(inbound)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === `toggle-inbound-${inbound.id}`} onClick={() => void handleToggleInboundActive(inbound)}>Включить</PrimaryButton>}</div></div>)}</div>
           <h4>Клиенты, здоровье и синхронизация</h4>
           <div className="list-stack">{vpnClients.slice(0, 5).map((client) => <div key={client.id} className="list-item"><span>{client.email} · истекает {formatDate(client.expiryTime)}</span><StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} /></div>)}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ok'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.summaryJson || run.errorMessage || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
         </Card>

@@ -616,6 +616,7 @@ export type CreateVpnInboundPayload = {
   sniffingJson: string
   isDefault: boolean
   capacity: number
+  isActive: boolean
 }
 
 export type VpnClientDto = {
