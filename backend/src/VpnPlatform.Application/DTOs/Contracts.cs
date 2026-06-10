@@ -249,6 +249,13 @@ public sealed record AdminTelegramBotSettingsDto(
     string SubscriptionExpiredTextTemplate,
     DateTimeOffset GeneratedAt);
 
+public sealed record AdminTelegramBotConnectionCheckDto(
+    bool IsReady,
+    string Status,
+    IReadOnlyCollection<string> RequiredActions,
+    IReadOnlyCollection<string> Warnings,
+    DateTimeOffset CheckedAt);
+
 public sealed record UpdateTelegramBotSettingsCommand(
     bool? Enabled,
     string? Mode,

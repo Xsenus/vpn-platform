@@ -701,6 +701,14 @@ export type AdminTelegramBotSettingsDto = {
   generatedAt: string
 }
 
+export type AdminTelegramBotConnectionCheckDto = {
+  isReady: boolean
+  status: string
+  requiredActions: string[]
+  warnings: string[]
+  checkedAt: string
+}
+
 export type UpdateTelegramBotSettingsPayload = {
   enabled?: boolean | null
   mode?: string | null
@@ -1749,6 +1757,15 @@ export class ApiClient {
 
   getAdminTelegramBotSettings(token: string): Promise<AdminTelegramBotSettingsDto> {
     return this.request<AdminTelegramBotSettingsDto>('/api/admin/telegram-bot/settings', { token, errorMessage: 'Failed to load Telegram bot settings' })
+  }
+
+  testAdminTelegramBotSettings(token: string): Promise<AdminTelegramBotConnectionCheckDto> {
+    return this.request<AdminTelegramBotConnectionCheckDto>('/api/admin/telegram-bot/settings/test', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to test Telegram bot settings'
+    })
   }
 
   updateAdminTelegramBotSettings(token: string, payload: UpdateTelegramBotSettingsPayload): Promise<AdminTelegramBotSettingsDto> {

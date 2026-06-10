@@ -222,9 +222,9 @@ git diff --check
 
 ### P1.3 Telegram-бот
 
-- [ ] `P1-TG-001` Настройка бота из админки.
-  - Что сделать: сохранить token/webhook/режим, проверить, что секрет не возвращается в API.
-  - Доказательство: API test.
+- [x] `P1-TG-001` Настройка бота из админки.
+  - Что сделано: сохранение token/webhook/режима, write-only секреты, маска token, серверная валидация username/token/URL и кнопка проверки подключения в админке.
+  - Доказательство: `AdminTelegramBotSettingsControllerTests`, `AdminAutomationMvpTests.Telegram_Bot_Settings_Should_Mask_Token_And_Update_Text_Templates`, frontend `ApiClient admin Telegram bot settings masks token at API boundary`.
 
 - [ ] `P1-TG-002` Привязка Telegram к пользователю.
   - Что сделать: link/unlink/status, ошибки повторной привязки.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Настройка Telegram-бота из админки: защищенные токены, Webhook/LongPolling, public username, WebApp URL, шаблоны и проверка готовности | Зеленое | Backend tests `247/247`, frontend tests `54/54`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Публичный сайт: главная, тарифы, FAQ, состояния loading/error/empty/ready, CTA и отсутствие console errors | Зеленое | Backend tests `245/245`, frontend tests `54/54`, local Browser smoke public-web |
 | 2026-06-10 | Codex | Кабинет без активной подписки и с активным VPN-доступом: empty state, CTA покупки, тариф, сервер, URI, QR-метаданные | Зеленое | Backend tests `244/244`, SQLite cabinet state tests, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Восстановление пароля: forgot, одноразовый reset token, новый пароль, отзыв сессий, expired/inactive user | Зеленое | Backend tests `242/242`, SQLite password reset flow, frontend tests/typecheck/build |

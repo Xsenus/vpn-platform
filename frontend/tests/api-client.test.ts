@@ -649,6 +649,13 @@ test('ApiClient admin Telegram bot settings masks token at API boundary', async 
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
+    if (String(url).endsWith('/api/admin/telegram-bot/settings/test')) {
+      return new Response(JSON.stringify({ isReady: true, status: 'ready', requiredActions: [], warnings: [], checkedAt: new Date().toISOString() }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: false, adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', instructionText: 'Instruction', supportText: 'Support', afterPaymentTextTemplate: 'After', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired', generatedAt: new Date().toISOString() }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -658,11 +665,15 @@ test('ApiClient admin Telegram bot settings masks token at API boundary', async 
   const client = new ApiClient('http://localhost:8080')
   const settings = await client.getAdminTelegramBotSettings('admin-token')
   await client.updateAdminTelegramBotSettings('admin-token', { enabled: true, mode: 'Webhook', publicBotUsername: '@managed_bot', botToken: 'new-token', webhookUrl: 'https://api.example.test/api/channels/telegram/webhook', secretToken: 'new-secret', adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired' })
+  const check = await client.testAdminTelegramBotSettings('admin-token')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/telegram-bot/settings')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/telegram-bot/settings')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/telegram-bot/settings/test')
   assert.equal(calls[1]?.init?.method, 'PATCH')
+  assert.equal(calls[2]?.init?.method, 'POST')
   assert.equal(settings.botTokenMasked, '1234***7890')
+  assert.equal(check.isReady, true)
   assert.equal(settings.webAppUrl, 'https://cabinet.example.test')
   assert.equal(settings.renewalTextTemplate, 'Renewal')
   assert.match(String(calls[1]?.init?.body), /managed_bot/)
@@ -1001,6 +1012,8 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /Bot token/)
   assert.match(adminSource, /Secret token/)
   assert.match(adminSource, /WebApp URL/)
+  assert.match(adminSource, /testAdminTelegramBotSettings/)
+  assert.match(adminSource, /botSettingsCheck/)
   assert.match(adminSource, /Шаблон продления/)
   assert.match(adminSource, /Шаблон ошибки оплаты/)
   assert.match(adminSource, /Шаблон окончания подписки/)

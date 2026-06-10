@@ -45,49 +45,35 @@ public class AdminTelegramBotSettingsController : ControllerBase
     [HttpGet("settings")]
     public async Task<IActionResult> GetSettings(CancellationToken cancellationToken)
     {
-        var templates = await _db.NotificationTemplates
-            .AsNoTracking()
-            .Where(x => x.Channel == NotificationChannelType.Telegram && x.Language == "ru")
-            .ToListAsync(cancellationToken);
+        var state = await LoadStateAsync(cancellationToken);
+        return Ok(ToDto(state));
+    }
 
-        var settings = await _db.SiteContentBlocks
-            .AsNoTracking()
-            .Where(x => x.Group == SettingsGroup)
-            .ToDictionaryAsync(x => x.Key, x => x.Value, cancellationToken);
-
-        var token = ReadProtectedSetting(settings, BotTokenProtectedKey) ?? _configuration["TelegramBot:BotToken"] ?? string.Empty;
-        var secretToken = ReadProtectedSetting(settings, SecretTokenProtectedKey) ?? _configuration["TelegramBot:SecretToken"] ?? string.Empty;
-
-        return Ok(new AdminTelegramBotSettingsDto(
-            ReadBoolSetting(settings, EnabledKey, _configuration.GetValue<bool>("TelegramBot:Enabled")),
-            NormalizeMode(ReadSetting(settings, ModeKey, _configuration["TelegramBot:Mode"] ?? "LongPolling")) ?? "LongPolling",
-            ReadSetting(settings, PublicBotUsernameKey, _configuration["TelegramBot:PublicBotUsername"] ?? string.Empty),
-            !string.IsNullOrWhiteSpace(token),
-            MaskToken(token),
-            ReadSetting(settings, WebhookUrlKey, _configuration["TelegramBot:WebhookUrl"] ?? string.Empty),
-            !string.IsNullOrWhiteSpace(secretToken),
-            ReadSetting(settings, AdminChatIdKey, _configuration["TelegramBot:AdminChatId"] ?? string.Empty),
-            ReadSetting(settings, WebAppUrlKey, _configuration["TelegramBot:WebAppUrl"] ?? string.Empty),
-            FindTemplate(templates, WelcomeKey, "Добро пожаловать! Выберите действие в меню."),
-            FindTemplate(templates, InstructionKey, "Инструкция появится после выдачи VPN-доступа."),
-            FindTemplate(templates, SupportKey, "Опишите проблему одним сообщением, оператор ответит в Telegram."),
-            FindTemplate(templates, AfterPaymentKey, "Оплата получена. Ваш VPN-доступ готов."),
-            FindTemplate(templates, RenewalKey, "Продление оформлено. После оплаты подписка будет продлена автоматически."),
-            FindTemplate(templates, PaymentFailedKey, "Оплата не прошла. Проверьте способ оплаты или попробуйте другой вариант."),
-            FindTemplate(templates, SubscriptionExpiredKey, "Срок подписки истек. Продлите тариф, чтобы восстановить VPN-доступ."),
-            DateTimeOffset.UtcNow));
+    [HttpPost("settings/test")]
+    [Authorize(Policy = AdminPolicies.BotManage)]
+    public async Task<IActionResult> TestSettings(CancellationToken cancellationToken)
+    {
+        var state = await LoadStateAsync(cancellationToken);
+        return Ok(BuildConnectionCheck(state));
     }
 
     [HttpPatch("settings")]
     [Authorize(Policy = AdminPolicies.BotManage)]
     public async Task<IActionResult> UpdateSettings([FromBody] UpdateTelegramBotSettingsCommand request, CancellationToken cancellationToken)
     {
+        var current = await LoadStateAsync(cancellationToken);
+        var validationError = ValidateUpdate(request, current);
+        if (validationError is not null)
+        {
+            return BadRequest(new { error = validationError });
+        }
+
         await UpsertSettingAsync(EnabledKey, "Включен", request.Enabled?.ToString().ToLowerInvariant(), "checkbox", cancellationToken);
         await UpsertSettingAsync(ModeKey, "Режим", NormalizeMode(request.Mode), "select", cancellationToken);
         await UpsertSettingAsync(PublicBotUsernameKey, "Public bot username", NormalizeUsername(request.PublicBotUsername), "text", cancellationToken);
-        await UpsertSettingAsync(WebhookUrlKey, "Webhook URL", request.WebhookUrl?.Trim(), "url", cancellationToken);
+        await UpsertSettingAsync(WebhookUrlKey, "Webhook URL", NormalizeOptionalUrl(request.WebhookUrl), "url", cancellationToken);
         await UpsertSettingAsync(AdminChatIdKey, "Admin chat id", request.AdminChatId?.Trim(), "text", cancellationToken);
-        await UpsertSettingAsync(WebAppUrlKey, "WebApp URL", request.WebAppUrl?.Trim(), "url", cancellationToken);
+        await UpsertSettingAsync(WebAppUrlKey, "WebApp URL", NormalizeOptionalUrl(request.WebAppUrl), "url", cancellationToken);
         if (!string.IsNullOrWhiteSpace(request.BotToken))
         {
             await UpsertSettingAsync(BotTokenProtectedKey, "Bot token", _secretProtector.Protect(request.BotToken.Trim()), "secret", cancellationToken);
@@ -107,6 +93,155 @@ public class AdminTelegramBotSettingsController : ControllerBase
         await UpsertTemplateAsync(SubscriptionExpiredKey, "Subscription expired text", request.SubscriptionExpiredTextTemplate, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetSettings(cancellationToken);
+    }
+
+    private async Task<TelegramBotSettingsState> LoadStateAsync(CancellationToken cancellationToken)
+    {
+        var templates = await _db.NotificationTemplates
+            .AsNoTracking()
+            .Where(x => x.Channel == NotificationChannelType.Telegram && x.Language == "ru")
+            .ToListAsync(cancellationToken);
+
+        var settings = await _db.SiteContentBlocks
+            .AsNoTracking()
+            .Where(x => x.Group == SettingsGroup)
+            .ToDictionaryAsync(x => x.Key, x => x.Value, cancellationToken);
+
+        var token = ReadProtectedSetting(settings, BotTokenProtectedKey) ?? _configuration["TelegramBot:BotToken"] ?? string.Empty;
+        var secretToken = ReadProtectedSetting(settings, SecretTokenProtectedKey) ?? _configuration["TelegramBot:SecretToken"] ?? string.Empty;
+
+        return new TelegramBotSettingsState(
+            ReadBoolSetting(settings, EnabledKey, _configuration.GetValue<bool>("TelegramBot:Enabled")),
+            NormalizeMode(ReadSetting(settings, ModeKey, _configuration["TelegramBot:Mode"] ?? "LongPolling")) ?? "LongPolling",
+            NormalizeUsername(ReadSetting(settings, PublicBotUsernameKey, _configuration["TelegramBot:PublicBotUsername"] ?? string.Empty)) ?? string.Empty,
+            token,
+            ReadSetting(settings, WebhookUrlKey, _configuration["TelegramBot:WebhookUrl"] ?? string.Empty),
+            secretToken,
+            ReadSetting(settings, AdminChatIdKey, _configuration["TelegramBot:AdminChatId"] ?? string.Empty),
+            ReadSetting(settings, WebAppUrlKey, _configuration["TelegramBot:WebAppUrl"] ?? string.Empty),
+            templates);
+    }
+
+    private static AdminTelegramBotSettingsDto ToDto(TelegramBotSettingsState state)
+        => new(
+            state.Enabled,
+            state.Mode,
+            state.PublicBotUsername,
+            !string.IsNullOrWhiteSpace(state.BotToken),
+            MaskToken(state.BotToken),
+            state.WebhookUrl,
+            !string.IsNullOrWhiteSpace(state.SecretToken),
+            state.AdminChatId,
+            state.WebAppUrl,
+            FindTemplate(state.Templates, WelcomeKey, "Добро пожаловать! Выберите действие в меню."),
+            FindTemplate(state.Templates, InstructionKey, "Инструкция появится после выдачи VPN-доступа."),
+            FindTemplate(state.Templates, SupportKey, "Опишите проблему одним сообщением, оператор ответит в Telegram."),
+            FindTemplate(state.Templates, AfterPaymentKey, "Оплата получена. Ваш VPN-доступ готов."),
+            FindTemplate(state.Templates, RenewalKey, "Продление оформлено. После оплаты подписка будет продлена автоматически."),
+            FindTemplate(state.Templates, PaymentFailedKey, "Оплата не прошла. Проверьте способ оплаты или попробуйте другой вариант."),
+            FindTemplate(state.Templates, SubscriptionExpiredKey, "Срок подписки истек. Продлите тариф, чтобы восстановить VPN-доступ."),
+            DateTimeOffset.UtcNow);
+
+    private static string? ValidateUpdate(UpdateTelegramBotSettingsCommand request, TelegramBotSettingsState current)
+    {
+        var enabled = request.Enabled ?? current.Enabled;
+        var mode = NormalizeMode(request.Mode) ?? current.Mode;
+        var username = NormalizeUsername(request.PublicBotUsername) ?? current.PublicBotUsername;
+        var token = string.IsNullOrWhiteSpace(request.BotToken) ? current.BotToken : request.BotToken.Trim();
+        var webhookUrl = NormalizeOptionalUrl(request.WebhookUrl) ?? current.WebhookUrl;
+        var webAppUrl = NormalizeOptionalUrl(request.WebAppUrl) ?? current.WebAppUrl;
+
+        if (!string.IsNullOrWhiteSpace(username) && !IsValidTelegramUsername(username))
+        {
+            return "Telegram username должен содержать 5-32 символа: латиница, цифры и подчёркивание.";
+        }
+
+        if (enabled && string.IsNullOrWhiteSpace(username))
+        {
+            return "Для включения Telegram-бота укажите public username.";
+        }
+
+        if (enabled && string.IsNullOrWhiteSpace(token))
+        {
+            return "Для включения Telegram-бота укажите Bot token.";
+        }
+
+        if (string.Equals(mode, "Webhook", StringComparison.Ordinal) && enabled && string.IsNullOrWhiteSpace(webhookUrl))
+        {
+            return "Для режима Webhook укажите Webhook URL.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(webhookUrl) && !IsHttpUrl(webhookUrl))
+        {
+            return "Webhook URL должен быть абсолютным http/https адресом.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(webAppUrl) && !IsHttpUrl(webAppUrl))
+        {
+            return "WebApp URL должен быть абсолютным http/https адресом.";
+        }
+
+        return null;
+    }
+
+    private static AdminTelegramBotConnectionCheckDto BuildConnectionCheck(TelegramBotSettingsState state)
+    {
+        var requiredActions = new List<string>();
+        var warnings = new List<string>();
+
+        if (!state.Enabled)
+        {
+            requiredActions.Add("Включите Telegram-бота в настройках.");
+        }
+
+        if (string.IsNullOrWhiteSpace(state.PublicBotUsername))
+        {
+            requiredActions.Add("Укажите public username бота без @.");
+        }
+        else if (!IsValidTelegramUsername(state.PublicBotUsername))
+        {
+            requiredActions.Add("Исправьте public username: допустимы 5-32 символа, латиница, цифры и подчёркивание.");
+        }
+
+        if (string.IsNullOrWhiteSpace(state.BotToken))
+        {
+            requiredActions.Add("Укажите Bot token из BotFather.");
+        }
+
+        if (string.Equals(state.Mode, "Webhook", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(state.WebhookUrl))
+            {
+                requiredActions.Add("Укажите Webhook URL для режима Webhook.");
+            }
+            else if (!IsHttpUrl(state.WebhookUrl))
+            {
+                requiredActions.Add("Исправьте Webhook URL: нужен абсолютный http/https адрес.");
+            }
+
+            if (string.IsNullOrWhiteSpace(state.SecretToken))
+            {
+                warnings.Add("Для Webhook рекомендуется задать secret token, чтобы отсеивать чужие запросы.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(state.WebAppUrl) && !IsHttpUrl(state.WebAppUrl))
+        {
+            requiredActions.Add("Исправьте WebApp URL: нужен абсолютный http/https адрес.");
+        }
+
+        if (string.IsNullOrWhiteSpace(state.AdminChatId))
+        {
+            warnings.Add("Admin chat id не задан: технические уведомления не будут уходить в админский чат.");
+        }
+
+        var isReady = requiredActions.Count == 0;
+        return new AdminTelegramBotConnectionCheckDto(
+            isReady,
+            isReady ? "ready" : "needs_configuration",
+            requiredActions,
+            warnings,
+            DateTimeOffset.UtcNow);
     }
 
     private async Task UpsertSettingAsync(string key, string label, string? value, string inputType, CancellationToken cancellationToken)
@@ -210,6 +345,24 @@ public class AdminTelegramBotSettingsController : ControllerBase
     private static string? NormalizeUsername(string? username)
         => username is null ? null : username.Trim().TrimStart('@');
 
+    private static string? NormalizeOptionalUrl(string? url)
+        => url is null ? null : url.Trim();
+
+    private static bool IsHttpUrl(string url)
+        => Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    private static bool IsValidTelegramUsername(string username)
+    {
+        var normalized = username.Trim().TrimStart('@');
+        if (normalized.Length is < 5 or > 32)
+        {
+            return false;
+        }
+
+        return normalized.All(ch => char.IsAsciiLetterOrDigit(ch) || ch == '_');
+    }
+
     private static string MaskToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -225,4 +378,15 @@ public class AdminTelegramBotSettingsController : ControllerBase
 
         return $"{trimmed[..4]}***{trimmed[^4..]}";
     }
+
+    private sealed record TelegramBotSettingsState(
+        bool Enabled,
+        string Mode,
+        string PublicBotUsername,
+        string BotToken,
+        string WebhookUrl,
+        string SecretToken,
+        string AdminChatId,
+        string WebAppUrl,
+        IReadOnlyCollection<NotificationTemplate> Templates);
 }

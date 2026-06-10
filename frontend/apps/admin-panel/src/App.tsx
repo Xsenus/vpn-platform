@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   AccessCredentialDto,
   AdminDashboardSummaryDto,
+  AdminTelegramBotConnectionCheckDto,
   AdminTelegramBotSettingsDto,
   AdminUserOverviewDto,
   ApiClient,
@@ -643,6 +644,7 @@ export function App() {
   const [vpnSyncRuns, setVpnSyncRuns] = useState<PanelSyncRunDto[]>([])
   const [botSettings, setBotSettings] = useState<AdminTelegramBotSettingsDto>(defaultBotSettings)
   const [botSettingsForm, setBotSettingsForm] = useState<UpdateTelegramBotSettingsPayload>({})
+  const [botSettingsCheck, setBotSettingsCheck] = useState<AdminTelegramBotConnectionCheckDto | null>(null)
   const [loadErrors, setLoadErrors] = useState<LoadError[]>([])
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -903,6 +905,7 @@ export function App() {
     setEditingVpnPanelId(null)
     setBotSettings(defaultBotSettings)
     setBotSettingsForm({})
+    setBotSettingsCheck(null)
     setLoadErrors([])
     setError('')
     setActionBusyId('')
@@ -1651,7 +1654,14 @@ export function App() {
     const saved = await api.updateAdminTelegramBotSettings(token, botSettingsForm)
     setBotSettings(saved)
     setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+    setBotSettingsCheck(null)
     setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
+  })
+
+  const handleTestBotSettings = () => runAction('bot-settings-test', async () => {
+    const result = await api.testAdminTelegramBotSettings(token)
+    setBotSettingsCheck(result)
+    setNotice(result.isReady ? 'Telegram-бот готов к работе.' : 'Проверка Telegram-бота нашла настройки, которые нужно заполнить.')
   })
 
   const providerFormSetup = providerSetup(providerForm.provider)
@@ -2157,6 +2167,23 @@ export function App() {
             <div className="muted">Режим {botSettings.mode} · bot token {botSettings.hasBotToken ? botSettings.botTokenMasked || 'скрыт' : 'пусто'} · secret token {botSettings.hasSecretToken ? 'задан' : 'пусто'} · admin chat {botSettings.adminChatId || '—'}</div>
             <div className="muted">Webhook: {botSettings.webhookUrl || '—'} · WebApp: {botSettings.webAppUrl || '—'} · исходные токены никогда не возвращаются API.</div>
           </div>
+          {botSettingsCheck && (
+            <div className="list-item-vertical" role="status" aria-live="polite">
+              <div className="card-head">
+                <strong>Проверка подключения</strong>
+                <StatusBadge value={botSettingsCheck.isReady ? 'Ready' : 'Needs configuration'} />
+              </div>
+              {botSettingsCheck.requiredActions.length > 0 && (
+                <ul className="compact-list">
+                  {botSettingsCheck.requiredActions.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
+              {botSettingsCheck.warnings.length > 0 && (
+                <div className="muted">Предупреждения: {botSettingsCheck.warnings.join(' ')}</div>
+              )}
+              {botSettingsCheck.requiredActions.length === 0 && <div className="muted">Обязательные настройки заполнены. Можно проверять реальный диалог с ботом в Telegram.</div>}
+            </div>
+          )}
           <form aria-busy={actionBusyId === 'bot-settings'} onSubmit={(event) => { event.preventDefault(); void handleSaveBotSettings() }}>
             <fieldset className="form-section">
               <legend>Подключение Telegram</legend>
@@ -2183,6 +2210,7 @@ export function App() {
             </fieldset>
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить настройки бота</PrimaryButton>
+              <PrimaryButton className="button-secondary" type="button" disabled={!token || actionBusyId === 'bot-settings-test'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings-test'} onClick={() => { void handleTestBotSettings() }}>Проверить подключение</PrimaryButton>
             </div>
           </form>
         </Card>
