@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `238/238`.
+- [x] `STATE-001` Backend test suite проходит: `239/239`.
 - [x] `STATE-002` Frontend test suite проходит: `49/49`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
@@ -183,9 +183,9 @@ git diff --check
 
 ### P1.2 Регистрация, логин и кабинет
 
-- [ ] `P1-CAB-001` Полный сценарий регистрации.
+- [x] `P1-CAB-001` Полный сценарий регистрации. 2026-06-10.
   - Что сделать: регистрация, подтверждение успешного входа, ошибки duplicate email, слабого пароля, неверного email.
-  - Доказательство: E2E test или ручной smoke-отчет.
+  - Доказательство: `AuthRegistrationControllerTests.Register_Should_Create_User_And_Reject_Duplicate_Weak_Password_And_Invalid_Email_On_Sqlite`, frontend auth validation tests.
 
 - [ ] `P1-CAB-002` Полный сценарий логина/logout.
   - Что сделать: валидный логин, неверный пароль, refresh token, logout, повторное открытие кабинета.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Регистрация в кабинете: успешный аккаунт, duplicate email, слабый пароль, неверный email, fallback display name | Зеленое | Backend tests `239/239`, SQLite registration test, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | История заказов и платежей в кабинете: paid/pending/failed/refunded, счетчики webhook/refund, отсутствие raw provider payload | Зеленое | Backend tests `238/238`, SQLite payment history test, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Поддержка в кабинете: создание обращения, ответ администратора, скрытые внутренние заметки, закрытие и переоткрытие | Зеленое | Backend tests `237/237`, SQLite support flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Продление конкретной подписки из кабинета и Telegram без дублей доступа | Зеленое | Backend tests `235/235`, frontend tests/typecheck/build, SQLite renewal order test |

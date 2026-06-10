@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Net.Mail;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -40,8 +41,10 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
-        var normalizedEmail = NormalizeEmail(request.Email);
-        if (string.IsNullOrWhiteSpace(normalizedEmail) || string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+        var normalizedEmail = NormalizeEmail(request?.Email);
+        var password = request?.Password ?? string.Empty;
+        var displayName = NormalizeDisplayName(request?.DisplayName, normalizedEmail);
+        if (!IsValidEmail(normalizedEmail) || string.IsNullOrWhiteSpace(password) || password.Trim().Length < 8 || displayName.Length > 80)
         {
             return BadRequest(new { error = "invalid_registration_request" });
         }
@@ -55,8 +58,8 @@ public class AuthController : ControllerBase
         var user = new User
         {
             Email = normalizedEmail,
-            DisplayName = request.DisplayName.Trim(),
-            PasswordHash = _passwordService.Hash(request.Password),
+            DisplayName = displayName,
+            PasswordHash = _passwordService.Hash(password),
             RolesCsv = UserRoles.User,
             Status = UserStatus.Active,
             ReferralCode = $"REF-{Guid.NewGuid():N}"[..10]
@@ -323,4 +326,37 @@ public class AuthController : ControllerBase
 
     private static string NormalizeEmail(string? email)
         => (email ?? string.Empty).Trim().ToLowerInvariant();
+
+    private static bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        try
+        {
+            var address = new MailAddress(email);
+            var domain = email.Split('@', 2).Length == 2 ? email.Split('@', 2)[1] : string.Empty;
+            return string.Equals(address.Address, email, StringComparison.OrdinalIgnoreCase)
+                && domain.Contains('.', StringComparison.Ordinal)
+                && !email.Contains(' ', StringComparison.Ordinal);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private static string NormalizeDisplayName(string? displayName, string normalizedEmail)
+    {
+        var normalized = (displayName ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            return normalized;
+        }
+
+        var localPart = normalizedEmail.Split('@', 2)[0].Trim();
+        return string.IsNullOrWhiteSpace(localPart) ? "User" : localPart;
+    }
 }
