@@ -225,6 +225,7 @@ public class SubscriptionService
 
         var subscriptions = await _db.Subscriptions
             .Include(x => x.CurrentAccess)
+            .Include(x => x.Tariff)
             .ToListAsync(cancellationToken);
 
         var moveToGrace = subscriptions
@@ -235,6 +236,7 @@ public class SubscriptionService
         {
             item.Status = SubscriptionStatus.GracePeriod;
             item.UpdatedAt = now;
+            await QueueLifecycleNotificationAsync(item, "subscription_expiring", "subscription_expiring", now, cancellationToken);
         }
 
         var expire = subscriptions
@@ -251,44 +253,115 @@ public class SubscriptionService
                 if (_vpnAccessLifecycleService is not null)
                 {
                     await _vpnAccessLifecycleService.DisableAccessAsync(item.CurrentAccess, "AccessDisabledOnExpiry", "subscription_expired", null, cancellationToken);
-                    continue;
                 }
-
-                try
+                else
                 {
-                    var provider = _vpnProviderFactory.Get(item.CurrentAccess.ProviderType);
-                    await provider.DisableAccessAsync(item.CurrentAccess.ProviderAccessId, cancellationToken);
-                    item.CurrentAccess.Status = AccessCredentialStatus.Disabled;
-                    item.CurrentAccess.DisabledAt = now;
-                    item.CurrentAccess.UpdatedAt = now;
-                    _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+                    try
                     {
-                        AccessCredentialId = item.CurrentAccess.Id,
-                        SubscriptionId = item.Id,
-                        EventType = "AccessDisabledOnExpiry",
-                        OldValueJson = "{}",
-                        NewValueJson = JsonSerializer.Serialize(new { item.CurrentAccess.ProviderAccessId, item.CurrentAccess.Status, disabledAt = now })
-                    });
-                }
-                catch (Exception ex)
-                {
-                    var safeError = SafeError(ex.Message);
-                    item.CurrentAccess.Status = AccessCredentialStatus.Error;
-                    item.CurrentAccess.UpdatedAt = now;
-                    _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+                        var provider = _vpnProviderFactory.Get(item.CurrentAccess.ProviderType);
+                        await provider.DisableAccessAsync(item.CurrentAccess.ProviderAccessId, cancellationToken);
+                        item.CurrentAccess.Status = AccessCredentialStatus.Disabled;
+                        item.CurrentAccess.DisabledAt = now;
+                        item.CurrentAccess.UpdatedAt = now;
+                        _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+                        {
+                            AccessCredentialId = item.CurrentAccess.Id,
+                            SubscriptionId = item.Id,
+                            EventType = "AccessDisabledOnExpiry",
+                            OldValueJson = "{}",
+                            NewValueJson = JsonSerializer.Serialize(new { item.CurrentAccess.ProviderAccessId, item.CurrentAccess.Status, disabledAt = now })
+                        });
+                    }
+                    catch (Exception ex)
                     {
-                        AccessCredentialId = item.CurrentAccess.Id,
-                        SubscriptionId = item.Id,
-                        EventType = "AccessDisableFailedOnExpiry",
-                        OldValueJson = "{}",
-                        NewValueJson = JsonSerializer.Serialize(new { item.CurrentAccess.ProviderAccessId, error = safeError })
-                    });
+                        var safeError = SafeError(ex.Message);
+                        item.CurrentAccess.Status = AccessCredentialStatus.Error;
+                        item.CurrentAccess.UpdatedAt = now;
+                        _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+                        {
+                            AccessCredentialId = item.CurrentAccess.Id,
+                            SubscriptionId = item.Id,
+                            EventType = "AccessDisableFailedOnExpiry",
+                            OldValueJson = "{}",
+                            NewValueJson = JsonSerializer.Serialize(new { item.CurrentAccess.ProviderAccessId, error = safeError })
+                        });
+                    }
                 }
             }
+
+            await QueueLifecycleNotificationAsync(item, "subscription_expired", "subscription_expired", now, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
         return moveToGrace.Count + expire.Count;
+    }
+
+    private async Task QueueLifecycleNotificationAsync(Subscription subscription, string templateKey, string eventType, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var correlationId = $"{eventType}:{subscription.Id:N}";
+        var outboxExists = await _db.OutboxMessages.AsNoTracking()
+            .AnyAsync(x => x.Type == "NotificationRequested" && x.CorrelationId == correlationId, cancellationToken);
+        if (!outboxExists)
+        {
+            _db.OutboxMessages.Add(new OutboxMessage
+            {
+                Type = "NotificationRequested",
+                CorrelationId = correlationId,
+                PayloadJson = JsonSerializer.Serialize(new
+                {
+                    userId = subscription.UserId,
+                    templateKey,
+                    subscriptionId = subscription.Id,
+                    tariffId = subscription.TariffId,
+                    tariffName = subscription.Tariff?.Name ?? string.Empty,
+                    status = subscription.Status.ToString(),
+                    endAt = subscription.EndAt,
+                    gracePeriodEndAt = subscription.GracePeriodEndAt
+                })
+            });
+        }
+
+        var telegramAccounts = await _db.TelegramAccounts.AsNoTracking()
+            .Where(x => x.UserId == subscription.UserId && !x.IsBlocked)
+            .ToListAsync(cancellationToken);
+        if (telegramAccounts.Count == 0)
+        {
+            return;
+        }
+
+        var text = BuildLifecycleTelegramText(subscription, eventType);
+        var payloadJson = JsonSerializer.Serialize(new
+        {
+            text,
+            replyMarkupJson = "{\"inline_keyboard\":[[{\"text\":\"Продлить подписку\",\"callback_data\":\"renew\"}]]}"
+        });
+
+        foreach (var account in telegramAccounts)
+        {
+            var exists = await _db.TelegramBotNotifications.AsNoTracking()
+                .AnyAsync(x => x.TelegramUserId == account.TelegramUserId && x.Type == eventType && x.PayloadJson == payloadJson && x.Status != "failed" && x.Status != "cancelled", cancellationToken);
+            if (exists)
+            {
+                continue;
+            }
+
+            _db.TelegramBotNotifications.Add(new TelegramBotNotification
+            {
+                TelegramUserId = account.TelegramUserId,
+                Type = eventType,
+                PayloadJson = payloadJson,
+                Status = "pending",
+                NextAttemptAt = now
+            });
+        }
+    }
+
+    private static string BuildLifecycleTelegramText(Subscription subscription, string eventType)
+    {
+        var tariffName = subscription.Tariff?.Name ?? "VPN";
+        return eventType == "subscription_expired"
+            ? $"Срок подписки {tariffName} истек, VPN-доступ отключен. Продлите тариф, чтобы восстановить подключение."
+            : $"Подписка {tariffName} перешла в льготный период до {subscription.GracePeriodEndAt:yyyy-MM-dd HH:mm} UTC. Продлите тариф, чтобы VPN-доступ не отключился.";
     }
 
     private async Task QueueVpnAccessFailedNotificationAsync(Subscription subscription, Tariff tariff, string error, CancellationToken cancellationToken)

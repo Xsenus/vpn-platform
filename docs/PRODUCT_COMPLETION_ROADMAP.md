@@ -212,9 +212,9 @@ git diff --check
   - Что сделать: купить продление активной подписки, проверить новую дату окончания и отсутствие дублей доступа.
   - Доказательство: backend test + E2E smoke.
 
-- [ ] `P1-CAB-008` Окончание подписки.
+- [x] `P1-CAB-008` Окончание подписки. 2026-06-10.
   - Что сделать: смоделировать expired subscription, проверить отключение/disable VPN клиента.
-  - Доказательство: backend test и 3x-ui/client state.
+  - Доказательство: `SubscriptionLifecycleExpiryTests`, sandbox E2E expiry, lifecycle notifications.
 
 - [ ] `P1-CAB-009` Поддержка в кабинете.
   - Что сделать: создать диалог, отправить сообщение, ответить из админки, закрыть обращение.
@@ -404,9 +404,9 @@ git diff --check
   - Что сделать: два webhook/recheck одновременно не ломают order/subscription.
   - Доказательство: concurrency tests.
 
-- [ ] `P4-BE-004` Renew/expire jobs.
+- [x] `P4-BE-004` Renew/expire jobs. 2026-06-10.
   - Что сделать: продление, окончание, отключение клиента, уведомления.
-  - Доказательство: tests + scheduled job smoke.
+  - Доказательство: `SubscriptionLifecycleExpiryTests`, `SandboxE2EScenariosMvpTests`, local SQLite API smoke.
 
 - [ ] `P4-BE-005` Audit log.
   - Что сделать: логировать admin actions, payment transitions, VPN provisioning, secret rotations.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Lifecycle подписок: grace/expired, отключение VPN, outbox и Telegram-уведомления | Зеленое | Backend tests `233/233`, local SQLite API smoke |
 | 2026-06-10 | Codex | Матрица готовности платежных провайдеров и публичная фильтрация | Зеленое | Backend tests, frontend tests/typecheck/build, local SQLite HTTP-smoke |
 | 2026-06-10 | Codex | CLI admin bootstrap/reset для локальной SQLite-БД | Зеленое | `admin-bootstrap`, `AdminBootstrapServiceTests`, HTTP-smoke login/admin dashboard |
 | 2026-06-10 | Codex | Backend tests, frontend tests, typecheck, build, GitHub Actions, VPS HTTP health | Зеленое, кроме live admin auth/E2E | Локальный аудит и ответы VPS 200 |

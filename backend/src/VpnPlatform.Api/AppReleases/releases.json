@@ -485,5 +485,28 @@
         "text": "CloudPayments больше не считается готовым без ExtraSettingsJson.hostedCheckoutUrl со страницей виджета магазина."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-10-subscription-lifecycle-notifications",
+    "version": "0.23.0",
+    "releasedAt": "2026-06-10T14:00:00Z",
+    "title": "Окончание подписки теперь ставит уведомления",
+    "summary": "Lifecycle подписок дополняет смену статуса и отключение VPN-доступа системными и Telegram-уведомлениями.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "При переходе подписки в льготный период создается событие subscription_expiring и Telegram-уведомление с кнопкой продления."
+      },
+      {
+        "type": "new",
+        "text": "При окончательном истечении подписки создается событие subscription_expired, а привязанные Telegram-аккаунты получают сообщение об отключении VPN-доступа."
+      },
+      {
+        "type": "improved",
+        "text": "Повторный запуск lifecycle worker не дублирует уведомления для уже обработанной подписки."
+      }
+    ]
   }
 ]

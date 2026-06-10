@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
@@ -17,7 +18,7 @@ public class SubscriptionLifecycleExpiryTests
         await using var db = CreateDbContext();
         var provider = new TrackingVpnProvider();
         var service = new SubscriptionService(db, new FixedClock(), new NodeAllocationService(db), new TestVpnProviderFactory(provider));
-        var access = await SeedExpiredGraceSubscriptionAsync(db);
+        var access = await SeedExpiredGraceSubscriptionAsync(db, withTelegram: true);
 
         var processed = await service.ProcessLifecycleAsync(CancellationToken.None);
 
@@ -30,6 +31,11 @@ public class SubscriptionLifecycleExpiryTests
         var history = await db.AccessCredentialHistories.SingleAsync();
         Assert.Equal("AccessDisabledOnExpiry", history.EventType);
         Assert.Contains(access.ProviderAccessId, history.NewValueJson);
+        var outbox = await db.OutboxMessages.SingleAsync(x => x.CorrelationId == $"subscription_expired:{subscription.Id:N}");
+        Assert.Equal("NotificationRequested", outbox.Type);
+        Assert.Contains("subscription_expired", outbox.PayloadJson, StringComparison.OrdinalIgnoreCase);
+        var telegram = await db.TelegramBotNotifications.SingleAsync(x => x.Type == "subscription_expired");
+        Assert.Contains("VPN-доступ отключен", PayloadText(telegram.PayloadJson), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -59,7 +65,7 @@ public class SubscriptionLifecycleExpiryTests
         await using var db = CreateDbContext();
         var provider = new TrackingVpnProvider();
         var service = new SubscriptionService(db, new FixedClock(), new NodeAllocationService(db), new TestVpnProviderFactory(provider));
-        await SeedSubscriptionAsync(db, SubscriptionStatus.Active, new FixedClock().UtcNow.AddDays(-1), new FixedClock().UtcNow.AddDays(2));
+        await SeedSubscriptionAsync(db, SubscriptionStatus.Active, new FixedClock().UtcNow.AddDays(-1), new FixedClock().UtcNow.AddDays(2), withTelegram: true);
 
         var processed = await service.ProcessLifecycleAsync(CancellationToken.None);
 
@@ -69,12 +75,34 @@ public class SubscriptionLifecycleExpiryTests
         Assert.Equal(AccessCredentialStatus.Active, subscription.CurrentAccess!.Status);
         Assert.Empty(provider.DisabledAccessIds);
         Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        var outbox = await db.OutboxMessages.SingleAsync(x => x.CorrelationId == $"subscription_expiring:{subscription.Id:N}");
+        Assert.Equal("NotificationRequested", outbox.Type);
+        Assert.Contains("subscription_expiring", outbox.PayloadJson, StringComparison.OrdinalIgnoreCase);
+        var telegram = await db.TelegramBotNotifications.SingleAsync(x => x.Type == "subscription_expiring");
+        Assert.Contains("льготный период", PayloadText(telegram.PayloadJson), StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<AccessCredential> SeedExpiredGraceSubscriptionAsync(ApplicationDbContext db)
-        => await SeedSubscriptionAsync(db, SubscriptionStatus.GracePeriod, new FixedClock().UtcNow.AddDays(-10), new FixedClock().UtcNow.AddSeconds(-1));
+    [Fact]
+    public async Task Lifecycle_Notifications_Should_Be_Idempotent_On_Repeated_Run()
+    {
+        await using var db = CreateDbContext();
+        var provider = new TrackingVpnProvider();
+        var service = new SubscriptionService(db, new FixedClock(), new NodeAllocationService(db), new TestVpnProviderFactory(provider));
+        await SeedExpiredGraceSubscriptionAsync(db, withTelegram: true);
 
-    private static async Task<AccessCredential> SeedSubscriptionAsync(ApplicationDbContext db, SubscriptionStatus status, DateTimeOffset endAt, DateTimeOffset gracePeriodEndAt)
+        var first = await service.ProcessLifecycleAsync(CancellationToken.None);
+        var second = await service.ProcessLifecycleAsync(CancellationToken.None);
+
+        Assert.Equal(1, first);
+        Assert.Equal(0, second);
+        Assert.Equal(1, await db.OutboxMessages.CountAsync(x => x.CorrelationId.StartsWith("subscription_expired:")));
+        Assert.Equal(1, await db.TelegramBotNotifications.CountAsync(x => x.Type == "subscription_expired"));
+    }
+
+    private static async Task<AccessCredential> SeedExpiredGraceSubscriptionAsync(ApplicationDbContext db, bool withTelegram = false)
+        => await SeedSubscriptionAsync(db, SubscriptionStatus.GracePeriod, new FixedClock().UtcNow.AddDays(-10), new FixedClock().UtcNow.AddSeconds(-1), withTelegram);
+
+    private static async Task<AccessCredential> SeedSubscriptionAsync(ApplicationDbContext db, SubscriptionStatus status, DateTimeOffset endAt, DateTimeOffset gracePeriodEndAt, bool withTelegram = false)
     {
         var user = new User
         {
@@ -144,6 +172,16 @@ public class SubscriptionLifecycleExpiryTests
         db.VpnNodes.Add(node);
         db.Subscriptions.Add(subscription);
         db.AccessCredentials.Add(access);
+        if (withTelegram)
+        {
+            db.TelegramAccounts.Add(new TelegramAccount
+            {
+                UserId = user.Id,
+                TelegramUserId = Random.Shared.NextInt64(10_000, 99_999),
+                Username = "vpn_user",
+                IsBlocked = false
+            });
+        }
         await db.SaveChangesAsync();
         return access;
     }
@@ -154,6 +192,12 @@ public class SubscriptionLifecycleExpiryTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private static string PayloadText(string payloadJson)
+    {
+        using var document = JsonDocument.Parse(payloadJson);
+        return document.RootElement.GetProperty("text").GetString() ?? string.Empty;
     }
 
     private sealed class FixedClock : IClock
