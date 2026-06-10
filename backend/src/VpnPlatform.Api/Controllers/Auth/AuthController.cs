@@ -76,9 +76,10 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var normalizedEmail = NormalizeEmail(request.Email);
+        var normalizedEmail = NormalizeEmail(request?.Email);
+        var password = request?.Password ?? string.Empty;
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
-        if (user is null || user.IsBlocked || !_passwordService.Verify(request.Password, user.PasswordHash))
+        if (user is null || user.IsBlocked || user.Status != UserStatus.Active || string.IsNullOrWhiteSpace(password) || !_passwordService.Verify(password, user.PasswordHash))
         {
             return Unauthorized(new { error = "invalid_credentials" });
         }
@@ -132,7 +133,7 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        if (string.IsNullOrWhiteSpace(request?.RefreshToken))
         {
             return Unauthorized(new { error = "invalid_refresh_token" });
         }

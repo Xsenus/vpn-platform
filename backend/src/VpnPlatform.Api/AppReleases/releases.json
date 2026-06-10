@@ -600,5 +600,28 @@
         "text": "SQLite-тест подтверждает создание пользователя, выдачу refresh-токена без хранения raw-значения и ошибки duplicate/weak/invalid registration."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-10-cabinet-session-flow",
+    "version": "0.28.0",
+    "releasedAt": "2026-06-10T19:00:00Z",
+    "title": "Логин и выход из кабинета проверяются полностью",
+    "summary": "Сценарий сессии кабинета покрыт SQLite-проверкой: валидный логин, неверный пароль, refresh rotation, повторное использование старого refresh-токена и logout.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Login теперь отклоняет пользователей не в статусе Active так же, как refresh-сценарий."
+      },
+      {
+        "type": "fixed",
+        "text": "Login и refresh безопасно обрабатывают пустой body и возвращают auth-ошибку вместо 500."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite-тест подтверждает rotation refresh-токена, отзыв сессии при повторном использовании старого токена и отказ refresh после logout."
+      }
+    ]
   }
 ]
