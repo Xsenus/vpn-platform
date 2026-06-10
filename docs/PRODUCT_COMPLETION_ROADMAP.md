@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `235/235`.
+- [x] `STATE-001` Backend test suite проходит: `237/237`.
 - [x] `STATE-002` Frontend test suite проходит: `49/49`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
@@ -216,9 +216,9 @@ git diff --check
   - Что сделать: смоделировать expired subscription, проверить отключение/disable VPN клиента.
   - Доказательство: `SubscriptionLifecycleExpiryTests`, sandbox E2E expiry, lifecycle notifications.
 
-- [ ] `P1-CAB-009` Поддержка в кабинете.
+- [x] `P1-CAB-009` Поддержка в кабинете. 2026-06-10.
   - Что сделать: создать диалог, отправить сообщение, ответить из админки, закрыть обращение.
-  - Доказательство: E2E или integration test.
+  - Доказательство: `MeSupportControllerTests.Cabinet_Support_Flow_Should_Work_With_Sqlite`, `MeSupportControllerTests.SupportEndpoints_Should_Reject_Too_Short_Text_And_Invalid_Status`, frontend support tests.
 
 ### P1.3 Telegram-бот
 
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Поддержка в кабинете: создание обращения, ответ администратора, скрытые внутренние заметки, закрытие и переоткрытие | Зеленое | Backend tests `237/237`, SQLite support flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Продление конкретной подписки из кабинета и Telegram без дублей доступа | Зеленое | Backend tests `235/235`, frontend tests/typecheck/build, SQLite renewal order test |
 | 2026-06-10 | Codex | Lifecycle подписок: grace/expired, отключение VPN, outbox и Telegram-уведомления | Зеленое | Backend tests `233/233`, local SQLite API smoke |
 | 2026-06-10 | Codex | Матрица готовности платежных провайдеров и публичная фильтрация | Зеленое | Backend tests, frontend tests/typecheck/build, local SQLite HTTP-smoke |

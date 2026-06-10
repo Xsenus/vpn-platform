@@ -562,9 +562,10 @@ public class AdminOperationsController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
-        if (string.IsNullOrWhiteSpace(request.Text))
+        var text = NormalizeSupportText(request?.Text, 4000);
+        if (text.Length < 2)
         {
-            return BadRequest(new { error = "Reply text is required." });
+            return BadRequest(new { error = "Reply text must contain at least 2 characters." });
         }
 
         _db.SupportMessages.Add(new SupportMessage
@@ -573,12 +574,13 @@ public class AdminOperationsController : ControllerBase
             UserId = ResolveUserId(),
             TelegramUserId = conversation.TelegramUserId,
             Direction = "outbound",
-            Text = request.Text.Trim()
+            Text = text,
+            AttachmentsJson = "[]"
         });
 
         if (conversation.TelegramUserId.HasValue)
         {
-            var payloadJson = JsonSerializer.Serialize(new { conversationId = id, text = request.Text.Trim() }, JsonOptions);
+            var payloadJson = JsonSerializer.Serialize(new { conversationId = id, text }, JsonOptions);
             var exists = await _db.TelegramBotNotifications.AsNoTracking()
                 .AnyAsync(x => x.TelegramUserId == conversation.TelegramUserId.Value && x.Type == "support_reply" && x.PayloadJson == payloadJson && x.Status != "failed" && x.Status != "cancelled", cancellationToken);
             if (!exists)
@@ -595,6 +597,7 @@ public class AdminOperationsController : ControllerBase
         }
 
         conversation.Status = conversation.Status == "closed" ? "open" : conversation.Status;
+        conversation.ClosedAt = conversation.Status == "closed" ? conversation.ClosedAt : null;
         conversation.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { conversationId = id, status = "queued" });
@@ -611,14 +614,14 @@ public class AdminOperationsController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
-        var status = string.IsNullOrWhiteSpace(request.Status) ? conversation.Status : request.Status.Trim().ToLowerInvariant();
+        var status = string.IsNullOrWhiteSpace(request?.Status) ? conversation.Status : request.Status.Trim().ToLowerInvariant();
         if (status is not ("open" or "pending" or "closed"))
         {
             return BadRequest(new { error = "Status must be open, pending or closed." });
         }
 
         conversation.Status = status;
-        conversation.AssignedToUserId = request.AssignedToUserId ?? conversation.AssignedToUserId;
+        conversation.AssignedToUserId = request?.AssignedToUserId ?? conversation.AssignedToUserId;
         conversation.ClosedAt = status == "closed" ? DateTimeOffset.UtcNow : null;
         conversation.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -635,9 +638,10 @@ public class AdminOperationsController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
-        if (string.IsNullOrWhiteSpace(request.Text))
+        var text = NormalizeSupportText(request?.Text, 4000);
+        if (text.Length < 2)
         {
-            return BadRequest(new { error = "Note text is required." });
+            return BadRequest(new { error = "Note text must contain at least 2 characters." });
         }
 
         var adminUserId = ResolveUserId();
@@ -646,12 +650,12 @@ public class AdminOperationsController : ControllerBase
             SupportConversationId = id,
             UserId = adminUserId,
             Direction = "internal",
-            Text = request.Text.Trim(),
+            Text = text,
             IsInternalNote = true,
             AttachmentsJson = "[]"
         };
         _db.SupportMessages.Add(note);
-        conversation.InternalNote = request.Text.Trim();
+        conversation.InternalNote = text;
         conversation.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new SupportMessageDto(note.Id, note.SupportConversationId, note.UserId, note.TelegramUserId, note.Direction, note.Text, note.AttachmentsJson, note.IsInternalNote, note.CreatedAt));
@@ -1376,6 +1380,12 @@ public class AdminOperationsController : ControllerBase
 
     private static string RedactSensitiveText(string? value, int maxLength)
         => SensitiveDataRedactor.Redact(value, maxLength: maxLength);
+
+    private static string NormalizeSupportText(string? value, int maxLength)
+    {
+        var text = (value ?? string.Empty).Trim();
+        return text.Length <= maxLength ? text : text[..maxLength];
+    }
 
     private static string NormalizeServerTags(string? tagsCsv, string owner, string authMethod, string credentialsStatus, bool validationMode)
     {

@@ -258,24 +258,26 @@ public class MeController : ControllerBase
     public async Task<IActionResult> CreateSupportConversation([FromBody] CreateMeSupportConversationHttpRequest request, CancellationToken cancellationToken)
     {
         var userId = ResolveUserId();
-        var subject = NormalizeSupportText(request.Subject, 160);
-        var text = NormalizeSupportText(request.Text, 4000);
-        if (string.IsNullOrWhiteSpace(subject))
+        var subject = NormalizeSupportText(request?.Subject, 160);
+        var text = NormalizeSupportText(request?.Text, 4000);
+        var orderId = request?.OrderId;
+        var subscriptionId = request?.SubscriptionId;
+        if (subject.Length < 4)
         {
-            return BadRequest(new { error = "Subject is required." });
+            return BadRequest(new { error = "Subject must contain at least 4 characters." });
         }
 
-        if (string.IsNullOrWhiteSpace(text))
+        if (text.Length < 10)
         {
-            return BadRequest(new { error = "Message text is required." });
+            return BadRequest(new { error = "Message text must contain at least 10 characters." });
         }
 
-        if (request.OrderId.HasValue && !await _db.Orders.AnyAsync(x => x.Id == request.OrderId.Value && x.UserId == userId, cancellationToken))
+        if (orderId.HasValue && !await _db.Orders.AnyAsync(x => x.Id == orderId.Value && x.UserId == userId, cancellationToken))
         {
             return BadRequest(new { error = "Linked order was not found." });
         }
 
-        if (request.SubscriptionId.HasValue && !await _db.Subscriptions.AnyAsync(x => x.Id == request.SubscriptionId.Value && x.UserId == userId, cancellationToken))
+        if (subscriptionId.HasValue && !await _db.Subscriptions.AnyAsync(x => x.Id == subscriptionId.Value && x.UserId == userId, cancellationToken))
         {
             return BadRequest(new { error = "Linked subscription was not found." });
         }
@@ -283,8 +285,8 @@ public class MeController : ControllerBase
         var contextJson = JsonSerializer.Serialize(new
         {
             source = "cabinet",
-            request.OrderId,
-            request.SubscriptionId
+            OrderId = orderId,
+            SubscriptionId = subscriptionId
         });
         var conversation = new SupportConversation
         {
@@ -292,7 +294,7 @@ public class MeController : ControllerBase
             Channel = "web",
             Status = "open",
             Subject = subject,
-            InternalNote = BuildSupportContextNote(request.OrderId, request.SubscriptionId)
+            InternalNote = BuildSupportContextNote(orderId, subscriptionId)
         };
         var message = new SupportMessage
         {
@@ -315,10 +317,10 @@ public class MeController : ControllerBase
     public async Task<IActionResult> ReplySupportConversation(Guid id, [FromBody] MeSupportReplyHttpRequest request, CancellationToken cancellationToken)
     {
         var userId = ResolveUserId();
-        var text = NormalizeSupportText(request.Text, 4000);
-        if (string.IsNullOrWhiteSpace(text))
+        var text = NormalizeSupportText(request?.Text, 4000);
+        if (text.Length < 2)
         {
-            return BadRequest(new { error = "Message text is required." });
+            return BadRequest(new { error = "Message text must contain at least 2 characters." });
         }
 
         var conversation = await _db.SupportConversations.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, cancellationToken);
@@ -355,7 +357,7 @@ public class MeController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
-        var status = request.Status.Trim().ToLowerInvariant();
+        var status = (request?.Status ?? string.Empty).Trim().ToLowerInvariant();
         if (status is not ("open" or "closed"))
         {
             return BadRequest(new { error = "Status must be open or closed." });
