@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `240/240`.
+- [x] `STATE-001` Backend test suite проходит: `242/242`.
 - [x] `STATE-002` Frontend test suite проходит: `49/49`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
@@ -191,10 +191,10 @@ git diff --check
   - Что сделать: валидный логин, неверный пароль, refresh token, logout, повторное открытие кабинета.
   - Доказательство: `AuthSessionControllerTests.Login_Refresh_Logout_Should_Work_With_Sqlite_And_Reject_Invalid_Sessions`, existing refresh-token hardening test.
 
-- [ ] `P1-CAB-003` Восстановление пароля.
+- [x] `P1-CAB-003` Восстановление пароля. 2026-06-10.
   - Ошибка/риск: endpoint есть, но почтовый/реальный сценарий может быть не проверен.
   - Что сделать: forgot password -> reset token -> reset password -> login.
-  - Доказательство: integration test или staging smoke.
+  - Доказательство: `AuthPasswordResetControllerTests.Forgot_And_Reset_Password_Should_Work_With_Sqlite_And_Revoke_Old_Sessions`, `AuthPasswordResetControllerTests.ResetPassword_Should_Reject_Token_When_User_Becomes_Inactive`.
 
 - [ ] `P1-CAB-004` Кабинет без подписки.
   - Что сделать: проверить empty state, CTA покупки, отсутствие QR/URI.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Восстановление пароля: forgot, одноразовый reset token, новый пароль, отзыв сессий, expired/inactive user | Зеленое | Backend tests `242/242`, SQLite password reset flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Логин/logout кабинета: валидный логин, неверный пароль, inactive user, refresh rotation, reuse detection, logout | Зеленое | Backend tests `240/240`, SQLite session flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Регистрация в кабинете: успешный аккаунт, duplicate email, слабый пароль, неверный email, fallback display name | Зеленое | Backend tests `239/239`, SQLite registration test, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | История заказов и платежей в кабинете: paid/pending/failed/refunded, счетчики webhook/refund, отсутствие raw provider payload | Зеленое | Backend tests `238/238`, SQLite payment history test, frontend tests/typecheck/build |

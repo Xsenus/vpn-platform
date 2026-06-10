@@ -623,5 +623,28 @@
         "text": "SQLite-тест подтверждает rotation refresh-токена, отзыв сессии при повторном использовании старого токена и отказ refresh после logout."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-10-cabinet-password-reset-flow",
+    "version": "0.29.0",
+    "releasedAt": "2026-06-10T20:00:00Z",
+    "title": "Восстановление пароля проверяется на локальной БД",
+    "summary": "Сценарий forgot password -> reset token -> reset password -> login теперь покрыт SQLite-проверкой вместе с одноразовостью токена и отзывом старых сессий.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Forgot/reset password безопасно обрабатывают пустой body и возвращают контролируемый ответ вместо ошибки сервера."
+      },
+      {
+        "type": "fixed",
+        "text": "Reset password больше не меняет пароль, если пользователь стал неактивным после выдачи токена."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite-тест подтверждает anti-enumeration forgot password, hashed one-time reset token, отзыв старых refresh-сессий и вход новым паролем."
+      }
+    ]
   }
 ]

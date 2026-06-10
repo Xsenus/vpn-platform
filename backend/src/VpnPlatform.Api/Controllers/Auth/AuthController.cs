@@ -195,7 +195,7 @@ public class AuthController : ControllerBase
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
-        var normalizedEmail = NormalizeEmail(request.Email);
+        var normalizedEmail = NormalizeEmail(request?.Email);
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
         string? validationToken = null;
 
@@ -227,13 +227,15 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+        var token = request?.Token ?? string.Empty;
+        var newPassword = request?.NewPassword ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(newPassword) || newPassword.Trim().Length < 8)
         {
             return BadRequest(new { error = "invalid_reset_request" });
         }
 
         var now = _clock.UtcNow;
-        var hash = HashToken(request.Token);
+        var hash = HashToken(token);
         var reset = await _db.PasswordResetTokens.FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
         if (reset is null || reset.UsedAt is not null || reset.ExpiresAt <= now)
         {
@@ -241,12 +243,12 @@ public class AuthController : ControllerBase
         }
 
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == reset.UserId, cancellationToken);
-        if (user is null || user.IsBlocked)
+        if (user is null || user.IsBlocked || user.Status != UserStatus.Active)
         {
             return BadRequest(new { error = "invalid_or_expired_reset_token" });
         }
 
-        user.PasswordHash = _passwordService.Hash(request.NewPassword);
+        user.PasswordHash = _passwordService.Hash(newPassword);
         user.UpdatedAt = now;
         reset.UsedAt = now;
         await RevokeUserSessionsAsync(user.Id, "password_reset", cancellationToken);
