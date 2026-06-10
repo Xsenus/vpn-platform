@@ -346,6 +346,68 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Client_Management_Should_Enable_Disable_Sync_Reset_And_Migrate()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var targetInboundId = Guid.NewGuid();
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            Id = targetInboundId,
+            VpnPanelId = ids.PanelId,
+            ExternalInboundId = "2",
+            Name = "backup-vless",
+            Protocol = "vless",
+            Port = 8443,
+            StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}",
+            SettingsJson = "{\"clients\":[]}",
+            IsDefault = false,
+            IsActive = true,
+            Capacity = 100
+        });
+        db.AccessCredentials.Add(new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = ids.SubscriptionId,
+            ProviderType = "x3ui",
+            ProviderAccessId = "client-1",
+            ServerId = Guid.NewGuid(),
+            AccessUri = "vless://old",
+            Status = AccessCredentialStatus.Active
+        });
+        await db.SaveChangesAsync();
+
+        var disabled = await service.DisableClientAsync(ids.ClientId, CancellationToken.None);
+        var enabled = await service.EnableClientAsync(ids.ClientId, CancellationToken.None);
+        var synced = await service.SyncClientAsync(ids.ClientId, CancellationToken.None);
+        var reset = await service.ResetClientTrafficAsync(ids.ClientId, CancellationToken.None);
+        var migrated = await service.MigrateClientAsync(ids.ClientId, new MigrateVpnClientCommand(targetInboundId), CancellationToken.None);
+
+        Assert.True(disabled.IsSuccess, disabled.Error);
+        Assert.False(disabled.Value!.Enable);
+        Assert.True(enabled.IsSuccess, enabled.Error);
+        Assert.True(enabled.Value!.Enable);
+        Assert.True(synced.IsSuccess, synced.Error);
+        Assert.Equal("synced", synced.Value!.SyncStatus);
+        Assert.True(reset.IsSuccess, reset.Error);
+        Assert.Equal("traffic-reset", reset.Value!.SyncStatus);
+        Assert.True(migrated.IsSuccess, migrated.Error);
+        Assert.Equal(targetInboundId, migrated.Value!.VpnInboundId);
+        Assert.Contains(":8443", migrated.Value.ConfigUri);
+        Assert.Equal(2, remote.UpdateClientCalls);
+        Assert.Equal(1, remote.GetTrafficCalls);
+        Assert.Equal(1, remote.ResetTrafficCalls);
+        Assert.Equal(1, remote.AddClientCalls);
+        Assert.Equal(1, remote.DeleteClientCalls);
+        var access = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(migrated.Value.ConfigUri, access.AccessUri);
+        Assert.Equal(AccessCredentialStatus.Active, access.Status);
+    }
+
+    [Fact]
     public async Task Real_Vpn_Provider_Should_Auto_Create_Inbound_And_Client()
     {
         await using var db = CreateDbContext();
@@ -583,6 +645,9 @@ public class X3UiIntegrationTests
         public int CreateInboundCalls { get; private set; }
         public int AddClientCalls { get; private set; }
         public int UpdateClientCalls { get; private set; }
+        public int DeleteClientCalls { get; private set; }
+        public int ResetTrafficCalls { get; private set; }
+        public int GetTrafficCalls { get; private set; }
 
         public Task<X3UiSession> LoginAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiSession("session=test", _now));
         public Task<X3UiHealthResult> CheckHealthAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiHealthResult(true, "2.4.12", 12));
@@ -612,11 +677,23 @@ public class X3UiIntegrationTests
             return Task.FromResult(new X3UiClientDto(request.ClientId, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null));
         }
 
-        public Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        {
+            DeleteClientCalls += 1;
+            return Task.CompletedTask;
+        }
         public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => Task.CompletedTask;
         public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string clientId, CancellationToken cancellationToken) => Task.FromResult(new X3UiTrafficSnapshot(clientId, 0, 0, _now));
+        public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        {
+            ResetTrafficCalls += 1;
+            return Task.CompletedTask;
+        }
+        public Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string clientId, CancellationToken cancellationToken)
+        {
+            GetTrafficCalls += 1;
+            return Task.FromResult(new X3UiTrafficSnapshot(clientId, 0, 0, _now));
+        }
 
         private X3UiInboundDto DefaultInbound()
             => new("1", "default-vless", "vless", 443, string.Empty,

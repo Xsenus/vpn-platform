@@ -760,6 +760,7 @@ export function App() {
   const [selectedVpnPanelId, setSelectedVpnPanelId] = useState('')
   const [vpnInbounds, setVpnInbounds] = useState<VpnInboundDto[]>([])
   const [vpnClients, setVpnClients] = useState<VpnClientDto[]>([])
+  const [vpnClientMigrationTargets, setVpnClientMigrationTargets] = useState<Record<string, string>>({})
   const [vpnHealthChecks, setVpnHealthChecks] = useState<PanelHealthCheckDto[]>([])
   const [vpnSyncRuns, setVpnSyncRuns] = useState<PanelSyncRunDto[]>([])
   const [botSettings, setBotSettings] = useState<AdminTelegramBotSettingsDto>(defaultBotSettings)
@@ -1088,6 +1089,17 @@ export function App() {
       ])
       setVpnInbounds(nextInbounds)
       setVpnClients(nextClients)
+      setVpnClientMigrationTargets((current) => {
+        const next: Record<string, string> = {}
+        for (const client of nextClients) {
+          const currentTarget = current[client.id]
+          const currentInbound = nextInbounds.find((inbound) => inbound.id === client.vpnInboundId)
+          const fallbackTarget = nextInbounds.find((inbound) => inbound.id !== client.vpnInboundId && inbound.isActive && (!currentInbound || inbound.protocol.toLowerCase() === currentInbound.protocol.toLowerCase()))?.id
+            ?? ''
+          next[client.id] = currentTarget && nextInbounds.some((inbound) => inbound.id === currentTarget) ? currentTarget : fallbackTarget
+        }
+        return next
+      })
       setVpnHealthChecks(nextHealthChecks)
       setVpnSyncRuns(nextSyncRuns)
     } catch (e) {
@@ -1721,6 +1733,32 @@ export function App() {
   const cancelInboundEdit = () => {
     setEditingInboundId(null)
     setInboundForm(defaultInboundForm)
+  }
+
+  const handleVpnClientAction = (client: VpnClientDto, action: 'enable' | 'disable' | 'sync' | 'reset') => runAction(`vpn-client-${action}-${client.id}`, async () => {
+    const saved = action === 'enable'
+      ? await api.enableAdminVpnClient(token, client.id)
+      : action === 'disable'
+        ? await api.disableAdminVpnClient(token, client.id)
+        : action === 'sync'
+          ? await api.syncAdminVpnClient(token, client.id)
+          : await api.resetAdminVpnClientTraffic(token, client.id)
+    setNotice(`VPN-клиент ${saved.email} обновлен: ${saved.syncStatus}.`)
+    await loadVpnPanelDetails(selectedVpnPanelId)
+  })
+
+  const handleMigrateVpnClient = (client: VpnClientDto) => runAction(`vpn-client-migrate-${client.id}`, async () => {
+    const targetInboundId = vpnClientMigrationTargets[client.id]
+    if (!targetInboundId) return
+    const saved = await api.migrateAdminVpnClient(token, client.id, targetInboundId)
+    setNotice(`VPN-клиент ${saved.email} перенесен на выбранный inbound.`)
+    await loadVpnPanelDetails(selectedVpnPanelId)
+  })
+
+  const updateVpnClientMigrationTarget = (clientId: string, targetInboundId: string) => setVpnClientMigrationTargets((current) => ({ ...current, [clientId]: targetInboundId }))
+  const migrationOptionsForClient = (client: VpnClientDto) => {
+    const currentInbound = vpnInbounds.find((inbound) => inbound.id === client.vpnInboundId)
+    return vpnInbounds.filter((inbound) => inbound.id !== client.vpnInboundId && inbound.isActive && (!currentInbound || inbound.protocol.toLowerCase() === currentInbound.protocol.toLowerCase()))
   }
 
   const editServer = (server: VpnNodeDto) => {
@@ -2396,7 +2434,11 @@ export function App() {
           </form>
           <div className="list-stack mt-12">{vpnInbounds.map((inbound) => <div key={inbound.id} className="list-item-vertical"><div className="item-head"><div><strong>{inbound.name}</strong><div className="muted">{inbound.protocol}:{inbound.port} · внешний ID {inbound.externalInboundId} · емкость {inbound.usedCapacity}/{inbound.capacity}</div><div className="muted">stream: {inbound.streamSettingsJson}</div></div><div className="item-status"><StatusBadge value={inbound.isActive ? 'Active' : 'Inactive'} />{inbound.isDefault && <StatusBadge value="Default" />}</div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editInbound(inbound)}>Редактировать</PrimaryButton>{!inbound.isDefault && inbound.isActive && <PrimaryButton disabled={actionBusyId === inbound.id} onClick={() => void handleSetDefaultInbound(inbound.id)}>Сделать основным</PrimaryButton>}{inbound.isActive ? <ConfirmButton className="button-secondary" disabled={actionBusyId === `toggle-inbound-${inbound.id}`} message={`Выключить inbound-правило "${inbound.name}"? Новые VPN-доступы не будут использовать его для выдачи.`} onConfirm={() => void handleToggleInboundActive(inbound)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === `toggle-inbound-${inbound.id}`} onClick={() => void handleToggleInboundActive(inbound)}>Включить</PrimaryButton>}</div></div>)}</div>
           <h4>Клиенты, здоровье и синхронизация</h4>
-          <div className="list-stack">{vpnClients.slice(0, 5).map((client) => <div key={client.id} className="list-item"><span>{client.email} · истекает {formatDate(client.expiryTime)}</span><StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} /></div>)}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ok'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.summaryJson || run.errorMessage || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
+          <div className="list-stack">{vpnClients.map((client) => {
+            const inbound = vpnInbounds.find((item) => item.id === client.vpnInboundId)
+            const migrationOptions = migrationOptionsForClient(client)
+            return <div key={client.id} className="list-item-vertical"><div className="item-head"><div><strong>{client.email}</strong><div className="muted">UUID {client.uuid} · inbound {inbound?.name ?? shortId(client.vpnInboundId)} · до {formatDate(client.expiryTime)}</div><div className="muted">Синхронизация: {client.syncStatus || 'unknown'} · {formatDate(client.lastSyncedAt)} · лимит устройств {client.limitIp ?? 0}</div></div><div className="item-status"><StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} />{inbound && <StatusBadge value={inbound.protocol} />}</div></div><div className="toolbar">{client.enable ? <ConfirmButton className="button-secondary" disabled={actionBusyId === `vpn-client-disable-${client.id}`} message={`Отключить VPN-клиента "${client.email}"? Пользователь потеряет подключение.`} onConfirm={() => void handleVpnClientAction(client, 'disable')}>Отключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === `vpn-client-enable-${client.id}`} onClick={() => void handleVpnClientAction(client, 'enable')}>Включить</PrimaryButton>}<PrimaryButton disabled={actionBusyId === `vpn-client-sync-${client.id}`} onClick={() => void handleVpnClientAction(client, 'sync')}>Синхронизировать</PrimaryButton><ConfirmButton disabled={actionBusyId === `vpn-client-reset-${client.id}`} message={`Сбросить трафик VPN-клиента "${client.email}"? Действие будет отправлено в 3x-ui.`} onConfirm={() => void handleVpnClientAction(client, 'reset')}>Сбросить трафик</ConfirmButton>{migrationOptions.length > 0 && <><select value={vpnClientMigrationTargets[client.id] ?? ''} onChange={(e) => updateVpnClientMigrationTarget(client.id, e.target.value)}>{migrationOptions.map((option) => <option key={option.id} value={option.id}>{option.name} · {option.protocol}:{option.port}</option>)}</select><ConfirmButton disabled={!vpnClientMigrationTargets[client.id] || actionBusyId === `vpn-client-migrate-${client.id}`} message={`Перенести VPN-клиента "${client.email}" на выбранный inbound?`} onConfirm={() => void handleMigrateVpnClient(client)}>Перенести</ConfirmButton></>}</div></div>
+          })}{vpnClients.length === 0 && <EmptyState title="Клиентов нет" description="После выдачи VPN-доступов клиенты 3x-ui появятся здесь." />}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ok'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.summaryJson || run.errorMessage || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
         </Card>
       </div>
 

@@ -570,6 +570,9 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
     if (String(url).includes('/test-connection') || String(url).includes('/health-checks')) {
       return new Response(JSON.stringify(String(url).includes('/health-checks') ? [] : { id: 'health-1', vpnPanelId: 'panel-1', status: 'Healthy', version: '2.4.12', latencyMs: 12, checkedAt: new Date().toISOString(), errorMessage: '' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
+    if (String(url).includes('/vpn-clients/')) {
+      return new Response(JSON.stringify({ id: 'client-1', userId: 'user-1', subscriptionId: 'sub-1', vpnPanelId: 'panel-1', vpnInboundId: 'inbound-1', externalClientId: 'client-1', email: 'user@example.test', uuid: 'client-uuid', flow: '', limitIp: 3, totalGb: null, expiryTime: new Date().toISOString(), enable: !String(url).includes('/disable'), configUri: 'vless://client', qrCodePayload: 'vless://client', syncStatus: 'synced', lastSyncedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
     if (String(url).includes('/sync')) {
       return new Response(JSON.stringify({ id: 'sync-1', vpnPanelId: 'panel-1', status: 'Succeeded', startedAt: new Date().toISOString(), summaryJson: '{}', errorMessage: '' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
@@ -596,6 +599,11 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   await client.updateAdminVpnInbound('admin-token', 'inbound-1', { name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{"network":"tcp"}', sniffingJson: '{}', isDefault: false, capacity: 5000, isActive: false })
   await client.setAdminVpnInboundDefault('admin-token', 'inbound-1')
   await client.getAdminVpnPanelClients('admin-token', 'panel-1')
+  await client.disableAdminVpnClient('admin-token', 'client-1')
+  await client.enableAdminVpnClient('admin-token', 'client-1')
+  await client.syncAdminVpnClient('admin-token', 'client-1')
+  await client.resetAdminVpnClientTraffic('admin-token', 'client-1')
+  await client.migrateAdminVpnClient('admin-token', 'client-1', 'inbound-2')
   await client.getAdminVpnPanelHealthChecks('admin-token', 'panel-1')
   await client.deleteAdminVpnPanel('admin-token', 'panel-1')
 
@@ -616,9 +624,16 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   assert.equal(calls[8]?.url, 'http://localhost:8080/api/admin/vpn-inbounds/inbound-1/set-default')
   assert.equal(calls[8]?.init?.method, 'POST')
   assert.equal(calls[9]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/clients')
-  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
-  assert.equal(calls[11]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
-  assert.equal(calls[11]?.init?.method, 'DELETE')
+  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/disable')
+  assert.equal(calls[10]?.init?.method, 'POST')
+  assert.equal(calls[11]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/enable')
+  assert.equal(calls[12]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/sync')
+  assert.equal(calls[13]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/reset-traffic')
+  assert.equal(calls[14]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/migrate')
+  assert.match(String(calls[14]?.init?.body), /inbound-2/)
+  assert.equal(calls[15]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
+  assert.equal(calls[16]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
+  assert.equal(calls[16]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 

@@ -109,6 +109,46 @@ public class AdminVpnPanelsController : ControllerBase
     public async Task<IActionResult> GetClients(Guid id, CancellationToken cancellationToken)
         => Ok(await _panels.GetClientsAsync(id, cancellationToken));
 
+    [HttpPost("vpn-clients/{id:guid}/enable")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> EnableClient(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _panels.EnableClientAsync(id, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
+
+    [HttpPost("vpn-clients/{id:guid}/disable")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> DisableClient(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _panels.DisableClientAsync(id, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
+
+    [HttpPost("vpn-clients/{id:guid}/sync")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> SyncClient(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _panels.SyncClientAsync(id, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
+
+    [HttpPost("vpn-clients/{id:guid}/reset-traffic")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> ResetClientTraffic(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _panels.ResetClientTrafficAsync(id, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
+
+    [HttpPost("vpn-clients/{id:guid}/migrate")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> MigrateClient(Guid id, [FromBody] MigrateVpnClientCommand request, CancellationToken cancellationToken)
+    {
+        var result = await _panels.MigrateClientAsync(id, request, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
+
     [HttpGet("vpn-panels/{id:guid}/sync-runs")]
     public async Task<IActionResult> GetSyncRuns(Guid id, CancellationToken cancellationToken)
         => Ok(await _panels.GetSyncRunsAsync(id, cancellationToken));

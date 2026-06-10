@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `278/278`.
+- [x] `STATE-001` Backend test suite проходит: `279/279`.
 - [x] `STATE-002` Frontend test suite проходит: `55/55`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
@@ -331,9 +331,10 @@ git diff --check
   - Что сделано: backend валидирует имя, протокол VLESS/VMess/Trojan, порт, емкость, JSON-объекты и обязательный `network` в `streamSettingsJson`; неактивный inbound нельзя назначить основным, а при выключении default-флаг снимается. В админке добавлены создание, редактирование, включение/выключение, назначение основным и управление JSON-полями inbound-а.
   - Доказательство: `X3UiIntegrationTests`, frontend API contract tests, typecheck/build, локальный SQLite HTTP-smoke `/api/admin/vpn-panels/{id}/inbounds` и `/api/admin/vpn-inbounds/{id}`.
 
-- [ ] `P2-ADM-VPN-005` Управление клиентами.
+- [x] `P2-ADM-VPN-005` Управление клиентами. 2026-06-10.
   - Что сделать: enable, disable, reset traffic, migrate, sync.
-  - Доказательство: tests + real 3x-ui smoke.
+  - Что сделано: добавлены admin endpoints `vpn-clients/{id}/enable`, `disable`, `sync`, `reset-traffic`, `migrate`; backend обновляет локальный `VpnClient`, связанные `AccessCredential`, sync status и timestamps, а в production вызывает 3x-ui client API. В админке список клиентов панели получил действия включения/выключения, синхронизации, сброса трафика и переноса на активный inbound того же протокола.
+  - Доказательство: `X3UiIntegrationTests.Client_Management_Should_Enable_Disable_Sync_Reset_And_Migrate`, frontend API contract tests, typecheck/build, локальный SQLite HTTP-smoke `/api/admin/vpn-panels/{id}/clients` и guard `/api/admin/vpn-clients/{id}/disable`.
 
 ### P2.6 Пользователи, подписки, заказы
 
@@ -610,6 +611,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Управление 3x-ui клиентами: enable/disable, sync, reset traffic, migrate, UI-действия и SQLite-safe списки панели | Зеленое | Backend tests `279/279`, frontend tests `55/55`, typecheck/build, Local SQLite HTTP-smoke `/api/admin/vpn-panels/{id}/clients` |
 | 2026-06-10 | Codex | Управление inbound-ами 3x-ui: create/edit, set default, active/inactive, protocol match и validation stream settings | Зеленое | Backend tests `278/278`, frontend tests `55/55`, typecheck/build, Local SQLite HTTP-smoke `/api/admin/vpn-panels/{id}/inbounds` и `/api/admin/vpn-inbounds/{id}` |
 | 2026-06-10 | Codex | CRUD 3x-ui панелей: создание, редактирование, проверка подключения, sync, отключение/включение и безопасное удаление с историей | Зеленое | Backend tests `273/273`, frontend tests `55/55`, typecheck/build, Local SQLite HTTP-smoke `/api/admin/vpn-panels` |
 | 2026-06-10 | Codex | Health-check VPN-серверов: Healthy, Degraded для обслуживания, Unhealthy при ошибке провайдера, история проверок и SQLite endpoint | Зеленое | Backend tests `271/271`, frontend tests `55/55`, typecheck/build, Local SQLite HTTP-smoke `/api/admin/servers/{id}/health-check` |

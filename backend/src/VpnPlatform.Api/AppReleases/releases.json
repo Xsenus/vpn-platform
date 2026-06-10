@@ -1037,5 +1037,28 @@
         "text": "Backend валидирует поддерживаемые протоколы VLESS, VMess и Trojan, диапазон портов, валидность JSON и обязательный network в streamSettingsJson."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-10-vpn-client-management",
+    "version": "0.47.0",
+    "releasedAt": "2026-06-10T23:45:00+07:00",
+    "title": "Управление 3x-ui клиентами добавлено в админку",
+    "summary": "В деталях 3x-ui панели теперь можно управлять VPN-клиентами: включать, выключать, синхронизировать, сбрасывать трафик и переносить клиента на другой совместимый inbound.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены admin endpoints для VPN-клиентов: enable, disable, sync, reset traffic и migrate."
+      },
+      {
+        "type": "improved",
+        "text": "Админка показывает клиентов панели с текущим inbound, статусом синхронизации, лимитом устройств и действиями управления."
+      },
+      {
+        "type": "fixed",
+        "text": "Списки клиентов, sync-runs, sync-events и health-checks 3x-ui панели больше не падают на SQLite из-за сортировки DateTimeOffset на стороне базы."
+      }
+    ]
   }
 ]

@@ -629,6 +629,7 @@ export type VpnClientDto = {
   email: string
   uuid: string
   flow: string
+  limitIp: number
   totalGb?: number | null
   expiryTime: string
   enable: boolean
@@ -1525,6 +1526,51 @@ export class ApiClient {
 
   getAdminVpnPanelClients(token: string, id: string): Promise<VpnClientDto[]> {
     return this.request<VpnClientDto[]>(`/api/admin/vpn-panels/${id}/clients`, { token, errorMessage: 'Failed to load VPN clients' })
+  }
+
+  enableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/enable`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to enable VPN client'
+    })
+  }
+
+  disableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/disable`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to disable VPN client'
+    })
+  }
+
+  syncAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/sync`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to sync VPN client'
+    })
+  }
+
+  resetAdminVpnClientTraffic(token: string, id: string): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/reset-traffic`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to reset VPN client traffic'
+    })
+  }
+
+  migrateAdminVpnClient(token: string, id: string, targetInboundId: string): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/migrate`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ targetInboundId }),
+      errorMessage: 'Failed to migrate VPN client'
+    })
   }
 
   getAdminVpnPanelSyncRuns(token: string, id: string): Promise<PanelSyncRunDto[]> {

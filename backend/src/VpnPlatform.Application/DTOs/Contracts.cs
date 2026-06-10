@@ -422,6 +422,7 @@ public sealed record VpnClientDto(
     string Email,
     string Uuid,
     string Flow,
+    int LimitIp,
     long? TotalGb,
     DateTimeOffset ExpiryTime,
     bool Enable,
@@ -429,6 +430,8 @@ public sealed record VpnClientDto(
     string QrCodePayload,
     string SyncStatus,
     DateTimeOffset? LastSyncedAt);
+
+public sealed record MigrateVpnClientCommand(Guid TargetInboundId);
 
 public sealed record PanelHealthCheckDto(Guid Id, Guid VpnPanelId, string Status, long? LatencyMs, string Version, string ErrorMessage, DateTimeOffset CheckedAt);
 public sealed record PanelSyncRunDto(Guid Id, Guid VpnPanelId, string Status, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt, string SummaryJson, string ErrorMessage);

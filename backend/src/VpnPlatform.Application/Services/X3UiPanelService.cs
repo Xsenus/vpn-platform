@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -526,26 +527,283 @@ public class X3UiPanelService
 
     public async Task<IReadOnlyCollection<VpnClientDto>> GetClientsAsync(Guid panelId, CancellationToken cancellationToken = default)
     {
-        var clients = await _db.VpnClients.AsNoTracking().Where(x => x.VpnPanelId == panelId).OrderByDescending(x => x.CreatedAt).ToListAsync(cancellationToken);
-        return clients.Select(MapClient).ToList();
+        var clients = await _db.VpnClients.AsNoTracking().Where(x => x.VpnPanelId == panelId).ToListAsync(cancellationToken);
+        return clients.OrderByDescending(x => x.CreatedAt).Select(MapClient).ToList();
+    }
+
+    public Task<Result<VpnClientDto>> EnableClientAsync(Guid clientId, CancellationToken cancellationToken = default)
+        => SetClientEnabledAsync(clientId, true, cancellationToken);
+
+    public Task<Result<VpnClientDto>> DisableClientAsync(Guid clientId, CancellationToken cancellationToken = default)
+        => SetClientEnabledAsync(clientId, false, cancellationToken);
+
+    public async Task<Result<VpnClientDto>> SyncClientAsync(Guid clientId, CancellationToken cancellationToken = default)
+    {
+        var client = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (client?.VpnPanel is null || client.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        if (!IsSandboxMode())
+        {
+            var configurationError = ValidatePanelCredentials(client.VpnPanel);
+            if (configurationError is not null)
+            {
+                return Result<VpnClientDto>.Failure(configurationError);
+            }
+
+            var password = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
+            await _client.GetClientTrafficAsync(client.VpnPanel, password, client.Uuid, cancellationToken);
+        }
+
+        client.SyncStatus = IsSandboxMode() ? "sandbox-synced" : "synced";
+        client.LastSyncedAt = _clock.UtcNow;
+        client.UpdatedAt = _clock.UtcNow;
+        await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<VpnClientDto>.Success(MapClient(client));
+    }
+
+    public async Task<Result<VpnClientDto>> ResetClientTrafficAsync(Guid clientId, CancellationToken cancellationToken = default)
+    {
+        var client = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (client?.VpnPanel is null || client.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        if (!IsSandboxMode())
+        {
+            var configurationError = ValidatePanelCredentials(client.VpnPanel);
+            if (configurationError is not null)
+            {
+                return Result<VpnClientDto>.Failure(configurationError);
+            }
+
+            var password = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
+            await _client.ResetClientTrafficAsync(client.VpnPanel, password, client.VpnInbound.ExternalInboundId, client.Uuid, cancellationToken);
+        }
+
+        client.SyncStatus = IsSandboxMode() ? "sandbox-traffic-reset" : "traffic-reset";
+        client.LastSyncedAt = _clock.UtcNow;
+        client.UpdatedAt = _clock.UtcNow;
+        await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<VpnClientDto>.Success(MapClient(client));
+    }
+
+    public async Task<Result<VpnClientDto>> MigrateClientAsync(Guid clientId, MigrateVpnClientCommand command, CancellationToken cancellationToken = default)
+    {
+        var client = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (client?.VpnPanel is null || client.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        var targetInbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == command.TargetInboundId, cancellationToken);
+        if (targetInbound?.VpnPanel is null)
+        {
+            return Result<VpnClientDto>.Failure("Target inbound not found.");
+        }
+        if (!targetInbound.IsActive)
+        {
+            return Result<VpnClientDto>.Failure("Target inbound is inactive.");
+        }
+        if (!string.Equals(targetInbound.Protocol, client.VpnInbound.Protocol, StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<VpnClientDto>.Failure("Target inbound protocol must match the client protocol.");
+        }
+        if (targetInbound.Id == client.VpnInboundId)
+        {
+            client.SyncStatus = "already-on-target";
+            client.LastSyncedAt = _clock.UtcNow;
+            client.UpdatedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<VpnClientDto>.Success(MapClient(client));
+        }
+
+        var sourceInbound = client.VpnInbound;
+        var sourcePanel = client.VpnPanel;
+        X3UiClientDto? remote = null;
+        if (!IsSandboxMode())
+        {
+            var sourceConfigurationError = ValidatePanelCredentials(sourcePanel);
+            var targetConfigurationError = ValidatePanelCredentials(targetInbound.VpnPanel);
+            if (sourceConfigurationError is not null) return Result<VpnClientDto>.Failure(sourceConfigurationError);
+            if (targetConfigurationError is not null) return Result<VpnClientDto>.Failure(targetConfigurationError);
+
+            var targetPassword = _secretProtector.Unprotect(targetInbound.VpnPanel.EncryptedPassword);
+            remote = await _client.AddClientAsync(targetInbound.VpnPanel, targetPassword, new X3UiAddClientRequest(targetInbound.ExternalInboundId, client.Email, client.Uuid, client.Flow, client.LimitIp, client.TotalGb, client.ExpiryTime, client.Enable), cancellationToken);
+            var sourcePassword = _secretProtector.Unprotect(sourcePanel.EncryptedPassword);
+            await _client.DeleteClientAsync(sourcePanel, sourcePassword, sourceInbound.ExternalInboundId, client.Uuid, cancellationToken);
+        }
+
+        if (sourceInbound.UsedCapacity > 0) sourceInbound.UsedCapacity -= 1;
+        targetInbound.UsedCapacity += 1;
+        if (sourcePanel.Id != targetInbound.VpnPanelId)
+        {
+            if (sourcePanel.UsedCapacity > 0) sourcePanel.UsedCapacity -= 1;
+            targetInbound.VpnPanel.UsedCapacity += 1;
+        }
+
+        client.VpnPanelId = targetInbound.VpnPanelId;
+        client.VpnInboundId = targetInbound.Id;
+        client.ExternalClientId = string.IsNullOrWhiteSpace(remote?.Id) ? client.ExternalClientId : remote.Id;
+        client.ConfigUri = BuildClientConfigUri(targetInbound.VpnPanel, targetInbound, client);
+        client.QrCodePayload = string.IsNullOrWhiteSpace(client.ConfigUri) ? string.Empty : client.ConfigUri;
+        client.SyncStatus = IsSandboxMode() ? "sandbox-migrated" : "migrated";
+        client.LastSyncedAt = _clock.UtcNow;
+        client.UpdatedAt = _clock.UtcNow;
+        await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<VpnClientDto>.Success(MapClient(client));
     }
 
     public async Task<IReadOnlyCollection<PanelSyncRunDto>> GetSyncRunsAsync(Guid panelId, CancellationToken cancellationToken = default)
     {
-        var runs = await _db.PanelSyncRuns.AsNoTracking().Where(x => x.VpnPanelId == panelId).OrderByDescending(x => x.StartedAt).Take(50).ToListAsync(cancellationToken);
-        return runs.Select(MapSyncRun).ToList();
+        var runs = await _db.PanelSyncRuns.AsNoTracking().Where(x => x.VpnPanelId == panelId).ToListAsync(cancellationToken);
+        return runs.OrderByDescending(x => x.StartedAt).Take(50).Select(MapSyncRun).ToList();
     }
 
     public async Task<IReadOnlyCollection<PanelSyncEventDto>> GetSyncEventsAsync(Guid runId, CancellationToken cancellationToken = default)
     {
-        var events = await _db.PanelSyncEvents.AsNoTracking().Where(x => x.PanelSyncRunId == runId).OrderBy(x => x.CreatedAt).ToListAsync(cancellationToken);
-        return events.Select(MapSyncEvent).ToList();
+        var events = await _db.PanelSyncEvents.AsNoTracking().Where(x => x.PanelSyncRunId == runId).ToListAsync(cancellationToken);
+        return events.OrderBy(x => x.CreatedAt).Select(MapSyncEvent).ToList();
     }
 
     public async Task<IReadOnlyCollection<PanelHealthCheckDto>> GetHealthChecksAsync(Guid panelId, CancellationToken cancellationToken = default)
     {
-        var checks = await _db.PanelHealthChecks.AsNoTracking().Where(x => x.VpnPanelId == panelId).OrderByDescending(x => x.CheckedAt).Take(50).ToListAsync(cancellationToken);
-        return checks.Select(MapHealth).ToList();
+        var checks = await _db.PanelHealthChecks.AsNoTracking().Where(x => x.VpnPanelId == panelId).ToListAsync(cancellationToken);
+        return checks.OrderByDescending(x => x.CheckedAt).Take(50).Select(MapHealth).ToList();
+    }
+
+    private async Task<Result<VpnClientDto>> SetClientEnabledAsync(Guid clientId, bool enabled, CancellationToken cancellationToken)
+    {
+        var client = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (client?.VpnPanel is null || client.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        if (!IsSandboxMode())
+        {
+            var configurationError = ValidatePanelCredentials(client.VpnPanel);
+            if (configurationError is not null)
+            {
+                return Result<VpnClientDto>.Failure(configurationError);
+            }
+
+            var password = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
+            await _client.UpdateClientAsync(client.VpnPanel, password, new X3UiUpdateClientRequest(client.VpnInbound.ExternalInboundId, client.Uuid, client.Email, client.Uuid, client.Flow, client.LimitIp, client.TotalGb, client.ExpiryTime, enabled), cancellationToken);
+        }
+
+        client.Enable = enabled;
+        client.SyncStatus = IsSandboxMode()
+            ? enabled ? "sandbox-enabled" : "sandbox-disabled"
+            : enabled ? "enabled" : "disabled";
+        client.LastSyncedAt = _clock.UtcNow;
+        client.UpdatedAt = _clock.UtcNow;
+        await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<VpnClientDto>.Success(MapClient(client));
+    }
+
+    private Task<VpnClient?> LoadClientForActionAsync(Guid clientId, CancellationToken cancellationToken)
+        => _db.VpnClients.Include(x => x.VpnPanel).Include(x => x.VpnInbound).FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
+
+    private static string? ValidatePanelCredentials(VpnPanel panel)
+        => string.IsNullOrWhiteSpace(panel.BaseUrl) || string.IsNullOrWhiteSpace(panel.Login) || string.IsNullOrWhiteSpace(panel.EncryptedPassword)
+            ? "Panel not configured: base URL, login and password are required."
+            : null;
+
+    private async Task UpdateLinkedAccessCredentialsAsync(VpnClient client, CancellationToken cancellationToken)
+    {
+        var accesses = await _db.AccessCredentials
+            .Where(x => x.SubscriptionId == client.SubscriptionId && (x.ProviderAccessId == client.ExternalClientId || x.ProviderAccessId == client.Id.ToString()))
+            .ToListAsync(cancellationToken);
+
+        foreach (var access in accesses)
+        {
+            access.ProviderAccessId = client.ExternalClientId;
+            access.AccessUri = client.ConfigUri;
+            access.QrCodePath = client.QrCodePayload;
+            access.Status = client.Enable ? AccessCredentialStatus.Active : AccessCredentialStatus.Disabled;
+            access.DisabledAt = client.Enable ? null : _clock.UtcNow;
+            access.LastSyncedAt = client.LastSyncedAt;
+            access.Revision += 1;
+            access.UpdatedAt = _clock.UtcNow;
+        }
+    }
+
+    private static string BuildClientConfigUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
+    {
+        var host = ExtractHost(panel.BaseUrl);
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        {
+            return client.ConfigUri;
+        }
+
+        var protocol = NormalizeProtocol(inbound.Protocol);
+        var network = ReadJsonString(inbound.StreamSettingsJson, "network", "tcp");
+        var security = ReadJsonString(inbound.StreamSettingsJson, "security", "none");
+        var remark = Uri.EscapeDataString(string.IsNullOrWhiteSpace(client.Email) ? $"vpn-{client.SubscriptionId}" : client.Email);
+
+        if (protocol is "vless")
+        {
+            var query = $"type={Uri.EscapeDataString(network)}&security={Uri.EscapeDataString(security)}";
+            if (!string.IsNullOrWhiteSpace(client.Flow))
+            {
+                query += $"&flow={Uri.EscapeDataString(client.Flow)}";
+            }
+            return $"vless://{client.Uuid}@{host}:{inbound.Port}?{query}#{remark}";
+        }
+
+        if (protocol is "trojan")
+        {
+            var query = $"type={Uri.EscapeDataString(network)}&security={Uri.EscapeDataString(security)}";
+            return $"trojan://{Uri.EscapeDataString(client.Uuid)}@{host}:{inbound.Port}?{query}#{remark}";
+        }
+
+        if (protocol is "vmess")
+        {
+            var vmess = new Dictionary<string, string>
+            {
+                ["v"] = "2",
+                ["ps"] = string.IsNullOrWhiteSpace(client.Email) ? $"vpn-{client.SubscriptionId}" : client.Email,
+                ["add"] = host,
+                ["port"] = inbound.Port.ToString(),
+                ["id"] = client.Uuid,
+                ["aid"] = "0",
+                ["scy"] = "auto",
+                ["net"] = network,
+                ["type"] = "none",
+                ["host"] = string.Empty,
+                ["path"] = string.Empty,
+                ["tls"] = security is "tls" or "reality" ? security : string.Empty
+            };
+            return $"vmess://{Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(vmess)))}";
+        }
+
+        return client.ConfigUri;
+    }
+
+    private static string ExtractHost(string baseUrl)
+        => Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ? uri.Host : string.Empty;
+
+    private static string ReadJsonString(string json, string propertyName, string fallback)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
+            return doc.RootElement.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+                ? value.GetString() ?? fallback
+                : fallback;
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     private async Task DetectClientDiffsAsync(Guid panelId, PanelSyncRun run, IReadOnlyCollection<X3UiInboundDto> remoteInbounds, CancellationToken cancellationToken)
@@ -667,7 +925,7 @@ public class X3UiPanelService
         => new(x.Id, x.VpnPanelId, x.ExternalInboundId, x.Name, x.Protocol, x.Port, x.Listen, x.SettingsJson, x.StreamSettingsJson, x.SniffingJson, x.IsDefault, x.IsActive, x.Capacity, x.UsedCapacity);
 
     private static VpnClientDto MapClient(VpnClient x)
-        => new(x.Id, x.UserId, x.SubscriptionId, x.VpnPanelId, x.VpnInboundId, x.ExternalClientId, x.Email, x.Uuid, x.Flow, x.TotalGb, x.ExpiryTime, x.Enable, x.ConfigUri, x.QrCodePayload, x.SyncStatus, x.LastSyncedAt);
+        => new(x.Id, x.UserId, x.SubscriptionId, x.VpnPanelId, x.VpnInboundId, x.ExternalClientId, x.Email, x.Uuid, x.Flow, x.LimitIp, x.TotalGb, x.ExpiryTime, x.Enable, x.ConfigUri, x.QrCodePayload, x.SyncStatus, x.LastSyncedAt);
 
     private static PanelHealthCheckDto MapHealth(PanelHealthCheck x)
         => new(x.Id, x.VpnPanelId, x.Status.ToString(), x.LatencyMs, x.Version, x.ErrorMessage, x.CheckedAt);
