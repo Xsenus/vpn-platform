@@ -270,7 +270,30 @@ public sealed record PaymentProviderSettingDto(Guid Id, Guid PaymentProviderAcco
 public sealed record PaymentWebhookEventDto(Guid Id, PaymentProvider Provider, Guid? PaymentAttemptId, Guid? PaymentProviderAccountId, string ProviderPaymentId, string ExternalEventId, string EventType, string Status, bool SignatureValidated, DateTimeOffset ReceivedAt, DateTimeOffset? ProcessedAt, string ErrorText);
 public sealed record RefundDto(Guid Id, Guid PaymentAttemptId, PaymentProvider Provider, string ProviderRefundId, string Status, decimal Amount, string Currency, string Reason, DateTimeOffset CreatedAt, DateTimeOffset? RefundedAt);
 
-public sealed record SubscriptionDto(Guid Id, Guid UserId, Guid TariffId, string Status, DateTimeOffset StartAt, DateTimeOffset EndAt, string? AccessUri, string? QrCodePath, string? ConfigPath, string? NodeName);
+public sealed record SubscriptionDto(
+    Guid Id,
+    Guid UserId,
+    Guid TariffId,
+    string Status,
+    DateTimeOffset StartAt,
+    DateTimeOffset EndAt,
+    string? AccessUri,
+    string? QrCodePath,
+    string? ConfigPath,
+    string? NodeName,
+    string? TariffName = null,
+    DateTimeOffset? GracePeriodEndAt = null,
+    bool AutoRenewFlag = false,
+    string? SourceChannel = null,
+    Guid? CurrentServerId = null,
+    Guid? CurrentAccessId = null,
+    Guid? LastPaymentId = null,
+    int RenewalCount = 0,
+    string? BlockReason = null,
+    DateTimeOffset? SuspendedAt = null,
+    DateTimeOffset? CancelledAt = null,
+    DateTimeOffset? CreatedAt = null,
+    DateTimeOffset? UpdatedAt = null);
 public sealed record ActivationResult(Guid SubscriptionId, Guid? AccessId);
 
 public sealed record VpnProvisionRequest(

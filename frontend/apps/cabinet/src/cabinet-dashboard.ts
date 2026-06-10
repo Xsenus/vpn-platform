@@ -5,11 +5,10 @@ export function isCurrentSubscription(subscription: SubscriptionDto) {
 }
 
 export function selectCurrentSubscription(subscriptions: SubscriptionDto[]) {
-  const sorted = [...subscriptions].sort((left, right) => {
-    const leftActive = isCurrentSubscription(left) ? 0 : 1
-    const rightActive = isCurrentSubscription(right) ? 0 : 1
-    if (leftActive !== rightActive) return leftActive - rightActive
-    return new Date(left.endAt).getTime() - new Date(right.endAt).getTime()
+  const sorted = subscriptions.filter(isCurrentSubscription).sort((left, right) => {
+    const leftEndAt = new Date(left.endAt).getTime()
+    const rightEndAt = new Date(right.endAt).getTime()
+    return rightEndAt - leftEndAt
   })
 
   return sorted[0] ?? null

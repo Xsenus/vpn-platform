@@ -1,0 +1,226 @@
+using System.Reflection;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using VpnPlatform.Api.Controllers.Me;
+using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Persistence;
+using Xunit;
+
+namespace VpnPlatform.UnitTests;
+
+public class MeCabinetControllerTests
+{
+    [Fact]
+    public async Task Cabinet_Should_Return_Empty_Subscriptions_And_Accesses_For_User_Without_Subscription_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        db.Users.Add(User(userId, "empty-cabinet@example.test"));
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, userId);
+
+        var subscriptionsResult = await controller.GetSubscriptions(CancellationToken.None);
+        var accessesResult = await controller.GetAccesses(CancellationToken.None);
+
+        var subscriptions = AssertOkList(subscriptionsResult);
+        var accesses = AssertOkList(accessesResult);
+        Assert.Empty(subscriptions);
+        Assert.Empty(accesses);
+    }
+
+    [Fact]
+    public async Task Cabinet_Should_Return_Active_Subscription_With_Tariff_Access_Qr_And_Server_Metadata_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var foreignUserId = Guid.NewGuid();
+        var tariff = new Tariff
+        {
+            Id = Guid.NewGuid(),
+            Name = "VPN Премиум",
+            Slug = "premium",
+            DurationDays = 30,
+            Price = 299,
+            Currency = "RUB",
+            IsActive = true
+        };
+        var node = new VpnNode
+        {
+            Id = Guid.NewGuid(),
+            Name = "nl-ams-1",
+            Host = "nl-ams-1.example.test",
+            IpAddress = "192.0.2.10",
+            Provider = "x3ui",
+            Region = "eu-west",
+            Country = "NL",
+            Status = NodeStatus.Ready,
+            HealthStatus = HealthStatus.Healthy
+        };
+        db.Users.AddRange(User(userId, "active-cabinet@example.test"), User(foreignUserId, "foreign-cabinet@example.test"));
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var now = new DateTimeOffset(2026, 6, 10, 10, 0, 0, TimeSpan.Zero);
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Active,
+            StartAt = now.AddDays(-1),
+            EndAt = now.AddDays(29),
+            SourceChannel = ChannelType.Web,
+            CurrentServerId = node.Id,
+            AutoRenewFlag = true,
+            RenewalCount = 1,
+            CreatedAt = now.AddMinutes(1),
+            UpdatedAt = now.AddMinutes(2)
+        };
+        var foreignSubscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = foreignUserId,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Active,
+            StartAt = now.AddDays(-1),
+            EndAt = now.AddDays(29),
+            SourceChannel = ChannelType.Web,
+            CurrentServerId = node.Id,
+            CreatedAt = now.AddMinutes(3),
+            UpdatedAt = now.AddMinutes(3)
+        };
+        db.Subscriptions.AddRange(subscription, foreignSubscription);
+        await db.SaveChangesAsync();
+
+        var access = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "client-active",
+            ServerId = node.Id,
+            AccessUri = "vless://active-user@example.test",
+            QrCodePath = "vless://active-user@example.test",
+            ConfigPath = "/configs/active-user.json",
+            Status = AccessCredentialStatus.Active,
+            IssuedAt = now,
+            Revision = 2,
+            CreatedAt = now.AddMinutes(4),
+            UpdatedAt = now.AddMinutes(4)
+        };
+        var foreignAccess = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = foreignSubscription.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "client-foreign",
+            ServerId = node.Id,
+            AccessUri = "vless://foreign@example.test",
+            QrCodePath = "vless://foreign@example.test",
+            ConfigPath = "/configs/foreign.json",
+            Status = AccessCredentialStatus.Active,
+            IssuedAt = now,
+            Revision = 1,
+            CreatedAt = now.AddMinutes(5),
+            UpdatedAt = now.AddMinutes(5)
+        };
+        db.AccessCredentials.AddRange(access, foreignAccess);
+        await db.SaveChangesAsync();
+
+        subscription.CurrentAccessId = access.Id;
+        foreignSubscription.CurrentAccessId = foreignAccess.Id;
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, userId);
+
+        var subscriptions = AssertOkList(await controller.GetSubscriptions(CancellationToken.None));
+        var accesses = AssertOkList(await controller.GetAccesses(CancellationToken.None));
+
+        var subscriptionDto = Assert.Single(subscriptions);
+        Assert.Equal(subscription.Id, Read<Guid>(subscriptionDto, "Id"));
+        Assert.Equal("Active", Read<string>(subscriptionDto, "Status"));
+        Assert.Equal(tariff.Name, Read<string>(subscriptionDto, "TariffName"));
+        Assert.Equal(access.Id, Read<Guid>(subscriptionDto, "CurrentAccessId"));
+        Assert.Equal(node.Id, Read<Guid>(subscriptionDto, "CurrentServerId"));
+        Assert.Equal(node.Name, Read<string>(subscriptionDto, "NodeName"));
+        Assert.Equal(access.AccessUri, Read<string>(subscriptionDto, "AccessUri"));
+        Assert.Equal(access.QrCodePath, Read<string>(subscriptionDto, "QrCodePath"));
+        Assert.Equal(access.ConfigPath, Read<string>(subscriptionDto, "ConfigPath"));
+
+        var accessDto = Assert.Single(accesses);
+        Assert.Equal(access.Id, Read<Guid>(accessDto, "Id"));
+        Assert.Equal(userId, Read<Guid>(accessDto, "UserId"));
+        Assert.Equal(subscription.Id, Read<Guid>(accessDto, "SubscriptionId"));
+        Assert.Equal(node.Name, Read<string>(accessDto, "ServerName"));
+        Assert.Equal("Active", Read<string>(accessDto, "Status"));
+        Assert.Equal(subscription.EndAt, Read<DateTimeOffset>(accessDto, "ExpiryDate"));
+        Assert.Equal(access.AccessUri, Read<string>(accessDto, "AccessUri"));
+        Assert.Equal(access.QrCodePath, Read<string>(accessDto, "QrCodePayload"));
+        Assert.Equal(2, Read<int>(accessDto, "Revision"));
+    }
+
+    private static User User(Guid id, string email)
+        => new()
+        {
+            Id = id,
+            Email = email,
+            DisplayName = email,
+            PasswordHash = "hash",
+            ReferralCode = id.ToString("N")[..12],
+            Status = UserStatus.Active
+        };
+
+    private static List<object> AssertOkList(IActionResult result)
+    {
+        var ok = Assert.IsType<OkObjectResult>(result);
+        return Assert.IsAssignableFrom<IEnumerable<object>>(ok.Value).ToList();
+    }
+
+    private static T Read<T>(object value, string propertyName)
+    {
+        var property = value.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
+        Assert.NotNull(property);
+        return Assert.IsType<T>(property.GetValue(value));
+    }
+
+    private static MeController CreateController(ApplicationDbContext db, Guid userId)
+    {
+        var configuration = new ConfigurationBuilder().Build();
+        return new MeController(db, null!, null!, null!, null!, null!, configuration)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+                    }, "unit-test"))
+                }
+            }
+        };
+    }
+
+    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+}

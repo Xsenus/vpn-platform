@@ -33,8 +33,8 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `242/242`.
-- [x] `STATE-002` Frontend test suite проходит: `49/49`.
+- [x] `STATE-001` Backend test suite проходит: `244/244`.
+- [x] `STATE-002` Frontend test suite проходит: `51/51`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` прошли успешно.
@@ -196,13 +196,13 @@ git diff --check
   - Что сделать: forgot password -> reset token -> reset password -> login.
   - Доказательство: `AuthPasswordResetControllerTests.Forgot_And_Reset_Password_Should_Work_With_Sqlite_And_Revoke_Old_Sessions`, `AuthPasswordResetControllerTests.ResetPassword_Should_Reject_Token_When_User_Becomes_Inactive`.
 
-- [ ] `P1-CAB-004` Кабинет без подписки.
+- [x] `P1-CAB-004` Кабинет без подписки. 2026-06-10.
   - Что сделать: проверить empty state, CTA покупки, отсутствие QR/URI.
-  - Доказательство: screenshot.
+  - Доказательство: `MeCabinetControllerTests.Cabinet_Should_Return_Empty_Subscriptions_And_Accesses_For_User_Without_Subscription_On_Sqlite`, frontend dashboard empty/expired tests.
 
-- [ ] `P1-CAB-005` Кабинет с активной подпиской.
+- [x] `P1-CAB-005` Кабинет с активной подпиской. 2026-06-10.
   - Что сделать: проверить статус, срок действия, тариф, VPN URI, QR, копирование ссылки.
-  - Доказательство: screenshot + API response.
+  - Доказательство: `MeCabinetControllerTests.Cabinet_Should_Return_Active_Subscription_With_Tariff_Access_Qr_And_Server_Metadata_On_Sqlite`, frontend dashboard active/currentAccessId tests.
 
 - [x] `P1-CAB-006` История заказов и платежей. 2026-06-10.
   - Что сделать: проверить paid, pending, failed, refunded статусы.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Кабинет без активной подписки и с активным VPN-доступом: empty state, CTA покупки, тариф, сервер, URI, QR-метаданные | Зеленое | Backend tests `244/244`, SQLite cabinet state tests, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Восстановление пароля: forgot, одноразовый reset token, новый пароль, отзыв сессий, expired/inactive user | Зеленое | Backend tests `242/242`, SQLite password reset flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Логин/logout кабинета: валидный логин, неверный пароль, inactive user, refresh rotation, reuse detection, logout | Зеленое | Backend tests `240/240`, SQLite session flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Регистрация в кабинете: успешный аккаунт, duplicate email, слабый пароль, неверный email, fallback display name | Зеленое | Backend tests `239/239`, SQLite registration test, frontend tests/typecheck/build |

@@ -65,6 +65,7 @@ public class MeController : ControllerBase
         var userId = ResolveUserId();
         var items = await _db.Subscriptions
             .AsNoTracking()
+            .Include(x => x.Tariff)
             .Include(x => x.CurrentAccess)
             .Include(x => x.CurrentServer)
             .Where(x => x.UserId == userId)
@@ -78,10 +79,23 @@ public class MeController : ControllerBase
                 x.CurrentAccess != null ? x.CurrentAccess.AccessUri : null,
                 x.CurrentAccess != null ? x.CurrentAccess.QrCodePath : null,
                 x.CurrentAccess != null ? x.CurrentAccess.ConfigPath : null,
-                x.CurrentServer != null ? x.CurrentServer.Name : null))
+                x.CurrentServer != null ? x.CurrentServer.Name : null,
+                x.Tariff != null ? x.Tariff.Name : null,
+                x.GracePeriodEndAt,
+                x.AutoRenewFlag,
+                x.SourceChannel.ToString(),
+                x.CurrentServerId,
+                x.CurrentAccessId,
+                x.LastPaymentId,
+                x.RenewalCount,
+                x.BlockReason,
+                x.SuspendedAt,
+                x.CancelledAt,
+                x.CreatedAt,
+                x.UpdatedAt))
             .ToListAsync(cancellationToken);
 
-        return Ok(items);
+        return Ok(items.OrderByDescending(x => x.CreatedAt).ToList());
     }
 
     [HttpGet("orders")]
@@ -468,8 +482,36 @@ public class MeController : ControllerBase
     [HttpGet("accesses")]
     public async Task<IActionResult> GetAccesses(CancellationToken cancellationToken)
     {
-        var subscriptionIds = await _db.Subscriptions.Where(x => x.UserId == ResolveUserId()).Select(x => x.Id).ToListAsync(cancellationToken);
-        var accesses = await _db.AccessCredentials.AsNoTracking().Where(x => subscriptionIds.Contains(x.SubscriptionId)).ToListAsync(cancellationToken);
+        var userId = ResolveUserId();
+        var accesses = await _db.AccessCredentials
+            .AsNoTracking()
+            .Include(x => x.Subscription)
+            .Include(x => x.Server)
+            .Where(x => x.Subscription != null && x.Subscription.UserId == userId)
+            .Select(x => new
+            {
+                x.Id,
+                x.SubscriptionId,
+                UserId = x.Subscription != null ? x.Subscription.UserId : (Guid?)null,
+                x.ProviderType,
+                x.ProviderAccessId,
+                x.ServerId,
+                ServerName = x.Server != null ? x.Server.Name : null,
+                x.AccessUri,
+                QrCodePayload = x.QrCodePath,
+                x.QrCodePath,
+                x.ConfigPath,
+                Status = x.Status.ToString(),
+                x.IssuedAt,
+                ExpiryDate = x.Subscription != null ? x.Subscription.EndAt : (DateTimeOffset?)null,
+                x.DisabledAt,
+                x.LastSyncedAt,
+                x.Revision,
+                x.CreatedAt,
+                x.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+
         return Ok(accesses.OrderByDescending(x => x.CreatedAt).ToList());
     }
 

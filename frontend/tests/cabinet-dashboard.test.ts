@@ -39,6 +39,24 @@ test('cabinet dashboard selects current subscription before old records', () => 
   assert.equal(selectCurrentSubscription([old, current])?.id, 'current')
 })
 
+test('cabinet dashboard does not treat expired subscriptions as current access', () => {
+  const expired = subscription({ id: 'expired', status: 'Expired', endAt: '2026-05-10T00:00:00Z' })
+  const summary = buildCabinetSummary([expired], [access({ subscriptionId: 'expired' })], new Date('2026-05-27T00:00:00Z'))
+
+  assert.equal(selectCurrentSubscription([expired]), null)
+  assert.equal(summary.currentSubscription, null)
+  assert.equal(summary.currentAccess, null)
+  assert.equal(summary.hasActiveSubscription, false)
+  assert.equal(summary.hasConnectionLink, false)
+})
+
+test('cabinet dashboard prefers the latest active subscription', () => {
+  const expiringSoon = subscription({ id: 'soon', status: 'Active', endAt: '2026-05-28T00:00:00Z' })
+  const latest = subscription({ id: 'latest', status: 'Active', endAt: '2026-06-30T00:00:00Z' })
+
+  assert.equal(selectCurrentSubscription([expiringSoon, latest])?.id, 'latest')
+})
+
 test('cabinet dashboard links access by currentAccessId and reports days left', () => {
   const current = subscription({ id: 'sub-2', currentAccessId: 'access-2', endAt: '2026-05-30T00:00:00Z' })
   const linkedAccess = access({ id: 'access-2', subscriptionId: 'sub-2', accessUri: 'vless://linked' })
