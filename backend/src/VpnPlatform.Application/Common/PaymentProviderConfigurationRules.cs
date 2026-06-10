@@ -3,6 +3,8 @@ using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Application.Common;
 
+public sealed record PaymentProviderCapabilityRule(string Key, string Label, bool Supported, string Status);
+
 public static class PaymentProviderConfigurationRules
 {
     public static bool SupportsWebCheckout(PaymentProvider provider)
@@ -44,6 +46,11 @@ public static class PaymentProviderConfigurationRules
             return "Production checkout requires a protected secret key.";
         }
 
+        if (account.Provider == PaymentProvider.CloudPayments && string.IsNullOrWhiteSpace(ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl")))
+        {
+            return "CloudPayments checkout requires ExtraSettingsJson.hostedCheckoutUrl with a merchant-hosted widget page.";
+        }
+
         return null;
     }
 
@@ -72,20 +79,53 @@ public static class PaymentProviderConfigurationRules
 
     public static string GetCapabilitiesJson(PaymentProvider provider)
     {
-        var capabilities = provider switch
-        {
-            PaymentProvider.YooKassa => new[] { "createPayment", "webhook", "signatureValidation", "refund", "recheck", "sandbox", "live" },
-            PaymentProvider.TBankAcquiring => new[] { "createPayment", "webhook", "signatureValidation", "refund", "recheck", "sandbox", "live" },
-            PaymentProvider.RoboKassa => new[] { "createPayment", "webhook", "signatureValidation", "sandbox", "live" },
-            PaymentProvider.Prodamus => new[] { "createPayment", "webhook", "signatureValidation", "sandbox", "live" },
-            PaymentProvider.YooMoney => new[] { "createPayment", "webhook", "signatureValidation", "sandbox", "live" },
-            PaymentProvider.TelegramStars => new[] { "telegramNative", "webhook", "sandboxNotSupported", "live" },
-            PaymentProvider.Stripe => new[] { "createPayment", "webhook", "signatureValidation", "refund", "recheck", "sandbox", "live" },
-            PaymentProvider.PayPal => new[] { "createPayment", "webhook", "signatureValidation", "refund", "recheck", "sandbox", "live" },
-            PaymentProvider.CloudPayments => new[] { "createPayment", "webhook", "signatureValidation", "sandbox", "live" },
-            _ => Array.Empty<string>()
-        };
+        var capabilities = GetCapabilityRules(provider)
+            .Where(x => x.Supported)
+            .Select(x => x.Key)
+            .ToArray();
 
         return System.Text.Json.JsonSerializer.Serialize(capabilities);
+    }
+
+    public static IReadOnlyCollection<PaymentProviderCapabilityRule> GetCapabilityRules(PaymentProvider provider)
+    {
+        var supportsWebCheckout = SupportsWebCheckout(provider);
+        var supportsRefund = provider is PaymentProvider.YooKassa or PaymentProvider.TBankAcquiring or PaymentProvider.Stripe or PaymentProvider.PayPal;
+        var supportsRecheck = provider is PaymentProvider.YooKassa or PaymentProvider.TBankAcquiring or PaymentProvider.Stripe or PaymentProvider.PayPal;
+        var supportsSandbox = provider != PaymentProvider.TelegramStars;
+
+        return new[]
+        {
+            new PaymentProviderCapabilityRule("createPayment", "Создание платежа", supportsWebCheckout, supportsWebCheckout ? "supported" : "bot_only"),
+            new PaymentProviderCapabilityRule("telegramNative", "Telegram invoice", provider == PaymentProvider.TelegramStars, provider == PaymentProvider.TelegramStars ? "supported" : "not_applicable"),
+            new PaymentProviderCapabilityRule("webhook", "Webhook / уведомления", true, "supported"),
+            new PaymentProviderCapabilityRule("signatureValidation", "Проверка подписи", provider != PaymentProvider.TelegramStars, provider == PaymentProvider.TelegramStars ? "telegram_update" : "supported"),
+            new PaymentProviderCapabilityRule("refund", "Возвраты", supportsRefund, supportsRefund ? "supported" : "not_supported"),
+            new PaymentProviderCapabilityRule("recheck", "Ручная перепроверка", supportsRecheck, supportsRecheck ? "supported" : "not_supported"),
+            new PaymentProviderCapabilityRule("sandbox", "Sandbox-режим", supportsSandbox, supportsSandbox ? "supported" : "not_supported"),
+            new PaymentProviderCapabilityRule("live", "Production-режим", true, provider == PaymentProvider.TelegramStars ? "requires_telegram_bot" : "supported")
+        };
+    }
+
+    public static string? ReadExtraSetting(string extraSettingsJson, string key)
+    {
+        if (string.IsNullOrWhiteSpace(extraSettingsJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(extraSettingsJson);
+            return document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                && document.RootElement.TryGetProperty(key, out var value)
+                && value.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? value.GetString()
+                    : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
     }
 }

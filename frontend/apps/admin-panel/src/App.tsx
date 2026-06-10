@@ -569,12 +569,21 @@ function providerIssue(account: PaymentProviderAccountDto) {
 }
 
 function capabilities(account: PaymentProviderAccountDto) {
+  if (account.capabilities?.length) return account.capabilities.filter((item) => item.supported).map((item) => item.label || item.key)
   try {
     const parsed = JSON.parse(account.capabilitiesJson ?? '[]')
     return Array.isArray(parsed) ? parsed.map(String) : []
   } catch {
     return []
   }
+}
+
+function unsupportedCapabilities(account: PaymentProviderAccountDto) {
+  return account.capabilities?.filter((item) => !item.supported).map((item) => item.label || item.key) ?? []
+}
+
+function requiredFieldSummary(account: PaymentProviderAccountDto) {
+  return account.requiredFields?.filter((item) => item.required) ?? []
 }
 
 async function copyToClipboard(text: string, setNotice: (value: string) => void) {
@@ -1880,7 +1889,11 @@ export function App() {
                     <div className="muted">{providerSetup(account.provider).shopIdLabel}: {account.shopId || '—'} · {providerSetup(account.provider).secretLabel}: {account.hasSecretKey ? 'задан' : 'пусто'} · {providerSetup(account.provider).webhookSecretLabel}: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
                     <div className="muted">API: {account.apiBaseUrl || '—'} · return: {account.returnUrl || '—'} · webhook URL: {account.webhookUrl || '—'}</div>
                     <div className="muted">IP allow list: {account.useWebhookIpAllowList ? (account.allowedWebhookIpRangesCsv || 'включен, список пуст') : 'не используется'} · extra: {account.extraSettingsJson && account.extraSettingsJson !== '{}' ? 'задан' : 'пусто'}</div>
-                    <div className="muted">Capabilities: {capabilities(account).join(', ') || '—'}</div>
+                    <div className="muted">Пользователю: {account.isPubliclyAvailable ? 'показывается на сайте и в кабинете' : 'скрыт до готовности или доступен только в Telegram'}</div>
+                    <div className="muted">Поддерживается: {capabilities(account).join(', ') || '—'}</div>
+                    {unsupportedCapabilities(account).length > 0 && <div className="muted">Не поддерживается сейчас: {unsupportedCapabilities(account).join(', ')}</div>}
+                    {requiredFieldSummary(account).length > 0 && <div className="muted">Обязательные поля: {requiredFieldSummary(account).map((field) => `${field.label}: ${field.configured ? 'заполнено' : 'не заполнено'}`).join(' · ')}</div>}
+                    {account.readinessBlockers && account.readinessBlockers.length > 0 && <div className="safe-note">Блокеры: {account.readinessBlockers.join(' · ')}</div>}
                     {providerCheckResults[account.id] && <div className="muted">Последняя проверка: {providerCheckResults[account.id].healthStatus} · {providerCheckResults[account.id].details.join(' · ')}</div>}
                   </div>
                   <div className="status-stack">

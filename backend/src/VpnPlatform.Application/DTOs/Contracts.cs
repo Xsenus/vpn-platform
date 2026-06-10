@@ -149,8 +149,25 @@ public sealed record PaymentProviderAccountDto(
     bool IsCheckoutConfigured,
     string? CheckoutConfigurationIssue,
     string CapabilitiesJson,
+    IReadOnlyCollection<PaymentProviderCapabilityDto> Capabilities,
+    IReadOnlyCollection<PaymentProviderRequiredFieldDto> RequiredFields,
+    IReadOnlyCollection<string> ReadinessBlockers,
+    bool IsPubliclyAvailable,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+public sealed record PaymentProviderCapabilityDto(
+    string Key,
+    string Label,
+    bool Supported,
+    string Status);
+
+public sealed record PaymentProviderRequiredFieldDto(
+    string Key,
+    string Label,
+    bool Required,
+    bool Configured,
+    string? Issue);
 
 public sealed record UpsertPaymentProviderAccountCommand(
     PaymentProvider Provider,

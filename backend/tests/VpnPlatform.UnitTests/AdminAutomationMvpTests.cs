@@ -184,14 +184,20 @@ public class AdminAutomationMvpTests
         var accounts = Assert.IsAssignableFrom<IReadOnlyCollection<PaymentProviderAccountDto>>(ok.Value);
         var ready = Assert.Single(accounts, x => x.Provider == PaymentProvider.YooKassa);
         Assert.True(ready.IsCheckoutConfigured);
+        Assert.True(ready.IsPubliclyAvailable);
         Assert.Null(ready.CheckoutConfigurationIssue);
         Assert.Contains("createPayment", ready.CapabilitiesJson, StringComparison.Ordinal);
+        Assert.Contains(ready.Capabilities, x => x.Key == "createPayment" && x.Supported);
+        Assert.Contains(ready.RequiredFields, x => x.Key == "shopId" && x.Required && x.Configured);
+        Assert.Empty(ready.ReadinessBlockers);
         Assert.Contains("***", ready.ExtraSettingsJson, StringComparison.Ordinal);
         Assert.DoesNotContain("must-not-leak", ready.ExtraSettingsJson, StringComparison.OrdinalIgnoreCase);
 
         var disabled = Assert.Single(accounts, x => x.Provider == PaymentProvider.RoboKassa);
         Assert.False(disabled.IsCheckoutConfigured);
+        Assert.False(disabled.IsPubliclyAvailable);
         Assert.Contains("Disabled", disabled.CheckoutConfigurationIssue, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(disabled.ReadinessBlockers, x => x.Contains("Disabled", StringComparison.OrdinalIgnoreCase));
 
         var json = JsonSerializer.Serialize(ok.Value);
         Assert.DoesNotContain("SecretKeyProtected", json, StringComparison.OrdinalIgnoreCase);

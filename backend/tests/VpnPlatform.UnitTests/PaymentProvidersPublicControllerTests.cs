@@ -19,6 +19,7 @@ public class PaymentProvidersPublicControllerTests
             Account(PaymentProvider.RoboKassa, PaymentProviderMode.Sandbox, isEnabled: false, publicName: "Robo disabled", secret: "protected-secret"),
             Account(PaymentProvider.YooMoney, PaymentProviderMode.Disabled, isEnabled: true, publicName: "YooMoney disabled-mode", secret: "protected-secret"),
             Account(PaymentProvider.Stripe, PaymentProviderMode.Sandbox, isEnabled: true, publicName: "Stripe without shop", secret: "sandbox-secret", shopId: ""),
+            Account(PaymentProvider.CloudPayments, PaymentProviderMode.Sandbox, isEnabled: true, publicName: "CloudPayments without widget", secret: "sandbox-secret", extraSettingsJson: "{}"),
             Account(PaymentProvider.TelegramStars, PaymentProviderMode.Sandbox, isEnabled: true, publicName: "Telegram Stars", secret: ""),
             Account(PaymentProvider.TBankAcquiring, PaymentProviderMode.Production, isEnabled: true, publicName: "TBank live", secret: "live-secret"));
         await db.SaveChangesAsync();
@@ -32,6 +33,7 @@ public class PaymentProvidersPublicControllerTests
         Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.RoboKassa));
         Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.YooMoney));
         Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.Stripe));
+        Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.CloudPayments));
         Assert.DoesNotContain(providers, x => x.Provider == nameof(PaymentProvider.TelegramStars));
         var serialized = System.Text.Json.JsonSerializer.Serialize(ok.Value);
         Assert.DoesNotContain("protected-secret", serialized, StringComparison.OrdinalIgnoreCase);
@@ -54,7 +56,7 @@ public class PaymentProvidersPublicControllerTests
         Assert.Empty(providers);
     }
 
-    private static PaymentProviderAccount Account(PaymentProvider provider, PaymentProviderMode mode, bool isEnabled, string publicName, string secret = "", string? shopId = null)
+    private static PaymentProviderAccount Account(PaymentProvider provider, PaymentProviderMode mode, bool isEnabled, string publicName, string secret = "", string? shopId = null, string extraSettingsJson = "{}")
         => new()
         {
             Id = Guid.NewGuid(),
@@ -68,7 +70,8 @@ public class PaymentProvidersPublicControllerTests
             ApiBaseUrl = "https://payment.test",
             ReturnUrl = "https://cabinet.test/payments",
             SecretKeyProtected = secret,
-            WebhookSecretProtected = secret
+            WebhookSecretProtected = secret,
+            ExtraSettingsJson = extraSettingsJson
         };
 
     private static ApplicationDbContext CreateDbContext()

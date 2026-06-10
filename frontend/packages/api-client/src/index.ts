@@ -237,8 +237,27 @@ export type PaymentProviderAccountDto = {
   isCheckoutConfigured?: boolean
   checkoutConfigurationIssue?: string | null
   capabilitiesJson?: string
+  capabilities?: PaymentProviderCapabilityDto[]
+  requiredFields?: PaymentProviderRequiredFieldDto[]
+  readinessBlockers?: string[]
+  isPubliclyAvailable?: boolean
   createdAt: string
   updatedAt: string
+}
+
+export type PaymentProviderCapabilityDto = {
+  key: string
+  label: string
+  supported: boolean
+  status: string
+}
+
+export type PaymentProviderRequiredFieldDto = {
+  key: string
+  label: string
+  required: boolean
+  configured: boolean
+  issue?: string | null
 }
 
 export type UpsertPaymentProviderAccountPayload = {

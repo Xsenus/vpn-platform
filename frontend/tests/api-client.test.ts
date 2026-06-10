@@ -564,7 +564,7 @@ test('ApiClient admin payment providers expose readiness fields without secrets'
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify([{ id: 'account-1', provider: 'YooKassa', mode: 'Sandbox', name: 'Yoo', publicName: 'Yoo', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: '', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', hasSecretKey: true, hasWebhookSecret: false, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{"apiSecret":"***"}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }]), {
+    return new Response(JSON.stringify([{ id: 'account-1', provider: 'YooKassa', mode: 'Sandbox', name: 'Yoo', publicName: 'Yoo', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: '', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', hasSecretKey: true, hasWebhookSecret: false, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{"apiSecret":"***"}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]', capabilities: [{ key: 'createPayment', label: 'Создание платежа', supported: true, status: 'supported' }], requiredFields: [{ key: 'shopId', label: 'ShopId / merchant id', required: true, configured: true, issue: null }], readinessBlockers: [], isPubliclyAvailable: true }]), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -578,7 +578,10 @@ test('ApiClient admin payment providers expose readiness fields without secrets'
   assert.equal(response[0]?.isCheckoutConfigured, true)
   assert.equal(response[0]?.extraSettingsJson, '{"apiSecret":"***"}')
   assert.equal(response[0]?.webhookUrl, 'https://api.example.test/webhooks/payments/yookassa')
-})
+  assert.equal(response[0]?.isPubliclyAvailable, true)
+  assert.equal(response[0]?.capabilities?.[0]?.label, 'Создание платежа')
+  assert.equal(response[0]?.requiredFields?.[0]?.configured, true)
+  })
 
 test('ApiClient admin payment providers can create, update and toggle accounts', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []

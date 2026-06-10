@@ -246,8 +246,58 @@ public class PaymentProviderAccountService
             PaymentProviderConfigurationRules.IsCheckoutConfigured(account),
             PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account),
             PaymentProviderConfigurationRules.GetCapabilitiesJson(account.Provider),
+            BuildCapabilities(account.Provider),
+            BuildRequiredFields(account),
+            BuildReadinessBlockers(account),
+            PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account),
             account.CreatedAt,
             account.UpdatedAt);
+
+    private static IReadOnlyCollection<PaymentProviderCapabilityDto> BuildCapabilities(PaymentProvider provider)
+        => PaymentProviderConfigurationRules.GetCapabilityRules(provider)
+            .Select(x => new PaymentProviderCapabilityDto(x.Key, x.Label, x.Supported, x.Status))
+            .ToArray();
+
+    private static IReadOnlyCollection<PaymentProviderRequiredFieldDto> BuildRequiredFields(PaymentProviderAccount account)
+    {
+        var production = account.Mode == PaymentProviderMode.Production;
+        var webCheckout = PaymentProviderConfigurationRules.SupportsWebCheckout(account.Provider);
+        var webhookSecretRequired = production && account.Provider is PaymentProvider.RoboKassa or PaymentProvider.YooMoney or PaymentProvider.Stripe or PaymentProvider.PayPal or PaymentProvider.Prodamus;
+        var hostedCheckoutUrl = PaymentProviderConfigurationRules.ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl");
+
+        var fields = new List<PaymentProviderRequiredFieldDto>
+        {
+            Field("enabled", "Аккаунт включен", true, account.IsEnabled, "Включите аккаунт, иначе пользователи не увидят способ оплаты."),
+            Field("mode", "Режим Sandbox или Production", true, account.Mode != PaymentProviderMode.Disabled, "Выберите Sandbox или Production."),
+            Field("shopId", account.Provider == PaymentProvider.TelegramStars ? "Bot username" : "ShopId / merchant id", webCheckout, !string.IsNullOrWhiteSpace(account.ShopId), "Укажите идентификатор магазина или мерчанта."),
+            Field("secretKey", "Secret key", production && webCheckout, !string.IsNullOrWhiteSpace(account.SecretKeyProtected), "Для production нужен защищенный secret key."),
+            Field("webhookSecret", "Webhook secret", webhookSecretRequired, !string.IsNullOrWhiteSpace(account.WebhookSecretProtected), "Для production-уведомлений нужен webhook secret."),
+            Field("apiBaseUrl", "API base URL", webCheckout && account.Provider != PaymentProvider.CloudPayments, !string.IsNullOrWhiteSpace(account.ApiBaseUrl), "Укажите API URL провайдера."),
+            Field("hostedCheckoutUrl", "CloudPayments hostedCheckoutUrl", account.Provider == PaymentProvider.CloudPayments, !string.IsNullOrWhiteSpace(hostedCheckoutUrl), "В ExtraSettingsJson нужен hostedCheckoutUrl со страницей виджета."),
+            Field("telegramBotFlow", "Telegram invoice flow", account.Provider == PaymentProvider.TelegramStars, PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account), "Настройте Telegram-бота и invoice flow.")
+        };
+
+        return fields.Where(x => x.Required || x.Configured).ToArray();
+    }
+
+    private static PaymentProviderRequiredFieldDto Field(string key, string label, bool required, bool configured, string issue)
+        => new(key, label, required, configured, required && !configured ? issue : null);
+
+    private static IReadOnlyCollection<string> BuildReadinessBlockers(PaymentProviderAccount account)
+    {
+        var blockers = new List<string>();
+        var checkoutIssue = PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account);
+        if (!string.IsNullOrWhiteSpace(checkoutIssue))
+        {
+            blockers.Add(checkoutIssue);
+        }
+
+        blockers.AddRange(BuildRequiredFields(account)
+            .Where(x => x.Required && !x.Configured && !string.IsNullOrWhiteSpace(x.Issue))
+            .Select(x => x.Issue!));
+
+        return blockers.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
 
 
     private static string MaskExtraSettings(string extraSettingsJson)

@@ -101,10 +101,10 @@ git diff --check
 
 Проблема: провайдеры есть в коде и админке, но не каждый live-flow подтвержден реальной проверкой.
 
-- [ ] `P0-PAY-001` Составить матрицу готовности провайдеров в админке.
+- [x] `P0-PAY-001` Составить матрицу готовности провайдеров в админке. 2026-06-10.
   - Что сделать: для каждого провайдера показывать checkout, webhook, refund, status recheck, sandbox, production, required fields.
   - Критерий готовности: админ видит, что именно поддержано, чего не хватает и почему способ оплаты скрыт от пользователя.
-  - Доказательство: screenshot раздела "Платежи", frontend/backend tests.
+  - Доказательство: backend tests `PaymentProviderConfigurationRulesTests`, `AdminAutomationMvpTests`, local SQLite HTTP-smoke admin/public payment providers.
 
 - [ ] `P0-PAY-002` YooKassa live/sandbox smoke.
   - Что сделать: checkout -> redirect -> webhook -> paid order -> subscription -> VPN issue.
@@ -151,10 +151,10 @@ git diff --check
   - Критерий готовности: пользователь может купить тариф в Telegram Stars и получить VPN.
   - Доказательство: Telegram update log, order ID, subscription ID.
 
-- [ ] `P0-PAY-011` Скрыть неподтвержденные способы оплаты от публичного сайта.
+- [x] `P0-PAY-011` Скрыть неподтвержденные способы оплаты от публичного сайта. 2026-06-10.
   - Что сделать: публичный API должен отдавать только enabled + ready providers.
   - Критерий готовности: пользователь не видит способ оплаты, который не пройдет checkout.
-  - Доказательство: API test и browser screenshot.
+  - Доказательство: `PaymentProvidersPublicControllerTests`, local SQLite HTTP-smoke `/api/public/payments/providers`.
 
 ## P1. Полные пользовательские сценарии
 
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Матрица готовности платежных провайдеров и публичная фильтрация | Зеленое | Backend tests, frontend tests/typecheck/build, local SQLite HTTP-smoke |
 | 2026-06-10 | Codex | CLI admin bootstrap/reset для локальной SQLite-БД | Зеленое | `admin-bootstrap`, `AdminBootstrapServiceTests`, HTTP-smoke login/admin dashboard |
 | 2026-06-10 | Codex | Backend tests, frontend tests, typecheck, build, GitHub Actions, VPS HTTP health | Зеленое, кроме live admin auth/E2E | Локальный аудит и ответы VPS 200 |
 

@@ -48,4 +48,36 @@ public class PaymentProviderConfigurationRulesTests
         account.SecretKeyProtected = "protected-secret";
         Assert.True(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
     }
+
+    [Fact]
+    public void CloudPayments_Should_Require_Hosted_Checkout_Url()
+    {
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.CloudPayments,
+            Mode = PaymentProviderMode.Sandbox,
+            IsEnabled = true,
+            Name = "cloudpayments",
+            PublicName = "CloudPayments",
+            ShopId = "public-id",
+            ExtraSettingsJson = "{}"
+        };
+
+        Assert.False(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
+        Assert.Contains("hostedCheckoutUrl", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        account.ExtraSettingsJson = """{"hostedCheckoutUrl":"https://pay.example.test/cloudpayments"}""";
+
+        Assert.True(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
+    }
+
+    [Fact]
+    public void Capability_Rules_Should_Report_Unsupported_Features()
+    {
+        var robokassa = PaymentProviderConfigurationRules.GetCapabilityRules(PaymentProvider.RoboKassa);
+
+        Assert.Contains(robokassa, x => x.Key == "createPayment" && x.Supported);
+        Assert.Contains(robokassa, x => x.Key == "refund" && !x.Supported);
+        Assert.Contains(robokassa, x => x.Key == "recheck" && !x.Supported);
+    }
 }
