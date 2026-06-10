@@ -330,6 +330,11 @@ function readAdminSectionFromHash(): AdminSectionId {
   return adminSections.some(([id]) => id === section) ? (section as AdminSectionId) : adminSections[0][0]
 }
 
+function adminSectionFromHref(href: string | null | undefined): AdminSectionId | null {
+  const section = (href ?? '').replace('#', '')
+  return adminSections.some(([id]) => id === section) ? (section as AdminSectionId) : null
+}
+
 type GenericUser = Record<string, unknown>
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
@@ -1769,10 +1774,27 @@ export function App() {
               {summary.productionReadiness.checks.map((check) => (
                 <div key={check.key} className="list-item">
                   <div>
-                    <strong>{check.label}</strong>
+                    <div className="item-heading">
+                      <strong>{check.label}</strong>
+                      {check.category && <span className="mini-pill">{check.category}</span>}
+                    </div>
                     <div className="muted">{check.message}</div>
                   </div>
-                  <StatusBadge value={check.status} />
+                  <div className="row-actions">
+                    {check.actionHref && (
+                      <a
+                        className="button button-secondary"
+                        href={check.actionHref}
+                        onClick={() => {
+                          const section = adminSectionFromHref(check.actionHref)
+                          if (section) setActiveSection(section)
+                        }}
+                      >
+                        {check.actionLabel || 'Открыть'}
+                      </a>
+                    )}
+                    <StatusBadge value={check.status} />
+                  </div>
                 </div>
               ))}
             </div>

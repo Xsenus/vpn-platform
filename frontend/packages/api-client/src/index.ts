@@ -679,6 +679,10 @@ export type AdminProductionReadinessCheckDto = {
   label: string
   status: string
   message: string
+  category?: string
+  severity?: string
+  actionLabel?: string
+  actionHref?: string
 }
 
 export type AdminTelegramBotSettingsDto = {

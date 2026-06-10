@@ -63,6 +63,7 @@ public class AdminAutomationMvpTests
         await using var db = CreateDbContext();
         db.Tariffs.Add(new Tariff { Id = Guid.NewGuid(), Name = "Live", Slug = "live", IsActive = true, IsTrial = false, Price = 490m, Currency = "RUB", DurationDays = 30 });
         db.PaymentProviderAccounts.Add(PaymentAccount(PaymentProvider.YooKassa, PaymentProviderMode.Production, isEnabled: true, shopId: "shop-1", secret: "protected-secret"));
+        AddTelegramSettings(db);
         db.VpnPanels.Add(new VpnPanel
         {
             Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -95,6 +96,8 @@ public class AdminAutomationMvpTests
         Assert.False(blockedSummary.ProductionReadiness.IsReady);
         Assert.Contains(blockedSummary.ProductionReadiness.Checks, x => x.Key == "vpn-node" && x.Status == "Blocked");
         Assert.Contains(blockedSummary.ProductionReadiness.Checks, x => x.Key == "vpn-panel" && x.Status == "Blocked");
+        Assert.Contains(blockedSummary.ProductionReadiness.Checks, x => x.Key == "payment-webhook" && x.Category == "Платежи" && x.ActionHref == "#payments");
+        Assert.Contains(blockedSummary.ProductionReadiness.Checks, x => x.Key == "telegram-bot" && x.Status == "Ready" && x.ActionHref == "#bot");
 
         var panel = new VpnPanel
         {
@@ -140,6 +143,7 @@ public class AdminAutomationMvpTests
         var readySummary = Assert.IsType<AdminDashboardSummaryDto>(ready.Value);
         Assert.True(readySummary.ProductionReadiness.IsReady);
         Assert.All(readySummary.ProductionReadiness.Checks, check => Assert.Equal("Ready", check.Status));
+        Assert.Contains(readySummary.ProductionReadiness.Checks, check => check.Key == "ci-cd" && check.Category == "CI/CD" && check.ActionHref == "#provisioning");
     }
 
     [Fact]
@@ -502,6 +506,15 @@ public class AdminAutomationMvpTests
             WebhookSecretProtected = secret,
             ExtraSettingsJson = extraSettingsJson
         };
+
+    private static void AddTelegramSettings(ApplicationDbContext db)
+    {
+        db.SiteContentBlocks.AddRange(
+            new SiteContentBlock { Key = "telegram_bot.enabled", Group = "telegram_bot", Label = "Включен", Value = "true", InputType = "checkbox" },
+            new SiteContentBlock { Key = "telegram_bot.mode", Group = "telegram_bot", Label = "Режим", Value = "LongPolling", InputType = "select" },
+            new SiteContentBlock { Key = "telegram_bot.public_bot_username", Group = "telegram_bot", Label = "Public bot username", Value = "vpnplatform_bot", InputType = "text" },
+            new SiteContentBlock { Key = "telegram_bot.bot_token_protected", Group = "telegram_bot", Label = "Bot token", Value = "protected-token", InputType = "secret" });
+    }
 
     private static ApplicationDbContext CreateDbContext()
     {

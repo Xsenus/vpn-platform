@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
@@ -14,10 +16,14 @@ namespace VpnPlatform.Api.Controllers.Admin;
 public class AdminDashboardController : ControllerBase
 {
     private readonly IApplicationDbContext _db;
+    private readonly IConfiguration? _configuration;
+    private readonly IHostEnvironment? _environment;
 
-    public AdminDashboardController(IApplicationDbContext db)
+    public AdminDashboardController(IApplicationDbContext db, IConfiguration? configuration = null, IHostEnvironment? environment = null)
     {
         _db = db;
+        _configuration = configuration;
+        _environment = environment;
     }
 
     [HttpGet("summary")]
@@ -66,15 +72,17 @@ public class AdminDashboardController : ControllerBase
 
     private async Task<AdminProductionReadinessDto> BuildProductionReadinessAsync(CancellationToken cancellationToken)
     {
-        var livePaymentProviders = await _db.PaymentProviderAccounts
+        var productionPaymentAccounts = await _db.PaymentProviderAccounts
             .AsNoTracking()
-            .CountAsync(x =>
-                x.IsEnabled &&
-                x.Mode == PaymentProviderMode.Production &&
-                x.Provider != PaymentProvider.TelegramStars &&
-                x.SecretKeyProtected != string.Empty &&
-                (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal),
-                cancellationToken);
+            .Where(x => x.IsEnabled && x.Mode == PaymentProviderMode.Production && x.Provider != PaymentProvider.TelegramStars)
+            .ToListAsync(cancellationToken);
+        var livePaymentProviders = productionPaymentAccounts.Count(x =>
+            x.SecretKeyProtected != string.Empty &&
+            (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal));
+        var livePaymentWebhooks = productionPaymentAccounts.Count(x =>
+            x.SecretKeyProtected != string.Empty &&
+            !string.IsNullOrWhiteSpace(x.WebhookUrl) &&
+            (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal));
 
         var activePaidTariffs = await _db.Tariffs
             .AsNoTracking()
@@ -118,20 +126,98 @@ public class AdminDashboardController : ControllerBase
                 !x.TagsCsv.ToLower().Contains("sandbox"),
                 cancellationToken);
 
+        var telegramState = await BuildTelegramReadinessStateAsync(cancellationToken);
+        var failedProvisioningRuns = await _db.ProvisioningRuns
+            .AsNoTracking()
+            .CountAsync(x => x.Status == ProvisioningRunStatus.Failed || x.Status == ProvisioningRunStatus.PrecheckFailed, cancellationToken);
+        var ciCdReady = HasWorkflowFile("ci.yml") && HasWorkflowFile("deploy-vps.yml");
+
         var checks = new[]
         {
-            Check("payment-provider", "Live-провайдер оплаты", livePaymentProviders > 0, livePaymentProviders > 0 ? $"Готово: {livePaymentProviders} production-аккаунт(ов)." : "Нет включенного production-провайдера с обязательными секретами."),
-            Check("paid-tariff", "Активный платный тариф", activePaidTariffs > 0, activePaidTariffs > 0 ? $"Готово: {activePaidTariffs} платный тариф(ов)." : "Нет активного платного тарифа для продажи."),
-            Check("vpn-panel", "Реальная 3x-ui панель", realPanels > 0, realPanels > 0 ? $"Готово: {realPanels} активная панель(и)." : "Нет активной реальной 3x-ui панели. Sandbox-панель не считается."),
-            Check("vpn-inbound", "Активный inbound", realInbounds > 0, realInbounds > 0 ? $"Готово: {realInbounds} inbound(ов)." : "Нет активного inbound на реальной панели."),
-            Check("vpn-node", "Реальный VPN-сервер", realNodes > 0, realNodes > 0 ? $"Готово: {realNodes} сервер(ов) открыт(ы) для выдачи." : "Нет готового реального VPN-сервера. Sandbox-нода не считается.")
+            Check("payment-provider", "Live-провайдер оплаты", livePaymentProviders > 0, livePaymentProviders > 0 ? $"Готово: {livePaymentProviders} production-аккаунт(ов)." : "Нет включенного production-провайдера с обязательными секретами.", "Платежи", "critical", "Открыть платежи", "#payments"),
+            Check("payment-webhook", "Webhook платежей", livePaymentProviders > 0 && livePaymentWebhooks > 0, livePaymentWebhooks > 0 ? $"Готово: webhook URL заполнен у {livePaymentWebhooks} production-аккаунт(ов)." : "Нет production-провайдера с заполненным webhook URL для статусов оплаты.", "Платежи", "critical", "Открыть платежи", "#payments"),
+            Check("paid-tariff", "Активный платный тариф", activePaidTariffs > 0, activePaidTariffs > 0 ? $"Готово: {activePaidTariffs} платный тариф(ов)." : "Нет активного платного тарифа для продажи.", "Тарифы", "critical", "Открыть тарифы", "#tariffs"),
+            Check("vpn-panel", "Реальная 3x-ui панель", realPanels > 0, realPanels > 0 ? $"Готово: {realPanels} активная панель(и)." : "Нет активной реальной 3x-ui панели. Sandbox-панель не считается.", "VPN", "critical", "Открыть панели", "#panels"),
+            Check("vpn-inbound", "Активный inbound", realInbounds > 0, realInbounds > 0 ? $"Готово: {realInbounds} inbound(ов)." : "Нет активного inbound на реальной панели.", "VPN", "critical", "Открыть панели", "#panels"),
+            Check("vpn-node", "Реальный VPN-сервер", realNodes > 0, realNodes > 0 ? $"Готово: {realNodes} сервер(ов) открыт(ы) для выдачи." : "Нет готового реального VPN-сервера. Sandbox-нода не считается.", "VPN", "critical", "Открыть серверы", "#nodes"),
+            Check("telegram-bot", "Telegram-бот", telegramState.IsReady, telegramState.Message, "Telegram", "warning", "Открыть Telegram", "#bot"),
+            Check("vps-provisioning", "Очередь VPS provisioning", failedProvisioningRuns == 0, failedProvisioningRuns == 0 ? "Готово: нет упавших precheck/deploy запусков." : $"Есть упавшие provisioning-запуски: {failedProvisioningRuns}.", "VPS", "warning", "Открыть VPS", "#provisioning"),
+            Check("ci-cd", "CI/CD workflow", ciCdReady, ciCdReady ? "Готово: найдены workflow для CI и VPS deploy." : "Не найдены workflow ci.yml и deploy-vps.yml в .github/workflows.", "CI/CD", "warning", "Открыть деплой", "#provisioning")
         };
 
         var isReady = checks.All(x => x.Status == "Ready");
         return new AdminProductionReadinessDto(isReady, isReady ? "Ready" : "Blocked", checks);
     }
 
-    private static AdminProductionReadinessCheckDto Check(string key, string label, bool ready, string message)
-        => new(key, label, ready ? "Ready" : "Blocked", message);
+    private async Task<(bool IsReady, string Message)> BuildTelegramReadinessStateAsync(CancellationToken cancellationToken)
+    {
+        var settings = await _db.SiteContentBlocks
+            .AsNoTracking()
+            .Where(x => x.Group == "telegram_bot" && x.IsActive)
+            .Select(x => new { x.Key, x.Value })
+            .ToListAsync(cancellationToken);
+        var values = settings
+            .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.Last().Value, StringComparer.OrdinalIgnoreCase);
+
+        var enabled = ReadBool(values, "telegram_bot.enabled", _configuration?.GetValue<bool>("TelegramBot:Enabled") ?? false);
+        var mode = Read(values, "telegram_bot.mode", _configuration?["TelegramBot:Mode"] ?? "LongPolling");
+        var username = Read(values, "telegram_bot.public_bot_username", _configuration?["TelegramBot:PublicBotUsername"] ?? string.Empty);
+        var token = Read(values, "telegram_bot.bot_token_protected", _configuration?["TelegramBot:BotToken"] ?? string.Empty);
+        var webhookUrl = Read(values, "telegram_bot.webhook_url", _configuration?["TelegramBot:WebhookUrl"] ?? string.Empty);
+
+        if (!enabled)
+        {
+            return (false, "Telegram-бот выключен. Пользователи не смогут покупать и получать уведомления через Telegram.");
+        }
+
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(token))
+        {
+            return (false, "Не заполнены public username или Bot token Telegram-бота.");
+        }
+
+        if (mode.Equals("Webhook", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(webhookUrl))
+        {
+            return (false, "Для режима Webhook нужен публичный Telegram webhook URL.");
+        }
+
+        return (true, mode.Equals("Webhook", StringComparison.OrdinalIgnoreCase)
+            ? "Готово: Telegram-бот включен, token сохранен, webhook URL заполнен."
+            : "Готово: Telegram-бот включен, token сохранен, LongPolling доступен.");
+    }
+
+    private bool HasWorkflowFile(string fileName)
+    {
+        var roots = new[]
+        {
+            _environment?.ContentRootPath,
+            Directory.GetCurrentDirectory(),
+            AppContext.BaseDirectory
+        }.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var root in roots)
+        {
+            var directory = new DirectoryInfo(root!);
+            for (var depth = 0; directory is not null && depth < 8; depth++, directory = directory.Parent)
+            {
+                var path = Path.Combine(directory.FullName, ".github", "workflows", fileName);
+                if (System.IO.File.Exists(path))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static string Read(IReadOnlyDictionary<string, string> values, string key, string fallback)
+        => values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : fallback;
+
+    private static bool ReadBool(IReadOnlyDictionary<string, string> values, string key, bool fallback)
+        => values.TryGetValue(key, out var value) && bool.TryParse(value, out var parsed) ? parsed : fallback;
+
+    private static AdminProductionReadinessCheckDto Check(string key, string label, bool ready, string message, string category, string severity, string actionLabel, string actionHref)
+        => new(key, label, ready ? "Ready" : "Blocked", message, category, severity, actionLabel, actionHref);
 
 }

@@ -242,14 +242,13 @@ git diff --check
 
 ### P2.1 Dashboard
 
-- [ ] `P2-ADM-DASH-001` Довести dashboard readiness до единого центра диагностики.
-  - Что сделать: показать готовность платежей, тарифов, VPN, 3x-ui, webhook, Telegram, VPS, CI/CD.
-  - Критерий готовности: админ видит, что мешает запуску продаж, без чтения логов.
-  - Доказательство: screenshot + backend test для summary.
+- [x] `P2-ADM-DASH-001` Довести dashboard readiness до единого центра диагностики.
+  - Что сделано: dashboard показывает готовность платежей, webhook, тарифов, VPN, 3x-ui, Telegram, VPS provisioning и CI/CD workflow с категориями, severity и понятными сообщениями.
+  - Доказательство: `AdminAutomationMvpTests.Dashboard_Summary_Should_Report_Production_Readiness_And_Ignore_Sandbox_Infrastructure`, frontend `ApiClient admin dashboard and user overview endpoints are tokenized`, Local SQLite API smoke.
 
-- [ ] `P2-ADM-DASH-002` Добавить быстрые переходы к проблемным разделам.
-  - Что сделать: из ошибки readiness можно перейти прямо к форме настройки.
-  - Доказательство: UI test или manual smoke.
+- [x] `P2-ADM-DASH-002` Добавить быстрые переходы к проблемным разделам.
+  - Что сделано: каждый readiness-блокер содержит `actionLabel`/`actionHref`, а админка показывает кнопку перехода на нужную вкладку.
+  - Доказательство: backend readiness DTO assertions, frontend API contract test, admin-panel typecheck/build.
 
 ### P2.2 Тарифы
 
@@ -597,6 +596,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Admin dashboard readiness: платежи, webhook, тарифы, VPN, 3x-ui, Telegram, VPS, CI/CD и быстрые переходы | Зеленое | Targeted backend tests `11/11`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Telegram-уведомления: pending/succeeded/failed платежи, активация, выдача VPN-доступа и lifecycle подписок | Зеленое | Backend tests `250/250`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Покупка через Telegram: тариф, заказ, Telegram Stars payment, pre-checkout, successful_payment, подписка и VPN-доступ на SQLite | Зеленое | Backend tests `249/249`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Привязка Telegram к пользователю: deep link, status, unlink, повторная привязка и SQLite expiry-запросы | Зеленое | Backend tests `248/248`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |

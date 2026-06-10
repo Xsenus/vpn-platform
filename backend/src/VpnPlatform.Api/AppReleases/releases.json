@@ -784,5 +784,28 @@
         "text": "Roadmap-блок P1-TG-004 закрыт тестами: payment failed, Telegram purchase flow, subscription lifecycle и готовность VPN-доступа."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-10-admin-dashboard-readiness",
+    "version": "0.36.0",
+    "releasedAt": "2026-06-10T18:00:00+07:00",
+    "title": "Dashboard админки стал центром готовности",
+    "summary": "Админка теперь показывает готовность продаж по платежам, тарифам, VPN, Telegram, VPS и CI/CD в одном списке с быстрыми переходами.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "В readiness dashboard добавлены проверки payment webhook, Telegram-бота, VPS provisioning и CI/CD workflow."
+      },
+      {
+        "type": "improved",
+        "text": "Каждый блокер получил категорию, severity, понятное описание и кнопку перехода в нужный раздел админки."
+      },
+      {
+        "type": "fixed",
+        "text": "Production readiness больше не ограничивается только платежами и VPN: администратор видит полный список препятствий без чтения логов."
+      }
+    ]
   }
 ]

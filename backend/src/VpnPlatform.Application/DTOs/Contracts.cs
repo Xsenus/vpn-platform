@@ -228,7 +228,11 @@ public sealed record AdminProductionReadinessCheckDto(
     string Key,
     string Label,
     string Status,
-    string Message);
+    string Message,
+    string Category,
+    string Severity,
+    string ActionLabel,
+    string ActionHref);
 
 public sealed record AdminTelegramBotSettingsDto(
     bool Enabled,

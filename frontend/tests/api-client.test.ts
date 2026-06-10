@@ -582,19 +582,30 @@ test('ApiClient admin dashboard and user overview endpoints are tokenized', asyn
       })
     }
 
-    return new Response(JSON.stringify({ totalUsers: 1, activeSubscriptions: 1, generatedAt: new Date().toISOString() }), {
+    return new Response(JSON.stringify({
+      totalUsers: 1,
+      activeSubscriptions: 1,
+      productionReadiness: {
+        isReady: false,
+        status: 'Blocked',
+        checks: [{ key: 'payment-webhook', label: 'Webhook платежей', status: 'Blocked', message: 'Webhook URL не заполнен', category: 'Платежи', severity: 'critical', actionLabel: 'Открыть платежи', actionHref: '#payments' }]
+      },
+      generatedAt: new Date().toISOString()
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
-  await client.getAdminDashboardSummary('admin-token')
+  const dashboard = await client.getAdminDashboardSummary('admin-token')
   await client.getAdminUserOverview('admin-token', 'user-1')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/dashboard/summary')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/users/user-1/overview')
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(dashboard.productionReadiness?.checks[0]?.actionHref, '#payments')
+  assert.equal(dashboard.productionReadiness?.checks[0]?.category, 'Платежи')
 })
 
 test('ApiClient admin payment providers expose readiness fields without secrets', async () => {
