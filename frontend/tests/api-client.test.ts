@@ -288,6 +288,41 @@ test('ApiClient cabinet support endpoints are tokenized and link order context',
   assert.equal(new Headers(calls[4]?.init?.headers).get('Authorization'), 'Bearer user-token')
 })
 
+test('ApiClient cabinet Telegram link status and unlink endpoints are tokenized', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    const path = String(url)
+    if (path.endsWith('/api/me/telegram/link-token')) {
+      return new Response(JSON.stringify({ token: 'link-token', deepLinkUrl: 'https://t.me/vpnplatform_bot?start=link_link-token', expiresAt: new Date().toISOString() }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(JSON.stringify({ isLinked: true, telegramUserId: 777001, username: 'ivan', linkedAt: new Date().toISOString() }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const link = await client.createTelegramLinkToken('user-token')
+  const status = await client.getTelegramStatus('user-token')
+  await client.unlinkTelegram('user-token')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/me/telegram/link-token')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/me/telegram/status')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/me/telegram/unlink')
+  assert.equal(calls[0]?.init?.method, 'POST')
+  assert.equal(calls[2]?.init?.method, 'DELETE')
+  assert.match(link.deepLinkUrl, /start=link_/)
+  assert.equal(status.username, 'ivan')
+  assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer user-token')
+  assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer user-token')
+  assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer user-token')
+})
+
 test('ApiClient admin server create and update send full safe payload with auth token', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {

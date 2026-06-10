@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -149,10 +150,62 @@ public class TelegramBotFoundationTests
         Assert.False(unlink.Value!.IsLinked);
     }
 
+    [Fact]
+    public async Task Telegram_Link_Status_Unlink_Should_Work_End_To_End_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var user = new User { Id = Guid.NewGuid(), Email = "sqlite@example.test", DisplayName = "SQLite User", PasswordHash = "hash", ReferralCode = "sqlite" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        var service = new TelegramBotService(db, clock);
+
+        var before = await service.GetStatusAsync(user.Id, CancellationToken.None);
+        var token = await service.CreateLinkTokenAsync(user.Id, "@vpnplatform_bot", CancellationToken.None);
+        var staleToken = await service.CreateLinkTokenAsync(user.Id, "vpnplatform_bot", CancellationToken.None);
+        var linked = await service.ProcessUpdateAsync(Update(110, $"/start link_{token.Value!.Token}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var duplicateToken = await service.CreateLinkTokenAsync(user.Id, "vpnplatform_bot", CancellationToken.None);
+        var repeat = await service.ProcessUpdateAsync(Update(111, $"/start link_{staleToken.Value!.Token}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var linkedStatus = await service.GetStatusAsync(user.Id, CancellationToken.None);
+        var unlink = await service.UnlinkAsync(user.Id, CancellationToken.None);
+        var afterUnlink = await service.GetStatusAsync(user.Id, CancellationToken.None);
+
+        Assert.False(before.IsLinked);
+        Assert.True(token.IsSuccess, token.Error);
+        Assert.True(staleToken.IsSuccess, staleToken.Error);
+        Assert.Equal($"https://t.me/vpnplatform_bot?start=link_{token.Value.Token}", token.Value.DeepLinkUrl);
+        Assert.True(linked.IsSuccess, linked.Error);
+        Assert.True(linked.Value!.ResponseText.Contains("успешно", StringComparison.OrdinalIgnoreCase));
+        Assert.False(duplicateToken.IsSuccess);
+        Assert.Contains("already has a linked Telegram account", duplicateToken.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.True(repeat.IsSuccess, repeat.Error);
+        Assert.Contains("уже привязан", repeat.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.True(linkedStatus.IsLinked);
+        Assert.Equal(777001, linkedStatus.TelegramUserId);
+        Assert.Equal("ivan", linkedStatus.Username);
+        Assert.Equal(clock.UtcNow, linkedStatus.LinkedAt);
+        Assert.True(unlink.IsSuccess, unlink.Error);
+        Assert.False(unlink.Value!.IsLinked);
+        Assert.False(afterUnlink.IsLinked);
+        Assert.Equal(1, await db.TelegramAccounts.CountAsync());
+        Assert.Equal(2, await db.TelegramBotDeepLinks.CountAsync(x => x.UsedAt != null && x.UsedByTelegramUserId == 777001));
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
             .Options;
         return new ApplicationDbContext(options);
     }

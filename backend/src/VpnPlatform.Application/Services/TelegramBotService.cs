@@ -299,7 +299,12 @@ public class TelegramBotService
             return Redact(rawBody);
         }
 
-        var session = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == telegramUserId.Value && x.ExpiresAt > _clock.UtcNow, cancellationToken);
+        var now = _clock.UtcNow;
+        var session = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == telegramUserId.Value, cancellationToken);
+        if (session is not null && session.ExpiresAt <= now)
+        {
+            session = null;
+        }
         if (session is null || !IsSensitiveProvisioningInputState(session.CurrentState))
         {
             return Redact(rawBody);
@@ -382,7 +387,12 @@ public class TelegramBotService
 
         if (parsed.MessageId.HasValue || !string.IsNullOrWhiteSpace(parsed.Text))
         {
-            var session = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == account.TelegramUserId && x.ExpiresAt > _clock.UtcNow, cancellationToken);
+            var now = _clock.UtcNow;
+            var session = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == account.TelegramUserId, cancellationToken);
+            if (session is not null && session.ExpiresAt <= now)
+            {
+                session = null;
+            }
             var isSensitiveInput = session is not null && IsSensitiveProvisioningInputState(session.CurrentState);
             _db.TelegramBotMessages.Add(new TelegramBotMessage
             {
@@ -492,7 +502,12 @@ public class TelegramBotService
             return new RouteResult("Действие отменено.", parsed.ChatId, account.UserId.HasValue ? LinkedMenuReplyMarkupJson() : UnlinkedMenuReplyMarkupJson());
         }
 
-        var activeSession = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == account.TelegramUserId && x.ExpiresAt > _clock.UtcNow, cancellationToken);
+        var now = _clock.UtcNow;
+        var activeSession = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == account.TelegramUserId, cancellationToken);
+        if (activeSession is not null && activeSession.ExpiresAt <= now)
+        {
+            activeSession = null;
+        }
         if (IsOwnVpsState(activeSession?.CurrentState) || normalized.StartsWith("own_vps_auth:", StringComparison.OrdinalIgnoreCase) || normalized.Equals("own_vps_confirm", StringComparison.OrdinalIgnoreCase))
         {
             return await HandleOwnVpsSessionAsync(account, parsed, normalized, text, activeSession, cancellationToken);
@@ -587,7 +602,7 @@ public class TelegramBotService
             return await HandlePaymentCheckAsync(account, normalized, parsed.ChatId, cancellationToken);
         }
 
-        var session = activeSession ?? await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == account.TelegramUserId && x.ExpiresAt > _clock.UtcNow, cancellationToken);
+        var session = activeSession;
         if (session?.CurrentState == BotStates.SupportMode && (!string.IsNullOrWhiteSpace(text) || parsed.HasAttachment))
         {
             await EnsureSupportConversationAsync(account, text, parsed.AttachmentsJson, false, cancellationToken);
@@ -900,10 +915,12 @@ public class TelegramBotService
             return new RouteResult("Этот тариф больше недоступен. Выберите актуальный тариф из списка.", chatId, await BuildTariffsKeyboardAsync(cancellationToken));
         }
 
-        var existing = await _db.Orders.AsNoTracking()
-            .Where(x => x.UserId == account.UserId.Value && x.TariffId == tariffId && x.Channel == ChannelType.Telegram && x.Status == OrderStatus.PendingPayment && x.ExpiresAt > _clock.UtcNow)
+        var now = _clock.UtcNow;
+        var existingOrders = await _db.Orders.AsNoTracking()
+            .Where(x => x.UserId == account.UserId.Value && x.TariffId == tariffId && x.Channel == ChannelType.Telegram && x.Status == OrderStatus.PendingPayment)
             .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+        var existing = existingOrders.FirstOrDefault(x => x.ExpiresAt > now);
 
         var reusedExistingOrder = existing is not null;
         var order = reusedExistingOrder
@@ -957,10 +974,12 @@ public class TelegramBotService
             return new RouteResult("Подписка для продления не найдена или тариф больше недоступен.", chatId, await BuildRenewalKeyboardAsync(account, cancellationToken));
         }
 
-        var existing = await _db.Orders.AsNoTracking()
-            .Where(x => x.UserId == account.UserId.Value && x.TariffId == subscription.TariffId && x.Type == OrderType.Renewal && x.Channel == ChannelType.Telegram && x.Status == OrderStatus.PendingPayment && x.ExpiresAt > _clock.UtcNow)
+        var now = _clock.UtcNow;
+        var existingOrders = await _db.Orders.AsNoTracking()
+            .Where(x => x.UserId == account.UserId.Value && x.TariffId == subscription.TariffId && x.Type == OrderType.Renewal && x.Channel == ChannelType.Telegram && x.Status == OrderStatus.PendingPayment)
             .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+        var existing = existingOrders.FirstOrDefault(x => x.ExpiresAt > now);
 
         var reusedExistingOrder = existing is not null;
         var order = reusedExistingOrder
@@ -1631,6 +1650,14 @@ public class TelegramBotService
             return "Этот Telegram уже привязан к другому аккаунту.";
         }
 
+        if (account.UserId.HasValue && account.UserId.Value == link.UserId.Value)
+        {
+            link.UsedAt ??= _clock.UtcNow;
+            link.UsedByTelegramUserId ??= account.TelegramUserId;
+            link.UpdatedAt = _clock.UtcNow;
+            return "Этот Telegram уже привязан к вашему аккаунту.";
+        }
+
         var userAlreadyLinked = await _db.TelegramAccounts.AnyAsync(x => x.UserId == link.UserId.Value && x.TelegramUserId != account.TelegramUserId, cancellationToken);
         if (userAlreadyLinked)
         {
@@ -1711,7 +1738,12 @@ public class TelegramBotService
 
     private async Task<JsonObject> GetSessionPayloadAsync(long telegramUserId, string expectedState, CancellationToken cancellationToken)
     {
-        var session = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == telegramUserId && x.CurrentState == expectedState && x.ExpiresAt > _clock.UtcNow, cancellationToken);
+        var now = _clock.UtcNow;
+        var session = await _db.TelegramBotSessions.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramUserId == telegramUserId && x.CurrentState == expectedState, cancellationToken);
+        if (session is not null && session.ExpiresAt <= now)
+        {
+            session = null;
+        }
         if (session is null)
         {
             return new JsonObject();
