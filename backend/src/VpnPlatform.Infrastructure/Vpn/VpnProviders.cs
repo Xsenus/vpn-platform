@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -216,12 +217,12 @@ public class X3UiVpnProvider : IVpnProvider
             existing.UpdatedAt = _clock.UtcNow;
         }
 
-        var uri = X3UiConfigUriGenerator.BuildVlessUri(panel, inbound, existing);
+        var uri = X3UiConfigUriGenerator.BuildUri(panel, inbound, existing);
         if (string.IsNullOrWhiteSpace(uri))
         {
             existing.SyncStatus = "RequiresAdminReview";
             await _db.SaveChangesAsync(cancellationToken);
-            throw new InvalidOperationException("Inbound settings are insufficient to generate VLESS config URI. Access requires admin review.");
+            throw new InvalidOperationException($"Inbound settings are insufficient to generate {inbound.Protocol} config URI. Access requires admin review.");
         }
 
         var qr = request.GenerateQrCode
@@ -554,9 +555,18 @@ public class X3UiVpnProvider : IVpnProvider
 
 public static class X3UiConfigUriGenerator
 {
+    public static string BuildUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
+        => NormalizeProtocol(inbound.Protocol) switch
+        {
+            "vless" => BuildVlessUri(panel, inbound, client),
+            "vmess" => BuildVmessUri(panel, inbound, client),
+            "trojan" => BuildTrojanUri(panel, inbound, client),
+            _ => string.Empty
+        };
+
     public static string BuildVlessUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
     {
-        if (!string.Equals(inbound.Protocol, "vless", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        if (NormalizeProtocol(inbound.Protocol) != "vless" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
         {
             return string.Empty;
         }
@@ -588,8 +598,93 @@ public static class X3UiConfigUriGenerator
         return $"vless://{client.Uuid}@{host}:{inbound.Port}?{queryString}#{remark}";
     }
 
+    public static string BuildTrojanUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
+    {
+        if (NormalizeProtocol(inbound.Protocol) != "trojan" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        {
+            return string.Empty;
+        }
+
+        var host = ExtractHost(panel.BaseUrl);
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return string.Empty;
+        }
+
+        var query = BuildSharedTransportQuery(inbound, includeSecurity: true);
+        var queryString = string.Join('&', query.Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value)}"));
+        var remark = Uri.EscapeDataString(string.IsNullOrWhiteSpace(client.Email) ? $"vpn-{client.SubscriptionId}" : client.Email);
+        return $"trojan://{Uri.EscapeDataString(client.Uuid)}@{host}:{inbound.Port}?{queryString}#{remark}";
+    }
+
+    public static string BuildVmessUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
+    {
+        if (NormalizeProtocol(inbound.Protocol) != "vmess" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        {
+            return string.Empty;
+        }
+
+        var host = ExtractHost(panel.BaseUrl);
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return string.Empty;
+        }
+
+        var network = ReadStreamValue(inbound.StreamSettingsJson, "network", "tcp");
+        var security = ReadStreamValue(inbound.StreamSettingsJson, "security", "none");
+        var remark = string.IsNullOrWhiteSpace(client.Email) ? $"vpn-{client.SubscriptionId}" : client.Email;
+        var vmess = new Dictionary<string, string>
+        {
+            ["v"] = "2",
+            ["ps"] = remark,
+            ["add"] = host,
+            ["port"] = inbound.Port.ToString(),
+            ["id"] = client.Uuid,
+            ["aid"] = "0",
+            ["scy"] = ReadClientSecurity(inbound.SettingsJson, "auto"),
+            ["net"] = network,
+            ["type"] = "none",
+            ["host"] = ReadNestedValue(inbound.StreamSettingsJson, "wsSettings", "headers", "Host") ?? string.Empty,
+            ["path"] = ReadNestedValue(inbound.StreamSettingsJson, "wsSettings", "path") ?? string.Empty,
+            ["tls"] = security is "tls" or "reality" ? security : string.Empty,
+            ["sni"] = ReadServerName(inbound.StreamSettingsJson) ?? string.Empty
+        };
+
+        var json = JsonSerializer.Serialize(vmess);
+        return $"vmess://{Convert.ToBase64String(Encoding.UTF8.GetBytes(json))}";
+    }
+
     private static string ExtractHost(string baseUrl)
         => Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ? uri.Host : string.Empty;
+
+    private static string NormalizeProtocol(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
+
+    private static Dictionary<string, string> BuildSharedTransportQuery(VpnInbound inbound, bool includeSecurity)
+    {
+        var query = new Dictionary<string, string>
+        {
+            ["type"] = ReadStreamValue(inbound.StreamSettingsJson, "network", "tcp")
+        };
+
+        if (includeSecurity)
+        {
+            query["security"] = ReadStreamValue(inbound.StreamSettingsJson, "security", "none");
+        }
+
+        var sni = ReadServerName(inbound.StreamSettingsJson);
+        if (!string.IsNullOrWhiteSpace(sni)) query["sni"] = sni;
+        var path = ReadNestedValue(inbound.StreamSettingsJson, "wsSettings", "path");
+        if (!string.IsNullOrWhiteSpace(path)) query["path"] = path;
+        var serviceName = ReadNestedValue(inbound.StreamSettingsJson, "grpcSettings", "serviceName");
+        if (!string.IsNullOrWhiteSpace(serviceName)) query["serviceName"] = serviceName;
+        return query;
+    }
+
+    private static string? ReadServerName(string json)
+        => ReadNestedValue(json, "tlsSettings", "serverName")
+           ?? ReadNestedValue(json, "realitySettings", "serverNames", firstArrayValue: true)
+           ?? ReadNestedValue(json, "realitySettings", "serverName");
 
     private static string ReadStreamValue(string json, string propertyName, string fallback)
     {
@@ -620,6 +715,47 @@ public static class X3UiConfigUriGenerator
         catch
         {
             return null;
+        }
+    }
+
+    private static string? ReadNestedValue(string json, string objectName, string nestedObjectName, string propertyName)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
+            if (!doc.RootElement.TryGetProperty(objectName, out var obj) || obj.ValueKind != JsonValueKind.Object) return null;
+            if (!obj.TryGetProperty(nestedObjectName, out var nested) || nested.ValueKind != JsonValueKind.Object) return null;
+            return nested.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string ReadClientSecurity(string settingsJson, string fallback)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(settingsJson) ? "{}" : settingsJson);
+            if (!doc.RootElement.TryGetProperty("clients", out var clients) || clients.ValueKind != JsonValueKind.Array)
+            {
+                return fallback;
+            }
+
+            var first = clients.EnumerateArray().FirstOrDefault();
+            if (first.ValueKind != JsonValueKind.Object)
+            {
+                return fallback;
+            }
+
+            return first.TryGetProperty("security", out var security) && security.ValueKind == JsonValueKind.String
+                ? security.GetString() ?? fallback
+                : fallback;
+        }
+        catch
+        {
+            return fallback;
         }
     }
 }

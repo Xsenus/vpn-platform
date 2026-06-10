@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Application.Abstractions;
@@ -25,7 +27,7 @@ public class X3UiIntegrationTests
         };
         var client = new VpnClient { SubscriptionId = Guid.NewGuid(), Uuid = "11111111-1111-1111-1111-111111111111", Email = "user@example.test", Flow = string.Empty };
 
-        var uri = X3UiConfigUriGenerator.BuildVlessUri(panel, inbound, client);
+        var uri = X3UiConfigUriGenerator.BuildUri(panel, inbound, client);
 
         Assert.StartsWith("vless://11111111-1111-1111-1111-111111111111@vpn.example.com:443", uri);
         Assert.Contains("type=ws", uri);
@@ -34,11 +36,61 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
-    public void Vless_Config_Generator_Should_Fail_When_Inbound_Is_Insufficient()
+    public void Trojan_Config_Generator_Should_Use_Panel_And_Inbound_Data()
     {
-        var uri = X3UiConfigUriGenerator.BuildVlessUri(
+        var panel = new VpnPanel { BaseUrl = "https://vpn.example.com:2053", Name = "EU" };
+        var inbound = new VpnInbound
+        {
+            Protocol = "trojan",
+            Port = 443,
+            StreamSettingsJson = "{\"network\":\"grpc\",\"security\":\"reality\",\"realitySettings\":{\"serverNames\":[\"vpn.example.com\"]},\"grpcSettings\":{\"serviceName\":\"vpn\"}}"
+        };
+        var client = new VpnClient { SubscriptionId = Guid.NewGuid(), Uuid = "trojan-password", Email = "user@example.test" };
+
+        var uri = X3UiConfigUriGenerator.BuildUri(panel, inbound, client);
+
+        Assert.StartsWith("trojan://trojan-password@vpn.example.com:443", uri);
+        Assert.Contains("type=grpc", uri);
+        Assert.Contains("security=reality", uri);
+        Assert.Contains("sni=vpn.example.com", uri);
+        Assert.Contains("serviceName=vpn", uri);
+    }
+
+    [Fact]
+    public void Vmess_Config_Generator_Should_Use_Base64_Profile()
+    {
+        var panel = new VpnPanel { BaseUrl = "https://vpn.example.com:2053", Name = "EU" };
+        var inbound = new VpnInbound
+        {
+            Protocol = "vmess",
+            Port = 443,
+            SettingsJson = "{\"clients\":[{\"security\":\"chacha20-poly1305\"}]}",
+            StreamSettingsJson = "{\"network\":\"ws\",\"security\":\"tls\",\"tlsSettings\":{\"serverName\":\"vpn.example.com\"},\"wsSettings\":{\"path\":\"/vmess\",\"headers\":{\"Host\":\"cdn.example.com\"}}}"
+        };
+        var client = new VpnClient { SubscriptionId = Guid.NewGuid(), Uuid = "11111111-1111-1111-1111-111111111111", Email = "user@example.test" };
+
+        var uri = X3UiConfigUriGenerator.BuildUri(panel, inbound, client);
+        var payload = Encoding.UTF8.GetString(Convert.FromBase64String(uri["vmess://".Length..]));
+        using var doc = JsonDocument.Parse(payload);
+        var root = doc.RootElement;
+
+        Assert.StartsWith("vmess://", uri);
+        Assert.Equal("2", root.GetProperty("v").GetString());
+        Assert.Equal("vpn.example.com", root.GetProperty("add").GetString());
+        Assert.Equal("443", root.GetProperty("port").GetString());
+        Assert.Equal("11111111-1111-1111-1111-111111111111", root.GetProperty("id").GetString());
+        Assert.Equal("ws", root.GetProperty("net").GetString());
+        Assert.Equal("/vmess", root.GetProperty("path").GetString());
+        Assert.Equal("cdn.example.com", root.GetProperty("host").GetString());
+        Assert.Equal("tls", root.GetProperty("tls").GetString());
+    }
+
+    [Fact]
+    public void Config_Generator_Should_Fail_When_Inbound_Is_Insufficient()
+    {
+        var uri = X3UiConfigUriGenerator.BuildUri(
             new VpnPanel { BaseUrl = "https://vpn.example.com" },
-            new VpnInbound { Protocol = "trojan", Port = 0 },
+            new VpnInbound { Protocol = "shadowsocks", Port = 0 },
             new VpnClient { Uuid = "11111111-1111-1111-1111-111111111111" });
 
         Assert.Equal(string.Empty, uri);
@@ -150,6 +202,45 @@ public class X3UiIntegrationTests
         Assert.Equal(1, await db.VpnClients.CountAsync());
         Assert.Equal(1, await db.TelegramBotNotifications.CountAsync(x => x.Type == "vpn_access_ready"));
         Assert.Equal(1, client.CreateInboundCalls);
+        Assert.Equal(1, client.AddClientCalls);
+    }
+
+    [Theory]
+    [InlineData("trojan", "trojan://")]
+    [InlineData("vmess", "vmess://")]
+    public async Task Real_Vpn_Provider_Should_Create_Config_For_Scenario_Protocol(string protocol, string expectedPrefix)
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var client = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, client, new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Monthly", Slug = $"monthly-{protocol}", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true });
+        db.VpnPanels.Add(new VpnPanel { Id = panelId, Name = "prod-panel", BaseUrl = "https://vpn.example.com:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100 });
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            Id = Guid.NewGuid(),
+            VpnPanelId = panelId,
+            ExternalInboundId = "1",
+            Name = protocol,
+            Protocol = protocol,
+            Port = 443,
+            SettingsJson = "{\"clients\":[]}",
+            StreamSettingsJson = "{\"network\":\"ws\",\"security\":\"tls\",\"tlsSettings\":{\"serverName\":\"vpn.example.com\"},\"wsSettings\":{\"path\":\"/vpn\"}}",
+            IsDefault = true,
+            IsActive = true,
+            Capacity = 100
+        });
+        await db.SaveChangesAsync();
+
+        var access = await provider.CreateAccessAsync(new VpnProvisionRequest(subscriptionId, userId, tariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3, protocol), CancellationToken.None);
+
+        Assert.StartsWith(expectedPrefix, access.AccessUri);
+        Assert.Equal(1, await db.VpnClients.CountAsync());
         Assert.Equal(1, client.AddClientCalls);
     }
 
