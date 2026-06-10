@@ -834,6 +834,7 @@ export type CreateMyOrderPayload = {
   paymentProvider: PaymentProvider
   promoCode?: string | null
   isFirstPurchase: boolean
+  subscriptionId?: string | null
 }
 
 export function buildAuthHeaders(token?: string | null): HeadersInit {

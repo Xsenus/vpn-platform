@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
@@ -9,6 +10,7 @@ namespace VpnPlatform.Application.Services;
 
 public class OrderService
 {
+    private const string RenewalSubscriptionIdKey = "renewalSubscriptionId";
     private readonly IApplicationDbContext _db;
     private readonly IClock _clock;
 
@@ -27,17 +29,24 @@ public class OrderService
         }
 
         var now = _clock.UtcNow;
-        var existingPending = await _db.Orders
+        var pendingOrders = await _db.Orders
             .AsNoTracking()
             .Where(x =>
                 x.UserId == command.UserId &&
-                x.TariffId == command.TariffId &&
+                x.TariffId == command.TariffId)
+            .ToListAsync(cancellationToken);
+        pendingOrders = pendingOrders
+            .Where(x =>
                 x.Type == command.Type &&
                 x.Channel == command.Channel &&
                 x.Status == OrderStatus.PendingPayment &&
                 x.ExpiresAt > now)
             .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToList();
+
+        var existingPending = command.Type == OrderType.Renewal && command.RenewalSubscriptionId.HasValue
+            ? pendingOrders.FirstOrDefault(x => GetRenewalSubscriptionId(x) == command.RenewalSubscriptionId.Value)
+            : pendingOrders.FirstOrDefault(x => GetRenewalSubscriptionId(x) is null);
 
         if (existingPending is not null)
         {
@@ -71,7 +80,7 @@ public class OrderService
             Currency = tariff.Currency,
             ExpiresAt = expiresAt,
             IsFirstPurchase = command.IsFirstPurchase,
-            ReferralContext = "{}"
+            ReferralContext = BuildReferralContext(command.RenewalSubscriptionId)
         };
 
         _db.Orders.Add(order);
@@ -109,6 +118,39 @@ public class OrderService
         return expired;
     }
 
+    public static Guid? GetRenewalSubscriptionId(Order order)
+        => TryReadRenewalSubscriptionId(order.ReferralContext);
+
     public static OrderDto MapToDto(Order order)
-        => new(order.Id, order.UserId, order.TariffId, order.Amount, order.Currency, order.Status.ToString(), order.ExpiresAt);
+        => new(order.Id, order.UserId, order.TariffId, order.Amount, order.Currency, order.Status.ToString(), order.ExpiresAt, GetRenewalSubscriptionId(order));
+
+    private static string BuildReferralContext(Guid? renewalSubscriptionId)
+        => renewalSubscriptionId.HasValue
+            ? JsonSerializer.Serialize(new Dictionary<string, string> { [RenewalSubscriptionIdKey] = renewalSubscriptionId.Value.ToString("D") })
+            : "{}";
+
+    private static Guid? TryReadRenewalSubscriptionId(string? referralContext)
+    {
+        if (string.IsNullOrWhiteSpace(referralContext))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(referralContext);
+            if (document.RootElement.ValueKind != JsonValueKind.Object
+                || !document.RootElement.TryGetProperty(RenewalSubscriptionIdKey, out var value)
+                || value.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return Guid.TryParse(value.GetString(), out var id) ? id : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 }

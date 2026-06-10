@@ -522,7 +522,9 @@ public class TelegramBotPurchaseFlowTests
         Assert.Contains("Заказ на продление", result.Value!.ResponseText);
         Assert.Contains(nameof(PaymentProvider.YooKassa), result.Value.ReplyMarkupJson!);
         Assert.DoesNotContain(nameof(PaymentProvider.RoboKassa), result.Value.ReplyMarkupJson!);
-        Assert.Equal(OrderType.Renewal, (await db.Orders.SingleAsync()).Type);
+        var order = await db.Orders.SingleAsync();
+        Assert.Equal(OrderType.Renewal, order.Type);
+        Assert.Equal(subscription.Id, OrderService.GetRenewalSubscriptionId(order));
     }
 
     [Fact]

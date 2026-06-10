@@ -965,7 +965,7 @@ public class TelegramBotService
         var reusedExistingOrder = existing is not null;
         var order = reusedExistingOrder
             ? OrderService.MapToDto(existing!)
-            : (await _orderService.CreateOrderAsync(new CreateOrderCommand(account.UserId.Value, subscription.TariffId, OrderType.Renewal, ChannelType.Telegram, PaymentProvider.YooKassa, null, false), cancellationToken)).Value;
+            : (await _orderService.CreateOrderAsync(new CreateOrderCommand(account.UserId.Value, subscription.TariffId, OrderType.Renewal, ChannelType.Telegram, PaymentProvider.YooKassa, null, false, RenewalSubscriptionId: subscription.Id), cancellationToken)).Value;
 
         if (order is null)
         {

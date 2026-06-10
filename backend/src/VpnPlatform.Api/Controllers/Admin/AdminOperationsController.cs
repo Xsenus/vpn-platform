@@ -381,7 +381,14 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
     {
         var orders = await _db.Orders.AsNoTracking()
-            .Select(x => new
+            .Include(x => x.User)
+            .Include(x => x.Tariff)
+            .Include(x => x.PaymentAttempts)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(300)
+            .ToListAsync(cancellationToken);
+
+        return Ok(orders.Select(x => new
             {
                 x.Id,
                 x.UserId,
@@ -400,12 +407,11 @@ public class AdminOperationsController : ControllerBase
                 x.PaidAt,
                 x.IsFirstPurchase,
                 PaymentAttemptsCount = x.PaymentAttempts.Count,
-                LinkedSubscriptionId = _db.Subscriptions.Where(subscription => subscription.UserId == x.UserId && subscription.TariffId == x.TariffId).Select(subscription => (Guid?)subscription.Id).FirstOrDefault(),
+                LinkedSubscriptionId = OrderService.GetRenewalSubscriptionId(x),
                 x.CreatedAt,
                 x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
-        return Ok(orders.OrderByDescending(x => x.CreatedAt).Take(300).ToList());
+            .ToList());
     }
 
     [HttpGet("payments")]

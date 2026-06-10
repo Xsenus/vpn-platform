@@ -551,7 +551,8 @@ export function App() {
         channel: 'Web',
         paymentProvider: provider,
         promoCode: null,
-        isFirstPurchase: false
+        isFirstPurchase: false,
+        subscriptionId: subscription.id
       })
       const payment = await api.initMyPayment(token, order.id, provider, window.location.origin)
       setRenewalState({ subscriptionId: subscription.id, order, payment })

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -197,6 +198,65 @@ public class SubscriptionScenarioProvisioningTests
         Assert.Empty(await db.AccessCredentials.ToListAsync());
         var subscription = await db.Subscriptions.SingleAsync();
         Assert.Equal(SubscriptionStatus.PendingActivation, subscription.Status);
+    }
+
+    [Fact]
+    public async Task ActivateOrRenewFromOrderAsync_Should_Renew_Target_Subscription_From_Order_Context()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2026, 5, 30, 12, 0, 0, TimeSpan.Zero);
+        var provider = new TrackingVpnProvider();
+        var tariffId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var firstSubscriptionId = Guid.NewGuid();
+        var targetSubscriptionId = Guid.NewGuid();
+        var firstEndAt = now.AddDays(10);
+        var targetEndAt = now.AddDays(20);
+
+        db.Users.Add(new User { Id = userId, Email = "target-renewal@example.test", DisplayName = "Target renewal", PasswordHash = "hash", ReferralCode = "target" });
+        db.Tariffs.Add(new Tariff
+        {
+            Id = tariffId,
+            Name = "Target Renewal",
+            Slug = "target-renewal",
+            DurationDays = 30,
+            Price = 990m,
+            Currency = "RUB",
+            MaxDevices = 2
+        });
+        db.VpnNodes.Add(Node(Guid.NewGuid(), "target-node", "eu", priority: 100, protocol: "vless"));
+        db.Subscriptions.AddRange(
+            new Subscription { Id = firstSubscriptionId, UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = now.AddDays(-5), EndAt = firstEndAt, GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(firstEndAt), SourceChannel = ChannelType.Web },
+            new Subscription { Id = targetSubscriptionId, UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = now.AddDays(-3), EndAt = targetEndAt, GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(targetEndAt), SourceChannel = ChannelType.Web });
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariffId,
+            Type = OrderType.Renewal,
+            Channel = ChannelType.Web,
+            PaymentProvider = PaymentProvider.YooKassa,
+            Status = OrderStatus.PaymentReceived,
+            Amount = 990m,
+            Currency = "RUB",
+            ExpiresAt = now.AddMinutes(15),
+            ReferralContext = "{\"renewalSubscriptionId\":\"" + targetSubscriptionId + "\"}"
+        };
+        var payment = new PaymentAttempt { Id = Guid.NewGuid(), OrderId = order.Id, Provider = PaymentProvider.YooKassa, Status = PaymentStatus.Succeeded, Amount = 990m, Currency = "RUB", ProviderPaymentId = "pay-target", PaidAt = now };
+        db.Orders.Add(order);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var service = new SubscriptionService(db, new FixedClock(now), new NodeAllocationService(db), new SingleVpnProviderFactory(provider));
+
+        var result = await service.ActivateOrRenewFromOrderAsync(order, payment);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(targetSubscriptionId, result.Value!.SubscriptionId);
+        Assert.Equal(firstEndAt, (await db.Subscriptions.SingleAsync(x => x.Id == firstSubscriptionId)).EndAt);
+        Assert.Equal(targetEndAt.AddDays(30), (await db.Subscriptions.SingleAsync(x => x.Id == targetSubscriptionId)).EndAt);
+        Assert.Equal(targetSubscriptionId, provider.LastRequest!.SubscriptionId);
+        Assert.Equal(targetSubscriptionId, (await db.AccessCredentials.SingleAsync()).SubscriptionId);
     }
 
     private static VpnNode Node(Guid id, string name, string region, int priority, string protocol)

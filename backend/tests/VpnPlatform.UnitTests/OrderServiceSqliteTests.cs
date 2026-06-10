@@ -48,6 +48,45 @@ public class OrderServiceSqliteTests
     }
 
     [Fact]
+    public async Task CreateOrderAsync_Should_Reuse_Renewal_Order_Only_For_Same_Subscription()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var now = new DateTimeOffset(2026, 5, 25, 8, 0, 0, TimeSpan.Zero);
+        var tariffId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var firstSubscriptionId = Guid.NewGuid();
+        var secondSubscriptionId = Guid.NewGuid();
+
+        db.Users.Add(new User { Id = userId, Email = "sqlite-renewal@test.local", DisplayName = "SQLite renewal user", PasswordHash = "hash" });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "SQLite Renewal", Slug = "sqlite-renewal", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
+        await db.SaveChangesAsync();
+
+        var service = new OrderService(db, new FixedClock(now));
+
+        var first = await service.CreateOrderAsync(new CreateOrderCommand(userId, tariffId, OrderType.Renewal, ChannelType.Web, PaymentProvider.YooKassa, null, false, RenewalSubscriptionId: firstSubscriptionId));
+        var duplicateFirst = await service.CreateOrderAsync(new CreateOrderCommand(userId, tariffId, OrderType.Renewal, ChannelType.Web, PaymentProvider.YooKassa, null, false, RenewalSubscriptionId: firstSubscriptionId));
+        var second = await service.CreateOrderAsync(new CreateOrderCommand(userId, tariffId, OrderType.Renewal, ChannelType.Web, PaymentProvider.YooKassa, null, false, RenewalSubscriptionId: secondSubscriptionId));
+
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.True(duplicateFirst.IsSuccess, duplicateFirst.Error);
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal(first.Value!.Id, duplicateFirst.Value!.Id);
+        Assert.NotEqual(first.Value.Id, second.Value!.Id);
+        Assert.Equal(firstSubscriptionId, first.Value.LinkedSubscriptionId);
+        Assert.Equal(secondSubscriptionId, second.Value.LinkedSubscriptionId);
+        Assert.Equal(2, await db.Orders.CountAsync());
+    }
+
+    [Fact]
     public async Task ProcessSubscriptionLifecycle_Should_Work_With_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

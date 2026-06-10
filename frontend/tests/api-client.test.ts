@@ -216,7 +216,8 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
     channel: 'Web',
     paymentProvider: 'YooKassa',
     promoCode: 'WELCOME10',
-    isFirstPurchase: false
+    isFirstPurchase: false,
+    subscriptionId: 'subscription-1'
   })
 
   const headers = new Headers(calls[0]?.init?.headers)
@@ -224,6 +225,7 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
   assert.equal(calls[0]?.init?.method, 'POST')
   assert.equal(headers.get('Authorization'), 'Bearer token-123')
   assert.match(String(calls[0]?.init?.body), /WELCOME10/)
+  assert.match(String(calls[0]?.init?.body), /subscription-1/)
 })
 
 test('ApiClient.initMyPayment calls tokenized endpoint', async () => {

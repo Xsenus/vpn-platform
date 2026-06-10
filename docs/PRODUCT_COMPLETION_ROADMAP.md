@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `226/226`.
+- [x] `STATE-001` Backend test suite проходит: `235/235`.
 - [x] `STATE-002` Frontend test suite проходит: `49/49`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
@@ -208,9 +208,9 @@ git diff --check
   - Что сделать: проверить paid, pending, failed, refunded статусы.
   - Доказательство: seeded data test или browser smoke.
 
-- [ ] `P1-CAB-007` Продление подписки.
+- [x] `P1-CAB-007` Продление подписки. 2026-06-10.
   - Что сделать: купить продление активной подписки, проверить новую дату окончания и отсутствие дублей доступа.
-  - Доказательство: backend test + E2E smoke.
+  - Доказательство: `OrderServiceSqliteTests.CreateOrderAsync_Should_Reuse_Renewal_Order_Only_For_Same_Subscription`, `SubscriptionScenarioProvisioningTests.ActivateOrRenewFromOrderAsync_Should_Renew_Target_Subscription_From_Order_Context`, `TelegramBotPurchaseFlowTests.Renewal_Flow_Should_Create_Renewal_Order_And_Respect_Provider_Filtering`.
 
 - [x] `P1-CAB-008` Окончание подписки. 2026-06-10.
   - Что сделать: смоделировать expired subscription, проверить отключение/disable VPN клиента.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Продление конкретной подписки из кабинета и Telegram без дублей доступа | Зеленое | Backend tests `235/235`, frontend tests/typecheck/build, SQLite renewal order test |
 | 2026-06-10 | Codex | Lifecycle подписок: grace/expired, отключение VPN, outbox и Telegram-уведомления | Зеленое | Backend tests `233/233`, local SQLite API smoke |
 | 2026-06-10 | Codex | Матрица готовности платежных провайдеров и публичная фильтрация | Зеленое | Backend tests, frontend tests/typecheck/build, local SQLite HTTP-smoke |
 | 2026-06-10 | Codex | CLI admin bootstrap/reset для локальной SQLite-БД | Зеленое | `admin-bootstrap`, `AdminBootstrapServiceTests`, HTTP-smoke login/admin dashboard |

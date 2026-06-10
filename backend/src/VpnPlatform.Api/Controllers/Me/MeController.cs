@@ -12,7 +12,7 @@ using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Controllers.Me;
 
-public sealed record CreateMeOrderHttpRequest(Guid TariffId, string Type, string Channel, string PaymentProvider, string? PromoCode, bool IsFirstPurchase);
+public sealed record CreateMeOrderHttpRequest(Guid TariffId, string Type, string Channel, string PaymentProvider, string? PromoCode, bool IsFirstPurchase, Guid? SubscriptionId);
 public sealed record InitMePaymentHttpRequest(string? ReturnUrl);
 public sealed record CreateMeSupportConversationHttpRequest(string Subject, string Text, Guid? OrderId, Guid? SubscriptionId);
 public sealed record MeSupportReplyHttpRequest(string Text);
@@ -87,22 +87,91 @@ public class MeController : ControllerBase
     [HttpGet("orders")]
     public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
     {
-        var orders = await _db.Orders.AsNoTracking().Where(x => x.UserId == ResolveUserId()).ToListAsync(cancellationToken);
-        return Ok(orders.OrderByDescending(x => x.CreatedAt).ToList());
+        var orders = await _db.Orders
+            .AsNoTracking()
+            .Include(x => x.Tariff)
+            .Include(x => x.PaymentAttempts)
+            .Where(x => x.UserId == ResolveUserId())
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return Ok(orders.Select(x => new
+        {
+            x.Id,
+            x.UserId,
+            x.TariffId,
+            TariffName = x.Tariff != null ? x.Tariff.Name : null,
+            x.Amount,
+            x.Currency,
+            Status = x.Status.ToString(),
+            Type = x.Type.ToString(),
+            Channel = x.Channel.ToString(),
+            PaymentProvider = x.PaymentProvider.ToString(),
+            x.CheckoutSessionId,
+            x.ExpiresAt,
+            x.PaidAt,
+            x.IsFirstPurchase,
+            PaymentAttemptsCount = x.PaymentAttempts.Count,
+            LinkedSubscriptionId = OrderService.GetRenewalSubscriptionId(x),
+            x.CreatedAt,
+            x.UpdatedAt
+        }).ToList());
     }
 
     [HttpPost("orders")]
     public async Task<IActionResult> CreateOrder([FromBody] CreateMeOrderHttpRequest request, CancellationToken cancellationToken)
     {
+        if (!Enum.TryParse<OrderType>(request.Type, true, out var orderType)
+            || !Enum.TryParse<ChannelType>(request.Channel, true, out var channel)
+            || !Enum.TryParse<PaymentProvider>(request.PaymentProvider, true, out var paymentProvider))
+        {
+            return BadRequest(new { error = "Invalid order request." });
+        }
+
+        var userId = ResolveUserId();
+        var tariffId = request.TariffId;
+        Guid? renewalSubscriptionId = null;
+
+        if (orderType == OrderType.Renewal)
+        {
+            if (!request.SubscriptionId.HasValue)
+            {
+                return BadRequest(new { error = "Subscription is required for renewal orders." });
+            }
+
+            var subscription = await _db.Subscriptions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == request.SubscriptionId.Value && x.UserId == userId, cancellationToken);
+
+            if (subscription is null)
+            {
+                return NotFound(new { error = "Subscription not found." });
+            }
+
+            if (subscription.Status is SubscriptionStatus.Cancelled or SubscriptionStatus.Blocked)
+            {
+                return BadRequest(new { error = "Subscription is not available for renewal." });
+            }
+
+            if (subscription.TariffId != request.TariffId)
+            {
+                return BadRequest(new { error = "Tariff does not match subscription." });
+            }
+
+            tariffId = subscription.TariffId;
+            renewalSubscriptionId = subscription.Id;
+        }
+
         var result = await _orderService.CreateOrderAsync(
             new CreateOrderCommand(
-                ResolveUserId(),
-                request.TariffId,
-                Enum.Parse<OrderType>(request.Type, true),
-                Enum.Parse<ChannelType>(request.Channel, true),
-                Enum.Parse<PaymentProvider>(request.PaymentProvider, true),
+                userId,
+                tariffId,
+                orderType,
+                channel,
+                paymentProvider,
                 request.PromoCode,
-                request.IsFirstPurchase),
+                request.IsFirstPurchase,
+                RenewalSubscriptionId: renewalSubscriptionId),
             cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });

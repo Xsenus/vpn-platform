@@ -48,9 +48,22 @@ public class SubscriptionService
         var generateQrCode = scenario?.GenerateQrCode ?? true;
         var useSandboxProvisioning = payment.ProviderMode == PaymentProviderMode.Sandbox;
 
-        var existing = await _db.Subscriptions
+        var renewalSubscriptionId = order.Type == OrderType.Renewal
+            ? OrderService.GetRenewalSubscriptionId(order)
+            : null;
+
+        var existingQuery = _db.Subscriptions
             .Include(x => x.CurrentAccess)
-            .FirstOrDefaultAsync(x => x.UserId == order.UserId && x.TariffId == order.TariffId && x.Status != SubscriptionStatus.Cancelled && x.Status != SubscriptionStatus.Blocked, cancellationToken);
+            .Where(x => x.UserId == order.UserId && x.TariffId == order.TariffId && x.Status != SubscriptionStatus.Cancelled && x.Status != SubscriptionStatus.Blocked);
+
+        var existing = renewalSubscriptionId.HasValue
+            ? await existingQuery.FirstOrDefaultAsync(x => x.Id == renewalSubscriptionId.Value, cancellationToken)
+            : await existingQuery.OrderByDescending(x => x.EndAt).FirstOrDefaultAsync(cancellationToken);
+
+        if (order.Type == OrderType.Renewal && renewalSubscriptionId.HasValue && existing is null)
+        {
+            return Result<ActivationResult>.Failure("Subscription not found or unavailable for renewal.");
+        }
 
         var now = _clock.UtcNow;
         Subscription subscription;
