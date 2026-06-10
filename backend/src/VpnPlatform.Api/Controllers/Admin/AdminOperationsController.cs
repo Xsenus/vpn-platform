@@ -1116,6 +1116,11 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = validationError });
         }
 
+        if (await _db.Tariffs.AnyAsync(x => x.Slug == tariff.Slug, cancellationToken))
+        {
+            return BadRequest(new { error = "Tariff slug already exists." });
+        }
+
         _db.Tariffs.Add(tariff);
         AddAuditLog("tariff.create", "Tariff", tariff.Id, "{}", JsonSerializer.Serialize(new { tariff.Name, tariff.Price, tariff.Currency, tariff.DurationDays, tariff.IsActive }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -1159,6 +1164,11 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = validationError });
         }
 
+        if (await _db.Tariffs.AnyAsync(x => x.Id != id && x.Slug == tariff.Slug, cancellationToken))
+        {
+            return BadRequest(new { error = "Tariff slug already exists." });
+        }
+
         tariff.UpdatedAt = DateTimeOffset.UtcNow;
         AddAuditLog("tariff.update", "Tariff", id, before, JsonSerializer.Serialize(MapTariffDto(tariff)));
         await _db.SaveChangesAsync(cancellationToken);
@@ -1176,7 +1186,13 @@ public class AdminOperationsController : ControllerBase
         var hasLinkedSubscriptions = await _db.Subscriptions.AnyAsync(x => x.TariffId == id, cancellationToken);
         if (hasLinkedOrders || hasLinkedSubscriptions)
         {
-            return BadRequest(new { error = "Нельзя удалить тариф, к которому уже привязаны заказы или подписки. Отключите его вместо удаления." });
+            var beforeArchive = JsonSerializer.Serialize(MapTariffDto(tariff));
+            tariff.IsActive = false;
+            tariff.VisibleTo = DateTimeOffset.UtcNow;
+            tariff.UpdatedAt = DateTimeOffset.UtcNow;
+            AddAuditLog("tariff.archive", "Tariff", id, beforeArchive, JsonSerializer.Serialize(MapTariffDto(tariff)));
+            await _db.SaveChangesAsync(cancellationToken);
+            return Ok(new { id, deleted = false, archived = true });
         }
 
         var before = JsonSerializer.Serialize(MapTariffDto(tariff));
@@ -1273,6 +1289,11 @@ public class AdminOperationsController : ControllerBase
         tariff.FeaturesJson = NormalizeTariffFeaturesJson(tariff.FeaturesJson);
         tariff.Badge = tariff.Badge.Trim();
         tariff.Currency = string.IsNullOrWhiteSpace(tariff.Currency) ? "RUB" : tariff.Currency.Trim().ToUpperInvariant();
+        if (!Regex.IsMatch(tariff.Currency, "^[A-Z]{3}$"))
+        {
+            return "Tariff currency must use a three-letter code, for example RUB, USD or XTR.";
+        }
+
         tariff.Category = string.IsNullOrWhiteSpace(tariff.Category) ? "default" : tariff.Category.Trim();
         tariff.AllowedRegionsCsv = tariff.AllowedRegionsCsv.Trim();
         tariff.AllowedNodeGroupsCsv = tariff.AllowedNodeGroupsCsv.Trim();

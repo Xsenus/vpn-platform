@@ -93,7 +93,7 @@ public class TariffManagementTests
     }
 
     [Fact]
-    public async Task AdminTariffs_Should_Reject_Delete_When_Linked_Order_Exists()
+    public async Task AdminTariffs_Should_Archive_Linked_Tariff_Instead_Of_Delete()
     {
         await using var db = CreateDb();
         var userId = Guid.NewGuid();
@@ -115,8 +115,11 @@ public class TariffManagementTests
 
         var result = await controller.DeleteTariff(tariff.Id, CancellationToken.None);
 
-        Assert.IsType<BadRequestObjectResult>(result);
-        Assert.True(await db.Tariffs.AnyAsync(x => x.Id == tariff.Id));
+        Assert.IsType<OkObjectResult>(result);
+        var archived = await db.Tariffs.SingleAsync(x => x.Id == tariff.Id);
+        Assert.False(archived.IsActive);
+        Assert.NotNull(archived.VisibleTo);
+        Assert.DoesNotContain((await new CatalogService(db).GetPublicTariffsAsync(CancellationToken.None)), x => x.Id == tariff.Id);
     }
 
     [Fact]
@@ -132,6 +135,44 @@ public class TariffManagementTests
 
         Assert.IsType<OkObjectResult>(result);
         Assert.False(await db.Tariffs.AnyAsync(x => x.Id == tariff.Id));
+    }
+
+    [Theory]
+    [InlineData(-1, "RUB", "Tariff price must be non-negative")]
+    [InlineData(490, "RUBLE", "Tariff currency must use a three-letter code")]
+    [InlineData(490, "12R", "Tariff currency must use a three-letter code")]
+    public async Task AdminTariffs_Should_Reject_Invalid_Price_And_Currency(decimal price, string currency, string expectedError)
+    {
+        await using var db = CreateDb();
+        var tariff = Tariff("invalid-money");
+        tariff.Price = price;
+        tariff.Currency = currency;
+        var controller = CreateController(db);
+
+        var result = await controller.CreateTariff(tariff, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains(expectedError, JsonSerializer.Serialize(badRequest.Value));
+        Assert.False(await db.Tariffs.AnyAsync());
+    }
+
+    [Fact]
+    public async Task AdminTariffs_Should_Reject_Duplicate_Slug_On_Create_And_Update()
+    {
+        await using var db = CreateDb();
+        db.Tariffs.AddRange(Tariff("basic"), Tariff("premium"));
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+
+        var duplicateCreate = await controller.CreateTariff(Tariff("basic"), CancellationToken.None);
+        using var patch = JsonDocument.Parse("""{"slug":"basic"}""");
+        var premium = await db.Tariffs.SingleAsync(x => x.Slug == "premium");
+        var duplicateUpdate = await controller.PatchTariff(premium.Id, patch.RootElement, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(duplicateCreate);
+        Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
+        await db.Entry(premium).ReloadAsync();
+        Assert.Equal("premium", premium.Slug);
     }
 
     private static Tariff Tariff(string slug, bool isActive = true, int sortOrder = 10)

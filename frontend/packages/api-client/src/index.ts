@@ -1650,8 +1650,8 @@ export class ApiClient {
     })
   }
 
-  deleteAdminTariff(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
-    return this.request<{ id: string; deleted: boolean }>(`/api/admin/tariffs/${id}`, {
+  deleteAdminTariff(token: string, id: string): Promise<{ id: string; deleted: boolean; archived?: boolean }> {
+    return this.request<{ id: string; deleted: boolean; archived?: boolean }>(`/api/admin/tariffs/${id}`, {
       method: 'DELETE',
       token,
       errorMessage: 'Failed to delete tariff'

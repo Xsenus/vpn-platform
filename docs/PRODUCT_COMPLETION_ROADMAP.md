@@ -252,18 +252,21 @@ git diff --check
 
 ### P2.2 Тарифы
 
-- [ ] `P2-ADM-TAR-001` Проверить CRUD тарифов.
+- [x] `P2-ADM-TAR-001` Проверить CRUD тарифов.
   - Что сделать: создать, изменить, отключить, удалить/архивировать тариф.
   - Критерий готовности: публичный сайт и кабинет получают актуальные данные.
-  - Доказательство: tests + browser smoke.
+  - Что сделано: создание и обновление нормализуют данные, отключение скрывает тариф с витрины, удаление несвязанного тарифа удаляет запись, связанный тариф архивируется без потери заказов и подписок.
+  - Доказательство: `TariffManagementTests.AdminTariffs_Should_Create_And_Update_Extended_Content`, `AdminTariffs_Should_Delete_Unused_Tariff`, `AdminTariffs_Should_Archive_Linked_Tariff_Instead_Of_Delete`, Local SQLite API smoke.
 
-- [ ] `P2-ADM-TAR-002` Управление описанием тарифов.
+- [x] `P2-ADM-TAR-002` Управление описанием тарифов.
   - Что сделать: features, subtitle, badge, лимиты, порядок сортировки, видимость.
-  - Доказательство: admin/public screenshots.
+  - Что сделано: админка управляет кратким и полным описанием, преимуществами, бейджем, лимитами устройств/трафика, sortOrder, категорией, видимостью, сценарием выдачи и текстом после оплаты; публичный каталог отдает эти поля в `TariffDto`.
+  - Доказательство: `TariffManagementTests.PublicCatalog_Should_Return_Extended_Active_Tariff_Content`, `PublicTariffsController_Should_Return_Only_Visible_Active_Tariffs_On_Sqlite`, frontend contract test на `featuresTextToJson` и `tariff-preview`.
 
-- [ ] `P2-ADM-TAR-003` Валидация цен и валют.
+- [x] `P2-ADM-TAR-003` Валидация цен и валют.
   - Что сделать: запрет отрицательных цен, некорректных валют, пустого названия.
-  - Доказательство: backend/frontend validation tests.
+  - Что сделано: backend отклоняет пустое название, отрицательную цену, неположительный срок/число устройств, некорректный код валюты, конфликтующий slug и некорректное окно видимости; frontend показывает ошибки до отправки формы.
+  - Доказательство: `TariffManagementTests.AdminTariffs_Should_Reject_Invalid_Price_And_Currency`, `AdminTariffs_Should_Reject_Duplicate_Slug_On_Create_And_Update`, frontend source contract test на `validateTariffForm`.
 
 ### P2.3 Сценарии работы
 

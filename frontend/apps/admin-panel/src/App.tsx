@@ -544,6 +544,21 @@ function featuresToText(tariff: Pick<TariffDto, 'features' | 'featuresJson'> | U
   return parseTariffFeatures(tariff).join('\n')
 }
 
+function validateTariffForm(form: UpdateTariffPayload) {
+  const errors: string[] = []
+  const currency = String(form.currency ?? '').trim().toUpperCase()
+  const slug = String(form.slug ?? '').trim()
+
+  if (!String(form.name ?? '').trim()) errors.push('Укажите название тарифа.')
+  if (n(form.price) < 0) errors.push('Цена не может быть отрицательной.')
+  if (n(form.durationDays) <= 0) errors.push('Срок тарифа должен быть больше 0 дней.')
+  if (n(form.maxDevices) <= 0) errors.push('Количество устройств должно быть больше 0.')
+  if (!/^[A-Z]{3}$/.test(currency)) errors.push('Валюта должна быть кодом из 3 латинских букв: RUB, USD или XTR.')
+  if (slug && !/^[a-z0-9а-яё_-]+(?:-[a-z0-9а-яё_-]+)*$/i.test(slug)) errors.push('Slug может содержать буквы, цифры, дефис и подчёркивание.')
+
+  return errors
+}
+
 function toDateTimeLocalValue(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -1085,11 +1100,18 @@ export function App() {
 
   const handleSaveTariff = async () => {
     if (!token) return
-    if (!tariffForm.name || n(tariffForm.price) < 0 || n(tariffForm.durationDays) <= 0) {
-      setError('Тариф: название обязательно, цена >= 0, срок > 0 дней.')
+    const validationErrors = validateTariffForm(tariffForm)
+    if (validationErrors.length > 0) {
+      setError(`Тариф: ${validationErrors.join(' ')}`)
       return
     }
-    const payload = { ...tariffForm, featuresJson: featuresTextToJson(tariffFeaturesText) }
+    const payload = {
+      ...tariffForm,
+      name: String(tariffForm.name ?? '').trim(),
+      slug: String(tariffForm.slug ?? '').trim(),
+      currency: String(tariffForm.currency ?? 'RUB').trim().toUpperCase(),
+      featuresJson: featuresTextToJson(tariffFeaturesText)
+    }
     setBusy(true)
     setError('')
     try {
@@ -1119,9 +1141,9 @@ export function App() {
 
   const handleDeleteTariff = async (tariff: TariffDto) => {
     await runAction(`delete-${tariff.id}`, async () => {
-      await api.deleteAdminTariff(token, tariff.id)
+      const result = await api.deleteAdminTariff(token, tariff.id)
       if (editingTariffId === tariff.id) resetTariffForm()
-      setNotice(`Тариф ${tariff.name} удалён.`)
+      setNotice(result.archived ? `Тариф ${tariff.name} архивирован и скрыт с витрины.` : `Тариф ${tariff.name} удалён.`)
       await loadAll(token)
     })
   }
@@ -2026,7 +2048,7 @@ export function App() {
           <h3>Список тарифов</h3>
           <div className="list-stack">
             {tariffs.length === 0 && <EmptyState title="Тарифов нет" description="Создайте первый тариф, чтобы он появился на странице покупки." />}
-            {tariffs.map((tariff) => <div key={tariff.id} className="list-item-vertical"><div className="item-head"><div><strong>{tariff.name}</strong><div className="muted">{tariff.description || '—'}</div><div className="muted">{tariff.durationDays} дней · {tariff.maxDevices} устройств · порядок {tariff.sortOrder ?? 0} · сценарий {tariff.provisioningScenario || 'auto'}</div><div className="muted">{parseTariffFeatures(tariff).join(' · ') || 'Преимущества не заполнены'}</div></div><div className="item-status"><strong>{tariff.price} {tariff.currency}</strong>{tariff.badge && <StatusBadge value={tariff.badge} />}<StatusBadge value={tariff.isActive === false ? 'Disabled' : 'Enabled'} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editTariff(tariff)}>Редактировать</PrimaryButton>{tariff.isActive === false ? <PrimaryButton className="button-ghost" disabled={actionBusyId === tariff.id} onClick={() => void handleToggleTariff(tariff)}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === tariff.id} message={`Выключить тариф "${tariff.name}"? Он исчезнет с публичной витрины и из Telegram.`} onConfirm={() => void handleToggleTariff(tariff)}>Выключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `delete-${tariff.id}`} message={`Удалить тариф "${tariff.name}"? Если есть заказы или подписки, API не даст удалить его.`} onConfirm={() => void handleDeleteTariff(tariff)}>Удалить</ConfirmButton></div></div>)}
+            {tariffs.map((tariff) => <div key={tariff.id} className="list-item-vertical"><div className="item-head"><div><strong>{tariff.name}</strong><div className="muted">{tariff.description || '—'}</div><div className="muted">{tariff.durationDays} дней · {tariff.maxDevices} устройств · порядок {tariff.sortOrder ?? 0} · сценарий {tariff.provisioningScenario || 'auto'}</div><div className="muted">{parseTariffFeatures(tariff).join(' · ') || 'Преимущества не заполнены'}</div></div><div className="item-status"><strong>{tariff.price} {tariff.currency}</strong>{tariff.badge && <StatusBadge value={tariff.badge} />}<StatusBadge value={tariff.isActive === false ? 'Disabled' : 'Enabled'} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editTariff(tariff)}>Редактировать</PrimaryButton>{tariff.isActive === false ? <PrimaryButton className="button-ghost" disabled={actionBusyId === tariff.id} onClick={() => void handleToggleTariff(tariff)}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === tariff.id} message={`Выключить тариф "${tariff.name}"? Он исчезнет с публичной витрины и из Telegram.`} onConfirm={() => void handleToggleTariff(tariff)}>Выключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `delete-${tariff.id}`} message={`Удалить тариф "${tariff.name}"? Если есть заказы или подписки, тариф будет архивирован и скрыт с витрины.`} onConfirm={() => void handleDeleteTariff(tariff)}>Удалить</ConfirmButton></div></div>)}
           </div>
         </Card>
       </div>
