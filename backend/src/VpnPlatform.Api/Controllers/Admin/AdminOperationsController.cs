@@ -51,6 +51,7 @@ public sealed record AdminSupportNoteHttpRequest(string Text);
 public sealed record AdminSubscriptionExtendHttpRequest(int Days, string? Reason = null);
 public sealed record AdminAccessActionHttpRequest(string? Reason = null);
 public sealed record SetNodeAllocationHttpRequest(bool Available);
+public sealed record DeleteServerHttpResponse(Guid Id, bool Deleted, bool Archived, int LinkedSubscriptions, int LinkedAccesses, int LinkedProvisioningRuns);
 
 [ApiController]
 [Authorize(Policy = AdminPolicies.AdminRead)]
@@ -891,6 +892,62 @@ public class AdminOperationsController : ControllerBase
         return result.IsSuccess
             ? Ok(new { serverId = id, runId = result.Value!.Id, status = "queued", dryRun = true })
             : BadRequest(new { error = result.Error });
+    }
+
+    [HttpPost("servers/{id:guid}/disable")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> DisableServer(Guid id, CancellationToken cancellationToken)
+    {
+        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (node is null) return NotFound();
+
+        var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
+        node.Status = NodeStatus.Disabled;
+        node.IsAvailableForNewUsers = false;
+        node.UpdatedAt = DateTimeOffset.UtcNow;
+        AddAuditLog("server.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(MapVpnNode(node));
+    }
+
+    [HttpDelete("servers/{id:guid}")]
+    [Authorize(Policy = AdminPolicies.ProvisioningManage)]
+    public async Task<IActionResult> DeleteServer(Guid id, CancellationToken cancellationToken)
+    {
+        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (node is null)
+        {
+            return NotFound(new { error = "Server not found." });
+        }
+
+        var linkedSubscriptions = await _db.Subscriptions.CountAsync(x => x.CurrentServerId == id, cancellationToken);
+        var linkedAccesses = await _db.AccessCredentials.CountAsync(x => x.ServerId == id, cancellationToken);
+        var linkedRuns = await _db.ProvisioningRuns.CountAsync(x => x.NodeId == id, cancellationToken);
+        var before = JsonSerializer.Serialize(new
+        {
+            node.Name,
+            node.Host,
+            node.Status,
+            node.IsAvailableForNewUsers,
+            linkedSubscriptions,
+            linkedAccesses,
+            linkedRuns
+        });
+
+        if (linkedSubscriptions > 0 || linkedAccesses > 0 || linkedRuns > 0)
+        {
+            node.Status = NodeStatus.Archived;
+            node.IsAvailableForNewUsers = false;
+            node.UpdatedAt = DateTimeOffset.UtcNow;
+            AddAuditLog("server.archive", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers, linkedSubscriptions, linkedAccesses, linkedRuns }));
+            await _db.SaveChangesAsync(cancellationToken);
+            return Ok(new DeleteServerHttpResponse(id, Deleted: false, Archived: true, linkedSubscriptions, linkedAccesses, linkedRuns));
+        }
+
+        _db.VpnNodes.Remove(node);
+        AddAuditLog("server.delete", "VpnNode", id, before, "{}");
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(new DeleteServerHttpResponse(id, Deleted: true, Archived: false, linkedSubscriptions, linkedAccesses, linkedRuns));
     }
 
     [HttpGet("provisioning-runs")]

@@ -1717,17 +1717,27 @@ export function App() {
     }
   }
 
-  const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate') => {
-    const actionLabel = action === 'maintenance' ? 'перевести в обслуживание' : action === 'ready' ? 'вернуть в работу' : action === 'drain' ? 'закрыть набор пользователей' : 'открыть набор пользователей'
+  const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate' | 'disable') => {
+    const actionLabel = action === 'maintenance' ? 'перевести в обслуживание' : action === 'ready' ? 'вернуть в работу' : action === 'drain' ? 'закрыть набор пользователей' : action === 'disable' ? 'отключить сервер' : 'открыть набор пользователей'
     await runAction(`${action}-${server.id}`, async () => {
       if (action === 'maintenance') await api.enableAdminServerMaintenance(token, server.id)
       if (action === 'ready') await api.disableAdminServerMaintenance(token, server.id)
       if (action === 'drain') await api.disableAdminServerAllocation(token, server.id)
       if (action === 'allocate') await api.enableAdminServerAllocation(token, server.id)
+      if (action === 'disable') await api.disableAdminServer(token, server.id)
       setNotice(`Сервер ${server.name}: ${actionLabel}.`)
       await loadAll(token)
     })
   }
+
+  const handleDeleteServer = (server: VpnNodeDto) => runAction(`delete-server-${server.id}`, async () => {
+    const result = await api.deleteAdminServer(token, server.id)
+    setNotice(result.archived
+      ? `Сервер ${server.name} архивирован: связей ${result.linkedSubscriptions + result.linkedAccesses + result.linkedProvisioningRuns}.`
+      : `Сервер ${server.name} удалён.`)
+    if (editingServerId === server.id) cancelServerEdit()
+    await loadAll(token)
+  })
 
   const handleQueuePrecheck = (serverId: string) => runAction(`precheck-${serverId}`, async () => {
     const response = await api.precheckAdminServer(token, serverId)
@@ -2207,7 +2217,7 @@ export function App() {
           <h3>VPN-серверы</h3>
           <div className="list-stack">
             {servers.length === 0 && <EmptyState title="VPN-серверы не добавлены" description="Добавьте сервер или запустите проверку собственного VPS." />}
-            {servers.map((server) => <div key={server.id} className="list-item-vertical"><div className="item-head"><div><strong>{server.name}</strong><div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div><div className="muted">Datacenter: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div><div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div><div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div></div><div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton><PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Проверить</PrimaryButton><ConfirmButton className="button-danger" message="Запустить подготовку сервера? В рабочем режиме это может затронуть инфраструктуру." onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton><ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton><PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton><ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton></div></div>)}
+            {servers.map((server) => <div key={server.id} className="list-item-vertical"><div className="item-head"><div><strong>{server.name}</strong><div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div><div className="muted">Datacenter: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div><div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div><div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div></div><div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton><PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Проверить</PrimaryButton><ConfirmButton className="button-danger" message="Запустить подготовку сервера? В рабочем режиме это может затронуть инфраструктуру." onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton><ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton><PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton><ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton><ConfirmButton className="button-secondary" disabled={server.status === 'Disabled'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton><ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? Если у него есть подписки, VPN-доступы или запуски подготовки, он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton></div></div>)}
           </div>
         </Card>
         <Card>

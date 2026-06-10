@@ -323,10 +323,17 @@ test('ApiClient cabinet Telegram link status and unlink endpoints are tokenized'
   assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer user-token')
 })
 
-test('ApiClient admin server create and update send full safe payload with auth token', async () => {
+test('ApiClient admin server CRUD actions send safe payloads with auth token', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
+    if (init?.method === 'DELETE') {
+      return new Response(JSON.stringify({ id: 'node-1', deleted: true, archived: false, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     return new Response(JSON.stringify({ id: 'node-1', name: 'nl-01', host: 'nl-01.example.com', ipAddress: '203.0.113.10', provider: 'hetzner', region: 'eu', country: 'NL', datacenter: 'fsn1', status: 'New', capacity: 5000, usedCapacity: 0, supportedProtocolsCsv: 'vless,vmess,trojan', healthStatus: 'Unknown', installedVersion: '', backupStatus: 'unknown', monitoringStatus: 'unknown', loggingStatus: 'unknown', tagsCsv: '', priority: 100, isAvailableForNewUsers: false }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -365,6 +372,8 @@ test('ApiClient admin server create and update send full safe payload with auth 
 
   await client.createAdminServer('admin-token', payload)
   await client.updateAdminServer('admin-token', 'node-1', { ...payload, name: 'nl-01-edited', priority: 200, tagsCsv: 'tier:premium' })
+  await client.disableAdminServer('admin-token', 'node-1')
+  await client.deleteAdminServer('admin-token', 'node-1')
 
   const headers = new Headers(calls[0]?.init?.headers)
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers')
@@ -377,6 +386,11 @@ test('ApiClient admin server create and update send full safe payload with auth 
   assert.equal(calls[1]?.init?.method, 'PUT')
   assert.match(String(calls[1]?.init?.body), /nl-01-edited/)
   assert.match(String(calls[1]?.init?.body), /tier:premium/)
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/servers/node-1/disable')
+  assert.equal(calls[2]?.init?.method, 'POST')
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/servers/node-1')
+  assert.equal(calls[3]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
 test('ApiClient provisioning run details and actions are tokenized', async () => {

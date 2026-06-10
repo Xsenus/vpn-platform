@@ -1680,6 +1680,18 @@ export class ApiClient {
     })
   }
 
+  deleteAdminServer(token: string, serverId: string): Promise<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number }> {
+    return this.request<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number }>(`/api/admin/servers/${serverId}`, {
+      method: 'DELETE',
+      token,
+      errorMessage: 'Failed to delete server'
+    })
+  }
+
+  disableAdminServer(token: string, serverId: string): Promise<VpnNodeDto> {
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to disable server' })
+  }
+
   enableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
     return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to enable allocation' })
   }
