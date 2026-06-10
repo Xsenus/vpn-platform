@@ -65,9 +65,11 @@ test('cabinet payments returns human messages and tones for important statuses',
   assert.match(getPaymentStatusMessage('Pending'), /ожидает подтверждения/)
   assert.match(getPaymentStatusMessage('Failed'), /ошибкой/)
   assert.match(getPaymentStatusMessage('Succeeded'), /успешно/)
+  assert.match(getPaymentStatusMessage('PartiallyRefunded'), /частичный возврат/)
 
   assert.equal(getPaymentStatusTone('Pending'), 'pending')
   assert.equal(getPaymentStatusTone('Succeeded'), 'success')
+  assert.equal(getPaymentStatusTone('PartiallyRefunded'), 'success')
   assert.equal(getPaymentStatusTone('Failed'), 'failed')
 })
 
@@ -103,4 +105,3 @@ test('cabinet payments exports safe order details without raw provider payloads'
   assert.equal(parsed.payments[0].webhookPayload, undefined)
   assert.equal(formatPaymentMoney(1499.5, 'RUB'), '1 499,5 RUB')
 })
-

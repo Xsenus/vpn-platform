@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-10:
 
-- [x] `STATE-001` Backend test suite проходит: `237/237`.
+- [x] `STATE-001` Backend test suite проходит: `238/238`.
 - [x] `STATE-002` Frontend test suite проходит: `49/49`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
@@ -204,9 +204,9 @@ git diff --check
   - Что сделать: проверить статус, срок действия, тариф, VPN URI, QR, копирование ссылки.
   - Доказательство: screenshot + API response.
 
-- [ ] `P1-CAB-006` История заказов и платежей.
+- [x] `P1-CAB-006` История заказов и платежей. 2026-06-10.
   - Что сделать: проверить paid, pending, failed, refunded статусы.
-  - Доказательство: seeded data test или browser smoke.
+  - Доказательство: `MePaymentsControllerTests.GetPayments_Should_Return_Safe_User_History_With_Key_Statuses_On_Sqlite`, frontend payment helper tests.
 
 - [x] `P1-CAB-007` Продление подписки. 2026-06-10.
   - Что сделать: купить продление активной подписки, проверить новую дату окончания и отсутствие дублей доступа.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | История заказов и платежей в кабинете: paid/pending/failed/refunded, счетчики webhook/refund, отсутствие raw provider payload | Зеленое | Backend tests `238/238`, SQLite payment history test, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Поддержка в кабинете: создание обращения, ответ администратора, скрытые внутренние заметки, закрытие и переоткрытие | Зеленое | Backend tests `237/237`, SQLite support flow, frontend tests/typecheck/build |
 | 2026-06-10 | Codex | Продление конкретной подписки из кабинета и Telegram без дублей доступа | Зеленое | Backend tests `235/235`, frontend tests/typecheck/build, SQLite renewal order test |
 | 2026-06-10 | Codex | Lifecycle подписок: grace/expired, отключение VPN, outbox и Telegram-уведомления | Зеленое | Backend tests `233/233`, local SQLite API smoke |

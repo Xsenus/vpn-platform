@@ -205,9 +205,40 @@ public class MeController : ControllerBase
     public async Task<IActionResult> GetPayments(CancellationToken cancellationToken)
     {
         var userId = ResolveUserId();
-        var orderIds = await _db.Orders.Where(x => x.UserId == userId).Select(x => x.Id).ToListAsync(cancellationToken);
-        var payments = await _db.Payments.AsNoTracking().Where(x => orderIds.Contains(x.OrderId)).ToListAsync(cancellationToken);
-        return Ok(payments.OrderByDescending(x => x.CreatedAt).ToList());
+        var payments = await _db.Payments
+            .AsNoTracking()
+            .Where(x => x.Order != null && x.Order.UserId == userId)
+            .Select(x => new
+            {
+                x.Id,
+                x.OrderId,
+                UserId = x.Order != null ? x.Order.UserId : (Guid?)null,
+                Provider = x.Provider.ToString(),
+                x.PaymentProviderAccountId,
+                ProviderMode = x.ProviderMode.ToString(),
+                x.ProviderPaymentId,
+                x.ExternalEventId,
+                x.IdempotencyKey,
+                x.ConfirmationUrl,
+                x.ReturnUrl,
+                x.Amount,
+                x.Currency,
+                Status = x.Status.ToString(),
+                x.SignatureValidated,
+                x.IsActivationProcessed,
+                x.ActivationProcessedAt,
+                x.PaidAt,
+                x.FailedAt,
+                x.RefundedAt,
+                x.RefundedAmount,
+                x.StatusReason,
+                WebhookEventsCount = _db.PaymentWebhookEvents.Count(evt => evt.PaymentAttemptId == x.Id),
+                RefundsCount = _db.Refunds.Count(refund => refund.PaymentAttemptId == x.Id),
+                x.CreatedAt,
+                x.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+        return Ok(payments.OrderByDescending(x => x.CreatedAt).Take(100).ToList());
     }
 
     [HttpGet("payments/{id:guid}")]
@@ -218,7 +249,37 @@ public class MeController : ControllerBase
             .AsNoTracking()
             .Include(x => x.Order)
             .FirstOrDefaultAsync(x => x.Id == id && x.Order != null && x.Order.UserId == userId, cancellationToken);
-        return payment is null ? NotFound() : Ok(payment);
+        return payment is null
+            ? NotFound()
+            : Ok(new
+            {
+                payment.Id,
+                payment.OrderId,
+                UserId = payment.Order != null ? payment.Order.UserId : (Guid?)null,
+                Provider = payment.Provider.ToString(),
+                payment.PaymentProviderAccountId,
+                ProviderMode = payment.ProviderMode.ToString(),
+                payment.ProviderPaymentId,
+                payment.ExternalEventId,
+                payment.IdempotencyKey,
+                payment.ConfirmationUrl,
+                payment.ReturnUrl,
+                payment.Amount,
+                payment.Currency,
+                Status = payment.Status.ToString(),
+                payment.SignatureValidated,
+                payment.IsActivationProcessed,
+                payment.ActivationProcessedAt,
+                payment.PaidAt,
+                payment.FailedAt,
+                payment.RefundedAt,
+                payment.RefundedAmount,
+                payment.StatusReason,
+                WebhookEventsCount = await _db.PaymentWebhookEvents.CountAsync(evt => evt.PaymentAttemptId == payment.Id, cancellationToken),
+                RefundsCount = await _db.Refunds.CountAsync(refund => refund.PaymentAttemptId == payment.Id, cancellationToken),
+                payment.CreatedAt,
+                payment.UpdatedAt
+            });
     }
 
     [HttpGet("support/conversations")]

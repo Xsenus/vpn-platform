@@ -3,7 +3,7 @@ import type { OrderDto, PaymentAttemptDto } from '@vpn-platform/api-client'
 export type PaymentStatusTone = 'pending' | 'success' | 'failed' | 'neutral'
 
 const retryableOrderStatuses = new Set(['PendingPayment', 'Failed', 'Expired'])
-const successfulStatuses = new Set(['Paid', 'Completed', 'Succeeded', 'Success', 'Activated'])
+const successfulStatuses = new Set(['Paid', 'Completed', 'Succeeded', 'Success', 'Activated', 'Refunded', 'PartiallyRefunded'])
 const failedStatuses = new Set(['Failed', 'Canceled', 'Cancelled', 'Expired', 'Rejected'])
 const pendingStatuses = new Set(['Pending', 'PendingPayment', 'Created', 'Processing', 'WaitingForCapture'])
 
@@ -65,6 +65,8 @@ export function getPaymentStatusMessage(status: string) {
       return 'Платеж отменен. Деньги не списаны или операция отменена провайдером.'
     case 'Refunded':
       return 'Платеж возвращен. Сумма возврата отражается в деталях платежа.'
+    case 'PartiallyRefunded':
+      return 'По платежу выполнен частичный возврат. Сумма возврата отражается в деталях платежа.'
     default:
       return 'Статус платежа синхронизируется с платежным провайдером.'
   }
@@ -136,4 +138,3 @@ export function buildOrderExportText(order: OrderDto, payments: PaymentAttemptDt
     payments: safePayments
   }, null, 2)
 }
-
