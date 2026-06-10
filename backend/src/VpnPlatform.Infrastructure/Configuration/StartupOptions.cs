@@ -15,6 +15,7 @@ public sealed class AdminBootstrapOptions
     public string Password { get; set; } = string.Empty;
     public string DisplayName { get; set; } = "Platform Admin";
     public string RolesCsv { get; set; } = "SuperAdmin";
+    public bool ResetExistingPassword { get; set; }
 }
 
 public sealed class CorsOptions

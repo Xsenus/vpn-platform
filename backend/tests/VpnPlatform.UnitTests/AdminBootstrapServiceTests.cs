@@ -1,0 +1,142 @@
+using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Application.Common;
+using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Configuration;
+using VpnPlatform.Infrastructure.Persistence;
+using VpnPlatform.Infrastructure.Services;
+using Xunit;
+
+namespace VpnPlatform.UnitTests;
+
+public class AdminBootstrapServiceTests
+{
+    [Fact]
+    public async Task BootstrapAsync_Should_Create_Admin_With_Normalized_Email_And_Roles()
+    {
+        await using var db = CreateDb();
+        var passwordService = new PasswordService();
+        var service = new AdminBootstrapService(passwordService);
+
+        var result = await service.BootstrapAsync(db, new AdminBootstrapOptions
+        {
+            Enabled = true,
+            Email = " Admin@Example.TEST ",
+            Password = "StrongAdminPassword123!",
+            DisplayName = "Главный администратор",
+            RolesCsv = "SuperAdmin,Admin"
+        }, CancellationToken.None);
+        await db.SaveChangesAsync();
+
+        var admin = await db.Users.SingleAsync();
+        Assert.True(result.Created);
+        Assert.True(result.ExistingPasswordReset);
+        Assert.Equal("admin@example.test", result.Email);
+        Assert.Equal("admin@example.test", admin.Email);
+        Assert.Equal("Главный администратор", admin.DisplayName);
+        Assert.Equal(UserRoles.NormalizeCsv("SuperAdmin,Admin"), admin.RolesCsv);
+        Assert.Equal(UserStatus.Active, admin.Status);
+        Assert.False(admin.IsBlocked);
+        Assert.True(passwordService.Verify("StrongAdminPassword123!", admin.PasswordHash));
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_Should_Unblock_Admin_And_Preserve_Password_By_Default()
+    {
+        await using var db = CreateDb();
+        var passwordService = new PasswordService();
+        var originalHash = passwordService.Hash("OldAdminPassword123!");
+        db.Users.Add(new User
+        {
+            Email = "admin@example.test",
+            DisplayName = "Old Admin",
+            PasswordHash = originalHash,
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Suspended,
+            IsBlocked = true,
+            ReferralCode = "ADMOLD"
+        });
+        await db.SaveChangesAsync();
+
+        var service = new AdminBootstrapService(passwordService);
+        var result = await service.BootstrapAsync(db, new AdminBootstrapOptions
+        {
+            Enabled = true,
+            Email = "admin@example.test",
+            Password = "NewAdminPassword123!",
+            RolesCsv = UserRoles.SuperAdmin,
+            ResetExistingPassword = false
+        }, CancellationToken.None);
+        await db.SaveChangesAsync();
+
+        var admin = await db.Users.SingleAsync();
+        Assert.False(result.Created);
+        Assert.False(result.ExistingPasswordReset);
+        Assert.Equal(UserRoles.SuperAdmin, admin.RolesCsv);
+        Assert.Equal(UserStatus.Active, admin.Status);
+        Assert.False(admin.IsBlocked);
+        Assert.Equal(originalHash, admin.PasswordHash);
+        Assert.True(passwordService.Verify("OldAdminPassword123!", admin.PasswordHash));
+        Assert.False(passwordService.Verify("NewAdminPassword123!", admin.PasswordHash));
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_Should_Reset_Existing_Admin_Password_When_Explicitly_Requested()
+    {
+        await using var db = CreateDb();
+        var passwordService = new PasswordService();
+        db.Users.Add(new User
+        {
+            Email = "admin@example.test",
+            DisplayName = "Admin",
+            PasswordHash = passwordService.Hash("OldAdminPassword123!"),
+            RolesCsv = UserRoles.Admin,
+            Status = UserStatus.Active,
+            ReferralCode = "ADMREF"
+        });
+        await db.SaveChangesAsync();
+
+        var service = new AdminBootstrapService(passwordService);
+        var result = await service.BootstrapAsync(db, new AdminBootstrapOptions
+        {
+            Enabled = true,
+            Email = "admin@example.test",
+            Password = "NewAdminPassword123!",
+            RolesCsv = UserRoles.SuperAdmin,
+            ResetExistingPassword = true
+        }, CancellationToken.None);
+        await db.SaveChangesAsync();
+
+        var admin = await db.Users.SingleAsync();
+        Assert.False(result.Created);
+        Assert.True(result.ExistingPasswordReset);
+        Assert.True(passwordService.Verify("NewAdminPassword123!", admin.PasswordHash));
+        Assert.False(passwordService.Verify("OldAdminPassword123!", admin.PasswordHash));
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_Should_Reject_Short_Password()
+    {
+        await using var db = CreateDb();
+        var service = new AdminBootstrapService(new PasswordService());
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.BootstrapAsync(db, new AdminBootstrapOptions
+        {
+            Enabled = true,
+            Email = "admin@example.test",
+            Password = "short",
+            RolesCsv = UserRoles.SuperAdmin
+        }, CancellationToken.None));
+
+        Assert.Contains("at least 16 characters", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ApplicationDbContext CreateDb()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+
+        return new ApplicationDbContext(options);
+    }
+}

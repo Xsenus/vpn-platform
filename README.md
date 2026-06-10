@@ -2,6 +2,8 @@
 
 Инструкция по публикации репозитория и автодеплою на VPS находится в [docs/github-deployment.md](docs/github-deployment.md).
 
+Актуальный master-roadmap по доведению проекта до production-ready находится в [docs/PRODUCT_COMPLETION_ROADMAP.md](docs/PRODUCT_COMPLETION_ROADMAP.md).
+
 Монорепозиторий платформы продажи VPN-подписок. Внутри есть backend на ASP.NET Core/.NET 9, три frontend-приложения на React/Vite, Telegram bot, background workers, платежные адаптеры, интеграция с 3x-ui/x-ui и provisioning через Ansible.
 
 ## Состав проекта
@@ -47,6 +49,15 @@ powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
 - Личный кабинет: `http://127.0.0.1:5174`
 - Админка: `http://127.0.0.1:5175`
 - Локальный администратор: `admin@local.test` / `LocalAdminPassword123!`
+
+Если локальная SQLite-база уже существовала и пароль администратора был изменен, его можно восстановить без запуска HTTP-сервера:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT="Local"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj -- admin-bootstrap
+```
+
+Команда использует секцию `AdminBootstrap`, создает администратора при отсутствии или сбрасывает пароль существующего администратора только для явного CLI-запуска. Пароль в вывод команды не печатается.
 
 Остановка:
 

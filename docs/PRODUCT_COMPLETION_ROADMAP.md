@@ -1,0 +1,614 @@
+# Master roadmap: доведение VPN Platform до production-ready
+
+Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
+
+Дата актуализации: 2026-06-10.
+
+## Как вести этот roadmap
+
+Статусы:
+
+- `[ ]` - не начато.
+- `[~]` - в работе. Используется временно, если задача начата, но не закрыта.
+- `[x]` - выполнено и проверено.
+- `[!]` - есть блокер или ошибка, которую нельзя закрыть без внешних данных.
+
+Правила для агента:
+
+1. Нельзя ставить `[x]`, если нет проверки из поля `Доказательство`.
+2. Если задача закрыта, рядом нужно добавить дату, коммит или короткую ссылку на результат.
+3. Если задача неактуальна, ее нельзя удалять молча: нужно заменить на `[x] Неактуально: причина`.
+4. Если найдена новая ошибка, ее нужно добавить в подходящий раздел с новым ID.
+5. После каждого крупного этапа нужно запускать обязательный validation gate:
+
+```powershell
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test
+npm run typecheck
+npm run build
+git diff --check
+```
+
+## Текущее резюме состояния
+
+Что подтверждено на 2026-06-10:
+
+- [x] `STATE-001` Backend test suite проходит: `226/226`.
+- [x] `STATE-002` Frontend test suite проходит: `49/49`.
+- [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
+- [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
+- [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` прошли успешно.
+- [x] `STATE-006` VPS отвечает: `/health/live`, `/health/ready`, `/`, `/cabinet/`, `/admin/`.
+- [x] `STATE-007` Sandbox-покупка и sandbox-выдача VPN реализованы.
+- [x] `STATE-008` Production и sandbox VPN-выдача разделены.
+- [x] `STATE-009` Генерация VPN-ссылок поддерживает VLESS, VMess и Trojan.
+- [ ] `STATE-010` Полный browser E2E всех экранов не завершен.
+- [ ] `STATE-011` Live-платежи всех провайдеров не подтверждены.
+- [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
+- [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
+- [ ] `STATE-014` Roadmap и старая документация частично устарели и требуют синхронизации.
+
+## P0. Блокеры production-запуска
+
+### P0.1 Доступ администратора на VPS
+
+Проблема: страница `/admin/` открывается, но рабочий вход в админку на VPS не подтвержден. Локальные demo-credentials возвращали `401 invalid_credentials`.
+
+- [ ] `P0-ADMIN-001` Создать или восстановить production admin-аккаунт на VPS.
+  - Что сделать: добавить безопасный способ seed/reset admin-пользователя через CLI, миграцию, one-shot команду или защищенный endpoint только для maintenance.
+  - Критерий готовности: можно войти в админку на VPS, токены создаются, logout работает.
+  - Доказательство: скриншот входа, HTTP 200 для admin API после логина, запись в changelog/коммит.
+
+- [x] `P0-ADMIN-001A` Добавить безопасный CLI-механизм admin bootstrap/reset. 2026-06-10.
+  - Что сделано: команда `admin-bootstrap` создает администратора или сбрасывает пароль существующего администратора без запуска HTTP-сервера.
+  - Доказательство: backend unit tests `AdminBootstrapServiceTests`, локальная SQLite-проверка команды, HTTP-smoke login и admin dashboard.
+
+- [ ] `P0-ADMIN-002` Проверить все разделы админки под реальным admin-аккаунтом.
+  - Что сделать: открыть dashboard, users, payments, tariffs, subscriptions, vpn, nodes, panels, support, bot, releases, faq, content, scenarios, provisioning.
+  - Критерий готовности: нет белого экрана, JS-ошибок, 401/403 после логина, сломанных таблиц и пустых обязательных состояний без объяснения.
+  - Доказательство: browser smoke-отчет, список найденных ошибок или отметка "ошибок нет".
+
+### P0.2 Реальная production-выдача VPN
+
+Проблема: код production-выдачи есть, но live-проверка с настоящей 3x-ui панелью и inbound не завершена.
+
+- [ ] `P0-VPN-001` Подключить реальную 3x-ui панель в админке.
+  - Что сделать: добавить panel base URL, логин, пароль/секрет, проверить подключение, сохранить без утечки секрета в API.
+  - Критерий готовности: кнопка проверки подключения возвращает success, секреты не видны в ответах API.
+  - Доказательство: результат health-check панели, тест на отсутствие секрета в response.
+
+- [ ] `P0-VPN-002` Синхронизировать реальные inbound-ы.
+  - Что сделать: получить inbound-ы из 3x-ui, сохранить protocol, port, network, security, stream settings.
+  - Критерий готовности: в админке виден хотя бы один активный inbound для VLESS или другого выбранного протокола.
+  - Доказательство: скриншот админки и API response без секретов.
+
+- [ ] `P0-VPN-003` Подключить реальный VPN-сервер к панели.
+  - Что сделать: создать VPN node, указать hostname, регион, capacity, supported protocols, panel binding, режим production.
+  - Критерий готовности: сервер `Ready`, не sandbox, не maintenance, принимает новых пользователей.
+  - Доказательство: admin readiness показывает готовый VPN-контур.
+
+- [ ] `P0-VPN-004` Провести live production order smoke.
+  - Что сделать: создать тестовый заказ в production-режиме, провести оплату через выбранный live/sandbox merchant, дождаться webhook, проверить подписку и VPN-доступ.
+  - Критерий готовности: подписка активна, создан клиент в 3x-ui, в кабинете видны URI и QR.
+  - Доказательство: ID заказа, ID подписки, ID VPN credential, подтверждение клиента в 3x-ui.
+
+- [ ] `P0-VPN-005` Проверить fail-closed поведение.
+  - Что сделать: временно отключить inbound/ноду и убедиться, что production-выдача не создает fake-доступ.
+  - Критерий готовности: подписка остается `PendingActivation` или заказ получает понятную ошибку, fake URI не создается.
+  - Доказательство: backend test или smoke-лог с ожидаемой ошибкой.
+
+### P0.3 Live-платежи
+
+Проблема: провайдеры есть в коде и админке, но не каждый live-flow подтвержден реальной проверкой.
+
+- [ ] `P0-PAY-001` Составить матрицу готовности провайдеров в админке.
+  - Что сделать: для каждого провайдера показывать checkout, webhook, refund, status recheck, sandbox, production, required fields.
+  - Критерий готовности: админ видит, что именно поддержано, чего не хватает и почему способ оплаты скрыт от пользователя.
+  - Доказательство: screenshot раздела "Платежи", frontend/backend tests.
+
+- [ ] `P0-PAY-002` YooKassa live/sandbox smoke.
+  - Что сделать: checkout -> redirect -> webhook -> paid order -> subscription -> VPN issue.
+  - Критерий готовности: пользователь получает VPN после успешной оплаты.
+  - Доказательство: ID платежа, webhook event, subscription ID.
+
+- [ ] `P0-PAY-003` RoboKassa smoke.
+  - Что сделать: проверить required fields, checkout, callback signatures, success/fail URLs.
+  - Критерий готовности: заказ корректно переходит в paid/failed.
+  - Доказательство: webhook log и order status.
+
+- [ ] `P0-PAY-004` YooMoney smoke.
+  - Что сделать: проверить quickpay/payment flow, webhook/signature, ограничения manual recheck.
+  - Критерий готовности: оплата отображается пользователю и создает подписку.
+  - Доказательство: payment ID и subscription ID.
+
+- [ ] `P0-PAY-005` CloudPayments smoke.
+  - Что сделать: проверить hosted checkout/widget URL, webhook, required extra settings.
+  - Критерий готовности: способ оплаты не показывается без обязательного hosted checkout/widget config.
+  - Доказательство: readiness result, успешный тестовый платеж или зафиксированный блокер.
+
+- [ ] `P0-PAY-006` TBank Acquiring smoke.
+  - Что сделать: проверить terminal key/password, init payment, notification signature, success/fail.
+  - Критерий готовности: заказ получает корректный статус после уведомления.
+  - Доказательство: payment log и order transition.
+
+- [ ] `P0-PAY-007` Prodamus smoke.
+  - Что сделать: проверить payform, signature, callback, ограничения refund/recheck.
+  - Критерий готовности: пользователь может оплатить, webhook активирует подписку.
+  - Доказательство: callback log и subscription ID.
+
+- [ ] `P0-PAY-008` Stripe smoke.
+  - Что сделать: checkout session, webhook signature, payment_intent, refund при наличии capture/payment intent.
+  - Критерий готовности: paid/refund flow работает или явно скрыт при неполной настройке.
+  - Доказательство: Stripe test event ID.
+
+- [ ] `P0-PAY-009` PayPal smoke.
+  - Что сделать: order create/capture, webhook, capture ID для refund.
+  - Критерий готовности: оплата активирует подписку, refund не вызывается без capture ID.
+  - Доказательство: PayPal order/capture ID.
+
+- [ ] `P0-PAY-010` Telegram Stars invoice flow.
+  - Что сделать: реализовать или полностью проверить Telegram invoice, pre-checkout, successful payment update, выдачу подписки.
+  - Критерий готовности: пользователь может купить тариф в Telegram Stars и получить VPN.
+  - Доказательство: Telegram update log, order ID, subscription ID.
+
+- [ ] `P0-PAY-011` Скрыть неподтвержденные способы оплаты от публичного сайта.
+  - Что сделать: публичный API должен отдавать только enabled + ready providers.
+  - Критерий готовности: пользователь не видит способ оплаты, который не пройдет checkout.
+  - Доказательство: API test и browser screenshot.
+
+## P1. Полные пользовательские сценарии
+
+### P1.1 Публичный сайт
+
+- [ ] `P1-PUBLIC-001` Проверить главную страницу.
+  - Ошибка/риск: CTA может вести не туда, контент может быть hardcoded, адаптив может ломаться.
+  - Что сделать: проверить hero, преимущества, тарифы, FAQ, CTA, футер, мобильную версию.
+  - Доказательство: browser screenshots desktop/mobile, отсутствие console errors.
+
+- [ ] `P1-PUBLIC-002` Проверить тарифы.
+  - Ошибка/риск: цена/описание могут не совпадать с админкой.
+  - Что сделать: изменить тариф в админке и убедиться, что публичный сайт и кабинет обновились.
+  - Доказательство: API response + screenshots до/после.
+
+- [ ] `P1-PUBLIC-003` Проверить FAQ.
+  - Ошибка/риск: FAQ может быть статическим или неуправляемым.
+  - Что сделать: создать/отредактировать FAQ в админке, проверить отображение на сайте.
+  - Доказательство: admin action + public screenshot.
+
+- [ ] `P1-PUBLIC-004` Проверить ошибки API.
+  - Ошибка/риск: при падении API пользователь видит пустой экран.
+  - Что сделать: смоделировать 500/timeout/empty data.
+  - Критерий готовности: есть понятный error/empty state.
+  - Доказательство: frontend test или browser screenshot.
+
+### P1.2 Регистрация, логин и кабинет
+
+- [ ] `P1-CAB-001` Полный сценарий регистрации.
+  - Что сделать: регистрация, подтверждение успешного входа, ошибки duplicate email, слабого пароля, неверного email.
+  - Доказательство: E2E test или ручной smoke-отчет.
+
+- [ ] `P1-CAB-002` Полный сценарий логина/logout.
+  - Что сделать: валидный логин, неверный пароль, refresh token, logout, повторное открытие кабинета.
+  - Доказательство: tests + browser smoke.
+
+- [ ] `P1-CAB-003` Восстановление пароля.
+  - Ошибка/риск: endpoint есть, но почтовый/реальный сценарий может быть не проверен.
+  - Что сделать: forgot password -> reset token -> reset password -> login.
+  - Доказательство: integration test или staging smoke.
+
+- [ ] `P1-CAB-004` Кабинет без подписки.
+  - Что сделать: проверить empty state, CTA покупки, отсутствие QR/URI.
+  - Доказательство: screenshot.
+
+- [ ] `P1-CAB-005` Кабинет с активной подпиской.
+  - Что сделать: проверить статус, срок действия, тариф, VPN URI, QR, копирование ссылки.
+  - Доказательство: screenshot + API response.
+
+- [ ] `P1-CAB-006` История заказов и платежей.
+  - Что сделать: проверить paid, pending, failed, refunded статусы.
+  - Доказательство: seeded data test или browser smoke.
+
+- [ ] `P1-CAB-007` Продление подписки.
+  - Что сделать: купить продление активной подписки, проверить новую дату окончания и отсутствие дублей доступа.
+  - Доказательство: backend test + E2E smoke.
+
+- [ ] `P1-CAB-008` Окончание подписки.
+  - Что сделать: смоделировать expired subscription, проверить отключение/disable VPN клиента.
+  - Доказательство: backend test и 3x-ui/client state.
+
+- [ ] `P1-CAB-009` Поддержка в кабинете.
+  - Что сделать: создать диалог, отправить сообщение, ответить из админки, закрыть обращение.
+  - Доказательство: E2E или integration test.
+
+### P1.3 Telegram-бот
+
+- [ ] `P1-TG-001` Настройка бота из админки.
+  - Что сделать: сохранить token/webhook/режим, проверить, что секрет не возвращается в API.
+  - Доказательство: API test.
+
+- [ ] `P1-TG-002` Привязка Telegram к пользователю.
+  - Что сделать: link/unlink/status, ошибки повторной привязки.
+  - Доказательство: backend tests + smoke.
+
+- [ ] `P1-TG-003` Покупка через Telegram.
+  - Что сделать: выбрать тариф, создать заказ, оплатить, получить VPN-доступ.
+  - Доказательство: Telegram update log + subscription ID.
+
+- [ ] `P1-TG-004` Уведомления.
+  - Что сделать: уведомить об оплате, выдаче доступа, окончании подписки, ошибке оплаты.
+  - Доказательство: tests или staging bot log.
+
+## P2. Админка как полноценный центр управления
+
+### P2.1 Dashboard
+
+- [ ] `P2-ADM-DASH-001` Довести dashboard readiness до единого центра диагностики.
+  - Что сделать: показать готовность платежей, тарифов, VPN, 3x-ui, webhook, Telegram, VPS, CI/CD.
+  - Критерий готовности: админ видит, что мешает запуску продаж, без чтения логов.
+  - Доказательство: screenshot + backend test для summary.
+
+- [ ] `P2-ADM-DASH-002` Добавить быстрые переходы к проблемным разделам.
+  - Что сделать: из ошибки readiness можно перейти прямо к форме настройки.
+  - Доказательство: UI test или manual smoke.
+
+### P2.2 Тарифы
+
+- [ ] `P2-ADM-TAR-001` Проверить CRUD тарифов.
+  - Что сделать: создать, изменить, отключить, удалить/архивировать тариф.
+  - Критерий готовности: публичный сайт и кабинет получают актуальные данные.
+  - Доказательство: tests + browser smoke.
+
+- [ ] `P2-ADM-TAR-002` Управление описанием тарифов.
+  - Что сделать: features, subtitle, badge, лимиты, порядок сортировки, видимость.
+  - Доказательство: admin/public screenshots.
+
+- [ ] `P2-ADM-TAR-003` Валидация цен и валют.
+  - Что сделать: запрет отрицательных цен, некорректных валют, пустого названия.
+  - Доказательство: backend/frontend validation tests.
+
+### P2.3 Сценарии работы
+
+- [ ] `P2-ADM-SCN-001` Проверить CRUD сценариев.
+  - Что сделать: создать сценарий покупки/продления/ошибки/окончания.
+  - Критерий готовности: сценарий реально влияет на выдачу VPN и уведомления.
+  - Доказательство: backend tests + smoke.
+
+- [ ] `P2-ADM-SCN-002` Привязка сценария к тарифу.
+  - Что сделать: админ выбирает, какой сценарий используется для конкретного тарифа.
+  - Доказательство: заказ по тарифу применяет нужный protocol/node selection/notifications.
+
+- [ ] `P2-ADM-SCN-003` UX редактора сценариев.
+  - Что сделать: заменить технические поля на понятные блоки: "после оплаты", "при продлении", "при ошибке", "при окончании".
+  - Доказательство: screenshot + usability review.
+
+### P2.4 Платежи
+
+- [ ] `P2-ADM-PAY-001` Провайдер-специфичные формы.
+  - Что сделать: для каждого провайдера показывать только его обязательные поля, подсказки и webhook URL.
+  - Критерий готовности: нет общего непонятного `ShopId / SecretKey / ExtraSettingsJson` без объяснения.
+  - Доказательство: frontend tests + screenshots всех провайдеров.
+
+- [ ] `P2-ADM-PAY-002` Проверка подключения.
+  - Что сделать: кнопка "Проверить подключение" должна возвращать понятный результат и список проблем.
+  - Доказательство: backend tests для readiness каждого провайдера.
+
+- [ ] `P2-ADM-PAY-003` Секреты write-only.
+  - Что сделать: убедиться, что API никогда не возвращает secret/webhook secret/private credentials.
+  - Доказательство: security tests.
+
+- [ ] `P2-ADM-PAY-004` Sandbox seed для всех провайдеров.
+  - Что сделать: локальный режим должен поднимать безопасные sandbox accounts без реальных денег.
+  - Доказательство: seed test + public providers API.
+
+### P2.5 VPN-серверы и 3x-ui панели
+
+- [ ] `P2-ADM-VPN-001` CRUD VPN-серверов.
+  - Что сделать: создать, изменить, отключить, архивировать сервер.
+  - Доказательство: backend tests + UI smoke.
+
+- [ ] `P2-ADM-VPN-002` Health-check серверов.
+  - Что сделать: показывать online/offline/maintenance/draining и причину.
+  - Доказательство: backend test + screenshot.
+
+- [ ] `P2-ADM-VPN-003` CRUD 3x-ui панелей.
+  - Что сделать: создать, проверить подключение, синхронизировать inbound-ы, отключить.
+  - Доказательство: integration/smoke.
+
+- [ ] `P2-ADM-VPN-004` Управление inbound-ами.
+  - Что сделать: set default, protocol match, active/inactive, validation stream settings.
+  - Доказательство: backend tests.
+
+- [ ] `P2-ADM-VPN-005` Управление клиентами.
+  - Что сделать: enable, disable, reset traffic, migrate, sync.
+  - Доказательство: tests + real 3x-ui smoke.
+
+### P2.6 Пользователи, подписки, заказы
+
+- [ ] `P2-ADM-USR-001` Пользователи.
+  - Что сделать: поиск, фильтры, карточка пользователя, подписки, заказы, платежи, Telegram.
+  - Доказательство: UI smoke.
+
+- [ ] `P2-ADM-SUB-001` Подписки.
+  - Что сделать: активировать, отключить, продлить, синхронизировать VPN-доступ.
+  - Доказательство: backend tests + UI smoke.
+
+- [ ] `P2-ADM-ORD-001` Заказы.
+  - Что сделать: фильтры по статусам, recheck payment, переход к пользователю/платежу.
+  - Доказательство: UI smoke.
+
+- [ ] `P2-ADM-REF-001` Возвраты.
+  - Что сделать: refund flow должен работать только для провайдеров, где есть нужные данные.
+  - Доказательство: provider-specific tests.
+
+### P2.7 Контент, FAQ и "Что нового"
+
+- [ ] `P2-ADM-CNT-001` Управление контентом главной.
+  - Что сделать: hero, преимущества, CTA, SEO/meta, порядок блоков.
+  - Доказательство: изменение в админке видно на публичном сайте.
+
+- [ ] `P2-ADM-FAQ-001` Управление FAQ.
+  - Что сделать: категории, порядок, публикация/скрытие.
+  - Доказательство: frontend/backend tests.
+
+- [ ] `P2-ADM-REL-001` Раздел "Что нового".
+  - Что сделать: создать релиз, отметить видимость, показать пользователю, mark as seen.
+  - Доказательство: admin + cabinet/public smoke.
+
+- [ ] `P2-ADM-REL-002` Добавлять описание задач после крупных изменений.
+  - Что сделать: после реализации этапа roadmap добавлять запись в "Что нового".
+  - Доказательство: release entry ID и screenshot.
+
+## P3. UX/UI и единая стилистика
+
+- [ ] `P3-UX-001` Единая дизайн-система.
+  - Что сделать: цвета, типографика, кнопки, поля, tabs, badges, tables, empty/loading/error states.
+  - Критерий готовности: public-web, cabinet и admin-panel выглядят как один продукт.
+  - Доказательство: screenshots всех основных экранов.
+
+- [ ] `P3-UX-002` Современный login admin.
+  - Что сделать: отдельный аккуратный экран логина, ошибки, loading, password visibility, remember/session hints.
+  - Доказательство: screenshot + auth tests.
+
+- [ ] `P3-UX-003` Навигация админки по вкладкам/разделам.
+  - Что сделать: каждый раздел открывается отдельно, настройки не идут одной длинной простыней.
+  - Доказательство: screenshots разделов.
+
+- [ ] `P3-UX-004` Проверка всех форм.
+  - Что сделать: labels, placeholders, validation, disabled/loading states, submit/cancel positions.
+  - Доказательство: form checklist.
+
+- [ ] `P3-UX-005` Адаптивность.
+  - Что сделать: проверить 1440, 1280, 1024, 768, 390 px.
+  - Доказательство: screenshots или Playwright report.
+
+- [ ] `P3-UX-006` Доступность.
+  - Что сделать: keyboard navigation, focus states, contrast, aria-label для icon buttons.
+  - Доказательство: axe/lighthouse или ручной отчет.
+
+- [ ] `P3-UX-007` Проверка русской локализации.
+  - Что сделать: отсутствие mojibake, нормальные переносы, нет английских технических сообщений пользователю.
+  - Доказательство: grep/check script + screenshots.
+
+## P4. Backend, доменная логика и надежность
+
+- [ ] `P4-BE-001` Финализировать state machines.
+  - Что сделать: заказы, платежи, подписки, VPN-доступы, provisioning runs.
+  - Критерий готовности: невозможные переходы запрещены, повторные webhook идемпотентны.
+  - Доказательство: unit/integration tests.
+
+- [ ] `P4-BE-002` Идемпотентность webhook.
+  - Что сделать: повтор webhook не создает вторую подписку/второй VPN-доступ.
+  - Доказательство: tests по каждому провайдеру.
+
+- [ ] `P4-BE-003` Конкурентность оплаты.
+  - Что сделать: два webhook/recheck одновременно не ломают order/subscription.
+  - Доказательство: concurrency tests.
+
+- [ ] `P4-BE-004` Renew/expire jobs.
+  - Что сделать: продление, окончание, отключение клиента, уведомления.
+  - Доказательство: tests + scheduled job smoke.
+
+- [ ] `P4-BE-005` Audit log.
+  - Что сделать: логировать admin actions, payment transitions, VPN provisioning, secret rotations.
+  - Доказательство: tests + admin view.
+
+- [ ] `P4-BE-006` Observability.
+  - Что сделать: structured logs, correlation IDs, health details, metrics.
+  - Доказательство: log examples и health output.
+
+## P5. База данных и миграции
+
+- [ ] `P5-DB-001` Полный аудит PostgreSQL schema.
+  - Что сделать: проверить таблицы, индексы, FK, nullable-поля, миграции.
+  - Доказательство: migration script/result, psql schema snapshot без секретов.
+
+- [ ] `P5-DB-002` EF model drift check.
+  - Что сделать: убедиться, что модель и миграции не расходятся.
+  - Доказательство: test или отдельная команда drift-check.
+
+- [ ] `P5-DB-003` Seed локальных данных.
+  - Что сделать: локальный запуск должен иметь тарифы, sandbox payments, sandbox VPN node, admin user.
+  - Доказательство: local smoke после чистой БД.
+
+- [ ] `P5-DB-004` Backup/restore для VPS.
+  - Что сделать: настроить backup PostgreSQL и инструкцию восстановления.
+  - Доказательство: test restore на отдельную БД или runbook.
+
+## P6. Безопасность и секреты
+
+- [ ] `P6-SEC-001` Production secret storage.
+  - Проблема: Own VPS provisioning пока не materializes protected SSH credentials для live Ansible.
+  - Что сделать: secret manager или encrypted ProvisioningSecret table, temporary materialization с cleanup.
+  - Доказательство: security tests, отсутствие секретов в logs/API/UI.
+
+- [ ] `P6-SEC-002` Secret rotation.
+  - Что сделать: ротация платежных, Telegram, 3x-ui, SSH секретов без показа старых значений.
+  - Доказательство: admin flow + tests.
+
+- [ ] `P6-SEC-003` RBAC.
+  - Что сделать: роли admin/support/operator, запрет опасных действий без прав.
+  - Доказательство: authorization tests.
+
+- [ ] `P6-SEC-004` Rate limiting.
+  - Что сделать: login, register, forgot password, webhook endpoints, public checkout.
+  - Доказательство: tests/config.
+
+- [ ] `P6-SEC-005` CORS/CSP/security headers.
+  - Что сделать: проверить production headers для API и frontend.
+  - Доказательство: curl/browser security report.
+
+- [ ] `P6-SEC-006` Проверка утечек секретов.
+  - Что сделать: scan repo, logs, docs, env examples на реальные ключи.
+  - Доказательство: secret scan result.
+
+## P7. Provisioning VPS
+
+- [ ] `P7-PROV-001` Разделить dry-run, validation и live deploy.
+  - Что сделать: UI и backend должны явно показывать режим, риски и ограничения.
+  - Доказательство: tests + screenshot.
+
+- [ ] `P7-PROV-002` Live Ansible credentials.
+  - Что сделать: безопасная временная передача SSH credentials в Ansible.
+  - Доказательство: live staging deploy без записи секрета в БД/лог.
+
+- [ ] `P7-PROV-003` Precheck сервера.
+  - Что сделать: OS, ports, disk, RAM, firewall, Docker/systemd, 3x-ui availability.
+  - Доказательство: precheck report.
+
+- [ ] `P7-PROV-004` Rollback.
+  - Что сделать: при неудачном provisioning вернуть run/node в понятное состояние.
+  - Доказательство: failure scenario test.
+
+- [ ] `P7-PROV-005` Документация live provisioning.
+  - Что сделать: отдельный runbook с предупреждениями и командами.
+  - Доказательство: docs review.
+
+## P8. CI/CD, GitHub и VPS deploy
+
+- [ ] `P8-CI-001` Проверить workflow auto-detect docker/systemd.
+  - Что сделать: убедиться, что deploy выбирает корректный режим и пишет понятный лог.
+  - Доказательство: GitHub Actions log.
+
+- [ ] `P8-CI-002` Required checks для main.
+  - Что сделать: включить обязательные checks перед merge/push.
+  - Доказательство: GitHub branch protection screenshot/config.
+
+- [ ] `P8-CI-003` Secrets audit в GitHub.
+  - Что сделать: проверить наличие и названия secrets для VPS, DB, deploy, registry.
+  - Доказательство: список имен без значений.
+
+- [ ] `P8-CI-004` VPS disk/memory maintenance.
+  - Что сделать: безопасная очистка old artifacts, logs rotation, apt cache, docker cache если используется.
+  - Доказательство: df/free до/после, без удаления рабочих данных.
+
+- [ ] `P8-CI-005` Post-deploy smoke.
+  - Что сделать: после deploy автоматически проверять API health, public, cabinet, admin, public providers.
+  - Доказательство: Actions step log.
+
+## P9. Тестирование
+
+- [ ] `P9-TST-001` Backend обязательный suite.
+  - Текущее состояние: проходит `226/226`.
+  - Что сделать: держать зеленым после каждого изменения.
+  - Доказательство: test output.
+
+- [ ] `P9-TST-002` Frontend unit tests.
+  - Текущее состояние: проходит `49/49`.
+  - Что сделать: добавить тесты для новых UI-сценариев.
+  - Доказательство: npm test output.
+
+- [ ] `P9-TST-003` Playwright E2E public.
+  - Что сделать: главная, тарифы, FAQ, checkout start.
+  - Доказательство: Playwright report.
+
+- [ ] `P9-TST-004` Playwright E2E cabinet.
+  - Что сделать: register/login/order/payment status/subscription/access/support.
+  - Доказательство: Playwright report.
+
+- [ ] `P9-TST-005` Playwright E2E admin.
+  - Что сделать: login, payments, tariffs, VPN, panels, scenarios, releases.
+  - Доказательство: Playwright report.
+
+- [ ] `P9-TST-006` Payment provider contract tests.
+  - Что сделать: signature verification, webhook payloads, idempotency для всех провайдеров.
+  - Доказательство: backend test names/results.
+
+- [ ] `P9-TST-007` Real staging smoke checklist.
+  - Что сделать: вручную или полуавтоматически пройти покупку и выдачу VPN на staging.
+  - Доказательство: заполненный smoke report.
+
+## P10. Документация
+
+- [ ] `P10-DOC-001` README на русском.
+  - Что сделать: запуск без Docker, запуск с Docker, env, DB, tests, deploy.
+  - Доказательство: fresh clone local run.
+
+- [ ] `P10-DOC-002` Документация администратора.
+  - Что сделать: как настроить тарифы, платежи, VPN, 3x-ui, Telegram, сценарии.
+  - Доказательство: review по каждому разделу админки.
+
+- [ ] `P10-DOC-003` Документация пользователя.
+  - Что сделать: как купить, оплатить, подключить VPN, продлить, обратиться в поддержку.
+  - Доказательство: public/cabinet help pages.
+
+- [ ] `P10-DOC-004` Документация разработчика.
+  - Что сделать: архитектура, доменные сущности, state machines, тесты, добавление провайдера.
+  - Доказательство: docs index.
+
+- [ ] `P10-DOC-005` Убрать mojibake в старых документах.
+  - Проблема: часть документов в консоли отображается как `Рџ...`, нужно проверить реальные файлы и перекодировать поврежденные.
+  - Что сделать: проверить encoding всех `.md`, исправить поврежденные тексты.
+  - Доказательство: script/report + нормальное отображение русского текста.
+
+## P11. Финальная приемка production-ready
+
+- [ ] `P11-ACC-001` Fresh local setup.
+  - Что сделать: с нуля поднять backend, frontend, локальную БД, seed, пройти sandbox purchase.
+  - Доказательство: fresh setup report.
+
+- [ ] `P11-ACC-002` VPS production smoke.
+  - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
+  - Доказательство: smoke report.
+
+- [ ] `P11-ACC-003` Mobile smoke.
+  - Что сделать: public/cabinet/admin на мобильном viewport.
+  - Доказательство: screenshots.
+
+- [ ] `P11-ACC-004` No console errors.
+  - Что сделать: проверить основные экраны в браузере.
+  - Доказательство: browser console report.
+
+- [ ] `P11-ACC-005` Security final check.
+  - Что сделать: secrets, auth, headers, rate limits, permissions.
+  - Доказательство: security checklist.
+
+- [ ] `P11-ACC-006` Final docs and changelog.
+  - Что сделать: обновить README, roadmap, "Что нового", инструкции запуска и deploy.
+  - Доказательство: docs commit.
+
+- [ ] `P11-ACC-007` Release decision.
+  - Что сделать: принять решение: sandbox-ready, staging-ready или production-ready.
+  - Критерий production-ready: все P0 закрыты, P1 критические сценарии закрыты, validation gate зеленый, VPS smoke успешен.
+  - Доказательство: tagged release или зафиксированная версия.
+
+## Журнал проверок
+
+Новые проверки добавлять сверху.
+
+| Дата | Кто | Что проверено | Результат | Доказательство |
+| --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | CLI admin bootstrap/reset для локальной SQLite-БД | Зеленое | `admin-bootstrap`, `AdminBootstrapServiceTests`, HTTP-smoke login/admin dashboard |
+| 2026-06-10 | Codex | Backend tests, frontend tests, typecheck, build, GitHub Actions, VPS HTTP health | Зеленое, кроме live admin auth/E2E | Локальный аудит и ответы VPS 200 |
+
+## Журнал найденных ошибок
+
+Новые ошибки добавлять сверху.
+
+| ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
+| --- | --- | --- | --- | --- | --- |
+| BUG-001 | P0 | VPS/Admin | Не подтвержден рабочий вход в админку на VPS | partial | CLI-механизм восстановления добавлен; дальше выполнить reset на VPS и пройти smoke |
+| BUG-002 | P0 | VPN | Не подтверждена live-выдача через реальный 3x-ui | open | Подключить panel/inbound/node и провести production smoke |
+| BUG-003 | P0 | Payments | Не все payment providers подтверждены live/sandbox smoke | open | Пройти матрицу провайдеров |
+| BUG-004 | P1 | Frontend | Нет полного browser E2E по public/cabinet/admin | open | Добавить Playwright/smoke проверки |
+| BUG-005 | P1 | Docs | Часть roadmap/docs устарела, возможен mojibake в старых `.md` | open | Синхронизировать и проверить кодировку |
+| BUG-006 | P1 | Provisioning | Live Ansible provisioning не production-ready из-за secret materialization | open | Реализовать безопасную передачу секретов |

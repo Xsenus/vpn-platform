@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -9,8 +10,11 @@ using VpnPlatform.Application;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Infrastructure;
 using VpnPlatform.Infrastructure.Configuration;
+using VpnPlatform.Infrastructure.Persistence;
+using VpnPlatform.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+var isAdminBootstrapCommand = args.Any(x => string.Equals(x, "admin-bootstrap", StringComparison.OrdinalIgnoreCase));
 
 builder.Host.UseSerilog((context, configuration) =>
 {
@@ -20,7 +24,7 @@ builder.Host.UseSerilog((context, configuration) =>
 });
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration, includeHostedServices: true, includeOperationalWorkers: true);
+builder.Services.AddInfrastructure(builder.Configuration, includeHostedServices: !isAdminBootstrapCommand, includeOperationalWorkers: !isAdminBootstrapCommand);
 
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -87,6 +91,12 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+if (isAdminBootstrapCommand)
+{
+    await RunAdminBootstrapCommandAsync(app.Services);
+    return;
+}
+
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<IdempotencyMiddleware>();
@@ -107,3 +117,48 @@ app.MapGet("/health/ready", () => Results.Ok(new { status = "ready" }));
 app.MapGet("/metrics", () => Results.Text("# HELP vpnplatform_api_info VPN Platform API info\n# TYPE vpnplatform_api_info gauge\nvpnplatform_api_info 1\n", "text/plain; version=0.0.4; charset=utf-8"));
 
 app.Run();
+
+static async Task RunAdminBootstrapCommandAsync(IServiceProvider services)
+{
+    using var scope = services.CreateScope();
+    var provider = scope.ServiceProvider;
+    var db = provider.GetRequiredService<ApplicationDbContext>();
+    var databaseOptions = provider.GetRequiredService<IOptions<DatabaseStartupOptions>>().Value;
+    var adminOptions = provider.GetRequiredService<IOptions<AdminBootstrapOptions>>().Value;
+
+    if (!adminOptions.Enabled)
+    {
+        throw new InvalidOperationException("AdminBootstrap:Enabled must be true for the admin-bootstrap command.");
+    }
+
+    if (databaseOptions.ApplyMigrationsOnStartup)
+    {
+        if (DatabaseProviderConfigurator.IsSqlite(databaseOptions.Provider) && databaseOptions.UseEnsureCreatedForLocalSqlite)
+        {
+            await db.Database.EnsureCreatedAsync();
+            await LocalSqliteSchemaRepair.ApplyAsync(db);
+        }
+        else
+        {
+            await db.Database.MigrateAsync();
+        }
+    }
+
+    var commandOptions = new AdminBootstrapOptions
+    {
+        Enabled = adminOptions.Enabled,
+        Email = adminOptions.Email,
+        Password = adminOptions.Password,
+        DisplayName = adminOptions.DisplayName,
+        RolesCsv = adminOptions.RolesCsv,
+        ResetExistingPassword = true
+    };
+    var result = await provider.GetRequiredService<AdminBootstrapService>().BootstrapAsync(db, commandOptions, CancellationToken.None);
+    await db.SaveChangesAsync();
+
+    Console.WriteLine("Admin bootstrap completed.");
+    Console.WriteLine($"Email: {result.Email}");
+    Console.WriteLine($"Roles: {result.RolesCsv}");
+    Console.WriteLine($"Created: {result.Created}");
+    Console.WriteLine($"Existing password reset: {result.ExistingPasswordReset}");
+}

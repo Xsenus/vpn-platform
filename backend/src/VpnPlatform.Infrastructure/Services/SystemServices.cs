@@ -43,23 +43,87 @@ public class PasswordService : IPasswordService
     }
 }
 
+public sealed record AdminBootstrapResult(
+    string Email,
+    string RolesCsv,
+    bool Created,
+    bool ExistingPasswordReset);
+
+public sealed class AdminBootstrapService
+{
+    private readonly IPasswordService _passwordService;
+
+    public AdminBootstrapService(IPasswordService passwordService)
+    {
+        _passwordService = passwordService;
+    }
+
+    public async Task<AdminBootstrapResult> BootstrapAsync(ApplicationDbContext db, AdminBootstrapOptions options, CancellationToken cancellationToken)
+    {
+        var normalizedEmail = NormalizeEmail(options.Email);
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            throw new InvalidOperationException("AdminBootstrap:Email is required when AdminBootstrap:Enabled=true.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Password) || options.Password.Length < 16)
+        {
+            throw new InvalidOperationException("AdminBootstrap:Password must contain at least 16 characters.");
+        }
+
+        var rolesCsv = UserRoles.NormalizeCsv(options.RolesCsv);
+        var admin = await db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
+        if (admin is null)
+        {
+            db.Users.Add(new User
+            {
+                Email = normalizedEmail,
+                DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? "Platform Admin" : options.DisplayName.Trim(),
+                PasswordHash = _passwordService.Hash(options.Password),
+                RolesCsv = rolesCsv,
+                Status = UserStatus.Active,
+                ReferralCode = $"ADM-{Guid.NewGuid():N}"[..10]
+            });
+
+            return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: true, ExistingPasswordReset: true);
+        }
+
+        admin.RolesCsv = rolesCsv;
+        admin.Status = UserStatus.Active;
+        admin.IsBlocked = false;
+        admin.UpdatedAt = DateTimeOffset.UtcNow;
+
+        if (options.ResetExistingPassword)
+        {
+            admin.PasswordHash = _passwordService.Hash(options.Password);
+        }
+
+        return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: false, ExistingPasswordReset: options.ResetExistingPassword);
+    }
+
+    private static string NormalizeEmail(string value) => value.Trim().ToLowerInvariant();
+}
+
 public class DbInitializer : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DbInitializer> _logger;
     private readonly IOptions<DatabaseStartupOptions> _databaseOptions;
     private readonly IOptions<AdminBootstrapOptions> _adminOptions;
+    private readonly AdminBootstrapService _adminBootstrapService;
 
     public DbInitializer(
         IServiceProvider serviceProvider,
         ILogger<DbInitializer> logger,
         IOptions<DatabaseStartupOptions> databaseOptions,
-        IOptions<AdminBootstrapOptions> adminOptions)
+        IOptions<AdminBootstrapOptions> adminOptions,
+        AdminBootstrapService adminBootstrapService)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _databaseOptions = databaseOptions;
         _adminOptions = adminOptions;
+        _adminBootstrapService = adminBootstrapService;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -88,7 +152,13 @@ public class DbInitializer : IHostedService
 
         if (adminOptions.Enabled)
         {
-            await BootstrapAdminAsync(scope.ServiceProvider, db, adminOptions, cancellationToken);
+            var result = await _adminBootstrapService.BootstrapAsync(db, adminOptions, cancellationToken);
+            _logger.LogInformation(
+                "Admin bootstrap completed. Email={Email}, Roles={Roles}, Created={Created}, ExistingPasswordReset={ExistingPasswordReset}",
+                result.Email,
+                result.RolesCsv,
+                result.Created,
+                result.ExistingPasswordReset);
         }
 
         await scope.ServiceProvider.GetRequiredService<AppReleaseSeedService>().SyncAsync(db, cancellationToken);
@@ -107,42 +177,6 @@ public class DbInitializer : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private static async Task BootstrapAdminAsync(IServiceProvider serviceProvider, ApplicationDbContext db, AdminBootstrapOptions options, CancellationToken cancellationToken)
-    {
-        var normalizedEmail = NormalizeEmail(options.Email);
-        if (string.IsNullOrWhiteSpace(normalizedEmail))
-        {
-            throw new InvalidOperationException("AdminBootstrap:Email is required when AdminBootstrap:Enabled=true.");
-        }
-
-        if (string.IsNullOrWhiteSpace(options.Password) || options.Password.Length < 16)
-        {
-            throw new InvalidOperationException("AdminBootstrap:Password must contain at least 16 characters.");
-        }
-
-        var passwordService = serviceProvider.GetRequiredService<IPasswordService>();
-        var admin = await db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
-        if (admin is null)
-        {
-            db.Users.Add(new User
-            {
-                Email = normalizedEmail,
-                DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? "Platform Admin" : options.DisplayName.Trim(),
-                PasswordHash = passwordService.Hash(options.Password),
-                RolesCsv = UserRoles.NormalizeCsv(options.RolesCsv),
-                Status = UserStatus.Active,
-                ReferralCode = $"ADM-{Guid.NewGuid():N}"[..10]
-            });
-        }
-        else
-        {
-            admin.RolesCsv = UserRoles.NormalizeCsv(options.RolesCsv);
-            admin.Status = UserStatus.Active;
-            admin.IsBlocked = false;
-            admin.UpdatedAt = DateTimeOffset.UtcNow;
-        }
-    }
 
     private static async Task SeedDemoDataAsync(ApplicationDbContext db, CancellationToken cancellationToken)
     {

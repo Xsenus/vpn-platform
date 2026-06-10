@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordService, PasswordService>();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<ISecretProtector, SecretProtector>();
+        services.AddSingleton<AdminBootstrapService>();
         services.AddScoped<ITelegramInvoiceProvider, DisabledTelegramInvoiceProvider>();
 
         services.AddScoped<IPaymentProvider, YooMoneyPaymentProvider>();
