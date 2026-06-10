@@ -304,9 +304,10 @@ git diff --check
   - Что сделано: платежные секреты в форме редактирования остаются пустыми и показывают только configured-статус; backend закреплен тестом, что create/list/update/check ответы не содержат secret, webhook secret, protected-поля и приватные extra settings.
   - Доказательство: `AdminAutomationMvpTests.Provider_Account_Secrets_Should_Be_Write_Only_In_Admin_Responses`, frontend source contract test на `configured={editingProviderAccount?.hasSecretKey}`, локальный SQLite smoke.
 
-- [ ] `P2-ADM-PAY-004` Sandbox seed для всех провайдеров.
+- [x] `P2-ADM-PAY-004` Sandbox seed для всех провайдеров. 2026-06-10.
   - Что сделать: локальный режим должен поднимать безопасные sandbox accounts без реальных денег.
-  - Доказательство: seed test + public providers API.
+  - Что сделано: локальный seed добавляет отсутствующие sandbox-аккаунты для всех web-провайдеров без дублей и без перезаписи уже настроенных аккаунтов; Telegram Stars остается bot-only/disabled до настройки Telegram invoice flow.
+  - Доказательство: `PaymentProviderSandboxSeedTests.Demo_Seed_Should_Add_Missing_Sandbox_Providers_Without_Duplicating_Existing_Accounts`, `PaymentProvidersPublicControllerTests`, локальный SQLite HTTP-smoke `/api/admin/payment-providers/accounts` и `/api/public/payments/providers`.
 
 ### P2.5 VPN-серверы и 3x-ui панели
 

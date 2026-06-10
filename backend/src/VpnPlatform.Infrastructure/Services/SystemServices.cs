@@ -175,7 +175,7 @@ public class DbInitializer : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private static async Task SeedDemoDataAsync(ApplicationDbContext db, CancellationToken cancellationToken)
+    internal static async Task SeedDemoDataAsync(ApplicationDbContext db, CancellationToken cancellationToken)
     {
         if (!await db.Tariffs.AnyAsync(cancellationToken))
         {
@@ -198,37 +198,18 @@ public class DbInitializer : IHostedService
             });
         }
 
-        if (!await db.PaymentProviderAccounts.AnyAsync(cancellationToken))
+        var existingPaymentProviders = await db.PaymentProviderAccounts
+            .Select(x => x.Provider)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var existingPaymentProviderSet = existingPaymentProviders.ToHashSet();
+        var now = DateTimeOffset.UtcNow;
+        var missingLocalSandboxProviders = LocalSandboxPaymentProviders(now)
+            .Where(x => !existingPaymentProviderSet.Contains(x.Provider))
+            .ToArray();
+        if (missingLocalSandboxProviders.Length > 0)
         {
-            var now = DateTimeOffset.UtcNow;
-            db.PaymentProviderAccounts.AddRange(
-                LocalSandboxProvider(PaymentProvider.YooKassa, "yookassa-local", "YooKassa Sandbox", "local-yookassa-shop", "https://api.yookassa.ru/v3", now, yookassaIps: true),
-                LocalSandboxProvider(PaymentProvider.RoboKassa, "robokassa-local", "RoboKassa Sandbox", "local-robokassa-merchant", "https://auth.robokassa.ru/Merchant/Index.aspx", now),
-                LocalSandboxProvider(PaymentProvider.YooMoney, "yoomoney-local", "YooMoney Sandbox", "410000000000000", "https://yoomoney.ru/quickpay/confirm", now),
-                LocalSandboxProvider(PaymentProvider.CloudPayments, "cloudpayments-local", "CloudPayments Sandbox", "local-cloudpayments-public-id", string.Empty, now, extraSettingsJson: """{"hostedCheckoutUrl":"http://localhost:5174/payments/cloudpayments-widget"}"""),
-                LocalSandboxProvider(PaymentProvider.TBankAcquiring, "tbank-local", "TBank Sandbox", "local-tbank-terminal", "https://securepay.tinkoff.ru", now),
-                LocalSandboxProvider(PaymentProvider.Prodamus, "prodamus-local", "Prodamus Sandbox", "local-prodamus-shop", "https://demo.payform.ru", now),
-                LocalSandboxProvider(PaymentProvider.Stripe, "stripe-local", "Stripe Sandbox", "local-stripe-account", "https://api.stripe.com", now),
-                LocalSandboxProvider(PaymentProvider.PayPal, "paypal-local", "PayPal Sandbox", "local-paypal-client", "https://api-m.sandbox.paypal.com", now),
-                new PaymentProviderAccount
-                {
-                    Provider = PaymentProvider.TelegramStars,
-                    Mode = PaymentProviderMode.Disabled,
-                    Name = "telegram-stars-bot-only",
-                    PublicName = "Telegram Stars (только Telegram-бот)",
-                    IsEnabled = false,
-                    IsDefault = false,
-                    ShopId = string.Empty,
-                    ApiBaseUrl = string.Empty,
-                    ReturnUrl = string.Empty,
-                    WebhookUrl = string.Empty,
-                    SecretKeyProtected = string.Empty,
-                    WebhookSecretProtected = string.Empty,
-                    ExtraSettingsJson = """{"status":"bot-only"}""",
-                    HealthStatus = HealthStatus.Unknown,
-                    CreatedAt = now,
-                    UpdatedAt = now
-                });
+            db.PaymentProviderAccounts.AddRange(missingLocalSandboxProviders);
         }
 
         if (!await db.SiteContentBlocks.AnyAsync(cancellationToken))
@@ -359,6 +340,38 @@ public class DbInitializer : IHostedService
             HealthStatus = HealthStatus.Unknown,
             CreatedAt = now,
             UpdatedAt = now
+        };
+
+    private static IReadOnlyCollection<PaymentProviderAccount> LocalSandboxPaymentProviders(DateTimeOffset now)
+        => new[]
+        {
+            LocalSandboxProvider(PaymentProvider.YooKassa, "yookassa-local", "YooKassa Sandbox", "local-yookassa-shop", "https://api.yookassa.ru/v3", now, yookassaIps: true),
+            LocalSandboxProvider(PaymentProvider.RoboKassa, "robokassa-local", "RoboKassa Sandbox", "local-robokassa-merchant", "https://auth.robokassa.ru/Merchant/Index.aspx", now),
+            LocalSandboxProvider(PaymentProvider.YooMoney, "yoomoney-local", "YooMoney Sandbox", "410000000000000", "https://yoomoney.ru/quickpay/confirm", now),
+            LocalSandboxProvider(PaymentProvider.CloudPayments, "cloudpayments-local", "CloudPayments Sandbox", "local-cloudpayments-public-id", string.Empty, now, extraSettingsJson: """{"hostedCheckoutUrl":"http://localhost:5174/payments/cloudpayments-widget"}"""),
+            LocalSandboxProvider(PaymentProvider.TBankAcquiring, "tbank-local", "TBank Sandbox", "local-tbank-terminal", "https://securepay.tinkoff.ru", now),
+            LocalSandboxProvider(PaymentProvider.Prodamus, "prodamus-local", "Prodamus Sandbox", "local-prodamus-shop", "https://demo.payform.ru", now),
+            LocalSandboxProvider(PaymentProvider.Stripe, "stripe-local", "Stripe Sandbox", "local-stripe-account", "https://api.stripe.com", now),
+            LocalSandboxProvider(PaymentProvider.PayPal, "paypal-local", "PayPal Sandbox", "local-paypal-client", "https://api-m.sandbox.paypal.com", now),
+            new PaymentProviderAccount
+            {
+                Provider = PaymentProvider.TelegramStars,
+                Mode = PaymentProviderMode.Disabled,
+                Name = "telegram-stars-bot-only",
+                PublicName = "Telegram Stars (только Telegram-бот)",
+                IsEnabled = false,
+                IsDefault = false,
+                ShopId = string.Empty,
+                ApiBaseUrl = string.Empty,
+                ReturnUrl = string.Empty,
+                WebhookUrl = string.Empty,
+                SecretKeyProtected = string.Empty,
+                WebhookSecretProtected = string.Empty,
+                ExtraSettingsJson = """{"status":"bot-only"}""",
+                HealthStatus = HealthStatus.Unknown,
+                CreatedAt = now,
+                UpdatedAt = now
+            }
         };
 
     private static string NormalizeEmail(string? email) => (email ?? string.Empty).Trim().ToLowerInvariant();
