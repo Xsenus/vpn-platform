@@ -58,7 +58,9 @@ public class SubscriptionService
 
         var existing = renewalSubscriptionId.HasValue
             ? await existingQuery.FirstOrDefaultAsync(x => x.Id == renewalSubscriptionId.Value, cancellationToken)
-            : await existingQuery.OrderByDescending(x => x.EndAt).FirstOrDefaultAsync(cancellationToken);
+            : (await existingQuery.ToListAsync(cancellationToken))
+                .OrderByDescending(x => x.EndAt)
+                .FirstOrDefault();
 
         if (order.Type == OrderType.Renewal && renewalSubscriptionId.HasValue && existing is null)
         {

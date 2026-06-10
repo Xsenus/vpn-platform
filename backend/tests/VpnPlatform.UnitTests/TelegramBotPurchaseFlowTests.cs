@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
@@ -110,6 +111,53 @@ public class TelegramBotPurchaseFlowTests
         Assert.Contains("Мои ключи", notification.PayloadJson);
         Assert.Contains("Продлить", notification.PayloadJson);
         Assert.Equal(PaymentStatus.Succeeded, (await db.Payments.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_Purchase_Should_Create_Subscription_And_Vpn_Access_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(390, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(391, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(392, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(393, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(394, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await db.Payments.SingleAsync(x => x.Provider == PaymentProvider.TelegramStars);
+        var preCheckout = await service.ProcessUpdateAsync(PreCheckoutUpdate(395, payment.Id, 490, "XTR"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var successful = await service.ProcessUpdateAsync(SuccessfulPaymentUpdate(396, payment.Id, "sqlite-tg-charge-1"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        var activationPayment = await db.Payments.SingleAsync();
+        Assert.True(await db.Subscriptions.AnyAsync(), $"{successful.Value?.ResponseText} {activationPayment.StatusReason}");
+        var subscription = await db.Subscriptions.SingleAsync();
+        var auditError = (await db.AuditLogs.ToListAsync()).OrderByDescending(x => x.CreatedAt).Select(x => x.AfterJson).FirstOrDefault();
+        Assert.True(await db.AccessCredentials.AnyAsync(), $"{successful.Value?.ResponseText} {activationPayment.StatusReason} {subscription.BlockReason} {auditError}");
+        var access = await db.AccessCredentials.SingleAsync();
+        var updatedPayment = activationPayment;
+        var updatedOrder = await db.Orders.SingleAsync();
+
+        Assert.True(preCheckout.IsSuccess, preCheckout.Error);
+        Assert.True(preCheckout.Value!.PreCheckoutOk);
+        Assert.True(successful.IsSuccess, successful.Error);
+        Assert.Contains("vless://test@vpn.test:443", successful.Value!.ResponseText, StringComparison.Ordinal);
+        Assert.Equal(OrderStatus.Completed, updatedOrder.Status);
+        Assert.Equal(PaymentStatus.Succeeded, updatedPayment.Status);
+        Assert.True(updatedPayment.IsActivationProcessed);
+        Assert.Equal(SubscriptionStatus.Active, subscription.Status);
+        Assert.Equal(ChannelType.Telegram, subscription.SourceChannel);
+        Assert.Equal(updatedPayment.Id, subscription.LastPaymentId);
+        Assert.Equal(subscription.Id, access.SubscriptionId);
+        Assert.Equal("vless://test@vpn.test:443", access.AccessUri);
+        Assert.Equal(1, await db.TelegramBotPayments.CountAsync(x => x.TelegramPaymentChargeId == "sqlite-tg-charge-1"));
+        Assert.Equal(1, await db.TelegramBotNotifications.CountAsync(x => x.Type == "subscription_activated" && x.TelegramUserId == 777777));
+        Assert.Contains(await db.TelegramBotUpdates.ToListAsync(), x => x.UpdateId == 396 && x.IsProcessed);
     }
 
     [Fact]
@@ -562,6 +610,14 @@ public class TelegramBotPurchaseFlowTests
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
             .Options;
         return new ApplicationDbContext(options);
     }

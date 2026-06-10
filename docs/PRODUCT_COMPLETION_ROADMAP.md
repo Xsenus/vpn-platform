@@ -230,9 +230,9 @@ git diff --check
   - Что сделано: link-token/status/unlink, одноразовый hash token, истечение token, запрет повторной привязки и SQLite-совместимые проверки активных Telegram-сессий.
   - Доказательство: `TelegramBotFoundationTests.Telegram_Link_Status_Unlink_Should_Work_End_To_End_On_Sqlite`, frontend `ApiClient cabinet Telegram link status and unlink endpoints are tokenized`.
 
-- [ ] `P1-TG-003` Покупка через Telegram.
-  - Что сделать: выбрать тариф, создать заказ, оплатить, получить VPN-доступ.
-  - Доказательство: Telegram update log + subscription ID.
+- [x] `P1-TG-003` Покупка через Telegram.
+  - Что сделано: выбор тарифа, создание/reuse Telegram-заказа, выбор платежного провайдера, Telegram Stars pre-checkout/successful_payment, активация подписки и выдача VPN-доступа.
+  - Доказательство: `TelegramBotPurchaseFlowTests.Telegram_Stars_Purchase_Should_Create_Subscription_And_Vpn_Access_On_Sqlite`, Telegram update log, payment ID, subscription ID и access ID.
 
 - [ ] `P1-TG-004` Уведомления.
   - Что сделать: уведомить об оплате, выдаче доступа, окончании подписки, ошибке оплаты.
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Покупка через Telegram: тариф, заказ, Telegram Stars payment, pre-checkout, successful_payment, подписка и VPN-доступ на SQLite | Зеленое | Backend tests `249/249`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Привязка Telegram к пользователю: deep link, status, unlink, повторная привязка и SQLite expiry-запросы | Зеленое | Backend tests `248/248`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Настройка Telegram-бота из админки: защищенные токены, Webhook/LongPolling, public username, WebApp URL, шаблоны и проверка готовности | Зеленое | Backend tests `247/247`, frontend tests `54/54`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Публичный сайт: главная, тарифы, FAQ, состояния loading/error/empty/ready, CTA и отсутствие console errors | Зеленое | Backend tests `245/245`, frontend tests `54/54`, local Browser smoke public-web |

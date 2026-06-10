@@ -918,9 +918,11 @@ public class TelegramBotService
         var now = _clock.UtcNow;
         var existingOrders = await _db.Orders.AsNoTracking()
             .Where(x => x.UserId == account.UserId.Value && x.TariffId == tariffId && x.Channel == ChannelType.Telegram && x.Status == OrderStatus.PendingPayment)
-            .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
-        var existing = existingOrders.FirstOrDefault(x => x.ExpiresAt > now);
+        var existing = existingOrders
+            .Where(x => x.ExpiresAt > now)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefault();
 
         var reusedExistingOrder = existing is not null;
         var order = reusedExistingOrder
@@ -977,9 +979,11 @@ public class TelegramBotService
         var now = _clock.UtcNow;
         var existingOrders = await _db.Orders.AsNoTracking()
             .Where(x => x.UserId == account.UserId.Value && x.TariffId == subscription.TariffId && x.Type == OrderType.Renewal && x.Channel == ChannelType.Telegram && x.Status == OrderStatus.PendingPayment)
-            .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
-        var existing = existingOrders.FirstOrDefault(x => x.ExpiresAt > now);
+        var existing = existingOrders
+            .Where(x => x.ExpiresAt > now)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefault();
 
         var reusedExistingOrder = existing is not null;
         var order = reusedExistingOrder

@@ -45,7 +45,8 @@ public class NodeAllocationService
             query = query.Where(x => x.NodeGroup != null && nodeGroupHints.Contains(x.NodeGroup.Code));
         }
 
-        var selected = await ApplyNodeOrdering(query, serverSelectionRule).FirstOrDefaultAsync(cancellationToken);
+        var nodeCandidates = await query.ToListAsync(cancellationToken);
+        var selected = ApplyNodeOrdering(nodeCandidates, serverSelectionRule).FirstOrDefault();
 
         if (selected is not null)
         {
@@ -65,7 +66,8 @@ public class NodeAllocationService
             panelQuery = panelQuery.Where(x => regionHints.Contains(x.Region));
         }
 
-        var panel = await ApplyPanelOrdering(panelQuery, serverSelectionRule).FirstOrDefaultAsync(cancellationToken);
+        var panelCandidates = await panelQuery.ToListAsync(cancellationToken);
+        var panel = ApplyPanelOrdering(panelCandidates, serverSelectionRule).FirstOrDefault();
 
         if (panel is not null)
         {
@@ -170,7 +172,7 @@ public class NodeAllocationService
     private static string NormalizeRule(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();
 
-    private static IOrderedQueryable<VpnNode> ApplyNodeOrdering(IQueryable<VpnNode> query, string rule)
+    private static IOrderedEnumerable<VpnNode> ApplyNodeOrdering(IEnumerable<VpnNode> query, string rule)
         => rule switch
         {
             "priority-first" => query.OrderByDescending(x => x.Priority).ThenBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity)).ThenBy(x => x.CreatedAt),
@@ -178,7 +180,7 @@ public class NodeAllocationService
             _ => query.OrderBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity)).ThenByDescending(x => x.Priority).ThenBy(x => x.CreatedAt)
         };
 
-    private static IOrderedQueryable<VpnPanel> ApplyPanelOrdering(IQueryable<VpnPanel> query, string rule)
+    private static IOrderedEnumerable<VpnPanel> ApplyPanelOrdering(IEnumerable<VpnPanel> query, string rule)
         => rule switch
         {
             "newest" => query.OrderByDescending(x => x.CreatedAt),

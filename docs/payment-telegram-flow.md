@@ -1,6 +1,6 @@
 # Платёжный сценарий Telegram
 
-Status: draft. Must pass validation gate before it is treated as complete.
+Status: MVP complete for roadmap block `P1-TG-003`.
 
 ## External payment providers
 
@@ -19,12 +19,12 @@ Flow:
 9. Telegram notification is queued once for linked Telegram account.
 10. `/subscriptions` and `/access` show updated status.
 
-Supported draft providers:
+Supported bot checkout providers:
 
 - YooKassa
 - Robokassa
 - YooMoney
-- Telegram Stars skeleton
+- Telegram Stars
 
 Unsupported providers remain fail-closed.
 
@@ -35,7 +35,7 @@ Unsupported providers remain fail-closed.
 - YooKassa: uses provider recheck when configured.
 - Robokassa/YooMoney: shows DB status and tells user webhook will update final status.
 
-## Telegram Stars skeleton
+## Telegram Stars
 
 `pay:<orderId>:TelegramStars` creates a pending `PaymentAttempt` with `Currency=XTR` and payload `tgstars:<paymentAttemptId>`.
 
@@ -45,6 +45,28 @@ Handlers:
 
 - `pre_checkout_query`: validates payload, ownership, amount and currency, then answers through Telegram API.
 - `successful_payment`: stores `TelegramBotPayment`, validates amount/currency/ownership, marks payment succeeded once, activates subscription once.
+- After a valid successful payment the subscription is activated and VPN access is provisioned through the same `SubscriptionService` path as web payments.
+
+## Validation
+
+Main proof for the full Telegram purchase flow:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "TelegramBotPurchaseFlowTests"
+```
+
+The SQLite E2E regression `Telegram_Stars_Purchase_Should_Create_Subscription_And_Vpn_Access_On_Sqlite` validates:
+
+- Telegram update log is written and processed;
+- tariff selection creates a Telegram order;
+- Telegram Stars payment attempt is prepared;
+- `pre_checkout_query` accepts the valid payload;
+- `successful_payment` creates `TelegramBotPayment`;
+- payment becomes `Succeeded`;
+- order becomes `Completed`;
+- subscription becomes `Active`;
+- VPN access is created;
+- Telegram activation notification is queued.
 
 ## Idempotency
 
