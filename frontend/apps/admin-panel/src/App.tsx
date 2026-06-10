@@ -1786,6 +1786,9 @@ export function App() {
   })
 
   const providerFormSetup = providerSetup(providerForm.provider)
+  const editingProviderAccount = editingProviderAccountId
+    ? paymentProviderAccounts.find((account) => account.id === editingProviderAccountId)
+    : undefined
 
   if (!token) {
     return (
@@ -2003,8 +2006,8 @@ export function App() {
               <div className="form-grid">
                 <label><span>{providerFormSetup.shopIdLabel}</span><input value={providerForm.shopId} onChange={(e) => updateProviderForm('shopId', e.target.value)} placeholder={providerFormSetup.shopIdPlaceholder} /></label>
                 <label><span>{providerFormSetup.apiBaseUrlLabel}</span><input value={providerForm.apiBaseUrl} onChange={(e) => updateProviderForm('apiBaseUrl', e.target.value)} placeholder={providerFormSetup.apiBaseUrl || 'https://api.provider.example'} type="url" inputMode="url" /></label>
-                <SecretField label={providerFormSetup.secretLabel} placeholder={providerFormSetup.secretPlaceholder} value={providerForm.secretKey ?? ''} onChange={(value) => updateProviderForm('secretKey', value)} />
-                <SecretField label={providerFormSetup.webhookSecretLabel} placeholder={providerFormSetup.webhookSecretPlaceholder} value={providerForm.webhookSecret ?? ''} onChange={(value) => updateProviderForm('webhookSecret', value)} />
+                <SecretField configured={editingProviderAccount?.hasSecretKey} label={providerFormSetup.secretLabel} placeholder={providerFormSetup.secretPlaceholder} value={providerForm.secretKey ?? ''} onChange={(value) => updateProviderForm('secretKey', value)} />
+                <SecretField configured={editingProviderAccount?.hasWebhookSecret} label={providerFormSetup.webhookSecretLabel} placeholder={providerFormSetup.webhookSecretPlaceholder} value={providerForm.webhookSecret ?? ''} onChange={(value) => updateProviderForm('webhookSecret', value)} />
                 <label><span>{providerFormSetup.returnUrlLabel}</span><input value={providerForm.returnUrl} onChange={(e) => updateProviderForm('returnUrl', e.target.value)} placeholder="https://example.com/checkout" type="url" inputMode="url" /></label>
                 <label><span>{providerFormSetup.webhookUrlLabel}</span><input value={providerForm.webhookUrl} onChange={(e) => updateProviderForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/webhooks/payments/provider" type="url" inputMode="url" /></label>
                 <label><span>Allowed IP ranges</span><input value={providerForm.allowedWebhookIpRangesCsv} onChange={(e) => updateProviderForm('allowedWebhookIpRangesCsv', e.target.value)} placeholder="185.71.76.0/27, 185.71.77.0/27" /></label>

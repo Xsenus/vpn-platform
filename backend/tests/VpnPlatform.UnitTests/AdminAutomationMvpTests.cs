@@ -285,6 +285,87 @@ public class AdminAutomationMvpTests
     }
 
     [Fact]
+    public async Task Provider_Account_Secrets_Should_Be_Write_Only_In_Admin_Responses()
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateOperationsController(db);
+        const string secretKey = "stripe-secret-key-must-not-leak";
+        const string webhookSecret = "stripe-webhook-secret-must-not-leak";
+        const string extraSecret = "extra-api-secret-must-not-leak";
+
+        var create = await controller.CreatePaymentProviderAccount(new UpsertPaymentProviderAccountCommand(
+            PaymentProvider.Stripe,
+            PaymentProviderMode.Sandbox,
+            "stripe-write-only",
+            "Stripe write-only",
+            true,
+            true,
+            "stripe-account",
+            "https://api.stripe.com",
+            "https://cabinet.example.test/payment-return",
+            "https://api.example.test/api/webhooks/payments/stripe",
+            secretKey,
+            webhookSecret,
+            false,
+            "",
+            $"{{\"apiSecret\":\"{extraSecret}\",\"region\":\"eu\"}}"), CancellationToken.None);
+
+        var createJson = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(create).Value);
+        Assert.Contains("HasSecretKey", createJson, StringComparison.Ordinal);
+        Assert.Contains("HasWebhookSecret", createJson, StringComparison.Ordinal);
+        Assert.DoesNotContain(secretKey, createJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(webhookSecret, createJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(extraSecret, createJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SecretKeyProtected", createJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("WebhookSecretProtected", createJson, StringComparison.OrdinalIgnoreCase);
+
+        var created = Assert.IsType<PaymentProviderAccountDto>(Assert.IsType<OkObjectResult>(create).Value);
+        var list = await controller.GetPaymentProviderAccounts(CancellationToken.None);
+        var listJson = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(list).Value);
+        Assert.DoesNotContain(secretKey, listJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(webhookSecret, listJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(extraSecret, listJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("***", listJson, StringComparison.Ordinal);
+
+        var update = await controller.UpdatePaymentProviderAccount(created.Id, new UpsertPaymentProviderAccountCommand(
+            PaymentProvider.Stripe,
+            PaymentProviderMode.Sandbox,
+            "stripe-write-only",
+            "Stripe write-only updated",
+            true,
+            true,
+            "stripe-account",
+            "https://api.stripe.com",
+            "https://cabinet.example.test/payment-return",
+            "https://api.example.test/api/webhooks/payments/stripe",
+            "",
+            "",
+            false,
+            "",
+            ""), CancellationToken.None);
+
+        var updateJson = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(update).Value);
+        Assert.Contains("HasSecretKey", updateJson, StringComparison.Ordinal);
+        Assert.Contains("HasWebhookSecret", updateJson, StringComparison.Ordinal);
+        Assert.DoesNotContain(secretKey, updateJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(webhookSecret, updateJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(extraSecret, updateJson, StringComparison.OrdinalIgnoreCase);
+
+        var check = await controller.CheckPaymentProviderAccount(created.Id, CancellationToken.None);
+        var checkJson = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(check).Value);
+        Assert.DoesNotContain(secretKey, checkJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(webhookSecret, checkJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(extraSecret, checkJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SecretKeyProtected", checkJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("WebhookSecretProtected", checkJson, StringComparison.OrdinalIgnoreCase);
+
+        var stored = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == created.Id);
+        Assert.Equal(secretKey, stored.SecretKeyProtected);
+        Assert.Equal(webhookSecret, stored.WebhookSecretProtected);
+        Assert.Contains(extraSecret, stored.ExtraSettingsJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Provider_Account_Check_Should_Update_Health_And_Return_Details()
     {
         await using var db = CreateDbContext();

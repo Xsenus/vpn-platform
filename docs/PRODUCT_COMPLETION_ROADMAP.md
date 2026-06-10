@@ -299,9 +299,10 @@ git diff --check
   - Что сделано: backend проверяет обязательные поля, URL, IP allow-list, ExtraSettingsJson и провайдерские особенности; админка показывает результат отдельным блоком со статусом, временем проверки и списком диагностических пунктов.
   - Доказательство: `AdminAutomationMvpTests.Provider_Account_Check_Should_Return_Clear_Readiness_For_All_Web_Providers`, `Provider_Account_Check_Should_Report_CloudPayments_Hosted_Checkout_Problem`, `Provider_Account_Check_Should_Show_TelegramStars_As_Bot_Only`, frontend source contract test, локальный SQLite smoke.
 
-- [ ] `P2-ADM-PAY-003` Секреты write-only.
+- [x] `P2-ADM-PAY-003` Секреты write-only. 2026-06-10.
   - Что сделать: убедиться, что API никогда не возвращает secret/webhook secret/private credentials.
-  - Доказательство: security tests.
+  - Что сделано: платежные секреты в форме редактирования остаются пустыми и показывают только configured-статус; backend закреплен тестом, что create/list/update/check ответы не содержат secret, webhook secret, protected-поля и приватные extra settings.
+  - Доказательство: `AdminAutomationMvpTests.Provider_Account_Secrets_Should_Be_Write_Only_In_Admin_Responses`, frontend source contract test на `configured={editingProviderAccount?.hasSecretKey}`, локальный SQLite smoke.
 
 - [ ] `P2-ADM-PAY-004` Sandbox seed для всех провайдеров.
   - Что сделать: локальный режим должен поднимать безопасные sandbox accounts без реальных денег.

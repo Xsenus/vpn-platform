@@ -899,5 +899,28 @@
         "text": "Backend проверяет обязательные поля, URL, ExtraSettingsJson, IP allow-list и особенности YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe, PayPal и Telegram Stars."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-10-payment-provider-write-only-secrets",
+    "version": "0.41.0",
+    "releasedAt": "2026-06-10T20:36:45+07:00",
+    "title": "Секреты платежных провайдеров закреплены как write-only",
+    "summary": "Админка показывает только факт, что secret key или webhook secret уже заданы, а API не возвращает приватные значения в ответах платежных провайдеров.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "При редактировании платежного аккаунта поля secret key и webhook secret остаются пустыми, но показывают статус «задано», если секрет уже сохранен."
+      },
+      {
+        "type": "fixed",
+        "text": "Ответы create, list, update и check для платежных провайдеров покрыты тестом на отсутствие raw secret, webhook secret, protected-полей и приватных extra settings."
+      },
+      {
+        "type": "important",
+        "text": "Чтобы заменить секрет, администратор вводит новое значение явно; пустое поле при редактировании сохраняет текущий секрет без раскрытия."
+      }
+    ]
   }
 ]
