@@ -65,8 +65,18 @@ type PaymentProviderSetup = {
   webhookUrlLabel: string
   extraSettingsPlaceholder: string
   extraSettingsHint: string
+  extraSettingsFields: PaymentProviderExtraSettingsField[]
   allowedIps: string
   useWebhookIpAllowList: boolean
+}
+
+type PaymentProviderExtraSettingsField = {
+  key: string
+  label: string
+  placeholder: string
+  hint: string
+  inputMode?: 'text' | 'url'
+  options?: Array<{ value: string; label: string }>
 }
 
 const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
@@ -87,6 +97,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'URL webhook в YooKassa',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Дополнительные настройки не обязательны.',
+    extraSettingsFields: [],
     allowedIps: yookassaAllowedIps,
     useWebhookIpAllowList: true
   },
@@ -107,6 +118,9 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'ResultURL в Robokassa',
     extraSettingsPlaceholder: '{"hashAlgorithm":"MD5"}',
     extraSettingsHint: 'Можно задать hashAlgorithm: MD5 или SHA256.',
+    extraSettingsFields: [
+      { key: 'hashAlgorithm', label: 'Алгоритм подписи', placeholder: 'MD5', hint: 'Используется при формировании и проверке подписи Robokassa.', options: [{ value: 'MD5', label: 'MD5' }, { value: 'SHA256', label: 'SHA256' }] }
+    ],
     allowedIps: '',
     useWebhookIpAllowList: false
   },
@@ -127,6 +141,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'HTTP notification URL',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Для локального sandbox ключи не нужны.',
+    extraSettingsFields: [],
     allowedIps: '',
     useWebhookIpAllowList: false
   },
@@ -147,6 +162,9 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'Webhook бота',
     extraSettingsPlaceholder: '{"status":"bot-only"}',
     extraSettingsHint: 'Включайте только после настройки Telegram-бота и BotToken.',
+    extraSettingsFields: [
+      { key: 'status', label: 'Статус сценария Stars', placeholder: 'bot-only', hint: 'Используется как служебная пометка, что оплата доступна только внутри Telegram-бота.', options: [{ value: 'bot-only', label: 'Только Telegram-бот' }, { value: 'invoice-flow', label: 'Telegram invoice flow' }] }
+    ],
     allowedIps: '',
     useWebhookIpAllowList: false
   },
@@ -167,6 +185,9 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'URL уведомлений CloudPayments',
     extraSettingsPlaceholder: '{"hostedCheckoutUrl":"https://pay.example.com/cloudpayments"}',
     extraSettingsHint: 'Обязательно для production: hostedCheckoutUrl со страницей виджета магазина.',
+    extraSettingsFields: [
+      { key: 'hostedCheckoutUrl', label: 'Hosted checkout URL', placeholder: 'https://pay.example.com/cloudpayments', hint: 'Страница магазина, где открыт CloudPayments widget.', inputMode: 'url' }
+    ],
     allowedIps: '',
     useWebhookIpAllowList: false
   },
@@ -187,6 +208,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'Notification URL',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Для sandbox можно оставить ключи пустыми.',
+    extraSettingsFields: [],
     allowedIps: '',
     useWebhookIpAllowList: false
   },
@@ -207,6 +229,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'Webhook URL',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'API возвратов и recheck включаются отдельно под конкретный аккаунт.',
+    extraSettingsFields: [],
     allowedIps: '',
     useWebhookIpAllowList: false
   },
@@ -227,6 +250,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'Stripe webhook endpoint',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Webhook должен отправлять checkout.session.completed и checkout.session.expired.',
+    extraSettingsFields: [],
     allowedIps: '',
     useWebhookIpAllowList: false
   },
@@ -247,6 +271,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     webhookUrlLabel: 'PayPal webhook URL',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Для sandbox используйте https://api-m.sandbox.paypal.com.',
+    extraSettingsFields: [],
     allowedIps: '',
     useWebhookIpAllowList: false
   }
@@ -276,6 +301,34 @@ function buildProviderForm(provider: PaymentProvider): UpsertPaymentProviderAcco
     allowedWebhookIpRangesCsv: setup.allowedIps,
     extraSettingsJson: setup.extraSettingsPlaceholder === '{}' ? '{}' : setup.extraSettingsPlaceholder
   }
+}
+
+function parseProviderExtraSettings(value?: string | null): Record<string, string> {
+  if (!value?.trim()) return {}
+
+  try {
+    const parsed = JSON.parse(value)
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') return {}
+    return Object.fromEntries(Object.entries(parsed).map(([key, item]) => [key, typeof item === 'string' ? item : String(item ?? '')]))
+  } catch {
+    return {}
+  }
+}
+
+function providerExtraSettingValue(form: UpsertPaymentProviderAccountPayload, field: PaymentProviderExtraSettingsField) {
+  return parseProviderExtraSettings(form.extraSettingsJson)[field.key] ?? ''
+}
+
+function setProviderExtraSettingValue(form: UpsertPaymentProviderAccountPayload, field: PaymentProviderExtraSettingsField, value: string): UpsertPaymentProviderAccountPayload {
+  const values = parseProviderExtraSettings(form.extraSettingsJson)
+  const nextValue = value.trim()
+  if (nextValue) {
+    values[field.key] = nextValue
+  } else {
+    delete values[field.key]
+  }
+
+  return { ...form, extraSettingsJson: Object.keys(values).length > 0 ? JSON.stringify(values) : '' }
 }
 
 function readSessionStorageItem(key: string) {
@@ -863,6 +916,7 @@ export function App() {
 
   const updateServerForm = <K extends keyof ServerFormState>(key: K, value: ServerFormState[K]) => setServerForm((current) => ({ ...current, [key]: value }))
   const updateProviderForm = <K extends keyof UpsertPaymentProviderAccountPayload>(key: K, value: UpsertPaymentProviderAccountPayload[K]) => setProviderForm((current) => ({ ...current, [key]: value }))
+  const updateProviderExtraSetting = (field: PaymentProviderExtraSettingsField, value: string) => setProviderForm((current) => setProviderExtraSettingValue(current, field, value))
   const selectProviderForForm = (provider: PaymentProvider) => {
     setProviderForm((current) => ({
       ...buildProviderForm(provider),
@@ -1951,9 +2005,30 @@ export function App() {
                 <label><span>{providerFormSetup.webhookUrlLabel}</span><input value={providerForm.webhookUrl} onChange={(e) => updateProviderForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/webhooks/payments/provider" type="url" inputMode="url" /></label>
                 <label><span>Allowed IP ranges</span><input value={providerForm.allowedWebhookIpRangesCsv} onChange={(e) => updateProviderForm('allowedWebhookIpRangesCsv', e.target.value)} placeholder="185.71.76.0/27, 185.71.77.0/27" /></label>
               </div>
-              <label><span>Extra settings JSON</span><textarea value={providerForm.extraSettingsJson} onChange={(e) => updateProviderForm('extraSettingsJson', e.target.value)} placeholder={editingProviderAccountId ? 'Оставьте пустым, чтобы сохранить текущий JSON' : providerFormSetup.extraSettingsPlaceholder} rows={4} /></label>
-              <p className="muted">{providerFormSetup.extraSettingsHint}</p>
-              {editingProviderAccountId && <p className="muted">При редактировании пустые поля секретов и Extra settings JSON сохраняют текущие значения. Чтобы заменить их, введите новые значения явно.</p>}
+              <div className="provider-extra-settings">
+                <span className="form-label">Дополнительные параметры {providerFormSetup.title}</span>
+                {providerFormSetup.extraSettingsFields.length === 0 && <p className="muted">Для этого провайдера дополнительных параметров нет. Достаточно заполнить поля подключения выше.</p>}
+                {providerFormSetup.extraSettingsFields.length > 0 && (
+                  <div className="form-grid">
+                    {providerFormSetup.extraSettingsFields.map((field) => (
+                      <label key={field.key}>
+                        <span>{field.label}</span>
+                        {field.options ? (
+                          <select value={providerExtraSettingValue(providerForm, field)} onChange={(e) => updateProviderExtraSetting(field, e.target.value)}>
+                            <option value="">Не задано</option>
+                            {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                          </select>
+                        ) : (
+                          <input value={providerExtraSettingValue(providerForm, field)} onChange={(e) => updateProviderExtraSetting(field, e.target.value)} placeholder={field.placeholder} type={field.inputMode === 'url' ? 'url' : 'text'} inputMode={field.inputMode === 'url' ? 'url' : 'text'} />
+                        )}
+                        <small>{field.hint}</small>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="muted">{providerFormSetup.extraSettingsHint}</p>
+                {editingProviderAccountId && <p className="muted">При редактировании пустые поля секретов и дополнительных параметров сохраняют текущие значения. Чтобы заменить их, введите новые значения явно.</p>}
+              </div>
               <div className="toolbar">
                 <label className="checkbox-row"><input checked={providerForm.isEnabled} onChange={(e) => updateProviderForm('isEnabled', e.target.checked)} type="checkbox" /> Включен</label>
                 <label className="checkbox-row"><input checked={providerForm.isDefault} onChange={(e) => updateProviderForm('isDefault', e.target.checked)} type="checkbox" /> По умолчанию</label>

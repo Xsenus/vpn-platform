@@ -165,6 +165,29 @@
   line-height: 1.45;
 }
 
+.provider-extra-settings {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.provider-extra-settings .form-label {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.provider-extra-settings .form-grid {
+  max-width: none;
+}
+
+.provider-extra-settings p {
+  margin: 0;
+}
+
 .release-item-editor {
   display: grid;
   grid-template-columns: 130px 96px minmax(0, 1fr) auto;

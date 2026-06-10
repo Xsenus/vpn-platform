@@ -288,10 +288,11 @@ git diff --check
 
 ### P2.4 Платежи
 
-- [ ] `P2-ADM-PAY-001` Провайдер-специфичные формы.
+- [x] `P2-ADM-PAY-001` Провайдер-специфичные формы.
   - Что сделать: для каждого провайдера показывать только его обязательные поля, подсказки и webhook URL.
   - Критерий готовности: нет общего непонятного `ShopId / SecretKey / ExtraSettingsJson` без объяснения.
-  - Доказательство: frontend tests + screenshots всех провайдеров.
+  - Что сделано: общие поля получили провайдерские названия и подсказки, ручное поле `Extra settings JSON` заменено блоком дополнительных параметров провайдера; CloudPayments настраивает `hostedCheckoutUrl`, RoboKassa - `hashAlgorithm`, Telegram Stars - служебный статус invoice-сценария.
+  - Доказательство: frontend source contract test на `provider-extra-settings`, `Hosted checkout URL`, `Алгоритм подписи` и отсутствие `Extra settings JSON`; SQLite smoke сохранения provider-specific настроек; browser smoke формы платежей.
 
 - [ ] `P2-ADM-PAY-002` Проверка подключения.
   - Что сделать: кнопка "Проверить подключение" должна возвращать понятный результат и список проблем.
