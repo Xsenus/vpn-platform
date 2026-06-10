@@ -95,14 +95,16 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 ? account.ReturnUrl
                 : "http://localhost:5174/payments";
 
-        var existingPending = await _db.Payments
+        var existingPendingCandidates = await _db.Payments
             .Where(x =>
                 x.OrderId == order.Id &&
                 x.Provider == command.Provider &&
                 x.PaymentProviderAccountId == account.Id &&
                 (x.Status == PaymentStatus.New || x.Status == PaymentStatus.Pending || x.Status == PaymentStatus.WaitingConfirmation))
+            .ToListAsync(cancellationToken);
+        var existingPending = existingPendingCandidates
             .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefault();
 
         if (existingPending is not null && !string.IsNullOrWhiteSpace(existingPending.ConfirmationUrl))
         {
@@ -450,6 +452,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             {
                 payment.Order.Status = OrderStatus.Failed;
                 payment.Order.UpdatedAt = now;
+                await QueuePaymentFailedTelegramNotificationsAsync(payment.Order, payment, status, now, cancellationToken);
             }
         }
         else if (status == PaymentStatus.Refunded)
@@ -604,6 +607,63 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             activation.AccessId
         }, JsonOptions);
     }
+
+    private async Task QueuePaymentFailedTelegramNotificationsAsync(Order order, PaymentAttempt payment, PaymentStatus status, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var telegramAccounts = await _db.TelegramAccounts.AsNoTracking()
+            .Where(x => x.UserId == order.UserId && !x.IsBlocked)
+            .ToListAsync(cancellationToken);
+
+        if (telegramAccounts.Count == 0)
+        {
+            return;
+        }
+
+        var payloadJson = BuildPaymentFailedTelegramPayload(order, payment, status);
+        foreach (var telegramAccount in telegramAccounts)
+        {
+            var exists = await _db.TelegramBotNotifications.AsNoTracking()
+                .AnyAsync(x => x.TelegramUserId == telegramAccount.TelegramUserId && x.Type == "payment_failed" && x.PayloadJson == payloadJson && x.Status != "failed" && x.Status != "cancelled", cancellationToken);
+            if (exists)
+            {
+                continue;
+            }
+
+            _db.TelegramBotNotifications.Add(new TelegramBotNotification
+            {
+                TelegramUserId = telegramAccount.TelegramUserId,
+                Type = "payment_failed",
+                PayloadJson = payloadJson,
+                Status = "pending",
+                NextAttemptAt = now
+            });
+        }
+    }
+
+    private static string BuildPaymentFailedTelegramPayload(Order order, PaymentAttempt payment, PaymentStatus status)
+    {
+        var statusText = status == PaymentStatus.Cancelled ? "отменен" : "не прошел";
+        var text = $"Платеж {statusText}.\nЗаказ: {order.Id}\nПровайдер: {payment.Provider}\nСумма: {payment.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {payment.Currency}\n\nВы можете выбрать другой способ оплаты или написать в поддержку.";
+        return JsonSerializer.Serialize(new
+        {
+            text,
+            replyMarkupJson = BuildPaymentFailedReplyMarkupJson(),
+            orderId = order.Id,
+            paymentId = payment.Id,
+            provider = payment.Provider.ToString(),
+            status = status.ToString()
+        }, JsonOptions);
+    }
+
+    private static string BuildPaymentFailedReplyMarkupJson()
+        => JsonSerializer.Serialize(new
+        {
+            inline_keyboard = new object[]
+            {
+                new object[] { new { text = "Купить VPN", callback_data = "tariffs" }, new { text = "Мои заказы", callback_data = "orders" } },
+                new object[] { new { text = "Поддержка", callback_data = "support" } }
+            }
+        }, JsonOptions);
 
     private static string BuildPostPaymentReplyMarkupJson()
         => JsonSerializer.Serialize(new

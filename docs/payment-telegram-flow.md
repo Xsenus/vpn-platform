@@ -1,6 +1,6 @@
 # Платёжный сценарий Telegram
 
-Status: MVP complete for roadmap block `P1-TG-003`.
+Status: MVP complete for roadmap blocks `P1-TG-003` and `P1-TG-004`.
 
 ## External payment providers
 
@@ -35,6 +35,21 @@ Unsupported providers remain fail-closed.
 - YooKassa: uses provider recheck when configured.
 - Robokassa/YooMoney: shows DB status and tells user webhook will update final status.
 
+## Telegram notifications
+
+Telegram notifications are queued in `TelegramBotNotifications` and deduplicated by `TelegramUserId`, `Type`, `PayloadJson` and non-terminal queue status.
+
+Covered event types:
+
+- `payment_pending` - bot created a payment URL and waits for provider confirmation.
+- `payment_succeeded` - external webhook succeeded, subscription was activated/renewed and VPN access is included when available.
+- `payment_failed` - provider webhook returned `Failed` or `Cancelled`; the user receives retry/support buttons.
+- `subscription_activated` - Telegram Stars successful payment activated subscription and created VPN access.
+- `vpn_access_ready` - VPN provider created access outside the immediate payment response.
+- `vpn_access_failed` - subscription activation could not create VPN access.
+- `subscription_expiring` - subscription moved to grace period.
+- `subscription_expired` - grace period ended and access was disabled.
+
 ## Telegram Stars
 
 `pay:<orderId>:TelegramStars` creates a pending `PaymentAttempt` with `Currency=XTR` and payload `tgstars:<paymentAttemptId>`.
@@ -67,6 +82,12 @@ The SQLite E2E regression `Telegram_Stars_Purchase_Should_Create_Subscription_An
 - subscription becomes `Active`;
 - VPN access is created;
 - Telegram activation notification is queued.
+
+Additional notification regressions:
+
+- `PaymentWebhookProcessingTests.YooKassa_Failed_Webhook_Should_Queue_Telegram_Payment_Failed_Once_On_Sqlite`.
+- `SubscriptionLifecycleExpiryTests` for `subscription_expiring` and `subscription_expired`.
+- `X3UiIntegrationTests.Real_Vpn_Provider_Should_Auto_Create_Inbound_And_Client` for `vpn_access_ready`.
 
 ## Idempotency
 

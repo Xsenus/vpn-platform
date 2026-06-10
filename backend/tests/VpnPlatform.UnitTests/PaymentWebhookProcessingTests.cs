@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -86,6 +87,59 @@ public class PaymentWebhookProcessingTests
         Assert.Equal(0, await db.Subscriptions.CountAsync());
         Assert.Equal(1, await db.PaymentWebhookEvents.CountAsync());
         Assert.Equal(PaymentWebhookEventStatus.Rejected, (await db.PaymentWebhookEvents.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task YooKassa_Failed_Webhook_Should_Queue_Telegram_Payment_Failed_Once_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock(new DateTimeOffset(2026, 4, 29, 8, 0, 0, TimeSpan.Zero));
+        var order = await SeedOrderGraphAsync(db, clock.UtcNow);
+        db.TelegramAccounts.Add(new TelegramAccount
+        {
+            TelegramUserId = 700700,
+            UserId = order.UserId,
+            Username = "buyer",
+            LinkedAt = clock.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var orchestrator = CreateOrchestrator(db, clock);
+
+        var init = await orchestrator.InitPaymentAsync(new(order.Id, PaymentProvider.YooKassa, "https://example.test/success"));
+        Assert.True(init.IsSuccess, init.Error);
+
+        var rawWebhook = $$"""
+        {
+          "type":"notification",
+          "event":"payment.canceled",
+          "object":{
+            "id":"{{init.Value!.PaymentId}}",
+            "status":"canceled",
+            "paid":false,
+            "amount":{"value":"490.00","currency":"RUB"}
+          }
+        }
+        """;
+        var headers = new Dictionary<string, string> { ["X-YooKassa-Sandbox-Webhook"] = "true" };
+
+        var first = await orchestrator.ProcessAsync(PaymentProvider.YooKassa, rawWebhook, headers, CancellationToken.None);
+        var second = await orchestrator.ProcessAsync(PaymentProvider.YooKassa, rawWebhook, headers, CancellationToken.None);
+
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal("Webhook already processed.", second.Value);
+        Assert.Equal(0, await db.Subscriptions.CountAsync());
+        Assert.Equal(1, await db.PaymentWebhookEvents.CountAsync());
+        Assert.Equal(PaymentStatus.Cancelled, (await db.Payments.SingleAsync()).Status);
+        Assert.Equal(OrderStatus.Failed, (await db.Orders.SingleAsync()).Status);
+        var notification = await db.TelegramBotNotifications.SingleAsync(x => x.Type == "payment_failed");
+        Assert.Equal(700700, notification.TelegramUserId);
+        Assert.Equal("pending", notification.Status);
+        Assert.Contains("Платеж отменен", notification.PayloadJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Купить VPN", notification.PayloadJson, StringComparison.OrdinalIgnoreCase);
     }
 
 
@@ -227,6 +281,14 @@ public class PaymentWebhookProcessingTests
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
             .Options;
         return new ApplicationDbContext(options);
     }

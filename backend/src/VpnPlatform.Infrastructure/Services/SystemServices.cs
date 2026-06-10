@@ -133,21 +133,18 @@ public class DbInitializer : IHostedService
         var databaseOptions = _databaseOptions.Value;
         var adminOptions = _adminOptions.Value;
 
-        if (databaseOptions.ApplyMigrationsOnStartup)
+        if (DatabaseProviderConfigurator.IsSqlite(databaseOptions.Provider) && databaseOptions.UseEnsureCreatedForLocalSqlite)
         {
-            if (DatabaseProviderConfigurator.IsSqlite(databaseOptions.Provider) && databaseOptions.UseEnsureCreatedForLocalSqlite)
+            await db.Database.EnsureCreatedAsync(cancellationToken);
+            var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, cancellationToken);
+            if (repairedColumns > 0)
             {
-                await db.Database.EnsureCreatedAsync(cancellationToken);
-                var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, cancellationToken);
-                if (repairedColumns > 0)
-                {
-                    _logger.LogInformation("Local SQLite schema repaired. ColumnsAdded={ColumnsAdded}", repairedColumns);
-                }
+                _logger.LogInformation("Local SQLite schema repaired. ColumnsAdded={ColumnsAdded}", repairedColumns);
             }
-            else
-            {
-                await db.Database.MigrateAsync(cancellationToken);
-            }
+        }
+        else if (databaseOptions.ApplyMigrationsOnStartup)
+        {
+            await db.Database.MigrateAsync(cancellationToken);
         }
 
         if (adminOptions.Enabled)

@@ -42,11 +42,14 @@ public class PaymentProviderAccountService
 
     public async Task<Result<PaymentProviderAccount>> GetEnabledAccountEntityAsync(PaymentProvider provider, CancellationToken cancellationToken = default)
     {
-        var account = await _db.PaymentProviderAccounts
+        var candidates = await _db.PaymentProviderAccounts
             .Where(x => x.Provider == provider && x.IsEnabled && x.Mode != PaymentProviderMode.Disabled)
+            .ToListAsync(cancellationToken);
+
+        var account = candidates
             .OrderByDescending(x => x.IsDefault)
             .ThenBy(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefault();
 
         return account is null
             ? Result<PaymentProviderAccount>.Failure($"Payment provider {provider} is not configured or disabled.")

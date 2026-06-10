@@ -234,9 +234,9 @@ git diff --check
   - Что сделано: выбор тарифа, создание/reuse Telegram-заказа, выбор платежного провайдера, Telegram Stars pre-checkout/successful_payment, активация подписки и выдача VPN-доступа.
   - Доказательство: `TelegramBotPurchaseFlowTests.Telegram_Stars_Purchase_Should_Create_Subscription_And_Vpn_Access_On_Sqlite`, Telegram update log, payment ID, subscription ID и access ID.
 
-- [ ] `P1-TG-004` Уведомления.
-  - Что сделать: уведомить об оплате, выдаче доступа, окончании подписки, ошибке оплаты.
-  - Доказательство: tests или staging bot log.
+- [x] `P1-TG-004` Уведомления.
+  - Что сделано: Telegram-очередь покрывает ожидание оплаты, успешную оплату, ошибку/отмену оплаты, активацию подписки, готовность VPN-доступа, ошибку выдачи доступа, приближение окончания и окончание подписки.
+  - Доказательство: `PaymentWebhookProcessingTests.YooKassa_Failed_Webhook_Should_Queue_Telegram_Payment_Failed_Once_On_Sqlite`, `TelegramBotPurchaseFlowTests`, `SubscriptionLifecycleExpiryTests`, `X3UiIntegrationTests.Real_Vpn_Provider_Should_Auto_Create_Inbound_And_Client`.
 
 ## P2. Админка как полноценный центр управления
 
@@ -597,6 +597,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Codex | Telegram-уведомления: pending/succeeded/failed платежи, активация, выдача VPN-доступа и lifecycle подписок | Зеленое | Backend tests `250/250`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Покупка через Telegram: тариф, заказ, Telegram Stars payment, pre-checkout, successful_payment, подписка и VPN-доступ на SQLite | Зеленое | Backend tests `249/249`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Привязка Telegram к пользователю: deep link, status, unlink, повторная привязка и SQLite expiry-запросы | Зеленое | Backend tests `248/248`, frontend tests `55/55`, typecheck/build, Local SQLite API smoke |
 | 2026-06-10 | Codex | Настройка Telegram-бота из админки: защищенные токены, Webhook/LongPolling, public username, WebApp URL, шаблоны и проверка готовности | Зеленое | Backend tests `247/247`, frontend tests `54/54`, typecheck/build, Local SQLite API smoke |
@@ -619,6 +620,9 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-06-10-010` | P1 | Local SQLite startup | При `UseEnsureCreatedForLocalSqlite=true` и `ApplyMigrationsOnStartup=false` новая SQLite-БД не создавала таблицы до admin bootstrap, из-за чего API падал на `no such table: Users`. | Исправлено | `EnsureCreated` и локальный schema repair выполняются до bootstrap/seed всегда, когда включен local SQLite EnsureCreated. |
+| `BUG-2026-06-10-009` | P1 | Payments/SQLite | `PaymentOrchestrator.InitPaymentAsync` сортировал pending-платежи по `DateTimeOffset` в SQL, из-за чего локальная SQLite-БД падала при создании платежа. | Исправлено | Выборка ограничивается order/provider/account/status, сортировка `CreatedAt` выполняется в памяти. |
+| `BUG-2026-06-10-008` | P1 | Payments/SQLite | `PaymentProviderAccountService.GetEnabledAccountEntityAsync` сортировал аккаунты провайдера по `CreatedAt` в SQLite SQL, что ломало выбор активного платежного аккаунта. | Исправлено | Сначала выбираются включенные кандидаты провайдера, затем приоритет default/created применяется в памяти. |
 | BUG-001 | P0 | VPS/Admin | Не подтвержден рабочий вход в админку на VPS | partial | CLI-механизм восстановления добавлен; дальше выполнить reset на VPS и пройти smoke |
 | BUG-002 | P0 | VPN | Не подтверждена live-выдача через реальный 3x-ui | open | Подключить panel/inbound/node и провести production smoke |
 | BUG-003 | P0 | Payments | Не все payment providers подтверждены live/sandbox smoke | open | Пройти матрицу провайдеров |
