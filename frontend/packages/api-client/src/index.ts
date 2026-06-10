@@ -579,6 +579,16 @@ export type CreateVpnPanelPayload = {
 
 export type UpdateVpnPanelPayload = Partial<CreateVpnPanelPayload> & { status?: string | null }
 
+export type DeleteVpnPanelResult = {
+  id: string
+  deleted: boolean
+  archived: boolean
+  linkedInbounds: number
+  linkedClients: number
+  linkedSyncRuns: number
+  linkedHealthChecks: number
+}
+
 export type VpnInboundDto = {
   id: string
   vpnPanelId: string
@@ -1452,6 +1462,14 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: 'Failed to update VPN panel'
+    })
+  }
+
+  deleteAdminVpnPanel(token: string, id: string): Promise<DeleteVpnPanelResult> {
+    return this.request<DeleteVpnPanelResult>(`/api/admin/vpn-panels/${id}`, {
+      method: 'DELETE',
+      token,
+      errorMessage: 'Failed to delete VPN panel'
     })
   }
 

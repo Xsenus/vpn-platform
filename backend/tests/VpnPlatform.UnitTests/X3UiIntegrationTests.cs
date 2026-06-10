@@ -168,6 +168,98 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Delete_Should_Remove_Unused_Panel()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "unused-panel",
+            BaseUrl = "https://unused-panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.New,
+            Capacity = 100
+        });
+        await db.SaveChangesAsync();
+
+        var result = await service.DeletePanelAsync(panelId, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(result.Value!.Deleted);
+        Assert.False(result.Value.Archived);
+        Assert.False(await db.VpnPanels.AnyAsync(x => x.Id == panelId));
+    }
+
+    [Fact]
+    public async Task Panel_Delete_Should_Disable_Panel_When_Operational_Data_Is_Linked()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        var inboundId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "linked-panel",
+            BaseUrl = "https://linked-panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            HealthStatus = HealthStatus.Healthy,
+            Capacity = 100
+        });
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            Id = inboundId,
+            VpnPanelId = panelId,
+            ExternalInboundId = "1",
+            Name = "default-vless",
+            Protocol = "vless",
+            Port = 443,
+            IsDefault = true,
+            IsActive = true,
+            Capacity = 100
+        });
+        db.VpnClients.Add(new VpnClient
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            SubscriptionId = Guid.NewGuid(),
+            VpnPanelId = panelId,
+            VpnInboundId = inboundId,
+            ExternalClientId = "client-1",
+            Email = "user@example.test",
+            Uuid = Guid.NewGuid().ToString("D"),
+            ExpiryTime = clock.UtcNow.AddDays(30),
+            Enable = true
+        });
+        db.PanelSyncRuns.Add(new PanelSyncRun { Id = Guid.NewGuid(), VpnPanelId = panelId, Status = PanelSyncRunStatus.Succeeded, StartedAt = clock.UtcNow });
+        db.PanelHealthChecks.Add(new PanelHealthCheck { Id = Guid.NewGuid(), VpnPanelId = panelId, Status = HealthStatus.Healthy, CheckedAt = clock.UtcNow });
+        await db.SaveChangesAsync();
+
+        var result = await service.DeletePanelAsync(panelId, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.False(result.Value!.Deleted);
+        Assert.True(result.Value.Archived);
+        Assert.Equal(1, result.Value.LinkedInbounds);
+        Assert.Equal(1, result.Value.LinkedClients);
+        Assert.Equal(1, result.Value.LinkedSyncRuns);
+        Assert.Equal(1, result.Value.LinkedHealthChecks);
+        var panel = await db.VpnPanels.SingleAsync(x => x.Id == panelId);
+        Assert.Equal(VpnPanelStatus.Disabled, panel.Status);
+        Assert.Equal(HealthStatus.Unknown, panel.HealthStatus);
+        Assert.Contains("disabled", panel.LastError, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Real_Vpn_Provider_Should_Auto_Create_Inbound_And_Client()
     {
         await using var db = CreateDbContext();

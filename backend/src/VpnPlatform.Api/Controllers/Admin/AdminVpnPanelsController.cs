@@ -50,7 +50,7 @@ public class AdminVpnPanelsController : ControllerBase
     public async Task<IActionResult> DeletePanel(Guid id, CancellationToken cancellationToken)
     {
         var result = await _panels.DeletePanelAsync(id, cancellationToken);
-        return result.IsSuccess ? Ok(new { status = result.Value }) : BadRequest(new { error = result.Error });
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("vpn-panels/{id:guid}/test-connection")]

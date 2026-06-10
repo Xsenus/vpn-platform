@@ -1647,6 +1647,23 @@ export function App() {
     await loadVpnPanelDetails(panelId)
   })
 
+  const handleSetVpnPanelStatus = (panel: VpnPanelDto, status: 'Active' | 'Disabled') => runAction(`panel-status-${panel.id}`, async () => {
+    const saved = await api.updateAdminVpnPanel(token, panel.id, { status })
+    setNotice(`Панель ${saved.name}: статус ${saved.status}.`)
+    await loadAll(token)
+    await loadVpnPanelDetails(panel.id)
+  })
+
+  const handleDeleteVpnPanel = (panel: VpnPanelDto) => runAction(`panel-delete-${panel.id}`, async () => {
+    const result = await api.deleteAdminVpnPanel(token, panel.id)
+    setNotice(result.archived
+      ? `Панель ${panel.name} отключена и сохранена в истории: связей ${result.linkedInbounds + result.linkedClients + result.linkedSyncRuns + result.linkedHealthChecks}.`
+      : `Панель ${panel.name} удалена.`)
+    if (selectedVpnPanelId === panel.id && result.deleted) setSelectedVpnPanelId('')
+    if (editingVpnPanelId === panel.id) cancelVpnPanelEdit()
+    await loadAll(token)
+  })
+
   const handleCreateInbound = () => runAction('create-inbound', async () => {
     if (!selectedVpnPanelId) return
     const saved = await api.createAdminVpnPanelInbound(token, selectedVpnPanelId, inboundForm)
@@ -2302,7 +2319,7 @@ export function App() {
               {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
-          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · синхронизация {formatDate(panel.lastSyncAt)}</div></div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedVpnPanelId(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton></div></div>)}</div>
+          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · синхронизация {formatDate(panel.lastSyncAt)}</div></div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedVpnPanelId(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={actionBusyId === `panel-status-${panel.id}`} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === `panel-status-${panel.id}`} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => void handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `panel-delete-${panel.id}`} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => void handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></div></div>)}</div>
         </Card>
         <Card>
           <h3>Детали панели</h3>

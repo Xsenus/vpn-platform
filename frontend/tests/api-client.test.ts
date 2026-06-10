@@ -564,6 +564,9 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
+    if (init?.method === 'DELETE') {
+      return new Response(JSON.stringify({ id: 'panel-1', deleted: true, archived: false, linkedInbounds: 0, linkedClients: 0, linkedSyncRuns: 0, linkedHealthChecks: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
     if (String(url).includes('/test-connection') || String(url).includes('/health-checks')) {
       return new Response(JSON.stringify(String(url).includes('/health-checks') ? [] : { id: 'health-1', vpnPanelId: 'panel-1', status: 'Healthy', version: '2.4.12', latencyMs: 12, checkedAt: new Date().toISOString(), errorMessage: '' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
@@ -589,6 +592,7 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   await client.createAdminVpnPanelInbound('admin-token', 'panel-1', { name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{}', sniffingJson: '{}', isDefault: true, capacity: 5000 })
   await client.getAdminVpnPanelClients('admin-token', 'panel-1')
   await client.getAdminVpnPanelHealthChecks('admin-token', 'panel-1')
+  await client.deleteAdminVpnPanel('admin-token', 'panel-1')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/vpn-panels')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/vpn-panels')
@@ -602,6 +606,8 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/inbounds')
   assert.equal(calls[7]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/clients')
   assert.equal(calls[8]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
+  assert.equal(calls[9]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
+  assert.equal(calls[9]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 

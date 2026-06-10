@@ -432,6 +432,7 @@ public sealed record VpnClientDto(
 public sealed record PanelHealthCheckDto(Guid Id, Guid VpnPanelId, string Status, long? LatencyMs, string Version, string ErrorMessage, DateTimeOffset CheckedAt);
 public sealed record PanelSyncRunDto(Guid Id, Guid VpnPanelId, string Status, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt, string SummaryJson, string ErrorMessage);
 public sealed record PanelSyncEventDto(Guid Id, Guid PanelSyncRunId, string EventType, string EntityType, Guid? EntityId, string ExternalId, string Message, string PayloadJson);
+public sealed record DeleteVpnPanelResultDto(Guid Id, bool Deleted, bool Archived, int LinkedInbounds, int LinkedClients, int LinkedSyncRuns, int LinkedHealthChecks);
 
 public sealed record X3UiSession(string SessionCookie, DateTimeOffset CreatedAt);
 public sealed record X3UiLoginRequest(string BaseUrl, string Username, string Password, VpnSslVerificationMode SslVerificationMode, X3UiApiVariant ApiVariant);

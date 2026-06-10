@@ -109,23 +109,32 @@ public class X3UiPanelService
         return Result<VpnPanelDto>.Success(MapPanel(panel));
     }
 
-    public async Task<Result<string>> DeletePanelAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Result<DeleteVpnPanelResultDto>> DeletePanelAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var hasClients = await _db.VpnClients.AnyAsync(x => x.VpnPanelId == id, cancellationToken);
-        if (hasClients)
-        {
-            return Result<string>.Failure("VPN panel has clients and cannot be deleted safely. Disable it instead.");
-        }
-
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (panel is null)
         {
-            return Result<string>.Failure("VPN panel not found.");
+            return Result<DeleteVpnPanelResultDto>.Failure("VPN panel not found.");
+        }
+
+        var linkedInbounds = await _db.VpnInbounds.CountAsync(x => x.VpnPanelId == id, cancellationToken);
+        var linkedClients = await _db.VpnClients.CountAsync(x => x.VpnPanelId == id, cancellationToken);
+        var linkedSyncRuns = await _db.PanelSyncRuns.CountAsync(x => x.VpnPanelId == id, cancellationToken);
+        var linkedHealthChecks = await _db.PanelHealthChecks.CountAsync(x => x.VpnPanelId == id, cancellationToken);
+
+        if (linkedInbounds > 0 || linkedClients > 0 || linkedSyncRuns > 0 || linkedHealthChecks > 0)
+        {
+            panel.Status = VpnPanelStatus.Disabled;
+            panel.HealthStatus = HealthStatus.Unknown;
+            panel.LastError = "Panel disabled by admin delete action because operational history is linked.";
+            panel.UpdatedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<DeleteVpnPanelResultDto>.Success(new DeleteVpnPanelResultDto(id, Deleted: false, Archived: true, linkedInbounds, linkedClients, linkedSyncRuns, linkedHealthChecks));
         }
 
         _db.VpnPanels.Remove(panel);
         await _db.SaveChangesAsync(cancellationToken);
-        return Result<string>.Success("deleted");
+        return Result<DeleteVpnPanelResultDto>.Success(new DeleteVpnPanelResultDto(id, Deleted: true, Archived: false, linkedInbounds, linkedClients, linkedSyncRuns, linkedHealthChecks));
     }
 
     public async Task<Result<PanelHealthCheckDto>> CheckHealthAsync(Guid panelId, CancellationToken cancellationToken = default)
