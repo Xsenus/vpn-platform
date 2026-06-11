@@ -181,9 +181,10 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
 
         var payloadSha = Sha256(rawBody);
+        var webhookEventId = BuildWebhookEventId(parsed, payloadSha);
         var existingEvent = await _db.PaymentWebhookEvents
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Provider == providerType && x.ExternalEventId == parsed.ExternalEventId && x.ProviderPaymentId == parsed.PaymentId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Provider == providerType && x.ExternalEventId == webhookEventId && x.ProviderPaymentId == parsed.PaymentId, cancellationToken);
         if (existingEvent is not null)
         {
             return Result<string>.Success("Webhook already processed.");
@@ -206,7 +207,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             PaymentAttemptId = payment?.Id,
             PaymentProviderAccountId = payment?.PaymentProviderAccountId,
             ProviderPaymentId = parsed.PaymentId,
-            ExternalEventId = parsed.ExternalEventId,
+            ExternalEventId = webhookEventId,
             EventType = parsed.EventType,
             PayloadSha256 = payloadSha,
             RawPayload = rawBody,
@@ -267,7 +268,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
 
         webhookEvent.Status = PaymentWebhookEventStatus.Verified;
-        var result = await ApplyPaymentStatusAsync(payment, parsed.Status, rawBody, parsed.ExternalEventId, cancellationToken);
+        var result = await ApplyPaymentStatusAsync(payment, parsed.Status, rawBody, webhookEventId, cancellationToken);
         webhookEvent.Status = result.IsSuccess ? PaymentWebhookEventStatus.Processed : PaymentWebhookEventStatus.Failed;
         webhookEvent.ErrorText = result.Error ?? string.Empty;
         webhookEvent.ProcessedAt = _clock.UtcNow;
@@ -702,6 +703,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
     private static string BuildRefundIdempotencyKey(Guid paymentId, decimal amount, string reason)
         => Sha256($"refund:{paymentId:N}:{amount.ToString("0.00", CultureInfo.InvariantCulture)}:{reason.Trim()}");
+
+    private static string BuildWebhookEventId(PaymentWebhookParseResult parsed, string payloadSha256)
+        => string.IsNullOrWhiteSpace(parsed.ExternalEventId)
+            ? $"payload:{payloadSha256}"
+            : parsed.ExternalEventId.Trim();
 
     private static string NormalizeCurrency(string currency)
         => currency == "643" ? "RUB" : currency.Trim().ToUpperInvariant();

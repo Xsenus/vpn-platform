@@ -425,9 +425,10 @@ git diff --check
   - Критерий готовности: невозможные переходы запрещены, повторные webhook остаются идемпотентными, поздний cancelled-webhook после successful payment не откатывает платеж/заказ/подписку.
   - Доказательство: `StatusStateMachineTests`, `PaymentWebhookProcessingTests.YooKassa_Late_Cancelled_Webhook_Should_Not_Downgrade_Succeeded_Payment`, backend full suite 341/341, local SQLite HTTP-smoke latest release `2026-06-11-state-machine-guards`.
 
-- [ ] `P4-BE-002` Идемпотентность webhook.
+- [x] `P4-BE-002` Идемпотентность webhook. 2026-06-11.
   - Что сделать: повтор webhook не создает вторую подписку/второй VPN-доступ.
-  - Доказательство: tests по каждому провайдеру.
+  - Что сделано: `PaymentOrchestrator` строит стабильный idempotency key для webhook без внешнего event id через `payload:<sha256>`; повторная доставка события определяется до изменения платежа/заказа/подписки.
+  - Доказательство: `PaymentWebhookIdempotencyContractTests` проверяет повтор webhook и fallback payload hash для каждого `PaymentProvider`; targeted payment webhook tests 42/42; backend full suite 359/359; local SQLite HTTP-smoke latest release `2026-06-11-payment-webhook-idempotency`.
 
 - [ ] `P4-BE-003` Конкурентность оплаты.
   - Что сделать: два webhook/recheck одновременно не ломают order/subscription.

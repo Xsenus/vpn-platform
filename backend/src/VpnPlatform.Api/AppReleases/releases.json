@@ -1460,5 +1460,32 @@
         "text": "Добавлены unit-тесты матрицы переходов и интеграционный тест позднего webhook, backend suite проходит 341/341."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-11-payment-webhook-idempotency",
+    "version": "0.64.0",
+    "releasedAt": "2026-06-11T09:00:00+07:00",
+    "title": "Webhook платежей стали идемпотентными для всех провайдеров",
+    "summary": "Повторная доставка платежного webhook больше не создает вторую подписку, второй VPN-доступ или повторную обработку события для любого подключенного платежного провайдера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Добавлен стабильный fallback idempotency key `payload:<sha256>` для webhook без внешнего event id, чтобы повтор одного и того же payload распознавался одинаково."
+      },
+      {
+        "type": "important",
+        "text": "Contract-тесты проходят по всем значениям `PaymentProvider`: YooMoney, YooKassa, RoboKassa, TelegramStars, CloudPayments, TBankAcquiring, Prodamus, Stripe и PayPal."
+      },
+      {
+        "type": "fixed",
+        "text": "Повторный webhook возвращает `Webhook already processed.` и не создает повторные `Subscription`, `AccessCredential` или `PaymentWebhookEvent`."
+      },
+      {
+        "type": "important",
+        "text": "Backend suite расширен до 359 тестов и проходит полностью."
+      }
+    ]
   }
 ]

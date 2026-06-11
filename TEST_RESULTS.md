@@ -2,6 +2,33 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: идемпотентность платежных webhook
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P4-BE-002` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `PaymentOrchestrator` теперь нормализует webhook event id: если провайдер не прислал внешний event id, используется стабильный ключ `payload:<sha256>`.
+- Добавлены contract-тесты идемпотентности для всех значений `PaymentProvider`: YooMoney, YooKassa, RoboKassa, TelegramStars, CloudPayments, TBankAcquiring, Prodamus, Stripe и PayPal.
+- Повторный webhook не создает вторую подписку, второй VPN-доступ или второй `PaymentWebhookEvent`.
+- Добавлен release entry `2026-06-11-payment-webhook-idempotency` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --no-restore --filter "PaymentWebhookIdempotencyContractTests|PaymentWebhookProcessingTests|YooMoneyWebhookProcessingTests|RoboKassaWebhookProcessingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data[data.length-1];console.log(data.length,last.releaseId,last.version,last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- Targeted payment webhook tests: 42/42 пройдено.
+- Backend full suite: 359/359 пройдено.
+- App releases JSON: валиден, последний релиз `2026-06-11-payment-webhook-idempotency`, версия `0.64.0`.
+- Contract-тесты: повтор webhook с внешним event id и без него идемпотентен для каждого `PaymentProvider`.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/admin/releases?search=2026-06-11-payment-webhook-idempotency`, `/api/public/payments/providers`, `/api/public/tariffs`; latest release `2026-06-11-payment-webhook-idempotency`, версия `0.64.0`.
+
 ## Проверка 2026-06-11: state machines доменных статусов
 
 Что проверено:
