@@ -49,6 +49,7 @@ import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } fr
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
+const ADMIN_EMAIL_STORAGE_KEY = 'vpn-platform-admin-email'
 const yookassaAllowedIps = '185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32'
 const paymentProviderOptions: PaymentProvider[] = ['YooKassa', 'RoboKassa', 'YooMoney', 'TelegramStars', 'CloudPayments', 'TBankAcquiring', 'Prodamus', 'Stripe', 'PayPal']
 const adminAuthRequiredMessage = 'Войдите как администратор, чтобы включить загрузку данных и действия в разделах.'
@@ -358,6 +359,22 @@ function removeSessionStorageItem(key: string) {
   } catch {
     // Storage cleanup is best-effort when browser storage is unavailable.
   }
+}
+
+function validateAdminLogin(email: string, password: string) {
+  const errors: string[] = []
+  const normalizedEmail = email.trim()
+  if (!normalizedEmail) {
+    errors.push('Укажите email администратора.')
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    errors.push('Email администратора должен быть корректным.')
+  }
+  if (!password) {
+    errors.push('Введите пароль администратора.')
+  } else if (password.length < 8) {
+    errors.push('Пароль должен содержать минимум 8 символов.')
+  }
+  return errors
 }
 
 
@@ -758,8 +775,9 @@ async function copyToClipboard(text: string, setNotice: (value: string) => void)
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const adminDisabledTitle = token ? undefined : adminAuthRequiredMessage
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(readSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY) ?? '')
   const [password, setPassword] = useState('')
+  const [rememberAdminEmail, setRememberAdminEmail] = useState(() => Boolean(readSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY)))
   const [users, setUsers] = useState<GenericUser[]>([])
   const [userSearch, setUserSearch] = useState('')
   const [userStatusFilter, setUserStatusFilter] = useState('')
@@ -837,6 +855,8 @@ export function App() {
   const [subscriptionExtendDays, setSubscriptionExtendDays] = useState<Record<string, number>>({})
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
   const activeSectionLabel = adminSections.find(([id]) => id === activeSection)?.[1] ?? 'Раздел'
+  const adminLoginErrors = useMemo(() => validateAdminLogin(email, password), [email, password])
+  const showAdminLoginErrors = adminLoginErrors.length > 0 && Boolean(email || password)
 
   const derivedSummary = useMemo(() => ({
     totalUsers: summary?.totalUsers ?? users.length,
@@ -1079,6 +1099,7 @@ export function App() {
   const clearAdminSession = () => {
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     setToken('')
+    setPassword('')
     setUsers([])
     setSelectedUserId('')
     setUserOverview(null)
@@ -1144,14 +1165,27 @@ export function App() {
   }
 
   const handleLogin = async () => {
+    const validationErrors = validateAdminLogin(email, password)
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' '))
+      return
+    }
+
     setBusy(true)
     setError('')
     setNotice('')
     try {
-      const response = await api.login(email, password)
+      const normalizedEmail = email.trim()
+      const response = await api.login(normalizedEmail, password)
       writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+      if (rememberAdminEmail) {
+        writeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY, normalizedEmail)
+      } else {
+        removeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY)
+      }
       setToken(response.accessToken)
-      setNotice('Токен администратора сохранён в sessionStorage и не показывается в UI.')
+      setPassword('')
+      setNotice('Сессия администратора открыта. Токен сохранён в sessionStorage и не показывается в UI.')
       await loadAll(response.accessToken)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось получить admin token')
@@ -2095,14 +2129,41 @@ export function App() {
               <div>
                 <p className="eyebrow">Управление платформой</p>
                 <h2 className="page-heading">Вход администратора</h2>
+                <p className="muted no-margin-bottom">Используйте учетную запись с ролью администратора. Данные панели загрузятся только после успешной авторизации.</p>
               </div>
               <ValidationModeBadge label="Доступ только для администраторов" />
             </div>
-            <form className="admin-login-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleLogin() }}>
-              <label><span>Email</span><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" type="email" autoComplete="email" required /></label>
-              <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Пароль администратора" autoComplete="current-password" minLength={8} required />
-              <PrimaryButton type="submit" disabled={busy || !email || !password} aria-busy={busy}>{busy ? 'Входим...' : 'Войти в админку'}</PrimaryButton>
+
+            <div className="admin-login-session" role="status">
+              <span>Сессия</span>
+              <strong>{rememberAdminEmail ? 'Email будет сохранен на этом устройстве' : 'Email не сохраняется'}</strong>
+            </div>
+
+            <form className="admin-login-form" aria-busy={busy} aria-describedby="admin-login-help" onSubmit={(event) => { event.preventDefault(); void handleLogin() }}>
+              <label>
+                <span>Email</span>
+                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" type="email" autoComplete="username" required />
+                <small>Нужна учетная запись с административной ролью.</small>
+              </label>
+              <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Пароль администратора" autoComplete="current-password" minLength={8} required help="Пароль не сохраняется и очищается после успешного входа." />
+              {showAdminLoginErrors && (
+                <ul className="validation-list" role="alert" aria-live="polite">
+                  {adminLoginErrors.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
+              <label className="checkbox-row admin-remember-row">
+                <input type="checkbox" checked={rememberAdminEmail} onChange={(e) => setRememberAdminEmail(e.target.checked)} />
+                <span>Запомнить email на этом устройстве</span>
+              </label>
+              <PrimaryButton type="submit" disabled={busy || adminLoginErrors.length > 0} aria-busy={busy}>{busy ? 'Проверяем доступ...' : 'Войти в админку'}</PrimaryButton>
             </form>
+
+            <div id="admin-login-help" className="admin-login-checklist" aria-label="Проверка перед входом">
+              <span>Пароль не показывается и не сохраняется.</span>
+              <span>Токен хранится только в sessionStorage браузера.</span>
+              <span>Опасные действия в админке требуют подтверждения.</span>
+            </div>
+
             <p className="safe-note" role="status">{adminAuthRequiredMessage}</p>
             {busy && <LoadingBlock label="Проверяем доступ..." />}
             {notice && <p className="toast-success" role="status" aria-live="polite">{notice}</p>}

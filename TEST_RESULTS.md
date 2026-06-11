@@ -2,6 +2,36 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: современный login админки
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P3-UX-002` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Экран входа админки получил валидацию `validateAdminLogin`, `role="alert"` для ошибок, remember email без хранения пароля и подсказки по sessionStorage.
+- Добавлен release entry `2026-06-11-admin-login-polish` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Static guard проверяет, что пароль не записывается в `sessionStorage`, а email сохраняется отдельно через `ADMIN_EMAIL_STORAGE_KEY`.
+- Local SQLite проверяет, что seed релизов загружается в БД, новый релиз становится latest и его можно отметить просмотренным.
+
+Команды и результат:
+
+```powershell
+cd frontend
+npm run typecheck
+npm test
+npm run build
+cd ..
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+```
+
+Результат:
+
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 60/60 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Backend full suite: 301/301 пройдено.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/mark-seen`, `/api/app-version/admin/releases/overview`; latest release `2026-06-11-admin-login-polish`, версия `0.57.0`, `mark-seen=true`, повторный latest вернул `seenByCurrentUser=true`.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: единая дизайн-система
 
 Что проверено:

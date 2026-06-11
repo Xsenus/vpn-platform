@@ -388,9 +388,10 @@ git diff --check
   - Критерий готовности: базовые компоненты и состояния больше не дублируются между public-web и cabinet, а новые разделы могут собираться из одного UI-пакета.
   - Доказательство: frontend UI/static tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-design-system-foundation`.
 
-- [ ] `P3-UX-002` Современный login admin.
+- [x] `P3-UX-002` Современный login admin. 2026-06-11.
   - Что сделать: отдельный аккуратный экран логина, ошибки, loading, password visibility, remember/session hints.
-  - Доказательство: screenshot + auth tests.
+  - Что сделано: экран входа админки получил явную клиентскую валидацию, remember email без сохранения пароля, подсказку по sessionStorage, checklist безопасности, `role="alert"` для ошибок и сохранение токена только после успешной авторизации.
+  - Доказательство: frontend static guard tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-admin-login-polish`.
 
 - [ ] `P3-UX-003` Навигация админки по вкладкам/разделам.
   - Что сделать: каждый раздел открывается отдельно, настройки не идут одной длинной простыней.
