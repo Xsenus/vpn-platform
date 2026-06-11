@@ -1531,7 +1531,16 @@ export function App() {
     })
   }
 
-  const handleSubscriptionAction = async (subscription: SubscriptionDto, action: 'extend' | 'block' | 'unblock' | 'cancel') => {
+  const handleSubscriptionAction = async (subscription: SubscriptionDto, action: 'activate' | 'extend' | 'block' | 'unblock' | 'cancel' | 'sync') => {
+    if (action === 'activate') {
+      await runAction(`${action}-${subscription.id}`, async () => {
+        await api.activateAdminSubscription(token, subscription.id, 'manual_subscription_activate')
+        setNotice('Подписка активирована, текущий VPN-доступ включен при наличии.')
+        await loadAll(token)
+      })
+      return
+    }
+
     if (action === 'extend') {
       const days = Number(subscriptionExtendDays[subscription.id] ?? 30)
       if (!Number.isFinite(days) || days <= 0) {
@@ -1541,6 +1550,20 @@ export function App() {
       await runAction(`${action}-${subscription.id}`, async () => {
         await api.extendAdminSubscription(token, subscription.id, days, 'manual_admin_extend')
         setNotice(`Подписка продлена на ${days} дней.`)
+        await loadAll(token)
+      })
+      return
+    }
+
+    if (action === 'sync') {
+      if (!subscription.currentAccessId) {
+        setError('У подписки нет текущего VPN-доступа для синхронизации.')
+        return
+      }
+
+      await runAction(`${action}-${subscription.id}`, async () => {
+        await api.syncAdminSubscriptionAccess(token, subscription.id, 'manual_subscription_sync')
+        setNotice('Текущий VPN-доступ подписки синхронизирован.')
         await loadAll(token)
       })
       return
@@ -2407,7 +2430,39 @@ export function App() {
           <h3>Подписки</h3>
           <div className="list-stack">
             {subscriptions.length === 0 && <EmptyState title="Подписок нет" description="После успешной оплаты подписка появится здесь." />}
-            {subscriptions.slice(0, 12).map((subscription) => <div key={subscription.id} className="list-item-vertical"><div className="item-head"><strong>{subscription.tariffName || shortId(subscription.tariffId)}</strong><StatusBadge value={subscription.status} /></div><div className="muted">Пользователь: {shortId(subscription.userId)} · источник: {subscription.sourceChannel ?? '—'} · действует до: {formatDate(subscription.endAt)}</div><div className="muted">Доступ: {shortId(subscription.currentAccessId)} · заказ/платеж: {shortId(subscription.lastPaymentId)} · продлений: {subscription.renewalCount ?? 0}</div><div className="toolbar"><label className="inline-number-field"><span>Дней</span><input value={subscriptionExtendDays[subscription.id] ?? 30} onChange={(e) => setSubscriptionExtendDays((current) => ({ ...current, [subscription.id]: Number(e.target.value) || 0 }))} type="number" min={1} step="1" inputMode="numeric" /></label><PrimaryButton onClick={() => void handleSubscriptionAction(subscription, 'extend')}>Продлить</PrimaryButton><ConfirmButton className="button-secondary" message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => void handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton><ConfirmButton className="button-danger" message="Отменить подписку? Пользователь может потерять доступ после обработки." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton></div></div>)}
+            {subscriptions.slice(0, 12).map((subscription) => {
+              const isActionBusy = actionBusyId.endsWith(subscription.id)
+              const canActivate = !['Active', 'Cancelled', 'Expired'].includes(subscription.status)
+              return (
+                <div key={subscription.id} className="list-item-vertical">
+                  <div className="item-head">
+                    <div>
+                      <strong>{subscription.tariffName || shortId(subscription.tariffId)}</strong>
+                      <div className="muted">Пользователь: {shortId(subscription.userId)} · источник: {subscription.sourceChannel ?? '—'} · период {formatDate(subscription.startAt)} - {formatDate(subscription.endAt)}</div>
+                      <div className="muted">Доступ: {shortId(subscription.currentAccessId)} · сервер: {shortId(subscription.currentServerId)} · платеж: {shortId(subscription.lastPaymentId)} · продлений: {subscription.renewalCount ?? 0}</div>
+                      <div className="muted">Льготный период до: {formatDate(subscription.gracePeriodEndAt)} · причина ограничения: {subscription.blockReason || '—'}</div>
+                    </div>
+                    <div className="item-status">
+                      <StatusBadge value={subscription.status} />
+                      <StatusBadge value={subscription.currentAccessId ? 'Access linked' : 'No access'} />
+                    </div>
+                  </div>
+                  <div className="toolbar">
+                    <label className="inline-number-field">
+                      <span>Дней</span>
+                      <input value={subscriptionExtendDays[subscription.id] ?? 30} onChange={(e) => setSubscriptionExtendDays((current) => ({ ...current, [subscription.id]: Number(e.target.value) || 0 }))} type="number" min={1} step="1" inputMode="numeric" />
+                    </label>
+                    {canActivate && (
+                      <PrimaryButton disabled={isActionBusy} onClick={() => void handleSubscriptionAction(subscription, 'activate')}>Активировать</PrimaryButton>
+                    )}
+                    <PrimaryButton disabled={isActionBusy} onClick={() => void handleSubscriptionAction(subscription, 'extend')}>Продлить</PrimaryButton>
+                    <PrimaryButton className="button-secondary" disabled={isActionBusy || !subscription.currentAccessId} title={subscription.currentAccessId ? undefined : 'У подписки нет текущего VPN-доступа'} onClick={() => void handleSubscriptionAction(subscription, 'sync')}>Синхронизировать доступ</PrimaryButton>
+                    <ConfirmButton className="button-secondary" disabled={isActionBusy} message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => void handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton>
+                    <ConfirmButton className="button-danger" disabled={isActionBusy || subscription.status === 'Cancelled'} message="Отменить подписку? Пользователь может потерять доступ после обработки." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </Card>
       </div>

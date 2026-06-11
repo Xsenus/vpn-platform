@@ -1309,6 +1309,15 @@ export class ApiClient {
     })
   }
 
+  activateAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string; endAt: string; currentAccessId?: string | null; access?: AccessActionResultDto | null }> {
+    return this.request<{ id: string; status: string; endAt: string; currentAccessId?: string | null; access?: AccessActionResultDto | null }>(`/api/admin/subscriptions/${id}/activate`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ reason: reason ?? null }),
+      errorMessage: 'Failed to activate subscription'
+    })
+  }
+
   blockAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
     return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/block`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: 'Failed to block subscription' })
   }
@@ -1319,6 +1328,15 @@ export class ApiClient {
 
   cancelAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
     return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/cancel`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: 'Failed to cancel subscription' })
+  }
+
+  syncAdminSubscriptionAccess(token: string, id: string, reason?: string | null): Promise<{ id: string; currentAccessId?: string | null; access: AccessActionResultDto }> {
+    return this.request<{ id: string; currentAccessId?: string | null; access: AccessActionResultDto }>(`/api/admin/subscriptions/${id}/sync-access`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ reason: reason ?? null }),
+      errorMessage: 'Failed to sync subscription access'
+    })
   }
 
   getAdminAccesses(token: string): Promise<AccessCredentialDto[]> {

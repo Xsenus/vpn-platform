@@ -343,9 +343,10 @@ git diff --check
   - Что сделано: список пользователей получил безопасную типизацию, поиск и фильтр по статусу; карточка пользователя разделена на профиль, метрики, подписки, заказы, платежи, VPN-доступы, Telegram-аккаунты и обращения поддержки. Backend overview теперь возвращает поля, совместимые с общими DTO, без `PasswordHash` и приватных metadata.
   - Доказательство: `AdminUsersControllerTests.GetOverview_Should_Return_Full_User_Profile_On_Sqlite`, frontend `admin user overview stats aggregates commercial and attention state`, typecheck/build, local SQLite API smoke `/api/admin/users` и `/api/admin/users/{id}/overview`.
 
-- [ ] `P2-ADM-SUB-001` Подписки.
+- [x] `P2-ADM-SUB-001` Подписки. 2026-06-11.
   - Что сделать: активировать, отключить, продлить, синхронизировать VPN-доступ.
-  - Доказательство: backend tests + UI smoke.
+  - Что сделано: добавлены admin endpoints `subscriptions/{id}/activate` и `subscriptions/{id}/sync-access`; активация переводит подписку в `Active`, снимает блокировку/отмену и включает текущий VPN-доступ, синхронизация дергает lifecycle текущего доступа и пишет историю. В админке раздел подписок получил кнопки активации, продления, синхронизации доступа, блокировки/разблокировки и отмены с loading/disabled состояниями.
+  - Доказательство: `AdminSubscriptionManagementTests`, `AdminAuthorizationPolicyTests`, frontend `ApiClient admin subscription and VPN access actions are confirmation-friendly POST calls`, typecheck/build, local SQLite HTTP-smoke.
 
 - [ ] `P2-ADM-ORD-001` Заказы.
   - Что сделать: фильтры по статусам, recheck payment, переход к пользователю/платежу.

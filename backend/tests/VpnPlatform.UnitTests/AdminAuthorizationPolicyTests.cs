@@ -73,6 +73,7 @@ public class AdminAuthorizationPolicyTests
     [InlineData(nameof(AdminOperationsController.EnableAccessCredential))]
     [InlineData(nameof(AdminOperationsController.SyncAccessCredential))]
     [InlineData(nameof(AdminOperationsController.ResetAccessTraffic))]
+    [InlineData(nameof(AdminOperationsController.SyncSubscriptionAccess))]
     public void Vpn_Access_Action_Endpoints_Should_Require_VpnManage(string methodName)
     {
         var method = typeof(AdminOperationsController).GetMethod(methodName);

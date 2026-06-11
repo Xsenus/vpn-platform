@@ -194,6 +194,66 @@ public class AdminOperationsController : ControllerBase
         return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.EndAt, subscription.GracePeriodEndAt });
     }
 
+    [HttpPost("subscriptions/{id:guid}/activate")]
+    [Authorize(Policy = AdminPolicies.AdminWrite)]
+    public async Task<IActionResult> ActivateSubscription(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
+    {
+        var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (subscription is null) return NotFound();
+
+        if (subscription.EndAt <= DateTimeOffset.UtcNow)
+        {
+            return BadRequest(new { error = "Subscription period has already ended. Extend the subscription before activation." });
+        }
+
+        var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason, subscription.SuspendedAt, subscription.CancelledAt });
+        subscription.Status = SubscriptionStatus.Active;
+        subscription.BlockReason = null;
+        subscription.SuspendedAt = null;
+        subscription.CancelledAt = null;
+        subscription.GracePeriodEndAt ??= subscription.EndAt.AddDays(3);
+        subscription.UpdatedAt = DateTimeOffset.UtcNow;
+        AddAuditLog("subscription.activate", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, request?.Reason }));
+        await _db.SaveChangesAsync(cancellationToken);
+
+        AdminAccessActionResult? accessResult = null;
+        if (subscription.CurrentAccess is not null)
+        {
+            if (_vpnAccessLifecycleService is not null)
+            {
+                var result = await _vpnAccessLifecycleService.EnableAccessAsync(subscription.CurrentAccess.Id, request?.Reason ?? "manual_subscription_activate", ResolveUserId(), cancellationToken);
+                if (!result.IsSuccess)
+                {
+                    return BadRequest(new { error = result.Error });
+                }
+
+                accessResult = result.Value;
+            }
+            else if (subscription.CurrentAccess.Status != AccessCredentialStatus.Active || subscription.CurrentAccess.DisabledAt.HasValue)
+            {
+                var accessBefore = JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, subscription.CurrentAccess.DisabledAt });
+                subscription.CurrentAccess.Status = AccessCredentialStatus.Active;
+                subscription.CurrentAccess.DisabledAt = null;
+                subscription.CurrentAccess.LastSyncedAt = DateTimeOffset.UtcNow;
+                subscription.CurrentAccess.UpdatedAt = DateTimeOffset.UtcNow;
+                subscription.CurrentAccess.Revision += 1;
+                _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+                {
+                    AccessCredentialId = subscription.CurrentAccess.Id,
+                    SubscriptionId = subscription.Id,
+                    EventType = "manual_subscription_activate",
+                    OldValueJson = accessBefore,
+                    NewValueJson = JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, request?.Reason })
+                });
+                AddAuditLog("access.enable", "AccessCredential", subscription.CurrentAccess.Id, accessBefore, JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, request?.Reason }));
+                await _db.SaveChangesAsync(cancellationToken);
+                accessResult = new AdminAccessActionResult(subscription.CurrentAccess.Id, subscription.CurrentAccess.Status.ToString(), subscription.CurrentAccess.DisabledAt, subscription.CurrentAccess.LastSyncedAt, subscription.CurrentAccess.Revision, null, "Access enabled.");
+            }
+        }
+
+        return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.EndAt, subscription.CurrentAccessId, Access = accessResult });
+    }
+
     [HttpPost("subscriptions/{id:guid}/block")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> BlockSubscription(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
@@ -253,6 +313,28 @@ public class AdminOperationsController : ControllerBase
             await _vpnAccessLifecycleService.DisableAccessAsync(subscription.CurrentAccess.Id, "AccessDisabledOnSubscriptionCancel", request?.Reason ?? "manual_subscription_cancel", ResolveUserId(), cancellationToken);
         }
         return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.CancelledAt });
+    }
+
+    [HttpPost("subscriptions/{id:guid}/sync-access")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> SyncSubscriptionAccess(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
+    {
+        if (_vpnAccessLifecycleService is null)
+        {
+            return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+        }
+
+        var subscription = await _db.Subscriptions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (subscription is null) return NotFound();
+        if (!subscription.CurrentAccessId.HasValue)
+        {
+            return BadRequest(new { error = "Subscription does not have a current VPN access." });
+        }
+
+        var result = await _vpnAccessLifecycleService.SyncAccessAsync(subscription.CurrentAccessId.Value, request?.Reason ?? "manual_subscription_sync", ResolveUserId(), cancellationToken);
+        return result.IsSuccess
+            ? Ok(new { subscription.Id, subscription.CurrentAccessId, Access = result.Value })
+            : BadRequest(new { error = result.Error });
     }
 
     [HttpGet("access-credentials/{id:guid}/qr")]

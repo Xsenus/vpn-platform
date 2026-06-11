@@ -106,7 +106,9 @@ const statusLabels: Record<string, string> = {
   Open: 'Открыто',
   Closed: 'Закрыто',
   'Checkout ready': 'Готово к оплате',
-  'Not configured': 'Не настроено'
+  'Not configured': 'Не настроено',
+  'Access linked': 'Доступ привязан',
+  'No access': 'Доступа нет'
 }
 
 function badgeLabel(value: unknown) {

@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: управление подписками в админке
+
+Что проверено:
+
+- Backend умеет активировать подписку, снимать блокировку/отмену и включать текущий VPN-доступ через `VpnAccessLifecycleService`.
+- Backend умеет синхронизировать текущий VPN-доступ подписки через endpoint `/api/admin/subscriptions/{id}/sync-access`.
+- Раздел админки «Подписки» получил действия: активировать, продлить, синхронизировать доступ, заблокировать/разблокировать и отменить.
+- Новые действия подписки покрыты authorization policy: синхронизация доступа требует `VpnManage`.
+- Добавлена запись «Что нового» `2026-06-11-admin-subscription-management`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+cd frontend
+npm run typecheck
+npm test
+npm run build
+```
+
+Результат:
+
+- Backend tests: 283/283 пройдено.
+- Frontend typecheck: пройден.
+- Frontend tests: 57/57 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/admin/subscriptions`, `/api/admin/subscriptions/{missingId}/activate`, `/api/admin/subscriptions/{missingId}/sync-access` прошли; новые маршруты корректно вернули 404 для отсутствующей подписки.
+
 ## Проверка 2026-06-11: карточка пользователя в админке
 
 Что проверено:
