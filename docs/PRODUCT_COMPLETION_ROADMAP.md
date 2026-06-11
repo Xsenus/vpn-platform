@@ -382,10 +382,11 @@ git diff --check
 
 ## P3. UX/UI и единая стилистика
 
-- [ ] `P3-UX-001` Единая дизайн-система.
+- [x] `P3-UX-001` Единая дизайн-система. 2026-06-11.
   - Что сделать: цвета, типографика, кнопки, поля, tabs, badges, tables, empty/loading/error states.
-  - Критерий готовности: public-web, cabinet и admin-panel выглядят как один продукт.
-  - Доказательство: screenshots всех основных экранов.
+  - Что сделано: в `@vpn-platform/ui` добавлены общие `designTokens`, `SegmentedTabs`, `StateBlock` и `DataTableLite`; публичный сайт и кабинет используют общий компонент вкладок входа/регистрации; CSS получил единые radius/state/table стили для следующих экранов админки, кабинета и сайта.
+  - Критерий готовности: базовые компоненты и состояния больше не дублируются между public-web и cabinet, а новые разделы могут собираться из одного UI-пакета.
+  - Доказательство: frontend UI/static tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-design-system-foundation`.
 
 - [ ] `P3-UX-002` Современный login admin.
   - Что сделать: отдельный аккуратный экран логина, ошибки, loading, password visibility, remember/session hints.

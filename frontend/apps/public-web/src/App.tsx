@@ -17,7 +17,7 @@ import {
   validatePasswordResetConfirm,
   validatePasswordResetRequest
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
 import { canStartCheckout, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 
@@ -717,26 +717,6 @@ function AccountPage({
     setResetMessage('')
   }
 
-  const handleAuthTabsKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const modes: Array<'login' | 'register'> = ['login', 'register']
-    const currentIndex = modes.indexOf(mode)
-    const nextMode = event.key === 'ArrowRight' || event.key === 'ArrowDown'
-      ? modes[(currentIndex + 1) % modes.length]
-      : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-        ? modes[(currentIndex + modes.length - 1) % modes.length]
-        : event.key === 'Home'
-          ? modes[0]
-          : event.key === 'End'
-            ? modes[modes.length - 1]
-            : null
-
-    if (!nextMode) return
-    event.preventDefault()
-    switchAuthMode(nextMode)
-    const nextTabId = nextMode === 'login' ? 'public-auth-login-tab' : 'public-auth-register-tab'
-    window.requestAnimationFrame(() => document.getElementById(nextTabId)?.focus())
-  }
-
   const handleForgotPassword = async () => {
     if (resetRequestErrors.length > 0) {
       setError(resetRequestErrors.join(' '))
@@ -858,10 +838,17 @@ function AccountPage({
                 <h3>{mode === 'login' ? 'Вход' : 'Регистрация'}</h3>
                 {pendingCheckout && <p className="muted">После входа покупка будет привязана к вашему аккаунту автоматически.</p>}
               </div>
-              <div className="segmented-control" role="tablist" aria-label="Режим авторизации" aria-orientation="horizontal" onKeyDown={handleAuthTabsKeyDown}>
-                <PrimaryButton id="public-auth-login-tab" type="button" role="tab" className={mode === 'login' ? 'active' : ''} aria-selected={mode === 'login'} aria-controls={authPanelId} tabIndex={mode === 'login' ? 0 : -1} onClick={() => switchAuthMode('login')}>Вход</PrimaryButton>
-                <PrimaryButton id="public-auth-register-tab" type="button" role="tab" className={mode === 'register' ? 'active' : ''} aria-selected={mode === 'register'} aria-controls={authPanelId} tabIndex={mode === 'register' ? 0 : -1} onClick={() => switchAuthMode('register')}>Регистрация</PrimaryButton>
-              </div>
+              <SegmentedTabs
+                idPrefix="public-auth"
+                panelId={authPanelId}
+                label="Режим авторизации"
+                value={mode}
+                onChange={switchAuthMode}
+                options={[
+                  { value: 'login', label: 'Вход' },
+                  { value: 'register', label: 'Регистрация' }
+                ]}
+              />
             </div>
             <form
               id={authPanelId}

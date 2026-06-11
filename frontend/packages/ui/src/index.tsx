@@ -1,5 +1,30 @@
 import React, { PropsWithChildren, useId, useState } from 'react'
 
+export const designTokens = {
+  colors: {
+    bg: 'var(--bg)',
+    surface: 'var(--surface)',
+    surfaceSoft: 'var(--surface-soft)',
+    line: 'var(--line)',
+    lineStrong: 'var(--line-strong)',
+    text: 'var(--text)',
+    muted: 'var(--muted)',
+    primary: 'var(--primary)',
+    primaryStrong: 'var(--primary-strong)',
+    danger: 'var(--danger)',
+    warning: 'var(--warning)',
+    info: 'var(--info)'
+  },
+  radius: {
+    sm: 'var(--radius-sm)',
+    md: 'var(--radius-md)',
+    pill: 'var(--radius-pill)'
+  },
+  shadow: {
+    surface: 'var(--shadow)'
+  }
+} as const
+
 export function PageShell({ title, children }: PropsWithChildren<{ title: string }>) {
   return (
     <main id="main-content" className="page-shell" tabIndex={-1}>
@@ -149,6 +174,75 @@ export function PrimaryButton({ type = 'button', ...props }: React.ButtonHTMLAtt
       className={['button', props.className].filter(Boolean).join(' ')}
       style={props.style}
     />
+  )
+}
+
+export type SegmentedTabOption<TValue extends string = string> = {
+  value: TValue
+  label: string
+  disabled?: boolean
+}
+
+export function SegmentedTabs<TValue extends string = string>({
+  options,
+  value,
+  onChange,
+  idPrefix,
+  panelId,
+  label
+}: {
+  options: Array<SegmentedTabOption<TValue>>
+  value: TValue
+  onChange: (value: TValue) => void
+  idPrefix: string
+  panelId: string
+  label: string
+}) {
+  const enabledOptions = options.filter((option) => !option.disabled)
+  const focusTab = (nextValue: TValue) => {
+    if (typeof document === 'undefined') return
+    document.getElementById(`${idPrefix}-${nextValue}-tab`)?.focus()
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || enabledOptions.length === 0) return
+    event.preventDefault()
+    const currentIndex = Math.max(0, enabledOptions.findIndex((option) => option.value === value))
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? enabledOptions.length - 1
+        : event.key === 'ArrowRight'
+          ? (currentIndex + 1) % enabledOptions.length
+          : (currentIndex - 1 + enabledOptions.length) % enabledOptions.length
+    const nextValue = enabledOptions[nextIndex].value
+    onChange(nextValue)
+    if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => focusTab(nextValue))
+    } else {
+      focusTab(nextValue)
+    }
+  }
+
+  return (
+    <div className="segmented-control" role="tablist" aria-label={label} aria-orientation="horizontal" onKeyDown={handleKeyDown}>
+      {options.map((option) => (
+        <PrimaryButton
+          key={option.value}
+          id={`${idPrefix}-${option.value}-tab`}
+          type="button"
+          role="tab"
+          disabled={option.disabled}
+          className={option.value === value ? 'active' : ''}
+          aria-selected={option.value === value}
+          aria-controls={panelId}
+          tabIndex={option.value === value ? 0 : -1}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </PrimaryButton>
+      ))}
+    </div>
   )
 }
 
@@ -336,6 +430,55 @@ export function ValidationModeBadge({ label = 'Проверочный режим
   return <StatusBadge value={label} />
 }
 
-export function DataTableLite({ children }: PropsWithChildren) {
-  return <div className="list-stack">{children}</div>
+export function StateBlock({
+  tone = 'neutral',
+  title,
+  description,
+  action
+}: {
+  tone?: 'neutral' | 'success' | 'warning' | 'danger'
+  title: string
+  description?: string
+  action?: React.ReactNode
+}) {
+  return (
+    <div className={`state-block state-block-${tone}`}>
+      <strong>{title}</strong>
+      {description && <span>{description}</span>}
+      {action && <div>{action}</div>}
+    </div>
+  )
+}
+
+export function DataTableLite({
+  columns,
+  rows,
+  emptyTitle = 'Нет данных',
+  emptyDescription
+}: {
+  columns: string[]
+  rows: Array<Array<React.ReactNode>>
+  emptyTitle?: string
+  emptyDescription?: string
+}) {
+  if (rows.length === 0) {
+    return <StateBlock title={emptyTitle} description={emptyDescription} />
+  }
+
+  return (
+    <div className="table-shell" role="region" aria-label="Таблица данных">
+      <table className="data-table-lite">
+        <thead>
+          <tr>{columns.map((column) => <th key={column} scope="col">{column}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 }

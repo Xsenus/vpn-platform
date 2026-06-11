@@ -6,6 +6,7 @@ import {
   CodeBlock,
   ConfirmButton,
   CopyButton,
+  DataTableLite,
   EmptyState,
   ErrorBlock,
   LoadingBlock,
@@ -14,9 +15,12 @@ import {
   PrimaryButton,
   SecretField,
   SectionCard,
+  SegmentedTabs,
   SkipLink,
+  StateBlock,
   StatusBadge,
-  ValidationModeBadge
+  ValidationModeBadge,
+  designTokens
 } from '../packages/ui/src/index.tsx'
 
 test('PageShell renders title and children', () => {
@@ -81,4 +85,37 @@ test('UI polish helpers render loading, empty, error, copy and validation states
   assert.match(html, /Удалить/)
   assert.match(html, /Задано|Webhook secret/)
   assert.doesNotMatch(html, /raw-password|PRIVATE KEY|bot-token/i)
+})
+
+test('Design system primitives render shared tabs, states and tables', () => {
+  const html = renderToStaticMarkup(
+    <div>
+      <SegmentedTabs
+        idPrefix="test-auth"
+        panelId="test-panel"
+        label="Режим авторизации"
+        value="login"
+        onChange={() => {}}
+        options={[
+          { value: 'login', label: 'Вход' },
+          { value: 'register', label: 'Регистрация' }
+        ]}
+      />
+      <StateBlock tone="warning" title="Нужно внимание" description="Проверьте настройки" />
+      <DataTableLite
+        columns={['Колонка', 'Статус']}
+        rows={[[<span key="value">Значение</span>, <StatusBadge key="status" value="Ready" />]]}
+      />
+      <DataTableLite columns={['Пусто']} rows={[]} emptyTitle="Нет записей" emptyDescription="Создайте первую запись" />
+    </div>
+  )
+
+  assert.equal(designTokens.colors.primary, 'var(--primary)')
+  assert.equal(designTokens.radius.md, 'var(--radius-md)')
+  assert.match(html, /role="tablist"/)
+  assert.match(html, /id="test-auth-login-tab"/)
+  assert.match(html, /aria-selected="true"/)
+  assert.match(html, /state-block-warning/)
+  assert.match(html, /data-table-lite/)
+  assert.match(html, /Нет записей/)
 })

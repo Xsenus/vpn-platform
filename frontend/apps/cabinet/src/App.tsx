@@ -21,7 +21,7 @@ import {
   validatePasswordResetConfirm,
   validatePasswordResetRequest
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary } from './cabinet-dashboard'
 import { buildOrderExportText, canRetryOrderPayment, formatPaymentMoney, getLatestPaymentForOrder, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
@@ -290,26 +290,6 @@ export function App() {
     setAuthMode(nextMode)
     setError('')
     setNotice('')
-  }
-
-  const handleAuthTabsKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const modes: Array<'login' | 'register'> = ['login', 'register']
-    const currentIndex = modes.indexOf(authMode)
-    const nextMode = event.key === 'ArrowRight' || event.key === 'ArrowDown'
-      ? modes[(currentIndex + 1) % modes.length]
-      : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-        ? modes[(currentIndex + modes.length - 1) % modes.length]
-        : event.key === 'Home'
-          ? modes[0]
-          : event.key === 'End'
-            ? modes[modes.length - 1]
-            : null
-
-    if (!nextMode) return
-    event.preventDefault()
-    switchAuthMode(nextMode)
-    const nextTabId = nextMode === 'login' ? 'cabinet-auth-login-tab' : 'cabinet-auth-register-tab'
-    window.requestAnimationFrame(() => document.getElementById(nextTabId)?.focus())
   }
 
   const handleRefreshSession = async () => {
@@ -655,10 +635,17 @@ export function App() {
                   <h3>{authMode === 'login' ? 'Вход в личный кабинет' : 'Создать аккаунт'}</h3>
                   <p className="muted">Введите email и пароль. Сессия сохраняется только в этом браузере и очищается при выходе.</p>
                 </div>
-                <div className="segmented-control" role="tablist" aria-label="Режим авторизации" aria-orientation="horizontal" onKeyDown={handleAuthTabsKeyDown}>
-                  <PrimaryButton id="cabinet-auth-login-tab" type="button" role="tab" className={authMode === 'login' ? 'active' : ''} aria-selected={authMode === 'login'} aria-controls={authPanelId} tabIndex={authMode === 'login' ? 0 : -1} onClick={() => switchAuthMode('login')}>Вход</PrimaryButton>
-                  <PrimaryButton id="cabinet-auth-register-tab" type="button" role="tab" className={authMode === 'register' ? 'active' : ''} aria-selected={authMode === 'register'} aria-controls={authPanelId} tabIndex={authMode === 'register' ? 0 : -1} onClick={() => switchAuthMode('register')}>Регистрация</PrimaryButton>
-                </div>
+                <SegmentedTabs
+                  idPrefix="cabinet-auth"
+                  panelId={authPanelId}
+                  label="Режим авторизации"
+                  value={authMode}
+                  onChange={switchAuthMode}
+                  options={[
+                    { value: 'login', label: 'Вход' },
+                    { value: 'register', label: 'Регистрация' }
+                  ]}
+                />
               </div>
               <form id={authPanelId} role="tabpanel" aria-labelledby={activeAuthTabId} aria-busy={busy} onSubmit={(event) => void handleAuthSubmit(event)}>
                 {authMode === 'register' && (
