@@ -338,9 +338,10 @@ git diff --check
 
 ### P2.6 Пользователи, подписки, заказы
 
-- [ ] `P2-ADM-USR-001` Пользователи.
+- [x] `P2-ADM-USR-001` Пользователи. 2026-06-11.
   - Что сделать: поиск, фильтры, карточка пользователя, подписки, заказы, платежи, Telegram.
-  - Доказательство: UI smoke.
+  - Что сделано: список пользователей получил безопасную типизацию, поиск и фильтр по статусу; карточка пользователя разделена на профиль, метрики, подписки, заказы, платежи, VPN-доступы, Telegram-аккаунты и обращения поддержки. Backend overview теперь возвращает поля, совместимые с общими DTO, без `PasswordHash` и приватных metadata.
+  - Доказательство: `AdminUsersControllerTests.GetOverview_Should_Return_Full_User_Profile_On_Sqlite`, frontend `admin user overview stats aggregates commercial and attention state`, typecheck/build, local SQLite API smoke `/api/admin/users` и `/api/admin/users/{id}/overview`.
 
 - [ ] `P2-ADM-SUB-001` Подписки.
   - Что сделать: активировать, отключить, продлить, синхронизировать VPN-доступ.

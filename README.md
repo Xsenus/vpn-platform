@@ -73,8 +73,11 @@ Backend:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT="Local"
+$env:DataProtection__KeyPath="../../../tmp/dataprotection-keys"
 dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --urls http://127.0.0.1:8080
 ```
+
+`DataProtection__KeyPath` нужен, чтобы локальный API хранил ключи авторизации внутри рабочей папки проекта, а не в профиле Windows. Это устраняет ошибки доступа к `AppData\Local\ASP.NET\DataProtection-Keys` при запуске из другого пользователя или sandbox-среды.
 
 Frontend в отдельных терминалах:
 

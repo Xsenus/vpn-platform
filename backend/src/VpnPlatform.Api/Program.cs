@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -57,6 +58,18 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = false;
 });
+
+var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
+{
+    var fullDataProtectionKeyPath = Path.IsPathRooted(dataProtectionKeyPath)
+        ? dataProtectionKeyPath
+        : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, dataProtectionKeyPath));
+    Directory.CreateDirectory(fullDataProtectionKeyPath);
+    builder.Services.AddDataProtection()
+        .SetApplicationName("VpnPlatform.Api")
+        .PersistKeysToFileSystem(new DirectoryInfo(fullDataProtectionKeyPath));
+}
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

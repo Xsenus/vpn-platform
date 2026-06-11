@@ -2,6 +2,39 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: карточка пользователя в админке
+
+Что проверено:
+
+- Backend user overview для админки возвращает безопасный профиль пользователя, Telegram-аккаунты, заказы, платежи, подписки, VPN-доступы и обращения поддержки без `PasswordHash` и приватных metadata.
+- Раздел админки «Пользователи» показывает структурированную карточку: профиль, быстрые метрики, причины внимания оператора, подписки, заказы, платежи, VPN-доступы, Telegram и поддержку.
+- Локальный запуск API на временной SQLite-БД работает без Docker; DataProtection-ключи направлены в рабочую папку проекта, чтобы не зависеть от прав к Windows-профилю.
+- Проверка кодировки: символов `U+FFFD` в README/docs/backend/frontend/.env.example не найдено.
+
+Команды и результат:
+
+```powershell
+dotnet build backend\VpnPlatform.sln --configuration Release --no-restore
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+cd frontend
+npm run typecheck
+npm test
+npm run build
+git diff --check
+rg -n "<символ U+FFFD>" README.md docs backend\src frontend\apps frontend\packages .env.example
+```
+
+Результат:
+
+- Backend build: 0 ошибок, 0 предупреждений.
+- Backend tests: 280/280 пройдено.
+- Frontend typecheck: пройден.
+- Frontend tests: 57/57 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/admin/users?search=admin&status=Active`, `/api/admin/users/{id}/overview` прошли успешно.
+- `git diff --check`: замечаний нет.
+- Поиск символа `U+FFFD`: совпадений нет.
+
 ## Что исправлено
 
 - Backend переведен на `.NET 9` (`net9.0`), `global.json` переключен на SDK 9, `dotnet-ef` обновлен до 9.0.16.

@@ -4,6 +4,7 @@ import {
   AdminDashboardSummaryDto,
   AdminTelegramBotConnectionCheckDto,
   AdminTelegramBotSettingsDto,
+  AdminUserDto,
   AdminUserOverviewDto,
   ApiClient,
   AppReleaseDto,
@@ -41,6 +42,7 @@ import {
   PanelSyncRunDto
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -388,7 +390,7 @@ function adminSectionFromHref(href: string | null | undefined): AdminSectionId |
   return adminSections.some(([id]) => id === section) ? (section as AdminSectionId) : null
 }
 
-type GenericUser = Record<string, unknown>
+type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
 
@@ -801,6 +803,7 @@ export function App() {
     openSupportConversations: summary?.openSupportConversations ?? supportConversations.filter((item) => item.status === 'open' || item.status === 'pending').length,
     provisioningErrors: summary?.provisioningErrors ?? provisioningRuns.filter((item) => item.status === 'Failed').length
   }), [summary, users, subscriptions, accessCredentials, orders, payments, servers, provisioningRuns, supportConversations, vpnPanels])
+  const userOverviewStats = useMemo(() => buildAdminUserOverviewStats(userOverview), [userOverview])
 
   const safeLoad = async <T,>(area: string, loader: () => Promise<T>, fallback: T, errors: LoadError[]) => {
     try {
@@ -2067,33 +2070,133 @@ export function App() {
           <div className="list-stack mt-12">
             {users.length === 0 && <EmptyState title="Пользователи не найдены" description="Попробуйте изменить поиск или статус." />}
             {users.slice(0, 20).map((user) => (
-              <div key={String(user.id)} className={`list-item${selectedUserId === String(user.id ?? '') ? ' selected-item' : ''}`}>
+              <div key={user.id} className={`list-item${selectedUserId === user.id ? ' selected-item' : ''}`}>
                 <div>
                   <strong>{s(user.displayName, 'Без имени')}</strong>
                   <div className="muted">{s(user.email)} · {s(user.authSource)} · {s(user.referralCode)}</div>
+                  <div className="muted">создан {formatDate(user.createdAt)} · вход {formatDate(user.lastLoginAt)}</div>
                 </div>
                 <div className="actions">
-                  <StatusBadge value={s(user.status, 'Unknown')} />
+                  <StatusBadge value={user.isBlocked ? 'Blocked' : user.status} />
                   <StatusBadge value={s(user.rolesCsv, 'User')} />
-                  <PrimaryButton className={selectedUserId === String(user.id ?? '') ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedUserId(String(user.id ?? ''))}>{selectedUserId === String(user.id ?? '') ? 'Открыто' : 'Открыть'}</PrimaryButton>
+                  <PrimaryButton className={selectedUserId === user.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedUserId(user.id)}>{selectedUserId === user.id ? 'Открыто' : 'Открыть'}</PrimaryButton>
                 </div>
               </div>
             ))}
           </div>
         </Card>
-        <Card>
+        <Card className="user-overview-card">
           <h3>Карточка пользователя</h3>
           {!userOverview && <p className="muted">Выберите пользователя.</p>}
           {userOverview && <>
-            <div className="list-item-vertical">
-              <strong>{s(userOverview.user.displayName)}</strong>
-              <div className="muted">{s(userOverview.user.email)} · roles {s(userOverview.user.rolesCsv)} · tg accounts {userOverview.telegramAccounts.length}</div>
-              <div className="muted">orders {userOverview.orders.length} · payments {userOverview.payments.length} · subscriptions {userOverview.subscriptions.length} · accesses {userOverview.accessCredentials.length}</div>
+            <div className="user-profile-head">
+              <div>
+                <strong>{s(userOverview.user.displayName, 'Без имени')}</strong>
+                <div className="muted">{s(userOverview.user.email)} · {s(userOverview.user.authSource)} · язык {s(userOverview.user.preferredLanguage)}</div>
+                <div className="muted">ID {shortId(userOverview.user.id)} · реферал {s(userOverview.user.referralCode)} · создан {formatDate(userOverview.user.createdAt)}</div>
+              </div>
+              <div className="row-actions">
+                <StatusBadge value={userOverview.user.isBlocked ? 'Blocked' : userOverview.user.status} />
+                <StatusBadge value={userOverview.user.emailConfirmed ? 'Email confirmed' : 'Email not confirmed'} />
+              </div>
             </div>
-            <h4>Покупки и доступы</h4>
-            <div className="list-stack">
-              {userOverview.orders.slice(0, 4).map((order) => <div key={order.id} className="list-item"><span>{order.tariffName || shortId(order.tariffId)} · {order.amount} {order.currency}</span><StatusBadge value={order.status} /></div>)}
-              {userOverview.accessCredentials.slice(0, 4).map((access) => <div key={access.id} className="list-item"><span>{access.providerType} · {access.serverName || shortId(access.serverId)}</span><StatusBadge value={access.status} /></div>)}
+            <div className="user-overview-stats">
+              <div className="user-metric"><span>Заказы</span><strong>{userOverviewStats.ordersCount}</strong></div>
+              <div className="user-metric"><span>Оплачено</span><strong>{formatAdminMoney(userOverviewStats.totalPaidAmount, userOverviewStats.currency)}</strong></div>
+              <div className="user-metric"><span>Активные подписки</span><strong>{userOverviewStats.activeSubscriptionsCount}/{userOverviewStats.subscriptionsCount}</strong></div>
+              <div className="user-metric"><span>VPN-доступы</span><strong>{userOverviewStats.activeAccessesCount}/{userOverviewStats.accessCredentialsCount}</strong></div>
+            </div>
+            {userOverviewStats.needsAttention && (
+              <div className="provider-check-result provider-check-result-problem">
+                <div className="provider-check-result-head"><strong>Нужно внимание оператора</strong><StatusBadge value="Attention" /></div>
+                <ul className="provider-check-result-list">{userOverviewStats.attentionReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+              </div>
+            )}
+
+            <div className="user-overview-section">
+              <div className="card-head"><h4>Подписки</h4><StatusBadge value={`${userOverviewStats.activeSubscriptionsCount} active`} /></div>
+              <div className="list-stack">
+                {userOverview.subscriptions.length === 0 && <EmptyState title="Подписок нет" description="После оплаты тарифов подписки появятся здесь." />}
+                {userOverview.subscriptions.slice(0, 5).map((subscription) => (
+                  <div key={subscription.id} className="list-item">
+                    <div>
+                      <strong>{subscription.tariffName || shortId(subscription.tariffId)}</strong>
+                      <div className="muted">{formatDate(subscription.startAt)} - {formatDate(subscription.endAt)} · {subscription.sourceChannel || '—'} · продлений {subscription.renewalCount ?? 0}</div>
+                      <div className="muted">сервер {shortId(subscription.currentServerId)} · доступ {shortId(subscription.currentAccessId)}</div>
+                    </div>
+                    <StatusBadge value={subscription.status} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="user-overview-section">
+              <div className="card-head"><h4>Заказы и платежи</h4><StatusBadge value={`${userOverviewStats.paymentsCount} payments`} /></div>
+              <div className="list-stack">
+                {userOverview.orders.length === 0 && userOverview.payments.length === 0 && <EmptyState title="Покупок нет" description="Заказы и платежи появятся после первого checkout." />}
+                {userOverview.orders.slice(0, 4).map((order) => (
+                  <div key={order.id} className="list-item">
+                    <div>
+                      <strong>{order.tariffName || shortId(order.tariffId)} · {order.amount} {order.currency}</strong>
+                      <div className="muted">{order.channel || '—'} · {order.paymentProvider || '—'} · создан {formatDate(order.createdAt)} · оплачен {formatDate(order.paidAt)}</div>
+                    </div>
+                    <StatusBadge value={order.status} />
+                  </div>
+                ))}
+                {userOverview.payments.slice(0, 4).map((payment) => (
+                  <div key={payment.id} className="list-item">
+                    <div>
+                      <strong>{payment.provider} · {payment.amount} {payment.currency}</strong>
+                      <div className="muted">payment {payment.providerPaymentId || shortId(payment.id)} · подпись {payment.signatureValidated ? 'проверена' : 'не проверена'} · активация {payment.isActivationProcessed ? 'выполнена' : 'ожидает'}</div>
+                    </div>
+                    <StatusBadge value={payment.status} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="user-overview-section">
+              <div className="card-head"><h4>VPN-доступы</h4><StatusBadge value={`${userOverviewStats.activeAccessesCount} active`} /></div>
+              <div className="list-stack">
+                {userOverview.accessCredentials.length === 0 && <EmptyState title="VPN-доступов нет" description="Доступы создаются после успешной оплаты и сценария выдачи." />}
+                {userOverview.accessCredentials.slice(0, 5).map((access) => (
+                  <div key={access.id} className="list-item">
+                    <div>
+                      <strong>{access.providerType} · {access.serverName || shortId(access.serverId)}</strong>
+                      <div className="muted">выдан {formatDate(access.issuedAt)} · sync {formatDate(access.lastSyncedAt)} · ревизия {access.revision}</div>
+                      <div className="muted user-overview-link">{access.accessUri || 'URI не выдан'}</div>
+                    </div>
+                    <StatusBadge value={access.status} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="user-overview-section">
+              <div className="card-head"><h4>Telegram и поддержка</h4><StatusBadge value={`${userOverviewStats.telegramAccountsCount} accounts`} /></div>
+              <div className="list-stack">
+                {userOverview.telegramAccounts.length === 0 && <EmptyState title="Telegram не привязан" description="После привязки аккаунта оператор увидит chat/user id и последний контакт." />}
+                {userOverview.telegramAccounts.map((account) => (
+                  <div key={account.id} className="list-item">
+                    <div>
+                      <strong>{telegramDisplayName(account)}</strong>
+                      <div className="muted">tg:{account.telegramUserId} · {account.languageCode || '—'} · привязан {formatDate(account.linkedAt)} · был {formatDate(account.lastSeenAt)}</div>
+                    </div>
+                    <StatusBadge value={account.isBlocked ? 'Blocked' : 'Linked'} />
+                  </div>
+                ))}
+                {userOverview.supportConversations.length === 0 && <EmptyState title="Обращений нет" description="Открытые обращения из кабинета и Telegram будут показаны здесь." />}
+                {userOverview.supportConversations.slice(0, 5).map((conversation) => (
+                  <div key={conversation.id} className="list-item">
+                    <div>
+                      <strong>{conversation.subject || 'Обращение'}</strong>
+                      <div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · обновлено {formatDate(conversation.updatedAt)}</div>
+                      {conversation.internalNote && <div className="muted">заметка: {conversation.internalNote}</div>}
+                    </div>
+                    <StatusBadge value={conversation.status} />
+                  </div>
+                ))}
+              </div>
             </div>
           </>}
         </Card>

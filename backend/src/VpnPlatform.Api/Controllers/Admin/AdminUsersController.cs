@@ -87,16 +87,26 @@ public class AdminUsersController : ControllerBase
             .Select(x => new
             {
                 x.Id,
+                x.UserId,
                 x.TariffId,
                 TariffName = x.Tariff != null ? x.Tariff.Name : string.Empty,
+                x.CheckoutSessionId,
                 x.Amount,
                 x.Currency,
                 Status = x.Status.ToString(),
                 Type = x.Type.ToString(),
                 Channel = x.Channel.ToString(),
                 PaymentProvider = x.PaymentProvider.ToString(),
+                x.ExpiresAt,
                 x.PaidAt,
-                x.CreatedAt
+                x.IsFirstPurchase,
+                PaymentAttemptsCount = x.PaymentAttempts.Count,
+                LinkedSubscriptionId = _db.Subscriptions
+                    .Where(subscription => subscription.UserId == x.UserId && subscription.TariffId == x.TariffId && subscription.LastPaymentId.HasValue)
+                    .Select(subscription => (Guid?)subscription.Id)
+                    .FirstOrDefault(),
+                x.CreatedAt,
+                x.UpdatedAt
             })
             .ToListAsync(cancellationToken);
         orders = orders.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
@@ -107,13 +117,31 @@ public class AdminUsersController : ControllerBase
             {
                 x.Id,
                 x.OrderId,
+                UserId = x.Order != null ? x.Order.UserId : (Guid?)null,
+                UserDisplayName = x.Order != null && x.Order.User != null ? x.Order.User.DisplayName : string.Empty,
                 Provider = x.Provider.ToString(),
+                x.PaymentProviderAccountId,
+                ProviderMode = x.ProviderMode.ToString(),
                 Status = x.Status.ToString(),
                 x.Amount,
                 x.Currency,
                 x.ProviderPaymentId,
+                x.ExternalEventId,
+                x.IdempotencyKey,
+                x.ConfirmationUrl,
+                x.ReturnUrl,
+                x.SignatureValidated,
+                x.IsActivationProcessed,
+                x.ActivationProcessedAt,
                 x.PaidAt,
-                x.CreatedAt
+                x.FailedAt,
+                x.RefundedAt,
+                x.RefundedAmount,
+                x.StatusReason,
+                WebhookEventsCount = _db.PaymentWebhookEvents.Count(eventItem => eventItem.PaymentAttemptId == x.Id),
+                RefundsCount = x.Refunds.Count,
+                x.CreatedAt,
+                x.UpdatedAt
             })
             .ToListAsync(cancellationToken);
         payments = payments.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
@@ -123,14 +151,24 @@ public class AdminUsersController : ControllerBase
             .Select(x => new
             {
                 x.Id,
+                x.UserId,
                 x.TariffId,
                 TariffName = x.Tariff != null ? x.Tariff.Name : string.Empty,
                 Status = x.Status.ToString(),
                 x.StartAt,
                 x.EndAt,
+                x.GracePeriodEndAt,
+                x.AutoRenewFlag,
                 x.CurrentAccessId,
                 x.CurrentServerId,
-                SourceChannel = x.SourceChannel.ToString()
+                x.LastPaymentId,
+                x.RenewalCount,
+                x.BlockReason,
+                x.SuspendedAt,
+                x.CancelledAt,
+                SourceChannel = x.SourceChannel.ToString(),
+                x.CreatedAt,
+                x.UpdatedAt
             })
             .ToListAsync(cancellationToken);
         subscriptions = subscriptions.OrderByDescending(x => x.StartAt).Take(20).ToList();
@@ -141,16 +179,22 @@ public class AdminUsersController : ControllerBase
             {
                 x.Id,
                 x.SubscriptionId,
+                UserId = x.Subscription != null ? x.Subscription.UserId : (Guid?)null,
                 x.ProviderType,
                 x.ProviderAccessId,
                 x.ServerId,
                 ServerName = x.Server != null ? x.Server.Name : string.Empty,
                 Status = x.Status.ToString(),
                 x.AccessUri,
+                x.QrCodePath,
                 QrCodePayload = x.QrCodePath,
+                x.ConfigPath,
                 x.IssuedAt,
                 x.DisabledAt,
-                x.LastSyncedAt
+                x.LastSyncedAt,
+                x.Revision,
+                x.CreatedAt,
+                x.UpdatedAt
             })
             .ToListAsync(cancellationToken);
         accesses = accesses.OrderByDescending(x => x.IssuedAt).Take(20).ToList();
@@ -162,11 +206,13 @@ public class AdminUsersController : ControllerBase
             .Select(x => new
             {
                 x.Id,
+                x.UserId,
                 x.TelegramUserId,
                 x.Channel,
                 x.Status,
                 x.Subject,
                 x.AssignedToUserId,
+                x.InternalNote,
                 x.ClosedAt,
                 x.CreatedAt,
                 x.UpdatedAt

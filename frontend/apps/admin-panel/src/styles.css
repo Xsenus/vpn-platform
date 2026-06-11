@@ -229,6 +229,67 @@
   overflow-wrap: anywhere;
 }
 
+.user-overview-card {
+  align-content: start;
+}
+
+.user-profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.user-overview-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.user-metric {
+  display: grid;
+  gap: 5px;
+  min-height: 78px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.user-metric span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.user-metric strong {
+  color: #0f172a;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.user-overview-section {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.user-overview-section h4 {
+  margin: 0;
+}
+
+.user-overview-link {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
 .release-item-editor {
   display: grid;
   grid-template-columns: 130px 96px minmax(0, 1fr) auto;
@@ -313,6 +374,14 @@
   }
 
   .provider-setup-note {
+    grid-template-columns: 1fr;
+  }
+
+  .user-profile-head {
+    flex-direction: column;
+  }
+
+  .user-overview-stats {
     grid-template-columns: 1fr;
   }
 }

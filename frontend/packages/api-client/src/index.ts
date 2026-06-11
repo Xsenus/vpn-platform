@@ -756,9 +756,39 @@ export type UpdateTelegramBotSettingsPayload = {
   subscriptionExpiredTextTemplate?: string | null
 }
 
+export type AdminUserDto = {
+  id: string
+  email?: string | null
+  displayName: string
+  rolesCsv: string
+  status: string
+  isBlocked: boolean
+  preferredLanguage: string
+  referralCode: string
+  authSource: string
+  emailConfirmed: boolean
+  lastLoginAt?: string | null
+  telegramRegistrationCompletedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdminTelegramAccountDto = {
+  id: string
+  telegramUserId: number
+  username: string
+  firstName: string
+  lastName: string
+  languageCode: string
+  isBlocked: boolean
+  linkedAt?: string | null
+  lastSeenAt?: string | null
+  registrationCompletedAt?: string | null
+}
+
 export type AdminUserOverviewDto = {
-  user: Record<string, unknown>
-  telegramAccounts: Array<Record<string, unknown>>
+  user: AdminUserDto
+  telegramAccounts: AdminTelegramAccountDto[]
   orders: OrderDto[]
   payments: PaymentAttemptDto[]
   subscriptions: SubscriptionDto[]
@@ -1253,13 +1283,13 @@ export class ApiClient {
     return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: 'Failed to load dashboard summary' })
   }
 
-  getAdminUsers(token: string, filters?: { search?: string; status?: string; role?: string }): Promise<Array<Record<string, unknown>>> {
+  getAdminUsers(token: string, filters?: { search?: string; status?: string; role?: string }): Promise<AdminUserDto[]> {
     const params = new URLSearchParams()
     if (filters?.search) params.set('search', filters.search)
     if (filters?.status) params.set('status', filters.status)
     if (filters?.role) params.set('role', filters.role)
     const suffix = params.toString() ? `?${params.toString()}` : ''
-    return this.request<Array<Record<string, unknown>>>(`/api/admin/users${suffix}`, { token, errorMessage: 'Failed to load users' })
+    return this.request<AdminUserDto[]>(`/api/admin/users${suffix}`, { token, errorMessage: 'Failed to load users' })
   }
 
   getAdminUserOverview(token: string, userId: string): Promise<AdminUserOverviewDto> {
