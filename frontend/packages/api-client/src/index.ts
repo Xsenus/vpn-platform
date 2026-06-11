@@ -146,9 +146,25 @@ export type OrderDto = {
   paidAt?: string | null
   isFirstPurchase?: boolean
   paymentAttemptsCount?: number
+  lastPaymentId?: string | null
+  lastPaymentStatus?: string | null
+  lastPaymentProvider?: string | null
   linkedSubscriptionId?: string | null
   createdAt?: string
   updatedAt?: string
+}
+
+export type AdminOrderFilters = {
+  status?: string
+  search?: string
+}
+
+export type PaymentStatusResultDto = {
+  orderId?: string
+  paymentId: string
+  status: string
+  rawResponse: string
+  statusReason?: string | null
 }
 
 export type PaymentInitResult = {
@@ -1384,20 +1400,33 @@ export class ApiClient {
     })
   }
 
-  getAdminOrders(token: string): Promise<OrderDto[]> {
-    return this.request<OrderDto[]>('/api/admin/orders', { token, errorMessage: 'Failed to load orders' })
+  getAdminOrders(token: string, filters: AdminOrderFilters = {}): Promise<OrderDto[]> {
+    const params = new URLSearchParams()
+    if (filters.status) params.set('status', filters.status)
+    if (filters.search) params.set('search', filters.search)
+    const query = params.toString()
+    return this.request<OrderDto[]>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: 'Failed to load orders' })
   }
 
   getAdminPayments(token: string): Promise<PaymentAttemptDto[]> {
     return this.request<PaymentAttemptDto[]>('/api/admin/payments', { token, errorMessage: 'Failed to load payments' })
   }
 
-  recheckAdminPayment(token: string, paymentId: string): Promise<PaymentAttemptDto> {
-    return this.request<PaymentAttemptDto>(`/api/admin/payments/${paymentId}/recheck`, {
+  recheckAdminPayment(token: string, paymentId: string): Promise<PaymentStatusResultDto> {
+    return this.request<PaymentStatusResultDto>(`/api/admin/payments/${paymentId}/recheck`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
       errorMessage: 'Failed to recheck payment'
+    })
+  }
+
+  recheckAdminOrderPayment(token: string, orderId: string): Promise<PaymentStatusResultDto> {
+    return this.request<PaymentStatusResultDto>(`/api/admin/orders/${orderId}/recheck-payment`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to recheck order payment'
     })
   }
 

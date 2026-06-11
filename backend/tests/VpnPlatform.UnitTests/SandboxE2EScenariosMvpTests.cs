@@ -80,7 +80,7 @@ public class SandboxE2EScenariosMvpTests
             Dashboard = Assert.IsType<OkObjectResult>(await harness.DashboardController.GetSummary(CancellationToken.None)).Value,
             Users = Assert.IsType<OkObjectResult>(await harness.UsersController.GetList(null, null, null, CancellationToken.None)).Value,
             UserOverview = Assert.IsType<OkObjectResult>(await harness.UsersController.GetOverview(subscription.UserId, CancellationToken.None)).Value,
-            Orders = Assert.IsType<OkObjectResult>(await harness.AdminController.GetOrders(CancellationToken.None)).Value,
+            Orders = Assert.IsType<OkObjectResult>(await harness.AdminController.GetOrders(null, null, CancellationToken.None)).Value,
             Payments = Assert.IsType<OkObjectResult>(await harness.AdminController.GetPayments(CancellationToken.None)).Value,
             Subscriptions = Assert.IsType<OkObjectResult>(await harness.AdminController.GetSubscriptions(CancellationToken.None)).Value,
             Accesses = Assert.IsType<OkObjectResult>(await harness.AdminController.GetAccessCredentials(CancellationToken.None)).Value,

@@ -158,7 +158,7 @@ public class TariffManagementTests
         await db.SaveChangesAsync();
         var controller = CreateController(db);
 
-        var ok = Assert.IsType<OkObjectResult>(await controller.GetOrders(CancellationToken.None));
+        var ok = Assert.IsType<OkObjectResult>(await controller.GetOrders(null, null, CancellationToken.None));
         using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
         var first = json.RootElement.EnumerateArray().First();
 

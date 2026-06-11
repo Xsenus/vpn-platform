@@ -761,6 +761,39 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
   assert.equal(new Headers(calls[9]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
+test('ApiClient admin order filters and recheck endpoints use finance-safe routes', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    if (String(url).includes('/api/admin/orders?')) {
+      return new Response(JSON.stringify([{ id: 'order-1', status: 'PendingPayment', lastPaymentId: 'payment-1', lastPaymentStatus: 'Pending' }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(JSON.stringify({ orderId: 'order-1', paymentId: 'payment-1', status: 'Succeeded', rawResponse: '{}' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const orders = await client.getAdminOrders('admin-token', { status: 'PendingPayment', search: 'user@example.test' })
+  const orderRecheck = await client.recheckAdminOrderPayment('admin-token', 'order-1')
+  const paymentRecheck = await client.recheckAdminPayment('admin-token', 'payment-1')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/orders?status=PendingPayment&search=user%40example.test')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/orders/order-1/recheck-payment')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/payments/payment-1/recheck')
+  assert.equal(calls[2]?.init?.method, 'POST')
+  assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(orders[0]?.lastPaymentId, 'payment-1')
+  assert.equal(orderRecheck.paymentId, 'payment-1')
+  assert.equal(paymentRecheck.status, 'Succeeded')
+})
+
 test('ApiClient admin Telegram bot settings masks token at API boundary', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {

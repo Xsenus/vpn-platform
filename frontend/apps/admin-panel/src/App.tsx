@@ -378,6 +378,20 @@ const adminSections = [
 
 type AdminSectionId = typeof adminSections[number][0]
 
+const orderStatusOptions = [
+  ['all', 'Все статусы'],
+  ['Draft', 'Черновики'],
+  ['PendingPayment', 'Ожидают оплату'],
+  ['PaymentReceived', 'Оплата получена'],
+  ['FulfillmentInProgress', 'Выдача'],
+  ['Completed', 'Завершены'],
+  ['Failed', 'Ошибки'],
+  ['Cancelled', 'Отменены'],
+  ['Expired', 'Истекли'],
+  ['Refunded', 'Возвращены'],
+  ['PartiallyProcessed', 'Частично обработаны']
+] as const
+
 function readAdminSectionFromHash(): AdminSectionId {
   if (typeof window === 'undefined') return adminSections[0][0]
 
@@ -729,6 +743,8 @@ export function App() {
   const [accessCredentials, setAccessCredentials] = useState<AccessCredentialDto[]>([])
   const [adminQrSvgs, setAdminQrSvgs] = useState<Record<string, string>>({})
   const [orders, setOrders] = useState<OrderDto[]>([])
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all')
+  const [orderSearch, setOrderSearch] = useState('')
   const [payments, setPayments] = useState<PaymentAttemptDto[]>([])
   const [paymentProviderAccounts, setPaymentProviderAccounts] = useState<PaymentProviderAccountDto[]>([])
   const [providerCheckResults, setProviderCheckResults] = useState<Record<string, PaymentProviderAccountCheckResultDto>>({})
@@ -804,6 +820,29 @@ export function App() {
     provisioningErrors: summary?.provisioningErrors ?? provisioningRuns.filter((item) => item.status === 'Failed').length
   }), [summary, users, subscriptions, accessCredentials, orders, payments, servers, provisioningRuns, supportConversations, vpnPanels])
   const userOverviewStats = useMemo(() => buildAdminUserOverviewStats(userOverview), [userOverview])
+  const filteredOrders = useMemo(() => {
+    const searchText = orderSearch.trim().toLowerCase()
+    return orders.filter((order) => {
+      const statusMatches = orderStatusFilter === 'all' || order.status === orderStatusFilter
+      if (!statusMatches) return false
+      if (!searchText) return true
+      return [
+        order.id,
+        order.userId,
+        order.userDisplayName,
+        order.userEmail,
+        order.tariffId,
+        order.tariffName,
+        order.status,
+        order.type,
+        order.channel,
+        order.paymentProvider,
+        order.lastPaymentId,
+        order.lastPaymentStatus,
+        order.linkedSubscriptionId
+      ].some((value) => s(value, '').toLowerCase().includes(searchText))
+    })
+  }, [orders, orderSearch, orderStatusFilter])
 
   const safeLoad = async <T,>(area: string, loader: () => Promise<T>, fallback: T, errors: LoadError[]) => {
     try {
@@ -1176,9 +1215,40 @@ export function App() {
 
   const handleRecheckPayment = async (paymentId: string) => runAction(paymentId, async () => {
     const payment = await api.recheckAdminPayment(token, paymentId)
-    setNotice(`Платеж ${payment.id.slice(0, 8)} проверен: ${payment.status}`)
+    setNotice(`Платеж ${shortId(payment.paymentId)} проверен: ${payment.status}`)
     await loadAll(token)
   })
+
+  const handleRecheckOrderPayment = async (order: OrderDto) => runAction(`order-recheck-${order.id}`, async () => {
+    const payment = await api.recheckAdminOrderPayment(token, order.id)
+    setNotice(`Заказ ${shortId(order.id)}: последний платеж ${shortId(payment.paymentId)} проверен, статус ${payment.status}.`)
+    await loadAll(token)
+  })
+
+  const openOrderUser = (order: OrderDto) => {
+    setSelectedUserId(order.userId)
+    setActiveSection('users')
+    if (typeof window !== 'undefined') window.location.hash = 'users'
+    setNotice(`Открыта карточка пользователя ${order.userEmail || shortId(order.userId)} по заказу ${shortId(order.id)}.`)
+  }
+
+  const openOrderPayment = (order: OrderDto) => {
+    setActiveSection('payments')
+    if (typeof window !== 'undefined') window.location.hash = 'payments'
+    if (order.lastPaymentId && typeof window !== 'undefined' && typeof document !== 'undefined') {
+      window.setTimeout(() => document.getElementById(`payment-${order.lastPaymentId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0)
+    }
+    setNotice(order.lastPaymentId ? `Открыт связанный платеж ${shortId(order.lastPaymentId)}.` : 'У заказа пока нет платежной попытки.')
+  }
+
+  const openOrderSubscription = (order: OrderDto) => {
+    setActiveSection('subscriptions')
+    if (typeof window !== 'undefined') window.location.hash = 'subscriptions'
+    if (order.linkedSubscriptionId && typeof window !== 'undefined' && typeof document !== 'undefined') {
+      window.setTimeout(() => document.getElementById(`subscription-${order.linkedSubscriptionId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0)
+    }
+    setNotice(order.linkedSubscriptionId ? `Открыта связанная подписка ${shortId(order.linkedSubscriptionId)}.` : 'У заказа нет связанной подписки.')
+  }
 
   const handleRefundPayment = async (payment: PaymentAttemptDto) => {
     await runAction(payment.id, async () => {
@@ -2343,16 +2413,53 @@ export function App() {
       <div className="section card-list-two" hidden={activeSection !== 'payments'}>
         <Card>
           <h3>Заказы</h3>
+          <div className="toolbar">
+            <label className="compact-field">
+              <span>Статус</span>
+              <select value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value)}>
+                {orderStatusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label className="compact-field flex-grow">
+              <span>Поиск</span>
+              <input value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} placeholder="email, тариф, ID заказа или платежа" />
+            </label>
+            {(orderStatusFilter !== 'all' || orderSearch) && <PrimaryButton className="button-ghost" onClick={() => { setOrderStatusFilter('all'); setOrderSearch('') }}>Сбросить</PrimaryButton>}
+          </div>
+          <div className="muted">Показано {filteredOrders.length} из {orders.length}. Фильтры помогают быстро найти зависшие оплаты, ошибки выдачи и возвраты.</div>
           <div className="list-stack">
             {orders.length === 0 && <EmptyState title="Заказов нет" description="Новые покупки и продления появятся здесь." />}
-            {orders.slice(0, 12).map((order) => <div key={order.id} className="list-item-vertical"><div className="item-head"><strong>{order.amount} {order.currency}</strong><StatusBadge value={order.status} /></div><div className="muted">Пользователь: {order.userDisplayName || shortId(order.userId)} · тариф: {order.tariffName || shortId(order.tariffId)} · канал: {order.channel ?? '—'} · оплата: {order.paymentProvider ?? '—'}</div><div className="muted">Оплачен: {formatDate(order.paidAt)} · попыток оплаты: {order.paymentAttemptsCount ?? 0} · подписка: {shortId(order.linkedSubscriptionId)}</div></div>)}
+            {orders.length > 0 && filteredOrders.length === 0 && <EmptyState title="Заказы не найдены" description="Измените статус или поисковый запрос." />}
+            {filteredOrders.slice(0, 40).map((order) => (
+              <div key={order.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{order.amount} {order.currency} · {order.tariffName || shortId(order.tariffId)}</strong>
+                    <div className="muted">Пользователь: {order.userDisplayName || order.userEmail || shortId(order.userId)} · канал: {order.channel ?? '—'} · тип: {order.type ?? '—'}</div>
+                    <div className="muted">Создан: {formatDate(order.createdAt)} · истекает: {formatDate(order.expiresAt)} · оплачен: {formatDate(order.paidAt)}</div>
+                    <div className="muted">Провайдер: {order.paymentProvider ?? '—'} · попыток оплаты: {order.paymentAttemptsCount ?? 0} · последний платеж: {shortId(order.lastPaymentId)} {order.lastPaymentStatus ? `(${order.lastPaymentStatus})` : ''}</div>
+                    <div className="muted">Заказ: {shortId(order.id)} · подписка: {shortId(order.linkedSubscriptionId)}</div>
+                  </div>
+                  <div className="item-status">
+                    <StatusBadge value={order.status} />
+                    {order.lastPaymentStatus && <StatusBadge value={order.lastPaymentStatus} />}
+                  </div>
+                </div>
+                <div className="toolbar">
+                  <PrimaryButton className="button-secondary" onClick={() => openOrderUser(order)}>К пользователю</PrimaryButton>
+                  <PrimaryButton className="button-secondary" disabled={!order.lastPaymentId} title={order.lastPaymentId ? undefined : 'У заказа нет платежной попытки'} onClick={() => openOrderPayment(order)}>К платежу</PrimaryButton>
+                  <PrimaryButton className="button-secondary" disabled={!order.linkedSubscriptionId} title={order.linkedSubscriptionId ? undefined : 'У заказа нет связанной подписки'} onClick={() => openOrderSubscription(order)}>К подписке</PrimaryButton>
+                  <PrimaryButton disabled={!order.lastPaymentId || actionBusyId === `order-recheck-${order.id}`} title={order.lastPaymentId ? undefined : 'Сначала нужна платежная попытка'} onClick={() => void handleRecheckOrderPayment(order)}>Проверить оплату</PrimaryButton>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
         <Card>
           <h3>Платежи, вебхуки и возвраты</h3>
           <div className="list-stack">
             {payments.length === 0 && <EmptyState title="Платежей нет" description="История попыток оплаты появится после покупок." />}
-            {payments.slice(0, 8).map((payment) => <div key={payment.id} className="list-item-vertical"><div className="item-head"><strong>{payment.provider} · {payment.amount} {payment.currency}</strong><StatusBadge value={payment.status} /></div><div className="muted">Заказ: {shortId(payment.orderId)} · транзакция: {payment.providerPaymentId || '—'} · активация: {payment.isActivationProcessed ? 'обработана' : 'ожидает'}</div><div className="toolbar"><PrimaryButton disabled={actionBusyId === payment.id} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton><ConfirmButton disabled={actionBusyId === payment.id || payment.status !== 'Succeeded'} className="button-secondary" message={`Вернуть платеж ${payment.amount} ${payment.currency}? Действие будет записано в аудит.`} onConfirm={() => void handleRefundPayment(payment)}>Вернуть платеж</ConfirmButton></div></div>)}
+            {payments.slice(0, 8).map((payment) => <div id={`payment-${payment.id}`} key={payment.id} className="list-item-vertical"><div className="item-head"><strong>{payment.provider} · {payment.amount} {payment.currency}</strong><StatusBadge value={payment.status} /></div><div className="muted">Заказ: {shortId(payment.orderId)} · транзакция: {payment.providerPaymentId || '—'} · активация: {payment.isActivationProcessed ? 'обработана' : 'ожидает'}</div><div className="toolbar"><PrimaryButton disabled={actionBusyId === payment.id} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton><ConfirmButton disabled={actionBusyId === payment.id || payment.status !== 'Succeeded'} className="button-secondary" message={`Вернуть платеж ${payment.amount} ${payment.currency}? Действие будет записано в аудит.`} onConfirm={() => void handleRefundPayment(payment)}>Вернуть платеж</ConfirmButton></div></div>)}
             {paymentWebhookEvents.slice(0, 4).map((event) => <div key={event.id} className="list-item"><span>{event.provider} · {event.eventType} · подпись {event.signatureValidated ? 'проверена' : 'не проверена'}</span><StatusBadge value={event.status} /></div>)}
             {refunds.slice(0, 4).map((refund) => <div key={refund.id} className="list-item"><span>Возврат {refund.amount} {refund.currency} · {refund.providerRefundId || shortId(refund.id)}</span><StatusBadge value={refund.status} /></div>)}
           </div>
@@ -2434,7 +2541,7 @@ export function App() {
               const isActionBusy = actionBusyId.endsWith(subscription.id)
               const canActivate = !['Active', 'Cancelled', 'Expired'].includes(subscription.status)
               return (
-                <div key={subscription.id} className="list-item-vertical">
+                <div id={`subscription-${subscription.id}`} key={subscription.id} className="list-item-vertical">
                   <div className="item-head">
                     <div>
                       <strong>{subscription.tariffName || shortId(subscription.tariffId)}</strong>

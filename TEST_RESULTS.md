@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: управление заказами в админке
+
+Что проверено:
+
+- Backend `/api/admin/orders` принимает фильтры `status/search`, сохраняет SQLite-safe сортировку и возвращает последний платеж заказа.
+- Backend `/api/admin/orders/{id}/recheck-payment` проверяет последнюю платежную попытку заказа через общий payment orchestrator.
+- Раздел админки «Заказы» получил фильтр статуса, поиск, расширенные карточки, переходы к пользователю/платежу/подписке и кнопку «Проверить оплату».
+- Исправлен frontend-контракт `recheckAdminPayment`: теперь он типизирован как `PaymentStatusResult`, а не как платежная попытка.
+- Добавлена запись «Что нового» `2026-06-11-admin-order-management`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminOrderManagementTests|AdminAuthorizationPolicyTests"
+cd frontend
+npm test -- --test-name-pattern "admin order"
+```
+
+Результат:
+
+- Backend narrow tests: 25/25 пройдено.
+- Backend full suite: 289/289 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 58/58 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/admin/orders?status=PendingPayment&search=smoke`, `/api/admin/orders/{missingId}/recheck-payment`; recheck несуществующего заказа корректно вернул HTTP 400.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: управление подписками в админке
 
 Что проверено:

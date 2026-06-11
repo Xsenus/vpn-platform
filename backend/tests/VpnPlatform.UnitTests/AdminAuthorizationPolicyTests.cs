@@ -98,6 +98,18 @@ public class AdminAuthorizationPolicyTests
         Assert.Contains(AdminPolicies.ProvisioningManage, policies);
     }
 
+    [Theory]
+    [InlineData(nameof(AdminOperationsController.RecheckPayment))]
+    [InlineData(nameof(AdminOperationsController.RecheckOrderPayment))]
+    [InlineData(nameof(AdminOperationsController.RefundPayment))]
+    public void Finance_Write_Endpoints_Should_Require_FinanceWrite(string methodName)
+    {
+        var method = typeof(AdminOperationsController).GetMethod(methodName);
+        Assert.NotNull(method);
+        var policies = method!.GetCustomAttributes<AuthorizeAttribute>().Select(x => x.Policy).ToList();
+        Assert.Contains(AdminPolicies.FinanceWrite, policies);
+    }
+
     [Fact]
     public void Telegram_Bot_Settings_Write_Endpoint_Should_Require_BotManage()
     {

@@ -466,40 +466,101 @@ public class AdminOperationsController : ControllerBase
 
     [HttpGet("orders")]
     [Authorize(Policy = AdminPolicies.FinanceRead)]
-    public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetOrders([FromQuery] string? status = null, [FromQuery] string? search = null, CancellationToken cancellationToken = default)
     {
-        var orders = await _db.Orders.AsNoTracking()
+        var parsedStatuses = ParseOrderStatuses(status);
+        if (parsedStatuses is null)
+        {
+            return BadRequest(new { error = "Invalid order status filter." });
+        }
+
+        var query = _db.Orders.AsNoTracking()
             .Include(x => x.User)
             .Include(x => x.Tariff)
             .Include(x => x.PaymentAttempts)
-            .Take(300)
-            .ToListAsync(cancellationToken);
+            .AsQueryable();
 
-        return Ok(orders.Select(x => new
-            {
-                x.Id,
-                x.UserId,
-                UserDisplayName = x.User != null ? x.User.DisplayName : string.Empty,
-                UserEmail = x.User != null ? x.User.Email : null,
-                x.TariffId,
-                TariffName = x.Tariff != null ? x.Tariff.Name : string.Empty,
-                x.Amount,
-                x.Currency,
-                Status = x.Status.ToString(),
-                Type = x.Type.ToString(),
-                Channel = x.Channel.ToString(),
-                PaymentProvider = x.PaymentProvider.ToString(),
-                x.CheckoutSessionId,
-                x.ExpiresAt,
-                x.PaidAt,
-                x.IsFirstPurchase,
-                PaymentAttemptsCount = x.PaymentAttempts.Count,
-                LinkedSubscriptionId = OrderService.GetRenewalSubscriptionId(x),
-                x.CreatedAt,
-                x.UpdatedAt
-            })
+        if (parsedStatuses.Count > 0)
+        {
+            query = query.Where(x => parsedStatuses.Contains(x.Status));
+        }
+
+        var orders = await query.ToListAsync(cancellationToken);
+        orders = orders
             .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+
+        var searchText = NormalizeSearchText(search);
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            orders = orders
+                .Where(x => OrderMatchesSearch(x, searchText))
+                .ToList();
+        }
+
+        return Ok(orders.Take(300).Select(x =>
+            {
+                var lastPayment = x.PaymentAttempts
+                    .OrderByDescending(payment => payment.CreatedAt)
+                    .FirstOrDefault();
+
+                return new
+                {
+                    x.Id,
+                    x.UserId,
+                    UserDisplayName = x.User != null ? x.User.DisplayName : string.Empty,
+                    UserEmail = x.User != null ? x.User.Email : null,
+                    x.TariffId,
+                    TariffName = x.Tariff != null ? x.Tariff.Name : string.Empty,
+                    x.Amount,
+                    x.Currency,
+                    Status = x.Status.ToString(),
+                    Type = x.Type.ToString(),
+                    Channel = x.Channel.ToString(),
+                    PaymentProvider = x.PaymentProvider.ToString(),
+                    x.CheckoutSessionId,
+                    x.ExpiresAt,
+                    x.PaidAt,
+                    x.IsFirstPurchase,
+                    PaymentAttemptsCount = x.PaymentAttempts.Count,
+                    LastPaymentId = lastPayment?.Id,
+                    LastPaymentStatus = lastPayment?.Status.ToString(),
+                    LastPaymentProvider = lastPayment?.Provider.ToString(),
+                    LinkedSubscriptionId = OrderService.GetRenewalSubscriptionId(x),
+                    x.CreatedAt,
+                    x.UpdatedAt
+                };
+            })
             .ToList());
+    }
+
+    [HttpPost("orders/{id:guid}/recheck-payment")]
+    [Authorize(Policy = AdminPolicies.FinanceWrite)]
+    public async Task<IActionResult> RecheckOrderPayment(Guid id, CancellationToken cancellationToken)
+    {
+        var paymentCandidates = await _db.Payments.AsNoTracking()
+            .Where(x => x.OrderId == id)
+            .ToListAsync(cancellationToken);
+        var payment = paymentCandidates
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefault();
+
+        if (payment is null)
+        {
+            return BadRequest(new { error = "Order does not have payment attempts to recheck." });
+        }
+
+        var result = await _paymentOrchestrator.RecheckPaymentAsync(payment.Id, cancellationToken);
+        return result.IsSuccess
+            ? Ok(new
+            {
+                OrderId = id,
+                PaymentId = payment.Id,
+                Status = result.Value!.Status.ToString(),
+                result.Value.RawResponse,
+                result.Value.StatusReason
+            })
+            : BadRequest(new { error = result.Error });
     }
 
     [HttpGet("payments")]
@@ -1626,6 +1687,47 @@ public class AdminOperationsController : ControllerBase
 
     private static bool IsProvisioningFailure(ProvisioningRunStatus status)
         => status is ProvisioningRunStatus.Failed or ProvisioningRunStatus.PrecheckFailed;
+
+    private static IReadOnlyCollection<OrderStatus>? ParseOrderStatuses(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status) || status.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            return Array.Empty<OrderStatus>();
+        }
+
+        var result = new List<OrderStatus>();
+        foreach (var rawValue in status.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!Enum.TryParse<OrderStatus>(rawValue, ignoreCase: true, out var parsed))
+            {
+                return null;
+            }
+
+            result.Add(parsed);
+        }
+
+        return result.Distinct().ToArray();
+    }
+
+    private static string NormalizeSearchText(string? value)
+        => (value ?? string.Empty).Trim().ToLowerInvariant();
+
+    private static bool OrderMatchesSearch(Order order, string searchText)
+        => order.Id.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.UserId.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.TariffId.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || (order.User?.Email ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || (order.User?.DisplayName ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || (order.Tariff?.Name ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.Status.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.Type.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.Channel.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.PaymentProvider.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.Currency.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || order.PaymentAttempts.Any(payment =>
+                payment.Id.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
+                || payment.ProviderPaymentId.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+                || payment.Status.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
     private void AddAuditLog(string action, string entityType, Guid entityId, string beforeJson, string afterJson)
     {
