@@ -983,6 +983,8 @@ export function App() {
                     key={conversation.id}
                     type="button"
                     className={`support-ticket${selectedSupportConversation?.id === conversation.id ? ' selected-item' : ''}`}
+                    aria-pressed={selectedSupportConversation?.id === conversation.id}
+                    aria-label={`${conversation.subject || 'Обращение в поддержку'}, статус ${conversation.status}`}
                     onClick={() => setSelectedSupportConversationId(conversation.id)}
                   >
                     <span>

@@ -1148,6 +1148,7 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
 test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => {
   const publicSource = readFileSync(new URL('../apps/public-web/src/App.tsx', import.meta.url), 'utf8')
   const cabinetSource = readFileSync(new URL('../apps/cabinet/src/App.tsx', import.meta.url), 'utf8')
+  const appVersionSource = readFileSync(new URL('../apps/cabinet/src/AppVersion.tsx', import.meta.url), 'utf8')
   const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
   const adminStylesSource = readFileSync(new URL('../apps/admin-panel/src/styles.css', import.meta.url), 'utf8')
   const publicStylesSource = readFileSync(new URL('../apps/public-web/src/styles.css', import.meta.url), 'utf8')
@@ -1171,6 +1172,15 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.doesNotMatch(publicSource + cabinetSource + adminSource, /useState\(sessionStorage/)
   assert.match(cabinetSource, /'5474': '5473'/)
   assert.match(cabinetSource, /aria-current="page"/)
+  assert.match(cabinetSource, /aria-pressed=\{selectedSupportConversation\?\.id === conversation\.id\}/)
+  assert.match(cabinetSource, /aria-label=\{`\$\{conversation\.subject/)
+  assert.match(appVersionSource, /useRef/)
+  assert.match(appVersionSource, /dialogRef\.current\?\.focus\(\)/)
+  assert.match(appVersionSource, /previousActiveElement\?\.focus\(\)/)
+  assert.match(appVersionSource, /event\.key !== 'Escape'/)
+  assert.match(appVersionSource, /aria-describedby="app-version-summary"/)
+  assert.match(appVersionSource, /aria-current=\{release\.releaseId === selectedRelease\.releaseId/)
+  assert.match(appVersionSource, /aria-expanded=\{historyOpen\}/)
   assert.match(cabinetSource, /Доступы не выдавались|Ключ ещё не готов/)
   assert.doesNotMatch(cabinetSource, /Перевыпуск ключа скоро/)
   assert.match(adminSource, /getAdminDashboardSummary/)
@@ -1347,6 +1357,9 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   }
 
   assert.match(stylesSource, /--page-x/)
+  assert.match(stylesSource, /\.sr-only/)
+  assert.match(stylesSource, /prefers-reduced-motion: reduce/)
+  assert.match(stylesSource, /\.button:focus-visible/)
   assert.match(stylesSource, /minmax\(min\(220px, 100%\), 1fr\)/)
   assert.match(stylesSource, /minmax\(min\(180px, 100%\), 1fr\)/)
   assert.match(stylesSource, /\.data-table-lite[\s\S]*min-width: 480px/)

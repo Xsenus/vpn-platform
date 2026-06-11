@@ -159,7 +159,12 @@ function badgeLabel(value: unknown) {
 export function StatusBadge({ value }: { value: unknown }) {
   const raw = String(value ?? 'Unknown')
   const label = badgeLabel(raw)
-  return <span className={`status-badge status-badge-${badgeTone(raw)}`}>{label || 'Неизвестно'}</span>
+  const resolvedLabel = label || 'Неизвестно'
+  return (
+    <span className={`status-badge status-badge-${badgeTone(raw)}`} role="status" aria-label={`Статус: ${resolvedLabel}`}>
+      {resolvedLabel}
+    </span>
+  )
 }
 
 export function CodeBlock({ children }: PropsWithChildren) {
@@ -274,16 +279,32 @@ export function ErrorBlock({ message }: { message: string }) {
 }
 
 export function CopyButton({ value, label = 'Скопировать', disabled }: { value?: string | null; label?: string; disabled?: boolean }) {
+  const [copied, setCopied] = useState(false)
+  const canCopy = Boolean(value) && !disabled
+
+  const handleCopy = async () => {
+    if (!value) return
+    await navigator.clipboard?.writeText(value)
+    setCopied(true)
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => setCopied(false), 1800)
+    }
+  }
+
   return (
-    <PrimaryButton
-      type="button"
-      disabled={disabled || !value}
-      onClick={() => value && void navigator.clipboard?.writeText(value)}
-      title={value ? 'Скопировать в буфер обмена' : 'Нечего копировать'}
-      className="button-secondary"
-    >
-      {label}
-    </PrimaryButton>
+    <span className="copy-action">
+      <PrimaryButton
+        type="button"
+        disabled={!canCopy}
+        onClick={() => void handleCopy()}
+        title={value ? 'Скопировать в буфер обмена' : 'Нечего копировать'}
+        aria-label={value ? `${label}: скопировать значение в буфер обмена` : `${label}: нечего копировать`}
+        className="button-secondary"
+      >
+        {label}
+      </PrimaryButton>
+      <span className="sr-only" role="status" aria-live="polite">{copied ? 'Скопировано' : ''}</span>
+    </span>
   )
 }
 
@@ -307,6 +328,7 @@ export function PasswordField({
   help?: string
 }) {
   const inputId = useId()
+  const helpId = useId()
   const [visible, setVisible] = useState(false)
 
   return (
@@ -322,6 +344,7 @@ export function PasswordField({
           autoComplete={autoComplete}
           minLength={minLength}
           required={required}
+          aria-describedby={help ? helpId : undefined}
         />
         <PrimaryButton
           type="button"
@@ -334,7 +357,7 @@ export function PasswordField({
           {visible ? 'Скрыть' : 'Показать'}
         </PrimaryButton>
       </span>
-      {help && <small>{help}</small>}
+      {help && <small id={helpId}>{help}</small>}
     </div>
   )
 }
@@ -374,13 +397,14 @@ export function ConfirmButton({ message, onConfirm, children, disabled, style, c
         className={className}
         aria-expanded={open}
         aria-controls={panelId}
+        aria-haspopup="dialog"
         aria-busy={busy}
         onClick={() => setOpen((current) => !current)}
       >
         {children}
       </PrimaryButton>
       {open && (
-        <span id={panelId} className="confirm-action-panel" role="group" aria-labelledby={messageId}>
+        <span id={panelId} className="confirm-action-panel" role="dialog" aria-modal="false" aria-labelledby={messageId}>
           <span id={messageId} className="confirm-action-message">{message}</span>
           <PrimaryButton type="button" className="button-danger" disabled={busy} aria-busy={busy} onClick={() => void confirm()}>
             {busy ? 'Выполняем...' : 'Подтвердить'}
@@ -396,6 +420,7 @@ export function ConfirmButton({ message, onConfirm, children, disabled, style, c
 
 export function SecretField({ label, configured, placeholder = 'Секрет хранится скрыто', value, onChange }: { label: string; configured?: boolean; placeholder?: string; value?: string; onChange?: (value: string) => void }) {
   const inputId = useId()
+  const helpId = useId()
   const [visible, setVisible] = useState(false)
 
   return (
@@ -409,6 +434,7 @@ export function SecretField({ label, configured, placeholder = 'Секрет х�
           placeholder={placeholder}
           type={visible ? 'text' : 'password'}
           autoComplete="new-password"
+          aria-describedby={helpId}
         />
         <PrimaryButton
           type="button"
@@ -421,7 +447,7 @@ export function SecretField({ label, configured, placeholder = 'Секрет х�
           {visible ? 'Скрыть' : 'Показать'}
         </PrimaryButton>
       </span>
-      <small>Значение не возвращается API и не показывается после сохранения.</small>
+      <small id={helpId}>Значение не возвращается API и не показывается после сохранения.</small>
     </div>
   )
 }

@@ -2,6 +2,41 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: доступность интерфейса
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P3-UX-006` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- В `@vpn-platform/ui` улучшены доступные состояния общих компонентов: `StatusBadge`, `CopyButton`, `PasswordField`, `SecretField`, `ConfirmButton`.
+- Для копирования добавлен скрытый live-region `sr-only`, для паролей и секретов - `aria-describedby`, для статусов - `role="status"`, для подтверждения - `role="dialog"` и `aria-haspopup="dialog"`.
+- Усилен видимый focus ring и добавлено правило `prefers-reduced-motion: reduce`.
+- Окно "Что нового" в кабинете получает фокус при открытии, закрывается по Escape, возвращает фокус на предыдущий элемент, имеет `aria-describedby` и отмечает выбранный релиз через `aria-current`.
+- Обращения в поддержку получили выбранное состояние через `aria-pressed` и понятное `aria-label`.
+- Добавлен release entry `2026-06-11-accessibility-polish` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs'); const p='backend/src/VpnPlatform.Api/AppReleases/releases.json'; const data=JSON.parse(fs.readFileSync(p,'utf8')); console.log(data.length, data[data.length-1].releaseId, data[data.length-1].version);"
+cd frontend
+npm test
+npm run typecheck
+npm run build
+cd ..
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+```
+
+Результат:
+
+- App releases JSON: валиден, последний релиз `2026-06-11-accessibility-polish`, версия `0.61.0`.
+- Frontend tests: 60/60 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Backend full suite: 301/301 пройдено.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/mark-seen`, `/api/app-version/admin/releases/overview`, `/api/public/payments/providers`, `/api/public/tariffs`; latest release `2026-06-11-accessibility-polish`, версия `0.61.0`, `mark-seen=true`, повторный latest вернул `seenByCurrentUser=true`, публичные провайдеры `8`, публичные тарифы `3`.
+- Browser accessibility smoke: public-web, cabinet и admin-panel открыты на 390 px; у интерактивных элементов нет пустых доступных имен, есть skip link/main, правило reduced motion подключено, горизонтального переполнения нет.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах выполнена, совпадений нет.
+
 ## Проверка 2026-06-11: адаптивность интерфейса
 
 Что проверено:

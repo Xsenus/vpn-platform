@@ -408,9 +408,10 @@ git diff --check
   - Что сделано: общий UI-слой получил токены адаптивных отступов и явные правила для 1280, 1024, 768 и 390 px; админка, публичный сайт и кабинет получили отдельные mobile/tablet правила для навигации, карточек, тарифов, таблиц, поддержки и окна "Что нового".
   - Доказательство: frontend static guard проверяет обязательные breakpoint-правила и критичные responsive CSS-блоки; дополнительно пройдены frontend typecheck/tests/build, backend full suite и local SQLite HTTP-smoke latest release `2026-06-11-responsive-breakpoints`.
 
-- [ ] `P3-UX-006` Доступность.
+- [x] `P3-UX-006` Доступность. 2026-06-11.
   - Что сделать: keyboard navigation, focus states, contrast, aria-label для icon buttons.
-  - Доказательство: axe/lighthouse или ручной отчет.
+  - Что сделано: общий UI-слой получил screen-reader-only live-region для копирования, `aria-describedby` для password/secret полей, `role=status` для бейджей, `role=dialog` для confirm-popover, усиленный focus ring и `prefers-reduced-motion`; окно "Что нового" в кабинете получает фокус при открытии, закрывается по Escape, возвращает фокус назад и описывает выбранный релиз; обращения в поддержку получили выбранное состояние через `aria-pressed`.
+  - Доказательство: frontend UI/static tests, browser accessibility smoke на локальных public/cabinet/admin, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-accessibility-polish`.
 
 - [ ] `P3-UX-007` Проверка русской локализации.
   - Что сделать: отсутствие mojibake, нормальные переносы, нет английских технических сообщений пользователю.

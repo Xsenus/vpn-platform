@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ApiClient, AppReleaseDto, AppReleaseItemDto } from '@vpn-platform/api-client'
 import { PrimaryButton } from '@vpn-platform/ui'
@@ -159,24 +159,51 @@ type AppVersionModalProps = {
 
 export function AppVersionModal({ latestRelease, selectedRelease, history, loadingHistory, onClose, onSelectRelease, onShowCurrent }: AppVersionModalProps) {
   const [historyOpen, setHistoryOpen] = useState(false)
+  const dialogRef = useRef<HTMLElement | null>(null)
   const isCurrent = latestRelease?.releaseId === selectedRelease.releaseId
+
+  useEffect(() => {
+    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    dialogRef.current?.focus()
+
+    return () => {
+      previousActiveElement?.focus()
+    }
+  }, [])
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Escape') return
+    event.stopPropagation()
+    onClose()
+  }
 
   return createPortal(
     <div className="app-version-overlay" role="presentation">
-      <section className="app-version-modal" role="dialog" aria-modal="true" aria-labelledby="app-version-title">
+      <section
+        ref={dialogRef}
+        className="app-version-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="app-version-title"
+        aria-describedby="app-version-summary"
+        tabIndex={-1}
+        onKeyDown={handleDialogKeyDown}
+      >
         <button className="app-version-close" type="button" aria-label="Закрыть окно что нового" onClick={onClose}>×</button>
-        <aside className={`app-version-history ${historyOpen ? 'is-open' : ''}`} aria-label="История обновлений">
+        <aside id="app-version-history" className={`app-version-history ${historyOpen ? 'is-open' : ''}`} aria-label="История обновлений">
           <div className="app-version-history-head">
             <strong>История обновлений</strong>
             <PrimaryButton type="button" className="button-ghost app-version-history-toggle" onClick={() => setHistoryOpen(false)}>Скрыть</PrimaryButton>
           </div>
-          {loadingHistory && <p className="muted">Загружаем историю...</p>}
+          {loadingHistory && <p className="muted" role="status" aria-live="polite">Загружаем историю...</p>}
           <div className="app-version-history-list">
             {history.map((release) => (
               <button
                 key={release.releaseId}
                 type="button"
                 className={release.releaseId === selectedRelease.releaseId ? 'active' : ''}
+                aria-current={release.releaseId === selectedRelease.releaseId ? 'true' : undefined}
+                aria-label={`Версия ${release.version}, ${formatReleaseDate(release.releasedAt)}`}
                 onClick={() => {
                   onSelectRelease(release.releaseId)
                   setHistoryOpen(false)
@@ -191,13 +218,21 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
         </aside>
         <div className="app-version-content">
           <div className="app-version-mobile-actions">
-            <PrimaryButton type="button" className="button-secondary" onClick={() => setHistoryOpen(true)}>История</PrimaryButton>
+            <PrimaryButton
+              type="button"
+              className="button-secondary"
+              aria-expanded={historyOpen}
+              aria-controls="app-version-history"
+              onClick={() => setHistoryOpen(true)}
+            >
+              История
+            </PrimaryButton>
           </div>
           <header className="app-version-header">
             <div>
               <p className="eyebrow">Что нового</p>
               <h2 id="app-version-title">{selectedRelease.title}</h2>
-              <p>{selectedRelease.summary}</p>
+              <p id="app-version-summary">{selectedRelease.summary}</p>
             </div>
             <div className="app-version-meta">
               <span>Версия {selectedRelease.version}</span>
