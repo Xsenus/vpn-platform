@@ -375,9 +375,10 @@ git diff --check
   - Что сделано: backend показывает только активные опубликованные релизы в `latest/history`, не дает отметить просмотренным скрытый или будущий релиз, а админские endpoints получили фильтры `visibility/source/search` и сводку `/api/app-version/admin/releases/overview`. В админке раздел "Что нового" показывает счетчики опубликованных, будущих, скрытых релизов, просмотры, последний опубликованный релиз, фильтры и статус "Запланировано" для будущих публикаций. Кабинет открывает новое обновление, показывает историю и фиксирует `mark-seen`.
   - Доказательство: `AppVersionControllerTests`, frontend `ApiClient app version endpoints are tokenized and mapped`, typecheck/build, local SQLite HTTP-smoke.
 
-- [ ] `P2-ADM-REL-002` Добавлять описание задач после крупных изменений.
+- [x] `P2-ADM-REL-002` Добавлять описание задач после крупных изменений. 2026-06-11.
   - Что сделать: после реализации этапа roadmap добавлять запись в "Что нового".
-  - Доказательство: release entry ID и screenshot.
+  - Что сделано: добавлен static guard-тест, который сверяет закрытые пункты P2.7 с `AppReleases/releases.json` и `TEST_RESULTS.md`, чтобы крупные изменения не проходили без записи в "Что нового" и результатов проверки. Для текущего этапа добавлена запись `2026-06-11-release-note-guard`.
+  - Доказательство: `ReleaseDocumentationGuardTests`, release entry ID `2026-06-11-release-note-guard`, local SQLite HTTP-smoke latest/history.
 
 ## P3. UX/UI и единая стилистика
 

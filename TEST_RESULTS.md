@@ -2,6 +2,37 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: обязательные записи «Что нового» для этапов
+
+Что проверено:
+
+- Закрытый roadmap-пункт `P2-ADM-REL-002` отмечен в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен release entry `2026-06-11-release-note-guard` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Backend static guard проверяет, что закрытые пункты P2.7 имеют запись в `releases.json` и упоминание releaseId в `TEST_RESULTS.md`.
+- Backend static guard проверяет, что seed-файл «Что нового» содержит пользовательские title/summary/items и допустимые типы пунктов.
+- Local SQLite проверяет, что seed релизов загружается в БД и latest/history видят новый релиз.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+cd frontend
+npm run typecheck
+npm test
+npm run build
+```
+
+Результат:
+
+- Backend narrow tests: 14/14 пройдено.
+- Backend full suite: 301/301 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 59/59 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/mark-seen`, `/api/app-version/admin/releases/overview`; latest release `2026-06-11-release-note-guard`, версия `0.55.0`, `mark-seen=true`, повторный latest вернул `seenByCurrentUser=true`.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: управление разделом «Что нового»
 
 Что проверено:
