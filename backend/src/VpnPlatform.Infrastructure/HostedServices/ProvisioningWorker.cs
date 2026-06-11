@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -78,7 +79,7 @@ public sealed class ProvisioningWorker : BackgroundService
         var node = await db.VpnNodes.FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);
         if (node is null)
         {
-            run.Status = ProvisioningRunStatus.Failed;
+            StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Failed, clock.UtcNow);
             run.FinishedAt = clock.UtcNow;
             run.ExecutionLog = "Provisioning failed: node not found.";
             await db.SaveChangesAsync(cancellationToken);
@@ -86,7 +87,7 @@ public sealed class ProvisioningWorker : BackgroundService
         }
 
         var now = clock.UtcNow;
-        run.Status = run.DryRun ? ProvisioningRunStatus.Prechecking : ProvisioningRunStatus.Deploying;
+        StatusStateMachine.SetProvisioningRunStatus(run, run.DryRun ? ProvisioningRunStatus.Prechecking : ProvisioningRunStatus.Deploying, now);
         run.StartedAt = now;
         run.ExecutionLog = ProvisioningService.AppendLog(run.ExecutionLog, run.DryRun ? $"Precheck started for node {node.Name}." : $"Deploy started for node {node.Name}.");
         node.ProvisioningStatus = run.Status;
@@ -144,7 +145,7 @@ public sealed class ProvisioningWorker : BackgroundService
 
         if (!result.Success)
         {
-            run.Status = ProvisioningRunStatus.PrecheckFailed;
+            StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.PrecheckFailed, now);
             node.ProvisioningStatus = ProvisioningRunStatus.PrecheckFailed;
             node.Status = NodeStatus.Error;
             node.IsAvailableForNewUsers = false;
@@ -155,7 +156,7 @@ public sealed class ProvisioningWorker : BackgroundService
             return;
         }
 
-        run.Status = ProvisioningRunStatus.ReadyToDeploy;
+        StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.ReadyToDeploy, now);
         node.ProvisioningStatus = ProvisioningRunStatus.ReadyToDeploy;
         node.Status = NodeStatus.New;
         node.UpdatedAt = now;
@@ -194,7 +195,7 @@ public sealed class ProvisioningWorker : BackgroundService
 
         if (!result.Success)
         {
-            run.Status = ProvisioningRunStatus.Failed;
+            StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Failed, now);
             node.ProvisioningStatus = ProvisioningRunStatus.Failed;
             node.Status = NodeStatus.Error;
             node.IsAvailableForNewUsers = false;
@@ -205,7 +206,7 @@ public sealed class ProvisioningWorker : BackgroundService
             return;
         }
 
-        run.Status = ProvisioningRunStatus.Deployed;
+        StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Deployed, now);
         node.ProvisioningStatus = ProvisioningRunStatus.Deployed;
         node.Status = NodeStatus.Ready;
         node.HealthStatus = HealthStatus.Healthy;
@@ -317,13 +318,12 @@ public sealed class ProvisioningWorker : BackgroundService
         }
         else
         {
-            subscription.Status = SubscriptionStatus.Active;
+            StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, clock.UtcNow);
             if (subscription.EndAt < clock.UtcNow.AddDays(1))
             {
                 subscription.EndAt = clock.UtcNow.AddDays(Math.Max(1, tariff.DurationDays));
             }
             subscription.CurrentServerId = node.Id;
-            subscription.UpdatedAt = clock.UtcNow;
         }
 
         var provider = vpnProviderFactory.Get("x3ui");
@@ -353,9 +353,8 @@ public sealed class ProvisioningWorker : BackgroundService
             access.AccessUri = result.AccessUri;
             access.QrCodePath = result.QrCodePath;
             access.ConfigPath = result.ConfigPath;
-            access.Status = AccessCredentialStatus.Active;
+            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Active, clock.UtcNow);
             access.LastSyncedAt = clock.UtcNow;
-            access.UpdatedAt = clock.UtcNow;
             access.Revision += 1;
         }
 

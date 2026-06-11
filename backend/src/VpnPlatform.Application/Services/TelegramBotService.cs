@@ -1246,13 +1246,29 @@ public class TelegramBotService
         var responseKeyboard = LinkedMenuReplyMarkupJson();
         if (payment.Status != PaymentStatus.Succeeded)
         {
-            payment.Status = PaymentStatus.Succeeded;
-            payment.PaidAt = _clock.UtcNow;
+            var now = _clock.UtcNow;
+            var paymentStatus = StatusStateMachine.TrySetPaymentStatus(payment, PaymentStatus.Succeeded, now);
+            if (!paymentStatus.IsSuccess)
+            {
+                payment.StatusReason = paymentStatus.Error ?? string.Empty;
+                payment.WebhookPayload = Redact(rawBody);
+                await _db.SaveChangesAsync(cancellationToken);
+                return new RouteResult(paymentStatus.Error ?? "Telegram Stars payment status transition is not allowed.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            }
+
+            payment.PaidAt = now;
             payment.SignatureValidated = true;
             payment.ExternalEventId = chargeId;
             payment.WebhookPayload = Redact(rawBody);
-            payment.Order.Status = OrderStatus.PaymentReceived;
-            payment.Order.PaidAt = _clock.UtcNow;
+            var orderStatus = StatusStateMachine.TrySetOrderStatus(payment.Order, OrderStatus.PaymentReceived, now);
+            if (!orderStatus.IsSuccess)
+            {
+                payment.StatusReason = orderStatus.Error ?? string.Empty;
+                await _db.SaveChangesAsync(cancellationToken);
+                return new RouteResult(orderStatus.Error ?? "Telegram Stars order status transition is not allowed.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            }
+
+            payment.Order.PaidAt = now;
 
             if (!payment.IsActivationProcessed && _subscriptionService is not null)
             {
@@ -1260,7 +1276,7 @@ public class TelegramBotService
                 if (activation.IsSuccess)
                 {
                     payment.IsActivationProcessed = true;
-                    payment.ActivationProcessedAt = _clock.UtcNow;
+                    payment.ActivationProcessedAt = now;
                     responseText = await BuildActivatedAccessTextAsync(payment.Order, activation.Value!, cancellationToken);
                     responseKeyboard = BuildPostPaymentReplyMarkupJson();
                     await QueueTelegramNotificationAsync(account.TelegramUserId, "subscription_activated", responseText, cancellationToken, responseKeyboard);
@@ -1268,7 +1284,7 @@ public class TelegramBotService
                 else
                 {
                     payment.StatusReason = activation.Error ?? string.Empty;
-                    payment.Order.Status = OrderStatus.PartiallyProcessed;
+                    StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.PartiallyProcessed, now);
                 }
             }
         }

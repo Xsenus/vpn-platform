@@ -728,11 +728,16 @@ public class X3UiPanelService
             access.ProviderAccessId = client.ExternalClientId;
             access.AccessUri = client.ConfigUri;
             access.QrCodePath = client.QrCodePayload;
-            access.Status = client.Enable ? AccessCredentialStatus.Active : AccessCredentialStatus.Disabled;
+            var targetStatus = client.Enable ? AccessCredentialStatus.Active : AccessCredentialStatus.Disabled;
+            var statusResult = StatusStateMachine.TrySetAccessStatus(access, targetStatus, _clock.UtcNow);
+            if (!statusResult.IsSuccess)
+            {
+                continue;
+            }
+
             access.DisabledAt = client.Enable ? null : _clock.UtcNow;
             access.LastSyncedAt = client.LastSyncedAt;
             access.Revision += 1;
-            access.UpdatedAt = _clock.UtcNow;
         }
     }
 

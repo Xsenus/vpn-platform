@@ -419,10 +419,11 @@ git diff --check
 
 ## P4. Backend, доменная логика и надежность
 
-- [ ] `P4-BE-001` Финализировать state machines.
+- [x] `P4-BE-001` Финализировать state machines. 2026-06-11.
   - Что сделать: заказы, платежи, подписки, VPN-доступы, provisioning runs.
-  - Критерий готовности: невозможные переходы запрещены, повторные webhook идемпотентны.
-  - Доказательство: unit/integration tests.
+  - Что сделано: добавлен общий `StatusStateMachine` для `OrderStatus`, `PaymentStatus`, `SubscriptionStatus`, `AccessCredentialStatus` и `ProvisioningRunStatus`; правила подключены к `PaymentOrchestrator`, Telegram Stars successful payment flow, `SubscriptionService`, `VpnAccessLifecycleService`, X3-UI синхронизации access credentials, ручным админским действиям и `ProvisioningWorker`.
+  - Критерий готовности: невозможные переходы запрещены, повторные webhook остаются идемпотентными, поздний cancelled-webhook после successful payment не откатывает платеж/заказ/подписку.
+  - Доказательство: `StatusStateMachineTests`, `PaymentWebhookProcessingTests.YooKassa_Late_Cancelled_Webhook_Should_Not_Downgrade_Succeeded_Payment`, backend full suite 341/341, local SQLite HTTP-smoke latest release `2026-06-11-state-machine-guards`.
 
 - [ ] `P4-BE-002` Идемпотентность webhook.
   - Что сделать: повтор webhook не создает вторую подписку/второй VPN-доступ.

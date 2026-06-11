@@ -70,7 +70,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         if (order.Status == OrderStatus.Expired || order.ExpiresAt <= _clock.UtcNow)
         {
-            order.Status = OrderStatus.Expired;
+            StatusStateMachine.SetOrderStatus(order, OrderStatus.Expired, _clock.UtcNow);
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PaymentInitResult>.Failure("Order expired.");
         }
@@ -145,13 +145,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             payment.ProviderPaymentId = init.PaymentId;
             payment.RawResponse = init.RawResponse;
             payment.ConfirmationUrl = init.RedirectUrl;
-            payment.Status = PaymentStatus.Pending;
+            StatusStateMachine.SetPaymentStatus(payment, PaymentStatus.Pending, now);
             payment.ProviderMode = account.Mode;
             payment.PaymentProviderAccountId = account.Id;
-            payment.UpdatedAt = now;
-            order.Status = OrderStatus.PendingPayment;
+            StatusStateMachine.SetOrderStatus(order, OrderStatus.PendingPayment, now);
             order.PaymentProvider = command.Provider;
-            order.UpdatedAt = now;
 
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PaymentInitResult>.Success(init);
@@ -361,11 +359,14 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             {
                 payment.RefundedAmount += amount;
                 payment.RefundedAt = _clock.UtcNow;
-                payment.Status = payment.RefundedAmount >= payment.Amount ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
+                var nextPaymentStatus = payment.RefundedAmount >= payment.Amount ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
+                StatusStateMachine.SetPaymentStatus(payment, nextPaymentStatus, _clock.UtcNow);
                 if (payment.Order is not null)
                 {
-                    payment.Order.Status = payment.Status == PaymentStatus.Refunded ? OrderStatus.Refunded : payment.Order.Status;
-                    payment.Order.UpdatedAt = _clock.UtcNow;
+                    if (payment.Status == PaymentStatus.Refunded)
+                    {
+                        StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.Refunded, _clock.UtcNow);
+                    }
                 }
             }
 
@@ -387,10 +388,19 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
     {
         var now = _clock.UtcNow;
         var previousStatus = payment.Status;
-        payment.Status = status;
+        var paymentTransition = StatusStateMachine.TrySetPaymentStatus(payment, status, now);
+        if (!paymentTransition.IsSuccess)
+        {
+            payment.StatusReason = paymentTransition.Error ?? string.Empty;
+            payment.WebhookPayload = rawPayload;
+            payment.ExternalEventId = externalEventId;
+            payment.UpdatedAt = now;
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<string>.Failure(paymentTransition.Error ?? "Payment status transition is not allowed.");
+        }
+
         payment.ExternalEventId = externalEventId;
         payment.WebhookPayload = rawPayload;
-        payment.UpdatedAt = now;
 
         if (status == PaymentStatus.Succeeded)
         {
@@ -409,12 +419,16 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                     return Result<string>.Failure($"Order is in terminal status {payment.Order.Status}.");
                 }
 
-                payment.Order.Status = OrderStatus.PaymentReceived;
-                payment.Order.UpdatedAt = now;
+                var orderPaymentReceived = StatusStateMachine.TrySetOrderStatus(payment.Order, OrderStatus.PaymentReceived, now);
+                if (!orderPaymentReceived.IsSuccess)
+                {
+                    return Result<string>.Failure(orderPaymentReceived.Error ?? "Order status transition is not allowed.");
+                }
+
                 var activation = await _subscriptionService.ActivateOrRenewFromOrderAsync(payment.Order, payment, cancellationToken);
                 if (!activation.IsSuccess)
                 {
-                    payment.Order.Status = OrderStatus.PartiallyProcessed;
+                    StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.PartiallyProcessed, now);
                     payment.StatusReason = activation.Error ?? string.Empty;
                     await _db.SaveChangesAsync(cancellationToken);
                     return Result<string>.Failure(activation.Error ?? "Subscription activation failed.");
@@ -450,8 +464,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             payment.FailedAt ??= now;
             if (payment.Order is not null && payment.Order.Status != OrderStatus.Completed)
             {
-                payment.Order.Status = OrderStatus.Failed;
-                payment.Order.UpdatedAt = now;
+                StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.Failed, now);
                 await QueuePaymentFailedTelegramNotificationsAsync(payment.Order, payment, status, now, cancellationToken);
             }
         }
@@ -460,14 +473,12 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             payment.RefundedAt ??= now;
             if (payment.Order is not null)
             {
-                payment.Order.Status = OrderStatus.Refunded;
-                payment.Order.UpdatedAt = now;
+                StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.Refunded, now);
             }
         }
         else if (status == PaymentStatus.WaitingConfirmation && payment.Order is not null)
         {
-            payment.Order.Status = OrderStatus.PendingPayment;
-            payment.Order.UpdatedAt = now;
+            StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.PendingPayment, now);
         }
 
         if (previousStatus != status)

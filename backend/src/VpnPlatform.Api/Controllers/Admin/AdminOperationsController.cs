@@ -179,13 +179,14 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
+        var now = DateTimeOffset.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.EndAt, subscription.GracePeriodEndAt, subscription.BlockReason });
-        var baseDate = subscription.EndAt > DateTimeOffset.UtcNow ? subscription.EndAt : DateTimeOffset.UtcNow;
+        var baseDate = subscription.EndAt > now ? subscription.EndAt : now;
         subscription.EndAt = baseDate.AddDays(request.Days);
         subscription.GracePeriodEndAt = subscription.EndAt.AddDays(3);
-        subscription.Status = SubscriptionStatus.Active;
+        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
+        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         subscription.BlockReason = null;
-        subscription.UpdatedAt = DateTimeOffset.UtcNow;
         AddAuditLog("subscription.extend", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.EndAt, request.Days, request.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
         if (subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null && subscription.CurrentAccess.Status != AccessCredentialStatus.Active)
@@ -208,12 +209,13 @@ public class AdminOperationsController : ControllerBase
         }
 
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason, subscription.SuspendedAt, subscription.CancelledAt });
-        subscription.Status = SubscriptionStatus.Active;
+        var now = DateTimeOffset.UtcNow;
+        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
+        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         subscription.BlockReason = null;
         subscription.SuspendedAt = null;
         subscription.CancelledAt = null;
         subscription.GracePeriodEndAt ??= subscription.EndAt.AddDays(3);
-        subscription.UpdatedAt = DateTimeOffset.UtcNow;
         AddAuditLog("subscription.activate", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
 
@@ -233,10 +235,10 @@ public class AdminOperationsController : ControllerBase
             else if (subscription.CurrentAccess.Status != AccessCredentialStatus.Active || subscription.CurrentAccess.DisabledAt.HasValue)
             {
                 var accessBefore = JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, subscription.CurrentAccess.DisabledAt });
-                subscription.CurrentAccess.Status = AccessCredentialStatus.Active;
+                var accessStatusResult = StatusStateMachine.TrySetAccessStatus(subscription.CurrentAccess, AccessCredentialStatus.Active, DateTimeOffset.UtcNow);
+                if (!accessStatusResult.IsSuccess) return BadRequest(new { error = accessStatusResult.Error });
                 subscription.CurrentAccess.DisabledAt = null;
                 subscription.CurrentAccess.LastSyncedAt = DateTimeOffset.UtcNow;
-                subscription.CurrentAccess.UpdatedAt = DateTimeOffset.UtcNow;
                 subscription.CurrentAccess.Revision += 1;
                 _db.AccessCredentialHistories.Add(new AccessCredentialHistory
                 {
@@ -262,10 +264,11 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
+        var now = DateTimeOffset.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason });
-        subscription.Status = SubscriptionStatus.Blocked;
+        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Blocked, now);
+        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         subscription.BlockReason = string.IsNullOrWhiteSpace(request?.Reason) ? "manual_admin_action" : request!.Reason!.Trim();
-        subscription.UpdatedAt = DateTimeOffset.UtcNow;
         AddAuditLog("subscription.block", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason }));
         await _db.SaveChangesAsync(cancellationToken);
         if (subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null)
@@ -282,10 +285,12 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
+        var now = DateTimeOffset.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason });
-        subscription.Status = subscription.EndAt >= DateTimeOffset.UtcNow ? SubscriptionStatus.Active : SubscriptionStatus.Expired;
+        var nextStatus = subscription.EndAt >= now ? SubscriptionStatus.Active : SubscriptionStatus.Expired;
+        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, nextStatus, now);
+        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         subscription.BlockReason = null;
-        subscription.UpdatedAt = DateTimeOffset.UtcNow;
         AddAuditLog("subscription.unblock", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
         if (subscription.Status == SubscriptionStatus.Active && subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null)
@@ -302,11 +307,12 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
+        var now = DateTimeOffset.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt });
-        subscription.Status = SubscriptionStatus.Cancelled;
-        subscription.CancelledAt = DateTimeOffset.UtcNow;
+        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Cancelled, now);
+        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
+        subscription.CancelledAt = now;
         subscription.BlockReason = string.IsNullOrWhiteSpace(request?.Reason) ? subscription.BlockReason : request!.Reason!.Trim();
-        subscription.UpdatedAt = DateTimeOffset.UtcNow;
         AddAuditLog("subscription.cancel", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
         if (subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null)
@@ -375,10 +381,11 @@ public class AdminOperationsController : ControllerBase
         var access = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (access is null) return NotFound();
 
+        var now = DateTimeOffset.UtcNow;
         var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
-        access.Status = AccessCredentialStatus.Disabled;
-        access.DisabledAt = DateTimeOffset.UtcNow;
-        access.UpdatedAt = DateTimeOffset.UtcNow;
+        var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Disabled, now);
+        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
+        access.DisabledAt = now;
         _db.AccessCredentialHistories.Add(new AccessCredentialHistory
         {
             AccessCredentialId = access.Id,
@@ -406,9 +413,9 @@ public class AdminOperationsController : ControllerBase
         if (access is null) return NotFound();
 
         var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
-        access.Status = AccessCredentialStatus.Active;
+        var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Active, DateTimeOffset.UtcNow);
+        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         access.DisabledAt = null;
-        access.UpdatedAt = DateTimeOffset.UtcNow;
         _db.AccessCredentialHistories.Add(new AccessCredentialHistory
         {
             AccessCredentialId = access.Id,

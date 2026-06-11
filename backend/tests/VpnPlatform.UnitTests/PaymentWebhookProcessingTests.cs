@@ -59,6 +59,58 @@ public class PaymentWebhookProcessingTests
     }
 
     [Fact]
+    public async Task YooKassa_Late_Cancelled_Webhook_Should_Not_Downgrade_Succeeded_Payment()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock(new DateTimeOffset(2026, 4, 29, 8, 0, 0, TimeSpan.Zero));
+        var order = await SeedOrderGraphAsync(db, clock.UtcNow);
+        var orchestrator = CreateOrchestrator(db, clock);
+
+        var init = await orchestrator.InitPaymentAsync(new(order.Id, PaymentProvider.YooKassa, "https://example.test/success"));
+        Assert.True(init.IsSuccess, init.Error);
+
+        var succeededWebhook = $$"""
+        {
+          "type":"notification",
+          "event":"payment.succeeded",
+          "object":{
+            "id":"{{init.Value!.PaymentId}}",
+            "status":"succeeded",
+            "paid":true,
+            "amount":{"value":"490.00","currency":"RUB"}
+          }
+        }
+        """;
+        var cancelledWebhook = $$"""
+        {
+          "type":"notification",
+          "event":"payment.canceled",
+          "object":{
+            "id":"{{init.Value!.PaymentId}}",
+            "status":"canceled",
+            "paid":false,
+            "amount":{"value":"490.00","currency":"RUB"}
+          }
+        }
+        """;
+        var headers = new Dictionary<string, string> { ["X-YooKassa-Sandbox-Webhook"] = "true" };
+
+        var paid = await orchestrator.ProcessAsync(PaymentProvider.YooKassa, succeededWebhook, headers, CancellationToken.None);
+        var cancelled = await orchestrator.ProcessAsync(PaymentProvider.YooKassa, cancelledWebhook, headers, CancellationToken.None);
+
+        Assert.True(paid.IsSuccess, paid.Error);
+        Assert.False(cancelled.IsSuccess);
+        Assert.Contains("Succeeded -> Cancelled", cancelled.Error, StringComparison.OrdinalIgnoreCase);
+
+        var payment = await db.Payments.SingleAsync();
+        var completedOrder = await db.Orders.SingleAsync();
+        Assert.Equal(PaymentStatus.Succeeded, payment.Status);
+        Assert.Equal(OrderStatus.Completed, completedOrder.Status);
+        Assert.Equal(1, await db.Subscriptions.CountAsync());
+        Assert.Equal(PaymentWebhookEventStatus.Failed, (await db.PaymentWebhookEvents.SingleAsync(x => x.EventType == "payment.canceled")).Status);
+    }
+
+    [Fact]
     public async Task YooKassa_Webhook_Should_Reject_Invalid_Local_Sandbox_Signature()
     {
         await using var db = CreateDbContext();

@@ -105,8 +105,7 @@ public class OrderService
         var expired = 0;
         foreach (var order in orders.Where(x => x.Status == OrderStatus.PendingPayment && x.ExpiresAt <= now))
         {
-            order.Status = OrderStatus.Expired;
-            order.UpdatedAt = now;
+            StatusStateMachine.SetOrderStatus(order, OrderStatus.Expired, now);
             expired += 1;
         }
 

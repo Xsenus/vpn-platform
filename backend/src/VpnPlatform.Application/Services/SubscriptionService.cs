@@ -94,9 +94,8 @@ public class SubscriptionService
             subscription.GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(subscription.EndAt);
             subscription.LastPaymentId = payment.Id;
             subscription.RenewalCount += 1;
-            subscription.Status = SubscriptionStatus.Active;
+            StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
             subscription.BlockReason = null;
-            subscription.UpdatedAt = now;
             await _db.SaveChangesAsync(cancellationToken);
         }
 
@@ -163,11 +162,10 @@ public class SubscriptionService
                 access.AccessUri = provisionResult.AccessUri;
                 access.QrCodePath = provisionResult.QrCodePath;
                 access.ConfigPath = provisionResult.ConfigPath;
-                access.Status = AccessCredentialStatus.Active;
+                StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Active, now);
                 access.DisabledAt = null;
                 access.LastSyncedAt = now;
                 access.Revision += 1;
-                access.UpdatedAt = now;
 
                 _db.AccessCredentialHistories.Add(new AccessCredentialHistory
                 {
@@ -179,11 +177,10 @@ public class SubscriptionService
                 });
             }
 
-            subscription.Status = SubscriptionStatus.Active;
+            StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
             subscription.CurrentServerId = node.Id;
             subscription.CurrentAccessId = access.Id;
-            subscription.UpdatedAt = now;
-            order.Status = OrderStatus.Completed;
+            StatusStateMachine.SetOrderStatus(order, OrderStatus.Completed, now);
             order.PaidAt = payment.PaidAt ?? now;
 
             if (previousServerId != node.Id || existing is null)
@@ -214,11 +211,9 @@ public class SubscriptionService
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);
-            subscription.Status = SubscriptionStatus.PendingActivation;
+            StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.PendingActivation, now);
             subscription.BlockReason = safeError;
-            subscription.UpdatedAt = now;
-            order.Status = OrderStatus.PartiallyProcessed;
-            order.UpdatedAt = now;
+            StatusStateMachine.SetOrderStatus(order, OrderStatus.PartiallyProcessed, now);
             _db.AuditLogs.Add(new AuditLog
             {
                 ActorType = "system",
@@ -251,8 +246,7 @@ public class SubscriptionService
 
         foreach (var item in moveToGrace)
         {
-            item.Status = SubscriptionStatus.GracePeriod;
-            item.UpdatedAt = now;
+            StatusStateMachine.SetSubscriptionStatus(item, SubscriptionStatus.GracePeriod, now);
             await QueueLifecycleNotificationAsync(item, "subscription_expiring", "subscription_expiring", now, cancellationToken);
         }
 
@@ -262,8 +256,7 @@ public class SubscriptionService
 
         foreach (var item in expire)
         {
-            item.Status = SubscriptionStatus.Expired;
-            item.UpdatedAt = now;
+            StatusStateMachine.SetSubscriptionStatus(item, SubscriptionStatus.Expired, now);
 
             if (item.CurrentAccess is not null)
             {
@@ -277,9 +270,8 @@ public class SubscriptionService
                     {
                         var provider = _vpnProviderFactory.Get(item.CurrentAccess.ProviderType);
                         await provider.DisableAccessAsync(item.CurrentAccess.ProviderAccessId, cancellationToken);
-                        item.CurrentAccess.Status = AccessCredentialStatus.Disabled;
+                        StatusStateMachine.SetAccessStatus(item.CurrentAccess, AccessCredentialStatus.Disabled, now);
                         item.CurrentAccess.DisabledAt = now;
-                        item.CurrentAccess.UpdatedAt = now;
                         _db.AccessCredentialHistories.Add(new AccessCredentialHistory
                         {
                             AccessCredentialId = item.CurrentAccess.Id,
@@ -292,8 +284,7 @@ public class SubscriptionService
                     catch (Exception ex)
                     {
                         var safeError = SafeError(ex.Message);
-                        item.CurrentAccess.Status = AccessCredentialStatus.Error;
-                        item.CurrentAccess.UpdatedAt = now;
+                        StatusStateMachine.SetAccessStatus(item.CurrentAccess, AccessCredentialStatus.Error, now);
                         _db.AccessCredentialHistories.Add(new AccessCredentialHistory
                         {
                             AccessCredentialId = item.CurrentAccess.Id,

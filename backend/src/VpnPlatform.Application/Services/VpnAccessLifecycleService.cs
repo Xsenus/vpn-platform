@@ -41,13 +41,17 @@ public class VpnAccessLifecycleService
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access is already disabled."));
         }
 
+        if (!StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.Disabled))
+        {
+            return Result<AdminAccessActionResult>.Failure($"VPN access status transition {access.Status} -> {AccessCredentialStatus.Disabled} is not allowed.");
+        }
+
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
             await provider.DisableAccessAsync(access.ProviderAccessId, cancellationToken);
-            access.Status = AccessCredentialStatus.Disabled;
+            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Disabled, now);
             access.DisabledAt = now;
-            access.UpdatedAt = now;
             access.Revision += 1;
             AddHistory(access, eventType ?? "AccessDisabled", before, new { access.Status, access.DisabledAt, reason });
             AddAudit("access.disable", access, before, new { access.Status, access.DisabledAt, reason }, actorUserId);
@@ -57,8 +61,7 @@ public class VpnAccessLifecycleService
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);
-            access.Status = AccessCredentialStatus.Error;
-            access.UpdatedAt = now;
+            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
             AddHistory(access, $"{eventType ?? "AccessDisable"}Failed", before, new { access.Status, error = safeError, reason });
             AddAudit("access.disable.failed", access, before, new { access.Status, error = safeError, reason }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
@@ -73,14 +76,18 @@ public class VpnAccessLifecycleService
 
         var now = _clock.UtcNow;
         var before = Snapshot(access);
+        if (!StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.Active))
+        {
+            return Result<AdminAccessActionResult>.Failure($"VPN access status transition {access.Status} -> {AccessCredentialStatus.Active} is not allowed.");
+        }
+
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
             await provider.EnableAccessAsync(access.ProviderAccessId, cancellationToken);
-            access.Status = AccessCredentialStatus.Active;
+            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Active, now);
             access.DisabledAt = null;
             access.LastSyncedAt = now;
-            access.UpdatedAt = now;
             access.Revision += 1;
             AddHistory(access, "AccessEnabled", before, new { access.Status, access.DisabledAt, reason });
             AddAudit("access.enable", access, before, new { access.Status, access.DisabledAt, reason }, actorUserId);
@@ -90,8 +97,7 @@ public class VpnAccessLifecycleService
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);
-            access.Status = AccessCredentialStatus.Error;
-            access.UpdatedAt = now;
+            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
             AddHistory(access, "AccessEnableFailed", before, new { access.Status, error = safeError, reason });
             AddAudit("access.enable.failed", access, before, new { access.Status, error = safeError, reason }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
@@ -106,6 +112,11 @@ public class VpnAccessLifecycleService
 
         var now = _clock.UtcNow;
         var before = Snapshot(access);
+        if (access.Status == AccessCredentialStatus.Revoked)
+        {
+            return Result<AdminAccessActionResult>.Failure("Revoked VPN access cannot be synced.");
+        }
+
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
@@ -120,8 +131,7 @@ public class VpnAccessLifecycleService
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);
-            access.Status = AccessCredentialStatus.Error;
-            access.UpdatedAt = now;
+            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
             AddHistory(access, "AccessSyncFailed", before, new { access.Status, error = safeError, reason });
             AddAudit("access.sync.failed", access, before, new { access.Status, error = safeError, reason }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);

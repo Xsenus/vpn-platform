@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: state machines доменных статусов
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P4-BE-001` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен общий `StatusStateMachine` для заказов, платежей, подписок, VPN-доступов и provisioning runs.
+- Guard подключен к платежному оркестратору, Telegram Stars successful payment flow, подпискам, lifecycle VPN-доступа, X3-UI синхронизации, админским действиям и provisioning worker.
+- Добавлен release entry `2026-06-11-state-machine-guards` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Добавлены unit-тесты матрицы разрешенных/запрещенных переходов и интеграционный тест позднего cancelled-webhook после successful payment.
+
+Команды и результат:
+
+```powershell
+dotnet build backend\VpnPlatform.sln --configuration Release --no-restore
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data[data.length-1];console.log(data.length,last.releaseId,last.version,last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- Backend build: успешно, 0 warnings, 0 errors.
+- Backend full suite: 341/341 пройдено.
+- App releases JSON: валиден, последний релиз `2026-06-11-state-machine-guards`, версия `0.63.0`.
+- State machine unit tests: разрешают рабочие переходы и запрещают невозможные откаты для `OrderStatus`, `PaymentStatus`, `SubscriptionStatus`, `AccessCredentialStatus`, `ProvisioningRunStatus`.
+- Webhook integration test: поздний `payment.canceled` после `payment.succeeded` получает failed processing и не откатывает `PaymentStatus.Succeeded`, `OrderStatus.Completed` и созданную подписку.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/admin/releases?search=2026-06-11-state-machine-guards`, `/api/app-version/admin/releases/overview`, `/api/public/payments/providers`, `/api/public/tariffs`; latest release `2026-06-11-state-machine-guards`, версия `0.63.0`, публичные провайдеры `8`, публичные тарифы `3`, поиск релиза `1`.
+
 ## Проверка 2026-06-11: русская локализация интерфейса
 
 Что проверено:

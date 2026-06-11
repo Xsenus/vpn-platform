@@ -1433,5 +1433,32 @@
         "text": "Frontend guard-тест проверяет отсутствие символов битой кодировки и англоязычных fallback-сообщений в пользовательских источниках."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-11-state-machine-guards",
+    "version": "0.63.0",
+    "releasedAt": "2026-06-11T08:30:00+07:00",
+    "title": "Статусы заказов, оплат и VPN-доступов защищены state machine",
+    "summary": "Для заказов, платежей, подписок, VPN-доступов и provisioning runs добавлены единые правила переходов, чтобы невозможные откаты не проходили через API, webhook или фоновые задачи.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "important",
+        "text": "Появился общий StatusStateMachine: он разрешает только ожидаемые переходы и блокирует откаты вроде Succeeded -> Cancelled, Completed -> PendingPayment и Revoked -> Active."
+      },
+      {
+        "type": "fixed",
+        "text": "Повторные webhook остаются идемпотентными, а поздний cancelled-webhook после успешной оплаты больше не может понизить статус платежа, заказа или подписки."
+      },
+      {
+        "type": "improved",
+        "text": "Правила подключены к платежному оркестратору, Telegram Stars, подпискам, lifecycle VPN-доступа, X3-UI синхронизации, админским действиям и provisioning worker."
+      },
+      {
+        "type": "important",
+        "text": "Добавлены unit-тесты матрицы переходов и интеграционный тест позднего webhook, backend suite проходит 341/341."
+      }
+    ]
   }
 ]

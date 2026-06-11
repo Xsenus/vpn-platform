@@ -243,7 +243,7 @@ public class ProvisioningService
         var queued = await QueueAsync(original.NodeId, original.DryRun, requestedByUserId, cancellationToken);
         if (queued.IsSuccess && queued.Value is not null)
         {
-            queued.Value.Status = ProvisioningRunStatus.Retrying;
+            StatusStateMachine.SetProvisioningRunStatus(queued.Value, ProvisioningRunStatus.Retrying, _clock.UtcNow);
             queued.Value.ExecutionLog = "Retry queued for provisioning run.";
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -263,15 +263,16 @@ public class ProvisioningService
             return Result<string>.Failure("Only pending/running provisioning runs can be cancelled.");
         }
 
-        run.Status = ProvisioningRunStatus.Cancelled;
-        run.FinishedAt = _clock.UtcNow;
+        var now = _clock.UtcNow;
+        StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Cancelled, now);
+        run.FinishedAt = now;
         run.ExecutionLog = AppendLog(run.ExecutionLog, "Provisioning run cancelled by operator.");
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);
         if (node is not null)
         {
             node.ProvisioningStatus = ProvisioningRunStatus.Cancelled;
             node.Status = NodeStatus.New;
-            node.UpdatedAt = _clock.UtcNow;
+            node.UpdatedAt = now;
         }
         AddAudit("provisioning.cancel", "ProvisioningRun", run.Id, requestedByUserId, "{}", JsonSerializer.Serialize(new { runId }));
         await _db.SaveChangesAsync(cancellationToken);
