@@ -2,6 +2,38 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: управление FAQ в админке
+
+Что проверено:
+
+- Backend `/api/admin/faq` принимает фильтры `category`, `visibility`, `search` и возвращает отсортированные вопросы.
+- Backend `/api/admin/faq/overview` возвращает счетчики активных/скрытых вопросов, публикации на главной и странице FAQ, категории и дубли.
+- Backend блокирует одинаковый вопрос в одной категории при создании и редактировании, включая русские категории с разным регистром.
+- Админка показывает сводку FAQ, фильтры по категории/видимости/поиску, статусы публикации и предупреждение о дублях.
+- Public API `/api/public/content/faq` и `/api/public/content/faq?home=true` получает опубликованные вопросы после админского изменения.
+- Добавлена запись «Что нового» `2026-06-11-admin-faq-management`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "FaqControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+cd frontend
+npm run typecheck
+npm test
+npm run build
+```
+
+Результат:
+
+- Backend narrow tests: 7/7 пройдено.
+- Backend full suite: 297/297 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 59/59 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `POST /api/admin/faq`, `/api/admin/faq/overview`, `/api/admin/faq?category=Подключение&visibility=home&search=qr`, `/api/public/content/faq`, `/api/public/content/faq?home=true`; создан 1 вопрос, фильтр вернул 1 запись, public/home вернули 1 запись, дубль с другим регистром вернул HTTP 400.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: готовность контента главной в админке
 
 Что проверено:

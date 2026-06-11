@@ -65,8 +65,8 @@ export function StatTile({ label, value, hint }: { label: string; value: string 
 
 function badgeTone(value: unknown) {
   const normalized = String(value ?? 'Unknown').toLowerCase()
-  if (normalized.includes('active') || normalized.includes('ready') || normalized.includes('paid') || normalized.includes('healthy') || normalized.includes('enabled') || normalized.includes('completed') || normalized.includes('deployed') || normalized.includes('linked')) return 'success'
-  if (normalized.includes('fail') || normalized.includes('error') || normalized.includes('blocked') || normalized.includes('cancel') || normalized.includes('disabled') || normalized.includes('unhealthy')) return 'danger'
+  if (normalized.includes('active') || normalized.includes('ready') || normalized.includes('paid') || normalized.includes('healthy') || normalized.includes('enabled') || normalized.includes('completed') || normalized.includes('deployed') || normalized.includes('linked') || normalized.includes('published') || normalized.includes('home')) return 'success'
+  if (normalized.includes('fail') || normalized.includes('error') || normalized.includes('blocked') || normalized.includes('cancel') || normalized.includes('disabled') || normalized.includes('unhealthy') || normalized.includes('hidden')) return 'danger'
   if (normalized.includes('pending') || normalized.includes('queued') || normalized.includes('grace') || normalized.includes('progress') || normalized.includes('sandbox') || normalized.includes('validation') || normalized.includes('attention') || normalized.includes('проблем')) return 'warning'
   return 'neutral'
 }
@@ -75,6 +75,9 @@ const statusLabels: Record<string, string> = {
   Active: 'Активно',
   Ready: 'Готово',
   Attention: 'Нужно внимание',
+  Published: 'Опубликовано',
+  Hidden: 'Скрыто',
+  Home: 'Главная',
   Paid: 'Оплачено',
   Healthy: 'Работает',
   Enabled: 'Включено',

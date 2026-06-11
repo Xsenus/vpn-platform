@@ -12,6 +12,7 @@ import {
   CreateServerPayload,
   CreateVpnInboundPayload,
   CreateVpnPanelPayload,
+  FaqOverviewDto,
   FaqItem,
   FaqUpsertPayload,
   OrderDto,
@@ -791,6 +792,10 @@ export function App() {
   const [releaseForm, setReleaseForm] = useState<AppReleaseUpsertPayload>(defaultReleaseForm)
   const [editingReleaseId, setEditingReleaseId] = useState('')
   const [faqEntries, setFaqEntries] = useState<FaqItem[]>([])
+  const [faqOverview, setFaqOverview] = useState<FaqOverviewDto | null>(null)
+  const [faqCategoryFilter, setFaqCategoryFilter] = useState('all')
+  const [faqVisibilityFilter, setFaqVisibilityFilter] = useState('all')
+  const [faqSearch, setFaqSearch] = useState('')
   const [faqForm, setFaqForm] = useState<FaqUpsertPayload>(defaultFaqForm)
   const [editingFaqId, setEditingFaqId] = useState('')
   const [siteContentBlocks, setSiteContentBlocks] = useState<SiteContentBlockDto[]>([])
@@ -908,6 +913,7 @@ export function App() {
       nextTariffs,
       nextAppReleases,
       nextFaqEntries,
+      nextFaqOverview,
       nextSiteContent,
       nextHomeContentReadiness,
       nextWorkScenarios,
@@ -928,7 +934,8 @@ export function App() {
       safeLoad('обращения поддержки', () => api.getAdminSupportConversations(currentToken), [], errors),
       safeLoad('tariffs', () => api.getAdminTariffs(currentToken), [], errors),
       safeLoad('Что нового', () => api.getAdminAppReleases(currentToken), [], errors),
-      safeLoad('FAQ', () => api.getAdminFaq(currentToken), [], errors),
+      safeLoad('FAQ', () => api.getAdminFaq(currentToken, { category: faqCategoryFilter, visibility: faqVisibilityFilter, search: faqSearch }), [], errors),
+      safeLoad('сводка FAQ', () => api.getAdminFaqOverview(currentToken), null, errors),
       safeLoad('контент сайта', () => api.getAdminSiteContent(currentToken, 'home'), [], errors),
       safeLoad('готовность главной', () => api.getAdminHomeContentReadiness(currentToken), null, errors),
       safeLoad('сценарии работы', () => api.getAdminWorkScenarios(currentToken), [], errors),
@@ -951,6 +958,7 @@ export function App() {
     setTariffs(nextTariffs)
     setAppReleases(nextAppReleases)
     setFaqEntries(nextFaqEntries)
+    setFaqOverview(nextFaqOverview)
     setSiteContentBlocks(nextSiteContent)
     setHomeContentReadiness(nextHomeContentReadiness)
     setWorkScenarios(nextWorkScenarios)
@@ -1089,6 +1097,10 @@ export function App() {
     setReleaseForm(defaultReleaseForm)
     setEditingReleaseId('')
     setFaqEntries([])
+    setFaqOverview(null)
+    setFaqCategoryFilter('all')
+    setFaqVisibilityFilter('all')
+    setFaqSearch('')
     setFaqForm(defaultFaqForm)
     setEditingFaqId('')
     setSiteContentBlocks([])
@@ -2965,6 +2977,31 @@ export function App() {
         </Card>
         <Card>
           <h3>Вопросы FAQ</h3>
+          <div className="item-head">
+            <div>
+              <div className="muted">
+                Всего: {faqOverview?.totalCount ?? faqEntries.length} · активных: {faqOverview?.activeCount ?? faqEntries.filter((entry) => entry.isActive !== false).length} · скрытых: {faqOverview?.hiddenCount ?? 0} · категорий: {faqOverview?.categoryCount ?? 0}
+              </div>
+              <div className="muted">
+                На главной: {faqOverview?.homeCount ?? 0} · на странице FAQ: {faqOverview?.faqPageCount ?? 0}
+              </div>
+            </div>
+            <div className="item-status">
+              <StatusBadge value={faqOverview?.hasPublicFaq ? 'Published' : 'Hidden'} />
+              <StatusBadge value={faqOverview?.hasHomeFaq ? 'Home' : 'Not configured'} />
+            </div>
+          </div>
+          {faqOverview && faqOverview.duplicateQuestions.length > 0 && (
+            <div className="safe-note">
+              Дубли вопросов в категориях: {faqOverview.duplicateQuestions.slice(0, 6).join(' · ')}{faqOverview.duplicateQuestions.length > 6 ? ' · ...' : ''}
+            </div>
+          )}
+          <form className="toolbar toolbar-form" aria-label="Фильтры FAQ" onSubmit={(event) => { event.preventDefault(); if (token) void loadAll(token) }}>
+            <label><span>Поиск</span><input value={faqSearch} onChange={(event) => setFaqSearch(event.target.value)} placeholder="Вопрос, ответ или категория" /></label>
+            <label><span>Категория</span><select value={faqCategoryFilter} onChange={(event) => setFaqCategoryFilter(event.target.value)}><option value="all">Все категории</option>{(faqOverview?.categories ?? []).map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+            <label><span>Видимость</span><select value={faqVisibilityFilter} onChange={(event) => setFaqVisibilityFilter(event.target.value)}><option value="all">Все записи</option><option value="active">Активные</option><option value="hidden">Скрытые</option><option value="home">На главной</option><option value="faq">На странице FAQ</option></select></label>
+            <PrimaryButton type="submit" disabled={!token || busy}>Применить</PrimaryButton>
+          </form>
           <div className="list-stack">
             {faqEntries.length === 0 && <EmptyState title="FAQ пока пуст" description="Создайте первый вопрос, чтобы он появился на публичной странице." />}
             {faqEntries.map((entry) => (

@@ -841,6 +841,26 @@ export type FaqUpsertPayload = {
   sortOrder: number
 }
 
+export type FaqOverviewDto = {
+  totalCount: number
+  activeCount: number
+  hiddenCount: number
+  homeCount: number
+  faqPageCount: number
+  publicCount: number
+  categoryCount: number
+  categories: string[]
+  duplicateQuestions: string[]
+  hasPublicFaq: boolean
+  hasHomeFaq: boolean
+}
+
+export type AdminFaqFilters = {
+  category?: string
+  visibility?: string
+  search?: string
+}
+
 export type SiteContentBlockDto = {
   id: string
   key: string
@@ -1693,8 +1713,17 @@ export class ApiClient {
     return this.request<AppReleaseDto[]>('/api/app-version/admin/releases', { token, errorMessage: 'Failed to load app releases' })
   }
 
-  getAdminFaq(token: string): Promise<FaqItem[]> {
-    return this.request<FaqItem[]>('/api/admin/faq', { token, errorMessage: 'Failed to load FAQ' })
+  getAdminFaq(token: string, filters: AdminFaqFilters = {}): Promise<FaqItem[]> {
+    const params = new URLSearchParams()
+    if (filters.category && filters.category !== 'all') params.set('category', filters.category)
+    if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
+    if (filters.search) params.set('search', filters.search)
+    const query = params.toString()
+    return this.request<FaqItem[]>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: 'Failed to load FAQ' })
+  }
+
+  getAdminFaqOverview(token: string): Promise<FaqOverviewDto> {
+    return this.request<FaqOverviewDto>('/api/admin/faq/overview', { token, errorMessage: 'Failed to load FAQ overview' })
   }
 
   getAdminSiteContent(token: string, group = 'home'): Promise<SiteContentBlockDto[]> {

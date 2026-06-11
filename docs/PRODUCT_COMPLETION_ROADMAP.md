@@ -365,9 +365,10 @@ git diff --check
   - Что сделано: backend получил проверку готовности `/api/admin/site-content/home-readiness` и восстановление обязательных блоков `/api/admin/site-content/home-defaults`; контролируются hero, SEO title/description, преимущества, тарифный заголовок, финальный CTA, footer и текст после оплаты. API запрещает дубли ключей при создании и редактировании. В админке раздел контента показывает, сколько обязательных блоков опубликовано, какие ключи отсутствуют, выключены, пустые или задублированы, и дает безопасную кнопку восстановления дефолтов.
   - Доказательство: изменение/восстановление в админке отражается в `/api/public/content/home`; `SiteContentControllerTests`, frontend `ApiClient site content endpoints cover public and admin CRUD`, typecheck/build, local SQLite HTTP-smoke.
 
-- [ ] `P2-ADM-FAQ-001` Управление FAQ.
+- [x] `P2-ADM-FAQ-001` Управление FAQ. 2026-06-11.
   - Что сделать: категории, порядок, публикация/скрытие.
-  - Доказательство: frontend/backend tests.
+  - Что сделано: backend `/api/admin/faq` получил фильтры `category/visibility/search`, endpoint `/api/admin/faq/overview` возвращает счетчики публикации, категории, состояние главной/FAQ-страницы и дубли вопросов. Создание и редактирование блокируют одинаковый вопрос в одной категории с учетом регистра и кириллицы. В админке раздел FAQ показывает сводку, фильтры по категории/видимости/поиску, предупреждение о дублях и статусы публикации.
+  - Доказательство: изменение FAQ в админке видно в `/api/public/content/faq` и `/api/public/content/faq?home=true`; `FaqControllerTests`, frontend `ApiClient FAQ endpoints cover public and admin CRUD`, typecheck/build, local SQLite HTTP-smoke.
 
 - [ ] `P2-ADM-REL-001` Раздел "Что нового".
   - Что сделать: создать релиз, отметить видимость, показать пользователю, mark as seen.

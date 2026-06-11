@@ -75,7 +75,14 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    if (String(url).includes('/api/public/content/faq') || String(url).endsWith('/api/admin/faq')) {
+    if (String(url).endsWith('/api/admin/faq/overview')) {
+      return new Response(JSON.stringify({ totalCount: 1, activeCount: 1, hiddenCount: 0, homeCount: 1, faqPageCount: 1, publicCount: 1, categoryCount: 1, categories: ['Подключение'], duplicateQuestions: [], hasPublicFaq: true, hasHomeFaq: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (String(url).includes('/api/public/content/faq') || String(url).includes('/api/admin/faq?') || String(url).endsWith('/api/admin/faq')) {
       return new Response(JSON.stringify([{ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 }]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -92,6 +99,8 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
   await client.getFaq()
   await client.getHomeFaq()
   await client.getAdminFaq('admin-token')
+  const filteredFaq = await client.getAdminFaq('admin-token', { category: 'Подключение', visibility: 'home', search: 'qr' })
+  const overview = await client.getAdminFaqOverview('admin-token')
   await client.createAdminFaq('admin-token', { question: 'Как?', answer: 'Так', category: 'Общее', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 })
   await client.updateAdminFaq('admin-token', 'faq-1', { question: 'Как?', answer: 'Так', category: 'Общее', isActive: true, showOnHome: false, showOnFaqPage: true, sortOrder: 20 })
   await client.deleteAdminFaq('admin-token', 'faq-1')
@@ -99,10 +108,14 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/content/faq')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/public/content/faq?home=true')
   assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/faq')
-  assert.equal(calls[3]?.init?.method, 'POST')
-  assert.equal(calls[4]?.init?.method, 'PUT')
-  assert.equal(calls[5]?.init?.method, 'DELETE')
-  assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/faq?category=%D0%9F%D0%BE%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD%D0%B8%D0%B5&visibility=home&search=qr')
+  assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/faq/overview')
+  assert.equal(calls[5]?.init?.method, 'POST')
+  assert.equal(calls[6]?.init?.method, 'PUT')
+  assert.equal(calls[7]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[7]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(filteredFaq[0]?.category, 'Подключение')
+  assert.equal(overview.hasPublicFaq, true)
 })
 
 test('ApiClient site content endpoints cover public and admin CRUD', async () => {
@@ -1145,6 +1158,9 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(cabinetSource, /Доступы не выдавались|Ключ ещё не готов/)
   assert.doesNotMatch(cabinetSource, /Перевыпуск ключа скоро/)
   assert.match(adminSource, /getAdminDashboardSummary/)
+  assert.match(adminSource, /getAdminFaqOverview/)
+  assert.match(adminSource, /Фильтры FAQ/)
+  assert.match(adminSource, /Дубли вопросов в категориях/)
   assert.match(adminSource, /getAdminSiteContent/)
   assert.match(adminSource, /getAdminHomeContentReadiness/)
   assert.match(adminSource, /restoreAdminHomeContentDefaults/)
