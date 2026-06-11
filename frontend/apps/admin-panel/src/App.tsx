@@ -398,6 +398,39 @@ const adminSections = [
 
 type AdminSectionId = typeof adminSections[number][0]
 
+const adminSectionDescriptions: Record<AdminSectionId, string> = {
+  dashboard: 'Сводка по продажам, инфраструктуре и очередям, чтобы быстро понять состояние платформы.',
+  users: 'Пользователи, их подписки, платежи, VPN-доступы, обращения и реферальные начисления.',
+  payments: 'Платежные провайдеры, готовность аккаунтов, платежи, возвраты и webhook-события.',
+  tariffs: 'Тарифы, цены, описания, сценарии после оплаты и публикация на витрине.',
+  subscriptions: 'Активные и истекающие подписки, ручные продления и связь с заказами.',
+  vpn: 'Выданные VPN-доступы, QR-коды и операции с пользовательскими ключами.',
+  nodes: 'VPS-серверы, SSH-доступы, приоритеты, capacity и подготовка инфраструктуры.',
+  panels: '3x-ui панели, inbound-ы, клиенты, синхронизация и проверки подключения.',
+  support: 'Обращения пользователей, переписка, внутренние заметки и статусы поддержки.',
+  bot: 'Telegram-бот, webhook, тексты сценариев и проверка подключения.',
+  releases: 'Раздел «Что нового»: публикации, история релизов и видимость обновлений.',
+  faq: 'FAQ для главной страницы, кабинета и публичной страницы вопросов.',
+  content: 'Контент главной страницы: hero, SEO, преимущества, отзывы и CTA.',
+  scenarios: 'Сценарии работы платформы и привязка тарифов к разрешенным сценариям.',
+  provisioning: 'Подготовка VPS, precheck, deploy, отмена запусков и запрос поддержки.'
+}
+
+const adminSectionGroups: Array<{ title: string; ids: AdminSectionId[] }> = [
+  { title: 'Операции', ids: ['dashboard', 'users', 'support'] },
+  { title: 'Продажи', ids: ['payments', 'tariffs', 'subscriptions'] },
+  { title: 'VPN', ids: ['vpn', 'nodes', 'panels', 'provisioning'] },
+  { title: 'Контент', ids: ['bot', 'releases', 'faq', 'content', 'scenarios'] }
+]
+
+function adminSectionTabId(id: AdminSectionId) {
+  return `admin-section-tab-${id}`
+}
+
+function adminSectionLabel(id: AdminSectionId) {
+  return adminSections.find(([sectionId]) => sectionId === id)?.[1] ?? 'Раздел'
+}
+
 const orderStatusOptions = [
   ['all', 'Все статусы'],
   ['Draft', 'Черновики'],
@@ -854,7 +887,11 @@ export function App() {
   const [editingInboundId, setEditingInboundId] = useState<string | null>(null)
   const [subscriptionExtendDays, setSubscriptionExtendDays] = useState<Record<string, number>>({})
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
-  const activeSectionLabel = adminSections.find(([id]) => id === activeSection)?.[1] ?? 'Раздел'
+  const activeSectionLabel = adminSectionLabel(activeSection)
+  const activeSectionDescription = adminSectionDescriptions[activeSection]
+  const activeSectionIndex = Math.max(0, adminSections.findIndex(([id]) => id === activeSection))
+  const previousAdminSection = activeSectionIndex > 0 ? adminSections[activeSectionIndex - 1][0] : null
+  const nextAdminSection = activeSectionIndex < adminSections.length - 1 ? adminSections[activeSectionIndex + 1][0] : null
   const adminLoginErrors = useMemo(() => validateAdminLogin(email, password), [email, password])
   const showAdminLoginErrors = adminLoginErrors.length > 0 && Boolean(email || password)
 
@@ -1082,6 +1119,41 @@ export function App() {
     items: current.items.length <= 1 ? current.items : current.items.filter((_, itemIndex) => itemIndex !== index)
   }))
   const updateBotForm = <K extends keyof UpdateTelegramBotSettingsPayload>(key: K, value: UpdateTelegramBotSettingsPayload[K]) => setBotSettingsForm((current) => ({ ...current, [key]: value }))
+
+  const focusAdminSectionTab = (sectionId: AdminSectionId) => {
+    if (typeof document === 'undefined') return
+    document.getElementById(adminSectionTabId(sectionId))?.focus()
+  }
+
+  const focusAdminContent = () => {
+    if (typeof document === 'undefined') return
+    document.getElementById('admin-content')?.focus()
+  }
+
+  const goToAdminSection = (sectionId: AdminSectionId, focusTarget: 'content' | 'tab' = 'content') => {
+    setActiveSection(sectionId)
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `#${sectionId}`)
+      window.requestAnimationFrame(() => {
+        if (focusTarget === 'tab') focusAdminSectionTab(sectionId)
+        else focusAdminContent()
+      })
+    }
+  }
+
+  const handleAdminSectionKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const lastIndex = adminSections.length - 1
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? lastIndex
+        : event.key === 'ArrowDown' || event.key === 'ArrowRight'
+          ? (activeSectionIndex + 1) > lastIndex ? 0 : activeSectionIndex + 1
+          : (activeSectionIndex - 1) < 0 ? lastIndex : activeSectionIndex - 1
+    goToAdminSection(adminSections[nextIndex][0], 'tab')
+  }
 
   const runAction = async (id: string, action: () => Promise<void>) => {
     setActionBusyId(id)
@@ -2119,7 +2191,7 @@ export function App() {
             <h2>Единый центр управления продажей VPN</h2>
             <p>Настраивайте тарифы, платежных провайдеров, Telegram-ботов, VPN-серверы, панели 3x-ui и выдачу доступов из одной панели.</p>
             <div className="admin-login-metrics">
-              <span><strong>11</strong> разделов</span>
+              <span><strong>15</strong> разделов</span>
               <span><strong>9</strong> провайдеров</span>
               <span><strong>24/7</strong> контроль</span>
             </div>
@@ -2181,17 +2253,43 @@ export function App() {
         <nav className="admin-sidebar" aria-label="Разделы админ-панели">
           <strong>Навигация</strong>
           <ValidationModeBadge label="Проверочный режим" />
-          {adminSections.map(([id, label]) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              className={activeSection === id ? 'active' : undefined}
-              aria-current={activeSection === id ? 'page' : undefined}
-              onClick={() => setActiveSection(id)}
-            >
-              {label}
-            </a>
-          ))}
+          <label className="admin-section-select">
+            <span>Раздел</span>
+            <select value={activeSection} onChange={(event) => goToAdminSection(event.target.value as AdminSectionId)}>
+              {adminSectionGroups.map((group) => (
+                <optgroup key={group.title} label={group.title}>
+                  {group.ids.map((id) => <option key={id} value={id}>{adminSectionLabel(id)}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <div className="admin-section-tabs" role="tablist" aria-label="Разделы админ-панели" aria-orientation="vertical" onKeyDown={handleAdminSectionKeyDown}>
+            {adminSectionGroups.map((group) => (
+              <div key={group.title} className="admin-nav-group" role="presentation">
+                <span className="admin-nav-group-title">{group.title}</span>
+                {group.ids.map((id) => (
+                  <a
+                    key={id}
+                    id={adminSectionTabId(id)}
+                    href={`#${id}`}
+                    role="tab"
+                    className={activeSection === id ? 'active' : undefined}
+                    aria-selected={activeSection === id}
+                    aria-current={activeSection === id ? 'page' : undefined}
+                    aria-controls={id}
+                    tabIndex={activeSection === id ? 0 : -1}
+                    title={adminSectionDescriptions[id]}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      goToAdminSection(id)
+                    }}
+                  >
+                    {adminSectionLabel(id)}
+                  </a>
+                ))}
+              </div>
+            ))}
+          </div>
           <small className="muted">Опасные действия требуют подтверждения. Секреты сохраняются скрыто и не возвращаются из API.</small>
         </nav>
         <div id="admin-content" className="admin-main" tabIndex={-1}>
@@ -2199,9 +2297,12 @@ export function App() {
         <div>
           <p className="eyebrow">Администрирование</p>
           <h2 className="page-heading">{activeSectionLabel}</h2>
-          <p className="muted no-margin-bottom">В каждой вкладке показаны только настройки и действия выбранного раздела.</p>
+          <p className="muted no-margin-bottom">{activeSectionDescription}</p>
         </div>
         <div className="admin-session-actions">
+          <span className="mini-pill">Раздел {activeSectionIndex + 1} из {adminSections.length}</span>
+          <PrimaryButton type="button" className="button-ghost" disabled={!previousAdminSection} onClick={() => previousAdminSection && goToAdminSection(previousAdminSection)}>Предыдущий</PrimaryButton>
+          <PrimaryButton type="button" className="button-ghost" disabled={!nextAdminSection} onClick={() => nextAdminSection && goToAdminSection(nextAdminSection)}>Следующий</PrimaryButton>
           <ValidationModeBadge label="Внешние Telegram, оплаты, 3x-ui и VPS отключены" />
           <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={() => void loadAll(token)}>Обновить данные</PrimaryButton>
           <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={clearAdminSession}>Завершить сессию</PrimaryButton>
@@ -2213,7 +2314,7 @@ export function App() {
       {error && <ErrorBlock message={error} />}
       {loadErrors.length > 0 && <CodeBlock>{loadErrors.map((item) => `${item.area}: ${item.message}`).join('\n')}</CodeBlock>}
 
-      <div id="dashboard" className="grid section" hidden={activeSection !== 'dashboard'}>
+      <div id="dashboard" className="grid section" role="tabpanel" aria-labelledby={adminSectionTabId('dashboard')} hidden={activeSection !== 'dashboard'}>
         <StatTile label="Всего пользователей" value={derivedSummary.totalUsers} />
         <StatTile label="Telegram-пользователи" value={derivedSummary.telegramUsers} />
         <StatTile label="Активные подписки" value={derivedSummary.activeSubscriptions} />
@@ -2285,7 +2386,7 @@ export function App() {
         </SectionCard>
       </div>
 
-      <div id="users" className="section card-list-two" hidden={activeSection !== 'users'}>
+      <div id="users" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('users')} hidden={activeSection !== 'users'}>
         <Card>
           <h3>Пользователи</h3>
           <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void loadUsers() }}>
@@ -2428,7 +2529,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="payments" className="section card-list-two" hidden={activeSection !== 'payments'}>
+      <div id="payments" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('payments')} hidden={activeSection !== 'payments'}>
         <Card>
           <h3>{editingProviderAccountId ? 'Редактирование способа оплаты' : 'Способы оплаты'}</h3>
           <p className="muted">Добавьте платежный аккаунт, включите его и проверьте готовность к оплатам. Секреты сохраняются скрыто.</p>
@@ -2633,7 +2734,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="tariffs" className="section card-list-two" hidden={activeSection !== 'tariffs'}>
+      <div id="tariffs" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('tariffs')} hidden={activeSection !== 'tariffs'}>
         <Card>
           <h3>{editingTariffId ? 'Редактирование тарифа' : 'Новый тариф'}</h3>
           <form aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveTariff() }}>
@@ -2699,7 +2800,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="subscriptions" className="section card-list-two" hidden={activeSection !== 'subscriptions'}>
+      <div id="subscriptions" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('subscriptions')} hidden={activeSection !== 'subscriptions'}>
         <Card>
           <h3>Подписки</h3>
           <div className="list-stack">
@@ -2741,7 +2842,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="vpn" className="section card-list-two" hidden={activeSection !== 'vpn'}>
+      <div id="vpn" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('vpn')} hidden={activeSection !== 'vpn'}>
         <Card>
           <h3>VPN-доступы</h3>
           <div className="list-stack">
@@ -2751,7 +2852,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="nodes" className="section card-list-two" hidden={activeSection !== 'nodes'}>
+      <div id="nodes" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('nodes')} hidden={activeSection !== 'nodes'}>
         <Card>
           <h3>VPN-серверы</h3>
           <div className="list-stack">
@@ -2805,7 +2906,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="panels" className="section card-list-two" hidden={activeSection !== 'panels'}>
+      <div id="panels" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('panels')} hidden={activeSection !== 'panels'}>
         <Card>
           <h3>{editingVpnPanelId ? 'Редактировать 3x-ui панель' : '3x-ui панели'}</h3>
           <p className="safe-note">В проверочном режиме тест и синхронизация идут через безопасный путь без реального подключения к 3x-ui.</p>
@@ -2874,7 +2975,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="support" className="section card-list-two" hidden={activeSection !== 'support'}>
+      <div id="support" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('support')} hidden={activeSection !== 'support'}>
         <Card>
           <h3>Обращения в поддержку</h3>
           <div className="list-stack">{supportConversations.length === 0 && <EmptyState title="Нет обращений" description="Сообщения из Telegram support появятся в этом списке." />}{supportConversations.slice(0, 12).map((conversation) => <div key={conversation.id} className={`list-item-vertical${selectedSupportConversationId === conversation.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{conversation.subject || 'Обращение в поддержку'}</strong><div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · пользователь:{shortId(conversation.userId)}</div><div className="muted">Ответственный: {shortId(conversation.assignedToUserId)} · заметка: {conversation.internalNote || '—'}</div></div><StatusBadge value={conversation.status} /></div><div className="toolbar"><PrimaryButton className={selectedSupportConversationId === conversation.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedSupportConversationId(conversation.id)}>{selectedSupportConversationId === conversation.id ? 'Открыто' : 'Открыть'}</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleSupportStatus('pending', conversation.id)}>В ожидание</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleSupportStatus(conversation.status === 'closed' ? 'open' : 'closed', conversation.id)}>{conversation.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}</PrimaryButton></div></div>)}</div>
@@ -2894,7 +2995,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="bot" className="section card-list-two" hidden={activeSection !== 'bot'}>
+      <div id="bot" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('bot')} hidden={activeSection !== 'bot'}>
         <Card>
           <h3>Настройки Telegram-бота</h3>
           <div className="list-item-vertical">
@@ -2951,7 +3052,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="releases" className="section card-list-two" hidden={activeSection !== 'releases'}>
+      <div id="releases" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('releases')} hidden={activeSection !== 'releases'}>
         <Card>
           <h3>{editingReleaseId ? 'Редактировать релиз' : 'Создать релиз'}</h3>
           <p className="muted">Эти записи показываются пользователям в окне «Что нового» после входа в личный кабинет. Будущие даты публикации не показываются до наступления времени.</p>
@@ -3045,7 +3146,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="faq" className="section card-list-two" hidden={activeSection !== 'faq'}>
+      <div id="faq" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('faq')} hidden={activeSection !== 'faq'}>
         <Card>
           <h3>{editingFaqId ? 'Редактировать вопрос' : 'Создать вопрос FAQ'}</h3>
           <p className="muted">Эти вопросы показываются на публичной странице FAQ. Неактивные записи остаются в админке, но скрываются от пользователей.</p>
@@ -3126,7 +3227,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="content" className="section card-list-two" hidden={activeSection !== 'content'}>
+      <div id="content" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('content')} hidden={activeSection !== 'content'}>
         <Card>
           <h3>{editingSiteContentId ? 'Редактировать блок контента' : 'Создать блок контента'}</h3>
           <p className="muted">Эти поля используются публичной главной страницей. Неактивные блоки остаются в админке, но не попадают в public API.</p>
@@ -3214,7 +3315,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="scenarios" className="section card-list-two" hidden={activeSection !== 'scenarios'}>
+      <div id="scenarios" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('scenarios')} hidden={activeSection !== 'scenarios'}>
         <Card>
           <h3>{editingWorkScenarioId ? 'Редактировать сценарий' : 'Создать сценарий работы'}</h3>
           <p className="muted">Сценарий описывает выдачу VPN после оплаты, поведение при ошибке, возврате, продлении и окончании подписки. Тариф выбирает сценарий по ключу.</p>
@@ -3293,7 +3394,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="provisioning" className="section card-list-two" hidden={activeSection !== 'provisioning'}>
+      <div id="provisioning" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('provisioning')} hidden={activeSection !== 'provisioning'}>
         <Card>
           <h3>Подготовка VPS</h3>
           <p className="safe-note">В проверочном режиме реальный SSH/Ansible-деплой выключен, пока это явно не разрешено настройками сервера.</p>

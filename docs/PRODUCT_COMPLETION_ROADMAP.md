@@ -393,9 +393,10 @@ git diff --check
   - Что сделано: экран входа админки получил явную клиентскую валидацию, remember email без сохранения пароля, подсказку по sessionStorage, checklist безопасности, `role="alert"` для ошибок и сохранение токена только после успешной авторизации.
   - Доказательство: frontend static guard tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-admin-login-polish`.
 
-- [ ] `P3-UX-003` Навигация админки по вкладкам/разделам.
+- [x] `P3-UX-003` Навигация админки по вкладкам/разделам. 2026-06-11.
   - Что сделать: каждый раздел открывается отдельно, настройки не идут одной длинной простыней.
-  - Доказательство: screenshots разделов.
+  - Что сделано: админская навигация стала grouped tablist с группами "Операции", "Продажи", "VPN" и "Контент"; добавлен мобильный select, переходы "Предыдущий/Следующий", описания активных разделов, hash-синхронизация без прыжков страницы и `role=tabpanel` для основных секций.
+  - Доказательство: frontend static guard tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-admin-section-navigation`.
 
 - [ ] `P3-UX-004` Проверка всех форм.
   - Что сделать: labels, placeholders, validation, disabled/loading states, submit/cancel positions.

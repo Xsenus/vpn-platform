@@ -195,9 +195,61 @@
   color: #ef4444;
 }
 
+.admin-section-select {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.admin-section-select span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.admin-section-tabs,
+.admin-nav-group {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-section-tabs {
+  max-height: calc(100vh - 290px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.admin-nav-group {
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-nav-group:first-child {
+  border-top: 0;
+}
+
+.admin-nav-group-title {
+  padding: 5px 10px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .admin-sidebar a {
+  justify-content: space-between;
   min-height: 42px;
   border: 1px solid transparent;
+}
+
+.admin-sidebar a[role="tab"][aria-selected="true"] {
+  border-color: rgba(15, 118, 110, 0.2);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .admin-main > [hidden] {
@@ -437,6 +489,11 @@
 
   .admin-login-session strong {
     text-align: left;
+  }
+
+  .admin-section-tabs {
+    max-height: none;
+    overflow: visible;
   }
 
   .release-item-editor {
