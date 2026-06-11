@@ -2,6 +2,38 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: готовность контента главной в админке
+
+Что проверено:
+
+- Backend `/api/admin/site-content/home-readiness` возвращает готовность обязательных блоков главной: hero, SEO, преимущества, тарифный заголовок, CTA, footer и текст после оплаты.
+- Backend `/api/admin/site-content/home-defaults` создает недостающие обязательные блоки и восстанавливает пустые или выключенные значения безопасными дефолтами.
+- Backend запрещает дубли ключей контента при создании и редактировании.
+- Админка показывает карточку готовности главной, списки отсутствующих/выключенных/пустых/задублированных ключей и кнопку восстановления дефолтов.
+- Public API `/api/public/content/home` получает восстановленные опубликованные блоки.
+- Добавлена запись «Что нового» `2026-06-11-admin-home-content-readiness`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "SiteContentControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+cd frontend
+npm run typecheck
+npm test
+npm run build
+```
+
+Результат:
+
+- Backend narrow tests: 5/5 пройдено.
+- Backend full suite: 294/294 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 59/59 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/admin/site-content/home-readiness`, `/api/admin/site-content/home-defaults`, `/api/admin/site-content?group=home`, `/api/public/content/home`; до восстановления `isReady=false`, после восстановления создано 18 блоков, `isReady=true`, public API вернул 18 блоков с hero и SEO.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: безопасные возвраты в админке
 
 Что проверено:

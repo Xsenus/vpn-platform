@@ -110,6 +110,14 @@ test('ApiClient site content endpoints cover public and admin CRUD', async () =>
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).includes('/api/public/content/home') || String(url).includes('/api/admin/site-content')) {
+      if (String(url).includes('/home-readiness')) {
+        return new Response(JSON.stringify({ isReady: true, requiredCount: 18, presentCount: 18, activeRequiredCount: 18, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: 18, requiredKeys: ['home.hero.title'] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+
+      if (String(url).includes('/home-defaults')) {
+        return new Response(JSON.stringify({ created: 1, restored: 2, readiness: { isReady: true, requiredCount: 18, presentCount: 18, activeRequiredCount: 18, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: 18, requiredKeys: ['home.hero.title'] } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+
       if (init?.method === 'DELETE') {
         return new Response(JSON.stringify({ id: 'content-1', deleted: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
@@ -124,16 +132,23 @@ test('ApiClient site content endpoints cover public and admin CRUD', async () =>
   const client = new ApiClient('http://localhost:8080')
   await client.getHomeContent()
   await client.getAdminSiteContent('admin-token', 'home')
+  const readiness = await client.getAdminHomeContentReadiness('admin-token')
+  const restored = await client.restoreAdminHomeContentDefaults('admin-token')
   await client.createAdminSiteContent('admin-token', { key: 'home.hero.title', value: 'VPN title', group: 'home', label: 'Hero title', inputType: 'text', isActive: true, sortOrder: 10 })
   await client.updateAdminSiteContent('admin-token', 'content-1', { key: 'home.hero.title', value: 'New title', group: 'home', label: 'Hero title', inputType: 'text', isActive: true, sortOrder: 10 })
   await client.deleteAdminSiteContent('admin-token', 'content-1')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/content/home')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/site-content?group=home')
-  assert.equal(calls[2]?.init?.method, 'POST')
-  assert.equal(calls[3]?.init?.method, 'PUT')
-  assert.equal(calls[4]?.init?.method, 'DELETE')
-  assert.equal(new Headers(calls[4]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/site-content/home-readiness')
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/site-content/home-defaults')
+  assert.equal(calls[3]?.init?.method, 'POST')
+  assert.equal(calls[4]?.init?.method, 'POST')
+  assert.equal(calls[5]?.init?.method, 'PUT')
+  assert.equal(calls[6]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[6]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(readiness.isReady, true)
+  assert.equal(restored.created, 1)
 })
 
 test('ApiClient work scenario endpoints cover admin CRUD', async () => {
@@ -1131,6 +1146,9 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.doesNotMatch(cabinetSource, /Перевыпуск ключа скоро/)
   assert.match(adminSource, /getAdminDashboardSummary/)
   assert.match(adminSource, /getAdminSiteContent/)
+  assert.match(adminSource, /getAdminHomeContentReadiness/)
+  assert.match(adminSource, /restoreAdminHomeContentDefaults/)
+  assert.match(adminSource, /Готовность главной страницы/)
   assert.match(adminSource, /id="content"/)
   assert.match(adminSource, /Контент сайта/)
   assert.match(adminSource, /getAdminWorkScenarios/)

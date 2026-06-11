@@ -866,6 +866,25 @@ export type SiteContentBlockUpsertPayload = {
   sortOrder: number
 }
 
+export type SiteContentReadinessDto = {
+  isReady: boolean
+  requiredCount: number
+  presentCount: number
+  activeRequiredCount: number
+  missingKeys: string[]
+  inactiveKeys: string[]
+  emptyKeys: string[]
+  duplicateKeys: string[]
+  publicBlocksCount: number
+  requiredKeys: string[]
+}
+
+export type SiteContentDefaultsResultDto = {
+  created: number
+  restored: number
+  readiness: SiteContentReadinessDto
+}
+
 export type WorkScenarioDto = {
   id: string
   name: string
@@ -1681,6 +1700,19 @@ export class ApiClient {
   getAdminSiteContent(token: string, group = 'home'): Promise<SiteContentBlockDto[]> {
     const suffix = group ? `?group=${encodeURIComponent(group)}` : ''
     return this.request<SiteContentBlockDto[]>(`/api/admin/site-content${suffix}`, { token, errorMessage: 'Failed to load site content' })
+  }
+
+  getAdminHomeContentReadiness(token: string): Promise<SiteContentReadinessDto> {
+    return this.request<SiteContentReadinessDto>('/api/admin/site-content/home-readiness', { token, errorMessage: 'Failed to load home content readiness' })
+  }
+
+  restoreAdminHomeContentDefaults(token: string): Promise<SiteContentDefaultsResultDto> {
+    return this.request<SiteContentDefaultsResultDto>('/api/admin/site-content/home-defaults', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: 'Failed to restore home content defaults'
+    })
   }
 
   createAdminSiteContent(token: string, payload: SiteContentBlockUpsertPayload): Promise<SiteContentBlockDto> {

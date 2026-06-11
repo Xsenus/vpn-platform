@@ -23,8 +23,9 @@ import {
   PaymentWebhookEventDto,
   ProvisioningRunDto,
   RefundDto,
-  SiteContentBlockDto,
   SiteContentBlockUpsertPayload,
+  SiteContentBlockDto,
+  SiteContentReadinessDto,
   SubscriptionDto,
   SupportConversationDto,
   SupportMessageDto,
@@ -625,6 +626,11 @@ function refundBlockerText(payment: PaymentAttemptDto) {
   return ''
 }
 
+function homeContentIssueCount(readiness: SiteContentReadinessDto | null) {
+  if (!readiness) return 0
+  return readiness.missingKeys.length + readiness.inactiveKeys.length + readiness.emptyKeys.length + readiness.duplicateKeys.length
+}
+
 function parseTariffFeatures(tariff: Pick<TariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
   const directFeatures = 'features' in tariff ? tariff.features : undefined
   if (Array.isArray(directFeatures) && directFeatures.length > 0) return directFeatures
@@ -788,6 +794,7 @@ export function App() {
   const [faqForm, setFaqForm] = useState<FaqUpsertPayload>(defaultFaqForm)
   const [editingFaqId, setEditingFaqId] = useState('')
   const [siteContentBlocks, setSiteContentBlocks] = useState<SiteContentBlockDto[]>([])
+  const [homeContentReadiness, setHomeContentReadiness] = useState<SiteContentReadinessDto | null>(null)
   const [siteContentForm, setSiteContentForm] = useState<SiteContentBlockUpsertPayload>(defaultSiteContentForm)
   const [editingSiteContentId, setEditingSiteContentId] = useState('')
   const [workScenarios, setWorkScenarios] = useState<WorkScenarioDto[]>([])
@@ -902,6 +909,7 @@ export function App() {
       nextAppReleases,
       nextFaqEntries,
       nextSiteContent,
+      nextHomeContentReadiness,
       nextWorkScenarios,
       nextServers,
       nextRuns,
@@ -922,6 +930,7 @@ export function App() {
       safeLoad('Что нового', () => api.getAdminAppReleases(currentToken), [], errors),
       safeLoad('FAQ', () => api.getAdminFaq(currentToken), [], errors),
       safeLoad('контент сайта', () => api.getAdminSiteContent(currentToken, 'home'), [], errors),
+      safeLoad('готовность главной', () => api.getAdminHomeContentReadiness(currentToken), null, errors),
       safeLoad('сценарии работы', () => api.getAdminWorkScenarios(currentToken), [], errors),
       safeLoad('servers', () => api.getAdminServers(currentToken), [], errors),
       safeLoad('подготовка серверов', () => api.getAdminProvisioningRuns(currentToken), [], errors),
@@ -943,6 +952,7 @@ export function App() {
     setAppReleases(nextAppReleases)
     setFaqEntries(nextFaqEntries)
     setSiteContentBlocks(nextSiteContent)
+    setHomeContentReadiness(nextHomeContentReadiness)
     setWorkScenarios(nextWorkScenarios)
     setServers(nextServers)
     setProvisioningRuns(nextRuns)
@@ -1082,6 +1092,7 @@ export function App() {
     setFaqForm(defaultFaqForm)
     setEditingFaqId('')
     setSiteContentBlocks([])
+    setHomeContentReadiness(null)
     setSiteContentForm(defaultSiteContentForm)
     setEditingSiteContentId('')
     setWorkScenarios([])
@@ -1552,6 +1563,16 @@ export function App() {
       await api.deleteAdminSiteContent(token, block.id)
       if (editingSiteContentId === block.id) resetSiteContentForm()
       setNotice('Блок контента удален.')
+      await loadAll(token)
+    })
+  }
+
+  const handleRestoreHomeContentDefaults = async () => {
+    if (!token) return
+    await runAction('content-restore-defaults', async () => {
+      const result = await api.restoreAdminHomeContentDefaults(token)
+      setHomeContentReadiness(result.readiness)
+      setNotice(`Главная обновлена: создано ${result.created}, восстановлено ${result.restored}.`)
       await loadAll(token)
     })
   }
@@ -2974,6 +2995,38 @@ export function App() {
         <Card>
           <h3>{editingSiteContentId ? 'Редактировать блок контента' : 'Создать блок контента'}</h3>
           <p className="muted">Эти поля используются публичной главной страницей. Неактивные блоки остаются в админке, но не попадают в public API.</p>
+          <div className="list-item-vertical">
+            <div className="item-head">
+              <div>
+                <strong>Готовность главной страницы</strong>
+                <div className="muted">
+                  Обязательные блоки: {homeContentReadiness ? `${homeContentReadiness.activeRequiredCount}/${homeContentReadiness.requiredCount}` : 'проверка не выполнена'} · опубликовано: {homeContentReadiness?.publicBlocksCount ?? siteContentBlocks.filter((block) => block.isActive).length}
+                </div>
+              </div>
+              <div className="item-status">
+                <StatusBadge value={homeContentReadiness?.isReady ? 'Ready' : 'Attention'} />
+                <StatusBadge value={`${homeContentIssueCount(homeContentReadiness)} проблем`} />
+              </div>
+            </div>
+            {homeContentReadiness && homeContentIssueCount(homeContentReadiness) > 0 && (
+              <div className="safe-note">
+                {homeContentReadiness.missingKeys.length > 0 && <div>Нет блоков: {homeContentReadiness.missingKeys.slice(0, 8).join(' · ')}{homeContentReadiness.missingKeys.length > 8 ? ' · ...' : ''}</div>}
+                {homeContentReadiness.inactiveKeys.length > 0 && <div>Выключены: {homeContentReadiness.inactiveKeys.slice(0, 8).join(' · ')}{homeContentReadiness.inactiveKeys.length > 8 ? ' · ...' : ''}</div>}
+                {homeContentReadiness.emptyKeys.length > 0 && <div>Пустые значения: {homeContentReadiness.emptyKeys.slice(0, 8).join(' · ')}{homeContentReadiness.emptyKeys.length > 8 ? ' · ...' : ''}</div>}
+                {homeContentReadiness.duplicateKeys.length > 0 && <div>Дубли ключей: {homeContentReadiness.duplicateKeys.slice(0, 8).join(' · ')}{homeContentReadiness.duplicateKeys.length > 8 ? ' · ...' : ''}</div>}
+              </div>
+            )}
+            <div className="toolbar">
+              <ConfirmButton
+                className="button-secondary"
+                disabled={!token || actionBusyId === 'content-restore-defaults'}
+                message="Восстановить обязательные блоки главной? Недостающие блоки будут созданы, пустые или выключенные обязательные блоки получат безопасные значения по умолчанию."
+                onConfirm={() => void handleRestoreHomeContentDefaults()}
+              >
+                Восстановить главную
+              </ConfirmButton>
+            </div>
+          </div>
           <form aria-busy={actionBusyId === 'content-create' || actionBusyId === `content-update-${editingSiteContentId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveSiteContent() }}>
             <fieldset className="form-section">
               <legend>Идентификация</legend>

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -67,6 +68,66 @@ public class SiteContentControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    [Fact]
+    public async Task AdminSiteContent_Should_Report_Readiness_And_Restore_Defaults()
+    {
+        await using var db = CreateDb();
+        db.SiteContentBlocks.AddRange(
+            Block("home.hero.title", "", isActive: false, sortOrder: 20),
+            Block("home.hero.subtitle", "Описание", sortOrder: 30));
+        await db.SaveChangesAsync();
+        var admin = CreateAdminController(db);
+
+        using var before = ToJson(await admin.GetHomeReadiness(CancellationToken.None));
+
+        Assert.False(before.RootElement.GetProperty("IsReady").GetBoolean());
+        Assert.Contains("home.features.item1", ReadStringArray(before.RootElement.GetProperty("MissingKeys")));
+        Assert.Contains("home.hero.title", ReadStringArray(before.RootElement.GetProperty("InactiveKeys")));
+        Assert.Contains("home.hero.title", ReadStringArray(before.RootElement.GetProperty("EmptyKeys")));
+        Assert.Empty(ReadStringArray(before.RootElement.GetProperty("DuplicateKeys")));
+
+        using var restored = ToJson(await admin.RestoreHomeDefaults(CancellationToken.None));
+        var readiness = restored.RootElement.GetProperty("readiness");
+
+        Assert.True(restored.RootElement.GetProperty("created").GetInt32() > 0);
+        Assert.True(restored.RootElement.GetProperty("restored").GetInt32() > 0);
+        Assert.True(readiness.GetProperty("IsReady").GetBoolean());
+        Assert.Empty(ReadStringArray(readiness.GetProperty("DuplicateKeys")));
+        Assert.Empty(ReadStringArray(readiness.GetProperty("MissingKeys")));
+        Assert.Empty(ReadStringArray(readiness.GetProperty("InactiveKeys")));
+        Assert.Empty(ReadStringArray(readiness.GetProperty("EmptyKeys")));
+
+        var publicController = new ContentController(db);
+        var publicBlocks = AssertOk<List<SiteContentBlockDto>>(await publicController.GetHomeContent(CancellationToken.None));
+
+        Assert.Contains(publicBlocks, x => x.Key == "home.seo.title");
+        Assert.Contains(publicBlocks, x => x.Key == "home.features.item1");
+        Assert.Contains(publicBlocks, x => x.Key == "home.finalCta.title");
+    }
+
+    [Fact]
+    public async Task AdminSiteContent_Should_Reject_Duplicate_Key_On_Create_And_Update()
+    {
+        await using var db = CreateDb();
+        db.SiteContentBlocks.Add(Block("home.hero.title", "Заголовок", sortOrder: 20));
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db);
+
+        var duplicateCreate = await controller.Create(
+            new SiteContentBlockUpsertRequest("home.hero.title", "Другой заголовок", "home", "Hero title", "", "text", true, 30),
+            CancellationToken.None);
+        var created = AssertOk<SiteContentBlockDto>(await controller.Create(
+            new SiteContentBlockUpsertRequest("home.hero.subtitle", "Описание", "home", "Hero subtitle", "", "textarea", true, 40),
+            CancellationToken.None));
+        var duplicateUpdate = await controller.Update(
+            created.Id,
+            new SiteContentBlockUpsertRequest("home.hero.title", "Описание", "home", "Hero subtitle", "", "textarea", true, 40),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(duplicateCreate);
+        Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
+    }
+
     private static SiteContentBlock Block(string key, string value, string group = "home", bool isActive = true, int sortOrder = 100)
         => new()
         {
@@ -114,4 +175,13 @@ public class SiteContentControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         return Assert.IsType<T>(ok.Value);
     }
+
+    private static JsonDocument ToJson(IActionResult result)
+    {
+        var ok = Assert.IsType<OkObjectResult>(result);
+        return JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+    }
+
+    private static string[] ReadStringArray(JsonElement element)
+        => element.EnumerateArray().Select(x => x.GetString() ?? string.Empty).ToArray();
 }
