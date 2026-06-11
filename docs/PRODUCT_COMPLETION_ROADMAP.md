@@ -353,9 +353,10 @@ git diff --check
   - Что сделано: backend `/api/admin/orders` принимает фильтры `status/search`, возвращает последний платеж заказа (`lastPaymentId/status/provider`) и сохраняет SQLite-safe сортировку в памяти; добавлен endpoint `orders/{id}/recheck-payment`, который проверяет последнюю платежную попытку заказа через общий payment orchestrator. В админке список заказов получил фильтр статуса, поиск, расширенную карточку, переходы к пользователю/платежу/подписке и кнопку проверки оплаты.
   - Доказательство: `AdminOrderManagementTests`, `AdminAuthorizationPolicyTests`, frontend `ApiClient admin order filters and recheck endpoints use finance-safe routes`, typecheck/build, local SQLite HTTP-smoke.
 
-- [ ] `P2-ADM-REF-001` Возвраты.
+- [x] `P2-ADM-REF-001` Возвраты. 2026-06-11.
   - Что сделать: refund flow должен работать только для провайдеров, где есть нужные данные.
-  - Доказательство: provider-specific tests.
+  - Что сделано: backend добавляет refund-readiness в `/api/admin/payments`: `refundSupported`, `canRefund`, `refundableAmount`, `refundBlockers`; endpoint `payments/{id}/refund` выполняет preflight и не вызывает провайдера, если адаптер не поддерживает возврат, платеж не успешный, сумма исчерпана или не хватает аккаунта/секретов. В админке платежи показывают остаток к возврату, причины блокировки, поле суммы и причину возврата перед подтверждением.
+  - Доказательство: `AdminRefundManagementTests`, `AdminAuthorizationPolicyTests`, frontend `ApiClient admin payments expose refund readiness and send refund payload`, typecheck/build, local SQLite HTTP-smoke.
 
 ### P2.7 Контент, FAQ и "Что нового"
 

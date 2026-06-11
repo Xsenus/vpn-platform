@@ -728,6 +728,46 @@ test('ApiClient admin payment providers can create, update and toggle accounts',
   assert.equal(check.isReady, true)
 })
 
+test('ApiClient admin payments expose refund readiness and send refund payload', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    if (String(url).endsWith('/api/admin/payments')) {
+      return new Response(JSON.stringify([{
+        id: 'payment-1',
+        orderId: 'order-1',
+        provider: 'YooKassa',
+        status: 'Succeeded',
+        amount: 100,
+        currency: 'RUB',
+        refundedAmount: 25,
+        refundSupported: true,
+        canRefund: true,
+        refundableAmount: 75,
+        refundBlockers: []
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    return new Response(JSON.stringify({ id: 'refund-1', paymentAttemptId: 'payment-1', provider: 'YooKassa', providerRefundId: 'rf-1', status: 'Succeeded', amount: 50, currency: 'RUB', reason: 'manual', createdAt: new Date().toISOString() }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const payments = await client.getAdminPayments('admin-token')
+  const refund = await client.refundAdminPayment('admin-token', 'payment-1', 50, 'manual')
+
+  assert.equal(payments[0]?.canRefund, true)
+  assert.equal(payments[0]?.refundableAmount, 75)
+  assert.deepEqual(payments[0]?.refundBlockers, [])
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/payments/payment-1/refund')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.match(String(calls[1]?.init?.body), /"amount":50/)
+  assert.match(String(calls[1]?.init?.body), /manual/)
+  assert.equal(refund.status, 'Succeeded')
+})
+
 test('ApiClient admin subscription and VPN access actions are confirmation-friendly POST calls', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {

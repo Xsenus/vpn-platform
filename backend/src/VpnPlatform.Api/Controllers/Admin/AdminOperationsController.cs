@@ -45,6 +45,7 @@ public sealed record CreateServerHttpRequest(
 
 public sealed record QueueProvisionHttpRequest(bool DryRun = false);
 public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
+public sealed record RefundReadinessDto(bool IsSupported, bool CanRefund, decimal RefundableAmount, IReadOnlyList<string> Blockers);
 public sealed record SetProviderEnabledHttpRequest(bool Enabled);
 public sealed record AdminSupportReplyHttpRequest(string Text);
 public sealed record AdminSupportStatusHttpRequest(string Status, Guid? AssignedToUserId = null);
@@ -568,38 +569,60 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> GetPayments(CancellationToken cancellationToken)
     {
         var payments = await _db.Payments.AsNoTracking()
-            .Select(x => new
-            {
-                x.Id,
-                x.OrderId,
-                UserId = x.Order != null ? x.Order.UserId : (Guid?)null,
-                UserDisplayName = x.Order != null && x.Order.User != null ? x.Order.User.DisplayName : string.Empty,
-                Provider = x.Provider.ToString(),
-                x.PaymentProviderAccountId,
-                ProviderMode = x.ProviderMode.ToString(),
-                x.ProviderPaymentId,
-                x.ExternalEventId,
-                x.IdempotencyKey,
-                x.ConfirmationUrl,
-                x.ReturnUrl,
-                x.Amount,
-                x.Currency,
-                Status = x.Status.ToString(),
-                x.SignatureValidated,
-                x.IsActivationProcessed,
-                x.ActivationProcessedAt,
-                x.PaidAt,
-                x.FailedAt,
-                x.RefundedAt,
-                x.RefundedAmount,
-                x.StatusReason,
-                WebhookEventsCount = _db.PaymentWebhookEvents.Count(evt => evt.PaymentAttemptId == x.Id),
-                RefundsCount = _db.Refunds.Count(refund => refund.PaymentAttemptId == x.Id),
-                x.CreatedAt,
-                x.UpdatedAt
-            })
+            .Include(x => x.Order)
+                .ThenInclude(x => x!.User)
+            .Include(x => x.PaymentProviderAccount)
+            .Include(x => x.Refunds)
             .ToListAsync(cancellationToken);
-        return Ok(payments.OrderByDescending(x => x.CreatedAt).Take(300).ToList());
+        var paymentIds = payments.Select(x => x.Id).ToArray();
+        var webhookCounts = await _db.PaymentWebhookEvents.AsNoTracking()
+            .Where(x => x.PaymentAttemptId.HasValue && paymentIds.Contains(x.PaymentAttemptId.Value))
+            .GroupBy(x => x.PaymentAttemptId!.Value)
+            .Select(x => new { PaymentAttemptId = x.Key, Count = x.Count() })
+            .ToDictionaryAsync(x => x.PaymentAttemptId, x => x.Count, cancellationToken);
+
+        return Ok(payments
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(300)
+            .Select(x =>
+            {
+                var refund = BuildRefundReadiness(x);
+                return new
+                {
+                    x.Id,
+                    x.OrderId,
+                    UserId = x.Order != null ? x.Order.UserId : (Guid?)null,
+                    UserDisplayName = x.Order?.User?.DisplayName ?? string.Empty,
+                    Provider = x.Provider.ToString(),
+                    x.PaymentProviderAccountId,
+                    ProviderMode = x.ProviderMode.ToString(),
+                    x.ProviderPaymentId,
+                    x.ExternalEventId,
+                    x.IdempotencyKey,
+                    x.ConfirmationUrl,
+                    x.ReturnUrl,
+                    x.Amount,
+                    x.Currency,
+                    Status = x.Status.ToString(),
+                    x.SignatureValidated,
+                    x.IsActivationProcessed,
+                    x.ActivationProcessedAt,
+                    x.PaidAt,
+                    x.FailedAt,
+                    x.RefundedAt,
+                    x.RefundedAmount,
+                    x.StatusReason,
+                    WebhookEventsCount = webhookCounts.GetValueOrDefault(x.Id),
+                    RefundsCount = x.Refunds.Count,
+                    RefundSupported = refund.IsSupported,
+                    CanRefund = refund.CanRefund,
+                    RefundableAmount = refund.RefundableAmount,
+                    RefundBlockers = refund.Blockers,
+                    x.CreatedAt,
+                    x.UpdatedAt
+                };
+            })
+            .ToList());
     }
 
     [HttpPost("payments/{id:guid}/recheck")]
@@ -614,6 +637,26 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.FinanceWrite)]
     public async Task<IActionResult> RefundPayment(Guid id, [FromBody] RefundPaymentHttpRequest request, CancellationToken cancellationToken)
     {
+        var payment = await _db.Payments.AsNoTracking()
+            .Include(x => x.PaymentProviderAccount)
+            .Include(x => x.Refunds)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (payment is null)
+        {
+            return BadRequest(new { error = "Payment attempt not found." });
+        }
+
+        var readiness = BuildRefundReadiness(payment);
+        if (!readiness.CanRefund)
+        {
+            return BadRequest(new { error = "Payment cannot be refunded.", readiness });
+        }
+
+        if (request.Amount <= 0 || request.Amount > readiness.RefundableAmount)
+        {
+            return BadRequest(new { error = "Refund amount is invalid.", readiness });
+        }
+
         var result = await _paymentOrchestrator.RefundPaymentAsync(id, request.Amount, request.Reason ?? string.Empty, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
@@ -1728,6 +1771,123 @@ public class AdminOperationsController : ControllerBase
                 payment.Id.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
                 || payment.ProviderPaymentId.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                 || payment.Status.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase));
+
+    private static RefundReadinessDto BuildRefundReadiness(PaymentAttempt payment)
+    {
+        var blockers = new List<string>();
+        var refundableAmount = Math.Max(0m, payment.Amount - payment.RefundedAmount);
+        var isSupported = PaymentProviderConfigurationRules.GetCapabilityRules(payment.Provider)
+            .Any(x => x.Key == "refund" && x.Supported);
+
+        if (!isSupported)
+        {
+            blockers.Add("Провайдер не поддерживает возвраты в текущем адаптере.");
+        }
+
+        if (payment.Status is not (PaymentStatus.Succeeded or PaymentStatus.PartiallyRefunded))
+        {
+            blockers.Add("Возврат доступен только для успешных или частично возвращенных платежей.");
+        }
+
+        if (refundableAmount <= 0)
+        {
+            blockers.Add("Вся сумма платежа уже возвращена.");
+        }
+
+        if (string.IsNullOrWhiteSpace(payment.ProviderPaymentId))
+        {
+            blockers.Add("Не сохранен идентификатор платежа у провайдера.");
+        }
+
+        var account = payment.PaymentProviderAccount;
+        if (payment.PaymentProviderAccountId is null || account is null)
+        {
+            blockers.Add("Платеж не связан с аккаунтом платежного провайдера.");
+        }
+        else
+        {
+            if (account.Provider != payment.Provider)
+            {
+                blockers.Add("Аккаунт провайдера не совпадает с провайдером платежа.");
+            }
+
+            if (!account.IsEnabled)
+            {
+                blockers.Add("Аккаунт платежного провайдера выключен.");
+            }
+
+            if (account.Mode == PaymentProviderMode.Disabled)
+            {
+                blockers.Add("Аккаунт платежного провайдера находится в режиме Disabled.");
+            }
+
+            AddProviderSpecificRefundBlockers(payment, account, blockers);
+        }
+
+        return new RefundReadinessDto(isSupported, blockers.Count == 0, refundableAmount, blockers);
+    }
+
+    private static void AddProviderSpecificRefundBlockers(PaymentAttempt payment, PaymentProviderAccount account, List<string> blockers)
+    {
+        static bool Missing(string? value) => string.IsNullOrWhiteSpace(value);
+        var hasSecret = !Missing(account.SecretKeyProtected);
+
+        switch (payment.Provider)
+        {
+            case PaymentProvider.YooKassa:
+                if (account.Mode == PaymentProviderMode.Production && Missing(account.ShopId))
+                {
+                    blockers.Add("Для production-возврата YooKassa нужен ShopId.");
+                }
+
+                if (account.Mode == PaymentProviderMode.Production && !hasSecret)
+                {
+                    blockers.Add("Для production-возврата YooKassa нужен SecretKey.");
+                }
+                break;
+
+            case PaymentProvider.TBankAcquiring:
+                if (Missing(account.ShopId))
+                {
+                    blockers.Add("Для возврата TBank нужен TerminalKey.");
+                }
+
+                if (!hasSecret)
+                {
+                    blockers.Add("Для возврата TBank нужен Password терминала.");
+                }
+                break;
+
+            case PaymentProvider.Stripe:
+                if (!hasSecret)
+                {
+                    blockers.Add("Для возврата Stripe нужен SecretKey.");
+                }
+
+                if (Missing(payment.ProviderPaymentId))
+                {
+                    blockers.Add("Для возврата Stripe нужен Checkout Session ID.");
+                }
+                break;
+
+            case PaymentProvider.PayPal:
+                if (Missing(account.ShopId))
+                {
+                    blockers.Add("Для возврата PayPal нужен Client ID.");
+                }
+
+                if (!hasSecret)
+                {
+                    blockers.Add("Для возврата PayPal нужен Client secret.");
+                }
+
+                if (Missing(payment.ProviderPaymentId))
+                {
+                    blockers.Add("Для возврата PayPal нужен Order ID, чтобы получить capture.");
+                }
+                break;
+        }
+    }
 
     private void AddAuditLog(string action, string entityType, Guid entityId, string beforeJson, string afterJson)
     {

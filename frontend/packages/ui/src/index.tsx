@@ -95,6 +95,8 @@ const statusLabels: Record<string, string> = {
   PartiallyProcessed: 'Частично обработано',
   PartiallyRefunded: 'Частичный возврат',
   Refunded: 'Возвращено',
+  'Refund ready': 'Возврат доступен',
+  'Refund blocked': 'Возврат недоступен',
   WaitingConfirmation: 'Ждет подтверждения',
   Queued: 'В очереди',
   GracePeriod: 'Льготный период',

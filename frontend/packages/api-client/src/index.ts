@@ -225,6 +225,10 @@ export type PaymentAttemptDto = {
   statusReason?: string | null
   webhookEventsCount?: number
   refundsCount?: number
+  refundSupported?: boolean
+  canRefund?: boolean
+  refundableAmount?: number
+  refundBlockers?: string[]
   rawRequest?: string
   rawResponse?: string
   webhookPayload?: string

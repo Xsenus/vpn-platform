@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: безопасные возвраты в админке
+
+Что проверено:
+
+- Backend `/api/admin/payments` возвращает refund readiness: `refundSupported`, `canRefund`, `refundableAmount`, `refundBlockers`.
+- Backend `POST /api/admin/payments/{id}/refund` выполняет preflight и не вызывает провайдера, если возврат недоступен.
+- В админке платежи показывают доступную сумму возврата, причины блокировки, поле суммы и причину возврата.
+- Неподдерживаемые провайдеры, неуспешные платежи, полностью возвращенные суммы и неполная настройка аккаунта блокируются до вызова provider API.
+- Добавлена запись «Что нового» `2026-06-11-admin-refund-readiness`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminRefundManagementTests|AdminAuthorizationPolicyTests"
+cd frontend
+npm test -- --test-name-pattern "refund readiness"
+```
+
+Результат:
+
+- Backend narrow tests: 25/25 пройдено.
+- Backend full suite: 292/292 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 59/59 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/admin/payments`, `/api/admin/refunds`, `/api/admin/payments/{missingId}/refund`; refund несуществующего платежа корректно вернул HTTP 400.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: управление заказами в админке
 
 Что проверено:

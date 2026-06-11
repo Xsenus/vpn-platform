@@ -606,6 +606,25 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
+function getRefundableAmount(payment: PaymentAttemptDto) {
+  return Math.max(0, payment.refundableAmount ?? (payment.amount - (payment.refundedAmount ?? 0)))
+}
+
+function canRefundPayment(payment: PaymentAttemptDto) {
+  return payment.canRefund === true && getRefundableAmount(payment) > 0
+}
+
+function refundBlockerText(payment: PaymentAttemptDto) {
+  if (payment.refundBlockers && payment.refundBlockers.length > 0) {
+    return payment.refundBlockers.join(' · ')
+  }
+
+  if (payment.refundSupported === false) return 'Провайдер не поддерживает возвраты.'
+  if (payment.status !== 'Succeeded' && payment.status !== 'PartiallyRefunded') return 'Возврат доступен только после успешной оплаты.'
+  if (getRefundableAmount(payment) <= 0) return 'Сумма уже возвращена.'
+  return ''
+}
+
 function parseTariffFeatures(tariff: Pick<TariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
   const directFeatures = 'features' in tariff ? tariff.features : undefined
   if (Array.isArray(directFeatures) && directFeatures.length > 0) return directFeatures
@@ -746,6 +765,8 @@ export function App() {
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
   const [orderSearch, setOrderSearch] = useState('')
   const [payments, setPayments] = useState<PaymentAttemptDto[]>([])
+  const [refundAmounts, setRefundAmounts] = useState<Record<string, number>>({})
+  const [refundReasons, setRefundReasons] = useState<Record<string, string>>({})
   const [paymentProviderAccounts, setPaymentProviderAccounts] = useState<PaymentProviderAccountDto[]>([])
   const [providerCheckResults, setProviderCheckResults] = useState<Record<string, PaymentProviderAccountCheckResultDto>>({})
   const [paymentWebhookEvents, setPaymentWebhookEvents] = useState<PaymentWebhookEventDto[]>([])
@@ -1041,6 +1062,8 @@ export function App() {
     setAdminQrSvgs({})
     setOrders([])
     setPayments([])
+    setRefundAmounts({})
+    setRefundReasons({})
     setPaymentProviderAccounts([])
     setProviderCheckResults({})
     setPaymentWebhookEvents([])
@@ -1252,8 +1275,12 @@ export function App() {
 
   const handleRefundPayment = async (payment: PaymentAttemptDto) => {
     await runAction(payment.id, async () => {
-      const refund = await api.refundAdminPayment(token, payment.id, payment.amount, 'manual_admin_refund')
+      const amount = refundAmounts[payment.id] ?? getRefundableAmount(payment)
+      const reason = refundReasons[payment.id]?.trim() || 'manual_admin_refund'
+      const refund = await api.refundAdminPayment(token, payment.id, amount, reason)
       setNotice(`Возврат ${refund.providerRefundId || refund.id}: ${refund.status}`)
+      setRefundAmounts((current) => ({ ...current, [payment.id]: getRefundableAmount(payment) }))
+      setRefundReasons((current) => ({ ...current, [payment.id]: '' }))
       await loadAll(token)
     })
   }
@@ -2459,7 +2486,41 @@ export function App() {
           <h3>Платежи, вебхуки и возвраты</h3>
           <div className="list-stack">
             {payments.length === 0 && <EmptyState title="Платежей нет" description="История попыток оплаты появится после покупок." />}
-            {payments.slice(0, 8).map((payment) => <div id={`payment-${payment.id}`} key={payment.id} className="list-item-vertical"><div className="item-head"><strong>{payment.provider} · {payment.amount} {payment.currency}</strong><StatusBadge value={payment.status} /></div><div className="muted">Заказ: {shortId(payment.orderId)} · транзакция: {payment.providerPaymentId || '—'} · активация: {payment.isActivationProcessed ? 'обработана' : 'ожидает'}</div><div className="toolbar"><PrimaryButton disabled={actionBusyId === payment.id} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton><ConfirmButton disabled={actionBusyId === payment.id || payment.status !== 'Succeeded'} className="button-secondary" message={`Вернуть платеж ${payment.amount} ${payment.currency}? Действие будет записано в аудит.`} onConfirm={() => void handleRefundPayment(payment)}>Вернуть платеж</ConfirmButton></div></div>)}
+            {payments.slice(0, 8).map((payment) => {
+              const refundableAmount = getRefundableAmount(payment)
+              const refundAllowed = canRefundPayment(payment)
+              const refundBlocker = refundBlockerText(payment)
+              const refundAmount = refundAmounts[payment.id] ?? refundableAmount
+              const refundReason = refundReasons[payment.id] ?? 'manual_admin_refund'
+              return (
+                <div id={`payment-${payment.id}`} key={payment.id} className="list-item-vertical">
+                  <div className="item-head">
+                    <div>
+                      <strong>{payment.provider} · {payment.amount} {payment.currency}</strong>
+                      <div className="muted">Заказ: {shortId(payment.orderId)} · транзакция: {payment.providerPaymentId || '—'} · режим {payment.providerMode ?? '—'}</div>
+                      <div className="muted">Активация: {payment.isActivationProcessed ? 'обработана' : 'ожидает'} · возвращено {payment.refundedAmount ?? 0} {payment.currency} · доступно к возврату {refundableAmount} {payment.currency}</div>
+                      {refundBlocker && <div className="safe-note">Возврат недоступен: {refundBlocker}</div>}
+                    </div>
+                    <div className="item-status">
+                      <StatusBadge value={payment.status} />
+                      <StatusBadge value={refundAllowed ? 'Refund ready' : 'Refund blocked'} />
+                    </div>
+                  </div>
+                  <div className="toolbar">
+                    <PrimaryButton disabled={actionBusyId === payment.id} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton>
+                    <label className="inline-number-field">
+                      <span>Сумма</span>
+                      <input value={refundAmount} onChange={(e) => setRefundAmounts((current) => ({ ...current, [payment.id]: Number(e.target.value) || 0 }))} type="number" min={0} max={refundableAmount} step="0.01" inputMode="decimal" disabled={!refundAllowed} />
+                    </label>
+                    <label className="compact-field">
+                      <span>Причина</span>
+                      <input value={refundReason} onChange={(e) => setRefundReasons((current) => ({ ...current, [payment.id]: e.target.value }))} placeholder="manual_admin_refund" disabled={!refundAllowed} />
+                    </label>
+                    <ConfirmButton disabled={actionBusyId === payment.id || !refundAllowed || refundAmount <= 0 || refundAmount > refundableAmount} className="button-secondary" message={`Вернуть ${refundAmount} ${payment.currency} по платежу ${shortId(payment.id)}? Действие будет записано в аудит.`} onConfirm={() => void handleRefundPayment(payment)}>Вернуть платеж</ConfirmButton>
+                  </div>
+                </div>
+              )
+            })}
             {paymentWebhookEvents.slice(0, 4).map((event) => <div key={event.id} className="list-item"><span>{event.provider} · {event.eventType} · подпись {event.signatureValidated ? 'проверена' : 'не проверена'}</span><StatusBadge value={event.status} /></div>)}
             {refunds.slice(0, 4).map((refund) => <div key={refund.id} className="list-item"><span>Возврат {refund.amount} {refund.currency} · {refund.providerRefundId || shortId(refund.id)}</span><StatusBadge value={refund.status} /></div>)}
           </div>
