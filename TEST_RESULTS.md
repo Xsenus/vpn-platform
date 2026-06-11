@@ -2,6 +2,41 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: адаптивность интерфейса
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P3-UX-005` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- В `@vpn-platform/ui` добавлены responsive-токены `--page-x`, `--page-y`, `--page-bottom` и явные CSS-переломы для 1280, 1024, 768 и 390 px.
+- Админка получила tablet/mobile правила для login-экрана, боковой навигации, вкладок разделов, платежных провайдеров, редактора релизов и пользовательских карточек.
+- Публичный сайт получил отдельные правила для hero, тарифов, FAQ, карты покрытия, CTA и футера на desktop/tablet/mobile.
+- Личный кабинет получил адаптивные правила для текущего VPN-доступа, поддержки, платежных метаданных и окна "Что нового".
+- Добавлен release entry `2026-06-11-responsive-breakpoints` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Frontend static guard проверяет обязательные breakpoint-правила и ключевые responsive CSS-блоки.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs'); const p='backend/src/VpnPlatform.Api/AppReleases/releases.json'; const data=JSON.parse(fs.readFileSync(p,'utf8')); console.log(data.length, data[data.length-1].releaseId, data[data.length-1].version);"
+cd frontend
+npm run typecheck
+npm test
+npm run build
+cd ..
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+```
+
+Результат:
+
+- App releases JSON: валиден, последний релиз `2026-06-11-responsive-breakpoints`, версия `0.60.0`.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 60/60 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Backend full suite: 301/301 пройдено.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/mark-seen`, `/api/app-version/admin/releases/overview`, `/api/public/payments/providers`, `/api/public/tariffs`; latest release `2026-06-11-responsive-breakpoints`, версия `0.60.0`, `mark-seen=true`, повторный latest вернул `seenByCurrentUser=true`, публичные провайдеры `8`, публичные тарифы `3`.
+- Browser responsive check: public-web, cabinet и admin-panel открыты через временные Vite-серверы на 1280 и 390 px; `scrollWidth` не превышает `clientWidth`, горизонтального переполнения нет, ключевые заголовки и карточки отрисованы.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах выполнена, совпадений нет.
+
 ## Проверка 2026-06-11: проверка форм админки
 
 Что проверено:

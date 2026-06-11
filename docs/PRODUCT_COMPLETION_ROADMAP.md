@@ -403,9 +403,10 @@ git diff --check
   - Что сделано: добавлен общий `FormValidationSummary`; ключевые админ-формы платежных провайдеров, тарифов, VPN-серверов, 3x-ui панелей, inbound-правил и сценариев получили явные валидаторы, видимый summary ошибок и disabled submit по тем же правилам.
   - Доказательство: frontend UI/static tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-admin-form-validation`.
 
-- [ ] `P3-UX-005` Адаптивность.
+- [x] `P3-UX-005` Адаптивность. 2026-06-11.
   - Что сделать: проверить 1440, 1280, 1024, 768, 390 px.
-  - Доказательство: screenshots или Playwright report.
+  - Что сделано: общий UI-слой получил токены адаптивных отступов и явные правила для 1280, 1024, 768 и 390 px; админка, публичный сайт и кабинет получили отдельные mobile/tablet правила для навигации, карточек, тарифов, таблиц, поддержки и окна "Что нового".
+  - Доказательство: frontend static guard проверяет обязательные breakpoint-правила и критичные responsive CSS-блоки; дополнительно пройдены frontend typecheck/tests/build, backend full suite и local SQLite HTTP-smoke latest release `2026-06-11-responsive-breakpoints`.
 
 - [ ] `P3-UX-006` Доступность.
   - Что сделать: keyboard navigation, focus states, contrast, aria-label для icon buttons.

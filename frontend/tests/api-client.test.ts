@@ -1150,6 +1150,8 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   const cabinetSource = readFileSync(new URL('../apps/cabinet/src/App.tsx', import.meta.url), 'utf8')
   const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
   const adminStylesSource = readFileSync(new URL('../apps/admin-panel/src/styles.css', import.meta.url), 'utf8')
+  const publicStylesSource = readFileSync(new URL('../apps/public-web/src/styles.css', import.meta.url), 'utf8')
+  const cabinetStylesSource = readFileSync(new URL('../apps/cabinet/src/styles.css', import.meta.url), 'utf8')
   const uiSource = readFileSync(new URL('../packages/ui/src/index.tsx', import.meta.url), 'utf8')
   const stylesSource = readFileSync(new URL('../packages/ui/src/styles.css', import.meta.url), 'utf8')
 
@@ -1334,6 +1336,26 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(publicSource, /home\.checkout\.providersEmptyDescription/)
   assert.match(adminSource, /panelPasswordConfigured|Пароль панели/i)
   assert.doesNotMatch(publicSource + cabinetSource + adminSource, /sk_live_|ghp_|BEGIN PRIVATE KEY/i)
+  const responsiveStylesSource = [
+    stylesSource,
+    adminStylesSource,
+    publicStylesSource,
+    cabinetStylesSource
+  ].join('\n')
+  for (const breakpoint of ['1280px', '1024px', '768px', '390px']) {
+    assert.match(responsiveStylesSource, new RegExp(`max-width:\\s*${breakpoint}`))
+  }
+
+  assert.match(stylesSource, /--page-x/)
+  assert.match(stylesSource, /minmax\(min\(220px, 100%\), 1fr\)/)
+  assert.match(stylesSource, /minmax\(min\(180px, 100%\), 1fr\)/)
+  assert.match(stylesSource, /\.data-table-lite[\s\S]*min-width: 480px/)
+  assert.match(adminStylesSource, /admin-section-tabs[\s\S]*max-height: 320px/)
+  assert.match(adminStylesSource, /provider-setup-note[\s\S]*grid-template-columns: 1fr/)
+  assert.match(publicStylesSource, /landing-hero-visual[\s\S]*width: min\(36vw, 360px\)/)
+  assert.match(publicStylesSource, /landing-stats[\s\S]*grid-template-columns: 1fr/)
+  assert.match(cabinetStylesSource, /app-version-modal[\s\S]*grid-template-columns: 280px/)
+  assert.match(cabinetStylesSource, /support-ticket[\s\S]*flex-direction: column/)
 })
 
 

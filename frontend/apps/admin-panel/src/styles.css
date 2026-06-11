@@ -462,6 +462,79 @@
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 1024px) {
+  .admin-login-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+  }
+
+  .admin-shell {
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .admin-sidebar {
+    top: 70px;
+  }
+
+  .provider-setup-note {
+    grid-template-columns: minmax(150px, 0.34fr) minmax(0, 1fr);
+  }
+
+  .provider-setup-note > .button,
+  .provider-setup-note > .confirm-action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .release-item-editor {
+    grid-template-columns: 120px 88px minmax(0, 1fr);
+  }
+
+  .release-item-editor > .button,
+  .release-item-editor > .confirm-action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-login-shell,
+  .admin-shell,
+  .provider-setup-note,
+  .release-item-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-login-intro {
+    min-height: 420px;
+  }
+
+  .admin-sidebar {
+    position: static;
+  }
+
+  .admin-section-tabs {
+    max-height: 320px;
+  }
+
+  .login-panel-header,
+  .admin-session-actions,
+  .admin-login-session,
+  .provider-check-result-head,
+  .user-profile-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-login-session strong {
+    text-align: left;
+  }
+
+  .user-overview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .admin-login-shell {
     grid-template-columns: 1fr;
@@ -510,5 +583,34 @@
 
   .user-overview-stats {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .admin-login-intro {
+    min-height: 300px;
+    padding: 20px;
+  }
+
+  .admin-login-intro h2 {
+    font-size: 30px;
+  }
+
+  .admin-login-shell > .card {
+    padding: 18px;
+  }
+
+  .admin-sidebar strong,
+  .admin-nav-group-title,
+  .admin-sidebar a,
+  .admin-section-select {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .provider-extra-settings,
+  .checkbox-list,
+  .release-item-editor {
+    padding: 10px;
   }
 }

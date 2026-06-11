@@ -504,6 +504,37 @@
   align-items: flex-start;
 }
 
+@media (max-width: 1280px) {
+  .landing-hero-visual {
+    width: min(36vw, 360px);
+  }
+
+  .landing-feature-section {
+    gap: 42px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .landing-hero {
+    min-height: 640px;
+    background:
+      linear-gradient(90deg, rgba(6, 13, 28, 0.92) 0%, rgba(6, 13, 28, 0.76) 58%, rgba(6, 13, 28, 0.3) 100%),
+      url("https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1800&q=84") center/cover;
+  }
+
+  .landing-stats {
+    width: min(920px, calc(100% - 24px));
+  }
+
+  .landing-feature-section {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+  }
+
+  .plan-card {
+    padding: 22px;
+  }
+}
+
 @media (max-width: 960px) {
   .landing-hero {
     min-height: 620px;
@@ -525,6 +556,42 @@
 
   .landing-illustration {
     order: 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-hero {
+    min-height: 580px;
+    padding: 28px;
+  }
+
+  .landing-hero h2 {
+    font-size: clamp(34px, 8vw, 48px);
+  }
+
+  .landing-stats,
+  .plan-grid,
+  .testimonial-grid,
+  .faq-preview-grid,
+  .faq-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-stats {
+    margin-top: 16px;
+  }
+
+  .landing-stats .card + .card {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .landing-cta,
+  .landing-footer,
+  .account-highlight,
+  .faq-error-card {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 
@@ -561,5 +628,46 @@
     align-items: stretch;
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 390px) {
+  .landing-hero {
+    min-height: 500px;
+    padding: 18px;
+  }
+
+  .landing-hero h2 {
+    font-size: 30px;
+  }
+
+  .landing-hero .eyebrow,
+  .landing-section .eyebrow {
+    font-size: 11px;
+  }
+
+  .landing-section {
+    margin-top: 42px;
+  }
+
+  .landing-illustration,
+  .coverage-map {
+    min-height: 320px;
+  }
+
+  .device-card {
+    width: min(240px, 84%);
+    padding: 14px;
+  }
+
+  .map-point {
+    width: 42px;
+    height: 42px;
+    font-size: 12px;
+  }
+
+  .plan-card {
+    min-height: auto;
+    padding: 18px;
   }
 }
