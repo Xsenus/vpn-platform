@@ -2,6 +2,37 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: проверка форм админки
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P3-UX-004` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- В `@vpn-platform/ui` добавлен общий `FormValidationSummary`.
+- Формы платежных провайдеров, тарифов, VPN-серверов, 3x-ui панелей, inbound-правил и сценариев получили явные валидаторы и видимый summary ошибок.
+- Submit-кнопки этих форм блокируются по тем же массивам ошибок, которые показываются пользователю.
+- Добавлен release entry `2026-06-11-admin-form-validation` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Static guard проверяет валидаторы, `FormValidationSummary` и disabled-состояния по ошибкам.
+
+Команды и результат:
+
+```powershell
+cd frontend
+npm run typecheck
+npm test
+npm run build
+cd ..
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+```
+
+Результат:
+
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 60/60 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Backend full suite: 301/301 пройдено.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/mark-seen`, `/api/app-version/admin/releases/overview`; latest release `2026-06-11-admin-form-validation`, версия `0.59.0`, `mark-seen=true`, повторный latest вернул `seenByCurrentUser=true`.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: навигация админки по разделам
 
 Что проверено:

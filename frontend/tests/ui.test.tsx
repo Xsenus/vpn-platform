@@ -9,6 +9,7 @@ import {
   DataTableLite,
   EmptyState,
   ErrorBlock,
+  FormValidationSummary,
   LoadingBlock,
   PageShell,
   PasswordField,
@@ -102,6 +103,7 @@ test('Design system primitives render shared tabs, states and tables', () => {
         ]}
       />
       <StateBlock tone="warning" title="Нужно внимание" description="Проверьте настройки" />
+      <FormValidationSummary errors={['Заполните название', 'Укажите корректную цену']} />
       <DataTableLite
         columns={['Колонка', 'Статус']}
         rows={[[<span key="value">Значение</span>, <StatusBadge key="status" value="Ready" />]]}
@@ -116,6 +118,8 @@ test('Design system primitives render shared tabs, states and tables', () => {
   assert.match(html, /id="test-auth-login-tab"/)
   assert.match(html, /aria-selected="true"/)
   assert.match(html, /state-block-warning/)
+  assert.match(html, /form-validation-summary/)
+  assert.match(html, /Проверьте поля формы/)
   assert.match(html, /data-table-lite/)
   assert.match(html, /Нет записей/)
 })

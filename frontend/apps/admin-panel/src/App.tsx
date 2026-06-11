@@ -44,7 +44,7 @@ import {
   PanelHealthCheckDto,
   PanelSyncRunDto
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
@@ -745,6 +745,65 @@ function validateWorkScenarioForm(form: WorkScenarioUpsertPayload) {
   if (Number(form.maxDevices) <= 0) errors.push('Количество устройств должно быть больше 0.')
   if (!['auto', 'manual', 'hybrid'].includes(String(form.provisioningMode || '').trim().toLowerCase())) errors.push('Режим выдачи должен быть auto, manual или hybrid.')
 
+  return errors
+}
+
+function isValidHttpUrl(value: string | null | undefined) {
+  const normalized = String(value ?? '').trim()
+  if (!normalized) return true
+  try {
+    const url = new URL(normalized)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function validatePaymentProviderForm(
+  form: UpsertPaymentProviderAccountPayload,
+  setup: PaymentProviderSetup,
+  editingAccount?: PaymentProviderAccountDto
+) {
+  const errors: string[] = []
+  const enabled = form.mode !== 'Disabled'
+  if (!form.name.trim()) errors.push('Укажите внутреннее имя способа оплаты.')
+  if (!form.publicName.trim()) errors.push('Укажите название способа оплаты для пользователя.')
+  if (enabled && setup.channel === 'web' && !form.shopId.trim()) errors.push(`Заполните поле "${setup.shopIdLabel}".`)
+  if (enabled && setup.channel === 'web' && !form.secretKey?.trim() && !editingAccount?.hasSecretKey) errors.push(`Заполните секрет "${setup.secretLabel}".`)
+  if (!isValidHttpUrl(form.apiBaseUrl)) errors.push('API base URL должен быть корректным http/https адресом.')
+  if (!isValidHttpUrl(form.returnUrl)) errors.push('Return URL должен быть корректным http/https адресом.')
+  if (!isValidHttpUrl(form.webhookUrl)) errors.push('Webhook URL должен быть корректным http/https адресом.')
+  return errors
+}
+
+function validateServerForm(form: ServerFormState) {
+  const errors: string[] = []
+  if (!form.name.trim()) errors.push('Укажите название VPN-сервера.')
+  if (!form.host.trim()) errors.push('Укажите Host / DNS VPN-сервера.')
+  if (Number(form.sshPort) <= 0 || Number(form.sshPort) > 65535) errors.push('SSH-порт должен быть в диапазоне 1-65535.')
+  if (Number(form.capacity) <= 0) errors.push('Емкость сервера должна быть больше 0.')
+  if (Number(form.priority) < 0) errors.push('Приоритет не может быть отрицательным.')
+  return errors
+}
+
+function validateVpnPanelForm(form: CreateVpnPanelPayload) {
+  const errors: string[] = []
+  if (!form.name.trim()) errors.push('Укажите название 3x-ui панели.')
+  if (!form.baseUrl.trim()) {
+    errors.push('Укажите адрес 3x-ui панели.')
+  } else if (!isValidHttpUrl(form.baseUrl)) {
+    errors.push('Адрес 3x-ui панели должен быть корректным http/https URL.')
+  }
+  if (Number(form.capacity) <= 0) errors.push('Емкость 3x-ui панели должна быть больше 0.')
+  return errors
+}
+
+function validateInboundForm(form: CreateVpnInboundPayload, selectedVpnPanelId: string) {
+  const errors: string[] = []
+  if (!selectedVpnPanelId) errors.push('Выберите 3x-ui панель перед созданием inbound.')
+  if (!form.name.trim()) errors.push('Укажите название inbound-правила.')
+  if (Number(form.port) <= 0 || Number(form.port) > 65535) errors.push('Порт inbound должен быть в диапазоне 1-65535.')
+  if (!form.protocol.trim()) errors.push('Укажите протокол inbound.')
   return errors
 }
 
@@ -2180,6 +2239,12 @@ export function App() {
   const editingProviderAccount = editingProviderAccountId
     ? paymentProviderAccounts.find((account) => account.id === editingProviderAccountId)
     : undefined
+  const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
+  const tariffFormErrors = validateTariffForm(tariffForm)
+  const serverFormErrors = validateServerForm(serverForm)
+  const vpnPanelFormErrors = validateVpnPanelForm(vpnPanelForm)
+  const inboundFormErrors = validateInboundForm(inboundForm, selectedVpnPanelId)
+  const workScenarioFormErrors = validateWorkScenarioForm(workScenarioForm)
 
   if (!token) {
     return (
@@ -2589,8 +2654,9 @@ export function App() {
                 <label className="checkbox-row"><input checked={providerForm.useWebhookIpAllowList} onChange={(e) => updateProviderForm('useWebhookIpAllowList', e.target.checked)} type="checkbox" /> Ограничить webhook по IP</label>
               </div>
             </fieldset>
+            <FormValidationSummary errors={providerFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || !providerForm.name} title={adminDisabledTitle} aria-busy={busy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={busy || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
               {editingProviderAccountId && <PrimaryButton type="button" className="button-ghost" onClick={resetProviderForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -2785,8 +2851,9 @@ export function App() {
               <div className="muted">{tariffForm.maxDevices ?? 0} устройств · сценарий {tariffForm.provisioningScenario || 'auto'}</div>
               {tariffFeaturesText && <ul className="feature-list compact-list">{tariffFeaturesText.split('\n').filter(Boolean).map((feature) => <li key={feature}>{feature}</li>)}</ul>}
             </div>
+            <FormValidationSummary errors={tariffFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || busy || !tariffForm.name} title={adminDisabledTitle} aria-busy={busy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || busy || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
               {editingTariffId && <PrimaryButton type="button" className="button-ghost" onClick={resetTariffForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -2898,8 +2965,9 @@ export function App() {
               </div>
             </fieldset>
             <p className="muted">SSH-доступ защищается API и не возвращается обратно. Проверочный режим не выполняет реальный SSH-деплой.</p>
+            <FormValidationSummary errors={serverFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || !serverForm.name || !serverForm.host} title={adminDisabledTitle} aria-busy={busy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={busy || !token || serverFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
               {editingServerId && <PrimaryButton type="button" className="button-ghost" onClick={cancelServerEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -2931,8 +2999,9 @@ export function App() {
               <label className="checkbox-row"><input checked={vpnPanelForm.autoCreateInbound} onChange={(e) => updateVpnPanelForm('autoCreateInbound', e.target.checked)} type="checkbox" /> Автоматически создавать inbound при выдаче доступа</label>
               <label><span>Шаблон inbound JSON</span><textarea value={vpnPanelForm.defaultInboundTemplateJson} onChange={(e) => updateVpnPanelForm('defaultInboundTemplateJson', e.target.value)} rows={4} placeholder='{"remark":"default-vless","protocol":"vless","port":443}' /></label>
             </fieldset>
+            <FormValidationSummary errors={vpnPanelFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || !vpnPanelForm.name || !vpnPanelForm.baseUrl} title={adminDisabledTitle} aria-busy={busy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={busy || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
               {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -2960,8 +3029,9 @@ export function App() {
               <label><span>streamSettingsJson</span><textarea value={inboundForm.streamSettingsJson} onChange={(e) => updateInboundForm('streamSettingsJson', e.target.value)} rows={4} spellCheck={false} placeholder='{"network":"tcp","security":"tls"}' /></label>
               <label><span>sniffingJson</span><textarea value={inboundForm.sniffingJson} onChange={(e) => updateInboundForm('sniffingJson', e.target.value)} rows={3} spellCheck={false} placeholder="{}" /></label>
             </fieldset>
+            <FormValidationSummary errors={inboundFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!selectedVpnPanelId || actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`}>{editingInboundId ? 'Сохранить inbound-правило' : 'Создать inbound-правило'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={inboundFormErrors.length > 0 || actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`}>{editingInboundId ? 'Сохранить inbound-правило' : 'Создать inbound-правило'}</PrimaryButton>
               {editingInboundId && <PrimaryButton type="button" className="button-ghost" onClick={cancelInboundEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -3363,8 +3433,9 @@ export function App() {
               <label><span>Текст для кабинета</span><textarea value={workScenarioForm.cabinetText} onChange={(e) => updateWorkScenarioForm('cabinetText', e.target.value)} rows={3} /></label>
               <label><span>Текст для Telegram</span><textarea value={workScenarioForm.telegramText} onChange={(e) => updateWorkScenarioForm('telegramText', e.target.value)} rows={3} /></label>
             </fieldset>
+            <FormValidationSummary errors={workScenarioFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !workScenarioForm.name || !workScenarioForm.key} title={adminDisabledTitle}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || workScenarioFormErrors.length > 0} title={adminDisabledTitle}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
               {editingWorkScenarioId && <PrimaryButton type="button" className="button-secondary" onClick={resetWorkScenarioForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>

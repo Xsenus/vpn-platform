@@ -398,9 +398,10 @@ git diff --check
   - Что сделано: админская навигация стала grouped tablist с группами "Операции", "Продажи", "VPN" и "Контент"; добавлен мобильный select, переходы "Предыдущий/Следующий", описания активных разделов, hash-синхронизация без прыжков страницы и `role=tabpanel` для основных секций.
   - Доказательство: frontend static guard tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-admin-section-navigation`.
 
-- [ ] `P3-UX-004` Проверка всех форм.
+- [x] `P3-UX-004` Проверка всех форм. 2026-06-11.
   - Что сделать: labels, placeholders, validation, disabled/loading states, submit/cancel positions.
-  - Доказательство: form checklist.
+  - Что сделано: добавлен общий `FormValidationSummary`; ключевые админ-формы платежных провайдеров, тарифов, VPN-серверов, 3x-ui панелей, inbound-правил и сценариев получили явные валидаторы, видимый summary ошибок и disabled submit по тем же правилам.
+  - Доказательство: frontend UI/static tests, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-admin-form-validation`.
 
 - [ ] `P3-UX-005` Адаптивность.
   - Что сделать: проверить 1440, 1280, 1024, 768, 390 px.

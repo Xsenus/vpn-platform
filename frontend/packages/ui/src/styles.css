@@ -566,6 +566,27 @@ form { display: grid; gap: 12px; max-width: 560px; }
   font-size: 14px;
 }
 
+.form-validation-summary {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  background: #fef2f2;
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.form-validation-summary strong {
+  color: var(--danger);
+}
+
+.form-validation-summary ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
 .list-stack { display: grid; gap: 12px; }
 .table-shell {
   width: 100%;
