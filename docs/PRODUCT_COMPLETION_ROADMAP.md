@@ -413,9 +413,9 @@ git diff --check
   - Что сделано: общий UI-слой получил screen-reader-only live-region для копирования, `aria-describedby` для password/secret полей, `role=status` для бейджей, `role=dialog` для confirm-popover, усиленный focus ring и `prefers-reduced-motion`; окно "Что нового" в кабинете получает фокус при открытии, закрывается по Escape, возвращает фокус назад и описывает выбранный релиз; обращения в поддержку получили выбранное состояние через `aria-pressed`.
   - Доказательство: frontend UI/static tests, browser accessibility smoke на локальных public/cabinet/admin, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-accessibility-polish`.
 
-- [ ] `P3-UX-007` Проверка русской локализации.
-  - Что сделать: отсутствие mojibake, нормальные переносы, нет английских технических сообщений пользователю.
-  - Доказательство: grep/check script + screenshots.
+- [x] `P3-UX-007` Проверка русской локализации. 2026-06-11.
+  - Сделано: API-клиент переведен на русский fallback для пустых ошибок сервера; в админке локализованы пользовательские подписи платежных провайдеров, Telegram-бота, серверов, VPN-панелей, источников релизов и режимов выдачи; общие бейджи больше не показывают `agent/manual/auto/hybrid` как голые enum-значения.
+  - Доказательство: frontend static guard на отсутствие `Failed to ...`, трех вопросительных знаков подряд и символа `U+FFFD` в пользовательских источниках, browser smoke на локальных public/cabinet/admin, frontend typecheck/build, backend full suite, local SQLite HTTP-smoke latest release `2026-06-11-russian-localization-check`.
 
 ## P4. Backend, доменная логика и надежность
 

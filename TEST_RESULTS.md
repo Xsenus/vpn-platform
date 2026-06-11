@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: русская локализация интерфейса
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P3-UX-007` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- API-клиент больше не использует англоязычные `Failed to ...` fallback-сообщения для пользовательских ошибок.
+- В админке локализованы подписи платежных провайдеров, Telegram-бота, серверов, VPN-панелей, источников релизов и режимов выдачи.
+- В `@vpn-platform/ui` локализованы бейджи `agent`, `manual`, `auto`, `hybrid`, `LongPolling`.
+- Добавлен release entry `2026-06-11-russian-localization-check` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs'); const p='backend/src/VpnPlatform.Api/AppReleases/releases.json'; const data=JSON.parse(fs.readFileSync(p,'utf8')); console.log(data.length, data[data.length-1].releaseId, data[data.length-1].version);"
+cd frontend
+npm test
+npm run typecheck
+npm run build
+cd ..
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs'); const files=['frontend/apps/admin-panel/src/App.tsx','frontend/apps/cabinet/src/App.tsx','frontend/apps/public-web/src/App.tsx','frontend/packages/ui/src/index.tsx','frontend/packages/api-client/src/index.ts','frontend/tests/api-client.test.ts']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd)) || /\?{3,}/.test(text)) throw new Error(file); } console.log('encoding guard ok');"
+```
+
+Результат:
+
+- App releases JSON: валиден, последний релиз `2026-06-11-russian-localization-check`, версия `0.62.0`.
+- Frontend tests: 60/60 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Backend full suite: 301/301 пройдено.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/mark-seen`, `/api/app-version/admin/releases/overview`, `/api/app-version/admin/releases?search=2026-06-11-russian-localization-check`, `/api/public/payments/providers`, `/api/public/tariffs`; релиз `2026-06-11-russian-localization-check`, версия `0.62.0`, `mark-seen=true`, публичные провайдеры `8`, публичные тарифы `3`.
+- Browser smoke: public `http://127.0.0.1:19173`, cabinet `http://127.0.0.1:19174`, admin `http://127.0.0.1:19175/#payments` и `#bot`; runtime-ошибок в консоли нет, признаков битой кодировки и `Failed to ...` в видимом тексте нет.
+- Encoding guard: в пользовательских frontend-источниках нет символа `U+FFFD` и трех вопросительных знаков подряд.
+
 ## Проверка 2026-06-11: доступность интерфейса
 
 Что проверено:

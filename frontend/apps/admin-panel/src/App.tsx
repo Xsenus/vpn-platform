@@ -90,12 +90,12 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     title: 'YooKassa',
     userName: 'YooKassa',
     channel: 'web',
-    summary: 'Карты, СБП и кошельки через редирект YooKassa. Для production нужны shopId и secret key.',
-    shopIdLabel: 'Shop ID',
+    summary: 'Карты, СБП и кошельки через редирект YooKassa. Для production нужны Shop ID и секретный ключ.',
+    shopIdLabel: 'Shop ID магазина',
     shopIdPlaceholder: 'Например, 123456',
-    secretLabel: 'Secret key',
+    secretLabel: 'Секретный ключ',
     secretPlaceholder: 'Ключ API из кабинета YooKassa',
-    webhookSecretLabel: 'Webhook secret',
+    webhookSecretLabel: 'Секрет webhook',
     webhookSecretPlaceholder: 'Обычно не нужен: статус перепроверяется через API',
     apiBaseUrl: 'https://api.yookassa.ru/v3',
     apiBaseUrlLabel: 'API YooKassa',
@@ -111,16 +111,16 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     title: 'RoboKassa',
     userName: 'RoboKassa',
     channel: 'web',
-    summary: 'Редирект на Robokassa. Для production нужны MerchantLogin, Password #1 и Password #2 для ResultURL.',
-    shopIdLabel: 'MerchantLogin',
+    summary: 'Редирект на Robokassa. Для production нужны логин магазина (MerchantLogin), пароль #1 и пароль #2 для ResultURL.',
+    shopIdLabel: 'Логин магазина (MerchantLogin)',
     shopIdPlaceholder: 'Логин магазина Robokassa',
-    secretLabel: 'Password #1',
+    secretLabel: 'Пароль #1',
     secretPlaceholder: 'Пароль для формирования ссылки оплаты',
-    webhookSecretLabel: 'Password #2',
+    webhookSecretLabel: 'Пароль #2',
     webhookSecretPlaceholder: 'Пароль для проверки ResultURL',
     apiBaseUrl: 'https://auth.robokassa.ru/Merchant/Index.aspx',
     apiBaseUrlLabel: 'URL формы оплаты',
-    returnUrlLabel: 'Success/Fail URL на сайте',
+    returnUrlLabel: 'URL успеха и ошибки на сайте',
     webhookUrlLabel: 'ResultURL в Robokassa',
     extraSettingsPlaceholder: '{"hashAlgorithm":"MD5"}',
     extraSettingsHint: 'Можно задать hashAlgorithm: MD5 или SHA256.',
@@ -135,16 +135,16 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     userName: 'YooMoney',
     channel: 'web',
     summary: 'Quickpay-форма YooMoney. Для production нужен receiver wallet и notification secret.',
-    shopIdLabel: 'Receiver / кошелек',
+    shopIdLabel: 'Кошелек получателя (Receiver)',
     shopIdPlaceholder: 'Например, 410011234567890',
-    secretLabel: 'OAuth/API token',
+    secretLabel: 'OAuth/API токен',
     secretPlaceholder: 'Не обязателен для quickpay-ссылки',
-    webhookSecretLabel: 'Notification secret',
+    webhookSecretLabel: 'Секрет уведомлений',
     webhookSecretPlaceholder: 'Секрет HTTP-уведомлений YooMoney',
     apiBaseUrl: 'https://yoomoney.ru/quickpay/confirm',
     apiBaseUrlLabel: 'URL quickpay',
-    returnUrlLabel: 'Success URL',
-    webhookUrlLabel: 'HTTP notification URL',
+    returnUrlLabel: 'URL успешной оплаты',
+    webhookUrlLabel: 'URL HTTP-уведомлений',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Для локального sandbox ключи не нужны.',
     extraSettingsFields: [],
@@ -156,11 +156,11 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     userName: 'Telegram Stars',
     channel: 'telegram',
     summary: 'Работает только в Telegram-боте через invoice. На публичном сайте и в кабинете скрывается.',
-    shopIdLabel: 'Bot username',
+    shopIdLabel: 'Username Telegram-бота',
     shopIdPlaceholder: '@your_vpn_bot',
-    secretLabel: 'Bot token',
+    secretLabel: 'Токен Telegram-бота',
     secretPlaceholder: 'Хранится в настройках Telegram-бота',
-    webhookSecretLabel: 'Telegram secret token',
+    webhookSecretLabel: 'Секрет webhook Telegram',
     webhookSecretPlaceholder: 'Опциональный secret token webhook',
     apiBaseUrl: '',
     apiBaseUrlLabel: 'Telegram API',
@@ -169,7 +169,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     extraSettingsPlaceholder: '{"status":"bot-only"}',
     extraSettingsHint: 'Включайте только после настройки Telegram-бота и BotToken.',
     extraSettingsFields: [
-      { key: 'status', label: 'Статус сценария Stars', placeholder: 'bot-only', hint: 'Используется как служебная пометка, что оплата доступна только внутри Telegram-бота.', options: [{ value: 'bot-only', label: 'Только Telegram-бот' }, { value: 'invoice-flow', label: 'Telegram invoice flow' }] }
+      { key: 'status', label: 'Статус сценария Stars', placeholder: 'bot-only', hint: 'Используется как служебная пометка, что оплата доступна только внутри Telegram-бота.', options: [{ value: 'bot-only', label: 'Только Telegram-бот' }, { value: 'invoice-flow', label: 'Telegram invoice flow (полная оплата)' }] }
     ],
     allowedIps: '',
     useWebhookIpAllowList: false
@@ -178,12 +178,12 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     title: 'CloudPayments',
     userName: 'CloudPayments',
     channel: 'web',
-    summary: 'Для безопасного server-side flow нужен merchant-hosted widget URL в Extra settings.',
-    shopIdLabel: 'Public ID',
+    summary: 'Для безопасного серверного сценария нужен URL страницы виджета магазина в дополнительных настройках.',
+    shopIdLabel: 'Публичный ID магазина',
     shopIdPlaceholder: 'Public ID из CloudPayments',
-    secretLabel: 'API password',
+    secretLabel: 'Пароль API',
     secretPlaceholder: 'Пароль API CloudPayments',
-    webhookSecretLabel: 'Webhook password',
+    webhookSecretLabel: 'Пароль webhook',
     webhookSecretPlaceholder: 'Пароль для проверки уведомлений',
     apiBaseUrl: '',
     apiBaseUrlLabel: 'API URL',
@@ -192,7 +192,7 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     extraSettingsPlaceholder: '{"hostedCheckoutUrl":"https://pay.example.com/cloudpayments"}',
     extraSettingsHint: 'Обязательно для production: hostedCheckoutUrl со страницей виджета магазина.',
     extraSettingsFields: [
-      { key: 'hostedCheckoutUrl', label: 'Hosted checkout URL', placeholder: 'https://pay.example.com/cloudpayments', hint: 'Страница магазина, где открыт CloudPayments widget.', inputMode: 'url' }
+      { key: 'hostedCheckoutUrl', label: 'URL страницы оплаты (hosted checkout)', placeholder: 'https://pay.example.com/cloudpayments', hint: 'Страница магазина, где открыт виджет CloudPayments.', inputMode: 'url' }
     ],
     allowedIps: '',
     useWebhookIpAllowList: false
@@ -202,16 +202,16 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     userName: 'TBank',
     channel: 'web',
     summary: 'Эквайринг TBank через Init/Confirm/Cancel API. Нужны TerminalKey и Password.',
-    shopIdLabel: 'TerminalKey',
+    shopIdLabel: 'Ключ терминала (TerminalKey)',
     shopIdPlaceholder: 'TerminalKey магазина',
-    secretLabel: 'Password',
+    secretLabel: 'Пароль терминала',
     secretPlaceholder: 'Пароль терминала TBank',
-    webhookSecretLabel: 'Webhook secret',
+    webhookSecretLabel: 'Секрет webhook',
     webhookSecretPlaceholder: 'Обычно совпадает с Password или не используется',
     apiBaseUrl: 'https://securepay.tinkoff.ru',
     apiBaseUrlLabel: 'API TBank',
-    returnUrlLabel: 'Success URL',
-    webhookUrlLabel: 'Notification URL',
+    returnUrlLabel: 'URL успешной оплаты',
+    webhookUrlLabel: 'URL уведомлений',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Для sandbox можно оставить ключи пустыми.',
     extraSettingsFields: [],
@@ -223,16 +223,16 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     userName: 'Prodamus',
     channel: 'web',
     summary: 'Payform Prodamus. Нужны адрес payform и секрет подписи.',
-    shopIdLabel: 'Shop / account',
+    shopIdLabel: 'Магазин или аккаунт',
     shopIdPlaceholder: 'Идентификатор магазина',
-    secretLabel: 'Secret key',
+    secretLabel: 'Секретный ключ',
     secretPlaceholder: 'Секрет подписи формы',
-    webhookSecretLabel: 'Webhook secret',
+    webhookSecretLabel: 'Секрет webhook',
     webhookSecretPlaceholder: 'Секрет проверки уведомлений',
     apiBaseUrl: 'https://demo.payform.ru',
-    apiBaseUrlLabel: 'Payform URL',
-    returnUrlLabel: 'Success URL',
-    webhookUrlLabel: 'Webhook URL',
+    apiBaseUrlLabel: 'URL платежной формы',
+    returnUrlLabel: 'URL успешной оплаты',
+    webhookUrlLabel: 'URL webhook',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'API возвратов и recheck включаются отдельно под конкретный аккаунт.',
     extraSettingsFields: [],
@@ -243,17 +243,17 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     title: 'Stripe',
     userName: 'Stripe',
     channel: 'web',
-    summary: 'Stripe Checkout Sessions. Для production нужны secret key и webhook endpoint secret.',
-    shopIdLabel: 'Account / merchant id',
+    summary: 'Stripe Checkout Sessions. Для production нужны секретный ключ и секрет endpoint webhook.',
+    shopIdLabel: 'Аккаунт или merchant id',
     shopIdPlaceholder: 'acct_... или внутреннее имя',
-    secretLabel: 'Secret key',
-    secretPlaceholder: 'Secret key из Stripe Dashboard',
-    webhookSecretLabel: 'Webhook endpoint secret',
+    secretLabel: 'Секретный ключ',
+    secretPlaceholder: 'Секретный ключ из Stripe Dashboard',
+    webhookSecretLabel: 'Секрет endpoint webhook',
     webhookSecretPlaceholder: 'whsec_...',
     apiBaseUrl: 'https://api.stripe.com',
     apiBaseUrlLabel: 'Stripe API',
-    returnUrlLabel: 'Success/cancel URL',
-    webhookUrlLabel: 'Stripe webhook endpoint',
+    returnUrlLabel: 'URL успеха и отмены',
+    webhookUrlLabel: 'Endpoint webhook Stripe',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Webhook должен отправлять checkout.session.completed и checkout.session.expired.',
     extraSettingsFields: [],
@@ -265,16 +265,16 @@ const paymentProviderSetup: Record<PaymentProvider, PaymentProviderSetup> = {
     userName: 'PayPal',
     channel: 'web',
     summary: 'PayPal Orders API. Для production нужны client id, secret и webhook id.',
-    shopIdLabel: 'Client ID',
+    shopIdLabel: 'ID клиента',
     shopIdPlaceholder: 'PayPal REST app client id',
-    secretLabel: 'Client secret',
+    secretLabel: 'Секрет клиента',
     secretPlaceholder: 'PayPal REST app secret',
-    webhookSecretLabel: 'Webhook ID',
+    webhookSecretLabel: 'ID webhook',
     webhookSecretPlaceholder: 'ID webhook из PayPal Developer',
     apiBaseUrl: 'https://api-m.paypal.com',
     apiBaseUrlLabel: 'PayPal API',
-    returnUrlLabel: 'Return URL',
-    webhookUrlLabel: 'PayPal webhook URL',
+    returnUrlLabel: 'URL возврата',
+    webhookUrlLabel: 'URL webhook PayPal',
     extraSettingsPlaceholder: '{}',
     extraSettingsHint: 'Для sandbox используйте https://api-m.sandbox.paypal.com.',
     extraSettingsFields: [],
@@ -429,6 +429,21 @@ function adminSectionTabId(id: AdminSectionId) {
 
 function adminSectionLabel(id: AdminSectionId) {
   return adminSections.find(([sectionId]) => sectionId === id)?.[1] ?? 'Раздел'
+}
+
+function releaseSourceLabel(source: string | null | undefined) {
+  const normalized = String(source ?? '').toLowerCase()
+  if (normalized === 'agent') return 'Агент'
+  if (normalized === 'manual') return 'Вручную'
+  return source || 'Не указан'
+}
+
+function provisioningModeLabel(mode: string | null | undefined) {
+  const normalized = String(mode ?? '').toLowerCase()
+  if (normalized === 'auto') return 'Автоматически'
+  if (normalized === 'manual') return 'Вручную'
+  if (normalized === 'hybrid') return 'Гибридно'
+  return mode || 'Не указан'
 }
 
 const orderStatusOptions = [
@@ -743,7 +758,7 @@ function validateWorkScenarioForm(form: WorkScenarioUpsertPayload) {
   if (!key) errors.push('Укажите ключ сценария.')
   if (key && !/^[a-z0-9_-]+(?:-[a-z0-9_-]+)*$/i.test(key)) errors.push('Ключ может содержать латинские буквы, цифры, дефис и подчёркивание.')
   if (Number(form.maxDevices) <= 0) errors.push('Количество устройств должно быть больше 0.')
-  if (!['auto', 'manual', 'hybrid'].includes(String(form.provisioningMode || '').trim().toLowerCase())) errors.push('Режим выдачи должен быть auto, manual или hybrid.')
+  if (!['auto', 'manual', 'hybrid'].includes(String(form.provisioningMode || '').trim().toLowerCase())) errors.push('Режим выдачи должен быть одним из вариантов: автоматически, вручную или гибридно.')
 
   return errors
 }
@@ -2604,7 +2619,7 @@ export function App() {
               <div className="provider-setup-note">
                 <strong>{providerFormSetup.title}</strong>
                 <span>{providerFormSetup.summary}</span>
-                <StatusBadge value={providerFormSetup.channel === 'web' ? 'Web checkout' : 'Только Telegram'} />
+                <StatusBadge value={providerFormSetup.channel === 'web' ? 'Оплата на сайте' : 'Только Telegram'} />
               </div>
               <div className="form-grid">
                 <label><span>Платежная система</span><select value={providerForm.provider} onChange={(e) => selectProviderForForm(e.target.value as PaymentProvider)}>{paymentProviderOptions.map((item) => <option key={item} value={item}>{providerSetup(item).title}</option>)}</select></label>
@@ -2622,7 +2637,7 @@ export function App() {
                 <SecretField configured={editingProviderAccount?.hasWebhookSecret} label={providerFormSetup.webhookSecretLabel} placeholder={providerFormSetup.webhookSecretPlaceholder} value={providerForm.webhookSecret ?? ''} onChange={(value) => updateProviderForm('webhookSecret', value)} />
                 <label><span>{providerFormSetup.returnUrlLabel}</span><input value={providerForm.returnUrl} onChange={(e) => updateProviderForm('returnUrl', e.target.value)} placeholder="https://example.com/checkout" type="url" inputMode="url" /></label>
                 <label><span>{providerFormSetup.webhookUrlLabel}</span><input value={providerForm.webhookUrl} onChange={(e) => updateProviderForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/webhooks/payments/provider" type="url" inputMode="url" /></label>
-                <label><span>Allowed IP ranges</span><input value={providerForm.allowedWebhookIpRangesCsv} onChange={(e) => updateProviderForm('allowedWebhookIpRangesCsv', e.target.value)} placeholder="185.71.76.0/27, 185.71.77.0/27" /></label>
+                <label><span>Разрешенные IP для webhook</span><input value={providerForm.allowedWebhookIpRangesCsv} onChange={(e) => updateProviderForm('allowedWebhookIpRangesCsv', e.target.value)} placeholder="185.71.76.0/27, 185.71.77.0/27" /></label>
               </div>
               <div className="provider-extra-settings">
                 <span className="form-label">Дополнительные параметры {providerFormSetup.title}</span>
@@ -2672,8 +2687,8 @@ export function App() {
                     <strong>{account.publicName}</strong>
                     <div className="muted">{providerSetup(account.provider).title} · {account.mode} · {providerSetup(account.provider).channel === 'web' ? 'показывается в web после готовности' : 'только Telegram-бот'} · {account.name}</div>
                     <div className="muted">{providerSetup(account.provider).shopIdLabel}: {account.shopId || '—'} · {providerSetup(account.provider).secretLabel}: {account.hasSecretKey ? 'задан' : 'пусто'} · {providerSetup(account.provider).webhookSecretLabel}: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
-                    <div className="muted">API: {account.apiBaseUrl || '—'} · return: {account.returnUrl || '—'} · webhook URL: {account.webhookUrl || '—'}</div>
-                    <div className="muted">IP allow list: {account.useWebhookIpAllowList ? (account.allowedWebhookIpRangesCsv || 'включен, список пуст') : 'не используется'} · extra: {account.extraSettingsJson && account.extraSettingsJson !== '{}' ? 'задан' : 'пусто'}</div>
+                    <div className="muted">API: {account.apiBaseUrl || '—'} · возврат: {account.returnUrl || '—'} · URL webhook: {account.webhookUrl || '—'}</div>
+                    <div className="muted">Список разрешенных IP: {account.useWebhookIpAllowList ? (account.allowedWebhookIpRangesCsv || 'включен, список пуст') : 'не используется'} · дополнительные параметры: {account.extraSettingsJson && account.extraSettingsJson !== '{}' ? 'задан' : 'пусто'}</div>
                     <div className="muted">Пользователю: {account.isPubliclyAvailable ? 'показывается на сайте и в кабинете' : 'скрыт до готовности или доступен только в Telegram'}</div>
                     <div className="muted">Поддерживается: {capabilities(account).join(', ') || '—'}</div>
                     {unsupportedCapabilities(account).length > 0 && <div className="muted">Не поддерживается сейчас: {unsupportedCapabilities(account).join(', ')}</div>}
@@ -2822,7 +2837,7 @@ export function App() {
                 <label><span>Порядок</span><input value={tariffForm.sortOrder ?? 100} onChange={(e) => updateTariffForm('sortOrder', Number(e.target.value) || 0)} type="number" min={0} step="1" placeholder="100" /></label>
                 <label><span>Категория</span><input value={tariffForm.category ?? 'default'} onChange={(e) => updateTariffForm('category', e.target.value)} placeholder="default" /></label>
                 <label><span>Бейдж</span><input value={tariffForm.badge ?? ''} onChange={(e) => updateTariffForm('badge', e.target.value)} placeholder="Популярный, Выгодно, Семейный" /></label>
-                <label><span>Сценарий выдачи</span><select value={tariffForm.provisioningScenario ?? 'auto'} onChange={(e) => updateTariffForm('provisioningScenario', e.target.value)}><option value="auto">auto</option>{workScenarios.map((scenario) => <option key={scenario.id} value={scenario.key}>{scenario.name} ({scenario.key})</option>)}</select></label>
+                <label><span>Сценарий выдачи</span><select value={tariffForm.provisioningScenario ?? 'auto'} onChange={(e) => updateTariffForm('provisioningScenario', e.target.value)}><option value="auto">По умолчанию (auto)</option>{workScenarios.map((scenario) => <option key={scenario.id} value={scenario.key}>{scenario.name} ({scenario.key})</option>)}</select></label>
               </div>
               <label><span>Короткое описание</span><textarea value={tariffForm.description ?? ''} onChange={(e) => updateTariffForm('description', e.target.value)} placeholder="Коротко для карточки тарифа" rows={3} /></label>
               <label><span>Полное описание</span><textarea value={tariffForm.fullDescription ?? ''} onChange={(e) => updateTariffForm('fullDescription', e.target.value)} placeholder="Подробное описание для публичной страницы" rows={4} /></label>
@@ -2924,7 +2939,7 @@ export function App() {
           <h3>VPN-серверы</h3>
           <div className="list-stack">
             {servers.length === 0 && <EmptyState title="VPN-серверы не добавлены" description="Добавьте сервер или запустите проверку собственного VPS." />}
-            {servers.map((server) => <div key={server.id} className="list-item-vertical"><div className="item-head"><div><strong>{server.name}</strong><div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div><div className="muted">Datacenter: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div><div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div><div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div><div className="muted">Последняя проверка: {formatDate(server.lastHealthCheckAt)} · latency {server.lastHealthLatencyMs ?? 0}ms · {server.lastHealthError || 'ошибок нет'}</div></div><div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton><PrimaryButton disabled={actionBusyId === `health-server-${server.id}`} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton><PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton><ConfirmButton className="button-danger" message="Запустить подготовку сервера? В рабочем режиме это может затронуть инфраструктуру." onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton><ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton><PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton><ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton><ConfirmButton className="button-secondary" disabled={server.status === 'Disabled'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton><ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? Если у него есть подписки, VPN-доступы или запуски подготовки, он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton></div></div>)}
+            {servers.map((server) => <div key={server.id} className="list-item-vertical"><div className="item-head"><div><strong>{server.name}</strong><div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div><div className="muted">Дата-центр: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div><div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div><div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div><div className="muted">Последняя проверка: {formatDate(server.lastHealthCheckAt)} · latency {server.lastHealthLatencyMs ?? 0}ms · {server.lastHealthError || 'ошибок нет'}</div></div><div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton><PrimaryButton disabled={actionBusyId === `health-server-${server.id}`} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton><PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton><ConfirmButton className="button-danger" message="Запустить подготовку сервера? В рабочем режиме это может затронуть инфраструктуру." onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton><ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton><PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton><ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton><ConfirmButton className="button-secondary" disabled={server.status === 'Disabled'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton><ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? Если у него есть подписки, VPN-доступы или запуски подготовки, он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton></div></div>)}
           </div>
         </Card>
         <Card>
@@ -2934,12 +2949,12 @@ export function App() {
               <legend>Идентификация сервера</legend>
               <div className="form-grid">
                 <label><span>Название</span><input value={serverForm.name} onChange={(e) => updateServerForm('name', e.target.value)} placeholder="nl-01" required /></label>
-                <label><span>Host / DNS</span><input value={serverForm.host} onChange={(e) => updateServerForm('host', e.target.value)} placeholder="vpn.example.com" required /></label>
+                <label><span>Host или DNS</span><input value={serverForm.host} onChange={(e) => updateServerForm('host', e.target.value)} placeholder="vpn.example.com" required /></label>
                 <label><span>IP-адрес</span><input value={serverForm.ipAddress} onChange={(e) => updateServerForm('ipAddress', e.target.value)} placeholder="203.0.113.10" /></label>
                 <label><span>Провайдер</span><input value={serverForm.provider} onChange={(e) => updateServerForm('provider', e.target.value)} placeholder="hetzner" /></label>
                 <label><span>Регион</span><input value={serverForm.region} onChange={(e) => updateServerForm('region', e.target.value)} placeholder="eu" /></label>
                 <label><span>Страна</span><input value={serverForm.country} onChange={(e) => updateServerForm('country', e.target.value)} placeholder="NL" /></label>
-                <label><span>Datacenter</span><input value={serverForm.datacenter} onChange={(e) => updateServerForm('datacenter', e.target.value)} placeholder="fsn1" /></label>
+                <label><span>Дата-центр</span><input value={serverForm.datacenter} onChange={(e) => updateServerForm('datacenter', e.target.value)} placeholder="fsn1" /></label>
                 <label><span>Емкость</span><input value={serverForm.capacity} onChange={(e) => updateServerForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
                 <label><span>Приоритет</span><input value={serverForm.priority} onChange={(e) => updateServerForm('priority', Number(e.target.value) || 0)} placeholder="100" type="number" min={1} step="1" /></label>
                 <label><span>Протоколы</span><input value={serverForm.supportedProtocolsCsv ?? ''} onChange={(e) => updateServerForm('supportedProtocolsCsv', e.target.value)} placeholder="vless,vmess,trojan" /></label>
@@ -2952,7 +2967,7 @@ export function App() {
                 <label><span>SSH-пользователь</span><input value={serverForm.sshUser ?? ''} onChange={(e) => updateServerForm('sshUser', e.target.value)} placeholder="root" /></label>
                 <label><span>SSH-порт</span><input value={serverForm.sshPort} onChange={(e) => updateServerForm('sshPort', Number(e.target.value) || 22)} placeholder="22" type="number" min={1} max={65535} step="1" /></label>
                 <label><span>Метод SSH</span><select value={serverForm.sshAuthMethod ?? 'ssh_key'} onChange={(e) => updateServerForm('sshAuthMethod', e.target.value)}><option value="ssh_key">SSH-ключ</option><option value="password">Пароль</option></select></label>
-                <SecretField label="SSH credential" value={serverForm.sshCredential ?? ''} onChange={(value) => updateServerForm('sshCredential', value)} />
+                <SecretField label="SSH-доступ" value={serverForm.sshCredential ?? ''} onChange={(value) => updateServerForm('sshCredential', value)} />
                 <label><span>Режим запуска</span><select value={serverForm.validationMode ? 'true' : 'false'} onChange={(e) => updateServerForm('validationMode', e.target.value === 'true')}><option value="true">Проверка без реального деплоя</option><option value="false">Рабочий кандидат</option></select></label>
               </div>
             </fieldset>
@@ -2993,8 +3008,8 @@ export function App() {
               <div className="form-grid">
                 <label><span>Регион</span><input value={vpnPanelForm.region} onChange={(e) => updateVpnPanelForm('region', e.target.value)} placeholder="eu" /></label>
                 <label><span>Емкость</span><input value={vpnPanelForm.capacity} onChange={(e) => updateVpnPanelForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
-                <label><span>SSL verification</span><select value={vpnPanelForm.sslVerificationMode} onChange={(e) => updateVpnPanelForm('sslVerificationMode', e.target.value)}><option value="Strict">Strict</option><option value="AllowSelfSigned">AllowSelfSigned</option><option value="Disabled">Disabled</option></select></label>
-                <label><span>API variant</span><select value={vpnPanelForm.apiVariant} onChange={(e) => updateVpnPanelForm('apiVariant', e.target.value)}><option value="X3UiOfficial">X3UiOfficial</option><option value="ThreeXUi">ThreeXUi</option><option value="LegacyXUi">LegacyXUi</option><option value="Custom">Custom</option></select></label>
+                <label><span>Проверка SSL</span><select value={vpnPanelForm.sslVerificationMode} onChange={(e) => updateVpnPanelForm('sslVerificationMode', e.target.value)}><option value="Strict">Strict</option><option value="AllowSelfSigned">AllowSelfSigned</option><option value="Disabled">Disabled</option></select></label>
+                <label><span>Вариант API</span><select value={vpnPanelForm.apiVariant} onChange={(e) => updateVpnPanelForm('apiVariant', e.target.value)}><option value="X3UiOfficial">X3UiOfficial</option><option value="ThreeXUi">ThreeXUi</option><option value="LegacyXUi">LegacyXUi</option><option value="Custom">Custom</option></select></label>
               </div>
               <label className="checkbox-row"><input checked={vpnPanelForm.autoCreateInbound} onChange={(e) => updateVpnPanelForm('autoCreateInbound', e.target.checked)} type="checkbox" /> Автоматически создавать inbound при выдаче доступа</label>
               <label><span>Шаблон inbound JSON</span><textarea value={vpnPanelForm.defaultInboundTemplateJson} onChange={(e) => updateVpnPanelForm('defaultInboundTemplateJson', e.target.value)} rows={4} placeholder='{"remark":"default-vless","protocol":"vless","port":443}' /></label>
@@ -3070,7 +3085,7 @@ export function App() {
           <h3>Настройки Telegram-бота</h3>
           <div className="list-item-vertical">
             <div className="card-head"><strong>@{botSettings.publicBotUsername || 'не настроен'}</strong><StatusBadge value={botSettings.enabled ? 'Enabled' : 'Disabled'} /></div>
-            <div className="muted">Режим {botSettings.mode} · bot token {botSettings.hasBotToken ? botSettings.botTokenMasked || 'скрыт' : 'пусто'} · secret token {botSettings.hasSecretToken ? 'задан' : 'пусто'} · admin chat {botSettings.adminChatId || '—'}</div>
+            <div className="muted">Режим {botSettings.mode === 'LongPolling' ? 'Опрос Telegram' : 'Webhook-уведомления'} · токен бота {botSettings.hasBotToken ? botSettings.botTokenMasked || 'скрыт' : 'пусто'} · секрет webhook {botSettings.hasSecretToken ? 'задан' : 'пусто'} · админский чат {botSettings.adminChatId || '—'}</div>
             <div className="muted">Webhook: {botSettings.webhookUrl || '—'} · WebApp: {botSettings.webAppUrl || '—'} · исходные токены никогда не возвращаются API.</div>
           </div>
           {botSettingsCheck && (
@@ -3095,13 +3110,13 @@ export function App() {
               <legend>Подключение Telegram</legend>
               <div className="form-grid">
                 <label><span>Состояние</span><select value={botSettingsForm.enabled ? 'true' : 'false'} onChange={(e) => updateBotForm('enabled', e.target.value === 'true')}><option value="false">Выключен</option><option value="true">Включен</option></select></label>
-                <label><span>Режим</span><select value={botSettingsForm.mode ?? 'LongPolling'} onChange={(e) => updateBotForm('mode', e.target.value)}><option value="LongPolling">Long polling</option><option value="Webhook">Webhook</option></select></label>
-                <label><span>Public bot username</span><input value={botSettingsForm.publicBotUsername ?? ''} onChange={(e) => updateBotForm('publicBotUsername', e.target.value)} placeholder="vpnplatform_bot" /></label>
-                <label><span>Webhook URL</span><input value={botSettingsForm.webhookUrl ?? ''} onChange={(e) => updateBotForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/channels/telegram/webhook" type="url" inputMode="url" /></label>
-                <label><span>Admin chat id</span><input value={botSettingsForm.adminChatId ?? ''} onChange={(e) => updateBotForm('adminChatId', e.target.value)} placeholder="-1001234567890" /></label>
-                <label><span>WebApp URL</span><input value={botSettingsForm.webAppUrl ?? ''} onChange={(e) => updateBotForm('webAppUrl', e.target.value)} placeholder="https://cabinet.example.com" type="url" inputMode="url" /></label>
-                <SecretField label="Bot token" configured={botSettings.hasBotToken} value={botSettingsForm.botToken ?? ''} onChange={(value) => updateBotForm('botToken', value)} />
-                <SecretField label="Secret token" configured={botSettings.hasSecretToken} value={botSettingsForm.secretToken ?? ''} onChange={(value) => updateBotForm('secretToken', value)} />
+                <label><span>Режим</span><select value={botSettingsForm.mode ?? 'LongPolling'} onChange={(e) => updateBotForm('mode', e.target.value)}><option value="LongPolling">Опрос Telegram</option><option value="Webhook">Webhook-уведомления</option></select></label>
+                <label><span>Username публичного бота</span><input value={botSettingsForm.publicBotUsername ?? ''} onChange={(e) => updateBotForm('publicBotUsername', e.target.value)} placeholder="vpnplatform_bot" /></label>
+                <label><span>URL webhook</span><input value={botSettingsForm.webhookUrl ?? ''} onChange={(e) => updateBotForm('webhookUrl', e.target.value)} placeholder="https://api.example.com/api/channels/telegram/webhook" type="url" inputMode="url" /></label>
+                <label><span>ID админского чата</span><input value={botSettingsForm.adminChatId ?? ''} onChange={(e) => updateBotForm('adminChatId', e.target.value)} placeholder="-1001234567890" /></label>
+                <label><span>URL WebApp</span><input value={botSettingsForm.webAppUrl ?? ''} onChange={(e) => updateBotForm('webAppUrl', e.target.value)} placeholder="https://cabinet.example.com" type="url" inputMode="url" /></label>
+                <SecretField label="Токен бота" configured={botSettings.hasBotToken} value={botSettingsForm.botToken ?? ''} onChange={(value) => updateBotForm('botToken', value)} />
+                <SecretField label="Секрет webhook" configured={botSettings.hasSecretToken} value={botSettingsForm.secretToken ?? ''} onChange={(value) => updateBotForm('secretToken', value)} />
               </div>
             </fieldset>
             <fieldset className="form-section">
@@ -3133,7 +3148,7 @@ export function App() {
                 <label><span>Release ID</span><input value={releaseForm.releaseId} onChange={(e) => updateReleaseForm('releaseId', e.target.value)} placeholder="2026-05-27-whats-new-module" required /></label>
                 <label><span>Версия</span><input value={releaseForm.version} onChange={(e) => updateReleaseForm('version', e.target.value)} placeholder="0.2.0" required /></label>
                 <label><span>Дата публикации</span><input value={toDateTimeLocalValue(releaseForm.releasedAt)} onChange={(e) => updateReleaseForm('releasedAt', fromDateTimeLocalValue(e.target.value))} type="datetime-local" required /></label>
-                <label><span>Источник</span><select value={releaseForm.source ?? 'manual'} onChange={(e) => updateReleaseForm('source', e.target.value)}><option value="manual">manual</option><option value="agent">agent</option></select></label>
+                <label><span>Источник</span><select value={releaseForm.source ?? 'manual'} onChange={(e) => updateReleaseForm('source', e.target.value)}><option value="manual">Вручную</option><option value="agent">Агент</option></select></label>
               </div>
               <label className="checkbox-row"><input checked={releaseForm.isActive} onChange={(e) => updateReleaseForm('isActive', e.target.checked)} type="checkbox" /> Опубликован и виден пользователям</label>
             </fieldset>
@@ -3177,7 +3192,7 @@ export function App() {
             </div>
             <div className="item-status">
               <StatusBadge value={appReleaseOverview?.publishedCount ? 'Published' : 'Hidden'} />
-              <StatusBadge value={`${appReleaseOverview?.agentCount ?? 0} agent`} />
+              <StatusBadge value={`${appReleaseOverview?.agentCount ?? 0} от агента`} />
             </div>
           </div>
           {appReleaseOverview && appReleaseOverview.emptyReleaseIds.length > 0 && (
@@ -3188,7 +3203,7 @@ export function App() {
           <form className="toolbar toolbar-form" aria-label="Фильтры релизов" onSubmit={(event) => { event.preventDefault(); if (token) void loadAll(token) }}>
             <label><span>Поиск</span><input value={releaseSearch} onChange={(event) => setReleaseSearch(event.target.value)} placeholder="Версия, releaseId, заголовок" /></label>
             <label><span>Видимость</span><select value={releaseVisibilityFilter} onChange={(event) => setReleaseVisibilityFilter(event.target.value)}><option value="all">Все релизы</option><option value="published">Опубликованные</option><option value="upcoming">Запланированные</option><option value="hidden">Скрытые</option></select></label>
-            <label><span>Источник</span><select value={releaseSourceFilter} onChange={(event) => setReleaseSourceFilter(event.target.value)}><option value="all">Все источники</option><option value="manual">manual</option><option value="agent">agent</option></select></label>
+            <label><span>Источник</span><select value={releaseSourceFilter} onChange={(event) => setReleaseSourceFilter(event.target.value)}><option value="all">Все источники</option><option value="manual">Вручную</option><option value="agent">Агент</option></select></label>
             <PrimaryButton type="submit" disabled={!token || busy}>Применить</PrimaryButton>
           </form>
           <div className="list-stack">
@@ -3201,7 +3216,7 @@ export function App() {
                     <div className="muted">Версия {release.version} · {release.releaseId} · публикация {formatDate(release.releasedAt)}</div>
                     <div className="muted">{release.summary}</div>
                   </div>
-                  <div className="item-status"><StatusBadge value={release.isActive ? (new Date(release.releasedAt).getTime() > Date.now() ? 'Upcoming' : 'Published') : 'Hidden'} /><StatusBadge value={release.source} /></div>
+                  <div className="item-status"><StatusBadge value={release.isActive ? (new Date(release.releasedAt).getTime() > Date.now() ? 'Upcoming' : 'Published') : 'Hidden'} /><StatusBadge value={releaseSourceLabel(release.source)} /></div>
                 </div>
                 <div className="list-stack mt-12">
                   {release.items.map((item, index) => <div key={`${release.id}-${index}`} className="list-item"><span>{item.type}: {item.text}</span></div>)}
@@ -3396,7 +3411,7 @@ export function App() {
                 <label><span>Название</span><input value={workScenarioForm.name} onChange={(e) => updateWorkScenarioForm('name', e.target.value)} placeholder="Автоматическая выдача VPN" required /></label>
                 <label><span>Ключ</span><input value={workScenarioForm.key} onChange={(e) => updateWorkScenarioForm('key', e.target.value)} placeholder="auto" required /></label>
                 <label><span>VPN-протокол</span><input value={workScenarioForm.vpnProtocol} onChange={(e) => updateWorkScenarioForm('vpnProtocol', e.target.value)} placeholder="vless" /></label>
-                <label><span>Режим выдачи</span><select value={workScenarioForm.provisioningMode} onChange={(e) => updateWorkScenarioForm('provisioningMode', e.target.value)}><option value="auto">auto</option><option value="manual">manual</option><option value="hybrid">hybrid</option></select></label>
+                <label><span>Режим выдачи</span><select value={workScenarioForm.provisioningMode} onChange={(e) => updateWorkScenarioForm('provisioningMode', e.target.value)}><option value="auto">Автоматически</option><option value="manual">Вручную</option><option value="hybrid">Гибридно</option></select></label>
                 <label><span>Правило сервера</span><input value={workScenarioForm.serverSelectionRule} onChange={(e) => updateWorkScenarioForm('serverSelectionRule', e.target.value)} placeholder="least-loaded" /></label>
                 <label><span>Правило inbound</span><input value={workScenarioForm.inboundSelectionRule} onChange={(e) => updateWorkScenarioForm('inboundSelectionRule', e.target.value)} placeholder="default" /></label>
                 <label><span>Устройств</span><input value={workScenarioForm.maxDevices} onChange={(e) => updateWorkScenarioForm('maxDevices', Number(e.target.value) || 1)} type="number" min={1} step="1" /></label>
@@ -3449,7 +3464,7 @@ export function App() {
                 <div className="item-head">
                   <div>
                     <strong>{scenario.name}</strong>
-                    <div className="muted">{scenario.key} · {scenario.vpnProtocol} · {scenario.provisioningMode} · сервер {scenario.serverSelectionRule}</div>
+                    <div className="muted">{scenario.key} · {scenario.vpnProtocol} · {provisioningModeLabel(scenario.provisioningMode)} · сервер {scenario.serverSelectionRule}</div>
                     <div className="muted">Оплата: {scenario.onPaymentSucceeded} · продление: {scenario.onRenewal}</div>
                     <div className="muted">Тарифы: {tariffs.filter((tariff) => tariff.provisioningScenario === scenario.key).map((tariff) => tariff.name).join(', ') || 'не выбраны'}</div>
                   </div>

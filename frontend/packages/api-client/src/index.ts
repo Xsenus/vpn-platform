@@ -1065,6 +1065,8 @@ export function normalizeApiError(payload: unknown, fallback: string): string {
   return fallback
 }
 
+const apiFallbackErrorMessage = 'Не удалось выполнить запрос. Попробуйте еще раз.'
+
 export class ApiClient {
   constructor(private readonly baseUrl: string) {}
 
@@ -1087,7 +1089,7 @@ export class ApiClient {
 
     const payload = await readJsonOrText(response)
     if (!response.ok) {
-      throw new Error(normalizeApiError(payload, errorMessage ?? 'Request failed'))
+      throw new Error(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage))
     }
 
     return payload as T
@@ -1110,37 +1112,37 @@ export class ApiClient {
     const text = await response.text()
     if (!response.ok) {
       const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
-      throw new Error(normalizeApiError(payload, errorMessage ?? 'Request failed'))
+      throw new Error(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage))
     }
 
     return text
   }
 
   getTariffs(): Promise<TariffDto[]> {
-    return this.request<TariffDto[]>('/api/public/tariffs', { errorMessage: 'Failed to load tariffs' })
+    return this.request<TariffDto[]>('/api/public/tariffs', { errorMessage: apiFallbackErrorMessage })
   }
 
   getFaq(): Promise<FaqItem[]> {
-    return this.request<FaqItem[]>('/api/public/content/faq', { errorMessage: 'Failed to load faq' })
+    return this.request<FaqItem[]>('/api/public/content/faq', { errorMessage: apiFallbackErrorMessage })
   }
 
   getHomeFaq(): Promise<FaqItem[]> {
-    return this.request<FaqItem[]>('/api/public/content/faq?home=true', { errorMessage: 'Failed to load faq' })
+    return this.request<FaqItem[]>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage })
   }
 
   getHomeContent(): Promise<SiteContentBlockDto[]> {
-    return this.request<SiteContentBlockDto[]>('/api/public/content/home', { errorMessage: 'Failed to load home content' })
+    return this.request<SiteContentBlockDto[]>('/api/public/content/home', { errorMessage: apiFallbackErrorMessage })
   }
 
   getPublicPaymentProviders(): Promise<PublicPaymentProviderDto[]> {
-    return this.request<PublicPaymentProviderDto[]>('/api/public/payments/providers', { errorMessage: 'Failed to load payment providers' })
+    return this.request<PublicPaymentProviderDto[]>('/api/public/payments/providers', { errorMessage: apiFallbackErrorMessage })
   }
 
   register(email: string, password: string, displayName: string): Promise<AuthResponse> {
     return this.request<AuthResponse>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, displayName }),
-      errorMessage: 'Registration failed'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1148,7 +1150,7 @@ export class ApiClient {
     return this.request<AuthResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-      errorMessage: 'Login failed'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1156,7 +1158,7 @@ export class ApiClient {
     return this.request<AuthResponse>('/api/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
-      errorMessage: 'Refresh failed'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1165,7 +1167,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ refreshToken: refreshToken ?? null }),
-      errorMessage: 'Logout failed'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1173,7 +1175,7 @@ export class ApiClient {
     return this.request<ForgotPasswordResponse>('/api/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
-      errorMessage: 'Password reset request failed'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1181,25 +1183,25 @@ export class ApiClient {
     return this.request<{ status: string }>('/api/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify({ token: resetToken, newPassword }),
-      errorMessage: 'Password reset failed'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getMe(token: string): Promise<UserProfileDto> {
-    return this.request<UserProfileDto>('/api/me', { token, errorMessage: 'Failed to load profile' })
+    return this.request<UserProfileDto>('/api/me', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createCheckoutSession(payload: CreateCheckoutSessionPayload): Promise<CheckoutSessionDto> {
     return this.request<CheckoutSessionDto>('/api/public/checkout-sessions', {
       method: 'POST',
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create checkout session'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getCheckoutSession(token: string): Promise<CheckoutSessionDto> {
     return this.request<CheckoutSessionDto>(`/api/public/checkout-sessions/${encodeURIComponent(token)}`, {
-      errorMessage: 'Failed to load checkout session'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1208,7 +1210,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to claim checkout session'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1216,7 +1218,7 @@ export class ApiClient {
     return this.request<OrderDto>('/api/public/orders', {
       method: 'POST',
       body: JSON.stringify(payload),
-      errorMessage: 'Anonymous public orders are disabled. Use checkout sessions.'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1224,12 +1226,12 @@ export class ApiClient {
     return this.request<PaymentInitResult>(`/api/public/payments/${provider}/init`, {
       method: 'POST',
       body: JSON.stringify({ orderId }),
-      errorMessage: 'Anonymous payment initialization is disabled. Claim checkout session first.'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getOrderStatus(orderId: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/public/orders/${orderId}/status`, { errorMessage: 'Failed to load order status' })
+    return this.request<OrderDto>(`/api/public/orders/${orderId}/status`, { errorMessage: apiFallbackErrorMessage })
   }
 
   createMyOrder(token: string, payload: CreateMyOrderPayload): Promise<OrderDto> {
@@ -1237,7 +1239,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create order'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1246,32 +1248,32 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ returnUrl: returnUrl ?? null }),
-      errorMessage: 'Failed to initialize payment'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getMySubscriptions(token: string): Promise<SubscriptionDto[]> {
-    return this.request<SubscriptionDto[]>('/api/me/subscriptions', { token, errorMessage: 'Failed to load subscriptions' })
+    return this.request<SubscriptionDto[]>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyOrders(token: string): Promise<OrderDto[]> {
-    return this.request<OrderDto[]>('/api/me/orders', { token, errorMessage: 'Failed to load orders' })
+    return this.request<OrderDto[]>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyPayments(token: string): Promise<PaymentAttemptDto[]> {
-    return this.request<PaymentAttemptDto[]>('/api/me/payments', { token, errorMessage: 'Failed to load payments' })
+    return this.request<PaymentAttemptDto[]>('/api/me/payments', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyPayment(token: string, paymentId: string): Promise<PaymentAttemptDto> {
-    return this.request<PaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: 'Failed to load payment' })
+    return this.request<PaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMySupportConversations(token: string): Promise<SupportConversationDto[]> {
-    return this.request<SupportConversationDto[]>('/api/me/support/conversations', { token, errorMessage: 'Failed to load support conversations' })
+    return this.request<SupportConversationDto[]>('/api/me/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMySupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
-    return this.request<SupportMessageDto[]>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: 'Failed to load support messages' })
+    return this.request<SupportMessageDto[]>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createMySupportConversation(token: string, payload: CreateMySupportConversationPayload): Promise<SupportConversationDto> {
@@ -1284,7 +1286,7 @@ export class ApiClient {
         orderId: payload.orderId ?? null,
         subscriptionId: payload.subscriptionId ?? null
       }),
-      errorMessage: 'Failed to create support conversation'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1293,7 +1295,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ text }),
-      errorMessage: 'Failed to send support message'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1302,7 +1304,7 @@ export class ApiClient {
       method: 'PATCH',
       token,
       body: JSON.stringify({ status }),
-      errorMessage: 'Failed to update support status'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1312,40 +1314,40 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to create Telegram link token'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getTelegramStatus(token: string): Promise<TelegramStatusDto> {
-    return this.request<TelegramStatusDto>('/api/me/telegram/status', { token, errorMessage: 'Failed to load Telegram status' })
+    return this.request<TelegramStatusDto>('/api/me/telegram/status', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   unlinkTelegram(token: string): Promise<TelegramStatusDto> {
     return this.request<TelegramStatusDto>('/api/me/telegram/unlink', {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to unlink Telegram'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getMyAccesses(token: string): Promise<AccessCredentialDto[]> {
-    return this.request<AccessCredentialDto[]>('/api/me/accesses', { token, errorMessage: 'Failed to load accesses' })
+    return this.request<AccessCredentialDto[]>('/api/me/accesses', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: 'Failed to load VPN QR code' })
+    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyReferrals(token: string): Promise<RewardLedgerDto[]> {
-    return this.request<RewardLedgerDto[]>('/api/me/referrals', { token, errorMessage: 'Failed to load referrals' })
+    return this.request<RewardLedgerDto[]>('/api/me/referrals', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getLatestAppVersion(token: string): Promise<AppVersionLatestResponse> {
-    return this.request<AppVersionLatestResponse>('/api/app-version/latest', { token, errorMessage: 'Failed to load latest app version' })
+    return this.request<AppVersionLatestResponse>('/api/app-version/latest', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAppVersionHistory(token: string): Promise<AppReleaseDto[]> {
-    return this.request<AppReleaseDto[]>('/api/app-version/history', { token, errorMessage: 'Failed to load app version history' })
+    return this.request<AppReleaseDto[]>('/api/app-version/history', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   markAppVersionSeen(token: string, releaseId: string): Promise<{ releaseId: string; seen: boolean }> {
@@ -1353,12 +1355,12 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ releaseId }),
-      errorMessage: 'Failed to mark app version as seen'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminDashboardSummary(token: string): Promise<AdminDashboardSummaryDto> {
-    return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: 'Failed to load dashboard summary' })
+    return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminUsers(token: string, filters?: { search?: string; status?: string; role?: string }): Promise<AdminUserDto[]> {
@@ -1367,15 +1369,15 @@ export class ApiClient {
     if (filters?.status) params.set('status', filters.status)
     if (filters?.role) params.set('role', filters.role)
     const suffix = params.toString() ? `?${params.toString()}` : ''
-    return this.request<AdminUserDto[]>(`/api/admin/users${suffix}`, { token, errorMessage: 'Failed to load users' })
+    return this.request<AdminUserDto[]>(`/api/admin/users${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminUserOverview(token: string, userId: string): Promise<AdminUserOverviewDto> {
-    return this.request<AdminUserOverviewDto>(`/api/admin/users/${userId}/overview`, { token, errorMessage: 'Failed to load user overview' })
+    return this.request<AdminUserOverviewDto>(`/api/admin/users/${userId}/overview`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminSubscriptions(token: string): Promise<SubscriptionDto[]> {
-    return this.request<SubscriptionDto[]>('/api/admin/subscriptions', { token, errorMessage: 'Failed to load subscriptions' })
+    return this.request<SubscriptionDto[]>('/api/admin/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   extendAdminSubscription(token: string, id: string, days: number, reason?: string | null): Promise<{ id: string; status: string; endAt: string }> {
@@ -1383,7 +1385,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ days, reason: reason ?? null }),
-      errorMessage: 'Failed to extend subscription'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1392,20 +1394,20 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
-      errorMessage: 'Failed to activate subscription'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   blockAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
-    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/block`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: 'Failed to block subscription' })
+    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/block`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage })
   }
 
   unblockAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
-    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/unblock`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: 'Failed to unblock subscription' })
+    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/unblock`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage })
   }
 
   cancelAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
-    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/cancel`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: 'Failed to cancel subscription' })
+    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/cancel`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage })
   }
 
   syncAdminSubscriptionAccess(token: string, id: string, reason?: string | null): Promise<{ id: string; currentAccessId?: string | null; access: AccessActionResultDto }> {
@@ -1413,16 +1415,16 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
-      errorMessage: 'Failed to sync subscription access'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminAccesses(token: string): Promise<AccessCredentialDto[]> {
-    return this.request<AccessCredentialDto[]>('/api/admin/access-credentials', { token, errorMessage: 'Failed to load VPN access credentials' })
+    return this.request<AccessCredentialDto[]>('/api/admin/access-credentials', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: 'Failed to load admin VPN QR code' })
+    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   enableAdminAccess(token: string, id: string, reason?: string | null): Promise<AccessActionResultDto> {
@@ -1430,7 +1432,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
-      errorMessage: 'Failed to enable VPN access'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1439,7 +1441,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
-      errorMessage: 'Failed to disable VPN access'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1449,7 +1451,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
-      errorMessage: 'Failed to sync VPN access'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1458,7 +1460,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
-      errorMessage: 'Failed to reset VPN access traffic'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1467,11 +1469,11 @@ export class ApiClient {
     if (filters.status) params.set('status', filters.status)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.request<OrderDto[]>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: 'Failed to load orders' })
+    return this.request<OrderDto[]>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminPayments(token: string): Promise<PaymentAttemptDto[]> {
-    return this.request<PaymentAttemptDto[]>('/api/admin/payments', { token, errorMessage: 'Failed to load payments' })
+    return this.request<PaymentAttemptDto[]>('/api/admin/payments', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   recheckAdminPayment(token: string, paymentId: string): Promise<PaymentStatusResultDto> {
@@ -1479,7 +1481,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to recheck payment'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1488,7 +1490,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to recheck order payment'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1497,12 +1499,12 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ amount, reason: reason ?? null }),
-      errorMessage: 'Failed to refund payment'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminPaymentProviderAccounts(token: string): Promise<PaymentProviderAccountDto[]> {
-    return this.request<PaymentProviderAccountDto[]>('/api/admin/payment-providers/accounts', { token, errorMessage: 'Failed to load payment provider accounts' })
+    return this.request<PaymentProviderAccountDto[]>('/api/admin/payment-providers/accounts', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminPaymentProviderAccount(token: string, payload: UpsertPaymentProviderAccountPayload): Promise<PaymentProviderAccountDto> {
@@ -1510,7 +1512,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create payment provider account'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1519,7 +1521,7 @@ export class ApiClient {
       method: 'PATCH',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update payment provider account'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1528,7 +1530,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ enabled }),
-      errorMessage: 'Failed to change payment provider account state'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1536,25 +1538,25 @@ export class ApiClient {
     return this.request<PaymentProviderAccountCheckResultDto>(`/api/admin/payment-providers/accounts/${id}/check`, {
       method: 'POST',
       token,
-      errorMessage: 'Failed to check payment provider account'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminPaymentWebhookEvents(token: string): Promise<PaymentWebhookEventDto[]> {
-    return this.request<PaymentWebhookEventDto[]>('/api/admin/payment-webhook-events', { token, errorMessage: 'Failed to load payment webhook events' })
+    return this.request<PaymentWebhookEventDto[]>('/api/admin/payment-webhook-events', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminRefunds(token: string): Promise<RefundDto[]> {
-    return this.request<RefundDto[]>('/api/admin/refunds', { token, errorMessage: 'Failed to load refunds' })
+    return this.request<RefundDto[]>('/api/admin/refunds', { token, errorMessage: apiFallbackErrorMessage })
   }
 
 
   getAdminSupportConversations(token: string): Promise<SupportConversationDto[]> {
-    return this.request<SupportConversationDto[]>('/api/admin/support/conversations', { token, errorMessage: 'Failed to load support conversations' })
+    return this.request<SupportConversationDto[]>('/api/admin/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminSupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
-    return this.request<SupportMessageDto[]>(`/api/admin/support/conversations/${conversationId}/messages`, { token, errorMessage: 'Failed to load support messages' })
+    return this.request<SupportMessageDto[]>(`/api/admin/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   replyAdminSupportConversation(token: string, conversationId: string, text: string): Promise<{ conversationId: string; status: string }> {
@@ -1562,7 +1564,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ text }),
-      errorMessage: 'Failed to send support reply'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1571,7 +1573,7 @@ export class ApiClient {
       method: 'PATCH',
       token,
       body: JSON.stringify({ status, assignedToUserId: assignedToUserId ?? null }),
-      errorMessage: 'Failed to update support status'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1580,12 +1582,12 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ text }),
-      errorMessage: 'Failed to add support note'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminVpnPanels(token: string): Promise<VpnPanelDto[]> {
-    return this.request<VpnPanelDto[]>('/api/admin/vpn-panels', { token, errorMessage: 'Failed to load VPN panels' })
+    return this.request<VpnPanelDto[]>('/api/admin/vpn-panels', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminVpnPanel(token: string, payload: CreateVpnPanelPayload): Promise<VpnPanelDto> {
@@ -1593,7 +1595,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create VPN panel'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1602,7 +1604,7 @@ export class ApiClient {
       method: 'PATCH',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update VPN panel'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1610,7 +1612,7 @@ export class ApiClient {
     return this.request<DeleteVpnPanelResult>(`/api/admin/vpn-panels/${id}`, {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to delete VPN panel'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1619,7 +1621,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to test VPN panel'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1628,12 +1630,12 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to sync VPN panel'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminVpnPanelInbounds(token: string, id: string): Promise<VpnInboundDto[]> {
-    return this.request<VpnInboundDto[]>(`/api/admin/vpn-panels/${id}/inbounds`, { token, errorMessage: 'Failed to load VPN inbounds' })
+    return this.request<VpnInboundDto[]>(`/api/admin/vpn-panels/${id}/inbounds`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminVpnPanelInbound(token: string, id: string, payload: CreateVpnInboundPayload): Promise<VpnInboundDto> {
@@ -1641,7 +1643,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create VPN inbound'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1650,7 +1652,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to set default inbound'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1659,12 +1661,12 @@ export class ApiClient {
       method: 'PATCH',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update VPN inbound'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminVpnPanelClients(token: string, id: string): Promise<VpnClientDto[]> {
-    return this.request<VpnClientDto[]>(`/api/admin/vpn-panels/${id}/clients`, { token, errorMessage: 'Failed to load VPN clients' })
+    return this.request<VpnClientDto[]>(`/api/admin/vpn-panels/${id}/clients`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   enableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
@@ -1672,7 +1674,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to enable VPN client'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1681,7 +1683,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to disable VPN client'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1690,7 +1692,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to sync VPN client'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1699,7 +1701,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to reset VPN client traffic'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1708,24 +1710,24 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ targetInboundId }),
-      errorMessage: 'Failed to migrate VPN client'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminVpnPanelSyncRuns(token: string, id: string): Promise<PanelSyncRunDto[]> {
-    return this.request<PanelSyncRunDto[]>(`/api/admin/vpn-panels/${id}/sync-runs`, { token, errorMessage: 'Failed to load panel sync runs' })
+    return this.request<PanelSyncRunDto[]>(`/api/admin/vpn-panels/${id}/sync-runs`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminVpnPanelSyncEvents(token: string, runId: string): Promise<PanelSyncEventDto[]> {
-    return this.request<PanelSyncEventDto[]>(`/api/admin/vpn-panel-sync-runs/${runId}/events`, { token, errorMessage: 'Failed to load panel sync events' })
+    return this.request<PanelSyncEventDto[]>(`/api/admin/vpn-panel-sync-runs/${runId}/events`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminVpnPanelHealthChecks(token: string, id: string): Promise<PanelHealthCheckDto[]> {
-    return this.request<PanelHealthCheckDto[]>(`/api/admin/vpn-panels/${id}/health-checks`, { token, errorMessage: 'Failed to load panel health checks' })
+    return this.request<PanelHealthCheckDto[]>(`/api/admin/vpn-panels/${id}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminTariffs(token: string): Promise<TariffDto[]> {
-    return this.request<TariffDto[]>('/api/admin/tariffs', { token, errorMessage: 'Failed to load tariffs' })
+    return this.request<TariffDto[]>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminAppReleases(token: string, filters: AppReleaseFilters = {}): Promise<AppReleaseDto[]> {
@@ -1734,11 +1736,11 @@ export class ApiClient {
     if (filters.source && filters.source !== 'all') params.set('source', filters.source)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.request<AppReleaseDto[]>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: 'Failed to load app releases' })
+    return this.request<AppReleaseDto[]>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminAppReleaseOverview(token: string): Promise<AppReleaseOverviewDto> {
-    return this.request<AppReleaseOverviewDto>('/api/app-version/admin/releases/overview', { token, errorMessage: 'Failed to load app release overview' })
+    return this.request<AppReleaseOverviewDto>('/api/app-version/admin/releases/overview', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminFaq(token: string, filters: AdminFaqFilters = {}): Promise<FaqItem[]> {
@@ -1747,20 +1749,20 @@ export class ApiClient {
     if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.request<FaqItem[]>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: 'Failed to load FAQ' })
+    return this.request<FaqItem[]>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminFaqOverview(token: string): Promise<FaqOverviewDto> {
-    return this.request<FaqOverviewDto>('/api/admin/faq/overview', { token, errorMessage: 'Failed to load FAQ overview' })
+    return this.request<FaqOverviewDto>('/api/admin/faq/overview', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminSiteContent(token: string, group = 'home'): Promise<SiteContentBlockDto[]> {
     const suffix = group ? `?group=${encodeURIComponent(group)}` : ''
-    return this.request<SiteContentBlockDto[]>(`/api/admin/site-content${suffix}`, { token, errorMessage: 'Failed to load site content' })
+    return this.request<SiteContentBlockDto[]>(`/api/admin/site-content${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminHomeContentReadiness(token: string): Promise<SiteContentReadinessDto> {
-    return this.request<SiteContentReadinessDto>('/api/admin/site-content/home-readiness', { token, errorMessage: 'Failed to load home content readiness' })
+    return this.request<SiteContentReadinessDto>('/api/admin/site-content/home-readiness', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   restoreAdminHomeContentDefaults(token: string): Promise<SiteContentDefaultsResultDto> {
@@ -1768,7 +1770,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to restore home content defaults'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1777,7 +1779,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create site content block'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1786,7 +1788,7 @@ export class ApiClient {
       method: 'PUT',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update site content block'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1794,12 +1796,12 @@ export class ApiClient {
     return this.request<{ id: string; deleted: boolean }>(`/api/admin/site-content/${id}`, {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to delete site content block'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminWorkScenarios(token: string): Promise<WorkScenarioDto[]> {
-    return this.request<WorkScenarioDto[]>('/api/admin/work-scenarios', { token, errorMessage: 'Failed to load work scenarios' })
+    return this.request<WorkScenarioDto[]>('/api/admin/work-scenarios', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminWorkScenario(token: string, payload: WorkScenarioUpsertPayload): Promise<WorkScenarioDto> {
@@ -1807,7 +1809,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create work scenario'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1816,7 +1818,7 @@ export class ApiClient {
       method: 'PUT',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update work scenario'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1824,7 +1826,7 @@ export class ApiClient {
     return this.request<{ id: string; deleted: boolean }>(`/api/admin/work-scenarios/${id}`, {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to delete work scenario'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1833,7 +1835,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create FAQ item'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1842,7 +1844,7 @@ export class ApiClient {
       method: 'PUT',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update FAQ item'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1850,7 +1852,7 @@ export class ApiClient {
     return this.request<{ id: string; deleted: boolean }>(`/api/admin/faq/${id}`, {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to delete FAQ item'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1859,7 +1861,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create app release'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1868,7 +1870,7 @@ export class ApiClient {
       method: 'PUT',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update app release'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1876,7 +1878,7 @@ export class ApiClient {
     return this.request<{ id: string; deleted: boolean }>(`/api/app-version/admin/releases/${id}`, {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to delete app release'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1885,7 +1887,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create tariff'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1894,7 +1896,7 @@ export class ApiClient {
       method: 'PATCH',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update tariff'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1902,12 +1904,12 @@ export class ApiClient {
     return this.request<{ id: string; deleted: boolean; archived?: boolean }>(`/api/admin/tariffs/${id}`, {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to delete tariff'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminServers(token: string): Promise<VpnNodeDto[]> {
-    return this.request<VpnNodeDto[]>('/api/admin/servers', { token, errorMessage: 'Failed to load servers' })
+    return this.request<VpnNodeDto[]>('/api/admin/servers', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminServer(token: string, payload: CreateServerPayload): Promise<VpnNodeDto> {
@@ -1915,7 +1917,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to create server'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1924,7 +1926,7 @@ export class ApiClient {
       method: 'PUT',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update server'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1932,12 +1934,12 @@ export class ApiClient {
     return this.request<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number }>(`/api/admin/servers/${serverId}`, {
       method: 'DELETE',
       token,
-      errorMessage: 'Failed to delete server'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   disableAdminServer(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to disable server' })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
   }
 
   checkAdminServerHealth(token: string, serverId: string): Promise<NodeHealthCheckDto> {
@@ -1945,28 +1947,28 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to check server health'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminServerHealthChecks(token: string, serverId: string): Promise<NodeHealthCheckDto[]> {
-    return this.request<NodeHealthCheckDto[]>(`/api/admin/servers/${serverId}/health-checks`, { token, errorMessage: 'Failed to load server health checks' })
+    return this.request<NodeHealthCheckDto[]>(`/api/admin/servers/${serverId}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   enableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to enable allocation' })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
   }
 
   disableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to disable allocation' })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
   }
 
   enableAdminServerMaintenance(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to enable maintenance' })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
   }
 
   disableAdminServerMaintenance(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: 'Failed to disable maintenance' })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
   }
 
   precheckAdminServer(token: string, serverId: string): Promise<{ serverId: string; runId: string; status: string; dryRun: boolean }> {
@@ -1974,7 +1976,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to queue server precheck'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -1983,17 +1985,17 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({ dryRun }),
-      errorMessage: 'Failed to queue provisioning run'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminProvisioningRuns(token: string): Promise<ProvisioningRunDto[]> {
-    return this.request<ProvisioningRunDto[]>('/api/admin/provisioning-runs', { token, errorMessage: 'Failed to load provisioning runs' })
+    return this.request<ProvisioningRunDto[]>('/api/admin/provisioning-runs', { token, errorMessage: apiFallbackErrorMessage })
   }
 
 
   getAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningRunDetailsDto> {
-    return this.request<ProvisioningRunDetailsDto>(`/api/admin/provisioning-runs/${runId}`, { token, errorMessage: 'Failed to load provisioning run details' })
+    return this.request<ProvisioningRunDetailsDto>(`/api/admin/provisioning-runs/${runId}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   retryAdminProvisioningRun(token: string, runId: string): Promise<{ runId: string; status: string; dryRun: boolean }> {
@@ -2001,7 +2003,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to retry provisioning run'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -2010,7 +2012,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to queue provisioning deploy'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -2019,7 +2021,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to cancel provisioning run'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -2028,12 +2030,12 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to mark provisioning run support-needed'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
   getAdminTelegramBotSettings(token: string): Promise<AdminTelegramBotSettingsDto> {
-    return this.request<AdminTelegramBotSettingsDto>('/api/admin/telegram-bot/settings', { token, errorMessage: 'Failed to load Telegram bot settings' })
+    return this.request<AdminTelegramBotSettingsDto>('/api/admin/telegram-bot/settings', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   testAdminTelegramBotSettings(token: string): Promise<AdminTelegramBotConnectionCheckDto> {
@@ -2041,7 +2043,7 @@ export class ApiClient {
       method: 'POST',
       token,
       body: JSON.stringify({}),
-      errorMessage: 'Failed to test Telegram bot settings'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 
@@ -2050,7 +2052,7 @@ export class ApiClient {
       method: 'PATCH',
       token,
       body: JSON.stringify(payload),
-      errorMessage: 'Failed to update Telegram bot settings'
+      errorMessage: apiFallbackErrorMessage
     })
   }
 }
