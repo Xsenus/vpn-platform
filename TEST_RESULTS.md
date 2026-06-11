@@ -2,6 +2,39 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-11: управление разделом «Что нового»
+
+Что проверено:
+
+- Backend `/api/app-version/latest` и `/api/app-version/history` показывают пользователю только активные опубликованные релизы.
+- Backend `/api/app-version/mark-seen` фиксирует просмотр опубликованного релиза и отклоняет скрытые или будущие релизы.
+- Backend `/api/app-version/admin/releases` принимает фильтры `visibility`, `source`, `search`.
+- Backend `/api/app-version/admin/releases/overview` возвращает счетчики опубликованных, запланированных, скрытых релизов, просмотры и последний опубликованный релиз.
+- Админка показывает сводку релизов, фильтры истории и статус «Запланировано» для будущих публикаций.
+- Кабинет продолжает открывать окно «Что нового», загружать историю и вызывать `mark-seen`.
+- Добавлена запись «Что нового» `2026-06-11-app-version-management`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AppVersionControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+cd frontend
+npm run typecheck
+npm test
+npm run build
+```
+
+Результат:
+
+- Backend narrow tests: 7/7 пройдено.
+- Backend full suite: 299/299 пройдено.
+- Frontend typecheck: пройден для public-web, cabinet, admin-panel.
+- Frontend tests: 59/59 пройдено.
+- Frontend build: public-web, cabinet, admin-panel собраны успешно.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `POST /api/app-version/admin/releases`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/mark-seen`, `/api/app-version/admin/releases/overview`, `/api/app-version/admin/releases?visibility=published&source=manual&search=smoke`; опубликованный релиз стал latest, `mark-seen=true`, повторный latest вернул `seenByCurrentUser=true`, фильтр вернул 1 запись, будущий релиз на `mark-seen` вернул HTTP 404.
+- Кодировка: проверка на символ замены Unicode U+FFFD в ключевых файлах без совпадений.
+
 ## Проверка 2026-06-11: управление FAQ в админке
 
 Что проверено:

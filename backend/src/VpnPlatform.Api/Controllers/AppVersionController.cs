@@ -62,6 +62,10 @@ public sealed class AppVersionController : ControllerBase
         {
             return NotFound(new { error = "Release not found." });
         }
+        if (!release.IsActive || release.ReleasedAt > DateTimeOffset.UtcNow)
+        {
+            return NotFound(new { error = "Release is not published." });
+        }
 
         var exists = await _db.AppReleaseSeen.AnyAsync(x => x.UserId == userId && x.AppReleaseId == release.Id, cancellationToken);
         if (!exists)
@@ -80,14 +84,18 @@ public sealed class AppVersionController : ControllerBase
 
     [HttpGet("admin/releases")]
     [Authorize(Policy = AdminPolicies.AdminRead)]
-    public async Task<IActionResult> GetAdminReleases(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAdminReleases(
+        [FromQuery] string? visibility = null,
+        [FromQuery] string? source = null,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
     {
         var releases = await _db.AppReleases
             .AsNoTracking()
             .Include(x => x.Items)
             .ToListAsync(cancellationToken);
 
-        var orderedReleases = releases
+        var orderedReleases = ApplyAdminFilters(releases, visibility, source, search)
             .OrderByDescending(x => x.ReleasedAt)
             .ThenByDescending(x => x.CreatedAt)
             .Take(200)
@@ -95,6 +103,40 @@ public sealed class AppVersionController : ControllerBase
             .ToList();
 
         return Ok(orderedReleases);
+    }
+
+    [HttpGet("admin/releases/overview")]
+    [Authorize(Policy = AdminPolicies.AdminRead)]
+    public async Task<IActionResult> GetAdminReleasesOverview(CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var releases = await _db.AppReleases
+            .AsNoTracking()
+            .Include(x => x.Items)
+            .ToListAsync(cancellationToken);
+        var published = releases
+            .Where(x => x.IsActive && x.ReleasedAt <= now)
+            .OrderByDescending(x => x.ReleasedAt)
+            .ThenByDescending(x => x.CreatedAt)
+            .ToList();
+
+        return Ok(new
+        {
+            TotalCount = releases.Count,
+            PublishedCount = published.Count,
+            UpcomingCount = releases.Count(x => x.IsActive && x.ReleasedAt > now),
+            HiddenCount = releases.Count(x => !x.IsActive),
+            AgentCount = releases.Count(x => string.Equals(x.Source, "agent", StringComparison.OrdinalIgnoreCase)),
+            ManualCount = releases.Count(x => string.Equals(x.Source, "manual", StringComparison.OrdinalIgnoreCase)),
+            SeenCount = await _db.AppReleaseSeen.AsNoTracking().CountAsync(cancellationToken),
+            LatestPublishedReleaseId = published.FirstOrDefault()?.ReleaseId,
+            LatestPublishedVersion = published.FirstOrDefault()?.Version,
+            EmptyReleaseIds = releases
+                .Where(x => x.Items.Count == 0 || x.Items.All(item => string.IsNullOrWhiteSpace(item.Text)))
+                .Select(x => x.ReleaseId)
+                .OrderBy(x => x)
+                .ToArray()
+        });
     }
 
     [HttpPost("admin/releases")]
@@ -223,6 +265,41 @@ public sealed class AppVersionController : ControllerBase
             .ThenByDescending(x => x.CreatedAt)
             .Take(50)
             .ToList();
+    }
+
+    private static IEnumerable<AppRelease> ApplyAdminFilters(IEnumerable<AppRelease> releases, string? visibility, string? source, string? search)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var filtered = releases;
+        if (!string.IsNullOrWhiteSpace(visibility) && !string.Equals(visibility, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = visibility.Trim().ToLowerInvariant() switch
+            {
+                "published" => filtered.Where(x => x.IsActive && x.ReleasedAt <= now),
+                "upcoming" => filtered.Where(x => x.IsActive && x.ReleasedAt > now),
+                "hidden" => filtered.Where(x => !x.IsActive),
+                _ => filtered
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(source) && !string.Equals(source, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalizedSource = NormalizeSource(source);
+            filtered = filtered.Where(x => string.Equals(NormalizeSource(x.Source), normalizedSource, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.Trim();
+            filtered = filtered.Where(x =>
+                x.ReleaseId.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                x.Version.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                x.Title.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                x.Summary.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                x.Items.Any(item => item.Text.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return filtered;
     }
 
     private static AppReleaseDto MapRelease(AppRelease release)

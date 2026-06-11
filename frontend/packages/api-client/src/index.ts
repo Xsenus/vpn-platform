@@ -93,6 +93,25 @@ export type AppReleaseUpsertPayload = {
   items: AppReleaseItemDto[]
 }
 
+export type AppReleaseOverviewDto = {
+  totalCount: number
+  publishedCount: number
+  upcomingCount: number
+  hiddenCount: number
+  agentCount: number
+  manualCount: number
+  seenCount: number
+  latestPublishedReleaseId?: string | null
+  latestPublishedVersion?: string | null
+  emptyReleaseIds: string[]
+}
+
+export type AppReleaseFilters = {
+  visibility?: string
+  source?: string
+  search?: string
+}
+
 export type UserProfileDto = {
   id: string
   email?: string | null
@@ -1709,8 +1728,17 @@ export class ApiClient {
     return this.request<TariffDto[]>('/api/admin/tariffs', { token, errorMessage: 'Failed to load tariffs' })
   }
 
-  getAdminAppReleases(token: string): Promise<AppReleaseDto[]> {
-    return this.request<AppReleaseDto[]>('/api/app-version/admin/releases', { token, errorMessage: 'Failed to load app releases' })
+  getAdminAppReleases(token: string, filters: AppReleaseFilters = {}): Promise<AppReleaseDto[]> {
+    const params = new URLSearchParams()
+    if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
+    if (filters.source && filters.source !== 'all') params.set('source', filters.source)
+    if (filters.search) params.set('search', filters.search)
+    const query = params.toString()
+    return this.request<AppReleaseDto[]>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: 'Failed to load app releases' })
+  }
+
+  getAdminAppReleaseOverview(token: string): Promise<AppReleaseOverviewDto> {
+    return this.request<AppReleaseOverviewDto>('/api/app-version/admin/releases/overview', { token, errorMessage: 'Failed to load app release overview' })
   }
 
   getAdminFaq(token: string, filters: AdminFaqFilters = {}): Promise<FaqItem[]> {

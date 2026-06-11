@@ -952,12 +952,18 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).endsWith('/latest')) {
-      return new Response(JSON.stringify({ currentVersion: '0.2.0', release: null, seen: true }), {
+      return new Response(JSON.stringify({ currentVersion: '0.2.0', latestRelease: null, seenByCurrentUser: true }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
     }
-    if (String(url).endsWith('/history') || String(url).endsWith('/admin/releases')) {
+    if (String(url).endsWith('/admin/releases/overview')) {
+      return new Response(JSON.stringify({ totalCount: 1, publishedCount: 1, upcomingCount: 0, hiddenCount: 0, agentCount: 0, manualCount: 1, seenCount: 2, latestPublishedReleaseId: 'release-1', latestPublishedVersion: '0.2.0', emptyReleaseIds: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+    if (String(url).endsWith('/history') || String(url).includes('/admin/releases?') || String(url).endsWith('/admin/releases')) {
       return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
@@ -972,6 +978,8 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
   await client.getAppVersionHistory('user-token')
   await client.markAppVersionSeen('user-token', 'release-1')
   await client.getAdminAppReleases('admin-token')
+  await client.getAdminAppReleases('admin-token', { visibility: 'published', source: 'manual', search: '0.2' })
+  const overview = await client.getAdminAppReleaseOverview('admin-token')
   await client.createAdminAppRelease('admin-token', {
     releaseId: 'release-1',
     version: '0.2.0',
@@ -998,11 +1006,14 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/app-version/history')
   assert.equal(calls[2]?.url, 'http://localhost:8080/api/app-version/mark-seen')
   assert.equal(calls[3]?.url, 'http://localhost:8080/api/app-version/admin/releases')
-  assert.equal(calls[4]?.init?.method, 'POST')
-  assert.equal(calls[5]?.init?.method, 'PUT')
-  assert.equal(calls[6]?.init?.method, 'DELETE')
+  assert.equal(calls[4]?.url, 'http://localhost:8080/api/app-version/admin/releases?visibility=published&source=manual&search=0.2')
+  assert.equal(calls[5]?.url, 'http://localhost:8080/api/app-version/admin/releases/overview')
+  assert.equal(calls[6]?.init?.method, 'POST')
+  assert.equal(calls[7]?.init?.method, 'PUT')
+  assert.equal(calls[8]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer user-token')
-  assert.equal(new Headers(calls[6]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(new Headers(calls[8]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(overview.latestPublishedVersion, '0.2.0')
 })
 
 test('frontend sources include app version gate and admin release editor', () => {
@@ -1018,6 +1029,9 @@ test('frontend sources include app version gate and admin release editor', () =>
   assert.match(cabinetAppSource, /Что нового/)
   assert.match(adminSource, /id="releases"/)
   assert.match(adminSource, /getAdminAppReleases/)
+  assert.match(adminSource, /getAdminAppReleaseOverview/)
+  assert.match(adminSource, /Фильтры релизов/)
+  assert.match(adminSource, /Запланированные/)
   assert.match(adminSource, /createAdminAppRelease/)
   assert.match(adminSource, /updateAdminAppRelease/)
   assert.match(adminSource, /deleteAdminAppRelease/)

@@ -7,6 +7,7 @@ import {
   AdminUserDto,
   AdminUserOverviewDto,
   ApiClient,
+  AppReleaseOverviewDto,
   AppReleaseDto,
   AppReleaseUpsertPayload,
   CreateServerPayload,
@@ -789,6 +790,10 @@ export function App() {
   const [editingTariffId, setEditingTariffId] = useState('')
   const [editingProviderAccountId, setEditingProviderAccountId] = useState('')
   const [appReleases, setAppReleases] = useState<AppReleaseDto[]>([])
+  const [appReleaseOverview, setAppReleaseOverview] = useState<AppReleaseOverviewDto | null>(null)
+  const [releaseVisibilityFilter, setReleaseVisibilityFilter] = useState('all')
+  const [releaseSourceFilter, setReleaseSourceFilter] = useState('all')
+  const [releaseSearch, setReleaseSearch] = useState('')
   const [releaseForm, setReleaseForm] = useState<AppReleaseUpsertPayload>(defaultReleaseForm)
   const [editingReleaseId, setEditingReleaseId] = useState('')
   const [faqEntries, setFaqEntries] = useState<FaqItem[]>([])
@@ -912,6 +917,7 @@ export function App() {
       nextSupportConversations,
       nextTariffs,
       nextAppReleases,
+      nextAppReleaseOverview,
       nextFaqEntries,
       nextFaqOverview,
       nextSiteContent,
@@ -933,7 +939,8 @@ export function App() {
       safeLoad('refunds', () => api.getAdminRefunds(currentToken), [], errors),
       safeLoad('обращения поддержки', () => api.getAdminSupportConversations(currentToken), [], errors),
       safeLoad('tariffs', () => api.getAdminTariffs(currentToken), [], errors),
-      safeLoad('Что нового', () => api.getAdminAppReleases(currentToken), [], errors),
+      safeLoad('Что нового', () => api.getAdminAppReleases(currentToken, { visibility: releaseVisibilityFilter, source: releaseSourceFilter, search: releaseSearch }), [], errors),
+      safeLoad('сводка релизов', () => api.getAdminAppReleaseOverview(currentToken), null, errors),
       safeLoad('FAQ', () => api.getAdminFaq(currentToken, { category: faqCategoryFilter, visibility: faqVisibilityFilter, search: faqSearch }), [], errors),
       safeLoad('сводка FAQ', () => api.getAdminFaqOverview(currentToken), null, errors),
       safeLoad('контент сайта', () => api.getAdminSiteContent(currentToken, 'home'), [], errors),
@@ -957,6 +964,7 @@ export function App() {
     setSupportConversations(nextSupportConversations)
     setTariffs(nextTariffs)
     setAppReleases(nextAppReleases)
+    setAppReleaseOverview(nextAppReleaseOverview)
     setFaqEntries(nextFaqEntries)
     setFaqOverview(nextFaqOverview)
     setSiteContentBlocks(nextSiteContent)
@@ -1094,6 +1102,10 @@ export function App() {
     setTariffFeaturesText('')
     setEditingTariffId('')
     setAppReleases([])
+    setAppReleaseOverview(null)
+    setReleaseVisibilityFilter('all')
+    setReleaseSourceFilter('all')
+    setReleaseSearch('')
     setReleaseForm(defaultReleaseForm)
     setEditingReleaseId('')
     setFaqEntries([])
@@ -2922,6 +2934,31 @@ export function App() {
         </Card>
         <Card>
           <h3>История релизов</h3>
+          <div className="item-head">
+            <div>
+              <div className="muted">
+                Всего: {appReleaseOverview?.totalCount ?? appReleases.length} · опубликовано: {appReleaseOverview?.publishedCount ?? 0} · запланировано: {appReleaseOverview?.upcomingCount ?? 0} · скрыто: {appReleaseOverview?.hiddenCount ?? 0}
+              </div>
+              <div className="muted">
+                Последний релиз: {appReleaseOverview?.latestPublishedVersion ?? 'нет'} · просмотров: {appReleaseOverview?.seenCount ?? 0}
+              </div>
+            </div>
+            <div className="item-status">
+              <StatusBadge value={appReleaseOverview?.publishedCount ? 'Published' : 'Hidden'} />
+              <StatusBadge value={`${appReleaseOverview?.agentCount ?? 0} agent`} />
+            </div>
+          </div>
+          {appReleaseOverview && appReleaseOverview.emptyReleaseIds.length > 0 && (
+            <div className="safe-note">
+              Релизы без пунктов: {appReleaseOverview.emptyReleaseIds.slice(0, 6).join(' · ')}{appReleaseOverview.emptyReleaseIds.length > 6 ? ' · ...' : ''}
+            </div>
+          )}
+          <form className="toolbar toolbar-form" aria-label="Фильтры релизов" onSubmit={(event) => { event.preventDefault(); if (token) void loadAll(token) }}>
+            <label><span>Поиск</span><input value={releaseSearch} onChange={(event) => setReleaseSearch(event.target.value)} placeholder="Версия, releaseId, заголовок" /></label>
+            <label><span>Видимость</span><select value={releaseVisibilityFilter} onChange={(event) => setReleaseVisibilityFilter(event.target.value)}><option value="all">Все релизы</option><option value="published">Опубликованные</option><option value="upcoming">Запланированные</option><option value="hidden">Скрытые</option></select></label>
+            <label><span>Источник</span><select value={releaseSourceFilter} onChange={(event) => setReleaseSourceFilter(event.target.value)}><option value="all">Все источники</option><option value="manual">manual</option><option value="agent">agent</option></select></label>
+            <PrimaryButton type="submit" disabled={!token || busy}>Применить</PrimaryButton>
+          </form>
           <div className="list-stack">
             {appReleases.length === 0 && <EmptyState title="Релизов пока нет" description="Создайте первый релиз или проверьте seed-файл AppReleases/releases.json." />}
             {appReleases.map((release) => (
@@ -2932,7 +2969,7 @@ export function App() {
                     <div className="muted">Версия {release.version} · {release.releaseId} · публикация {formatDate(release.releasedAt)}</div>
                     <div className="muted">{release.summary}</div>
                   </div>
-                  <div className="item-status"><StatusBadge value={release.isActive ? 'Published' : 'Hidden'} /><StatusBadge value={release.source} /></div>
+                  <div className="item-status"><StatusBadge value={release.isActive ? (new Date(release.releasedAt).getTime() > Date.now() ? 'Upcoming' : 'Published') : 'Hidden'} /><StatusBadge value={release.source} /></div>
                 </div>
                 <div className="list-stack mt-12">
                   {release.items.map((item, index) => <div key={`${release.id}-${index}`} className="list-item"><span>{item.type}: {item.text}</span></div>)}

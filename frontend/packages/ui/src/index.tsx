@@ -67,7 +67,7 @@ function badgeTone(value: unknown) {
   const normalized = String(value ?? 'Unknown').toLowerCase()
   if (normalized.includes('active') || normalized.includes('ready') || normalized.includes('paid') || normalized.includes('healthy') || normalized.includes('enabled') || normalized.includes('completed') || normalized.includes('deployed') || normalized.includes('linked') || normalized.includes('published') || normalized.includes('home')) return 'success'
   if (normalized.includes('fail') || normalized.includes('error') || normalized.includes('blocked') || normalized.includes('cancel') || normalized.includes('disabled') || normalized.includes('unhealthy') || normalized.includes('hidden')) return 'danger'
-  if (normalized.includes('pending') || normalized.includes('queued') || normalized.includes('grace') || normalized.includes('progress') || normalized.includes('sandbox') || normalized.includes('validation') || normalized.includes('attention') || normalized.includes('проблем')) return 'warning'
+  if (normalized.includes('pending') || normalized.includes('queued') || normalized.includes('grace') || normalized.includes('progress') || normalized.includes('sandbox') || normalized.includes('validation') || normalized.includes('attention') || normalized.includes('upcoming') || normalized.includes('проблем')) return 'warning'
   return 'neutral'
 }
 
@@ -77,7 +77,10 @@ const statusLabels: Record<string, string> = {
   Attention: 'Нужно внимание',
   Published: 'Опубликовано',
   Hidden: 'Скрыто',
+  Upcoming: 'Запланировано',
   Home: 'Главная',
+  agent: 'agent',
+  manual: 'manual',
   Paid: 'Оплачено',
   Healthy: 'Работает',
   Enabled: 'Включено',
