@@ -1649,5 +1649,32 @@
         "text": "Добавлен runbook test restore в отдельную БД `vpnplatform_restore_check`, чтобы проверять пригодность dump до production restore."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-postgres-schema-audit",
+    "version": "0.71.0",
+    "releasedAt": "2026-06-12T11:05:00+07:00",
+    "title": "Добавлен аудит PostgreSQL schema",
+    "summary": "Платформа получила воспроизводимый аудит PostgreSQL schema: миграции, idempotent SQL и sanitized snapshot таблиц, колонок, nullable-полей, индексов и внешних ключей.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены `audit-postgres-schema.sh` и `audit-postgres-schema.ps1` для Linux/VPS и Windows."
+      },
+      {
+        "type": "important",
+        "text": "PostgreSQL snapshot строится только при заданном `DATABASE_URL` и использует `information_schema`/`pg_indexes`, не читая пользовательские данные и значения секретов."
+      },
+      {
+        "type": "improved",
+        "text": "EF-only режим без PostgreSQL формирует `ef-migrations.txt` и `postgres-migrations-idempotent.sql`, поэтому аудит можно запускать локально и в CI."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлен `PostgresSchemaAuditTests`, который проверяет PostgreSQL EF metadata, PK, индексы, FK, nullable metadata, migration chain и документацию аудита."
+      }
+    ]
   }
 ]

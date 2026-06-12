@@ -2,6 +2,44 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: аудит PostgreSQL schema
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P5-DB-001` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлены `scripts/audit-postgres-schema.sh` и `scripts/audit-postgres-schema.ps1`.
+- EF-only режим без PostgreSQL формирует `ef-migrations.txt`, `postgres-migrations-idempotent.sql`, `audit-metadata.env` и явный `postgres-schema-snapshot.txt` с пометкой, что `DATABASE_URL` не задан.
+- PostgreSQL режим при наличии `DATABASE_URL` и `psql` снимает sanitized snapshot таблиц, колонок, nullable-полей, индексов и FK через `information_schema`/`pg_indexes`, без чтения пользовательских данных.
+- Добавлен runbook `docs/postgres-schema-audit.md`.
+- Добавлен `PostgresSchemaAuditTests`: проверяет PostgreSQL EF metadata, PK у mapped entities, индексы, FK, nullable metadata, migration chain, audit-скрипты и документацию.
+- Добавлен release entry `2026-06-12-postgres-schema-audit` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data.at(-1);console.log(data.length,last.releaseId,last.version,last.title);"
+$null = [scriptblock]::Create((Get-Content -Path scripts\audit-postgres-schema.ps1 -Raw))
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/postgres-schema-audit.md','scripts/audit-postgres-schema.sh','scripts/audit-postgres-schema.ps1','backend/tests/VpnPlatform.UnitTests/PostgresSchemaAuditTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); const last=data.at(-1); console.log('encoding guard ok', last.releaseId, last.title);"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter PostgresSchemaAuditTests --logger "console;verbosity=minimal"
+$env:SCHEMA_AUDIT_DIR = Join-Path $PWD 'artifacts\postgres-schema-audit-local'; powershell -ExecutionPolicy Bypass -File scripts\audit-postgres-schema.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests" --logger "console;verbosity=minimal"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore --logger "console;verbosity=minimal"
+git diff --check
+```
+
+Итог:
+
+- JSON релизов валиден: latest `2026-06-12-postgres-schema-audit`, версия `0.71.0`.
+- PowerShell syntax check: OK.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `PostgresSchemaAuditTests`: 3/3.
+- `scripts\audit-postgres-schema.ps1`: OK, EF-only artifacts созданы в `artifacts/postgres-schema-audit-local`.
+- Реальный `psql` snapshot не запускался локально, потому что `DATABASE_URL` для отдельной PostgreSQL-БД не задан; runbook описывает staging/VPS запуск.
+- Bash syntax check не запускался: доступный `bash` указывает на WSL без `/bin/bash`; Linux-скрипт покрыт static guard в `PostgresSchemaAuditTests`.
+- Release docs tests: 14/14.
+- Backend full suite: 373/373.
+- Local SQLite HTTP-smoke на чистой БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest` с Bearer-токеном; latest release `2026-06-12-postgres-schema-audit`, версия `0.71.0`.
+
 ## Проверка 2026-06-12: backup/restore PostgreSQL для VPS
 
 Что проверено:

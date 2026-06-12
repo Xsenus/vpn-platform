@@ -451,9 +451,10 @@ git diff --check
 
 ## P5. База данных и миграции
 
-- [ ] `P5-DB-001` Полный аудит PostgreSQL schema.
+- [x] `P5-DB-001` Полный аудит PostgreSQL schema. 2026-06-12.
   - Что сделать: проверить таблицы, индексы, FK, nullable-поля, миграции.
-  - Доказательство: migration script/result, psql schema snapshot без секретов.
+  - Что сделано: добавлены кроссплатформенные `scripts/audit-postgres-schema.sh` и `scripts/audit-postgres-schema.ps1`; аудит формирует `ef-migrations.txt`, idempotent `postgres-migrations-idempotent.sql`, metadata-файл и, при наличии `DATABASE_URL`/`psql`, sanitized `postgres-schema-snapshot.txt` только из `information_schema` и `pg_indexes` без чтения пользовательских данных. Добавлен runbook `docs/postgres-schema-audit.md` с локальным EF-only режимом и production/staging режимом для реальной PostgreSQL-БД.
+  - Доказательство: `PostgresSchemaAuditTests` проверяет PostgreSQL EF metadata, наличие PK у всех mapped entities, индексы, FK, nullable metadata, migration chain и безопасность audit-скриптов; PowerShell syntax check; локальный EF-only запуск `scripts\audit-postgres-schema.ps1`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-postgres-schema-audit`.
 
 - [x] `P5-DB-002` EF model drift check. 2026-06-12.
   - Что сделать: убедиться, что модель и миграции не расходятся.
