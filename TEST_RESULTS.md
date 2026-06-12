@@ -2,6 +2,43 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: backup/restore PostgreSQL для VPS
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P5-DB-004` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `scripts/backup-db.sh` усилен проверкой `pg_dump`, custom dump, `.dump.list` и retention через `BACKUP_RETENTION_DAYS`.
+- Добавлены PowerShell и Linux restore-скрипты: `scripts/restore-db.sh`, `scripts/restore-db.ps1`.
+- Добавлен PowerShell backup-скрипт `scripts/backup-db.ps1`.
+- Restore требует `BACKUP_FILE` и отдельный `RESTORE_DATABASE_URL`; совпадение с `DATABASE_URL` блокируется без `RESTORE_ALLOW_DATABASE_URL_MATCH=true`.
+- `scripts/apply-migrations.sh` передает `BACKUP_RETENTION_DAYS` в pre-migration backup.
+- `backups/` добавлен в `.gitignore`, чтобы dump-файлы не попадали в репозиторий.
+- Добавлен runbook `docs/postgres-backup-restore.md` с test restore в отдельную БД `vpnplatform_restore_check`.
+- Добавлен release entry `2026-06-12-postgres-backup-restore-runbook` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter DatabaseBackupRestoreScriptsTests --logger "console;verbosity=minimal"
+$null = [scriptblock]::Create((Get-Content -Path scripts\backup-db.ps1 -Raw)); $null = [scriptblock]::Create((Get-Content -Path scripts\restore-db.ps1 -Raw))
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data.at(-1);console.log(data.length,last.releaseId,last.version,last.title);"
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','TEST_RESULTS.md','docs/postgres-backup-restore.md','scripts/backup-db.sh','scripts/restore-db.sh','scripts/backup-db.ps1','scripts/restore-db.ps1','scripts/apply-migrations.sh','backend/tests/VpnPlatform.UnitTests/DatabaseBackupRestoreScriptsTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); const last=data.at(-1); console.log('encoding guard ok', last.releaseId, last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- `DatabaseBackupRestoreScriptsTests`: 1/1 пройдено.
+- PowerShell syntax check: `backup-db.ps1` и `restore-db.ps1` валидны.
+- Реальный `pg_dump/pg_restore` не запускался в этой Windows-среде, потому что локальный PostgreSQL test restore не поднят; runbook и скрипты готовы для VPS/Linux или Windows с установленными PostgreSQL client tools.
+- Release documentation tests: 14/14 пройдено.
+- Backend full suite: 370/370 пройдено.
+- App releases JSON: валиден, последний релиз `2026-06-12-postgres-backup-restore-runbook`, версия `0.70.0`.
+- Encoding guard: измененные файлы читаются как UTF-8, `U+FFFD` не найден.
+- Local SQLite HTTP-smoke: чистая БД, `/health/live`, `/health/ready`, `/metrics`, `/api/auth/login`, `/api/app-version/latest`; latest release `2026-06-12-postgres-backup-restore-runbook`, версия `0.70.0`, `readyChecks=2`, metrics содержат `vpnplatform_http_requests_total` и `vpnplatform_api_uptime_seconds`.
+
 ## Проверка 2026-06-12: локальный seed данных и VPN sandbox
 
 Что проверено:

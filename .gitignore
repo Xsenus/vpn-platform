@@ -118,6 +118,7 @@ override.tf.json
 *_override.tf.json
 
 # Archives and local exports
+backups/
 *.zip
 *.tar
 *.tar.gz

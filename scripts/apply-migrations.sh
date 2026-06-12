@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 : "${ConnectionStrings__DefaultConnection:?Set ConnectionStrings__DefaultConnection for EF Core migrations}"
 : "${DATABASE_URL:?Set DATABASE_URL so the pre-migration backup can be created with pg_dump}"
 
-BACKUP_PATH="$(BACKUP_DIR="${BACKUP_DIR:-./backups/db}" ./scripts/backup-db.sh)"
+BACKUP_PATH="$(BACKUP_DIR="${BACKUP_DIR:-./backups/db}" BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}" ./scripts/backup-db.sh)"
 echo "Created database backup: $BACKUP_PATH"
 
 dotnet tool restore >/dev/null 2>&1 || true

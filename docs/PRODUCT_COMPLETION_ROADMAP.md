@@ -465,9 +465,10 @@ git diff --check
   - Что сделано: demo seed дополняет чистую локальную SQLite-БД тарифами, FAQ/content/work scenario, sandbox-аккаунтами всех платежных провайдеров, disabled Telegram Stars, sandbox node group, `sandbox-x3ui-panel`, default VLESS inbound и `sandbox-vpn-node` Ready/Healthy. Admin bootstrap создает `admin@local.test`, а повторный seed не дублирует данные.
   - Доказательство: `PaymentProviderSandboxSeedTests` 2/2 на SQLite/InMemory; backend full suite; local SQLite HTTP-smoke после чистой БД показывает latest release `2026-06-12-local-seed-vpn-infrastructure`, публичные тарифы, платежные провайдеры, admin login и health/metrics.
 
-- [ ] `P5-DB-004` Backup/restore для VPS.
+- [x] `P5-DB-004` Backup/restore для VPS. 2026-06-12.
   - Что сделать: настроить backup PostgreSQL и инструкцию восстановления.
-  - Доказательство: test restore на отдельную БД или runbook.
+  - Что сделано: усилен `scripts/backup-db.sh`, добавлены `scripts/backup-db.ps1`, `scripts/restore-db.sh`, `scripts/restore-db.ps1`, игнор `backups/`, retention через `BACKUP_RETENTION_DAYS`, `.dump.list` через `pg_restore --list`, restore только через отдельный `RESTORE_DATABASE_URL` с защитой от совпадения с `DATABASE_URL`; `apply-migrations.sh` использует backup retention.
+  - Доказательство: `DatabaseBackupRestoreScriptsTests`; PowerShell syntax check; runbook `docs/postgres-backup-restore.md` с test restore в `vpnplatform_restore_check`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-postgres-backup-restore-runbook`.
 
 ## P6. Безопасность и секреты
 
