@@ -565,6 +565,8 @@ export type ProvisioningRunDto = {
   errorSummary?: string | null
   executionLog: string
   executionLogPreview?: string | null
+  precheckReport?: string | null
+  precheckReportPreview?: string | null
   createdAt: string
 }
 

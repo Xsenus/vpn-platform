@@ -3622,6 +3622,7 @@ export function App() {
                 <div className="muted">Следующий deploy: {run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)} · риск {provisioningRiskLabel(run.deployRiskLevel)} · {run.deployNextAction || 'сначала выполните precheck'}</div>
                 <div className="muted">{run.dryRun ? 'проверка без изменений' : 'развертывание'} · старт {formatDate(run.startedAt)} · финиш {formatDate(run.finishedAt)}</div>
                 {run.operatorWarning && <div className="safe-note">{run.operatorWarning}</div>}
+                {run.precheckReportPreview && <pre className="safe-note">{run.precheckReportPreview}</pre>}
                 <div className="muted">{run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
                 <div className="toolbar">
                   <PrimaryButton disabled={!token || actionBusyId === `retry-${run.id}`} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton>

@@ -62,6 +62,8 @@ public sealed record AdminAuditLogFilters(string? Action = null, string? EntityT
 [Route("api/admin")]
 public class AdminOperationsController : ControllerBase
 {
+    private const string PrecheckReportStepName = "Precheck report";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -1371,12 +1373,20 @@ public class AdminOperationsController : ControllerBase
             .ToListAsync(cancellationToken);
         runs = runs.OrderByDescending(x => x.CreatedAt).Take(200).ToList();
         var nodeIds = runs.Select(x => x.NodeId).Distinct().ToList();
+        var runIds = runs.Select(x => x.Id).ToList();
         var nodes = await _db.VpnNodes.AsNoTracking().Where(x => nodeIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, cancellationToken);
+        var precheckReports = await _db.ProvisioningStepRuns.AsNoTracking()
+            .Where(x => runIds.Contains(x.ProvisioningRunId) && x.StepName == PrecheckReportStepName)
+            .ToListAsync(cancellationToken);
+        var precheckReportByRunId = precheckReports
+            .GroupBy(x => x.ProvisioningRunId)
+            .ToDictionary(x => x.Key, x => RedactSensitiveText(x.OrderByDescending(step => step.CreatedAt).First().Output, 4000));
         return Ok(runs.Select(x =>
         {
             nodes.TryGetValue(x.NodeId, out var node);
             var mode = ProvisioningService.DescribeProvisioningMode(node, x.DryRun);
             var deployMode = ProvisioningService.DescribeProvisioningMode(node, dryRun: false);
+            precheckReportByRunId.TryGetValue(x.Id, out var precheckReportPreview);
             return new
             {
                 x.Id,
@@ -1411,6 +1421,7 @@ public class AdminOperationsController : ControllerBase
                 ErrorSummary = IsProvisioningFailure(x.Status) ? RedactSensitiveText(x.ExecutionLog, 1000) : string.Empty,
                 ExecutionLogPreview = RedactSensitiveText(x.ExecutionLog, 2000),
                 ExecutionLog = RedactSensitiveText(x.ExecutionLog, 2000),
+                PrecheckReportPreview = precheckReportPreview ?? string.Empty,
                 x.CreatedAt,
                 x.UpdatedAt
             };
@@ -1438,6 +1449,7 @@ public class AdminOperationsController : ControllerBase
 
         var mode = ProvisioningService.DescribeProvisioningMode(node, run.DryRun);
         var deployMode = ProvisioningService.DescribeProvisioningMode(node, dryRun: false);
+        var precheckReport = steps.FirstOrDefault(x => x.StepName == PrecheckReportStepName)?.Output;
         return Ok(new
         {
             Run = new
@@ -1473,6 +1485,7 @@ public class AdminOperationsController : ControllerBase
                 run.FinishedAt,
                 ErrorSummary = IsProvisioningFailure(run.Status) ? RedactSensitiveText(run.ExecutionLog, 1000) : string.Empty,
                 ExecutionLog = RedactSensitiveText(run.ExecutionLog, 8000),
+                PrecheckReport = RedactSensitiveText(precheckReport, 8000),
                 LinkedAccessId = access?.Id,
                 run.CreatedAt,
                 run.UpdatedAt

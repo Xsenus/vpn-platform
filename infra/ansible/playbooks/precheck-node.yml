@@ -3,6 +3,8 @@
   hosts: vpn_nodes
   become: true
   gather_facts: true
+  vars:
+    x3ui_port: "{{ x3ui_port | default(2053) }}"
   tasks:
     - name: Verify SSH reachability
       ansible.builtin.ping:
@@ -25,6 +27,50 @@
           - (ansible_facts['memory_mb']['real']['total'] | int) >= 512
         fail_msg: "Host memory is too low for panel + observability bootstrap."
 
+    - name: Inspect listening TCP ports
+      ansible.builtin.shell: |
+        set -o pipefail
+        ss -ltn || netstat -ltn || true
+      args:
+        executable: /bin/bash
+      register: listening_ports
+      changed_when: false
+      failed_when: false
+
+    - name: Inspect firewall status
+      ansible.builtin.command: ufw status verbose
+      register: firewall_status
+      changed_when: false
+      failed_when: false
+
+    - name: Verify systemd availability
+      ansible.builtin.command: systemctl --version
+      register: systemd_status
+      changed_when: false
+      failed_when: systemd_status.rc != 0
+
+    - name: Inspect Docker availability
+      ansible.builtin.command: docker --version
+      register: docker_status
+      changed_when: false
+      failed_when: false
+
+    - name: Inspect 3x-ui availability
+      ansible.builtin.shell: |
+        set -o pipefail
+        if command -v x-ui >/dev/null 2>&1; then
+          command -v x-ui
+        elif test -x /usr/local/x-ui/x-ui; then
+          echo /usr/local/x-ui/x-ui
+        else
+          echo "3x-ui not installed yet; deploy can install it."
+        fi
+      args:
+        executable: /bin/bash
+      register: x3ui_status
+      changed_when: false
+      failed_when: false
+
     - name: Print precheck summary
       ansible.builtin.debug:
         msg:
@@ -32,3 +78,9 @@
           - "Distribution: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
           - "Memory MB: {{ ansible_facts['memory_mb']['real']['total'] }}"
           - "Root free bytes: {{ (ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | map(attribute='size_available') | first | default(0)) }}"
+          - "Listening ports: {{ listening_ports.stdout | default('not reported') }}"
+          - "Firewall: {{ firewall_status.stdout | default('not reported') }}"
+          - "Docker: {{ docker_status.stdout | default('not installed') }}"
+          - "systemd: {{ systemd_status.stdout_lines[0] | default('not reported') }}"
+          - "3x-ui: {{ x3ui_status.stdout | default('not reported') }}"
+          - "Required ports: ssh={{ ansible_port | default(22) }}, https=443, panel={{ x3ui_port }}"

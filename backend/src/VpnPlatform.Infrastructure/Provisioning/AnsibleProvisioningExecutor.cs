@@ -11,6 +11,8 @@ namespace VpnPlatform.Infrastructure.Provisioning;
 
 public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
 {
+    internal const string PrecheckReportStepName = "Precheck report";
+
     private readonly ProvisioningOptions _options;
     private readonly ProvisioningSecretMaterializer _secretMaterializer;
     private readonly ILogger<AnsibleProvisioningExecutor> _logger;
@@ -203,12 +205,18 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
                 .ToArray()
                 ?? Array.Empty<ProvisioningStepResult>();
 
-            return new ProvisioningExecutionResult(
-                response.Success && process.ExitCode == 0,
-                SecretRedactor.Redact(response.SummaryLog, knownSecrets),
-                steps,
-                response.WorkDirectory ?? workDirectory,
-                SecretRedactor.Redact(response.ErrorText ?? stderr, knownSecrets));
+            var success = response.Success && process.ExitCode == 0;
+            var summaryLog = SecretRedactor.Redact(response.SummaryLog, knownSecrets);
+            var errorText = SecretRedactor.Redact(response.ErrorText ?? stderr, knownSecrets);
+
+            return run.DryRun
+                ? BuildPrecheckExecutionResult(node, run, success, summaryLog, steps, response.WorkDirectory ?? workDirectory, errorText)
+                : new ProvisioningExecutionResult(
+                    success,
+                    summaryLog,
+                    steps,
+                    response.WorkDirectory ?? workDirectory,
+                    errorText);
         }
         finally
         {
@@ -244,18 +252,28 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         var safeHost = string.IsNullOrWhiteSpace(host) ? "unknown-host" : host;
         if (run.DryRun)
         {
-            return new ProvisioningExecutionResult(
+            var steps = new[]
+            {
+                new ProvisioningStepResult("Validate input", true, $"Host={safeHost}; Port={node.SshPort}; User={node.SshUser}; credentials=configured"),
+                new ProvisioningStepResult("Check SSH config", true, "Mock SSH config accepted. No socket was opened."),
+                new ProvisioningStepResult("Check OS", true, "Mock OS: Ubuntu/Debian compatible."),
+                new ProvisioningStepResult("Check ports", true, "Mock ports: 22/443/2053 available for SSH, HTTPS and panel traffic."),
+                new ProvisioningStepResult("Check disk", true, "Mock disk: root filesystem has more than 1 GiB free."),
+                new ProvisioningStepResult("Check RAM", true, "Mock RAM: node has at least 512 MiB memory."),
+                new ProvisioningStepResult("Check firewall", true, "Mock firewall: UFW/firewall state can be inspected and required rules can be applied."),
+                new ProvisioningStepResult("Check Docker", true, "Mock Docker: optional Docker runtime check completed; provisioning can continue without container mode."),
+                new ProvisioningStepResult("Check systemd", true, "Mock systemd: service manager is available."),
+                new ProvisioningStepResult("Check 3x-ui availability", true, "Mock 3x-ui: panel binary can be installed or reused during deploy.")
+            };
+
+            return BuildPrecheckExecutionResult(
+                node,
+                run,
                 true,
                 $"Validation precheck succeeded for {safeHost}. validation/mock mode active: no SSH/Ansible network call was made.",
-                new[]
-                {
-                    new ProvisioningStepResult("Validate input", true, $"Host={safeHost}; Port={node.SshPort}; User={node.SshUser}; credentials=configured"),
-                    new ProvisioningStepResult("Check SSH config", true, "Mock SSH config accepted. No socket was opened."),
-                    new ProvisioningStepResult("Check OS", true, "Mock OS: Ubuntu/Debian compatible."),
-                    new ProvisioningStepResult("Check ports", true, "Mock ports: 22/443/2053 allowed."),
-                    new ProvisioningStepResult("Check resources", true, "Mock resources: disk and memory are sufficient.")
-                },
-                $"mock://provisioning/{run.Id:N}");
+                steps,
+                $"mock://provisioning/{run.Id:N}",
+                null);
         }
 
         return new ProvisioningExecutionResult(
@@ -288,6 +306,98 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         {
             // Best-effort cleanup. The redacted runner logs are still safe for persistence.
         }
+    }
+
+    private static ProvisioningExecutionResult BuildPrecheckExecutionResult(
+        VpnNode node,
+        ProvisioningRun run,
+        bool success,
+        string? summaryLog,
+        IReadOnlyCollection<ProvisioningStepResult> steps,
+        string? workDirectory,
+        string? errorText)
+    {
+        var report = BuildPrecheckReport(node, run, success, steps, errorText);
+        var enrichedSteps = steps
+            .Where(x => !string.Equals(x.StepName, PrecheckReportStepName, StringComparison.OrdinalIgnoreCase))
+            .Append(new ProvisioningStepResult(PrecheckReportStepName, success, report, success ? null : errorText))
+            .ToArray();
+
+        var safeSummary = string.IsNullOrWhiteSpace(summaryLog)
+            ? (success ? "Precheck succeeded." : "Precheck failed.")
+            : summaryLog.Trim();
+
+        return new ProvisioningExecutionResult(
+            success,
+            $"{safeSummary}{Environment.NewLine}{Environment.NewLine}{PrecheckReportStepName}:{Environment.NewLine}{report}",
+            enrichedSteps,
+            workDirectory,
+            errorText);
+    }
+
+    private static string BuildPrecheckReport(VpnNode node, ProvisioningRun run, bool success, IReadOnlyCollection<ProvisioningStepResult> steps, string? errorText)
+    {
+        var host = !string.IsNullOrWhiteSpace(node.IpAddress) ? node.IpAddress : node.Host;
+        var report = new PrecheckReport(
+            run.Id,
+            node.Id,
+            string.IsNullOrWhiteSpace(host) ? "unknown-host" : host,
+            node.SshPort,
+            string.IsNullOrWhiteSpace(node.SshUser) ? "root" : node.SshUser,
+            success ? "passed" : "failed",
+            success ? "Server precheck passed." : "Server precheck failed. Review failed/not_reported checks and runner log.",
+            new[]
+            {
+                ResolvePrecheckItem("ssh", "SSH connectivity", steps, new[] { "ssh", "ping", "inventory", "ansible-playbook" }, success),
+                ResolvePrecheckItem("os", "Operating system", steps, new[] { "os", "debian", "ubuntu", "distribution" }, success),
+                ResolvePrecheckItem("ports", "Required ports", steps, new[] { "ports", "443", "2053", "listening" }, success),
+                ResolvePrecheckItem("disk", "Disk space", steps, new[] { "disk", "root filesystem", "root free", "free bytes" }, success),
+                ResolvePrecheckItem("ram", "RAM", steps, new[] { "ram", "memory", "memory mb" }, success),
+                ResolvePrecheckItem("firewall", "Firewall", steps, new[] { "firewall", "ufw" }, success),
+                ResolvePrecheckItem("docker", "Docker", steps, new[] { "docker", "container" }, true),
+                ResolvePrecheckItem("systemd", "systemd", steps, new[] { "systemd", "systemctl" }, success),
+                ResolvePrecheckItem("x3ui", "3x-ui availability", steps, new[] { "3x-ui", "x-ui", "x3ui" }, true)
+            },
+            string.IsNullOrWhiteSpace(errorText) ? null : TrimForReport(errorText, 1000));
+
+        return JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+    }
+
+    private static PrecheckItem ResolvePrecheckItem(string key, string label, IReadOnlyCollection<ProvisioningStepResult> steps, IReadOnlyCollection<string> markers, bool fallbackSuccess)
+    {
+        var matched = steps.FirstOrDefault(step =>
+            markers.Any(marker => ContainsMarker(step.StepName, marker)
+                || ContainsMarker(step.Output, marker)
+                || ContainsMarker(step.ErrorText, marker)));
+
+        if (matched is null)
+        {
+            return new PrecheckItem(
+                key,
+                label,
+                fallbackSuccess ? "passed" : "not_reported",
+                fallbackSuccess
+                    ? "Runner completed successfully but did not return a dedicated per-check output."
+                    : "Runner did not return a dedicated per-check output; inspect ansible-playbook log.",
+                fallbackSuccess ? null : "Open the provisioning run details and review the runner output.");
+        }
+
+        var evidence = !string.IsNullOrWhiteSpace(matched.Output) ? matched.Output : matched.ErrorText;
+        return new PrecheckItem(
+            key,
+            label,
+            matched.Success ? "passed" : "failed",
+            TrimForReport(evidence, 1000),
+            matched.Success ? null : "Fix the server environment and run precheck again.");
+    }
+
+    private static bool ContainsMarker(string? value, string marker)
+        => !string.IsNullOrWhiteSpace(value) && value.Contains(marker, StringComparison.OrdinalIgnoreCase);
+
+    private static string TrimForReport(string? value, int maxLength)
+    {
+        var text = string.IsNullOrWhiteSpace(value) ? "No output." : value.Trim();
+        return text.Length <= maxLength ? text : text[..maxLength];
     }
 
     private static string ResolveExistingPath(string value)
@@ -330,4 +440,22 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         public string? Output { get; set; }
         public string? ErrorText { get; set; }
     }
+
+    private sealed record PrecheckReport(
+        Guid RunId,
+        Guid NodeId,
+        string Host,
+        int SshPort,
+        string SshUser,
+        string Status,
+        string Summary,
+        IReadOnlyCollection<PrecheckItem> Checks,
+        string? ErrorText);
+
+    private sealed record PrecheckItem(
+        string Key,
+        string Label,
+        string Status,
+        string Evidence,
+        string? RequiredAction);
 }

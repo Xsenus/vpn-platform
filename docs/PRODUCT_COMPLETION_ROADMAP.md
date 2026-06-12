@@ -516,9 +516,10 @@ git diff --check
   - Что сделано: live Ansible получает protected `ssh_key` только через временный файл `WorkingDirectory/<runId>/secrets/ssh-key-*`, а executor удаляет файл в `finally`. Redaction теперь покрывает raw/private key, protected payload, legacy key path, temporary key path и temporary `secrets` directory path, поэтому runner output/stderr/step logs не сохраняют путь или секрет даже при случайном выводе аргументов.
   - Доказательство: `ProvisioningSecretMaterializerTests`, `OwnVpsProvisioningMvpTests`; тест `Ansible_Runner_Redaction_Should_Cover_Temporary_Key_Path_And_Plaintext`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-live-ansible-credentials`; документация `docs/live-ansible-credentials.md`.
 
-- [ ] `P7-PROV-003` Precheck сервера.
+- [x] `P7-PROV-003` Precheck сервера. 2026-06-12.
   - Что сделать: OS, ports, disk, RAM, firewall, Docker/systemd, 3x-ui availability.
-  - Доказательство: precheck report.
+  - Что сделано: `precheck-node.yml` проверяет Debian-family OS, свободное место на root, RAM, listening ports, firewall/UFW, systemd, Docker runtime и доступность/установленность 3x-ui. `AnsibleProvisioningExecutor` формирует единый JSON `Precheck report` для mock и live runner, сохраняет его отдельным `ProvisioningStepRun`, добавляет в summary log и отдает через admin API как `precheckReport`/`precheckReportPreview`. Админка показывает отчет в разделе «Подготовка VPS».
+  - Доказательство: `OwnVpsProvisioningMvpTests`, frontend API/typecheck tests, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-vps-precheck-report`, документация `docs/vps-precheck-report.md`.
 
 - [ ] `P7-PROV-004` Rollback.
   - Что сделать: при неудачном provisioning вернуть run/node в понятное состояние.

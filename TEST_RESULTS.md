@@ -2,6 +2,44 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: отчет precheck VPS
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P7-PROV-003` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `AnsibleProvisioningExecutor` формирует JSON `Precheck report` для dry-run/mock и live runner, сохраняет его отдельным шагом и добавляет в summary log.
+- Admin API возвращает `precheckReportPreview` в списке provisioning runs и полный `precheckReport` в деталях запуска.
+- Админка показывает отчет precheck в разделе «Подготовка VPS».
+- `precheck-node.yml` инспектирует OS, ports, disk, RAM, firewall, Docker, systemd и 3x-ui availability.
+- Добавлена документация `docs/vps-precheck-report.md`.
+- Добавлен release entry `2026-06-12-vps-precheck-report` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "OwnVpsProvisioningMvpTests|ProvisioningSecretMaterializerTests"
+npm test -- --test-name-pattern "provisioning"
+npm run typecheck --workspace apps/admin-panel
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+npm run build --workspace apps/admin-panel
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/vps-precheck-report.md','TEST_RESULTS.md','backend/src/VpnPlatform.Infrastructure/Provisioning/AnsibleProvisioningExecutor.cs','backend/src/VpnPlatform.Api/Controllers/Admin/AdminOperationsController.cs','backend/tests/VpnPlatform.UnitTests/OwnVpsProvisioningMvpTests.cs','frontend/packages/api-client/src/index.ts','frontend/apps/admin-panel/src/App.tsx','infra/ansible/playbooks/precheck-node.yml']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Targeted provisioning tests: 19/19.
+- Frontend API tests: 61/61.
+- Admin panel typecheck: OK.
+- Admin panel production build: OK.
+- Backend full suite: 413/413.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-12-vps-precheck-report`, версия `0.80.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `POST /api/admin/servers/{id}/precheck`, `/api/admin/provisioning-runs`, `/api/admin/provisioning-runs/{id}`; latest release `2026-06-12-vps-precheck-report`, версия `0.80.0`; серверов `1`; precheck run `ReadyToDeploy`; `precheckReportPreview` содержит `x3ui`; полный `precheckReport` содержит `firewall`.
+
 ## Проверка 2026-06-12: live Ansible credentials
 
 Что проверено:

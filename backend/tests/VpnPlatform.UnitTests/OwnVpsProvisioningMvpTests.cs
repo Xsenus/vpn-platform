@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -206,8 +207,96 @@ public class OwnVpsProvisioningMvpTests
         Assert.True(result.Success);
         Assert.Contains(result.Steps, x => x.StepName == "Validate input");
         Assert.Contains(result.Steps, x => x.StepName == "Check SSH config");
+        Assert.Contains(result.Steps, x => x.StepName == "Check OS");
+        Assert.Contains(result.Steps, x => x.StepName == "Check ports");
+        Assert.Contains(result.Steps, x => x.StepName == "Check disk");
+        Assert.Contains(result.Steps, x => x.StepName == "Check RAM");
+        Assert.Contains(result.Steps, x => x.StepName == "Check firewall");
+        Assert.Contains(result.Steps, x => x.StepName == "Check Docker");
+        Assert.Contains(result.Steps, x => x.StepName == "Check systemd");
+        Assert.Contains(result.Steps, x => x.StepName == "Check 3x-ui availability");
         Assert.Contains("Validation precheck succeeded for vps.example.test", result.SummaryLog, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("validation/mock", result.SummaryLog, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Precheck report", result.SummaryLog, StringComparison.OrdinalIgnoreCase);
+
+        var reportStep = Assert.Single(result.Steps, x => x.StepName == "Precheck report");
+        using var report = JsonDocument.Parse(reportStep.Output);
+        var root = report.RootElement;
+        Assert.Equal("passed", root.GetProperty("status").GetString());
+        var checkKeys = root.GetProperty("checks").EnumerateArray().Select(x => x.GetProperty("key").GetString()).ToArray();
+        Assert.Contains("ssh", checkKeys);
+        Assert.Contains("os", checkKeys);
+        Assert.Contains("ports", checkKeys);
+        Assert.Contains("disk", checkKeys);
+        Assert.Contains("ram", checkKeys);
+        Assert.Contains("firewall", checkKeys);
+        Assert.Contains("docker", checkKeys);
+        Assert.Contains("systemd", checkKeys);
+        Assert.Contains("x3ui", checkKeys);
+    }
+
+    [Fact]
+    public async Task Admin_Provisioning_Run_Views_Should_Return_Precheck_Report()
+    {
+        await using var db = CreateDbContext();
+        var nodeId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "Precheck VPS", Host = "precheck.example.test", SshUser = "root", SshPort = 22, TagsCsv = "validation-mode:true" });
+        db.ProvisioningRuns.Add(new ProvisioningRun { Id = runId, NodeId = nodeId, Status = ProvisioningRunStatus.ReadyToDeploy, DryRun = true, ExecutionLog = "Precheck report stored." });
+        db.ProvisioningStepRuns.Add(new ProvisioningStepRun
+        {
+            ProvisioningRunId = runId,
+            StepName = "Precheck report",
+            Status = ProvisioningRunStatus.Succeeded,
+            Output = """{"status":"passed","checks":[{"key":"ssh","status":"passed"}]}"""
+        });
+        await db.SaveChangesAsync();
+
+        var service = new ProvisioningService(db, new TestClock(), new TestSecretProtector());
+        var controller = CreateOperationsController(db, service);
+
+        var runs = Assert.IsType<OkObjectResult>(await controller.GetProvisioningRuns(CancellationToken.None)).Value;
+        var details = Assert.IsType<OkObjectResult>(await controller.GetProvisioningRun(runId, CancellationToken.None)).Value;
+        var json = JsonSerializer.Serialize(new { runs, details });
+
+        Assert.Contains("PrecheckReportPreview", json, StringComparison.Ordinal);
+        Assert.Contains("PrecheckReport", json, StringComparison.Ordinal);
+        Assert.Contains("status", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("passed", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Admin_Provisioning_Run_List_With_Precheck_Report_Should_Work_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var nodeId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "SQLite Precheck VPS", Host = "sqlite-precheck.example.test", SshUser = "root", SshPort = 22, TagsCsv = "validation-mode:true" });
+        db.ProvisioningRuns.Add(new ProvisioningRun { Id = runId, NodeId = nodeId, Status = ProvisioningRunStatus.ReadyToDeploy, DryRun = true, ExecutionLog = "Precheck report stored." });
+        db.ProvisioningStepRuns.Add(new ProvisioningStepRun
+        {
+            ProvisioningRunId = runId,
+            StepName = "Precheck report",
+            Status = ProvisioningRunStatus.Succeeded,
+            Output = """{"status":"passed","checks":[{"key":"firewall","status":"passed"}]}"""
+        });
+        await db.SaveChangesAsync();
+
+        var service = new ProvisioningService(db, new TestClock(), new TestSecretProtector());
+        var controller = CreateOperationsController(db, service);
+
+        var runs = Assert.IsType<OkObjectResult>(await controller.GetProvisioningRuns(CancellationToken.None)).Value;
+        var json = JsonSerializer.Serialize(runs);
+
+        Assert.Contains("PrecheckReportPreview", json, StringComparison.Ordinal);
+        Assert.Contains("firewall", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

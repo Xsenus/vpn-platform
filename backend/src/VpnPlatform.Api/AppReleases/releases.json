@@ -1892,5 +1892,32 @@
         "text": "Добавлен runbook `docs/live-ansible-credentials.md` с правилами безопасной передачи SSH credentials в live Ansible."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-vps-precheck-report",
+    "version": "0.80.0",
+    "releasedAt": "2026-06-12T12:32:00+07:00",
+    "title": "Добавлен отчет precheck VPS",
+    "summary": "Подготовка VPS получила единый отчет precheck по OS, портам, диску, RAM, firewall, Docker, systemd и доступности 3x-ui.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Dry-run precheck теперь сохраняет отдельный шаг `Precheck report` с JSON-отчетом по обязательным проверкам сервера."
+      },
+      {
+        "type": "improved",
+        "text": "Admin API возвращает `precheckReportPreview` в списке запусков и полный `precheckReport` в деталях provisioning run."
+      },
+      {
+        "type": "improved",
+        "text": "Ansible playbook precheck инспектирует listening ports, firewall/UFW, Docker, systemd и наличие 3x-ui до deploy."
+      },
+      {
+        "type": "fixed",
+        "text": "Админка показывает отчет precheck в разделе «Подготовка VPS», чтобы оператор видел результат проверки без чтения raw logs."
+      }
+    ]
   }
 ]
