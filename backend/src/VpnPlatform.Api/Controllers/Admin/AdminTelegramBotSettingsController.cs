@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +93,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
         await UpsertTemplateAsync(RenewalKey, "Renewal text", request.RenewalTextTemplate, cancellationToken);
         await UpsertTemplateAsync(PaymentFailedKey, "Payment failed text", request.PaymentFailedTextTemplate, cancellationToken);
         await UpsertTemplateAsync(SubscriptionExpiredKey, "Subscription expired text", request.SubscriptionExpiredTextTemplate, cancellationToken);
+        AddSecretRotationAudit(request);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetSettings(cancellationToken);
     }
@@ -303,6 +306,52 @@ public class AdminTelegramBotSettingsController : ControllerBase
         template.Body = normalized;
         template.IsActive = true;
         template.UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private void AddSecretRotationAudit(UpdateTelegramBotSettingsCommand request)
+    {
+        var rotatedBotToken = !string.IsNullOrWhiteSpace(request.BotToken);
+        var rotatedSecretToken = !string.IsNullOrWhiteSpace(request.SecretToken);
+        if (!rotatedBotToken && !rotatedSecretToken)
+        {
+            return;
+        }
+
+        var afterJson = JsonSerializer.Serialize(new
+        {
+            rotatedBotToken,
+            rotatedSecretToken,
+            mode = NormalizeMode(request.Mode),
+            publicBotUsername = NormalizeUsername(request.PublicBotUsername),
+            webhookConfigured = !string.IsNullOrWhiteSpace(request.WebhookUrl),
+            webAppConfigured = !string.IsNullOrWhiteSpace(request.WebAppUrl)
+        });
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            ActorType = "admin",
+            ActorId = ResolveUserId()?.ToString() ?? "unknown",
+            Action = "telegram_bot.secret.rotate",
+            EntityType = "TelegramBotSettings",
+            EntityId = SettingsGroup,
+            BeforeJson = "{}",
+            AfterJson = SensitiveDataRedactor.Redact(afterJson),
+            Ip = HttpContext?.Connection.RemoteIpAddress?.ToString() ?? string.Empty,
+            UserAgent = HttpContext?.Request.Headers.UserAgent.ToString() ?? string.Empty
+        });
+    }
+
+    private Guid? ResolveUserId()
+    {
+        var principal = HttpContext?.User;
+        if (principal is null)
+        {
+            return null;
+        }
+
+        var raw = principal.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? principal.FindFirstValue("sub");
+        return Guid.TryParse(raw, out var userId) ? userId : null;
     }
 
     private static string FindTemplate(IEnumerable<NotificationTemplate> templates, string key, string fallback)

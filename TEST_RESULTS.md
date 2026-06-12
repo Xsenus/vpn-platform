@@ -2,6 +2,39 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: безопасная ротация секретов
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P6-SEC-002` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Платежная ротация продолжает писать `payment_provider.secret.rotate`.
+- Добавлен `server.secret.rotate` для SSH credential и panel password.
+- Добавлен `telegram_bot.secret.rotate` для BotToken и SecretToken.
+- При ротации server secrets создаются новые `secretref:ssh:*` и `secretref:panel:*`, но API/audit не раскрывают raw secret, protected payload или `secretref:*`.
+- Telegram settings продолжают сохранять BotToken/SecretToken через write-only поля и audit содержит только флаги `rotatedBotToken` / `rotatedSecretToken`.
+- Добавлена документация `docs/secret-rotation.md`.
+- Добавлен release entry `2026-06-12-secret-rotation-audit` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "SecurityHardeningMvpTests|AdminTelegramBotSettingsControllerTests|AuditLogMvpTests" --logger "console;verbosity=minimal"
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data.at(-1);console.log(data.length,last.releaseId,last.version,last.releasedAt,last.title);"
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/secret-rotation.md','backend/src/VpnPlatform.Api/Controllers/Admin/AdminOperationsController.cs','backend/src/VpnPlatform.Api/Controllers/Admin/AdminTelegramBotSettingsController.cs','backend/tests/VpnPlatform.UnitTests/SecurityHardeningMvpTests.cs','backend/tests/VpnPlatform.UnitTests/AdminTelegramBotSettingsControllerTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests" --logger "console;verbosity=minimal"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore --logger "console;verbosity=minimal"
+git diff --check
+```
+
+Итог:
+
+- `SecurityHardeningMvpTests|AdminTelegramBotSettingsControllerTests|AuditLogMvpTests`: 14/14.
+- JSON релизов валиден: latest `2026-06-12-secret-rotation-audit`, версия `0.73.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- Release docs tests: 14/14.
+- Backend full suite: 378/378.
+- Local SQLite HTTP-smoke на чистой БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest` с Bearer-токеном; latest release `2026-06-12-secret-rotation-audit`, версия `0.73.0`.
+
 ## Проверка 2026-06-12: production secret storage для provisioning
 
 Что проверено:

@@ -49,6 +49,14 @@ public class AdminTelegramBotSettingsControllerTests
         Assert.Contains(await db.SiteContentBlocks.ToListAsync(), x => x.Key == "telegram_bot.secret_token_protected" && x.Value == "protected:webhook-secret");
         Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.welcome" && x.Body == "Добро пожаловать");
 
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "telegram_bot.secret.rotate");
+        var auditJson = $"{audit.BeforeJson}\n{audit.AfterJson}";
+        Assert.Contains("rotatedBotToken", auditJson, StringComparison.Ordinal);
+        Assert.Contains("rotatedSecretToken", auditJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("telegram-secret", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("webhook-secret", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("protected:", auditJson, StringComparison.OrdinalIgnoreCase);
+
         var check = await controller.TestSettings(CancellationToken.None);
         var checkDto = Assert.IsType<AdminTelegramBotConnectionCheckDto>(Assert.IsType<OkObjectResult>(check).Value);
         Assert.True(checkDto.IsReady);

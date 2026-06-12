@@ -479,9 +479,10 @@ git diff --check
   - Что сделано: добавлен `ProvisioningSecretMaterializer`, который использует `ISecretProtector`, расшифровывает только protected `ssh_key` payload в временный файл `WorkingDirectory/<runId>/secrets/ssh-key-*`, выставляет best-effort права `700/600` на Unix, передает runner только path и удаляет файл в `finally`. `AnsibleProvisioningExecutor` больше не fail-closed для supported protected SSH key, но продолжает блокировать password-based live SSH, `validation-placeholder:*`, legacy protected values в `SshPrivateKeyPath` и missing protected payload при наличии `SshCredentialRef`.
   - Доказательство: `ProvisioningSecretMaterializerTests`, `OwnVpsProvisioningMvpTests`, `SecurityHardeningMvpTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-production-provisioning-secret-storage`; документация `docs/production-secret-storage.md`.
 
-- [ ] `P6-SEC-002` Secret rotation.
+- [x] `P6-SEC-002` Secret rotation. 2026-06-12.
   - Что сделать: ротация платежных, Telegram, 3x-ui, SSH секретов без показа старых значений.
-  - Доказательство: admin flow + tests.
+  - Что сделано: платежная ротация уже фиксировалась через `payment_provider.secret.rotate`; добавлены `server.secret.rotate` для SSH credential/panel password и `telegram_bot.secret.rotate` для BotToken/SecretToken. При ротации server secrets создается новый `secretref:ssh:*`/`secretref:panel:*`, старые значения не раскрываются, API продолжает возвращать только configured-флаги. Audit-события содержат только безопасные флаги `rotated*` и metadata без raw secret/protected payload/secretref.
+  - Доказательство: `SecurityHardeningMvpTests`, `AdminTelegramBotSettingsControllerTests`, `AuditLogMvpTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-secret-rotation-audit`; документация `docs/secret-rotation.md`.
 
 - [ ] `P6-SEC-003` RBAC.
   - Что сделать: роли admin/support/operator, запрет опасных действий без прав.

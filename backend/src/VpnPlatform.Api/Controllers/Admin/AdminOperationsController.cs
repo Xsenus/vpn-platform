@@ -1111,12 +1111,16 @@ public class AdminOperationsController : ControllerBase
             SshCredentialConfigured = ProvisioningService.CredentialsConfigured(node)
         };
 
-        if (!string.IsNullOrWhiteSpace(request.SshCredential))
+        var rotatedSshCredential = !string.IsNullOrWhiteSpace(request.SshCredential);
+        var rotatedPanelPassword = !string.IsNullOrWhiteSpace(request.PanelPassword);
+
+        if (rotatedSshCredential)
         {
+            var sshCredential = request.SshCredential!.Trim();
             node.ProtectedSshCredential = _secretProtector is not null
-                ? _secretProtector.Protect(request.SshCredential.Trim())
-                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(request.SshCredential.Trim()))).ToLowerInvariant();
-            node.SshCredentialRef = string.IsNullOrWhiteSpace(node.SshCredentialRef) ? $"secretref:ssh:{Guid.NewGuid():N}" : node.SshCredentialRef;
+                ? _secretProtector.Protect(sshCredential)
+                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(sshCredential))).ToLowerInvariant();
+            node.SshCredentialRef = $"secretref:ssh:{Guid.NewGuid():N}";
             node.SshPrivateKeyPath = string.Empty;
         }
         else if (!string.IsNullOrWhiteSpace(request.SshPrivateKeyPath))
@@ -1126,12 +1130,13 @@ public class AdminOperationsController : ControllerBase
             node.SshCredentialRef = string.Empty;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.PanelPassword))
+        if (rotatedPanelPassword)
         {
+            var panelPassword = request.PanelPassword!.Trim();
             node.ProtectedPanelPassword = _secretProtector is not null
-                ? _secretProtector.Protect(request.PanelPassword.Trim())
-                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(request.PanelPassword.Trim()))).ToLowerInvariant();
-            node.PanelSecretRef = string.IsNullOrWhiteSpace(node.PanelSecretRef) ? $"secretref:panel:{Guid.NewGuid():N}" : node.PanelSecretRef;
+                ? _secretProtector.Protect(panelPassword)
+                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(panelPassword))).ToLowerInvariant();
+            node.PanelSecretRef = $"secretref:panel:{Guid.NewGuid():N}";
             node.PanelPassword = string.Empty;
         }
 
@@ -1175,6 +1180,7 @@ public class AdminOperationsController : ControllerBase
             owner,
             request.ValidationMode
         }));
+        AddServerSecretRotationAudit(node, rotatedSshCredential, rotatedPanelPassword, authMethod);
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapVpnNode(node));
     }
@@ -2033,6 +2039,30 @@ public class AdminOperationsController : ControllerBase
                 account.Name,
                 rotatedSecretKey,
                 rotatedWebhookSecret
+            }, JsonOptions));
+    }
+
+    private void AddServerSecretRotationAudit(VpnNode node, bool rotatedSshCredential, bool rotatedPanelPassword, string authMethod)
+    {
+        if (!rotatedSshCredential && !rotatedPanelPassword)
+        {
+            return;
+        }
+
+        AddAuditLog(
+            "server.secret.rotate",
+            "VpnNode",
+            node.Id,
+            "{}",
+            JsonSerializer.Serialize(new
+            {
+                node.Name,
+                node.Host,
+                rotatedSshCredential,
+                rotatedPanelPassword,
+                sshAuthMethod = authMethod,
+                sshCredentialConfigured = ProvisioningService.CredentialsConfigured(node),
+                panelPasswordConfigured = ProvisioningService.PanelPasswordConfigured(node)
             }, JsonOptions));
     }
 

@@ -200,6 +200,95 @@ public class SecurityHardeningMvpTests
     }
 
     [Fact]
+    public async Task Admin_UpdateServer_Should_Rotate_Ssh_And_Panel_Secrets_With_Redacted_Audit()
+    {
+        await using var db = CreateDbContext();
+        var protector = CreateSecretProtector();
+        var controller = CreateOperationsController(db, protector);
+
+        var create = Assert.IsType<OkObjectResult>(await controller.AddServer(new CreateServerHttpRequest(
+            Name: "Rotate node",
+            Host: "rotate-node.example.test",
+            IpAddress: "",
+            Provider: "admin-vps",
+            Region: "EU",
+            Country: "NL",
+            Datacenter: "AMS",
+            Capacity: 100,
+            SupportedProtocolsCsv: "vless",
+            Priority: 100,
+            TagsCsv: "tier:standard",
+            SshUser: "root",
+            SshPort: 22,
+            SshPrivateKeyPath: null,
+            SkipHostKeyChecking: true,
+            PanelBaseUrl: "https://panel.example.test",
+            PanelUsername: "admin",
+            PanelPassword: "old-panel-secret",
+            PanelInboundId: 1,
+            PublicHostname: "rotate-node.example.test",
+            PublicPort: 443,
+            NodeGroupId: null,
+            SshAuthMethod: "ssh_key",
+            SshCredential: "old-ssh-secret",
+            ValidationMode: true,
+            OwnerType: "admin"), CancellationToken.None));
+
+        var node = await db.VpnNodes.SingleAsync();
+        var originalSshSecret = node.ProtectedSshCredential;
+        var originalSshRef = node.SshCredentialRef;
+        var originalPanelSecret = node.ProtectedPanelPassword;
+        var originalPanelRef = node.PanelSecretRef;
+
+        var update = await controller.UpdateServer(node.Id, new CreateServerHttpRequest(
+            Name: "Rotate node",
+            Host: "rotate-node.example.test",
+            IpAddress: "",
+            Provider: "admin-vps",
+            Region: "EU",
+            Country: "NL",
+            Datacenter: "AMS",
+            Capacity: 100,
+            SupportedProtocolsCsv: "vless",
+            Priority: 100,
+            TagsCsv: "tier:standard",
+            SshUser: "root",
+            SshPort: 22,
+            SshPrivateKeyPath: null,
+            SkipHostKeyChecking: true,
+            PanelBaseUrl: "https://panel.example.test",
+            PanelUsername: "admin",
+            PanelPassword: "new-panel-secret-must-not-leak",
+            PanelInboundId: 1,
+            PublicHostname: "rotate-node.example.test",
+            PublicPort: 443,
+            NodeGroupId: null,
+            SshAuthMethod: "ssh_key",
+            SshCredential: "new-ssh-secret-must-not-leak",
+            ValidationMode: true,
+            OwnerType: "admin"), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(update);
+        Assert.NotEqual(originalSshSecret, node.ProtectedSshCredential);
+        Assert.NotEqual(originalSshRef, node.SshCredentialRef);
+        Assert.NotEqual(originalPanelSecret, node.ProtectedPanelPassword);
+        Assert.NotEqual(originalPanelRef, node.PanelSecretRef);
+        Assert.Empty(node.SshPrivateKeyPath);
+        Assert.Empty(node.PanelPassword);
+
+        var rotateAudit = await db.AuditLogs.SingleAsync(x => x.Action == "server.secret.rotate");
+        var auditJson = $"{rotateAudit.BeforeJson}\n{rotateAudit.AfterJson}";
+        Assert.Contains("rotatedSshCredential", auditJson, StringComparison.Ordinal);
+        Assert.Contains("rotatedPanelPassword", auditJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("old-ssh-secret", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("new-ssh-secret-must-not-leak", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("old-panel-secret", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("new-panel-secret-must-not-leak", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("secretref:", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(create.Value);
+    }
+
+    [Fact]
     public async Task Auth_Login_Refresh_Logout_Should_Rotate_And_Revoke_Hashed_Refresh_Tokens()
     {
         await using var db = CreateDbContext();

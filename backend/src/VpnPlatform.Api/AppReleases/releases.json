@@ -1703,5 +1703,32 @@
         "text": "Password-based live SSH, `validation-placeholder:*` и legacy protected values в `SshPrivateKeyPath` остаются fail-closed до безопасной реализации runner."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-secret-rotation-audit",
+    "version": "0.73.0",
+    "releasedAt": "2026-06-12T11:25:00+07:00",
+    "title": "Добавлена безопасная ротация секретов",
+    "summary": "Админка теперь фиксирует ротацию платежных, Telegram и server provisioning секретов отдельными audit-событиями без раскрытия старых или новых значений.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены audit-события `server.secret.rotate` и `telegram_bot.secret.rotate` рядом с уже существующим `payment_provider.secret.rotate`."
+      },
+      {
+        "type": "important",
+        "text": "Server secret rotation выдает новые `secretref:ssh:*` и `secretref:panel:*`, но API и audit не раскрывают сами references и protected payload."
+      },
+      {
+        "type": "improved",
+        "text": "Telegram BotToken и SecretToken обновляются через write-only поля и пишут только флаги `rotatedBotToken` / `rotatedSecretToken`."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены тесты, которые проверяют отсутствие raw secret, protected payload и `secretref:*` в audit/API при ротации."
+      }
+    ]
   }
 ]
