@@ -2,6 +2,39 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: rate limiting публичного API
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P6-SEC-004` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлены `ApiRateLimitPolicies` с policy `auth-sensitive`, `public-checkout`, `webhook`.
+- `Program.cs` подключает `builder.Services.AddRateLimiter(ApiRateLimitPolicies.Configure)` и `app.UseRateLimiter()`.
+- Auth endpoints `register/login/refresh/forgot-password/reset-password` защищены policy `auth-sensitive`.
+- Публичные checkout endpoints защищены policy `public-checkout`.
+- Платежные webhook и channel webhook controllers защищены policy `webhook`.
+- При превышении лимита API возвращает `429 Too Many Requests` с problem JSON.
+- Добавлена документация `docs/rate-limiting.md`.
+- Добавлен release entry `2026-06-12-api-rate-limiting` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/rate-limiting.md','backend/src/VpnPlatform.Api/Security/ApiRateLimitPolicies.cs','backend/src/VpnPlatform.Api/Program.cs','backend/src/VpnPlatform.Api/Controllers/Auth/AuthController.cs','backend/src/VpnPlatform.Api/Controllers/Public/OrdersController.cs','backend/src/VpnPlatform.Api/Controllers/Webhooks/PaymentWebhooksController.cs','backend/src/VpnPlatform.Api/Controllers/Channels/ChannelWebhooksController.cs','backend/tests/VpnPlatform.UnitTests/RateLimitingSecurityTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter RateLimitingSecurityTests --logger "console;verbosity=minimal"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests" --logger "console;verbosity=minimal"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore --logger "console;verbosity=minimal"
+git diff --check
+```
+
+Итог:
+
+- JSON релизов валиден: latest `2026-06-12-api-rate-limiting`, версия `0.75.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `RateLimitingSecurityTests`: 11/11.
+- Release docs tests: 14/14.
+- Backend full suite: 400/400.
+- Local SQLite HTTP-smoke на чистой БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest` с Bearer-токеном; latest release `2026-06-12-api-rate-limiting`, версия `0.75.0`; превышение `POST /api/auth/forgot-password` вернуло `429`.
+
 ## Проверка 2026-06-12: RBAC-матрица админки
 
 Что проверено:

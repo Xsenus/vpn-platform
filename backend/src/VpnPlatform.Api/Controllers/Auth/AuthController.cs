@@ -4,9 +4,11 @@ using System.Text;
 using System.Text.Json;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Contracts;
+using VpnPlatform.Api.Security;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
@@ -39,6 +41,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting(ApiRateLimitPolicies.AuthSensitive)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = NormalizeEmail(request?.Email);
@@ -74,6 +77,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(ApiRateLimitPolicies.AuthSensitive)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = NormalizeEmail(request?.Email);
@@ -131,6 +135,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting(ApiRateLimitPolicies.AuthSensitive)]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request?.RefreshToken))
@@ -193,6 +198,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot-password")]
+    [EnableRateLimiting(ApiRateLimitPolicies.AuthSensitive)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = NormalizeEmail(request?.Email);
@@ -225,6 +231,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("reset-password")]
+    [EnableRateLimiting(ApiRateLimitPolicies.AuthSensitive)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
     {
         var token = request?.Token ?? string.Empty;

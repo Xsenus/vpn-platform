@@ -489,9 +489,10 @@ git diff --check
   - Что сделано: добавлена единая `AdminPolicies.PolicyRoles`, а `Program.cs` регистрирует все admin-policies из этой матрицы. Роли `ReadOnly`, `SupportAgent`, `FinanceManager`, `Operator`, `Admin`, `SuperAdmin` разведены по read/write/manage-доступам; `User` исключен из всех admin-policy. Для финансов, поддержки, VPN, provisioning, Telegram-бота и системных настроек сохранены отдельные политики.
   - Доказательство: `AdminAuthorizationPolicyTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-rbac-policy-matrix`; документация `docs/rbac-policy-matrix.md`.
 
-- [ ] `P6-SEC-004` Rate limiting.
+- [x] `P6-SEC-004` Rate limiting. 2026-06-12.
   - Что сделать: login, register, forgot password, webhook endpoints, public checkout.
-  - Доказательство: tests/config.
+  - Что сделано: добавлены `ApiRateLimitPolicies` и middleware `AddRateLimiter/UseRateLimiter`; auth endpoints `register/login/refresh/forgot-password/reset-password` используют `auth-sensitive`, публичный checkout использует `public-checkout`, платежные и channel webhook controllers используют `webhook`. При превышении лимита API возвращает `429 Too Many Requests` с problem JSON.
+  - Доказательство: `RateLimitingSecurityTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-api-rate-limiting`; документация `docs/rate-limiting.md`.
 
 - [ ] `P6-SEC-005` CORS/CSP/security headers.
   - Что сделать: проверить production headers для API и frontend.

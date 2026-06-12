@@ -1757,5 +1757,32 @@
         "text": "Runtime authorization tests проверяют разрешенные и запрещенные комбинации ролей для чтения, финансов, поддержки, provisioning, ботов и системных настроек."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-api-rate-limiting",
+    "version": "0.75.0",
+    "releasedAt": "2026-06-12T11:39:00+07:00",
+    "title": "Добавлены лимиты запросов для публичного API",
+    "summary": "API получил rate limiting для чувствительных auth-действий, публичного checkout и webhook endpoints, чтобы снизить риск перебора, спама и перегрузки внешними событиями.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены политики `auth-sensitive`, `public-checkout` и `webhook` на базе встроенного .NET rate limiter."
+      },
+      {
+        "type": "important",
+        "text": "Login, register, forgot password, reset password и refresh теперь ограничены по IP и пути запроса."
+      },
+      {
+        "type": "improved",
+        "text": "Публичное создание checkout-сессии и legacy endpoint заказов защищены отдельным лимитом, не влияющим на health/metrics."
+      },
+      {
+        "type": "fixed",
+        "text": "Платежные и channel webhook endpoints получили отдельную policy с более высоким лимитом для безопасной повторной доставки событий."
+      }
+    ]
   }
 ]

@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using VpnPlatform.Api.Security;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Enums;
@@ -21,6 +23,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost("checkout-sessions")]
+    [EnableRateLimiting(ApiRateLimitPolicies.PublicCheckout)]
     public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionHttpRequest request, CancellationToken cancellationToken)
     {
         var result = await _checkoutSessionService.CreateAsync(
@@ -53,6 +56,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost("orders")]
+    [EnableRateLimiting(ApiRateLimitPolicies.PublicCheckout)]
     public IActionResult CreateAnonymousOrder()
         => StatusCode(StatusCodes.Status410Gone, new
         {

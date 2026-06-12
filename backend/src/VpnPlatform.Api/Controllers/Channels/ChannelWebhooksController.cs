@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using VpnPlatform.Api.Security;
 
 namespace VpnPlatform.Api.Controllers.Channels;
 
 [ApiController]
 [Route("api/channels")]
+[EnableRateLimiting(ApiRateLimitPolicies.Webhook)]
 public class ChannelWebhooksController : ControllerBase
 {
     [HttpPost("telegram/webhook")]

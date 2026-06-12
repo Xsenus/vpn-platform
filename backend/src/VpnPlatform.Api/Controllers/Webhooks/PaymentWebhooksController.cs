@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using VpnPlatform.Api.Security;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Enums;
 
@@ -8,6 +10,7 @@ namespace VpnPlatform.Api.Controllers.Webhooks;
 
 [ApiController]
 [Route("api/webhooks/payments")]
+[EnableRateLimiting(ApiRateLimitPolicies.Webhook)]
 public class PaymentWebhooksController : ControllerBase
 {
     private readonly PaymentOrchestrator _paymentOrchestrator;

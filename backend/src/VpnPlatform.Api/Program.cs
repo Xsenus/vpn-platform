@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using VpnPlatform.Api.Middleware;
 using VpnPlatform.Api.Observability;
+using VpnPlatform.Api.Security;
 using VpnPlatform.Application;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Infrastructure;
@@ -61,6 +62,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = false;
 });
+builder.Services.AddRateLimiter(ApiRateLimitPolicies.Configure);
 
 var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
 if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
@@ -118,6 +120,7 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger
 }
 
 app.UseCors("default");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
