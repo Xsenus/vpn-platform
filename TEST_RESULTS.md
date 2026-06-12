@@ -2,6 +2,41 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: secret scan gate
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P6-SEC-006` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлены `scripts/scan-secrets.ps1` и `scripts/scan-secrets.sh`.
+- Scanner проверяет Telegram, Stripe/OpenAI, GitHub, GitLab, AWS, Google, Slack tokens и PEM private keys.
+- `validate-backend.sh` и `validate-all.sh` запускают secret scan до build/test шагов.
+- `check-validation-safety.sh` проверяет наличие scanner и базовых token/private-key паттернов.
+- Добавлен allowlist для тестовых fixture и локальных placeholders.
+- Добавлена документация `docs/secret-scan.md`.
+- Добавлен release entry `2026-06-12-secret-scan-gate` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/secret-scan.md','TEST_RESULTS.md','scripts/scan-secrets.ps1','scripts/scan-secrets.sh','scripts/validate-all.sh','scripts/validate-backend.sh','scripts/check-validation-safety.sh','backend/tests/VpnPlatform.UnitTests/SecretScanTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter SecretScanTests --logger "console;verbosity=minimal"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests" --logger "console;verbosity=minimal"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore --logger "console;verbosity=minimal"
+git diff --check
+```
+
+Итог:
+
+- JSON релизов валиден: latest `2026-06-12-secret-scan-gate`, версия `0.77.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- PowerShell secret scan: `Files scanned: 386. Findings: 0`.
+- Bash scan локально не запущен: в текущей Windows-среде нет `/bin/bash`; bash-скрипт покрыт `SecretScanTests` и рассчитан на Linux CI.
+- `SecretScanTests`: 3/3.
+- Release docs tests: 14/14.
+- Backend full suite: 408/408.
+- Local SQLite HTTP-smoke на чистой БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest` с Bearer-токеном; latest release `2026-06-12-secret-scan-gate`, версия `0.77.0`.
+
 ## Проверка 2026-06-12: security headers API и frontend
 
 Что проверено:

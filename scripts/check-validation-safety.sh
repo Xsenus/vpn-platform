@@ -9,6 +9,7 @@ VALIDATE_BACKEND="$ROOT_DIR/scripts/validate-backend.sh"
 VALIDATE_DOCKER="$ROOT_DIR/scripts/validate-docker.sh"
 CHECK_EF_DRIFT="$ROOT_DIR/scripts/check-ef-drift.sh"
 CHECK_EF_DRIFT_PS1="$ROOT_DIR/scripts/check-ef-drift.ps1"
+SCAN_SECRETS="$ROOT_DIR/scripts/scan-secrets.sh"
 LIVE_SECRET_PATTERN='([0-9]{9,}:AA[A-Za-z0-9_-]{20,}|sk_live_|pk_live_|xox[baprs]-|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|ya29\.[A-Za-z0-9_-]{20,}|-----BEGIN[[:space:]]+(RSA|OPENSSH|EC)?[[:space:]]*PRIVATE KEY-----)'
 
 fail() {
@@ -51,6 +52,7 @@ require_file "$VALIDATE_BACKEND"
 require_file "$VALIDATE_DOCKER"
 require_file "$CHECK_EF_DRIFT"
 require_file "$CHECK_EF_DRIFT_PS1"
+require_file "$SCAN_SECRETS"
 
 # Compose validation override must keep live integrations off inside containers.
 expect_text "$COMPOSE_FILE" 'TelegramBot__Enabled:[[:space:]]*"?false"?' 'compose disables Telegram bot runtime'
@@ -100,11 +102,16 @@ reject_text "$WORKFLOW_FILE" "$LIVE_SECRET_PATTERN" 'obvious live secret/token/p
 
 # Validation entry points must run this safety gate before backend/Docker/EF work.
 expect_text "$VALIDATE_BACKEND" 'check-validation-safety\.sh' 'backend validation runs validation-safety gate'
+expect_text "$VALIDATE_BACKEND" 'scan-secrets\.sh' 'backend validation runs secret scan'
+expect_text "$VALIDATE_BACKEND" 'scan-secrets\.sh.*dotnet restore|scan-secrets\.sh' 'backend validation includes secret scan before backend work'
 expect_text "$VALIDATE_DOCKER" 'check-validation-safety\.sh' 'Docker validation runs validation-safety gate'
 expect_text "$CHECK_EF_DRIFT" 'check-validation-safety\.sh' 'EF drift validation runs validation-safety gate'
 expect_text "$CHECK_EF_DRIFT_PS1" 'has-pending-model-changes' 'PowerShell EF drift validation checks pending model changes'
 expect_text "$CHECK_EF_DRIFT_PS1" 'Database__ApplyMigrationsOnStartup[[:space:]]*=[[:space:]]*"false"' 'PowerShell EF drift validation disables auto migrations'
 expect_text "$CHECK_EF_DRIFT_PS1" 'Provisioning__LiveExecutionEnabled[[:space:]]*=[[:space:]]*"false"' 'PowerShell EF drift validation disables live provisioning'
 expect_text "$WORKFLOW_FILE" 'check-validation-safety\.sh' 'GitHub validation workflow runs validation-safety gate'
+expect_text "$SCAN_SECRETS" 'Telegram bot token' 'secret scanner checks Telegram bot tokens'
+expect_text "$SCAN_SECRETS" 'GitHub token' 'secret scanner checks GitHub tokens'
+expect_text "$SCAN_SECRETS" 'Private key PEM' 'secret scanner checks private keys'
 
 ok "validation safety checks completed"

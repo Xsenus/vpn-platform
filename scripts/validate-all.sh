@@ -36,6 +36,9 @@ fi
 echo "[1/13] dotnet restore"
 dotnet restore backend/VpnPlatform.sln
 
+echo "[secret-scan] repository secret scan"
+bash ./scripts/scan-secrets.sh
+
 echo "[2/13] dotnet build"
 dotnet build backend/VpnPlatform.sln --configuration "$CONFIGURATION" --no-restore
 

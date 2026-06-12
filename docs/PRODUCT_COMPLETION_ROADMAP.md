@@ -499,9 +499,10 @@ git diff --check
   - Что сделано: backend API получил `SecurityHeadersMiddleware` с `nosniff`, `DENY`, `no-referrer`, `Permissions-Policy`, API CSP и production HSTS; frontend Docker images `public-web`, `cabinet`, `admin-panel` используют общий `nginx.security.conf` с CSP/HSTS/security headers и SPA fallback. Production CORS остается allow-list based через `Cors:AllowedOrigins` и startup validator.
   - Доказательство: `SecurityHeadersTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-security-headers`; документация `docs/security-headers.md`.
 
-- [ ] `P6-SEC-006` Проверка утечек секретов.
+- [x] `P6-SEC-006` Проверка утечек секретов. 2026-06-12.
   - Что сделать: scan repo, logs, docs, env examples на реальные ключи.
-  - Доказательство: secret scan result.
+  - Что сделано: добавлены `scripts/scan-secrets.ps1` и `scripts/scan-secrets.sh` для поиска Telegram, Stripe/OpenAI, GitHub, GitLab, AWS, Google, Slack tokens и PEM private keys; `validate-backend.sh` и `validate-all.sh` запускают secret scan до build/test; `check-validation-safety.sh` проверяет наличие scanner и базовых паттернов. Для тестовых fixture и локальных placeholders добавлен явный allowlist.
+  - Доказательство: `SecretScanTests`; PowerShell secret scan result `Files scanned: 385. Findings: 0`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-secret-scan-gate`; документация `docs/secret-scan.md`.
 
 ## P7. Provisioning VPS
 

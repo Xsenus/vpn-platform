@@ -1811,5 +1811,32 @@
         "text": "Добавлены тесты, которые проверяют backend security headers, порядок middleware и подключение защищенного nginx-конфига во всех frontend Dockerfiles."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-secret-scan-gate",
+    "version": "0.77.0",
+    "releasedAt": "2026-06-12T11:54:00+07:00",
+    "title": "Добавлена проверка утечек секретов",
+    "summary": "Validation pipeline получил воспроизводимый secret scan для репозитория, документации, env-шаблонов, конфигов и log-like файлов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены `scan-secrets.ps1` и `scan-secrets.sh` для локальной и CI-проверки секретов."
+      },
+      {
+        "type": "important",
+        "text": "Scanner ищет реальные Telegram, Stripe/OpenAI, GitHub, GitLab, AWS, Google, Slack tokens и PEM private keys."
+      },
+      {
+        "type": "improved",
+        "text": "`validate-backend.sh` и `validate-all.sh` запускают secret scan до build/test шагов."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены tests и allowlist для тестовых fixture/placeholders, чтобы scan ловил реальные утечки без шума от проверочных значений."
+      }
+    ]
   }
 ]

@@ -19,6 +19,7 @@ run() {
 
 cd "$ROOT_DIR"
 ./scripts/check-validation-safety.sh
+bash ./scripts/scan-secrets.sh
 
 require dotnet
 require git
