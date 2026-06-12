@@ -55,6 +55,7 @@ public sealed record AdminAccessActionHttpRequest(string? Reason = null);
 public sealed record SetNodeAllocationHttpRequest(bool Available);
 public sealed record DeleteServerHttpResponse(Guid Id, bool Deleted, bool Archived, int LinkedSubscriptions, int LinkedAccesses, int LinkedProvisioningRuns);
 public sealed record NodeHealthCheckDto(Guid Id, Guid NodeId, string Status, DateTimeOffset CheckedAt, long LatencyMs, string MetadataJson, string ErrorText);
+public sealed record AdminAuditLogFilters(string? Action = null, string? EntityType = null, string? ActorType = null, string? Search = null, DateTimeOffset? From = null, DateTimeOffset? To = null, int Limit = 200);
 
 [ApiController]
 [Authorize(Policy = AdminPolicies.AdminRead)]
@@ -93,6 +94,73 @@ public class AdminOperationsController : ControllerBase
         _secretProtector = secretProtector;
         _qrCodeGenerator = qrCodeGenerator;
         _vpnProviderFactory = vpnProviderFactory;
+    }
+
+    [HttpGet("audit-logs")]
+    [Authorize(Policy = AdminPolicies.AdminRead)]
+    public async Task<IActionResult> GetAuditLogs([FromQuery] AdminAuditLogFilters filters, CancellationToken cancellationToken)
+    {
+        var limit = Math.Clamp(filters.Limit, 1, 500);
+        var query = _db.AuditLogs.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(filters.Action))
+        {
+            var action = filters.Action.Trim();
+            query = query.Where(x => x.Action.Contains(action));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.EntityType))
+        {
+            var entityType = filters.EntityType.Trim();
+            query = query.Where(x => x.EntityType == entityType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.ActorType))
+        {
+            var actorType = filters.ActorType.Trim();
+            query = query.Where(x => x.ActorType == actorType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.Search))
+        {
+            var search = filters.Search.Trim();
+            query = query.Where(x =>
+                x.Action.Contains(search) ||
+                x.EntityType.Contains(search) ||
+                x.EntityId.Contains(search) ||
+                x.ActorId.Contains(search));
+        }
+
+        var rows = await query.ToListAsync(cancellationToken);
+        if (filters.From.HasValue)
+        {
+            rows = rows.Where(x => x.CreatedAt >= filters.From.Value).ToList();
+        }
+
+        if (filters.To.HasValue)
+        {
+            rows = rows.Where(x => x.CreatedAt <= filters.To.Value).ToList();
+        }
+
+        var logs = rows
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Take(limit)
+            .Select(x => new AdminAuditLogDto(
+                x.Id,
+                x.ActorType,
+                x.ActorId,
+                x.Action,
+                x.EntityType,
+                x.EntityId,
+                x.BeforeJson,
+                x.AfterJson,
+                x.Ip,
+                x.UserAgent,
+                x.CreatedAt))
+            .ToList();
+
+        return Ok(logs);
     }
 
     [HttpGet("subscriptions")]
@@ -700,23 +768,48 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> CreatePaymentProviderAccount([FromBody] UpsertPaymentProviderAccountCommand request, CancellationToken cancellationToken)
     {
         var result = await _paymentProviderAccounts.UpsertAsync(null, request, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        AddAuditLog("payment_provider.create", "PaymentProviderAccount", result.Value!.Id, "{}", SerializeProviderAccountAudit(result.Value));
+        AddPaymentProviderSecretRotationAudit(result.Value, request);
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(result.Value);
     }
 
     [HttpPatch("payment-providers/accounts/{id:guid}")]
     [Authorize(Policy = AdminPolicies.FinanceWrite)]
     public async Task<IActionResult> UpdatePaymentProviderAccount(Guid id, [FromBody] UpsertPaymentProviderAccountCommand request, CancellationToken cancellationToken)
     {
+        var before = await _db.PaymentProviderAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         var result = await _paymentProviderAccounts.UpsertAsync(id, request, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        AddAuditLog("payment_provider.update", "PaymentProviderAccount", id, SerializeProviderAccountAudit(before), SerializeProviderAccountAudit(result.Value!));
+        AddPaymentProviderSecretRotationAudit(result.Value!, request);
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(result.Value);
     }
 
     [HttpPost("payment-providers/accounts/{id:guid}/enabled")]
     [Authorize(Policy = AdminPolicies.FinanceWrite)]
     public async Task<IActionResult> SetPaymentProviderAccountEnabled(Guid id, [FromBody] SetProviderEnabledHttpRequest request, CancellationToken cancellationToken)
     {
+        var before = await _db.PaymentProviderAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         var result = await _paymentProviderAccounts.SetEnabledAsync(id, request.Enabled, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        AddAuditLog("payment_provider.enabled.set", "PaymentProviderAccount", id, SerializeProviderAccountAudit(before), SerializeProviderAccountAudit(result.Value!));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(result.Value);
     }
 
     [HttpPost("payment-providers/accounts/{id:guid}/check")]
@@ -724,7 +817,14 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> CheckPaymentProviderAccount(Guid id, CancellationToken cancellationToken)
     {
         var result = await _paymentProviderAccounts.CheckAsync(id, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        AddAuditLog("payment_provider.check", "PaymentProviderAccount", id, "{}", JsonSerializer.Serialize(new { result.Value!.Provider, result.Value.Mode, result.Value.IsReady, result.Value.HealthStatus, result.Value.Message }, JsonOptions));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(result.Value);
     }
 
 
@@ -1912,6 +2012,56 @@ public class AdminOperationsController : ControllerBase
         });
     }
 
+    private void AddPaymentProviderSecretRotationAudit(PaymentProviderAccountDto account, UpsertPaymentProviderAccountCommand request)
+    {
+        var rotatedSecretKey = !string.IsNullOrWhiteSpace(request.SecretKey);
+        var rotatedWebhookSecret = !string.IsNullOrWhiteSpace(request.WebhookSecret);
+        if (!rotatedSecretKey && !rotatedWebhookSecret)
+        {
+            return;
+        }
+
+        AddAuditLog(
+            "payment_provider.secret.rotate",
+            "PaymentProviderAccount",
+            account.Id,
+            "{}",
+            JsonSerializer.Serialize(new
+            {
+                account.Provider,
+                account.Mode,
+                account.Name,
+                rotatedSecretKey,
+                rotatedWebhookSecret
+            }, JsonOptions));
+    }
+
+    private static string SerializeProviderAccountAudit(PaymentProviderAccount? account)
+        => account is null ? "{}" : SerializeProviderAccountAudit(PaymentProviderAccountService.MapToDto(account));
+
+    private static string SerializeProviderAccountAudit(PaymentProviderAccountDto account)
+        => JsonSerializer.Serialize(new
+        {
+            account.Id,
+            account.Provider,
+            account.Mode,
+            account.Name,
+            account.PublicName,
+            account.IsEnabled,
+            account.IsDefault,
+            account.ShopId,
+            account.ApiBaseUrl,
+            account.ReturnUrl,
+            account.WebhookUrl,
+            account.HasSecretKey,
+            account.HasWebhookSecret,
+            account.UseWebhookIpAllowList,
+            account.AllowedWebhookIpRangesCsv,
+            account.HealthStatus,
+            account.IsCheckoutConfigured,
+            account.CheckoutConfigurationIssue
+        }, JsonOptions);
+
     private static string RedactSensitiveText(string? value, int maxLength)
         => SensitiveDataRedactor.Redact(value, maxLength: maxLength);
 
@@ -2001,7 +2151,13 @@ public class AdminOperationsController : ControllerBase
 
     private Guid? ResolveUserId()
     {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        var principal = HttpContext?.User ?? User;
+        if (principal is null)
+        {
+            return null;
+        }
+
+        var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
         return Guid.TryParse(sub, out var value) ? value : null;
     }
 }

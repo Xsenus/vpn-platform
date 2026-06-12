@@ -1,0 +1,192 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Api.Controllers.Admin;
+using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
+using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
+using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Payments;
+using VpnPlatform.Infrastructure.Persistence;
+using Xunit;
+
+namespace VpnPlatform.UnitTests;
+
+public class AuditLogMvpTests
+{
+    [Fact]
+    public async Task Admin_Audit_Logs_Should_Filter_Recent_Records_On_Sqlite()
+    {
+        await using var db = CreateDbContext();
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 6, 12, 10, 0, 0, TimeSpan.Zero);
+        db.AuditLogs.AddRange(
+            new AuditLog { ActorType = "admin", ActorId = "admin-1", Action = "payment_provider.update", EntityType = "PaymentProviderAccount", EntityId = Guid.NewGuid().ToString(), BeforeJson = "{}", AfterJson = "{}", CreatedAt = now },
+            new AuditLog { ActorType = "system", ActorId = "payment-orchestrator", Action = "payment.status.changed", EntityType = "PaymentAttempt", EntityId = Guid.NewGuid().ToString(), BeforeJson = "{}", AfterJson = "{}", CreatedAt = now.AddMinutes(-1) });
+        await db.SaveChangesAsync();
+
+        var controller = CreateAdminController(db, new FixedClock(now));
+        var response = await controller.GetAuditLogs(new AdminAuditLogFilters(Action: "payment_provider", ActorType: "admin"), CancellationToken.None);
+
+        var logs = AssertOk<List<AdminAuditLogDto>>(response);
+        var log = Assert.Single(logs);
+        Assert.Equal("payment_provider.update", log.Action);
+        Assert.Equal("admin", log.ActorType);
+    }
+
+    [Fact]
+    public async Task Payment_Provider_Secret_Rotation_Should_Write_Redacted_Audit()
+    {
+        await using var db = CreateDbContext();
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 6, 12, 10, 5, 0, TimeSpan.Zero);
+        var controller = CreateAdminController(db, new FixedClock(now));
+
+        var request = new UpsertPaymentProviderAccountCommand(
+            PaymentProvider.YooKassa,
+            PaymentProviderMode.Sandbox,
+            "sandbox-yookassa",
+            "YooKassa Sandbox",
+            true,
+            true,
+            "shop-1",
+            "https://api.yookassa.ru/v3",
+            "https://example.test/success",
+            "https://example.test/webhook",
+            "raw-secret-must-not-leak",
+            "raw-webhook-secret-must-not-leak",
+            false,
+            string.Empty,
+            "{}");
+
+        var response = await controller.CreatePaymentProviderAccount(request, CancellationToken.None);
+
+        var account = AssertOk<PaymentProviderAccountDto>(response);
+        Assert.Equal(PaymentProvider.YooKassa, account.Provider);
+
+        var logs = await db.AuditLogs.OrderBy(x => x.Action).ToListAsync();
+        Assert.Contains(logs, x => x.Action == "payment_provider.create");
+        Assert.Contains(logs, x => x.Action == "payment_provider.secret.rotate");
+        var auditJson = string.Join('\n', logs.Select(x => $"{x.BeforeJson}\n{x.AfterJson}"));
+        Assert.DoesNotContain("raw-secret-must-not-leak", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("raw-webhook-secret-must-not-leak", auditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("rotatedSecretKey", auditJson, StringComparison.Ordinal);
+        Assert.Contains("rotatedWebhookSecret", auditJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Payment_Status_Recheck_Should_Write_System_Audit()
+    {
+        await using var db = CreateDbContext();
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 6, 12, 10, 10, 0, TimeSpan.Zero);
+        var clock = new FixedClock(now);
+        var paymentProvider = new TestPaymentProvider("pay-audit-1");
+        var orchestrator = CreateOrchestrator(db, clock, paymentProvider);
+        var paymentId = await SeedPaymentGraphAsync(db, now, paymentProvider.PaymentId);
+
+        var result = await orchestrator.RecheckPaymentAsync(paymentId, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "payment.status.changed");
+        Assert.Equal("system", audit.ActorType);
+        Assert.Equal("payment-orchestrator", audit.ActorId);
+        Assert.Equal("PaymentAttempt", audit.EntityType);
+        Assert.Equal(paymentId.ToString(), audit.EntityId);
+        Assert.Contains("Succeeded", audit.AfterJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-secret", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static AdminOperationsController CreateAdminController(ApplicationDbContext db, FixedClock clock)
+    {
+        var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        return new AdminOperationsController(db, null!, null!, providerAccounts, secretProtector: new TestSecretProtector());
+    }
+
+    private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, FixedClock clock, TestPaymentProvider paymentProvider)
+    {
+        var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var paymentProviderFactory = new PaymentProviderFactory(new IPaymentProvider[] { paymentProvider });
+        var nodeAllocation = new NodeAllocationService(db);
+        var subscriptionService = new SubscriptionService(db, clock, nodeAllocation, new TestVpnProviderFactory(new TestVpnProvider()));
+        return new PaymentOrchestrator(db, paymentProviderFactory, new IPaymentWebhookVerifier[] { paymentProvider }, providerAccounts, subscriptionService, clock);
+    }
+
+    private static async Task<Guid> SeedPaymentGraphAsync(ApplicationDbContext db, DateTimeOffset now, string providerPaymentId)
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "audit-buyer@example.test", DisplayName = "Audit Buyer", PasswordHash = "hash", ReferralCode = $"audit-{Guid.NewGuid():N}" };
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Monthly", Slug = $"monthly-{Guid.NewGuid():N}", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true };
+        var account = new PaymentProviderAccount { Id = Guid.NewGuid(), Provider = PaymentProvider.YooKassa, Mode = PaymentProviderMode.Sandbox, Name = "audit-yookassa", PublicName = "YooKassa", IsEnabled = true, IsDefault = true, ShopId = "shop-1", ApiBaseUrl = "https://api.yookassa.ru/v3", ReturnUrl = "https://example.test/success", SecretKeyProtected = "raw-secret", UseWebhookIpAllowList = false };
+        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Web, PaymentProvider = PaymentProvider.YooKassa, Status = OrderStatus.PendingPayment, Amount = tariff.Price, Currency = tariff.Currency, ExpiresAt = now.AddMinutes(15), IsFirstPurchase = true };
+        var payment = new PaymentAttempt { Id = Guid.NewGuid(), OrderId = order.Id, PaymentProviderAccountId = account.Id, Provider = PaymentProvider.YooKassa, ProviderMode = PaymentProviderMode.Sandbox, ProviderPaymentId = providerPaymentId, IdempotencyKey = $"payment:{order.Id:N}:audit", Amount = order.Amount, Currency = order.Currency, Status = PaymentStatus.Pending, ConfirmationUrl = "https://example.test/pay", ReturnUrl = account.ReturnUrl, RawRequest = "{}", RawResponse = "{}" };
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(order);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        return payment.Id;
+    }
+
+    private static ApplicationDbContext CreateDbContext()
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private static T AssertOk<T>(IActionResult response)
+    {
+        var ok = Assert.IsType<OkObjectResult>(response);
+        return Assert.IsType<T>(ok.Value);
+    }
+
+    private sealed class FixedClock : IClock
+    {
+        public FixedClock(DateTimeOffset utcNow) => UtcNow = utcNow;
+        public DateTimeOffset UtcNow { get; }
+    }
+
+    private sealed class TestSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext) => plaintext;
+        public string Unprotect(string protectedValue) => protectedValue;
+        public string Mask(string? value, int visibleTail = 4) => string.IsNullOrEmpty(value) ? string.Empty : new string('*', Math.Max(0, value.Length - visibleTail)) + value[^Math.Min(visibleTail, value.Length)..];
+    }
+
+    private sealed class TestPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier
+    {
+        public TestPaymentProvider(string paymentId) => PaymentId = paymentId;
+        public PaymentProvider Provider => PaymentProvider.YooKassa;
+        public string PaymentId { get; }
+        public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken) => Task.FromResult(new PaymentInitResult(PaymentId, "https://example.test/pay", "{}"));
+        public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken) => Task.FromResult(new PaymentWebhookParseResult("evt-audit", "payment.succeeded", PaymentId, PaymentStatus.Succeeded, rawBody, true, 490m, "RUB", true));
+        public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken) => Task.FromResult(new PaymentStatusResult(payment.ProviderPaymentId, PaymentStatus.Succeeded, "{}"));
+        public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken) => Task.FromResult(new PaymentRefundResult($"refund-{Guid.NewGuid():N}", RefundStatus.Succeeded, "{}"));
+        public Task<PaymentWebhookVerificationResult> VerifyAsync(PaymentProviderAccount account, PaymentWebhookParseResult parsed, string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken) => Task.FromResult(new PaymentWebhookVerificationResult(true, "test", null));
+    }
+
+    private sealed class TestVpnProviderFactory : IVpnProviderFactory
+    {
+        private readonly IVpnProvider _provider;
+        public TestVpnProviderFactory(IVpnProvider provider) => _provider = provider;
+        public IVpnProvider Get(string providerName) => _provider;
+    }
+
+    private sealed class TestVpnProvider : IVpnProvider
+    {
+        public string Name => "x3ui";
+        public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken) => Task.FromResult(new VpnProvisionResult($"client-{request.SubscriptionId:N}", "vless://test@example.test:443", "/qr/test.png", "/config/test.txt"));
+        public Task<VpnProvisionResult> UpdateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken) => CreateAccessAsync(request, cancellationToken);
+        public Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DeleteAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<VpnUsageSnapshot> GetUsageAsync(string providerAccessId, CancellationToken cancellationToken) => Task.FromResult(new VpnUsageSnapshot(providerAccessId, 0, 0, DateTimeOffset.UtcNow));
+        public Task<HealthStatus> GetNodeHealthAsync(VpnNode node, CancellationToken cancellationToken) => Task.FromResult(HealthStatus.Healthy);
+    }
+}

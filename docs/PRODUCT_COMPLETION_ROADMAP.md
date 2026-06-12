@@ -439,9 +439,10 @@ git diff --check
   - Что сделать: продление, окончание, отключение клиента, уведомления.
   - Доказательство: `SubscriptionLifecycleExpiryTests`, `SandboxE2EScenariosMvpTests`, local SQLite API smoke.
 
-- [ ] `P4-BE-005` Audit log.
+- [x] `P4-BE-005` Audit log. 2026-06-12.
   - Что сделать: логировать admin actions, payment transitions, VPN provisioning, secret rotations.
-  - Доказательство: tests + admin view.
+  - Что сделано: добавлен `/api/admin/audit-logs` с фильтрами и раздел "Аудит" в админке; платежные provider account действия пишут безопасные audit-события, а ротация SecretKey/webhook secret фиксируется отдельным событием без раскрытия значений. `PaymentOrchestrator` пишет системный `payment.status.changed` при фактической смене статуса, существующие VPN provisioning/lifecycle audit-события доступны в общем журнале.
+  - Доказательство: `AuditLogMvpTests` проверяет endpoint на SQLite, отсутствие утечек секретов и системный audit платежного recheck; frontend typecheck/tests/build; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-admin-audit-log`.
 
 - [ ] `P4-BE-006` Observability.
   - Что сделать: structured logs, correlation IDs, health details, metrics.

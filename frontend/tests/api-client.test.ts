@@ -702,6 +702,24 @@ test('ApiClient admin dashboard and user overview endpoints are tokenized', asyn
   assert.equal(dashboard.productionReadiness?.checks[0]?.category, 'Платежи')
 })
 
+test('ApiClient admin audit logs endpoint sends filters and auth token', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify([{ id: 'audit-1', actorType: 'admin', actorId: 'user-1', action: 'payment_provider.update', entityType: 'PaymentProviderAccount', entityId: 'account-1', beforeJson: '{}', afterJson: '{}', ip: '127.0.0.1', userAgent: 'test', createdAt: '2026-06-12T10:30:00Z' }]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const response = await client.getAdminAuditLogs('admin-token', { action: 'payment_provider', entityType: 'PaymentProviderAccount', actorType: 'admin', search: 'account-1', limit: 50 })
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/audit-logs?action=payment_provider&entityType=PaymentProviderAccount&actorType=admin&search=account-1&limit=50')
+  assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(response[0]?.action, 'payment_provider.update')
+})
+
 test('ApiClient admin payment providers expose readiness fields without secrets', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {

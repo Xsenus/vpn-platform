@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   AccessCredentialDto,
+  AdminAuditLogDto,
   AdminDashboardSummaryDto,
   AdminTelegramBotConnectionCheckDto,
   AdminTelegramBotSettingsDto,
@@ -388,6 +389,7 @@ const adminSections = [
   ['nodes', 'Серверы'],
   ['panels', '3x-ui панели'],
   ['support', 'Поддержка'],
+  ['audit', 'Аудит'],
   ['bot', 'Telegram-бот'],
   ['releases', 'Что нового'],
   ['faq', 'FAQ'],
@@ -408,6 +410,7 @@ const adminSectionDescriptions: Record<AdminSectionId, string> = {
   nodes: 'VPS-серверы, SSH-доступы, приоритеты, capacity и подготовка инфраструктуры.',
   panels: '3x-ui панели, inbound-ы, клиенты, синхронизация и проверки подключения.',
   support: 'Обращения пользователей, переписка, внутренние заметки и статусы поддержки.',
+  audit: 'Журнал административных действий, платежных переходов, выдачи VPN-доступов и ротации секретов.',
   bot: 'Telegram-бот, webhook, тексты сценариев и проверка подключения.',
   releases: 'Раздел «Что нового»: публикации, история релизов и видимость обновлений.',
   faq: 'FAQ для главной страницы, кабинета и публичной страницы вопросов.',
@@ -417,7 +420,7 @@ const adminSectionDescriptions: Record<AdminSectionId, string> = {
 }
 
 const adminSectionGroups: Array<{ title: string; ids: AdminSectionId[] }> = [
-  { title: 'Операции', ids: ['dashboard', 'users', 'support'] },
+  { title: 'Операции', ids: ['dashboard', 'users', 'support', 'audit'] },
   { title: 'Продажи', ids: ['payments', 'tariffs', 'subscriptions'] },
   { title: 'VPN', ids: ['vpn', 'nodes', 'panels', 'provisioning'] },
   { title: 'Контент', ids: ['bot', 'releases', 'faq', 'content', 'scenarios'] }
@@ -891,6 +894,11 @@ export function App() {
   const [selectedUserId, setSelectedUserId] = useState('')
   const [userOverview, setUserOverview] = useState<AdminUserOverviewDto | null>(null)
   const [summary, setSummary] = useState<AdminDashboardSummaryDto | null>(null)
+  const [auditLogs, setAuditLogs] = useState<AdminAuditLogDto[]>([])
+  const [auditActionFilter, setAuditActionFilter] = useState('')
+  const [auditEntityTypeFilter, setAuditEntityTypeFilter] = useState('')
+  const [auditActorTypeFilter, setAuditActorTypeFilter] = useState('')
+  const [auditSearch, setAuditSearch] = useState('')
   const [subscriptions, setSubscriptions] = useState<SubscriptionDto[]>([])
   const [accessCredentials, setAccessCredentials] = useState<AccessCredentialDto[]>([])
   const [adminQrSvgs, setAdminQrSvgs] = useState<Record<string, string>>({})
@@ -1037,6 +1045,7 @@ export function App() {
 
     const [
       nextSummary,
+      nextAuditLogs,
       nextUsers,
       nextSubscriptions,
       nextAccessCredentials,
@@ -1060,6 +1069,7 @@ export function App() {
       nextBotSettings
     ] = await Promise.all([
       safeLoad('dashboard', () => api.getAdminDashboardSummary(currentToken), null, errors),
+      safeLoad('аудит', () => api.getAdminAuditLogs(currentToken, { action: auditActionFilter, entityType: auditEntityTypeFilter, actorType: auditActorTypeFilter, search: auditSearch, limit: 200 }), [], errors),
       safeLoad('users', () => api.getAdminUsers(currentToken, { search: userSearch, status: userStatusFilter }), [], errors),
       safeLoad('subscriptions', () => api.getAdminSubscriptions(currentToken), [], errors),
       safeLoad('accesses', () => api.getAdminAccesses(currentToken), [], errors),
@@ -1084,6 +1094,7 @@ export function App() {
     ])
 
     setSummary(nextSummary)
+    setAuditLogs(nextAuditLogs)
     setUsers(nextUsers)
     setSubscriptions(nextSubscriptions)
     setAccessCredentials(nextAccessCredentials)
@@ -2464,6 +2475,56 @@ export function App() {
             {payments.filter((item) => item.status === 'Failed' || item.status === 'Cancelled').length === 0 && provisioningRuns.filter((run) => ['Failed', 'PrecheckFailed'].includes(run.status)).length === 0 && supportConversations.filter((conversation) => conversation.status !== 'closed').length === 0 && <EmptyState title="Нет срочных проблем" description="Ошибок оплат, подготовки серверов и открытых обращений сейчас нет." />}
           </div>
         </SectionCard>
+      </div>
+
+      <div id="audit" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('audit')} hidden={activeSection !== 'audit'}>
+        <Card>
+          <h3>Журнал аудита</h3>
+          <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void loadAll(token) }}>
+            <label><span>Действие</span><input value={auditActionFilter} onChange={(e) => setAuditActionFilter(e.target.value)} placeholder="payment.status.changed" /></label>
+            <label><span>Сущность</span><input value={auditEntityTypeFilter} onChange={(e) => setAuditEntityTypeFilter(e.target.value)} placeholder="PaymentAttempt" /></label>
+            <label><span>Actor</span><select value={auditActorTypeFilter} onChange={(e) => setAuditActorTypeFilter(e.target.value)}><option value="">Все</option><option value="admin">admin</option><option value="system">system</option><option value="user">user</option></select></label>
+            <label><span>Поиск</span><input value={auditSearch} onChange={(e) => setAuditSearch(e.target.value)} placeholder="id, actor или action" /></label>
+            <PrimaryButton type="submit" disabled={!token || busy} title={adminDisabledTitle} aria-busy={busy}>Применить</PrimaryButton>
+          </form>
+          <div className="list-stack mt-12">
+            {auditLogs.length === 0 && <EmptyState title="Записей аудита нет" description="Журнал пополняется после административных действий, платежных переходов и операций выдачи VPN-доступа." />}
+            {auditLogs.slice(0, 50).map((entry) => (
+              <div key={entry.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{entry.action}</strong>
+                    <div className="muted">{entry.entityType} · {shortId(entry.entityId)} · {formatDate(entry.createdAt)}</div>
+                    <div className="muted">actor: {entry.actorType}/{entry.actorId || 'unknown'} · IP: {entry.ip || '—'}</div>
+                  </div>
+                  <div className="item-status">
+                    <StatusBadge value={entry.actorType || 'unknown'} />
+                    <StatusBadge value={entry.entityType || 'entity'} />
+                  </div>
+                </div>
+                <div className="card-list-two compact-grid">
+                  <div>
+                    <strong>До</strong>
+                    <CodeBlock>{entry.beforeJson || '{}'}</CodeBlock>
+                  </div>
+                  <div>
+                    <strong>После</strong>
+                    <CodeBlock>{entry.afterJson || '{}'}</CodeBlock>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <h3>Что пишется в аудит</h3>
+          <div className="list-stack">
+            <div className="list-item"><span>Админские изменения платежных провайдеров</span><StatusBadge value="admin" /></div>
+            <div className="list-item"><span>Ротация SecretKey и webhook secret без раскрытия значений</span><StatusBadge value="redacted" /></div>
+            <div className="list-item"><span>Переходы статусов платежей из webhook и recheck</span><StatusBadge value="system" /></div>
+            <div className="list-item"><span>VPN provisioning и lifecycle-действия доступа</span><StatusBadge value="vpn" /></div>
+          </div>
+        </Card>
       </div>
 
       <div id="users" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('users')} hidden={activeSection !== 'users'}>

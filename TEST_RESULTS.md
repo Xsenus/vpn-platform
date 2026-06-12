@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: журнал аудита в админке
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P4-BE-005` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен backend endpoint `/api/admin/audit-logs` с фильтрами `action`, `entityType`, `actorType`, `search`, `from`, `to`, `limit`.
+- В админке добавлен раздел `Аудит` с фильтрами и просмотром `beforeJson/afterJson`.
+- Действия с платежными провайдерами пишут audit-события `payment_provider.create`, `payment_provider.update`, `payment_provider.enabled.set`, `payment_provider.check`.
+- Ротация SecretKey/webhook secret пишется отдельным событием `payment_provider.secret.rotate` без раскрытия секретных значений.
+- Переходы статусов платежей из webhook/recheck пишутся как системные события `payment.status.changed`.
+- Добавлен release entry `2026-06-12-admin-audit-log` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "FullyQualifiedName~AuditLogMvpTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+npm run typecheck
+npm test
+npm run build
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data[data.length-1];console.log(data.length,last.releaseId,last.version,last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- `AuditLogMvpTests`: 3/3 пройдено.
+- Backend full suite: 364/364 пройдено.
+- Frontend typecheck: пройдено для public-web, cabinet и admin-panel.
+- Frontend tests: 61/61 пройдено.
+- Frontend build: public-web, cabinet и admin-panel собраны успешно.
+- App releases JSON: валиден, последний релиз `2026-06-12-admin-audit-log`, версия `0.66.0`.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/admin/releases?search=2026-06-12-admin-audit-log`, `/api/admin/audit-logs?limit=20`, `/api/admin/audit-logs?action=auth.login&limit=20`, `/api/public/payments/providers`, `/api/public/tariffs`; latest release `2026-06-12-admin-audit-log`, версия `0.66.0`, audit `1`, audit search `1`, публичные провайдеры `8`, публичные тарифы `3`.
+
 ## Проверка 2026-06-12: конкурентная обработка оплаты
 
 Что проверено:

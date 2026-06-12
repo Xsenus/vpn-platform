@@ -528,6 +528,17 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         if (previousStatus != status)
         {
+            _db.AuditLogs.Add(new AuditLog
+            {
+                ActorType = "system",
+                ActorId = "payment-orchestrator",
+                Action = "payment.status.changed",
+                EntityType = nameof(PaymentAttempt),
+                EntityId = payment.Id.ToString(),
+                BeforeJson = JsonSerializer.Serialize(new { status = previousStatus.ToString(), payment.OrderId, payment.Provider, payment.ProviderPaymentId }, JsonOptions),
+                AfterJson = JsonSerializer.Serialize(new { status = payment.Status.ToString(), orderStatus = payment.Order?.Status.ToString(), payment.IsActivationProcessed, payment.PaidAt, externalEventId }, JsonOptions),
+                CreatedAt = now
+            });
             _db.OutboxMessages.Add(new OutboxMessage
             {
                 Type = "PaymentStatusChanged",

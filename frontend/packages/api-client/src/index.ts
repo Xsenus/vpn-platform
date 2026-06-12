@@ -112,6 +112,30 @@ export type AppReleaseFilters = {
   search?: string
 }
 
+export type AdminAuditLogDto = {
+  id: string
+  actorType: string
+  actorId: string
+  action: string
+  entityType: string
+  entityId: string
+  beforeJson: string
+  afterJson: string
+  ip: string
+  userAgent: string
+  createdAt: string
+}
+
+export type AdminAuditLogFilters = {
+  action?: string
+  entityType?: string
+  actorType?: string
+  search?: string
+  from?: string
+  to?: string
+  limit?: number
+}
+
 export type UserProfileDto = {
   id: string
   email?: string | null
@@ -1361,6 +1385,19 @@ export class ApiClient {
 
   getAdminDashboardSummary(token: string): Promise<AdminDashboardSummaryDto> {
     return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: apiFallbackErrorMessage })
+  }
+
+  getAdminAuditLogs(token: string, filters: AdminAuditLogFilters = {}): Promise<AdminAuditLogDto[]> {
+    const params = new URLSearchParams()
+    if (filters.action) params.set('action', filters.action)
+    if (filters.entityType) params.set('entityType', filters.entityType)
+    if (filters.actorType) params.set('actorType', filters.actorType)
+    if (filters.search) params.set('search', filters.search)
+    if (filters.from) params.set('from', filters.from)
+    if (filters.to) params.set('to', filters.to)
+    if (filters.limit) params.set('limit', String(filters.limit))
+    const query = params.toString()
+    return this.request<AdminAuditLogDto[]>(`/api/admin/audit-logs${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminUsers(token: string, filters?: { search?: string; status?: string; role?: string }): Promise<AdminUserDto[]> {
