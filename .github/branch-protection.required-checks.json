@@ -1,0 +1,25 @@
+{
+  "repository": "Xsenus/vpn-platform",
+  "branches": [
+    "main",
+    "master"
+  ],
+  "requiredStatusChecks": {
+    "strict": true,
+    "contexts": [
+      "backend restore, build, test, EF",
+      "frontend install, typecheck, build, test",
+      "provisioning runner and Ansible syntax",
+      "docker compose config and image build"
+    ]
+  },
+  "pullRequestReviews": {
+    "dismissStaleReviews": true,
+    "requireCodeOwnerReviews": false,
+    "requiredApprovingReviewCount": 1
+  },
+  "enforceAdmins": true,
+  "requiredConversationResolution": true,
+  "allowForcePushes": false,
+  "allowDeletions": false
+}

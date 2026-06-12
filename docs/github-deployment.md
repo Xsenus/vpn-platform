@@ -25,6 +25,8 @@ Workflow `deploy-vps` поддерживает три режима:
 
 Подробная проверка auto-detect, ожидаемые строки GitHub Actions log и пример блока `$GITHUB_STEP_SUMMARY` описаны в `docs/deploy-vps-auto-detect.md`.
 
+Обязательные checks для `main`/`master`, конфиг branch protection и скрипт применения описаны в `docs/github-required-checks.md`.
+
 ## GitHub Secrets
 
 В GitHub открой `Settings -> Secrets and variables -> Actions -> New repository secret` и добавь:

@@ -538,9 +538,10 @@ git diff --check
   - Что сделано: шаг `Detect deployment mode` в `.github/workflows/deploy-vps.yml` теперь пишет requested/selected режим, результат Docker Compose detection, причину выбора в `::notice` и блок `$GITHUB_STEP_SUMMARY`. Для `auto` workflow выбирает `docker` только если на VPS доступны `docker` и `docker compose version`, иначе уходит в `systemd`; явные `docker`/`systemd` режимы сохраняются как manual override.
   - Доказательство: `DeployWorkflowGuardTests`, документация `docs/deploy-vps-auto-detect.md`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-deploy-mode-auto-detect`, GitHub Actions log должен содержать `Deploy mode: requested=... selected=... docker_detected=... reason=...`.
 
-- [ ] `P8-CI-002` Required checks для main.
+- [x] `P8-CI-002` Required checks для main. 2026-06-12.
   - Что сделать: включить обязательные checks перед merge/push.
-  - Доказательство: GitHub branch protection screenshot/config.
+  - Что сделано: добавлен конфиг `.github/branch-protection.required-checks.json` с обязательными checks из workflow `validation`, включены strict up-to-date checks, один approving review, dismiss stale approvals, conversation resolution, запрет force push/delete и enforcement для администраторов. Добавлен `scripts/configure-branch-protection.ps1`, который применяет настройки через GitHub REST API или показывает payload в `-DryRun`. `deploy-vps` не добавлен в required checks, потому что это production deploy на push, а не PR validation.
+  - Доказательство: `BranchProtectionGuardTests`, `powershell -ExecutionPolicy Bypass -File scripts/configure-branch-protection.ps1 -DryRun`, документация `docs/github-required-checks.md`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-required-checks-main`, config `.github/branch-protection.required-checks.json`.
 
 - [ ] `P8-CI-003` Secrets audit в GitHub.
   - Что сделать: проверить наличие и названия secrets для VPS, DB, deploy, registry.

@@ -2,6 +2,43 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: required checks для main
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P8-CI-002` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен конфиг `.github/branch-protection.required-checks.json` для веток `main` и `master`.
+- Required checks синхронизированы с job names workflow `validation`: backend, frontend, provisioning/Ansible и docker build.
+- Добавлен `scripts/configure-branch-protection.ps1` с GitHub REST API, `-DryRun`, чтением token только из env и проверкой applied contexts после применения.
+- Добавлена документация `docs/github-required-checks.md`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-12-required-checks-main`.
+- Добавлен release entry `2026-06-12-required-checks-main` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/configure-branch-protection.ps1 -DryRun
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "BranchProtectionGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "ReleaseDocumentationGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['.github/branch-protection.required-checks.json','backend/src/VpnPlatform.Api/AppReleases/releases.json','backend/tests/VpnPlatform.UnitTests/BranchProtectionGuardTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/github-required-checks.md','docs/github-deployment.md','scripts/configure-branch-protection.ps1','TEST_RESULTS.md']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Branch protection dry-run: OK, payload собран для `Xsenus/vpn-platform`, ветки `main/master`, 4 required checks.
+- Targeted branch protection guard tests: 3/3.
+- Targeted release/docs guard tests: 3/3.
+- Backend full suite: 420/420.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-12-required-checks-main`, версия `0.84.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`; latest release `2026-06-12-required-checks-main`, версия `0.84.0`; серверов `1`, provisioning-запусков `0`.
+- Live GitHub branch protection не применялся из этой среды: `gh` CLI не установлен, `GITHUB_TOKEN/GH_TOKEN` в env отсутствует. Для применения нужен запуск `scripts/configure-branch-protection.ps1` с токеном repository administration write.
+
 ## Проверка 2026-06-12: auto-detect deploy docker/systemd
 
 Что проверено:

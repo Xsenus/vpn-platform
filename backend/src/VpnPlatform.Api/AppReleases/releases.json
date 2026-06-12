@@ -2000,5 +2000,32 @@
         "text": "Добавлена инструкция `docs/deploy-vps-auto-detect.md` с порядком проверки GitHub Actions log и manual override через `VPS_DEPLOY_MODE`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-required-checks-main",
+    "version": "0.84.0",
+    "releasedAt": "2026-06-12T13:04:00+07:00",
+    "title": "Добавлена настройка required checks для main",
+    "summary": "Защита основных веток GitHub теперь описана в репозитории и может применяться повторяемым скриптом.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен конфиг `.github/branch-protection.required-checks.json` со списком обязательных checks для `main` и `master`."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/configure-branch-protection.ps1` для применения branch protection через GitHub REST API или проверки payload в `-DryRun`."
+      },
+      {
+        "type": "important",
+        "text": "Required checks используют workflow `validation`; production deploy `deploy-vps` не блокирует pull request и остается push-deploy контуром."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены guard-тесты, которые сверяют required checks с job names в `ci.yml` и не дают потерять запрет force push/delete."
+      }
+    ]
   }
 ]
