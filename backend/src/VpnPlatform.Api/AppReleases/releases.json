@@ -1784,5 +1784,32 @@
         "text": "Платежные и channel webhook endpoints получили отдельную policy с более высоким лимитом для безопасной повторной доставки событий."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-security-headers",
+    "version": "0.76.0",
+    "releasedAt": "2026-06-12T11:46:00+07:00",
+    "title": "Добавлены security headers для API и frontend",
+    "summary": "Backend API и frontend Docker images теперь выставляют защитные HTTP-заголовки, CSP и production HSTS, а production CORS остается строгим allow-list.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Backend API получил `SecurityHeadersMiddleware` для nosniff, frame deny, referrer policy, permissions policy, API CSP и production HSTS."
+      },
+      {
+        "type": "important",
+        "text": "Frontend Docker images используют общий `nginx.security.conf` с CSP, HSTS и SPA fallback через `try_files`."
+      },
+      {
+        "type": "improved",
+        "text": "Development Swagger UI не получает API CSP, чтобы локальная документация продолжала открываться без специальных исключений."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены тесты, которые проверяют backend security headers, порядок middleware и подключение защищенного nginx-конфига во всех frontend Dockerfiles."
+      }
+    ]
   }
 ]

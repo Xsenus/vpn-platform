@@ -494,9 +494,10 @@ git diff --check
   - Что сделано: добавлены `ApiRateLimitPolicies` и middleware `AddRateLimiter/UseRateLimiter`; auth endpoints `register/login/refresh/forgot-password/reset-password` используют `auth-sensitive`, публичный checkout использует `public-checkout`, платежные и channel webhook controllers используют `webhook`. При превышении лимита API возвращает `429 Too Many Requests` с problem JSON.
   - Доказательство: `RateLimitingSecurityTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-api-rate-limiting`; документация `docs/rate-limiting.md`.
 
-- [ ] `P6-SEC-005` CORS/CSP/security headers.
+- [x] `P6-SEC-005` CORS/CSP/security headers. 2026-06-12.
   - Что сделать: проверить production headers для API и frontend.
-  - Доказательство: curl/browser security report.
+  - Что сделано: backend API получил `SecurityHeadersMiddleware` с `nosniff`, `DENY`, `no-referrer`, `Permissions-Policy`, API CSP и production HSTS; frontend Docker images `public-web`, `cabinet`, `admin-panel` используют общий `nginx.security.conf` с CSP/HSTS/security headers и SPA fallback. Production CORS остается allow-list based через `Cors:AllowedOrigins` и startup validator.
+  - Доказательство: `SecurityHeadersTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-security-headers`; документация `docs/security-headers.md`.
 
 - [ ] `P6-SEC-006` Проверка утечек секретов.
   - Что сделать: scan repo, logs, docs, env examples на реальные ключи.

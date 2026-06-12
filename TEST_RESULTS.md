@@ -2,6 +2,46 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: security headers API и frontend
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P6-SEC-005` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Backend API получил `SecurityHeadersMiddleware`.
+- API выставляет `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Content-Security-Policy`.
+- `Strict-Transport-Security` выставляется только в `Production`.
+- Development Swagger UI не получает API CSP, чтобы не ломать локальную документацию.
+- Frontend Dockerfiles `public-web`, `cabinet`, `admin-panel` копируют общий `frontend/nginx.security.conf`.
+- nginx-конфиг frontend содержит CSP, HSTS, security headers и SPA fallback `try_files`.
+- Production CORS остается allow-list based через `Cors:AllowedOrigins` и startup validator.
+- Добавлена документация `docs/security-headers.md`.
+- Добавлен release entry `2026-06-12-security-headers` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/security-headers.md','backend/src/VpnPlatform.Api/Middleware/SecurityHeadersMiddleware.cs','backend/src/VpnPlatform.Api/Program.cs','backend/tests/VpnPlatform.UnitTests/SecurityHeadersTests.cs','frontend/nginx.security.conf','frontend/Dockerfile.public-web','frontend/Dockerfile.cabinet','frontend/Dockerfile.admin-panel']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter SecurityHeadersTests --logger "console;verbosity=minimal"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests" --logger "console;verbosity=minimal"
+npm run typecheck
+npm run build
+npm test
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore --logger "console;verbosity=minimal"
+git diff --check
+```
+
+Итог:
+
+- JSON релизов валиден: latest `2026-06-12-security-headers`, версия `0.76.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `SecurityHeadersTests`: 5/5.
+- Release docs tests: 14/14.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- Frontend tests: 61/61.
+- Backend full suite: 405/405.
+- Local SQLite HTTP-smoke на чистой БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest` с Bearer-токеном; latest release `2026-06-12-security-headers`, версия `0.76.0`; `/health/live` вернул `nosniff`, `DENY`, `no-referrer`, `Permissions-Policy`, API CSP, без HSTS в Local.
+
 ## Проверка 2026-06-12: rate limiting публичного API
 
 Что проверено:

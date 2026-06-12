@@ -110,6 +110,7 @@ if (isAdminBootstrapCommand)
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<RequestObservabilityMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<IdempotencyMiddleware>();
 
