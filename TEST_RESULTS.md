@@ -2,6 +2,38 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: конкурентная обработка оплаты
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P4-BE-003` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `PaymentOrchestrator` получил общий `PaymentProcessingGate` по заказу и свежий DB snapshot внутри gate, чтобы параллельные webhook/recheck не запускали повторную активацию.
+- Конкурентная вставка одного `PaymentWebhookEvent` теперь возвращает идемпотентный ответ, если уникальное событие уже сохранено другим потоком.
+- Sandbox-выбор VPN-ноды больше не сортирует `decimal` в SQL, поэтому локальная SQLite-БД проходит активацию оплаты.
+- Добавлен release entry `2026-06-12-payment-concurrency-guard` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "FullyQualifiedName~PaymentConcurrencyTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "FullyQualifiedName~PaymentWebhookProcessingTests|FullyQualifiedName~PaymentWebhookIdempotencyContractTests|FullyQualifiedName~PaymentConcurrencyTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data[data.length-1];console.log(data.length,last.releaseId,last.version,last.title);"
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','TEST_RESULTS.md','backend/src/VpnPlatform.Application/Common/PaymentProcessingGate.cs','backend/src/VpnPlatform.Application/Services/PaymentOrchestrator.cs','backend/src/VpnPlatform.Application/Services/NodeAllocationService.cs','backend/tests/VpnPlatform.UnitTests/PaymentConcurrencyTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); const last=data.at(-1); console.log('encoding guard ok', last.releaseId, last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- `PaymentConcurrencyTests`: 2/2 пройдено на SQLite.
+- Targeted payment tests: 28/28 пройдено.
+- Release documentation tests: 14/14 пройдено.
+- Backend full suite: 361/361 пройдено.
+- App releases JSON: валиден, последний релиз `2026-06-12-payment-concurrency-guard`, версия `0.65.0`.
+- Encoding guard: измененные файлы читаются как UTF-8, `U+FFFD` не найден.
+- Local SQLite HTTP-smoke: `/health/live`, `/api/auth/login`, `/api/app-version/latest`, `/api/app-version/history`, `/api/app-version/admin/releases?search=2026-06-12-payment-concurrency-guard`, `/api/public/payments/providers`, `/api/public/tariffs`; latest release `2026-06-12-payment-concurrency-guard`, версия `0.65.0`, история `50`, поиск релиза `1`, публичные провайдеры `8`, публичные тарифы `3`.
+
 ## Проверка 2026-06-11: идемпотентность платежных webhook
 
 Что проверено:

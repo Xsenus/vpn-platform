@@ -430,9 +430,10 @@ git diff --check
   - Что сделано: `PaymentOrchestrator` строит стабильный idempotency key для webhook без внешнего event id через `payload:<sha256>`; повторная доставка события определяется до изменения платежа/заказа/подписки.
   - Доказательство: `PaymentWebhookIdempotencyContractTests` проверяет повтор webhook и fallback payload hash для каждого `PaymentProvider`; targeted payment webhook tests 42/42; backend full suite 359/359; local SQLite HTTP-smoke latest release `2026-06-11-payment-webhook-idempotency`.
 
-- [ ] `P4-BE-003` Конкурентность оплаты.
+- [x] `P4-BE-003` Конкурентность оплаты. 2026-06-12.
   - Что сделать: два webhook/recheck одновременно не ломают order/subscription.
-  - Доказательство: concurrency tests.
+  - Что сделано: `PaymentOrchestrator` сериализует применение статуса платежа по заказу через `PaymentProcessingGate`, после входа в gate перечитывает свежий snapshot платежа из БД и безопасно выходит, если активация уже выполнена. Конкурентная вставка одного `PaymentWebhookEvent` теперь возвращает идемпотентный ответ вместо исключения уникального индекса. Sandbox-выбор VPN-ноды перенес сортировку по загрузке в память, чтобы локальный SQLite проходил активацию оплаты.
+  - Доказательство: `PaymentConcurrencyTests` проверяет параллельный одинаковый webhook и параллельные webhook/recheck на SQLite; targeted payment tests 28/28; local SQLite HTTP-smoke latest release `2026-06-12-payment-concurrency-guard`.
 
 - [x] `P4-BE-004` Renew/expire jobs. 2026-06-10.
   - Что сделать: продление, окончание, отключение клиента, уведомления.

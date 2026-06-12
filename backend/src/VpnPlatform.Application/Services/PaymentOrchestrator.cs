@@ -217,7 +217,22 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             ReceivedAt = _clock.UtcNow
         };
         _db.PaymentWebhookEvents.Add(webhookEvent);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            var duplicateWebhookEvent = await _db.PaymentWebhookEvents
+                .AsNoTracking()
+                .AnyAsync(x => x.Provider == providerType && x.ExternalEventId == webhookEventId && x.ProviderPaymentId == parsed.PaymentId, cancellationToken);
+            if (duplicateWebhookEvent)
+            {
+                return Result<string>.Success("Webhook already processed.");
+            }
+
+            throw;
+        }
 
         if (payment is null || payment.Order is null || payment.PaymentProviderAccount is null)
         {
@@ -387,6 +402,35 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
     private async Task<Result<string>> ApplyPaymentStatusAsync(PaymentAttempt payment, PaymentStatus status, string rawPayload, string externalEventId, CancellationToken cancellationToken)
     {
+        await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(payment.OrderId, cancellationToken);
+        var currentPayment = await _db.Payments
+            .AsNoTracking()
+            .Include(x => x.Order)
+            .Include(x => x.PaymentProviderAccount)
+            .FirstOrDefaultAsync(x => x.Id == payment.Id, cancellationToken);
+        if (currentPayment is not null)
+        {
+            if (status == PaymentStatus.Succeeded && (currentPayment.IsActivationProcessed || currentPayment.Order?.Status == OrderStatus.Completed))
+            {
+                return Result<string>.Success("Payment already activated.");
+            }
+
+            payment.Status = currentPayment.Status;
+            payment.IsActivationProcessed = currentPayment.IsActivationProcessed;
+            payment.ActivationProcessedAt = currentPayment.ActivationProcessedAt;
+            payment.PaidAt = currentPayment.PaidAt;
+            payment.FailedAt = currentPayment.FailedAt;
+            payment.RefundedAt = currentPayment.RefundedAt;
+            payment.RefundedAmount = currentPayment.RefundedAmount;
+            payment.StatusReason = currentPayment.StatusReason;
+
+            if (payment.Order is not null && currentPayment.Order is not null)
+            {
+                payment.Order.Status = currentPayment.Order.Status;
+                payment.Order.PaidAt = currentPayment.Order.PaidAt;
+            }
+        }
+
         var now = _clock.UtcNow;
         var previousStatus = payment.Status;
         var paymentTransition = StatusStateMachine.TrySetPaymentStatus(payment, status, now);

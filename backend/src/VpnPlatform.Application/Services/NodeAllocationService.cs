@@ -103,7 +103,7 @@ public class NodeAllocationService
     public async Task<VpnNode> SelectOrCreateSandboxNodeAsync(string? protocol, CancellationToken cancellationToken = default)
     {
         var requiredProtocol = NormalizeProtocol(protocol);
-        var sandboxNode = await _db.VpnNodes
+        var sandboxCandidates = await _db.VpnNodes
             .Where(x =>
                 x.Provider == "x3ui" &&
                 x.Region == "sandbox" &&
@@ -112,9 +112,8 @@ public class NodeAllocationService
                 x.HealthStatus != HealthStatus.Unhealthy &&
                 x.UsedCapacity < x.Capacity &&
                 (string.IsNullOrWhiteSpace(x.SupportedProtocolsCsv) || x.SupportedProtocolsCsv.ToLower().Contains(requiredProtocol)))
-            .OrderBy(x => x.UsedCapacity * 1.0m / Math.Max(1, x.Capacity))
-            .ThenBy(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+        var sandboxNode = ApplyNodeOrdering(sandboxCandidates, "least-loaded").FirstOrDefault();
 
         if (sandboxNode is not null)
         {
