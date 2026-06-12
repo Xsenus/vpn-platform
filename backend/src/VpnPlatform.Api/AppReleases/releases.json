@@ -1946,5 +1946,32 @@
         "text": "Добавлен E2E failure scenario, который проверяет rollback, support context, audit и отсутствие утечки deploy-секретов."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-live-provisioning-runbook",
+    "version": "0.82.0",
+    "releasedAt": "2026-06-12T12:49:00+07:00",
+    "title": "Добавлен runbook live provisioning",
+    "summary": "Операторы получили единую инструкцию для безопасного включения настоящего SSH/Ansible deploy на staging или production VPS.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `docs/live-provisioning-runbook.md` с preflight, Ansible syntax-check, SSH/known_hosts и ручным runner dry-run."
+      },
+      {
+        "type": "important",
+        "text": "Runbook фиксирует live gates: `Provisioning__LiveExecutionEnabled`, `Provisioning__AllowLiveDeploy`, `validation-mode:false` и `explicit-live-provisioning:true`."
+      },
+      {
+        "type": "improved",
+        "text": "Документация описывает API-порядок precheck/deploy, проверку `Precheck report`, rollback path и post-deploy smoke."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлен guard-тест, который не даст удалить из runbook обязательные operator gates и fail-closed правила."
+      }
+    ]
   }
 ]

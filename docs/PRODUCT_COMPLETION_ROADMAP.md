@@ -526,9 +526,10 @@ git diff --check
   - Что сделано: `ProvisioningWorker` снимает snapshot состояния `VpnNode` перед deploy и при ошибке возвращает эксплуатационные поля ноды к прежним значениям, оставляя `ProvisioningRun.Status=Failed` и `VpnNode.ProvisioningStatus=Failed` для видимости инцидента. В run добавляется шаг `Rollback node state`, в audit пишется `provisioning.rollback_applied`, а support/Telegram получают redacted-контекст ошибки.
   - Доказательство: failure scenario test `OwnVps_Deploy_Failure_Should_Roll_Back_Node_State_And_Surface_Admin_Context`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-vps-provisioning-rollback`, документация `docs/vps-provisioning-rollback.md`.
 
-- [ ] `P7-PROV-005` Документация live provisioning.
+- [x] `P7-PROV-005` Документация live provisioning. 2026-06-12.
   - Что сделать: отдельный runbook с предупреждениями и командами.
-  - Доказательство: docs review.
+  - Что сделано: добавлен `docs/live-provisioning-runbook.md` с preflight, Ansible syntax-check, SSH/known_hosts, live flags `Provisioning__LiveExecutionEnabled` и `Provisioning__AllowLiveDeploy`, тегами `validation-mode:false` и `explicit-live-provisioning:true`, API-порядком precheck/deploy, ручным runner dry-run, rollback/failure path, smoke и fail-closed правилами. Общий `docs/provisioning.md` теперь ссылается на live runbook.
+  - Доказательство: `ReleaseDocumentationGuardTests.Live_Provisioning_Runbook_Should_Cover_Operator_Gates`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-live-provisioning-runbook`, releaseId `2026-06-12-live-provisioning-runbook`.
 
 ## P8. CI/CD, GitHub и VPS deploy
 

@@ -10,7 +10,8 @@ public class ReleaseDocumentationGuardTests
         new("P2-ADM-CNT-001", "2026-06-11-admin-home-content-readiness"),
         new("P2-ADM-FAQ-001", "2026-06-11-admin-faq-management"),
         new("P2-ADM-REL-001", "2026-06-11-app-version-management"),
-        new("P2-ADM-REL-002", "2026-06-11-release-note-guard")
+        new("P2-ADM-REL-002", "2026-06-11-release-note-guard"),
+        new("P7-PROV-005", "2026-06-12-live-provisioning-runbook")
     ];
 
     [Fact]
@@ -55,6 +56,25 @@ public class ReleaseDocumentationGuardTests
                 Assert.False(string.IsNullOrWhiteSpace(item.GetProperty("text").GetString()));
             });
         }
+    }
+
+    [Fact]
+    public void Live_Provisioning_Runbook_Should_Cover_Operator_Gates()
+    {
+        var root = FindRepositoryRoot();
+        var runbook = File.ReadAllText(Path.Combine(root, "docs", "live-provisioning-runbook.md"));
+
+        Assert.Contains("Provisioning__LiveExecutionEnabled=true", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Provisioning__AllowLiveDeploy=true", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("explicit-live-provisioning:true", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validation-mode:false", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Provisioning__KnownHostsPath", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ansible-playbook --syntax-check", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("POST /api/admin/servers/{id}/precheck", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("POST /api/admin/provisioning-runs/{id}/deploy", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Precheck report", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Rollback node state", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Fail-closed", runbook, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

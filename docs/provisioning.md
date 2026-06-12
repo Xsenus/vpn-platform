@@ -23,6 +23,10 @@
 - `infra/ansible/playbooks/precheck-node.yml`
 - `infra/ansible/playbooks/provision-node.yml`
 
+## Live provisioning runbook
+
+Для настоящего staging/production deploy используйте отдельную инструкцию `docs/live-provisioning-runbook.md`. В ней описаны preflight, `known_hosts`, `Provisioning__LiveExecutionEnabled`, `Provisioning__AllowLiveDeploy`, теги `validation-mode:false` и `explicit-live-provisioning:true`, порядок API-команд, rollback и smoke-проверки.
+
 ## Какие данные нужны на ноде
 
 Минимум:

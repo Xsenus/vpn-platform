@@ -2,6 +2,37 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: runbook live provisioning
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P7-PROV-005` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `docs/live-provisioning-runbook.md` с preflight, Ansible syntax-check, SSH/known_hosts, live flags, тегами ноды, API-порядком precheck/deploy, ручным runner dry-run, rollback/failure path, smoke и fail-closed правилами.
+- `docs/provisioning.md` ссылается на live provisioning runbook.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-12-live-provisioning-runbook`.
+- Добавлен guard `Live_Provisioning_Runbook_Should_Cover_Operator_Gates`.
+- Добавлен release entry `2026-06-12-live-provisioning-runbook` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "ReleaseDocumentationGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/live-provisioning-runbook.md','docs/provisioning.md','TEST_RESULTS.md','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Targeted release/docs guard tests: 3/3.
+- Backend full suite: 415/415.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-12-live-provisioning-runbook`, версия `0.82.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`; latest release `2026-06-12-live-provisioning-runbook`, версия `0.82.0`; серверов `1`, provisioning-запусков `0`.
+
 ## Проверка 2026-06-12: rollback состояния VPS
 
 Что проверено:
