@@ -1,6 +1,8 @@
-# TODO: безопасное хранение provisioning-секретов
+# Статус: безопасное хранение provisioning-секретов
 
-Stage 6 introduces an Own VPS provisioning MVP. It keeps validation mode safe and redacts SSH credentials from API responses, admin UI, logs, audit entries, Telegram messages and Telegram update payloads. The implementation intentionally does **not** claim production-ready credential handling.
+Stage 6 introduced an Own VPS provisioning MVP. It keeps validation mode safe and redacts SSH credentials from API responses, admin UI, logs, audit entries, Telegram messages and Telegram update payloads.
+
+Stage P6-SEC-001 adds production-oriented temporary materialization for protected SSH private keys. The current supported live credential path is `ssh_key`; password-based live SSH remains fail-closed until the runner can pass passwords without writing them into inventory/logs.
 
 ## Current MVP behaviour
 
@@ -16,14 +18,15 @@ Stage 6 introduces an Own VPS provisioning MVP. It keeps validation mode safe an
 - Live Ansible execution is disabled by default with:
   - `Provisioning__LiveExecutionEnabled=false`;
   - `Provisioning__AllowLiveDeploy=false`.
-- Protected credentials are not materialized to files for live Ansible in this MVP.
+- Protected `ssh_key` credentials can be materialized to a temporary key file for live Ansible only inside `AnsibleProvisioningExecutor`, after the explicit live provisioning gates are enabled. The file is deleted in `finally`.
+- Protected password credentials, validation placeholders and legacy protected values in `SshPrivateKeyPath` are not materialized.
 
 ## Production hardening plan
 
 1. Move SSH credentials out of `VpnNode.SshPrivateKeyPath` into a dedicated encrypted `ProvisioningSecret` table or external secret manager.
 2. Store only a secret reference on `VpnNode` / `ProvisioningRun`.
 3. Add per-secret purpose, owner, expiry/TTL and rotation metadata.
-4. Materialize private keys/passwords only into temporary files or process input with strict permissions when live provisioning is explicitly enabled.
+4. Materialize private keys only into temporary files with strict permissions when live provisioning is explicitly enabled.
 5. Delete temporary files immediately after Ansible execution.
 6. Add envelope encryption with key rotation support and audit events for decrypt/read operations.
 7. Add automated tests proving credentials never appear in:
@@ -50,4 +53,4 @@ Stage 7 adds backward-compatible protected fields on `VpnNode`:
 
 New admin/Telegram provisioning writes should use these protected fields instead of storing credentials in `SshPrivateKeyPath` or `PanelPassword`. Legacy fields remain in the database only for compatibility and approved operator-managed paths.
 
-Live Ansible still must not receive protected credentials directly. A future production stage must implement secure temporary credential materialization or an external secret manager before live provisioning can be considered production-ready.
+Live Ansible must not receive protected credentials directly. `ProvisioningSecretMaterializer` now decrypts only `ssh_key` payloads into `WorkingDirectory/<runId>/secrets`, sets best-effort restrictive permissions and deletes the file after the runner exits. A future stage should add an external secret manager and a safe password-based runner path if password SSH is required.

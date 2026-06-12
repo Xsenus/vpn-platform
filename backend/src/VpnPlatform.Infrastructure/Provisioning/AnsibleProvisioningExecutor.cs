@@ -12,11 +12,13 @@ namespace VpnPlatform.Infrastructure.Provisioning;
 public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
 {
     private readonly ProvisioningOptions _options;
+    private readonly ProvisioningSecretMaterializer _secretMaterializer;
     private readonly ILogger<AnsibleProvisioningExecutor> _logger;
 
-    public AnsibleProvisioningExecutor(IOptions<ProvisioningOptions> options, ILogger<AnsibleProvisioningExecutor> logger)
+    public AnsibleProvisioningExecutor(IOptions<ProvisioningOptions> options, ProvisioningSecretMaterializer secretMaterializer, ILogger<AnsibleProvisioningExecutor> logger)
     {
         _options = options.Value;
+        _secretMaterializer = secretMaterializer;
         _logger = logger;
     }
 
@@ -67,130 +69,151 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
             arguments.Add(Quote(node.Host));
         }
 
-        if (!string.IsNullOrWhiteSpace(node.ProtectedSshCredential) || !string.IsNullOrWhiteSpace(node.SshCredentialRef))
+        MaterializedProvisioningSecret? materializedSshKey = null;
+        try
         {
-            return new ProvisioningExecutionResult(
-                false,
-                "Protected SSH credentials are configured, but live Ansible credential materialization is not enabled in this MVP. Use validation mode or configure an approved key path on a staging host.",
-                new[] { new ProvisioningStepResult("SSH credential guard", false, "Protected credentials were detected and not exposed to ansible-playbook.", "Live protected credential materialization is not implemented in this MVP.") },
-                workDirectory,
-                "Protected SSH credentials cannot be used for live Ansible in this MVP.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(node.SshPrivateKeyPath))
-        {
-            if (node.SshPrivateKeyPath.StartsWith("v1:", StringComparison.Ordinal) || node.SshPrivateKeyPath.StartsWith("validation-placeholder:", StringComparison.Ordinal))
+            try
+            {
+                materializedSshKey = await _secretMaterializer.MaterializeSshPrivateKeyAsync(node, workDirectory, cancellationToken);
+            }
+            catch (InvalidOperationException ex)
             {
                 return new ProvisioningExecutionResult(
                     false,
-                    "Protected SSH credentials are configured in the legacy key-path field, but live Ansible credential materialization is not enabled in this MVP. Use validation mode or configure an approved key path on a staging host.",
-                    new[] { new ProvisioningStepResult("SSH credential guard", false, "Protected credentials were detected and not exposed to ansible-playbook.", "Live protected credential materialization is not implemented in this MVP.") },
+                    "Protected SSH credential materialization failed. No raw credential was exposed to ansible-playbook.",
+                    new[] { new ProvisioningStepResult("SSH credential materialization", false, "Protected credential was not materialized.", ex.Message) },
                     workDirectory,
-                    "Protected SSH credentials cannot be used for live Ansible in this MVP.");
+                    ex.Message);
             }
 
-            arguments.Add("--private-key-path");
-            arguments.Add(Quote(node.SshPrivateKeyPath));
-        }
+            if (materializedSshKey is not null)
+            {
+                arguments.Add("--private-key-path");
+                arguments.Add(Quote(materializedSshKey.Path));
+            }
 
-        if (!string.IsNullOrWhiteSpace(_options.KnownHostsPath))
-        {
-            arguments.Add("--known-hosts-path");
-            arguments.Add(Quote(_options.KnownHostsPath));
-        }
+            if (!string.IsNullOrWhiteSpace(node.SshPrivateKeyPath))
+            {
+                if (node.SshPrivateKeyPath.StartsWith("v1:", StringComparison.Ordinal) || node.SshPrivateKeyPath.StartsWith("validation-placeholder:", StringComparison.Ordinal))
+                {
+                    return new ProvisioningExecutionResult(
+                        false,
+                        "Protected SSH credentials are configured in the legacy key-path field and were not exposed to ansible-playbook.",
+                        new[] { new ProvisioningStepResult("SSH credential guard", false, "Legacy protected credentials were detected and not exposed to ansible-playbook.", "Move the credential into ProtectedSshCredential before live provisioning.") },
+                        workDirectory,
+                        "Legacy protected SSH credentials cannot be used for live Ansible.");
+                }
 
-        if (node.SkipHostKeyChecking)
-        {
-            arguments.Add("--skip-host-key-checking");
-        }
+                if (materializedSshKey is null)
+                {
+                    arguments.Add("--private-key-path");
+                    arguments.Add(Quote(node.SshPrivateKeyPath));
+                }
+            }
 
-        if (run.DryRun)
-        {
-            arguments.Add("--check");
-        }
+            if (!string.IsNullOrWhiteSpace(_options.KnownHostsPath))
+            {
+                arguments.Add("--known-hosts-path");
+                arguments.Add(Quote(_options.KnownHostsPath));
+            }
 
-        var extraVars = new Dictionary<string, object?>
-        {
-            ["node_name"] = node.Name,
-            ["node_region"] = node.Region,
-            ["node_country"] = node.Country,
-            ["node_provider"] = node.Provider,
-            ["x3ui_port"] = 2053,
-            ["vpn_platform_user"] = "vpnplatform",
-            ["panel_base_url"] = node.PanelBaseUrl,
-            ["panel_username"] = node.PanelUsername,
-            ["panel_password"] = string.Empty,
-            ["panel_inbound_id"] = node.PanelInboundId,
-            ["public_hostname"] = node.PublicHostname,
-            ["public_port"] = node.PublicPort,
-            ["install_xui"] = !run.DryRun
-        };
+            if (node.SkipHostKeyChecking)
+            {
+                arguments.Add("--skip-host-key-checking");
+            }
 
-        var extraVarsPath = Path.Combine(workDirectory, "extra-vars.json");
-        await File.WriteAllTextAsync(extraVarsPath, JsonSerializer.Serialize(extraVars, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
-        arguments.Add("--extra-vars-file");
-        arguments.Add(Quote(extraVarsPath));
+            if (run.DryRun)
+            {
+                arguments.Add("--check");
+            }
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = _options.PythonBinary,
-            Arguments = string.Join(' ', arguments),
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WorkingDirectory = workDirectory
-        };
+            var extraVars = new Dictionary<string, object?>
+            {
+                ["node_name"] = node.Name,
+                ["node_region"] = node.Region,
+                ["node_country"] = node.Country,
+                ["node_provider"] = node.Provider,
+                ["x3ui_port"] = 2053,
+                ["vpn_platform_user"] = "vpnplatform",
+                ["panel_base_url"] = node.PanelBaseUrl,
+                ["panel_username"] = node.PanelUsername,
+                ["panel_password"] = string.Empty,
+                ["panel_inbound_id"] = node.PanelInboundId,
+                ["public_hostname"] = node.PublicHostname,
+                ["public_port"] = node.PublicPort,
+                ["install_xui"] = !run.DryRun
+            };
 
-        _logger.LogInformation("Starting provisioning run {RunId} for node {NodeId} with playbook {PlaybookPath}", run.Id, node.Id, playbookPath);
+            var extraVarsPath = Path.Combine(workDirectory, "extra-vars.json");
+            await File.WriteAllTextAsync(extraVarsPath, JsonSerializer.Serialize(extraVars, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+            arguments.Add("--extra-vars-file");
+            arguments.Add(Quote(extraVarsPath));
 
-        using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start provisioning runner process.");
-        var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
+            var psi = new ProcessStartInfo
+            {
+                FileName = _options.PythonBinary,
+                Arguments = string.Join(' ', arguments),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = workDirectory
+            };
 
-        var knownSecrets = new[] { node.PanelPassword, node.ProtectedPanelPassword, node.SshPrivateKeyPath, node.ProtectedSshCredential };
-        var redactedStdout = SecretRedactor.Redact(stdout, knownSecrets);
-        var redactedStderr = SecretRedactor.Redact(stderr, knownSecrets);
+            _logger.LogInformation("Starting provisioning run {RunId} for node {NodeId} with playbook {PlaybookPath}", run.Id, node.Id, playbookPath);
 
-        TryDeleteSensitiveFile(extraVarsPath);
+            using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start provisioning runner process.");
+            var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(redactedStderr))
-        {
-            _logger.LogWarning("Provisioning runner stderr for {RunId}: {Stderr}", run.Id, redactedStderr);
-        }
+            var knownSecrets = new[] { node.PanelPassword, node.ProtectedPanelPassword, node.SshPrivateKeyPath, node.ProtectedSshCredential, materializedSshKey?.Plaintext };
+            var redactedStdout = SecretRedactor.Redact(stdout, knownSecrets);
+            var redactedStderr = SecretRedactor.Redact(stderr, knownSecrets);
 
-        RunnerResponse? response = null;
-        if (!string.IsNullOrWhiteSpace(stdout))
-        {
-            response = JsonSerializer.Deserialize<RunnerResponse>(stdout, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        }
+            TryDeleteSensitiveFile(extraVarsPath);
 
-        if (response is null)
-        {
+            if (!string.IsNullOrWhiteSpace(redactedStderr))
+            {
+                _logger.LogWarning("Provisioning runner stderr for {RunId}: {Stderr}", run.Id, redactedStderr);
+            }
+
+            RunnerResponse? response = null;
+            if (!string.IsNullOrWhiteSpace(stdout))
+            {
+                response = JsonSerializer.Deserialize<RunnerResponse>(stdout, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+
+            if (response is null)
+            {
+                return new ProvisioningExecutionResult(
+                    false,
+                    $"Provisioning runner returned unreadable response. ExitCode={process.ExitCode}",
+                    new[] { new ProvisioningStepResult("runner", false, redactedStdout, redactedStderr) },
+                    workDirectory,
+                    redactedStderr);
+            }
+
+            var steps = response.Steps?
+                .Select(x => new ProvisioningStepResult(
+                    x.StepName ?? "ansible",
+                    x.Success,
+                    SecretRedactor.Redact(x.Output, knownSecrets),
+                    SecretRedactor.Redact(x.ErrorText, knownSecrets)))
+                .ToArray()
+                ?? Array.Empty<ProvisioningStepResult>();
+
             return new ProvisioningExecutionResult(
-                false,
-                $"Provisioning runner returned unreadable response. ExitCode={process.ExitCode}",
-                new[] { new ProvisioningStepResult("runner", false, redactedStdout, redactedStderr) },
-                workDirectory,
-                redactedStderr);
+                response.Success && process.ExitCode == 0,
+                SecretRedactor.Redact(response.SummaryLog, knownSecrets),
+                steps,
+                response.WorkDirectory ?? workDirectory,
+                SecretRedactor.Redact(response.ErrorText ?? stderr, knownSecrets));
         }
-
-        var steps = response.Steps?
-            .Select(x => new ProvisioningStepResult(
-                x.StepName ?? "ansible",
-                x.Success,
-                SecretRedactor.Redact(x.Output, knownSecrets),
-                SecretRedactor.Redact(x.ErrorText, knownSecrets)))
-            .ToArray()
-            ?? Array.Empty<ProvisioningStepResult>();
-
-        return new ProvisioningExecutionResult(
-            response.Success && process.ExitCode == 0,
-            SecretRedactor.Redact(response.SummaryLog, knownSecrets),
-            steps,
-            response.WorkDirectory ?? workDirectory,
-            SecretRedactor.Redact(response.ErrorText ?? stderr, knownSecrets));
+        finally
+        {
+            materializedSshKey?.Dispose();
+        }
     }
 
 

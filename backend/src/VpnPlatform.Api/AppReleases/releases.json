@@ -1676,5 +1676,32 @@
         "text": "Добавлен `PostgresSchemaAuditTests`, который проверяет PostgreSQL EF metadata, PK, индексы, FK, nullable metadata, migration chain и документацию аудита."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-production-provisioning-secret-storage",
+    "version": "0.72.0",
+    "releasedAt": "2026-06-12T11:15:00+07:00",
+    "title": "Добавлено безопасное хранилище provisioning-секретов",
+    "summary": "Own VPS provisioning теперь умеет использовать protected SSH private key для live Ansible через временный materialized key file с cleanup и редактированием логов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `ProvisioningSecretMaterializer`, который расшифровывает protected `ssh_key` только на время provisioning-run."
+      },
+      {
+        "type": "important",
+        "text": "Temporary key file создается внутри `WorkingDirectory/<runId>/secrets`, передается runner как path и удаляется в `finally`."
+      },
+      {
+        "type": "improved",
+        "text": "Runner stdout/stderr и step output редактируются с учетом protected payload и расшифрованного plaintext, чтобы секрет не попадал в logs/API."
+      },
+      {
+        "type": "fixed",
+        "text": "Password-based live SSH, `validation-placeholder:*` и legacy protected values в `SshPrivateKeyPath` остаются fail-closed до безопасной реализации runner."
+      }
+    ]
   }
 ]

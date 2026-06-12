@@ -31,6 +31,19 @@ Legacy fields are retained for compatibility only:
 
 These legacy fields must not be projected to admin/public/cabinet/Telegram APIs.
 
+## P6-SEC-001 live materialization model
+
+Live provisioning no longer needs raw SSH key paths for new protected `ssh_key` credentials:
+
+- `ProtectedSshCredential` stores the encrypted private key payload;
+- `SshCredentialRef` remains the configured reference/marker;
+- `ProvisioningSecretMaterializer` decrypts the key only for the current provisioning run;
+- the temporary key is written under `Provisioning:WorkingDirectory/<runId>/secrets`;
+- the key file is deleted in `finally` after the Ansible runner exits;
+- runner logs are redacted with both protected payload and decrypted plaintext.
+
+Password-based live SSH is intentionally blocked until the runner supports a safe transport that does not place passwords in inventory files, command lines or logs.
+
 ## Required key configuration
 
 Set a strong secret protection key outside git:

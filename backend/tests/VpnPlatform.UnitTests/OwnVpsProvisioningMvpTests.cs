@@ -121,6 +121,7 @@ public class OwnVpsProvisioningMvpTests
     {
         var executor = new AnsibleProvisioningExecutor(
             Options.Create(new ProvisioningOptions()),
+            new ProvisioningSecretMaterializer(new TestSecretProtector()),
             NullLogger<AnsibleProvisioningExecutor>.Instance);
         var node = new VpnNode
         {

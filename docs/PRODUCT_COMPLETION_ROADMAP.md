@@ -473,10 +473,11 @@ git diff --check
 
 ## P6. Безопасность и секреты
 
-- [ ] `P6-SEC-001` Production secret storage.
+- [x] `P6-SEC-001` Production secret storage. 2026-06-12.
   - Проблема: Own VPS provisioning пока не materializes protected SSH credentials для live Ansible.
   - Что сделать: secret manager или encrypted ProvisioningSecret table, temporary materialization с cleanup.
-  - Доказательство: security tests, отсутствие секретов в logs/API/UI.
+  - Что сделано: добавлен `ProvisioningSecretMaterializer`, который использует `ISecretProtector`, расшифровывает только protected `ssh_key` payload в временный файл `WorkingDirectory/<runId>/secrets/ssh-key-*`, выставляет best-effort права `700/600` на Unix, передает runner только path и удаляет файл в `finally`. `AnsibleProvisioningExecutor` больше не fail-closed для supported protected SSH key, но продолжает блокировать password-based live SSH, `validation-placeholder:*`, legacy protected values в `SshPrivateKeyPath` и missing protected payload при наличии `SshCredentialRef`.
+  - Доказательство: `ProvisioningSecretMaterializerTests`, `OwnVpsProvisioningMvpTests`, `SecurityHardeningMvpTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-production-provisioning-secret-storage`; документация `docs/production-secret-storage.md`.
 
 - [ ] `P6-SEC-002` Secret rotation.
   - Что сделать: ротация платежных, Telegram, 3x-ui, SSH секретов без показа старых значений.

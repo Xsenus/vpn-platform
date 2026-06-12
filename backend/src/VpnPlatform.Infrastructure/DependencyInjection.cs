@@ -97,6 +97,7 @@ public static class DependencyInjection
         services.AddScoped<IQrCodeGenerator, SvgQrCodeGenerator>();
         services.AddScoped<IVpnProvider, X3UiVpnProvider>();
         services.AddScoped<IVpnProviderFactory, VpnProviderFactory>();
+        services.AddScoped<ProvisioningSecretMaterializer>();
         services.AddScoped<IProvisioningExecutor, AnsibleProvisioningExecutor>();
         services.AddScoped<AppReleaseSeedService>();
 

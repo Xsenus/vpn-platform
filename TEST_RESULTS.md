@@ -2,6 +2,39 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: production secret storage для provisioning
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P6-SEC-001` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `ProvisioningSecretMaterializer` для временной материализации protected SSH private key.
+- `AnsibleProvisioningExecutor` теперь умеет передавать runner только path к временно созданному key file и удаляет materialized secret в `finally`.
+- Password-based live SSH, `validation-placeholder:*`, legacy protected values в `SshPrivateKeyPath` и missing protected payload при наличии `SshCredentialRef` остаются fail-closed.
+- Runner stdout/stderr и step output редактируются с учетом protected payload и расшифрованного plaintext.
+- Добавлены docs: `docs/production-secret-storage.md`; обновлены `docs/TODO_SECURE_PROVISIONING_SECRETS.md` и `docs/SECRET_MIGRATION_PLAN.md`.
+- Добавлен release entry `2026-06-12-production-provisioning-secret-storage` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProvisioningSecretMaterializerTests|OwnVpsProvisioningMvpTests|SecurityHardeningMvpTests" --logger "console;verbosity=minimal"
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data.at(-1);console.log(data.length,last.releaseId,last.version,last.title);"
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','TEST_RESULTS.md','docs/production-secret-storage.md','docs/TODO_SECURE_PROVISIONING_SECRETS.md','docs/SECRET_MIGRATION_PLAN.md','backend/src/VpnPlatform.Infrastructure/Provisioning/ProvisioningSecretMaterializer.cs','backend/src/VpnPlatform.Infrastructure/Provisioning/AnsibleProvisioningExecutor.cs','backend/tests/VpnPlatform.UnitTests/ProvisioningSecretMaterializerTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests" --logger "console;verbosity=minimal"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore --logger "console;verbosity=minimal"
+git diff --check
+```
+
+Итог:
+
+- `ProvisioningSecretMaterializerTests|OwnVpsProvisioningMvpTests|SecurityHardeningMvpTests`: 22/22.
+- JSON релизов валиден: latest `2026-06-12-production-provisioning-secret-storage`, версия `0.72.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- Release docs tests: 14/14.
+- Backend full suite: 377/377.
+- Local SQLite HTTP-smoke на чистой БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest` с Bearer-токеном; latest release `2026-06-12-production-provisioning-secret-storage`, версия `0.72.0`.
+- Live Ansible на реальном VPS не запускался: проверена локальная безопасная materialization/cleanup логика и fail-closed ветки.
+
 ## Проверка 2026-06-12: аудит PostgreSQL schema
 
 Что проверено:
