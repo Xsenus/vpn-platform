@@ -506,9 +506,10 @@ git diff --check
 
 ## P7. Provisioning VPS
 
-- [ ] `P7-PROV-001` Разделить dry-run, validation и live deploy.
+- [x] `P7-PROV-001` Разделить dry-run, validation и live deploy. 2026-06-12.
   - Что сделать: UI и backend должны явно показывать режим, риски и ограничения.
-  - Доказательство: tests + screenshot.
+  - Что сделано: `ProvisioningService` получил единый `ProvisioningModeDescriptor` для `dry-run`, `validation-deploy`, `live-deploy-blocked` и `live-deploy`; backend возвращает mode/risk/liveDeployAllowed/nextAction/operatorWarning в admin API серверов и provisioning runs, а для dry-run отдельно отдаёт будущий `deployMode*`. Админка показывает режимы и риски в списке серверов и запусков, оставляет безопасный precheck доступным и блокирует deploy, если live deploy не разрешён явно.
+  - Доказательство: `OwnVpsProvisioningMvpTests`, frontend source/API contract tests, `npm run typecheck --workspace apps/admin-panel`, документация `docs/provisioning-modes.md`, releaseId `2026-06-12-provisioning-mode-boundaries`.
 
 - [ ] `P7-PROV-002` Live Ansible credentials.
   - Что сделать: безопасная временная передача SSH credentials в Ansible.

@@ -25,6 +25,14 @@ public sealed record OwnVpsProvisioningCommand(
     bool AutoDeployAfterPrecheck = true,
     bool ValidationMode = true);
 
+public sealed record ProvisioningModeDescriptor(
+    string Mode,
+    string Title,
+    string RiskLevel,
+    bool LiveDeployAllowed,
+    string NextAction,
+    string OperatorWarning);
+
 public class ProvisioningService
 {
     public const string LiveDeployDisabledError = "Live provisioning is disabled by default. Use validation/dry-run mode or enable explicit live provisioning on an approved staging target.";
@@ -48,7 +56,8 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("Node not found.");
         }
 
-        if (!dryRun && !IsValidationNode(node) && !HasTag(node, "explicit-live-provisioning", "true"))
+        var mode = DescribeProvisioningMode(node, dryRun);
+        if (mode.Mode == "live-deploy-blocked")
         {
             return Result<ProvisioningRun>.Failure(LiveDeployDisabledError);
         }
@@ -119,7 +128,7 @@ public class ProvisioningService
             node.IsAvailableForNewUsers = false;
         }
 
-        AddAudit("provisioning.queue", "ProvisioningRun", run.Id, requestedByUserId, "{}", JsonSerializer.Serialize(new { nodeId, dryRun, status = status.ToString(), validationMode = IsValidationNode(node) }));
+        AddAudit("provisioning.queue", "ProvisioningRun", run.Id, requestedByUserId, "{}", JsonSerializer.Serialize(new { nodeId, dryRun, status = status.ToString(), validationMode = IsValidationNode(node), mode = mode.Mode, riskLevel = mode.RiskLevel, mode.LiveDeployAllowed }));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<ProvisioningRun>.Success(run);
     }
@@ -436,6 +445,61 @@ public class ProvisioningService
 
     public static bool HasTag(VpnNode node, string key, string value)
         => string.Equals(ExtractTag(node.TagsCsv, key), value, StringComparison.OrdinalIgnoreCase);
+
+    public static ProvisioningModeDescriptor DescribeProvisioningMode(VpnNode? node, bool dryRun)
+    {
+        if (dryRun)
+        {
+            return new ProvisioningModeDescriptor(
+                "dry-run",
+                "Dry-run precheck",
+                "safe",
+                LiveDeployAllowed: false,
+                "Проверить результат precheck и только потом запускать deploy.",
+                "Режим не вносит изменения на VPS: выполняется проверка входных данных и безопасный precheck.");
+        }
+
+        if (node is null)
+        {
+            return new ProvisioningModeDescriptor(
+                "unknown",
+                "Сервер не найден",
+                "blocked",
+                LiveDeployAllowed: false,
+                "Проверить наличие сервера перед запуском deploy.",
+                "Нельзя определить режим deploy без связанного VPN-сервера.");
+        }
+
+        if (IsValidationNode(node))
+        {
+            return new ProvisioningModeDescriptor(
+                "validation-deploy",
+                "Validation deploy",
+                "low",
+                LiveDeployAllowed: false,
+                "Можно прогонять сценарий как validation: реальные SSH/Ansible-действия остаются выключенными.",
+                "Validation deploy предназначен для проверки сценария и не должен менять рабочую инфраструктуру.");
+        }
+
+        if (HasTag(node, "explicit-live-provisioning", "true"))
+        {
+            return new ProvisioningModeDescriptor(
+                "live-deploy",
+                "Live deploy",
+                "high",
+                LiveDeployAllowed: true,
+                "Запускать только на одобренном staging/production VPS после успешного precheck.",
+                "Live deploy может выполнить реальные SSH/Ansible-действия на сервере.");
+        }
+
+        return new ProvisioningModeDescriptor(
+            "live-deploy-blocked",
+            "Live deploy заблокирован",
+            "blocked",
+            LiveDeployAllowed: false,
+            "Включите validation-mode или явно добавьте тег explicit-live-provisioning:true для одобренного VPS.",
+            LiveDeployDisabledError);
+    }
 
     private async Task<SupportConversation> EnsureSupportConversationAsync(Guid? userId, long? telegramUserId, string subject, string message, CancellationToken cancellationToken)
     {

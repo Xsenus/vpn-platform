@@ -449,6 +449,42 @@ function provisioningModeLabel(mode: string | null | undefined) {
   return mode || 'Не указан'
 }
 
+function provisioningDeployModeLabel(mode: string | null | undefined) {
+  const normalized = String(mode ?? '').toLowerCase()
+  if (normalized === 'dry-run') return 'Dry-run precheck'
+  if (normalized === 'validation-deploy') return 'Validation deploy'
+  if (normalized === 'live-deploy') return 'Live deploy'
+  if (normalized === 'live-deploy-blocked') return 'Live deploy заблокирован'
+  if (normalized === 'unknown') return 'Режим не определён'
+  return mode || 'Режим не определён'
+}
+
+function provisioningRiskLabel(risk: string | null | undefined) {
+  const normalized = String(risk ?? '').toLowerCase()
+  if (normalized === 'safe') return 'безопасно'
+  if (normalized === 'low') return 'низкий риск'
+  if (normalized === 'high') return 'высокий риск'
+  if (normalized === 'blocked') return 'заблокировано'
+  return risk || 'риск не указан'
+}
+
+function provisioningRiskBadge(risk: string | null | undefined) {
+  const normalized = String(risk ?? '').toLowerCase()
+  if (normalized === 'safe') return 'Safe'
+  if (normalized === 'low') return 'Low risk'
+  if (normalized === 'high') return 'High risk'
+  if (normalized === 'blocked') return 'Blocked'
+  return risk || 'Unknown'
+}
+
+function serverProvisioningMode(server: VpnNodeDto) {
+  return server.provisioningMode || (readTagValue(server.tagsCsv, 'validation-mode') === 'false' ? 'live-deploy-blocked' : 'validation-deploy')
+}
+
+function serverProvisioningCanDeploy(server: VpnNodeDto) {
+  return serverProvisioningMode(server) !== 'live-deploy-blocked'
+}
+
 const orderStatusOptions = [
   ['all', 'Все статусы'],
   ['Draft', 'Черновики'],
@@ -2207,28 +2243,28 @@ export function App() {
 
   const handleQueuePrecheck = (serverId: string) => runAction(`precheck-${serverId}`, async () => {
     const response = await api.precheckAdminServer(token, serverId)
-    setNotice(`Проверка поставлена в очередь. ID запуска: ${response.runId}`)
+    setNotice(`Проверка поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. ID запуска: ${response.runId}`)
     await loadAll(token)
   })
 
   const handleQueueProvision = async (serverId: string) => {
     await runAction(`provision-${serverId}`, async () => {
       const response = await api.queueAdminProvision(token, serverId, false)
-      setNotice(`Подготовка сервера поставлена в очередь. ID запуска: ${response.runId}`)
+      setNotice(`Подготовка сервера поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await loadAll(token)
     })
   }
 
   const handleRetryProvisioningRun = (runId: string) => runAction(`retry-${runId}`, async () => {
     const response = await api.retryAdminProvisioningRun(token, runId)
-    setNotice(`Повтор поставлен в очередь. Новый ID запуска: ${response.runId}`)
+    setNotice(`Повтор поставлен в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. Новый ID запуска: ${response.runId}`)
     await loadAll(token)
   })
 
   const handleDeployProvisioningRun = (runId: string) => {
     return runAction(`deploy-run-${runId}`, async () => {
       const response = await api.deployAdminProvisioningRun(token, runId)
-      setNotice(`Развертывание поставлено в очередь. ID запуска: ${response.runId}`)
+      setNotice(`Развертывание поставлено в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await loadAll(token)
     })
   }
@@ -3000,7 +3036,34 @@ export function App() {
           <h3>VPN-серверы</h3>
           <div className="list-stack">
             {servers.length === 0 && <EmptyState title="VPN-серверы не добавлены" description="Добавьте сервер или запустите проверку собственного VPS." />}
-            {servers.map((server) => <div key={server.id} className="list-item-vertical"><div className="item-head"><div><strong>{server.name}</strong><div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div><div className="muted">Дата-центр: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div><div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div><div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div><div className="muted">Последняя проверка: {formatDate(server.lastHealthCheckAt)} · latency {server.lastHealthLatencyMs ?? 0}ms · {server.lastHealthError || 'ошибок нет'}</div></div><div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton><PrimaryButton disabled={actionBusyId === `health-server-${server.id}`} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton><PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton><ConfirmButton className="button-danger" message="Запустить подготовку сервера? В рабочем режиме это может затронуть инфраструктуру." onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton><ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton><PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton><ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton><ConfirmButton className="button-secondary" disabled={server.status === 'Disabled'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton><ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? Если у него есть подписки, VPN-доступы или запуски подготовки, он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton></div></div>)}
+            {servers.map((server) => (
+              <div key={server.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{server.name}</strong>
+                    <div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div>
+                    <div className="muted">Дата-центр: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div>
+                    <div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div>
+                    <div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div>
+                    <div className="muted">Provisioning: {server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))} · риск {provisioningRiskLabel(server.provisioningRiskLevel)} · live deploy {server.liveDeployAllowed ? 'разрешён' : 'закрыт'} · {server.provisioningNextAction || server.provisioningOperatorWarning || 'сначала выполните precheck'}</div>
+                    <div className="muted">Последняя проверка: {formatDate(server.lastHealthCheckAt)} · latency {server.lastHealthLatencyMs ?? 0}ms · {server.lastHealthError || 'ошибок нет'}</div>
+                  </div>
+                  <div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /><StatusBadge value={provisioningRiskBadge(server.provisioningRiskLevel)} /></div>
+                </div>
+                {server.provisioningOperatorWarning && <div className="safe-note">{server.provisioningOperatorWarning}</div>}
+                <div className="toolbar">
+                  <PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton>
+                  <PrimaryButton disabled={actionBusyId === `health-server-${server.id}`} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton>
+                  <PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server)} message={`Запустить подготовку сервера "${server.name}"? Режим: ${server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте precheck перед запуском.'}`} onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton>
+                  <ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>
+                  <PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
+                  <ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
+                  <ConfirmButton className="button-secondary" disabled={server.status === 'Disabled'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton>
+                  <ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? Если у него есть подписки, VPN-доступы или запуски подготовки, он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
         <Card>
@@ -3545,7 +3608,30 @@ export function App() {
         <Card>
           <h3>Подготовка VPS</h3>
           <p className="safe-note">В проверочном режиме реальный SSH/Ansible-деплой выключен, пока это явно не разрешено настройками сервера.</p>
-          <div className="list-stack">{provisioningRuns.length === 0 && <EmptyState title="Запусков подготовки нет" description="Проверки и подготовки VPS появятся здесь после Telegram или админ-сценария." />}{provisioningRuns.slice(0, 12).map((run) => <div key={run.id} className="list-item-vertical"><div className="item-head"><strong>{run.nodeName || shortId(run.nodeId)}</strong><StatusBadge value={run.status} /></div><div className="muted">Запуск: {shortId(run.id)} · источник {run.source || '—'} · владелец {run.owner || '—'} · шаг {run.currentStep || run.status}</div><div className="muted">Цель: {run.targetHost || shortId(run.nodeId)}:{run.sshPort ?? 22} · пользователь {run.username || 'root'} · авторизация {run.authMethod || '—'} · доступы {run.credentialsConfigured ? 'заданы' : 'не заданы'} · {run.validationMode ? 'режим проверки' : 'рабочий кандидат'}</div><div className="muted">{run.dryRun ? 'проверка без изменений' : 'развертывание'} · старт {formatDate(run.startedAt)} · финиш {formatDate(run.finishedAt)}</div><div className="muted">{run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div><div className="toolbar"><PrimaryButton disabled={!token || actionBusyId === `retry-${run.id}`} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton><ConfirmButton disabled={!token || actionBusyId === `deploy-run-${run.id}` || !['ReadyToDeploy', 'Succeeded'].includes(run.status)} className="button-danger" message="Развернуть VPS? В рабочем режиме это может выполнить реальные SSH/Ansible-действия." onConfirm={() => void handleDeployProvisioningRun(run.id)}>Развернуть</ConfirmButton><ConfirmButton disabled={!token || actionBusyId === `cancel-run-${run.id}` || ['Failed', 'PrecheckFailed', 'Deployed', 'Succeeded', 'Cancelled'].includes(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => void handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton><PrimaryButton disabled={!token || actionBusyId === `support-run-${run.id}`} onClick={() => void handleProvisioningSupportNeeded(run.id)}>Нужна поддержка</PrimaryButton></div></div>)}</div>
+          <div className="list-stack">
+            {provisioningRuns.length === 0 && <EmptyState title="Запусков подготовки нет" description="Проверки и подготовки VPS появятся здесь после Telegram или админ-сценария." />}
+            {provisioningRuns.slice(0, 12).map((run) => (
+              <div key={run.id} className="list-item-vertical">
+                <div className="item-head">
+                  <strong>{run.nodeName || shortId(run.nodeId)}</strong>
+                  <div className="item-status"><StatusBadge value={run.status} /><StatusBadge value={provisioningRiskBadge(run.riskLevel)} /></div>
+                </div>
+                <div className="muted">Запуск: {shortId(run.id)} · источник {run.source || '—'} · владелец {run.owner || '—'} · шаг {run.currentStep || run.status}</div>
+                <div className="muted">Цель: {run.targetHost || shortId(run.nodeId)}:{run.sshPort ?? 22} · пользователь {run.username || 'root'} · авторизация {run.authMethod || '—'} · доступы {run.credentialsConfigured ? 'заданы' : 'не заданы'} · {run.validationMode ? 'validation node' : 'live candidate'}</div>
+                <div className="muted">Режим запуска: {run.modeTitle || provisioningDeployModeLabel(run.mode)} · риск {provisioningRiskLabel(run.riskLevel)} · live deploy {run.liveDeployAllowed ? 'разрешён' : 'закрыт'} · {run.nextAction || 'проверьте результат перед следующим действием'}</div>
+                <div className="muted">Следующий deploy: {run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)} · риск {provisioningRiskLabel(run.deployRiskLevel)} · {run.deployNextAction || 'сначала выполните precheck'}</div>
+                <div className="muted">{run.dryRun ? 'проверка без изменений' : 'развертывание'} · старт {formatDate(run.startedAt)} · финиш {formatDate(run.finishedAt)}</div>
+                {run.operatorWarning && <div className="safe-note">{run.operatorWarning}</div>}
+                <div className="muted">{run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
+                <div className="toolbar">
+                  <PrimaryButton disabled={!token || actionBusyId === `retry-${run.id}`} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton>
+                  <ConfirmButton disabled={!token || actionBusyId === `deploy-run-${run.id}` || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В live-режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => void handleDeployProvisioningRun(run.id)}>Развернуть</ConfirmButton>
+                  <ConfirmButton disabled={!token || actionBusyId === `cancel-run-${run.id}` || ['Failed', 'PrecheckFailed', 'Deployed', 'Succeeded', 'Cancelled'].includes(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => void handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton>
+                  <PrimaryButton disabled={!token || actionBusyId === `support-run-${run.id}`} onClick={() => void handleProvisioningSupportNeeded(run.id)}>Нужна поддержка</PrimaryButton>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       </div>
         </div>

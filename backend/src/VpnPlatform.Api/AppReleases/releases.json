@@ -1838,5 +1838,32 @@
         "text": "Добавлены tests и allowlist для тестовых fixture/placeholders, чтобы scan ловил реальные утечки без шума от проверочных значений."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-provisioning-mode-boundaries",
+    "version": "0.78.0",
+    "releasedAt": "2026-06-12T12:09:00+07:00",
+    "title": "Разделены режимы подготовки VPS",
+    "summary": "Админка и backend теперь явно различают dry-run precheck, validation deploy и настоящий live deploy с уровнем риска и предупреждениями оператора.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Admin API возвращает mode, riskLevel, liveDeployAllowed, nextAction и operatorWarning для серверов, provisioning-запусков и команд queue/retry/deploy."
+      },
+      {
+        "type": "important",
+        "text": "Live deploy остаётся заблокированным по умолчанию и требует явного тега `explicit-live-provisioning:true` на одобренном VPS."
+      },
+      {
+        "type": "improved",
+        "text": "Админка показывает режим и риск в списке серверов и запусков, а кнопки deploy блокируются, если следующий запуск попадает в `live-deploy-blocked`."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены тесты на матрицу режимов, блокировку live deploy без явного разрешения и frontend-контракт новых provisioning-полей."
+      }
+    ]
   }
 ]

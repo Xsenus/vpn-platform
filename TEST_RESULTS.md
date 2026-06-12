@@ -2,6 +2,43 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: границы режимов provisioning VPS
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P7-PROV-001` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Backend разделяет `dry-run`, `validation-deploy`, `live-deploy-blocked` и `live-deploy` через `ProvisioningModeDescriptor`.
+- Admin API отдаёт `mode`, `riskLevel`, `liveDeployAllowed`, `nextAction`, `operatorWarning` и отдельные `deployMode*` поля для следующего deploy после dry-run.
+- Админка показывает режимы и риски в списке серверов и provisioning-запусков, блокирует запрещённый live deploy и оставляет `Precheck VPS` безопасным действием.
+- Добавлена документация `docs/provisioning-modes.md`.
+- Добавлен release entry `2026-06-12-provisioning-mode-boundaries` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "FullyQualifiedName~OwnVpsProvisioningMvpTests"
+npm test -- --runInBand
+npm run typecheck --workspace apps/admin-panel
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+npm run build --workspace apps/admin-panel
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/provisioning-modes.md','backend/src/VpnPlatform.Application/Services/ProvisioningService.cs','backend/src/VpnPlatform.Api/Controllers/Admin/AdminOperationsController.cs','backend/tests/VpnPlatform.UnitTests/OwnVpsProvisioningMvpTests.cs','frontend/packages/api-client/src/index.ts','frontend/apps/admin-panel/src/App.tsx','frontend/tests/api-client.test.ts']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- `OwnVpsProvisioningMvpTests`: 12/12.
+- Frontend tests: 61/61.
+- Admin-panel typecheck/build: OK.
+- Backend full suite: 410/410.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-12-provisioning-mode-boundaries`, версия `0.78.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`, `/api/public/payments/providers`; latest release `2026-06-12-provisioning-mode-boundaries`, версия `0.78.0`; sandbox server вернул `provisioningMode=live-deploy-blocked`, `provisioningRiskLevel=blocked`, `liveDeployAllowed=false`; публичные провайдеры `8`.
+- Browser smoke админки: `http://127.0.0.1:5175/` открыл login screen, title `VPN Platform — админ-панель`, React root найден, консольных `error` logs нет; dev server остановлен.
+
 ## Проверка 2026-06-12: secret scan gate
 
 Что проверено:

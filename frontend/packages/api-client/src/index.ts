@@ -503,6 +503,14 @@ export type VpnNodeDto = {
   lastHealthError?: string | null
   lastHealthMetadataJson?: string | null
   provisioningStatus?: string
+  provisioningMode?: string | null
+  provisioningModeTitle?: string | null
+  provisioningRiskLevel?: string | null
+  liveDeployAllowed?: boolean
+  provisioningNextAction?: string | null
+  provisioningOperatorWarning?: string | null
+  precheckMode?: string | null
+  precheckModeTitle?: string | null
   installedVersion: string
   backupStatus: string
   monitoringStatus: string
@@ -537,6 +545,18 @@ export type ProvisioningRunDto = {
   source?: string | null
   owner?: string | null
   validationMode?: boolean
+  mode?: string | null
+  modeTitle?: string | null
+  riskLevel?: string | null
+  liveDeployAllowed?: boolean
+  nextAction?: string | null
+  operatorWarning?: string | null
+  deployMode?: string | null
+  deployModeTitle?: string | null
+  deployRiskLevel?: string | null
+  deployLiveDeployAllowed?: boolean
+  deployNextAction?: string | null
+  deployOperatorWarning?: string | null
   currentStep?: string | null
   requestedByUserId?: string | null
   dryRun: boolean
@@ -546,6 +566,19 @@ export type ProvisioningRunDto = {
   executionLog: string
   executionLogPreview?: string | null
   createdAt: string
+}
+
+export type ProvisioningCommandResponse = {
+  serverId?: string | null
+  runId: string
+  status: string
+  dryRun: boolean
+  mode?: string | null
+  modeTitle?: string | null
+  riskLevel?: string | null
+  liveDeployAllowed?: boolean
+  nextAction?: string | null
+  operatorWarning?: string | null
 }
 
 export type NodeHealthCheckDto = {
@@ -2008,8 +2041,8 @@ export class ApiClient {
     return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
   }
 
-  precheckAdminServer(token: string, serverId: string): Promise<{ serverId: string; runId: string; status: string; dryRun: boolean }> {
-    return this.request<{ serverId: string; runId: string; status: string; dryRun: boolean }>(`/api/admin/servers/${serverId}/precheck`, {
+  precheckAdminServer(token: string, serverId: string): Promise<ProvisioningCommandResponse> {
+    return this.request<ProvisioningCommandResponse>(`/api/admin/servers/${serverId}/precheck`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -2017,8 +2050,8 @@ export class ApiClient {
     })
   }
 
-  queueAdminProvision(token: string, serverId: string, dryRun = false): Promise<{ serverId: string; runId: string; status: string; dryRun: boolean }> {
-    return this.request<{ serverId: string; runId: string; status: string; dryRun: boolean }>(`/api/admin/servers/${serverId}/provision`, {
+  queueAdminProvision(token: string, serverId: string, dryRun = false): Promise<ProvisioningCommandResponse> {
+    return this.request<ProvisioningCommandResponse>(`/api/admin/servers/${serverId}/provision`, {
       method: 'POST',
       token,
       body: JSON.stringify({ dryRun }),
@@ -2035,8 +2068,8 @@ export class ApiClient {
     return this.request<ProvisioningRunDetailsDto>(`/api/admin/provisioning-runs/${runId}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
-  retryAdminProvisioningRun(token: string, runId: string): Promise<{ runId: string; status: string; dryRun: boolean }> {
-    return this.request<{ runId: string; status: string; dryRun: boolean }>(`/api/admin/provisioning-runs/${runId}/retry`, {
+  retryAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningCommandResponse> {
+    return this.request<ProvisioningCommandResponse>(`/api/admin/provisioning-runs/${runId}/retry`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -2044,8 +2077,8 @@ export class ApiClient {
     })
   }
 
-  deployAdminProvisioningRun(token: string, runId: string): Promise<{ runId: string; status: string; dryRun: boolean }> {
-    return this.request<{ runId: string; status: string; dryRun: boolean }>(`/api/admin/provisioning-runs/${runId}/deploy`, {
+  deployAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningCommandResponse> {
+    return this.request<ProvisioningCommandResponse>(`/api/admin/provisioning-runs/${runId}/deploy`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),

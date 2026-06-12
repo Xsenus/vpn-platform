@@ -446,7 +446,7 @@ test('ApiClient provisioning run details and actions are tokenized', async () =>
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).endsWith('/deploy')) {
-      return new Response(JSON.stringify({ runId: 'run-1', status: 'DeployQueued', dryRun: false }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ runId: 'run-1', status: 'DeployQueued', dryRun: false, mode: 'validation-deploy', modeTitle: 'Validation deploy', riskLevel: 'low', liveDeployAllowed: false }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (String(url).endsWith('/cancel')) {
       return new Response(JSON.stringify({ runId: 'run-1', status: 'cancelled' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -456,14 +456,14 @@ test('ApiClient provisioning run details and actions are tokenized', async () =>
     }
 
     return new Response(JSON.stringify({
-      run: { id: 'run-1', nodeId: 'node-1', nodeName: 'customer-vps', targetHost: 'vps.example.com', sshPort: 22, username: 'root', authMethod: 'ssh_key', credentialsConfigured: true, status: 'ReadyToDeploy', currentStep: 'ready_to_deploy', dryRun: true, startedAt: new Date().toISOString(), executionLog: 'password=***', linkedAccessId: null, createdAt: new Date().toISOString() },
+      run: { id: 'run-1', nodeId: 'node-1', nodeName: 'customer-vps', targetHost: 'vps.example.com', sshPort: 22, username: 'root', authMethod: 'ssh_key', credentialsConfigured: true, status: 'ReadyToDeploy', currentStep: 'ready_to_deploy', dryRun: true, mode: 'dry-run', modeTitle: 'Dry-run precheck', riskLevel: 'safe', liveDeployAllowed: false, deployMode: 'validation-deploy', deployModeTitle: 'Validation deploy', deployRiskLevel: 'low', deployLiveDeployAllowed: false, startedAt: new Date().toISOString(), executionLog: 'password=***', linkedAccessId: null, createdAt: new Date().toISOString() },
       steps: [{ id: 'step-1', provisioningRunId: 'run-1', stepName: 'Validate input', status: 'Succeeded', output: 'credentials=***', errorText: '', createdAt: new Date().toISOString() }]
     }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
   const details = await client.getAdminProvisioningRun('admin-token', 'run-1')
-  await client.deployAdminProvisioningRun('admin-token', 'run-1')
+  const deploy = await client.deployAdminProvisioningRun('admin-token', 'run-1')
   await client.cancelAdminProvisioningRun('admin-token', 'run-1')
   await client.markAdminProvisioningSupportNeeded('admin-token', 'run-1')
 
@@ -474,6 +474,9 @@ test('ApiClient provisioning run details and actions are tokenized', async () =>
   assert.equal(calls[1]?.init?.method, 'POST')
   assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(details.run.credentialsConfigured, true)
+  assert.equal(details.run.mode, 'dry-run')
+  assert.equal(details.run.deployMode, 'validation-deploy')
+  assert.equal(deploy.mode, 'validation-deploy')
   assert.equal(details.steps[0]?.output, 'credentials=***')
 })
 
@@ -481,7 +484,7 @@ test('ApiClient.queueAdminProvision calls provisioning endpoint', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ serverId: 'node-1', runId: 'run-1', status: 'queued', dryRun: false }), {
+    return new Response(JSON.stringify({ serverId: 'node-1', runId: 'run-1', status: 'queued', dryRun: false, mode: 'live-deploy', modeTitle: 'Live deploy', riskLevel: 'high', liveDeployAllowed: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -495,6 +498,8 @@ test('ApiClient.queueAdminProvision calls provisioning endpoint', async () => {
   assert.equal(calls[0]?.init?.method, 'POST')
   assert.equal(headers.get('Authorization'), 'Bearer admin-token')
   assert.equal(response.runId, 'run-1')
+  assert.equal(response.mode, 'live-deploy')
+  assert.equal(response.riskLevel, 'high')
 })
 
 test('ApiClient.createCheckoutSession calls public checkout-session endpoint', async () => {
@@ -1372,6 +1377,11 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(uiSource, /manual: 'Вручную'/)
   assert.match(adminSource, /releaseSourceLabel/)
   assert.match(adminSource, /provisioningModeLabel/)
+  assert.match(adminSource, /provisioningDeployModeLabel/)
+  assert.match(adminSource, /provisioningRiskBadge/)
+  assert.match(adminSource, /serverProvisioningCanDeploy/)
+  assert.match(adminSource, /live deploy/)
+  assert.match(adminSource, /deployMode === 'live-deploy-blocked'/)
   assert.match(adminSource, /Опрос Telegram/)
   for (const source of [publicSource, cabinetSource, appVersionSource, adminSource, uiSource, apiClientSource]) {
     assert.doesNotMatch(source, /\uFFFD/)

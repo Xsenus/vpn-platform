@@ -1190,9 +1190,13 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> Provision(Guid id, [FromBody] QueueProvisionHttpRequest? request, CancellationToken cancellationToken)
     {
         var result = await _provisioningService.QueueAsync(id, request?.DryRun ?? false, ResolveUserId(), cancellationToken);
-        return result.IsSuccess
-            ? Ok(new { serverId = id, runId = result.Value!.Id, status = "queued", dryRun = result.Value.DryRun })
-            : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        return Ok(MapProvisioningCommandResult(id, result.Value!, node, "queued"));
     }
 
     [HttpPost("servers/{id:guid}/precheck")]
@@ -1200,9 +1204,13 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> Precheck(Guid id, CancellationToken cancellationToken)
     {
         var result = await _provisioningService.QueueAsync(id, true, ResolveUserId(), cancellationToken);
-        return result.IsSuccess
-            ? Ok(new { serverId = id, runId = result.Value!.Id, status = "queued", dryRun = true })
-            : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        return Ok(MapProvisioningCommandResult(id, result.Value!, node, "queued"));
     }
 
     [HttpPost("servers/{id:guid}/disable")]
@@ -1367,6 +1375,8 @@ public class AdminOperationsController : ControllerBase
         return Ok(runs.Select(x =>
         {
             nodes.TryGetValue(x.NodeId, out var node);
+            var mode = ProvisioningService.DescribeProvisioningMode(node, x.DryRun);
+            var deployMode = ProvisioningService.DescribeProvisioningMode(node, dryRun: false);
             return new
             {
                 x.Id,
@@ -1380,6 +1390,18 @@ public class AdminOperationsController : ControllerBase
                 Source = node is null ? string.Empty : ProvisioningService.ExtractTag(node.TagsCsv, "source") ?? string.Empty,
                 Owner = node is null ? string.Empty : ProvisioningService.ExtractTag(node.TagsCsv, "owner") ?? string.Empty,
                 ValidationMode = node is not null && ProvisioningService.IsValidationNode(node),
+                Mode = mode.Mode,
+                ModeTitle = mode.Title,
+                RiskLevel = mode.RiskLevel,
+                mode.LiveDeployAllowed,
+                mode.NextAction,
+                mode.OperatorWarning,
+                DeployMode = deployMode.Mode,
+                DeployModeTitle = deployMode.Title,
+                DeployRiskLevel = deployMode.RiskLevel,
+                DeployLiveDeployAllowed = deployMode.LiveDeployAllowed,
+                DeployNextAction = deployMode.NextAction,
+                DeployOperatorWarning = deployMode.OperatorWarning,
                 Status = x.Status.ToString(),
                 CurrentStep = ResolveCurrentProvisioningStep(x.Status),
                 x.RequestedByUserId,
@@ -1414,6 +1436,8 @@ public class AdminOperationsController : ControllerBase
             ? null
             : await _db.AccessCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.ServerId == node.Id, cancellationToken);
 
+        var mode = ProvisioningService.DescribeProvisioningMode(node, run.DryRun);
+        var deployMode = ProvisioningService.DescribeProvisioningMode(node, dryRun: false);
         return Ok(new
         {
             Run = new
@@ -1429,6 +1453,18 @@ public class AdminOperationsController : ControllerBase
                 Source = node is null ? string.Empty : ProvisioningService.ExtractTag(node.TagsCsv, "source") ?? string.Empty,
                 Owner = node is null ? string.Empty : ProvisioningService.ExtractTag(node.TagsCsv, "owner") ?? string.Empty,
                 ValidationMode = node is not null && ProvisioningService.IsValidationNode(node),
+                Mode = mode.Mode,
+                ModeTitle = mode.Title,
+                RiskLevel = mode.RiskLevel,
+                mode.LiveDeployAllowed,
+                mode.NextAction,
+                mode.OperatorWarning,
+                DeployMode = deployMode.Mode,
+                DeployModeTitle = deployMode.Title,
+                DeployRiskLevel = deployMode.RiskLevel,
+                DeployLiveDeployAllowed = deployMode.LiveDeployAllowed,
+                DeployNextAction = deployMode.NextAction,
+                DeployOperatorWarning = deployMode.OperatorWarning,
                 Status = run.Status.ToString(),
                 CurrentStep = ResolveCurrentProvisioningStep(run.Status),
                 run.RequestedByUserId,
@@ -1462,9 +1498,13 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> RetryProvisioningRun(Guid id, CancellationToken cancellationToken)
     {
         var result = await _provisioningService.RetryAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess
-            ? Ok(new { runId = result.Value!.Id, status = result.Value.Status.ToString(), dryRun = result.Value.DryRun })
-            : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == result.Value!.NodeId, cancellationToken);
+        return Ok(MapProvisioningCommandResult(null, result.Value!, node, result.Value!.Status.ToString()));
     }
 
     [HttpPost("provisioning-runs/{id:guid}/deploy")]
@@ -1472,9 +1512,13 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> DeployProvisioningRun(Guid id, CancellationToken cancellationToken)
     {
         var result = await _provisioningService.QueueDeployAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess
-            ? Ok(new { runId = result.Value!.Id, status = result.Value.Status.ToString(), dryRun = result.Value.DryRun })
-            : BadRequest(new { error = result.Error });
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == result.Value!.NodeId, cancellationToken);
+        return Ok(MapProvisioningCommandResult(null, result.Value!, node, result.Value!.Status.ToString()));
     }
 
     [HttpPost("provisioning-runs/{id:guid}/cancel")]
@@ -2135,8 +2179,29 @@ public class AdminOperationsController : ControllerBase
             check.MetadataJson,
             RedactSensitiveText(check.ErrorText, 1000));
 
+    private static object MapProvisioningCommandResult(Guid? serverId, ProvisioningRun run, VpnNode? node, string status)
+    {
+        var mode = ProvisioningService.DescribeProvisioningMode(node, run.DryRun);
+        return new
+        {
+            ServerId = serverId ?? run.NodeId,
+            RunId = run.Id,
+            Status = status,
+            run.DryRun,
+            Mode = mode.Mode,
+            ModeTitle = mode.Title,
+            RiskLevel = mode.RiskLevel,
+            mode.LiveDeployAllowed,
+            mode.NextAction,
+            mode.OperatorWarning
+        };
+    }
+
     private static object MapVpnNode(VpnNode node, NodeHealthCheck? latestHealthCheck = null)
-        => new
+    {
+        var dryRunMode = ProvisioningService.DescribeProvisioningMode(node, dryRun: true);
+        var deployMode = ProvisioningService.DescribeProvisioningMode(node, dryRun: false);
+        return new
         {
             node.Id,
             node.Name,
@@ -2156,6 +2221,14 @@ public class AdminOperationsController : ControllerBase
             LastHealthError = latestHealthCheck is null ? string.Empty : RedactSensitiveText(latestHealthCheck.ErrorText, 1000),
             LastHealthMetadataJson = latestHealthCheck?.MetadataJson ?? string.Empty,
             ProvisioningStatus = node.ProvisioningStatus.ToString(),
+            ProvisioningMode = deployMode.Mode,
+            ProvisioningModeTitle = deployMode.Title,
+            ProvisioningRiskLevel = deployMode.RiskLevel,
+            deployMode.LiveDeployAllowed,
+            ProvisioningNextAction = deployMode.NextAction,
+            ProvisioningOperatorWarning = deployMode.OperatorWarning,
+            PrecheckMode = dryRunMode.Mode,
+            PrecheckModeTitle = dryRunMode.Title,
             node.InstalledVersion,
             node.BackupStatus,
             node.MonitoringStatus,
@@ -2178,6 +2251,7 @@ public class AdminOperationsController : ControllerBase
             node.CreatedAt,
             node.UpdatedAt
         };
+    }
 
     private Guid? ResolveUserId()
     {

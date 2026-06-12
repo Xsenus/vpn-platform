@@ -98,9 +98,69 @@ public class OwnVpsProvisioningMvpTests
         });
         Assert.Contains("SshCredentialConfigured", json, StringComparison.Ordinal);
         Assert.Contains("AuthMethod", json, StringComparison.Ordinal);
+        Assert.Contains("ProvisioningMode", json, StringComparison.Ordinal);
+        Assert.Contains("Mode", json, StringComparison.Ordinal);
+        Assert.Contains("DeployMode", json, StringComparison.Ordinal);
+        Assert.Contains("RiskLevel", json, StringComparison.Ordinal);
+        Assert.Contains("LiveDeployAllowed", json, StringComparison.Ordinal);
+        Assert.Contains("dry-run", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validation-deploy", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ssh-password-must-not-leak", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("SshPrivateKeyPath", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("v1:", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Provisioning_Mode_Descriptor_Should_Separate_DryRun_Validation_Blocked_And_Live()
+    {
+        var validationNode = new VpnNode { TagsCsv = "validation-mode:true" };
+        var blockedLiveNode = new VpnNode { TagsCsv = "validation-mode:false" };
+        var explicitLiveNode = new VpnNode { TagsCsv = "validation-mode:false,explicit-live-provisioning:true" };
+
+        var dryRun = ProvisioningService.DescribeProvisioningMode(blockedLiveNode, dryRun: true);
+        var validation = ProvisioningService.DescribeProvisioningMode(validationNode, dryRun: false);
+        var blocked = ProvisioningService.DescribeProvisioningMode(blockedLiveNode, dryRun: false);
+        var live = ProvisioningService.DescribeProvisioningMode(explicitLiveNode, dryRun: false);
+
+        Assert.Equal("dry-run", dryRun.Mode);
+        Assert.Equal("safe", dryRun.RiskLevel);
+        Assert.False(dryRun.LiveDeployAllowed);
+        Assert.Equal("validation-deploy", validation.Mode);
+        Assert.Equal("low", validation.RiskLevel);
+        Assert.False(validation.LiveDeployAllowed);
+        Assert.Equal("live-deploy-blocked", blocked.Mode);
+        Assert.Equal("blocked", blocked.RiskLevel);
+        Assert.False(blocked.LiveDeployAllowed);
+        Assert.Contains("explicit-live-provisioning", blocked.NextAction, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("live-deploy", live.Mode);
+        Assert.Equal("high", live.RiskLevel);
+        Assert.True(live.LiveDeployAllowed);
+    }
+
+    [Fact]
+    public async Task QueueAsync_Should_Block_Live_Deploy_Without_Explicit_Tag_But_Allow_DryRun_And_Explicit_Live()
+    {
+        await using var db = CreateDbContext();
+        var blockedNodeId = Guid.NewGuid();
+        var liveNodeId = Guid.NewGuid();
+        db.VpnNodes.AddRange(
+            new VpnNode { Id = blockedNodeId, Name = "blocked-live", Host = "blocked.example.test", SshUser = "root", SshPort = 22, TagsCsv = "validation-mode:false" },
+            new VpnNode { Id = liveNodeId, Name = "explicit-live", Host = "live.example.test", SshUser = "root", SshPort = 22, TagsCsv = "validation-mode:false,explicit-live-provisioning:true" });
+        await db.SaveChangesAsync();
+
+        var service = new ProvisioningService(db, new TestClock(), new TestSecretProtector());
+
+        var blockedLive = await service.QueueAsync(blockedNodeId, dryRun: false, requestedByUserId: Guid.NewGuid());
+        var dryRun = await service.QueueAsync(blockedNodeId, dryRun: true, requestedByUserId: Guid.NewGuid());
+        var explicitLive = await service.QueueAsync(liveNodeId, dryRun: false, requestedByUserId: Guid.NewGuid());
+
+        Assert.False(blockedLive.IsSuccess);
+        Assert.Equal(ProvisioningService.LiveDeployDisabledError, blockedLive.Error);
+        Assert.True(dryRun.IsSuccess, dryRun.Error);
+        Assert.True(dryRun.Value!.DryRun);
+        Assert.True(explicitLive.IsSuccess, explicitLive.Error);
+        Assert.False(explicitLive.Value!.DryRun);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.queue" && x.AfterJson.Contains("live-deploy", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
