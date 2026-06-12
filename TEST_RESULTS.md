@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: auto-detect deploy docker/systemd
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P8-CI-001` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `.github/workflows/deploy-vps.yml` пишет requested/selected режим, `docker_detected` и причину выбора в `::notice`.
+- Workflow добавляет блок `VPS deploy mode` в `$GITHUB_STEP_SUMMARY`.
+- `auto` выбирает `docker` только при наличии `docker` и `docker compose version` на VPS, иначе выбирает `systemd`.
+- Добавлена документация `docs/deploy-vps-auto-detect.md`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-12-deploy-mode-auto-detect`.
+- Добавлен release entry `2026-06-12-deploy-mode-auto-detect` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "DeployWorkflowGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "ReleaseDocumentationGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['.github/workflows/deploy-vps.yml','backend/src/VpnPlatform.Api/AppReleases/releases.json','backend/tests/VpnPlatform.UnitTests/DeployWorkflowGuardTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/deploy-vps-auto-detect.md','docs/github-deployment.md','TEST_RESULTS.md']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Targeted deploy workflow guard tests: 2/2.
+- Targeted release/docs guard tests: 3/3.
+- Backend full suite: 417/417.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-12-deploy-mode-auto-detect`, версия `0.83.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`; latest release `2026-06-12-deploy-mode-auto-detect`, версия `0.83.0`; серверов `1`, provisioning-запусков `0`.
+
 ## Проверка 2026-06-12: runbook live provisioning
 
 Что проверено:

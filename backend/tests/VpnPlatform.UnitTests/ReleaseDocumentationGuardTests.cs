@@ -11,7 +11,8 @@ public class ReleaseDocumentationGuardTests
         new("P2-ADM-FAQ-001", "2026-06-11-admin-faq-management"),
         new("P2-ADM-REL-001", "2026-06-11-app-version-management"),
         new("P2-ADM-REL-002", "2026-06-11-release-note-guard"),
-        new("P7-PROV-005", "2026-06-12-live-provisioning-runbook")
+        new("P7-PROV-005", "2026-06-12-live-provisioning-runbook"),
+        new("P8-CI-001", "2026-06-12-deploy-mode-auto-detect")
     ];
 
     [Fact]

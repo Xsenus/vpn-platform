@@ -23,6 +23,8 @@ Workflow `deploy-vps` поддерживает три режима:
 
 Если `VPS_DEPLOY_MODE` не задан, используется `auto`.
 
+Подробная проверка auto-detect, ожидаемые строки GitHub Actions log и пример блока `$GITHUB_STEP_SUMMARY` описаны в `docs/deploy-vps-auto-detect.md`.
+
 ## GitHub Secrets
 
 В GitHub открой `Settings -> Secrets and variables -> Actions -> New repository secret` и добавь:

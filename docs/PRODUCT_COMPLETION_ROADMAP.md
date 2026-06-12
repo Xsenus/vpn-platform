@@ -533,9 +533,10 @@ git diff --check
 
 ## P8. CI/CD, GitHub и VPS deploy
 
-- [ ] `P8-CI-001` Проверить workflow auto-detect docker/systemd.
+- [x] `P8-CI-001` Проверить workflow auto-detect docker/systemd. 2026-06-12.
   - Что сделать: убедиться, что deploy выбирает корректный режим и пишет понятный лог.
-  - Доказательство: GitHub Actions log.
+  - Что сделано: шаг `Detect deployment mode` в `.github/workflows/deploy-vps.yml` теперь пишет requested/selected режим, результат Docker Compose detection, причину выбора в `::notice` и блок `$GITHUB_STEP_SUMMARY`. Для `auto` workflow выбирает `docker` только если на VPS доступны `docker` и `docker compose version`, иначе уходит в `systemd`; явные `docker`/`systemd` режимы сохраняются как manual override.
+  - Доказательство: `DeployWorkflowGuardTests`, документация `docs/deploy-vps-auto-detect.md`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-deploy-mode-auto-detect`, GitHub Actions log должен содержать `Deploy mode: requested=... selected=... docker_detected=... reason=...`.
 
 - [ ] `P8-CI-002` Required checks для main.
   - Что сделать: включить обязательные checks перед merge/push.

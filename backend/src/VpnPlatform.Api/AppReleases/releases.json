@@ -1973,5 +1973,32 @@
         "text": "Добавлен guard-тест, который не даст удалить из runbook обязательные operator gates и fail-closed правила."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-deploy-mode-auto-detect",
+    "version": "0.83.0",
+    "releasedAt": "2026-06-12T12:55:00+07:00",
+    "title": "Добавлена проверка auto-detect deploy",
+    "summary": "GitHub Actions теперь явно показывает, какой режим деплоя на VPS был запрошен, выбран и почему.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Шаг `Detect deployment mode` пишет requested/selected режим, результат Docker detection и причину выбора в notice GitHub Actions."
+      },
+      {
+        "type": "new",
+        "text": "В `$GITHUB_STEP_SUMMARY` появляется блок `VPS deploy mode`, который можно использовать как доказательство выбора docker или systemd deploy."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлен guard-тест, который защищает workflow от потери auto/docker/systemd режимов и понятного deploy log."
+      },
+      {
+        "type": "new",
+        "text": "Добавлена инструкция `docs/deploy-vps-auto-detect.md` с порядком проверки GitHub Actions log и manual override через `VPS_DEPLOY_MODE`."
+      }
+    ]
   }
 ]

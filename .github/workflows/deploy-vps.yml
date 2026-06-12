@@ -141,18 +141,33 @@ jobs:
               ;;
           esac
 
+          docker_detected="false"
           if [ "$requested" = "auto" ]; then
             if ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1"; then
               mode="docker"
+              docker_detected="true"
+              reason="auto: Docker CLI and Docker Compose plugin were detected on VPS"
             else
               mode="systemd"
+              reason="auto: Docker Compose was not detected on VPS, using systemd release without Docker"
             fi
           else
             mode="$requested"
+            reason="manual: deploy_mode was set to $requested"
           fi
 
+          echo "requested=$requested" >> "$GITHUB_OUTPUT"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          echo "Selected deployment mode: $mode"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "docker_detected=$docker_detected" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Deploy mode::requested=$requested selected=$mode docker_detected=$docker_detected reason=$reason"
+          {
+            echo "### VPS deploy mode"
+            echo "- Requested: \`$requested\`"
+            echo "- Selected: \`$mode\`"
+            echo "- Docker detected: \`$docker_detected\`"
+            echo "- Reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup .NET SDK for systemd release
         if: steps.deploy_mode.outputs.mode == 'systemd'
