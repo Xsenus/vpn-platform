@@ -444,9 +444,10 @@ git diff --check
   - Что сделано: добавлен `/api/admin/audit-logs` с фильтрами и раздел "Аудит" в админке; платежные provider account действия пишут безопасные audit-события, а ротация SecretKey/webhook secret фиксируется отдельным событием без раскрытия значений. `PaymentOrchestrator` пишет системный `payment.status.changed` при фактической смене статуса, существующие VPN provisioning/lifecycle audit-события доступны в общем журнале.
   - Доказательство: `AuditLogMvpTests` проверяет endpoint на SQLite, отсутствие утечек секретов и системный audit платежного recheck; frontend typecheck/tests/build; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-admin-audit-log`.
 
-- [ ] `P4-BE-006` Observability.
+- [x] `P4-BE-006` Observability. 2026-06-12.
   - Что сделать: structured logs, correlation IDs, health details, metrics.
-  - Доказательство: log examples и health output.
+  - Что сделано: добавлен нормализованный `X-Correlation-Id` в ответах и logger scope, request observability middleware со структурным HTTP-логом, runtime-счетчики запросов, Prometheus endpoint `/metrics`, детальный `/health/live` и `/health/ready` с проверками БД, outbox, provisioning и VPN-нод.
+  - Доказательство: `ObservabilityMvpTests` проверяет correlation header, Prometheus-метрики и readiness report на SQLite; backend full suite; local SQLite HTTP-smoke `/health/live`, `/health/ready`, `/metrics`; latest release `2026-06-12-observability-mvp`.
 
 ## P5. База данных и миграции
 

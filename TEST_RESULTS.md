@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: observability API
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P4-BE-006` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `CorrelationIdMiddleware` нормализует входящий `X-Correlation-Id`, возвращает его в ответе, добавляет в `HttpContext.Items`, `Activity` tag и logger scope.
+- Добавлен `RequestObservabilityMiddleware`: каждый HTTP-запрос пишет структурный лог с методом, путем, статусом, временем выполнения и correlation id.
+- Endpoint `/health/live` возвращает service, environment, uptime и correlation id.
+- Endpoint `/health/ready` проверяет локальную БД и возвращает счетчики пользователей, активных тарифов, включенных платежных провайдеров, pending outbox, failed provisioning и unhealthy VPN-нод.
+- Endpoint `/metrics` возвращает Prometheus text format с `vpnplatform_api_info`, `vpnplatform_api_uptime_seconds`, `vpnplatform_http_requests_in_flight`, `vpnplatform_http_requests_total`, `vpnplatform_http_request_duration_ms_sum`.
+- Добавлен release entry `2026-06-12-observability-mvp` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --no-restore
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --no-restore --filter ObservabilityMvpTests --logger "console;verbosity=minimal"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data.at(-1);console.log(data.length,last.releaseId,last.version,last.title);"
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','TEST_RESULTS.md','backend/src/VpnPlatform.Api/Middleware/CorrelationIdMiddleware.cs','backend/src/VpnPlatform.Api/Middleware/RequestObservabilityMiddleware.cs','backend/src/VpnPlatform.Api/Observability/ApiObservabilityMetrics.cs','backend/src/VpnPlatform.Api/Observability/ObservabilityHealthService.cs','backend/tests/VpnPlatform.UnitTests/ObservabilityMvpTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); const last=data.at(-1); console.log('encoding guard ok', last.releaseId, last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- API build: пройдено без предупреждений и ошибок.
+- `ObservabilityMvpTests`: 3/3 пройдено.
+- Release documentation tests: 14/14 пройдено.
+- Backend full suite: 367/367 пройдено.
+- App releases JSON: валиден, последний релиз `2026-06-12-observability-mvp`, версия `0.67.0`.
+- Encoding guard: измененные файлы читаются как UTF-8, `U+FFFD` не найден.
+- Local SQLite HTTP-smoke: `/health/live`, `/health/ready`, `/metrics`, `/api/auth/login`, `/api/app-version/latest`; `live=ok`, `ready=Ready`, `readyChecks=2`, latest release `2026-06-12-observability-mvp`, версия `0.67.0`, metrics содержат `vpnplatform_http_requests_total` и `vpnplatform_api_uptime_seconds`.
+
 ## Проверка 2026-06-12: журнал аудита в админке
 
 Что проверено:

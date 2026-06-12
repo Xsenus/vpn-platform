@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using VpnPlatform.Api.Middleware;
+using VpnPlatform.Api.Observability;
 using VpnPlatform.Application;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Infrastructure;
@@ -26,6 +27,8 @@ builder.Host.UseSerilog((context, configuration) =>
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration, includeHostedServices: !isAdminBootstrapCommand, includeOperationalWorkers: !isAdminBootstrapCommand);
+builder.Services.AddSingleton<ApiObservabilityMetrics>();
+builder.Services.AddScoped<ObservabilityHealthService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -111,6 +114,7 @@ if (isAdminBootstrapCommand)
 }
 
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<RequestObservabilityMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<IdempotencyMiddleware>();
 
@@ -125,9 +129,25 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }));
-app.MapGet("/health/ready", () => Results.Ok(new { status = "ready" }));
-app.MapGet("/metrics", () => Results.Text("# HELP vpnplatform_api_info VPN Platform API info\n# TYPE vpnplatform_api_info gauge\nvpnplatform_api_info 1\n", "text/plain; version=0.0.4; charset=utf-8"));
+app.MapGet("/health/live", (HttpContext context, IHostEnvironment environment, ApiObservabilityMetrics metrics) => Results.Ok(new
+{
+    status = "ok",
+    service = app.Configuration["Observability:ServiceName"] ?? "vpn-platform-api",
+    environment = environment.EnvironmentName,
+    correlationId = context.Items["X-Correlation-Id"]?.ToString() ?? context.TraceIdentifier,
+    uptimeSeconds = (long)Math.Max(0, metrics.Uptime.TotalSeconds)
+}));
+app.MapGet("/health/ready", async (HttpContext context, ObservabilityHealthService healthService, CancellationToken cancellationToken) =>
+{
+    var report = await healthService.BuildReadyAsync(
+        context.Items["X-Correlation-Id"]?.ToString() ?? context.TraceIdentifier,
+        cancellationToken);
+
+    return string.Equals(report.Status, HealthStatuses.Ready, StringComparison.Ordinal)
+        ? Results.Ok(report)
+        : Results.Json(report, statusCode: StatusCodes.Status503ServiceUnavailable);
+});
+app.MapGet("/metrics", (ApiObservabilityMetrics metrics) => Results.Text(metrics.ToPrometheus(), "text/plain; version=0.0.4; charset=utf-8"));
 
 app.Run();
 

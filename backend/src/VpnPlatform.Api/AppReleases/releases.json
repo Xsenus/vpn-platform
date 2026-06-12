@@ -1541,5 +1541,32 @@
         "text": "Audit endpoint учитывает особенности SQLite: сортировка по дате выполняется безопасно после SQL-фильтров, поэтому локальная БД проходит проверку."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-observability-mvp",
+    "version": "0.67.0",
+    "releasedAt": "2026-06-12T10:20:00+07:00",
+    "title": "API получил наблюдаемость и детальные проверки здоровья",
+    "summary": "В API добавлены correlation IDs, структурные HTTP-логи, детальный readiness health и Prometheus-метрики для локальной диагностики и будущего мониторинга.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Каждый запрос получает `X-Correlation-Id`: API принимает внешний идентификатор, нормализует его, возвращает в ответе и добавляет в scope логов."
+      },
+      {
+        "type": "new",
+        "text": "Endpoint `/health/ready` теперь проверяет доступность БД и показывает ключевые счетчики: пользователей, активные тарифы, включенные платежные провайдеры, outbox, ошибки provisioning и unhealthy VPN-ноды."
+      },
+      {
+        "type": "improved",
+        "text": "Endpoint `/metrics` публикует Prometheus-метрики по HTTP-запросам, времени обработки, in-flight запросам и uptime процесса."
+      },
+      {
+        "type": "important",
+        "text": "Добавлены unit-тесты `ObservabilityMvpTests`, которые проверяют correlation header, накопление метрик и readiness report на локальной SQLite-БД."
+      }
+    ]
   }
 ]
