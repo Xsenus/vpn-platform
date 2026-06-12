@@ -92,17 +92,10 @@ builder.Services
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(AdminPolicies.AdminOnly, p => p.RequireRole(AdminPolicies.AllAdminRoles));
-    options.AddPolicy(AdminPolicies.AdminRead, p => p.RequireRole(AdminPolicies.AllAdminRoles));
-    options.AddPolicy(AdminPolicies.AdminWrite, p => p.RequireRole(AdminPolicies.AdminWriteRoles));
-    options.AddPolicy(AdminPolicies.FinanceRead, p => p.RequireRole(AdminPolicies.FinanceReadRoles));
-    options.AddPolicy(AdminPolicies.FinanceWrite, p => p.RequireRole(AdminPolicies.FinanceWriteRoles));
-    options.AddPolicy(AdminPolicies.SupportRead, p => p.RequireRole(AdminPolicies.SupportReadRoles));
-    options.AddPolicy(AdminPolicies.SupportWrite, p => p.RequireRole(AdminPolicies.SupportWriteRoles));
-    options.AddPolicy(AdminPolicies.ProvisioningManage, p => p.RequireRole(AdminPolicies.ProvisioningManageRoles));
-    options.AddPolicy(AdminPolicies.VpnManage, p => p.RequireRole(AdminPolicies.VpnManageRoles));
-    options.AddPolicy(AdminPolicies.BotManage, p => p.RequireRole(AdminPolicies.BotManageRoles));
-    options.AddPolicy(AdminPolicies.SettingsManage, p => p.RequireRole(AdminPolicies.SettingsManageRoles));
+    foreach (var policy in AdminPolicies.PolicyRoles)
+    {
+        options.AddPolicy(policy.Key, p => p.RequireRole(policy.Value));
+    }
 });
 
 var app = builder.Build();

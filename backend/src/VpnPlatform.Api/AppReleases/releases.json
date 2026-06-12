@@ -1730,5 +1730,32 @@
         "text": "Добавлены тесты, которые проверяют отсутствие raw secret, protected payload и `secretref:*` в audit/API при ротации."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-rbac-policy-matrix",
+    "version": "0.74.0",
+    "releasedAt": "2026-06-12T11:31:00+07:00",
+    "title": "Усилена RBAC-матрица админки",
+    "summary": "Административные права теперь регистрируются из единой матрицы ролей, а тесты проверяют позитивные и негативные сценарии доступа для read/write/manage-действий.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлена единая `AdminPolicies.PolicyRoles`, где перечислены все admin-policy и роли, которым разрешен доступ."
+      },
+      {
+        "type": "important",
+        "text": "Обычная роль `User` не входит ни в одну admin-policy, а `ReadOnly`, `SupportAgent`, `FinanceManager` и `Operator` разведены по зонам ответственности."
+      },
+      {
+        "type": "improved",
+        "text": "`Program.cs` больше не дублирует список policy вручную: API регистрирует политики авторизации напрямую из матрицы."
+      },
+      {
+        "type": "fixed",
+        "text": "Runtime authorization tests проверяют разрешенные и запрещенные комбинации ролей для чтения, финансов, поддержки, provisioning, ботов и системных настроек."
+      }
+    ]
   }
 ]

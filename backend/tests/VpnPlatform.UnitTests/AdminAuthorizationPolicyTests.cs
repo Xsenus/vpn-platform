@@ -1,6 +1,9 @@
 using System.Reflection;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Common;
 using Xunit;
@@ -66,7 +69,53 @@ public class AdminAuthorizationPolicyTests
         Assert.DoesNotContain(UserRoles.Operator, AdminPolicies.SettingsManageRoles);
     }
 
+    [Fact]
+    public void Policy_Role_Map_Should_Contain_All_Admin_Policies_Without_User_Role()
+    {
+        var expectedPolicies = new[]
+        {
+            AdminPolicies.AdminOnly,
+            AdminPolicies.AdminRead,
+            AdminPolicies.AdminWrite,
+            AdminPolicies.FinanceRead,
+            AdminPolicies.FinanceWrite,
+            AdminPolicies.SupportRead,
+            AdminPolicies.SupportWrite,
+            AdminPolicies.ProvisioningManage,
+            AdminPolicies.VpnManage,
+            AdminPolicies.BotManage,
+            AdminPolicies.SettingsManage
+        };
 
+        Assert.Equal(expectedPolicies.OrderBy(x => x), AdminPolicies.PolicyRoles.Keys.OrderBy(x => x));
+        foreach (var roles in AdminPolicies.PolicyRoles.Values)
+        {
+            Assert.NotEmpty(roles);
+            Assert.DoesNotContain(UserRoles.User, roles);
+            Assert.All(roles, role => Assert.Contains(role, UserRoles.Parse(role)));
+        }
+    }
+
+    [Theory]
+    [InlineData(AdminPolicies.AdminRead, UserRoles.ReadOnly, true)]
+    [InlineData(AdminPolicies.AdminWrite, UserRoles.ReadOnly, false)]
+    [InlineData(AdminPolicies.SupportWrite, UserRoles.SupportAgent, true)]
+    [InlineData(AdminPolicies.FinanceWrite, UserRoles.SupportAgent, false)]
+    [InlineData(AdminPolicies.FinanceWrite, UserRoles.FinanceManager, true)]
+    [InlineData(AdminPolicies.ProvisioningManage, UserRoles.FinanceManager, false)]
+    [InlineData(AdminPolicies.ProvisioningManage, UserRoles.Operator, true)]
+    [InlineData(AdminPolicies.BotManage, UserRoles.Operator, true)]
+    [InlineData(AdminPolicies.SettingsManage, UserRoles.Operator, false)]
+    [InlineData(AdminPolicies.AdminRead, UserRoles.User, false)]
+    public async Task Runtime_Authorization_Should_Allow_Only_Configured_Roles(string policyName, string role, bool expected)
+    {
+        var authorizationService = BuildAuthorizationService();
+        var user = PrincipalWithRole(role);
+
+        var result = await authorizationService.AuthorizeAsync(user, resource: null, policyName);
+
+        Assert.Equal(expected, result.Succeeded);
+    }
 
     [Theory]
     [InlineData(nameof(AdminOperationsController.DisableAccessCredential))]
@@ -152,4 +201,22 @@ public class AdminAuthorizationPolicyTests
             || attribute is HttpPutAttribute
             || attribute is HttpPatchAttribute
             || attribute is HttpDeleteAttribute);
+
+    private static IAuthorizationService BuildAuthorizationService()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAuthorizationCore(options =>
+        {
+            foreach (var policy in AdminPolicies.PolicyRoles)
+            {
+                options.AddPolicy(policy.Key, builder => builder.RequireRole(policy.Value));
+            }
+        });
+
+        return services.BuildServiceProvider().GetRequiredService<IAuthorizationService>();
+    }
+
+    private static ClaimsPrincipal PrincipalWithRole(string role)
+        => new(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, role) }, "test"));
 }

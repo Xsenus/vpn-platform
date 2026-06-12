@@ -484,9 +484,10 @@ git diff --check
   - Что сделано: платежная ротация уже фиксировалась через `payment_provider.secret.rotate`; добавлены `server.secret.rotate` для SSH credential/panel password и `telegram_bot.secret.rotate` для BotToken/SecretToken. При ротации server secrets создается новый `secretref:ssh:*`/`secretref:panel:*`, старые значения не раскрываются, API продолжает возвращать только configured-флаги. Audit-события содержат только безопасные флаги `rotated*` и metadata без raw secret/protected payload/secretref.
   - Доказательство: `SecurityHardeningMvpTests`, `AdminTelegramBotSettingsControllerTests`, `AuditLogMvpTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-secret-rotation-audit`; документация `docs/secret-rotation.md`.
 
-- [ ] `P6-SEC-003` RBAC.
+- [x] `P6-SEC-003` RBAC. 2026-06-12.
   - Что сделать: роли admin/support/operator, запрет опасных действий без прав.
-  - Доказательство: authorization tests.
+  - Что сделано: добавлена единая `AdminPolicies.PolicyRoles`, а `Program.cs` регистрирует все admin-policies из этой матрицы. Роли `ReadOnly`, `SupportAgent`, `FinanceManager`, `Operator`, `Admin`, `SuperAdmin` разведены по read/write/manage-доступам; `User` исключен из всех admin-policy. Для финансов, поддержки, VPN, provisioning, Telegram-бота и системных настроек сохранены отдельные политики.
+  - Доказательство: `AdminAuthorizationPolicyTests`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-rbac-policy-matrix`; документация `docs/rbac-policy-matrix.md`.
 
 - [ ] `P6-SEC-004` Rate limiting.
   - Что сделать: login, register, forgot password, webhook endpoints, public checkout.

@@ -2,6 +2,38 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: RBAC-матрица админки
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P6-SEC-003` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлена единая матрица `AdminPolicies.PolicyRoles` для всех admin-policy.
+- `Program.cs` регистрирует authorization policies из матрицы, без ручного дублирования списка.
+- Роль `User` исключена из всех admin-policy.
+- Роли `ReadOnly`, `SupportAgent`, `FinanceManager`, `Operator`, `Admin`, `SuperAdmin` разведены по read/write/manage-доступам.
+- Добавлены runtime authorization tests для разрешенных и запрещенных комбинаций ролей.
+- Добавлена документация `docs/rbac-policy-matrix.md`.
+- Добавлен release entry `2026-06-12-rbac-policy-matrix` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/rbac-policy-matrix.md','backend/src/VpnPlatform.Application/Common/AdminPolicies.cs','backend/src/VpnPlatform.Api/Program.cs','backend/tests/VpnPlatform.UnitTests/AdminAuthorizationPolicyTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter AdminAuthorizationPolicyTests --logger "console;verbosity=minimal"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests" --logger "console;verbosity=minimal"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore --logger "console;verbosity=minimal"
+git diff --check
+```
+
+Итог:
+
+- JSON релизов валиден: latest `2026-06-12-rbac-policy-matrix`, версия `0.74.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `AdminAuthorizationPolicyTests`: 33/33.
+- Release docs tests: 14/14.
+- Backend full suite: 389/389.
+- Local SQLite HTTP-smoke на чистой БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest` с Bearer-токеном; latest release `2026-06-12-rbac-policy-matrix`, версия `0.74.0`.
+
 ## Проверка 2026-06-12: безопасная ротация секретов
 
 Что проверено:

@@ -89,4 +89,19 @@ public static class AdminPolicies
         UserRoles.SuperAdmin,
         UserRoles.Admin
     };
+
+    public static readonly IReadOnlyDictionary<string, string[]> PolicyRoles = new Dictionary<string, string[]>
+    {
+        [AdminOnly] = AllAdminRoles,
+        [AdminRead] = AllAdminRoles,
+        [AdminWrite] = AdminWriteRoles,
+        [FinanceRead] = FinanceReadRoles,
+        [FinanceWrite] = FinanceWriteRoles,
+        [SupportRead] = SupportReadRoles,
+        [SupportWrite] = SupportWriteRoles,
+        [ProvisioningManage] = ProvisioningManageRoles,
+        [VpnManage] = VpnManageRoles,
+        [BotManage] = BotManageRoles,
+        [SettingsManage] = SettingsManageRoles
+    };
 }
