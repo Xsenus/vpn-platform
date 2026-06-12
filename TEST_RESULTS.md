@@ -2,6 +2,37 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: локальный seed данных и VPN sandbox
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P5-DB-003` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `DbInitializer.SeedDemoDataAsync` теперь создает sandbox VPN-инфраструктуру для чистой локальной БД: node group `sandbox`, panel `sandbox-x3ui-panel`, default inbound `sandbox-default-vless`, node `sandbox-vpn-node`.
+- Sandbox-нода создается в статусах `Ready` и `Healthy`, доступна для новых пользователей и содержит протоколы `vless,vmess,trojan`.
+- Добавлен SQLite acceptance-тест локального seed: admin user, тарифы, sandbox payments, Telegram Stars disabled, VPN panel/inbound/node, читаемый русский контент и идемпотентность повторного seed.
+- Добавлен release entry `2026-06-12-local-seed-vpn-infrastructure` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter PaymentProviderSandboxSeedTests --logger "console;verbosity=minimal"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data.at(-1);console.log(data.length,last.releaseId,last.version,last.title);"
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','TEST_RESULTS.md','backend/src/VpnPlatform.Infrastructure/Services/SystemServices.cs','backend/tests/VpnPlatform.UnitTests/PaymentProviderSandboxSeedTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); const last=data.at(-1); console.log('encoding guard ok', last.releaseId, last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- `PaymentProviderSandboxSeedTests`: 2/2 пройдено.
+- API Release build: пройдено без предупреждений и ошибок.
+- Release documentation tests: 14/14 пройдено.
+- Backend full suite: 369/369 пройдено.
+- App releases JSON: валиден, последний релиз `2026-06-12-local-seed-vpn-infrastructure`, версия `0.69.0`.
+- Encoding guard: измененные файлы читаются как UTF-8, `U+FFFD` не найден.
+- Local SQLite HTTP-smoke: чистая БД, `/health/live`, `/health/ready`, `/metrics`, `/api/auth/login`, `/api/app-version/latest`, `/api/public/tariffs`, `/api/public/payments/providers`, `/api/admin/servers`, `/api/admin/vpn-panels`; latest release `2026-06-12-local-seed-vpn-infrastructure`, версия `0.69.0`, тарифы `3`, провайдеры `8`, серверы `1`, панели `1`, `sandbox-vpn-node=true`, `sandbox-x3ui-panel=true`.
+
 ## Проверка 2026-06-12: кроссплатформенный EF model drift gate
 
 Что проверено:

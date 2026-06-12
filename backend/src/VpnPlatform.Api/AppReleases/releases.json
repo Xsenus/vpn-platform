@@ -1595,5 +1595,32 @@
         "text": "PowerShell cleanup восстанавливает snapshot миграций байт-в-байт, включая BOM и окончания строк, поэтому проверка не оставляет шум в рабочем дереве."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-local-seed-vpn-infrastructure",
+    "version": "0.69.0",
+    "releasedAt": "2026-06-12T10:36:00+07:00",
+    "title": "Локальный seed теперь поднимает VPN sandbox-инфраструктуру",
+    "summary": "Чистая локальная SQLite-БД теперь получает не только администратора, тарифы и sandbox-платежи, но и готовые sandbox VPN node group, 3x-ui panel, inbound и node для проверки выдачи доступа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Demo seed создает `sandbox-x3ui-panel`, default VLESS inbound и `sandbox-vpn-node` в группе `sandbox`."
+      },
+      {
+        "type": "improved",
+        "text": "Sandbox VPN-нода сразу помечается Ready/Healthy и доступна для локальных сценариев выдачи VPN-доступа без ручной настройки сервера."
+      },
+      {
+        "type": "important",
+        "text": "Добавлен SQLite acceptance-тест, который проверяет чистую локальную БД: admin user, тарифы, sandbox payments, VPN panel/inbound/node и читаемый русский seed-контент."
+      },
+      {
+        "type": "fixed",
+        "text": "Повторный запуск demo seed не дублирует sandbox group, panel, inbound, node, тарифы и платежные аккаунты."
+      }
+    ]
   }
 ]

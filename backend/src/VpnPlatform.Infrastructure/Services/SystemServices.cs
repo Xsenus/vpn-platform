@@ -212,6 +212,8 @@ public class DbInitializer : IHostedService
             db.PaymentProviderAccounts.AddRange(missingLocalSandboxProviders);
         }
 
+        await SeedLocalSandboxVpnAsync(db, now, cancellationToken);
+
         if (!await db.SiteContentBlocks.AnyAsync(cancellationToken))
         {
             db.SiteContentBlocks.AddRange(
@@ -295,6 +297,113 @@ public class DbInitializer : IHostedService
                 new FaqEntry { Question = "Можно ли продлить заранее?", Answer = "Да. При продлении срок подписки увеличивается корректно и не теряет уже оплаченные дни.", Category = "Оплата", SortOrder = 20 },
                 new FaqEntry { Question = "Что делать, если доступ перестал работать?", Answer = "Откройте обращение в поддержку или проверьте актуальную ссылку подключения в кабинете.", Category = "Поддержка", SortOrder = 30 }
             );
+        }
+    }
+
+    private static async Task SeedLocalSandboxVpnAsync(ApplicationDbContext db, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var sandboxGroup = await db.NodeGroups.FirstOrDefaultAsync(x => x.Code == "sandbox", cancellationToken);
+        if (sandboxGroup is null)
+        {
+            sandboxGroup = new NodeGroup
+            {
+                Name = "Локальная sandbox-группа",
+                Code = "sandbox",
+                Region = "sandbox",
+                IsActive = true,
+                AllocationStrategy = "least-loaded",
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            db.NodeGroups.Add(sandboxGroup);
+        }
+
+        var sandboxPanel = await db.VpnPanels.FirstOrDefaultAsync(x => x.Name == "sandbox-x3ui-panel", cancellationToken);
+        if (sandboxPanel is null)
+        {
+            sandboxPanel = new VpnPanel
+            {
+                Name = "sandbox-x3ui-panel",
+                BaseUrl = "https://sandbox-node.local",
+                Region = "sandbox",
+                Status = VpnPanelStatus.Active,
+                HealthStatus = HealthStatus.Healthy,
+                Login = "sandbox",
+                EncryptedPassword = string.Empty,
+                SslVerificationMode = VpnSslVerificationMode.AllowSelfSigned,
+                ApiVariant = X3UiApiVariant.ThreeXUi,
+                Capacity = 100000,
+                UsedCapacity = 0,
+                AutoCreateInbound = false,
+                DefaultInboundTemplateJson = "{}",
+                LastHealthCheckAt = now,
+                LastSyncAt = now,
+                Version = "sandbox",
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            db.VpnPanels.Add(sandboxPanel);
+        }
+
+        var hasSandboxInbound = await db.VpnInbounds.AnyAsync(
+            x => x.VpnPanelId == sandboxPanel.Id && x.ExternalInboundId == "sandbox-default-vless",
+            cancellationToken);
+        if (!hasSandboxInbound)
+        {
+            db.VpnInbounds.Add(new VpnInbound
+            {
+                VpnPanelId = sandboxPanel.Id,
+                ExternalInboundId = "sandbox-default-vless",
+                Name = "Sandbox VLESS inbound",
+                Protocol = "vless",
+                Port = 443,
+                Listen = "0.0.0.0",
+                SettingsJson = """{"clients":[]}""",
+                StreamSettingsJson = """{"network":"tcp","security":"none"}""",
+                SniffingJson = """{"enabled":false}""",
+                IsDefault = true,
+                IsActive = true,
+                Capacity = 100000,
+                UsedCapacity = 0,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        var hasSandboxNode = await db.VpnNodes.AnyAsync(x => x.Name == "sandbox-vpn-node", cancellationToken);
+        if (!hasSandboxNode)
+        {
+            db.VpnNodes.Add(new VpnNode
+            {
+                Name = "sandbox-vpn-node",
+                Host = "sandbox-node.local",
+                IpAddress = "sandbox-node.local",
+                Provider = "x3ui",
+                Region = "sandbox",
+                Country = "sandbox",
+                Datacenter = "local",
+                Status = NodeStatus.Ready,
+                Capacity = 100000,
+                UsedCapacity = 0,
+                SupportedProtocolsCsv = "vless,vmess,trojan",
+                HealthStatus = HealthStatus.Healthy,
+                LastHealthCheckAt = now,
+                ProvisioningStatus = ProvisioningRunStatus.Succeeded,
+                InstalledVersion = "sandbox",
+                BackupStatus = "disabled",
+                MonitoringStatus = "sandbox",
+                LoggingStatus = "sandbox",
+                TagsCsv = "sandbox,seeded,local",
+                Priority = 1000,
+                IsAvailableForNewUsers = true,
+                PanelBaseUrl = sandboxPanel.BaseUrl,
+                PanelUsername = sandboxPanel.Login,
+                PublicHostname = "sandbox-node.local",
+                PublicPort = 443,
+                NodeGroupId = sandboxGroup.Id,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
         }
     }
 

@@ -460,9 +460,10 @@ git diff --check
   - Что сделано: базовый `EfModelDriftTests` сравнивает runtime-модель `ApplicationDbContext` с `ApplicationDbContextModelSnapshot`; добавлен кроссплатформенный `scripts/check-ef-drift.ps1` для Windows рядом с Linux `scripts/check-ef-drift.sh`; acceptance-test проверяет, что оба скрипта используют `has-pending-model-changes`, временную `__ModelDriftCheck`, безопасные env-переменные и документацию.
   - Доказательство: `EfModelDriftTests` 2/2; `powershell -ExecutionPolicy Bypass -File scripts\check-ef-drift.ps1` завершился `[OK] EF model has no pending migration changes`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-ef-drift-powershell-gate`.
 
-- [ ] `P5-DB-003` Seed локальных данных.
+- [x] `P5-DB-003` Seed локальных данных. 2026-06-12.
   - Что сделать: локальный запуск должен иметь тарифы, sandbox payments, sandbox VPN node, admin user.
-  - Доказательство: local smoke после чистой БД.
+  - Что сделано: demo seed дополняет чистую локальную SQLite-БД тарифами, FAQ/content/work scenario, sandbox-аккаунтами всех платежных провайдеров, disabled Telegram Stars, sandbox node group, `sandbox-x3ui-panel`, default VLESS inbound и `sandbox-vpn-node` Ready/Healthy. Admin bootstrap создает `admin@local.test`, а повторный seed не дублирует данные.
+  - Доказательство: `PaymentProviderSandboxSeedTests` 2/2 на SQLite/InMemory; backend full suite; local SQLite HTTP-smoke после чистой БД показывает latest release `2026-06-12-local-seed-vpn-infrastructure`, публичные тарифы, платежные провайдеры, admin login и health/metrics.
 
 - [ ] `P5-DB-004` Backup/restore для VPS.
   - Что сделать: настроить backup PostgreSQL и инструкцию восстановления.
