@@ -1865,5 +1865,32 @@
         "text": "Добавлены тесты на матрицу режимов, блокировку live deploy без явного разрешения и frontend-контракт новых provisioning-полей."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-live-ansible-credentials",
+    "version": "0.79.0",
+    "releasedAt": "2026-06-12T12:18:00+07:00",
+    "title": "Усилена защита SSH-ключей для live Ansible",
+    "summary": "Live provisioning теперь редактирует не только содержимое SSH-ключа, но и временный путь ключа, чтобы runner output не раскрывал секретные детали запуска.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Ansible executor добавил temporary key path и директорию `secrets` в список known secrets для redaction."
+      },
+      {
+        "type": "important",
+        "text": "Если runner случайно напечатает `--private-key-path`, execution log и step output сохранят только отредактированное значение."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлен тест `Ansible_Runner_Redaction_Should_Cover_Temporary_Key_Path_And_Plaintext` для проверки raw key, protected payload, legacy path и temporary path."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен runbook `docs/live-ansible-credentials.md` с правилами безопасной передачи SSH credentials в live Ansible."
+      }
+    ]
   }
 ]

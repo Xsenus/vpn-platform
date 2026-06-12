@@ -2,6 +2,36 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: live Ansible credentials
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P7-PROV-002` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `AnsibleProvisioningExecutor` добавляет temporary SSH key path и temporary `secrets` directory path в список known secrets для redaction.
+- Runner output/stderr/step logs больше не сохраняют raw private key, protected payload, legacy key path, temporary key path и panel password.
+- Добавлена документация `docs/live-ansible-credentials.md`.
+- Добавлен release entry `2026-06-12-live-ansible-credentials` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "ProvisioningSecretMaterializerTests|OwnVpsProvisioningMvpTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/live-ansible-credentials.md','backend/src/VpnPlatform.Infrastructure/Provisioning/AnsibleProvisioningExecutor.cs','backend/tests/VpnPlatform.UnitTests/ProvisioningSecretMaterializerTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Targeted provisioning secret tests: 17/17.
+- Backend full suite: 411/411.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-12-live-ansible-credentials`, версия `0.79.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`, `/api/public/payments/providers`; latest release `2026-06-12-live-ansible-credentials`, версия `0.79.0`; серверов `1`, provisioning-запусков `0`, публичных провайдеров `8`.
+
 ## Проверка 2026-06-12: границы режимов provisioning VPS
 
 Что проверено:

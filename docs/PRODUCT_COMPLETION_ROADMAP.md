@@ -511,9 +511,10 @@ git diff --check
   - Что сделано: `ProvisioningService` получил единый `ProvisioningModeDescriptor` для `dry-run`, `validation-deploy`, `live-deploy-blocked` и `live-deploy`; backend возвращает mode/risk/liveDeployAllowed/nextAction/operatorWarning в admin API серверов и provisioning runs, а для dry-run отдельно отдаёт будущий `deployMode*`. Админка показывает режимы и риски в списке серверов и запусков, оставляет безопасный precheck доступным и блокирует deploy, если live deploy не разрешён явно.
   - Доказательство: `OwnVpsProvisioningMvpTests`, frontend source/API contract tests, `npm run typecheck --workspace apps/admin-panel`, документация `docs/provisioning-modes.md`, releaseId `2026-06-12-provisioning-mode-boundaries`.
 
-- [ ] `P7-PROV-002` Live Ansible credentials.
+- [x] `P7-PROV-002` Live Ansible credentials. 2026-06-12.
   - Что сделать: безопасная временная передача SSH credentials в Ansible.
-  - Доказательство: live staging deploy без записи секрета в БД/лог.
+  - Что сделано: live Ansible получает protected `ssh_key` только через временный файл `WorkingDirectory/<runId>/secrets/ssh-key-*`, а executor удаляет файл в `finally`. Redaction теперь покрывает raw/private key, protected payload, legacy key path, temporary key path и temporary `secrets` directory path, поэтому runner output/stderr/step logs не сохраняют путь или секрет даже при случайном выводе аргументов.
+  - Доказательство: `ProvisioningSecretMaterializerTests`, `OwnVpsProvisioningMvpTests`; тест `Ansible_Runner_Redaction_Should_Cover_Temporary_Key_Path_And_Plaintext`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-live-ansible-credentials`; документация `docs/live-ansible-credentials.md`.
 
 - [ ] `P7-PROV-003` Precheck сервера.
   - Что сделать: OS, ports, disk, RAM, firewall, Docker/systemd, 3x-ui availability.

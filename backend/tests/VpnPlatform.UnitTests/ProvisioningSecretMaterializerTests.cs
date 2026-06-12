@@ -3,6 +3,7 @@ using System.Text;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Infrastructure.Provisioning;
+using VpnPlatform.Infrastructure.Security;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
@@ -60,6 +61,35 @@ public class ProvisioningSecretMaterializerTests
         materialized.Dispose();
 
         Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public void Ansible_Runner_Redaction_Should_Cover_Temporary_Key_Path_And_Plaintext()
+    {
+        var protectedPayload = "v1:protected-payload";
+        var materializedPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "vpnplatform-live-run", "secrets", "ssh-key-test");
+        var plaintext = "-----BEGIN OPENSSH PRIVATE KEY-----\nprivate-key-material\n-----END OPENSSH PRIVATE KEY-----";
+        var node = new VpnNode
+        {
+            PanelPassword = "panel-password",
+            ProtectedPanelPassword = "v1:panel",
+            SshPrivateKeyPath = "/legacy/operator/key",
+            ProtectedSshCredential = protectedPayload
+        };
+        using var materialized = new MaterializedProvisioningSecret(materializedPath, plaintext);
+
+        var knownSecrets = AnsibleProvisioningExecutor.BuildKnownSecretsForRedaction(node, materialized);
+        var redacted = SecretRedactor.Redact(
+            $"runner args --private-key-path {materializedPath}; dir {System.IO.Path.GetDirectoryName(materializedPath)}; key {plaintext}; protected {protectedPayload}; legacy {node.SshPrivateKeyPath}; panel {node.PanelPassword}",
+            knownSecrets);
+
+        Assert.Contains("***", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain(materializedPath, redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(System.IO.Path.GetDirectoryName(materializedPath)!, redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("private-key-material", redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(protectedPayload, redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(node.SshPrivateKeyPath, redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(node.PanelPassword, redacted, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

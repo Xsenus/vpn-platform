@@ -167,7 +167,7 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
             var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
             await process.WaitForExitAsync(cancellationToken);
 
-            var knownSecrets = new[] { node.PanelPassword, node.ProtectedPanelPassword, node.SshPrivateKeyPath, node.ProtectedSshCredential, materializedSshKey?.Plaintext };
+            var knownSecrets = BuildKnownSecretsForRedaction(node, materializedSshKey);
             var redactedStdout = SecretRedactor.Redact(stdout, knownSecrets);
             var redactedStderr = SecretRedactor.Redact(stderr, knownSecrets);
 
@@ -214,6 +214,27 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         {
             materializedSshKey?.Dispose();
         }
+    }
+
+    internal static IReadOnlyCollection<string?> BuildKnownSecretsForRedaction(VpnNode node, MaterializedProvisioningSecret? materializedSshKey)
+    {
+        var secrets = new List<string?>
+        {
+            node.PanelPassword,
+            node.ProtectedPanelPassword,
+            node.SshPrivateKeyPath,
+            node.ProtectedSshCredential,
+            materializedSshKey?.Plaintext,
+            materializedSshKey?.Path
+        };
+
+        var materializedDirectory = materializedSshKey?.Path is null ? null : Path.GetDirectoryName(materializedSshKey.Path);
+        if (!string.IsNullOrWhiteSpace(materializedDirectory))
+        {
+            secrets.Add(materializedDirectory);
+        }
+
+        return secrets;
     }
 
 
