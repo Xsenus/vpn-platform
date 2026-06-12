@@ -229,6 +229,60 @@ public class SandboxE2EScenariosMvpTests
     }
 
     [Fact]
+    public async Task OwnVps_Deploy_Failure_Should_Roll_Back_Node_State_And_Surface_Admin_Context()
+    {
+        await using var harness = await SandboxHarness.CreateAsync();
+        await harness.SeedTariffNodeAndProviderAsync();
+        var userId = Guid.NewGuid();
+        harness.Db.Users.Add(new User { Id = userId, Email = "rollback@example.test", DisplayName = "Rollback User", PasswordHash = "hash", RolesCsv = "User", Status = UserStatus.Active, ReferralCode = "RBK" });
+        await harness.Db.SaveChangesAsync();
+
+        var created = await harness.ProvisioningService.CreateOwnVpsRequestAsync(new OwnVpsProvisioningCommand(
+            userId,
+            300500,
+            "rollback-vps.example.test",
+            22,
+            "root",
+            "password",
+            "ssh-password-must-not-leak",
+            "Rollback VPS",
+            "customer",
+            "telegram"));
+        Assert.True(created.IsSuccess, created.Error);
+
+        await harness.ProcessNextProvisioningRunAsync(new FakeProvisioningExecutor(success: true, phase: "precheck"));
+        var node = await harness.Db.VpnNodes.SingleAsync(x => x.Provider == "customer-vps");
+        Assert.Equal(NodeStatus.New, node.Status);
+        Assert.Equal(ProvisioningRunStatus.DeployQueued, node.ProvisioningStatus);
+        Assert.False(node.IsAvailableForNewUsers);
+
+        await harness.ProcessNextProvisioningRunAsync(new FakeProvisioningExecutor(success: false, phase: "deploy", error: "deploy failed password=raw-deploy-secret token=raw-deploy-secret"));
+
+        var failedDeployRun = await harness.Db.ProvisioningRuns.OrderByDescending(x => x.CreatedAt).FirstAsync(x => !x.DryRun);
+        var rolledBackNode = await harness.Db.VpnNodes.SingleAsync(x => x.Id == node.Id);
+        Assert.Equal(ProvisioningRunStatus.Failed, failedDeployRun.Status);
+        Assert.Equal(ProvisioningRunStatus.Failed, rolledBackNode.ProvisioningStatus);
+        Assert.Equal(NodeStatus.New, rolledBackNode.Status);
+        Assert.Equal(HealthStatus.Unknown, rolledBackNode.HealthStatus);
+        Assert.False(rolledBackNode.IsAvailableForNewUsers);
+        Assert.Equal(0, await harness.Db.AccessCredentials.CountAsync());
+        Assert.Equal(0, await harness.Db.VpnPanels.CountAsync());
+        Assert.Equal(1, await harness.Db.SupportConversations.CountAsync());
+
+        var steps = await harness.Db.ProvisioningStepRuns.Where(x => x.ProvisioningRunId == failedDeployRun.Id).ToListAsync();
+        Assert.Contains(steps, x => x.StepName == "Rollback node state" && x.Status == ProvisioningRunStatus.Succeeded);
+        Assert.Contains(await harness.Db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.rollback_applied" && x.EntityId == failedDeployRun.Id.ToString());
+        Assert.Contains(await harness.Db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.deploy_failed" && x.AfterJson.Contains("rollback", StringComparison.OrdinalIgnoreCase));
+
+        var adminDetails = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(await harness.AdminController.GetProvisioningRun(failedDeployRun.Id, CancellationToken.None)).Value);
+        Assert.Contains("Rollback node state", adminDetails, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Rollback applied", adminDetails, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Failed", adminDetails, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("raw-deploy-secret", adminDetails, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ssh-password-must-not-leak", adminDetails, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task OwnVps_DryRun_Failure_Should_Create_Support_Context_And_Retry_Without_Duplicates()
     {
         await using var harness = await SandboxHarness.CreateAsync();

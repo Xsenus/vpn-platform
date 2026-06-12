@@ -1919,5 +1919,32 @@
         "text": "Админка показывает отчет precheck в разделе «Подготовка VPS», чтобы оператор видел результат проверки без чтения raw logs."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-vps-provisioning-rollback",
+    "version": "0.81.0",
+    "releasedAt": "2026-06-12T12:44:00+07:00",
+    "title": "Добавлен rollback состояния VPS",
+    "summary": "При ошибке deploy платформа возвращает ноду к последнему понятному состоянию и показывает оператору отдельный rollback-шаг.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Provisioning worker снимает snapshot ноды перед deploy и восстанавливает статус, доступность, health и эксплуатационные поля при ошибке."
+      },
+      {
+        "type": "improved",
+        "text": "В деталях provisioning run появляется шаг `Rollback node state`, а audit получает событие `provisioning.rollback_applied`."
+      },
+      {
+        "type": "important",
+        "text": "Run остается `Failed`, а `VpnNode.ProvisioningStatus` показывает `Failed`, чтобы оператор видел инцидент и мог запустить retry."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлен E2E failure scenario, который проверяет rollback, support context, audit и отсутствие утечки deploy-секретов."
+      }
+    ]
   }
 ]

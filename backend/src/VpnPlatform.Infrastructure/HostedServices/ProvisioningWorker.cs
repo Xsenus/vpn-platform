@@ -86,6 +86,7 @@ public sealed class ProvisioningWorker : BackgroundService
             return;
         }
 
+        var deployRollbackSnapshot = run.DryRun ? null : NodeRollbackSnapshot.Capture(node);
         var now = clock.UtcNow;
         StatusStateMachine.SetProvisioningRunStatus(run, run.DryRun ? ProvisioningRunStatus.Prechecking : ProvisioningRunStatus.Deploying, now);
         run.StartedAt = now;
@@ -128,7 +129,7 @@ public sealed class ProvisioningWorker : BackgroundService
         }
         else
         {
-            await CompleteDeployAsync(db, secretProtector, vpnProviderFactory, node, run, result, clock, cancellationToken);
+            await CompleteDeployAsync(db, secretProtector, vpnProviderFactory, node, run, result, deployRollbackSnapshot, clock, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -185,7 +186,7 @@ public sealed class ProvisioningWorker : BackgroundService
         }
     }
 
-    private static async Task CompleteDeployAsync(ApplicationDbContext db, ISecretProtector secretProtector, IVpnProviderFactory vpnProviderFactory, VpnNode node, ProvisioningRun run, ProvisioningExecutionResult result, IClock clock, CancellationToken cancellationToken)
+    private static async Task CompleteDeployAsync(ApplicationDbContext db, ISecretProtector secretProtector, IVpnProviderFactory vpnProviderFactory, VpnNode node, ProvisioningRun run, ProvisioningExecutionResult result, NodeRollbackSnapshot? rollbackSnapshot, IClock clock, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         run.FinishedAt = now;
@@ -196,13 +197,10 @@ public sealed class ProvisioningWorker : BackgroundService
         if (!result.Success)
         {
             StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Failed, now);
-            node.ProvisioningStatus = ProvisioningRunStatus.Failed;
-            node.Status = NodeStatus.Error;
-            node.IsAvailableForNewUsers = false;
-            node.UpdatedAt = now;
+            ApplyDeployFailureRollback(db, node, run, rollbackSnapshot, result, now);
             await EnsureSupportConversationAsync(db, node, run, "Own VPS deploy failed", result.ErrorText ?? result.SummaryLog, clock, cancellationToken);
-            await QueueTelegramNotificationAsync(db, node, "own_vps_deploy_failed", $"Deploy VPS завершился ошибкой: {ProvisioningService.RedactSensitiveText(result.ErrorText ?? result.SummaryLog, 1000)}\n\nМы создали обращение в поддержку. Админ может сделать retry.", clock, cancellationToken);
-            AddAudit(db, "provisioning.deploy_failed", "ProvisioningRun", run.Id, run.RequestedByUserId, new { nodeId = node.Id, error = ProvisioningService.RedactSensitiveText(result.ErrorText ?? result.SummaryLog, 1000) });
+            await QueueTelegramNotificationAsync(db, node, "own_vps_deploy_failed", $"Deploy VPS завершился ошибкой: {ProvisioningService.RedactSensitiveText(result.ErrorText ?? result.SummaryLog, 1000)}\n\nСостояние сервера откатили к последнему понятному состоянию. Мы создали обращение в поддержку. Админ может сделать retry.", clock, cancellationToken);
+            AddAudit(db, "provisioning.deploy_failed", "ProvisioningRun", run.Id, run.RequestedByUserId, new { nodeId = node.Id, error = ProvisioningService.RedactSensitiveText(result.ErrorText ?? result.SummaryLog, 1000), rollback = rollbackSnapshot is not null ? "applied" : "snapshot-missing" });
             return;
         }
 
@@ -222,6 +220,43 @@ public sealed class ProvisioningWorker : BackgroundService
         var accessMessage = await EnsureOwnVpsAccessAsync(db, vpnProviderFactory, node, run, clock, cancellationToken);
         await QueueTelegramNotificationAsync(db, node, "own_vps_deployed", $"VPN на вашем VPS готов ✅\nСервер: {node.Name} ({node.Host})\n{accessMessage}\n\nИнструкция: импортируйте VPN URI в VLESS/Xray-compatible клиент. Если возникнут проблемы — нажмите «Поддержка».", clock, cancellationToken, BuildPostPaymentReplyMarkupJson());
         AddAudit(db, "provisioning.deploy_succeeded", "ProvisioningRun", run.Id, run.RequestedByUserId, new { nodeId = node.Id, accessMessage });
+    }
+
+    private static void ApplyDeployFailureRollback(ApplicationDbContext db, VpnNode node, ProvisioningRun run, NodeRollbackSnapshot? snapshot, ProvisioningExecutionResult result, DateTimeOffset now)
+    {
+        if (snapshot is null)
+        {
+            node.ProvisioningStatus = ProvisioningRunStatus.Failed;
+            node.Status = NodeStatus.Error;
+            node.IsAvailableForNewUsers = false;
+            node.UpdatedAt = now;
+            run.ExecutionLog = ProvisioningService.AppendLog(run.ExecutionLog, "Rollback skipped: node snapshot was not available. Node marked Error for operator review.");
+            AddStep(db, run.Id, "Rollback node state", ProvisioningRunStatus.Failed, "Rollback skipped because node snapshot was not available. Node marked Error for operator review.", result.ErrorText ?? result.SummaryLog, now);
+            AddAudit(db, "provisioning.rollback_missing_snapshot", "ProvisioningRun", run.Id, run.RequestedByUserId, new { nodeId = node.Id, error = ProvisioningService.RedactSensitiveText(result.ErrorText ?? result.SummaryLog, 1000) });
+            return;
+        }
+
+        snapshot.ApplyTo(node, now);
+        node.ProvisioningStatus = ProvisioningRunStatus.Failed;
+        node.UpdatedAt = now;
+
+        var rollbackSummary = $"Rollback applied after deploy failure. Node restored to status={node.Status}, availableForNewUsers={node.IsAvailableForNewUsers}, health={node.HealthStatus}.";
+        run.ExecutionLog = ProvisioningService.AppendLog(run.ExecutionLog, rollbackSummary);
+        AddStep(db, run.Id, "Rollback node state", ProvisioningRunStatus.Succeeded, rollbackSummary, string.Empty, now);
+        AddAudit(db, "provisioning.rollback_applied", "ProvisioningRun", run.Id, run.RequestedByUserId, new
+        {
+            nodeId = node.Id,
+            restored = new
+            {
+                node.Status,
+                node.HealthStatus,
+                node.IsAvailableForNewUsers,
+                node.InstalledVersion,
+                node.BackupStatus,
+                node.MonitoringStatus,
+                node.LoggingStatus
+            }
+        });
     }
 
     private static async Task EnsurePanelAndInboundAsync(ApplicationDbContext db, ISecretProtector secretProtector, VpnNode node, DateTimeOffset now, CancellationToken cancellationToken)
@@ -488,6 +523,50 @@ public sealed class ProvisioningWorker : BackgroundService
             Ip = string.Empty,
             UserAgent = string.Empty
         });
+    }
+
+    private sealed record NodeRollbackSnapshot(
+        NodeStatus Status,
+        HealthStatus HealthStatus,
+        DateTimeOffset? LastHealthCheckAt,
+        bool IsAvailableForNewUsers,
+        string InstalledVersion,
+        string BackupStatus,
+        string MonitoringStatus,
+        string LoggingStatus,
+        int UsedCapacity,
+        int Capacity,
+        string TagsCsv)
+    {
+        public static NodeRollbackSnapshot Capture(VpnNode node)
+            => new(
+                node.Status,
+                node.HealthStatus,
+                node.LastHealthCheckAt,
+                node.IsAvailableForNewUsers,
+                node.InstalledVersion,
+                node.BackupStatus,
+                node.MonitoringStatus,
+                node.LoggingStatus,
+                node.UsedCapacity,
+                node.Capacity,
+                node.TagsCsv);
+
+        public void ApplyTo(VpnNode node, DateTimeOffset now)
+        {
+            node.Status = Status;
+            node.HealthStatus = HealthStatus;
+            node.LastHealthCheckAt = LastHealthCheckAt;
+            node.IsAvailableForNewUsers = IsAvailableForNewUsers;
+            node.InstalledVersion = InstalledVersion;
+            node.BackupStatus = BackupStatus;
+            node.MonitoringStatus = MonitoringStatus;
+            node.LoggingStatus = LoggingStatus;
+            node.UsedCapacity = UsedCapacity;
+            node.Capacity = Capacity;
+            node.TagsCsv = TagsCsv;
+            node.UpdatedAt = now;
+        }
     }
 
     private static string BuildPostPaymentReplyMarkupJson()

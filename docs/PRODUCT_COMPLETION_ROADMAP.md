@@ -521,9 +521,10 @@ git diff --check
   - Что сделано: `precheck-node.yml` проверяет Debian-family OS, свободное место на root, RAM, listening ports, firewall/UFW, systemd, Docker runtime и доступность/установленность 3x-ui. `AnsibleProvisioningExecutor` формирует единый JSON `Precheck report` для mock и live runner, сохраняет его отдельным `ProvisioningStepRun`, добавляет в summary log и отдает через admin API как `precheckReport`/`precheckReportPreview`. Админка показывает отчет в разделе «Подготовка VPS».
   - Доказательство: `OwnVpsProvisioningMvpTests`, frontend API/typecheck tests, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-vps-precheck-report`, документация `docs/vps-precheck-report.md`.
 
-- [ ] `P7-PROV-004` Rollback.
+- [x] `P7-PROV-004` Rollback. 2026-06-12.
   - Что сделать: при неудачном provisioning вернуть run/node в понятное состояние.
-  - Доказательство: failure scenario test.
+  - Что сделано: `ProvisioningWorker` снимает snapshot состояния `VpnNode` перед deploy и при ошибке возвращает эксплуатационные поля ноды к прежним значениям, оставляя `ProvisioningRun.Status=Failed` и `VpnNode.ProvisioningStatus=Failed` для видимости инцидента. В run добавляется шаг `Rollback node state`, в audit пишется `provisioning.rollback_applied`, а support/Telegram получают redacted-контекст ошибки.
+  - Доказательство: failure scenario test `OwnVps_Deploy_Failure_Should_Roll_Back_Node_State_And_Surface_Admin_Context`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-vps-provisioning-rollback`, документация `docs/vps-provisioning-rollback.md`.
 
 - [ ] `P7-PROV-005` Документация live provisioning.
   - Что сделать: отдельный runbook с предупреждениями и командами.

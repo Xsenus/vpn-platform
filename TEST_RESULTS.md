@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: rollback состояния VPS
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P7-PROV-004` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- `ProvisioningWorker` снимает snapshot `VpnNode` перед deploy и при ошибке возвращает node status, health, availability и эксплуатационные поля к значениям до deploy.
+- При failed deploy run остается `Failed`, а `VpnNode.ProvisioningStatus` становится `Failed`, чтобы оператор видел инцидент.
+- В run добавляется шаг `Rollback node state`, а audit получает событие `provisioning.rollback_applied`.
+- Support context и Telegram-уведомление получают redacted-контекст ошибки без SSH/password/token утечек.
+- Добавлена документация `docs/vps-provisioning-rollback.md`.
+- Добавлен release entry `2026-06-12-vps-provisioning-rollback` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "OwnVps_Deploy_Failure_Should_Roll_Back_Node_State_And_Surface_Admin_Context|OwnVps_DryRun_E2E_Should_Protect_Credential_Process_Mock_Deploy_Create_Access_And_Admin_Visibility|OwnVps_DryRun_Failure_Should_Create_Support_Context_And_Retry_Without_Duplicates"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "OwnVps_Deploy_Failure_Should_Roll_Back_Node_State_And_Surface_Admin_Context"
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/vps-provisioning-rollback.md','backend/src/VpnPlatform.Infrastructure/HostedServices/ProvisioningWorker.cs','backend/tests/VpnPlatform.UnitTests/SandboxE2EScenariosMvpTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Targeted rollback/E2E tests: 3/3.
+- Targeted rollback regression: 1/1.
+- Backend full suite: 414/414.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-12-vps-provisioning-rollback`, версия `0.81.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`; latest release `2026-06-12-vps-provisioning-rollback`, версия `0.81.0`; серверов `1`, provisioning-запусков `0`.
+
 ## Проверка 2026-06-12: отчет precheck VPS
 
 Что проверено:
