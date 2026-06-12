@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-12: кроссплатформенный EF model drift gate
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P5-DB-002` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `scripts/check-ef-drift.ps1` для локальной проверки EF model drift на Windows/PowerShell.
+- PowerShell drift-check использует `dotnet ef migrations has-pending-model-changes`, безопасные env-переменные, временную диагностическую миграцию `__ModelDriftCheck` и cleanup без изменения snapshot.
+- `EfModelDriftTests` расширен acceptance-проверкой Linux и PowerShell drift-скриптов, env safety и документации.
+- Обновлена инструкция `docs/ef-model-drift-check.md`.
+- Добавлен release entry `2026-06-12-ef-drift-powershell-gate` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter EfModelDriftTests --logger "console;verbosity=minimal"
+powershell -ExecutionPolicy Bypass -File scripts\check-ef-drift.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|AppReleaseSeedServiceTests|AppVersionControllerTests"
+dotnet test backend\VpnPlatform.sln --configuration Release --no-restore
+node -e "const fs=require('fs');const p='backend/src/VpnPlatform.Api/AppReleases/releases.json';const data=JSON.parse(fs.readFileSync(p,'utf8'));const last=data.at(-1);console.log(data.length,last.releaseId,last.version,last.title);"
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','docs/PRODUCT_COMPLETION_ROADMAP.md','TEST_RESULTS.md','docs/ef-model-drift-check.md','scripts/check-ef-drift.ps1','scripts/check-validation-safety.sh','backend/tests/VpnPlatform.UnitTests/EfModelDriftTests.cs']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); const last=data.at(-1); console.log('encoding guard ok', last.releaseId, last.title);"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-build
+```
+
+Результат:
+
+- `EfModelDriftTests`: 2/2 пройдено.
+- PowerShell EF drift-check: `[OK] EF model has no pending migration changes.`
+- Bash safety-check: не запускался в текущей Windows-среде, потому что доступный `bash` пытается стартовать WSL без `/bin/bash`; покрытие Linux-скрипта проверено статическим .NET acceptance-тестом и остается для GitHub/Linux среды.
+- Release documentation tests: 14/14 пройдено.
+- Backend full suite: 368/368 пройдено.
+- App releases JSON: валиден, последний релиз `2026-06-12-ef-drift-powershell-gate`, версия `0.68.0`.
+- Encoding guard: измененные файлы читаются как UTF-8, `U+FFFD` не найден.
+- Local SQLite HTTP-smoke: `/health/live`, `/health/ready`, `/metrics`, `/api/auth/login`, `/api/app-version/latest`; `live=ok`, `ready=Ready`, `readyChecks=2`, latest release `2026-06-12-ef-drift-powershell-gate`, версия `0.68.0`, metrics содержат `vpnplatform_http_requests_total` и `vpnplatform_api_uptime_seconds`.
+
 ## Проверка 2026-06-12: observability API
 
 Что проверено:

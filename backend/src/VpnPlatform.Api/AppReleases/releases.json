@@ -1568,5 +1568,32 @@
         "text": "Добавлены unit-тесты `ObservabilityMvpTests`, которые проверяют correlation header, накопление метрик и readiness report на локальной SQLite-БД."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-12-ef-drift-powershell-gate",
+    "version": "0.68.0",
+    "releasedAt": "2026-06-12T10:35:00+07:00",
+    "title": "Проверка EF model drift стала кроссплатформенной",
+    "summary": "Добавлен PowerShell drift-check для Windows и усилены тесты, которые подтверждают, что модель EF, snapshot и миграции не расходятся перед изменениями БД.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/check-ef-drift.ps1`: команда запускается локально на Windows, использует EF tooling и не требует поднятой PostgreSQL-БД."
+      },
+      {
+        "type": "important",
+        "text": "Drift-check отключает live-интеграции, auto migrations, demo seed и admin bootstrap, чтобы проверка не трогала внешние сервисы и реальные данные."
+      },
+      {
+        "type": "improved",
+        "text": "В `EfModelDriftTests` добавлен acceptance-test, который контролирует Linux и PowerShell drift-скрипты, безопасные переменные окружения и документацию."
+      },
+      {
+        "type": "fixed",
+        "text": "PowerShell cleanup восстанавливает snapshot миграций байт-в-байт, включая BOM и окончания строк, поэтому проверка не оставляет шум в рабочем дереве."
+      }
+    ]
   }
 ]

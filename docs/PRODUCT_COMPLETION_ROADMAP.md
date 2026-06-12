@@ -455,9 +455,10 @@ git diff --check
   - Что сделать: проверить таблицы, индексы, FK, nullable-поля, миграции.
   - Доказательство: migration script/result, psql schema snapshot без секретов.
 
-- [ ] `P5-DB-002` EF model drift check.
+- [x] `P5-DB-002` EF model drift check. 2026-06-12.
   - Что сделать: убедиться, что модель и миграции не расходятся.
-  - Доказательство: test или отдельная команда drift-check.
+  - Что сделано: базовый `EfModelDriftTests` сравнивает runtime-модель `ApplicationDbContext` с `ApplicationDbContextModelSnapshot`; добавлен кроссплатформенный `scripts/check-ef-drift.ps1` для Windows рядом с Linux `scripts/check-ef-drift.sh`; acceptance-test проверяет, что оба скрипта используют `has-pending-model-changes`, временную `__ModelDriftCheck`, безопасные env-переменные и документацию.
+  - Доказательство: `EfModelDriftTests` 2/2; `powershell -ExecutionPolicy Bypass -File scripts\check-ef-drift.ps1` завершился `[OK] EF model has no pending migration changes`; backend full suite; local SQLite HTTP-smoke latest release `2026-06-12-ef-drift-powershell-gate`.
 
 - [ ] `P5-DB-003` Seed локальных данных.
   - Что сделать: локальный запуск должен иметь тарифы, sandbox payments, sandbox VPN node, admin user.
