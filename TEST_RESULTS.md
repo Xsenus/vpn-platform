@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: аудит GitHub Secrets
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P8-CI-003` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `.github/github-secrets.audit.json` со списком required/optional GitHub Actions secret names без значений.
+- Required secrets совпадают с explicit gate в `.github/workflows/deploy-vps.yml`: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_APP_DIR`, `VPS_SSH_KEY`, `PRODUCTION_ENV_FILE`.
+- Optional secrets покрывают остальные references workflow: `VPS_DEPLOY_MODE`, `VITE_API_BASE_URL`, `VITE_PUBLIC_WEB_URL`.
+- Registry secrets явно отмечены как not required, потому что текущие workflows не пушат container images в registry.
+- Добавлен `scripts/audit-github-secrets.ps1`: `-DryRun` проверяет локальный конфиг и workflow, live-режим получает только names через GitHub REST API и не выводит значения.
+- Добавлена документация `docs/github-secrets-audit.md`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-github-secrets-audit`.
+- Добавлен release entry `2026-06-13-github-secrets-audit` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/audit-github-secrets.ps1 -DryRun
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "GitHubSecretsAuditTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "ReleaseDocumentationGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['.github/github-secrets.audit.json','backend/src/VpnPlatform.Api/AppReleases/releases.json','backend/tests/VpnPlatform.UnitTests/GitHubSecretsAuditTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/github-secrets-audit.md','docs/github-deployment.md','scripts/audit-github-secrets.ps1','TEST_RESULTS.md']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- GitHub secrets audit dry-run: OK, config и workflow references совпадают; GitHub API не вызывался.
+- Targeted GitHub secrets audit tests: 3/3.
+- Targeted release/docs guard tests: 3/3.
+- Backend full suite: 423/423.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-13-github-secrets-audit`, версия `0.85.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`; latest release `2026-06-13-github-secrets-audit`, версия `0.85.0`; серверов `1`, provisioning-запусков `0`.
+- Live GitHub secrets audit не выполнялся из этой среды: `GITHUB_TOKEN/GH_TOKEN` в env отсутствует. Скрипт готов к запуску с токеном, который может читать repository Actions secrets metadata; значения secrets GitHub API не возвращает.
+
 ## Проверка 2026-06-12: required checks для main
 
 Что проверено:

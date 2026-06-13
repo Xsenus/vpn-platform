@@ -27,6 +27,8 @@ Workflow `deploy-vps` поддерживает три режима:
 
 Обязательные checks для `main`/`master`, конфиг branch protection и скрипт применения описаны в `docs/github-required-checks.md`.
 
+Аудит имен GitHub Actions secrets без раскрытия значений описан в `docs/github-secrets-audit.md`.
+
 ## GitHub Secrets
 
 В GitHub открой `Settings -> Secrets and variables -> Actions -> New repository secret` и добавь:

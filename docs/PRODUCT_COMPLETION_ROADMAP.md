@@ -543,9 +543,10 @@ git diff --check
   - Что сделано: добавлен конфиг `.github/branch-protection.required-checks.json` с обязательными checks из workflow `validation`, включены strict up-to-date checks, один approving review, dismiss stale approvals, conversation resolution, запрет force push/delete и enforcement для администраторов. Добавлен `scripts/configure-branch-protection.ps1`, который применяет настройки через GitHub REST API или показывает payload в `-DryRun`. `deploy-vps` не добавлен в required checks, потому что это production deploy на push, а не PR validation.
   - Доказательство: `BranchProtectionGuardTests`, `powershell -ExecutionPolicy Bypass -File scripts/configure-branch-protection.ps1 -DryRun`, документация `docs/github-required-checks.md`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-12-required-checks-main`, config `.github/branch-protection.required-checks.json`.
 
-- [ ] `P8-CI-003` Secrets audit в GitHub.
+- [x] `P8-CI-003` Secrets audit в GitHub. 2026-06-13.
   - Что сделать: проверить наличие и названия secrets для VPS, DB, deploy, registry.
-  - Доказательство: список имен без значений.
+  - Что сделано: добавлен `.github/github-secrets.audit.json` со списком required/optional secret names для `deploy-vps`, включая VPS/deploy/frontend категории и явную пометку, что registry secrets сейчас не нужны. Добавлен `scripts/audit-github-secrets.ps1`: в `-DryRun` он сверяет конфиг с workflow локально, а в live-режиме через GitHub REST API получает только имена repository secrets и проверяет missing required без вывода значений.
+  - Доказательство: `GitHubSecretsAuditTests`, `powershell -ExecutionPolicy Bypass -File scripts/audit-github-secrets.ps1 -DryRun`, документация `docs/github-secrets-audit.md`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-13-github-secrets-audit`; список имен без значений хранится в `.github/github-secrets.audit.json`.
 
 - [ ] `P8-CI-004` VPS disk/memory maintenance.
   - Что сделать: безопасная очистка old artifacts, logs rotation, apt cache, docker cache если используется.

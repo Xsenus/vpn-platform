@@ -2027,5 +2027,32 @@
         "text": "Добавлены guard-тесты, которые сверяют required checks с job names в `ci.yml` и не дают потерять запрет force push/delete."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-github-secrets-audit",
+    "version": "0.85.0",
+    "releasedAt": "2026-06-13T12:21:00+07:00",
+    "title": "Добавлен аудит GitHub Secrets",
+    "summary": "Имена GitHub Actions secrets для deploy теперь описаны в репозитории и проверяются без раскрытия значений.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `.github/github-secrets.audit.json` со списком required и optional secret names для VPS/deploy/frontend контура."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/audit-github-secrets.ps1` с dry-run проверкой workflow и live-аудитом имен secrets через GitHub REST API."
+      },
+      {
+        "type": "important",
+        "text": "Скрипт не выводит значения secrets: GitHub API возвращает только names, а результат аудита фиксируется как список имен без секретных данных."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены guard-тесты, которые сверяют required secrets с gate в `deploy-vps.yml` и контролируют, что registry secrets пока не требуются."
+      }
+    ]
   }
 ]
