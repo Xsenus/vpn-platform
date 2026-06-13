@@ -1,0 +1,439 @@
+import { expect, test, type Page, type Route } from '@playwright/test'
+
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'content-type, authorization',
+  'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+  'content-type': 'application/json; charset=utf-8'
+}
+
+const now = '2026-06-13T07:00:00Z'
+const user = {
+  id: 'user-cabinet-e2e',
+  email: 'cabinet-e2e@example.test',
+  displayName: 'Cabinet E2E',
+  preferredLanguage: 'ru',
+  referralCode: 'CABINET-E2E',
+  status: 'Active'
+}
+
+const subscription = {
+  id: 'sub-active',
+  userId: user.id,
+  tariffId: 'tariff-pro',
+  tariffName: 'Pro 30 дней',
+  status: 'Active',
+  startAt: '2026-06-01T00:00:00Z',
+  endAt: '2026-07-01T00:00:00Z',
+  gracePeriodEndAt: null,
+  autoRenewFlag: false,
+  sourceChannel: 'Web',
+  currentServerId: 'server-eu',
+  currentAccessId: 'access-active',
+  lastPaymentId: 'payment-paid',
+  renewalCount: 0,
+  accessUri: 'vless://cabinet-e2e@example.com:443?security=reality#cabinet-e2e',
+  qrCodePath: 'qr://cabinet-e2e',
+  configPath: 'config://cabinet-e2e',
+  nodeName: 'EU Sandbox',
+  createdAt: now,
+  updatedAt: now
+}
+
+const paidOrder = {
+  id: 'order-paid',
+  userId: user.id,
+  userDisplayName: user.displayName,
+  userEmail: user.email,
+  tariffId: subscription.tariffId,
+  tariffName: subscription.tariffName,
+  amount: 490,
+  currency: 'RUB',
+  status: 'Paid',
+  type: 'NewSubscription',
+  channel: 'Web',
+  paymentProvider: 'YooKassa',
+  checkoutSessionId: null,
+  expiresAt: '2026-06-14T00:00:00Z',
+  paidAt: '2026-06-13T06:00:00Z',
+  isFirstPurchase: true,
+  paymentAttemptsCount: 1,
+  lastPaymentId: 'payment-paid',
+  lastPaymentStatus: 'Succeeded',
+  lastPaymentProvider: 'YooKassa',
+  linkedSubscriptionId: subscription.id,
+  createdAt: now,
+  updatedAt: now
+}
+
+const paidPayment = {
+  id: 'payment-paid',
+  orderId: paidOrder.id,
+  userId: user.id,
+  userDisplayName: user.displayName,
+  provider: 'YooKassa',
+  paymentProviderAccountId: 'provider-yookassa',
+  providerMode: 'Sandbox',
+  providerPaymentId: 'yk-paid-1',
+  externalEventId: 'evt-paid-1',
+  idempotencyKey: 'idem-paid',
+  confirmationUrl: 'https://pay.example.test/paid',
+  returnUrl: 'http://127.0.0.1:5294',
+  amount: 490,
+  currency: 'RUB',
+  status: 'Succeeded',
+  signatureValidated: true,
+  isActivationProcessed: true,
+  activationProcessedAt: '2026-06-13T06:01:00Z',
+  paidAt: '2026-06-13T06:00:00Z',
+  failedAt: null,
+  refundedAt: null,
+  refundedAmount: 0,
+  statusReason: null,
+  webhookEventsCount: 1,
+  refundsCount: 0,
+  refundSupported: true,
+  canRefund: false,
+  refundableAmount: 0,
+  refundBlockers: [],
+  createdAt: now,
+  updatedAt: now
+}
+
+const access = {
+  id: 'access-active',
+  subscriptionId: subscription.id,
+  userId: user.id,
+  providerType: 'X3UI',
+  providerAccessId: 'x3ui-client-1',
+  serverId: 'server-eu',
+  serverName: 'EU Sandbox',
+  accessUri: subscription.accessUri,
+  qrCodePayload: subscription.accessUri,
+  qrCodePath: 'qr://cabinet-e2e',
+  configPath: 'config://cabinet-e2e',
+  status: 'Active',
+  issuedAt: '2026-06-13T06:00:00Z',
+  expiryDate: subscription.endAt,
+  disabledAt: null,
+  lastSyncedAt: '2026-06-13T06:05:00Z',
+  revision: 3,
+  history: [],
+  createdAt: now,
+  updatedAt: now
+}
+
+const provider = {
+  provider: 'YooKassa',
+  publicName: 'YooKassa sandbox',
+  mode: 'Sandbox',
+  healthStatus: 'Healthy'
+}
+
+function authResponse(email = user.email) {
+  return {
+    accessToken: `access-token-${email}`,
+    refreshToken: `refresh-token-${email}`,
+    email,
+    displayName: user.displayName
+  }
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return {
+    status,
+    headers: corsHeaders,
+    body: JSON.stringify(body)
+  }
+}
+
+async function fulfillJson(route: Route, body: unknown, status = 200) {
+  await route.fulfill(jsonResponse(body, status))
+}
+
+async function fulfillOptions(route: Route) {
+  await route.fulfill({ status: 204, headers: corsHeaders })
+}
+
+async function mockCabinetApi(page: Page) {
+  const requests: Array<{ method: string; url: string; body: unknown }> = []
+  let supportConversations: unknown[] = []
+  let supportMessages: unknown[] = []
+  let renewalOrder = {
+    ...paidOrder,
+    id: 'order-renewal',
+    status: 'PendingPayment',
+    type: 'Renewal',
+    isFirstPurchase: false,
+    linkedSubscriptionId: subscription.id,
+    paidAt: null,
+    lastPaymentId: null,
+    lastPaymentStatus: null
+  }
+  let renewalPayment = {
+    paymentId: 'payment-renewal',
+    redirectUrl: 'https://pay.example.test/renewal',
+    rawResponse: '{"sandbox":true}'
+  }
+
+  const record = (route: Route) => {
+    const request = route.request()
+    if (request.method() !== 'OPTIONS') {
+      requests.push({
+        method: request.method(),
+        url: request.url(),
+        body: request.postData() ? request.postDataJSON() : null
+      })
+    }
+  }
+
+  await page.route('**/api/**', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname
+    const method = request.method()
+
+    if (method === 'OPTIONS') {
+      await fulfillOptions(route)
+      return
+    }
+
+    record(route)
+
+    if (method === 'POST' && path === '/api/auth/register') {
+      await fulfillJson(route, authResponse(request.postDataJSON().email))
+      return
+    }
+
+    if (method === 'POST' && path === '/api/auth/login') {
+      await fulfillJson(route, authResponse(request.postDataJSON().email))
+      return
+    }
+
+    if (method === 'POST' && path === '/api/auth/logout') {
+      await fulfillJson(route, { status: 'ok' })
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me') {
+      await fulfillJson(route, user)
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/subscriptions') {
+      await fulfillJson(route, [subscription])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/orders') {
+      await fulfillJson(route, [paidOrder])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/payments') {
+      await fulfillJson(route, [paidPayment])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/accesses') {
+      await fulfillJson(route, [access])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/referrals') {
+      await fulfillJson(route, [])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/support/conversations') {
+      await fulfillJson(route, supportConversations)
+      return
+    }
+
+    if (method === 'POST' && path === '/api/me/support/conversations') {
+      const payload = request.postDataJSON()
+      const conversation = {
+        id: 'support-created',
+        userId: user.id,
+        telegramUserId: null,
+        channel: 'Web',
+        status: 'open',
+        subject: payload.subject,
+        assignedToUserId: null,
+        internalNote: '',
+        closedAt: null,
+        createdAt: now,
+        updatedAt: now
+      }
+      const firstMessage = {
+        id: 'support-message-1',
+        supportConversationId: conversation.id,
+        userId: user.id,
+        telegramUserId: null,
+        direction: 'inbound',
+        text: payload.text,
+        attachmentsJson: '[]',
+        isInternalNote: false,
+        createdAt: now
+      }
+      supportConversations = [conversation]
+      supportMessages = [firstMessage]
+      await fulfillJson(route, conversation)
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/support/conversations/support-created/messages') {
+      await fulfillJson(route, supportMessages)
+      return
+    }
+
+    if (method === 'POST' && path === '/api/me/support/conversations/support-created/reply') {
+      const payload = request.postDataJSON()
+      const message = {
+        id: 'support-message-2',
+        supportConversationId: 'support-created',
+        userId: user.id,
+        telegramUserId: null,
+        direction: 'inbound',
+        text: payload.text,
+        attachmentsJson: '[]',
+        isInternalNote: false,
+        createdAt: now
+      }
+      supportMessages = [...supportMessages, message]
+      await fulfillJson(route, message)
+      return
+    }
+
+    if (method === 'GET' && path === '/api/me/telegram/status') {
+      await fulfillJson(route, { isLinked: false, telegramUserId: null, username: null, linkedAt: null })
+      return
+    }
+
+    if (method === 'GET' && path === '/api/public/payments/providers') {
+      await fulfillJson(route, [provider])
+      return
+    }
+
+    if (method === 'POST' && path === '/api/me/orders') {
+      const payload = request.postDataJSON()
+      renewalOrder = {
+        ...renewalOrder,
+        tariffId: payload.tariffId,
+        paymentProvider: payload.paymentProvider
+      }
+      await fulfillJson(route, renewalOrder)
+      return
+    }
+
+    if (method === 'POST' && path === '/api/me/orders/order-renewal/payments/YooKassa/init') {
+      await fulfillJson(route, renewalPayment)
+      return
+    }
+
+    if (method === 'GET' && path === '/api/cabinet/access/access-active/qr') {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'content-type': 'image/svg+xml; charset=utf-8'
+        },
+        body: '<svg role="img" aria-label="qr-e2e"><text>qr-e2e</text></svg>'
+      })
+      return
+    }
+
+    if (method === 'GET' && path === '/api/app-version/latest') {
+      await fulfillJson(route, { currentVersion: null, latestRelease: null, seenByCurrentUser: true })
+      return
+    }
+
+    if (method === 'GET' && path === '/api/app-version/history') {
+      await fulfillJson(route, [])
+      return
+    }
+
+    await fulfillJson(route, { error: `Unhandled ${method} ${path}` }, 404)
+  })
+
+  return {
+    requests,
+    getLastRequest: (path: string, method = 'POST') =>
+      requests.findLast((item) => item.method === method && new URL(item.url).pathname === path)
+  }
+}
+
+test('cabinet covers register, login, payments, subscription access and support', async ({ page }) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  const api = await mockCabinetApi(page)
+
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Личный кабинет', exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'Регистрация' }).click()
+
+  const authPanel = page.locator('#cabinet-auth-panel')
+  await authPanel.getByLabel('Имя').fill(user.displayName)
+  await authPanel.getByLabel('Email').fill(user.email)
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Зарегистрироваться' }).click()
+
+  await expect(page.getByText('Аккаунт создан.')).toBeVisible()
+  await expect(page.getByText('Pro 30 дней').first()).toBeVisible()
+  await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
+  await expect(page.getByText('yk-paid-1')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'EU Sandbox' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
+  await expect(page.locator('.qr-preview').first()).toContainText('qr-e2e')
+
+  await page.getByRole('button', { name: 'Продлить' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Последнее продление' })).toBeVisible()
+  await expect(page.getByText('payment-renewal')).toBeVisible()
+  expect(api.getLastRequest('/api/me/orders')?.body).toMatchObject({
+    tariffId: 'tariff-pro',
+    type: 'Renewal',
+    channel: 'Web',
+    paymentProvider: 'YooKassa',
+    subscriptionId: 'sub-active'
+  })
+
+  await page.getByLabel('Тема').fill('Не вижу продление')
+  await page.getByLabel('Сообщение').fill('Оплата создана, хочу проверить статус подписки и доступ.')
+  await page.getByLabel('Связанный заказ').selectOption('order-paid')
+  await page.getByLabel('Связанная подписка').selectOption('sub-active')
+  await page.getByRole('button', { name: 'Создать обращение' }).click()
+
+  await expect(page.getByText('Обращение в поддержку создано.')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Не вижу продление/ })).toBeVisible()
+  await expect(page.getByText('Оплата создана, хочу проверить статус подписки и доступ.')).toBeVisible()
+
+  await page.getByLabel('Ответ').fill('Дополняю обращение из E2E.')
+  await page.getByRole('button', { name: 'Отправить' }).click()
+  await expect(page.getByText('Сообщение отправлено в поддержку.')).toBeVisible()
+  await expect(page.getByText('Дополняю обращение из E2E.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await page.getByRole('tab', { name: 'Вход' }).click()
+  await expect(page.getByRole('tabpanel', { name: 'Вход' })).toBeVisible()
+
+  const loginPanel = page.locator('#cabinet-auth-panel')
+  await loginPanel.getByLabel('Email').fill(user.email)
+  await loginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await loginPanel.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByText('Вход выполнен.')).toBeVisible()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  expect(api.getLastRequest('/api/auth/register')?.body).toMatchObject({
+    email: user.email,
+    displayName: user.displayName
+  })
+  expect(api.getLastRequest('/api/auth/login')?.body).toMatchObject({
+    email: user.email
+  })
+  expect(consoleErrors).toEqual([])
+})

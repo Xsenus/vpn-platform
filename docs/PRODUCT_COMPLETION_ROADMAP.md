@@ -577,9 +577,10 @@ git diff --check
   - Что сделано: добавлен Playwright config `frontend/playwright.config.ts`, E2E spec `frontend/e2e/public.spec.ts`, npm-скрипты `e2e` и `e2e:public`, документация `docs/playwright-public-e2e.md`. Тест поднимает public-web на выделенном порту, мокирует публичные API endpoints без live-платежей, проверяет главную, managed FAQ preview, тарифы, web-provider select, создание public checkout session, сохраненную покупку на `/account`, FAQ search и отсутствие console/page errors. CI и staging-validation теперь устанавливают Chromium, запускают `npm run e2e:public` и сохраняют HTML-report.
   - Доказательство: `npm run e2e:public` 1/1, frontend unit tests 64/64, frontend typecheck/build, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-playwright-public-e2e`.
 
-- [ ] `P9-TST-004` Playwright E2E cabinet.
-  - Что сделать: register/login/order/payment status/subscription/access/support.
-  - Доказательство: Playwright report.
+- [x] `P9-TST-004` Playwright E2E cabinet. 2026-06-13.
+  - Что сделать: держать зеленым пользовательский путь register/login/order/payment status/subscription/access/support.
+  - Что сделано: добавлен Playwright spec `frontend/e2e/cabinet.spec.ts`, общий Vite helper `frontend/scripts/playwright-webservers.mjs`, npm-скрипт `e2e:cabinet`, документация `docs/playwright-cabinet-e2e.md`. Тест мокирует cabinet API без live-платежей и проверяет регистрацию, выход, повторный вход, активную подписку, VPN-ключ, QR-код, историю заказов/платежей/доступов, продление через web-провайдер и поддержку. CI и staging-validation запускают `npm run e2e:cabinet` после public E2E и сохраняют общий HTML-report.
+  - Доказательство: `npm run e2e:cabinet` 1/1, `npm run e2e:public` 1/1, frontend unit tests 64/64, frontend typecheck/build, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-playwright-cabinet-e2e`.
 
 - [ ] `P9-TST-005` Playwright E2E admin.
   - Что сделать: login, payments, tariffs, VPN, panels, scenarios, releases.

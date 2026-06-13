@@ -2189,5 +2189,32 @@
         "text": "E2E мокирует только публичные API endpoints и не ходит во внешние платежные системы, поэтому checkout start безопасен для локальной и CI-проверки."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-playwright-cabinet-e2e",
+    "version": "0.91.0",
+    "releasedAt": "2026-06-13T14:10:00+07:00",
+    "title": "Добавлен Playwright E2E для личного кабинета",
+    "summary": "Личный кабинет теперь проверяется браузерным E2E: регистрация, вход, подписка, VPN-ключ, продление, платеж и поддержка проходят как единый сценарий.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `frontend/e2e/cabinet.spec.ts`: тест проверяет регистрацию, logout, повторный login, активную подписку, VPN-ключ, QR-код, историю заказов, платежей и доступов."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `frontend/scripts/playwright-webservers.mjs`, который поднимает public-web и cabinet на стабильных портах для локального и CI-запуска."
+      },
+      {
+        "type": "improved",
+        "text": "CI и staging-validation запускают `npm run e2e:cabinet` вместе с public E2E и сохраняют общий HTML-report из `frontend/playwright-report/e2e`."
+      },
+      {
+        "type": "important",
+        "text": "Cabinet E2E мокирует `/api/**`, не требует живой БД, Telegram, VPN-серверов или реальных платежных провайдеров и безопасен для регулярного запуска."
+      }
+    ]
   }
 ]

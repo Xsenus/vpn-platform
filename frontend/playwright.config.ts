@@ -9,14 +9,14 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [
     ['list'],
-    ['html', { open: 'never', outputFolder: 'playwright-report/public' }]
+    ['html', { open: 'never', outputFolder: 'playwright-report/e2e' }]
   ],
   use: {
     baseURL: 'http://127.0.0.1:5293',
     trace: 'retain-on-failure'
   },
   webServer: {
-    command: 'node apps/public-web/node_modules/vite/bin/vite.js apps/public-web --host 127.0.0.1 --port 5293 --strictPort',
+    command: 'node scripts/playwright-webservers.mjs',
     url: 'http://127.0.0.1:5293',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
@@ -27,7 +27,16 @@ export default defineConfig({
   projects: [
     {
       name: 'public-web',
+      testMatch: /public\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] }
+    },
+    {
+      name: 'cabinet',
+      testMatch: /cabinet\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://127.0.0.1:5294'
+      }
     }
   ]
 })

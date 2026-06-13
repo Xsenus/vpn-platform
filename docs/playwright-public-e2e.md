@@ -15,7 +15,7 @@ cd frontend
 npm run e2e:public
 ```
 
-Playwright сам поднимает `frontend/apps/public-web` на `http://127.0.0.1:5173`.
+Playwright сам поднимает `frontend/apps/public-web` на `http://127.0.0.1:5293`.
 Публичные API endpoints мокируются внутри теста, поэтому сценарий не ходит во внешние платежные системы и не требует живого backend.
 
 ## Первый запуск на новой машине
@@ -31,7 +31,7 @@ npx playwright install chromium
 
 - `npm run e2e:public` проходит в проекте `public-web`;
 - в консоли браузера нет ошибок;
-- HTML-report создается в `frontend/playwright-report/public`;
+- HTML-report создается в `frontend/playwright-report/e2e`;
 - `.github/workflows/ci.yml` и `.github/workflows/staging-validation.yml` устанавливают Chromium, запускают `npm run e2e:public` и сохраняют report artifact;
 - `TEST_RESULTS.md` содержит актуальный результат;
 - release seed содержит `2026-06-13-playwright-public-e2e`.

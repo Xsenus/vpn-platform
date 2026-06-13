@@ -52,6 +52,7 @@ test('frontend package and CI keep the same mandatory commands', () => {
   assert.match(packageJson.scripts.build, /apps\/admin-panel/)
   assert.match(packageJson.scripts.e2e, /playwright test/)
   assert.match(packageJson.scripts['e2e:public'], /playwright test --project=public-web/)
+  assert.match(packageJson.scripts['e2e:cabinet'], /playwright test --project=cabinet/)
 
   assert.match(ciWorkflow, /check-frontend-lockfile\.sh/)
   assert.match(ciWorkflow, /npm ci/)
@@ -60,6 +61,8 @@ test('frontend package and CI keep the same mandatory commands', () => {
   assert.match(ciWorkflow, /npm run test/)
   assert.match(ciWorkflow, /playwright install --with-deps chromium/)
   assert.match(ciWorkflow, /npm run e2e:public/)
+  assert.match(ciWorkflow, /npm run e2e:cabinet/)
+  assert.match(ciWorkflow, /frontend\/playwright-report\/e2e/)
   assert.match(ciWorkflow, /npm audit --audit-level=high/)
 })
 
