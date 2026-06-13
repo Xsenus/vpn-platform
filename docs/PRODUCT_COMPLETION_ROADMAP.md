@@ -548,9 +548,10 @@ git diff --check
   - Что сделано: добавлен `.github/github-secrets.audit.json` со списком required/optional secret names для `deploy-vps`, включая VPS/deploy/frontend категории и явную пометку, что registry secrets сейчас не нужны. Добавлен `scripts/audit-github-secrets.ps1`: в `-DryRun` он сверяет конфиг с workflow локально, а в live-режиме через GitHub REST API получает только имена repository secrets и проверяет missing required без вывода значений.
   - Доказательство: `GitHubSecretsAuditTests`, `powershell -ExecutionPolicy Bypass -File scripts/audit-github-secrets.ps1 -DryRun`, документация `docs/github-secrets-audit.md`, backend full suite, local SQLite HTTP-smoke latest release `2026-06-13-github-secrets-audit`; список имен без значений хранится в `.github/github-secrets.audit.json`.
 
-- [ ] `P8-CI-004` VPS disk/memory maintenance.
+- [x] `P8-CI-004` VPS disk/memory maintenance. 2026-06-13.
   - Что сделать: безопасная очистка old artifacts, logs rotation, apt cache, docker cache если используется.
-  - Доказательство: df/free до/после, без удаления рабочих данных.
+  - Что сделано: добавлен `scripts/vps-maintenance.sh` с dry-run по умолчанию и явным `--apply`, отчетом `df -h/free -h/du -sh` до и после, защитой `APP_DIR/shared`, `APP_DIR/current`, текущего release и путей вне `APP_DIR`. Скрипт чистит только старые release-директории с именем git sha, старые release archives, app logs, systemd journal и apt cache; Docker prune включается только отдельным `--docker-prune` и не трогает volumes. Добавлена инструкция `docs/vps-maintenance.md`.
+  - Доказательство: `VpsMaintenanceScriptTests`, `bash -n scripts/vps-maintenance.sh`, local dry-run на временном APP_DIR, backend full suite, local SQLite HTTP-smoke latest release `2026-06-13-vps-maintenance-safe-cleanup`; live VPS cleanup не запускался без отдельной команды оператора.
 
 - [ ] `P8-CI-005` Post-deploy smoke.
   - Что сделать: после deploy автоматически проверять API health, public, cabinet, admin, public providers.

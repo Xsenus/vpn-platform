@@ -29,6 +29,8 @@ Workflow `deploy-vps` поддерживает три режима:
 
 Аудит имен GitHub Actions secrets без раскрытия значений описан в `docs/github-secrets-audit.md`.
 
+Безопасная очистка диска/RAM на слабом VPS описана в `docs/vps-maintenance.md`.
+
 ## GitHub Secrets
 
 В GitHub открой `Settings -> Secrets and variables -> Actions -> New repository secret` и добавь:

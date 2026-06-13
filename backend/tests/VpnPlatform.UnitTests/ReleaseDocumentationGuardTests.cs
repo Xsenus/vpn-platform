@@ -14,7 +14,8 @@ public class ReleaseDocumentationGuardTests
         new("P7-PROV-005", "2026-06-12-live-provisioning-runbook"),
         new("P8-CI-001", "2026-06-12-deploy-mode-auto-detect"),
         new("P8-CI-002", "2026-06-12-required-checks-main"),
-        new("P8-CI-003", "2026-06-13-github-secrets-audit")
+        new("P8-CI-003", "2026-06-13-github-secrets-audit"),
+        new("P8-CI-004", "2026-06-13-vps-maintenance-safe-cleanup")
     ];
 
     [Fact]

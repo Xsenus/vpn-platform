@@ -2054,5 +2054,32 @@
         "text": "Добавлены guard-тесты, которые сверяют required secrets с gate в `deploy-vps.yml` и контролируют, что registry secrets пока не требуются."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-vps-maintenance-safe-cleanup",
+    "version": "0.86.0",
+    "releasedAt": "2026-06-13T12:34:00+07:00",
+    "title": "Добавлена безопасная очистка VPS",
+    "summary": "Для слабого VPS добавлена воспроизводимая maintenance-процедура с dry-run, отчетом диска/RAM и защитой рабочих данных.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/vps-maintenance.sh`: по умолчанию он работает в dry-run и показывает, что будет очищено."
+      },
+      {
+        "type": "important",
+        "text": "Скрипт защищает `shared`, `current`, текущий release и любые пути вне `APP_DIR`, чтобы не удалить рабочие данные."
+      },
+      {
+        "type": "improved",
+        "text": "Maintenance-отчет печатает `df -h`, `free -h` и `du -sh` до и после очистки для фиксации результата."
+      },
+      {
+        "type": "fixed",
+        "text": "Docker prune включается только через `--docker-prune` и никогда не выполняет `docker volume prune`."
+      }
+    ]
   }
 ]

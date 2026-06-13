@@ -2,6 +2,49 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: безопасная очистка VPS
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P8-CI-004` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `scripts/vps-maintenance.sh` с dry-run по умолчанию и реальной очисткой только через `--apply`.
+- Скрипт печатает `df -h`, `free -h`, `du -sh` до и после maintenance.
+- Старые release-директории удаляются только внутри `APP_DIR/releases`, только с именем git sha и с сохранением `KEEP_RELEASES`.
+- Защищены `APP_DIR`, `APP_DIR/shared`, `APP_DIR/current`, `APP_DIR/releases`, текущий symlink release и любые пути вне `APP_DIR`.
+- App logs очищаются только внутри `APP_DIR/logs`; production `.env`, database dumps и рабочие каталоги не трогаются.
+- `journalctl --vacuum-time`, `apt-get clean/autoclean` включены как безопасная системная очистка.
+- Docker prune включается только через `--docker-prune`, не выполняет `docker volume prune`.
+- Добавлена документация `docs/vps-maintenance.md`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-vps-maintenance-safe-cleanup`.
+- Добавлен release entry `2026-06-13-vps-maintenance-safe-cleanup` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+bash -n scripts/vps-maintenance.sh
+bash scripts/vps-maintenance.sh --dry-run --app-dir /tmp/vpn-platform-maintenance-smoke
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "VpsMaintenanceScriptTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "ReleaseDocumentationGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','backend/tests/VpnPlatform.UnitTests/VpsMaintenanceScriptTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/vps-maintenance.md','docs/github-deployment.md','scripts/vps-maintenance.sh','TEST_RESULTS.md']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- `bash -n scripts/vps-maintenance.sh`: OK.
+- Local maintenance dry-run: OK, команды удаления напечатаны как `[dry-run]`, рабочие данные не удалялись.
+- Targeted VPS maintenance tests: 4/4.
+- Targeted release/docs guard tests: 3/3.
+- Backend full suite: 427/427.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-13-vps-maintenance-safe-cleanup`, версия `0.86.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, login `admin@local.test`, `/api/app-version/latest`, `/api/admin/servers`, `/api/admin/provisioning-runs`; latest release `2026-06-13-vps-maintenance-safe-cleanup`, версия `0.86.0`; серверов `1`, provisioning-запусков `0`.
+- Live VPS cleanup не запускался из этой среды: скрипт подготовлен, но реальная очистка требует явного запуска оператором с `--apply`.
+
 ## Проверка 2026-06-13: аудит GitHub Secrets
 
 Что проверено:
