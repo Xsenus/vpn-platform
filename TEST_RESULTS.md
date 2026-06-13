@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: Playwright E2E public
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P9-TST-003` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлены `frontend/playwright.config.ts` и `frontend/e2e/public.spec.ts`.
+- Добавлены npm-скрипты `e2e` и `e2e:public`.
+- Public E2E проверяет главную, managed FAQ preview, тарифы, web-provider select, public checkout session, переход на `/account`, сохраненную покупку и FAQ search.
+- CI и staging-validation теперь устанавливают Chromium, запускают `npm run e2e:public` и сохраняют HTML-report artifact.
+- Добавлена документация `docs/playwright-public-e2e.md`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-playwright-public-e2e`.
+- Добавлен release entry `2026-06-13-playwright-public-e2e` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+npm run e2e:public --prefix frontend
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+node -e "const fs=require('fs'); const files=['TEST_RESULTS.md','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/playwright-public-e2e.md','frontend/playwright.config.ts','frontend/e2e/public.spec.ts','frontend/package.json','backend/src/VpnPlatform.Api/AppReleases/releases.json']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Public Playwright E2E: 1/1.
+- Frontend unit tests: 64/64.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Backend full suite: 433/433.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-13-playwright-public-e2e`, версия `0.90.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, bootstrap login `smoke-admin@example.test`, `/api/app-version/latest`; latest release `2026-06-13-playwright-public-e2e`, версия `0.90.0`.
+
 ## Проверка 2026-06-13: frontend validation gate
 
 Что проверено:

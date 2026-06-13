@@ -50,12 +50,16 @@ test('frontend package and CI keep the same mandatory commands', () => {
   assert.match(packageJson.scripts.build, /apps\/public-web/)
   assert.match(packageJson.scripts.build, /apps\/cabinet/)
   assert.match(packageJson.scripts.build, /apps\/admin-panel/)
+  assert.match(packageJson.scripts.e2e, /playwright test/)
+  assert.match(packageJson.scripts['e2e:public'], /playwright test --project=public-web/)
 
   assert.match(ciWorkflow, /check-frontend-lockfile\.sh/)
   assert.match(ciWorkflow, /npm ci/)
   assert.match(ciWorkflow, /npm run typecheck/)
   assert.match(ciWorkflow, /npm run build/)
   assert.match(ciWorkflow, /npm run test/)
+  assert.match(ciWorkflow, /playwright install --with-deps chromium/)
+  assert.match(ciWorkflow, /npm run e2e:public/)
   assert.match(ciWorkflow, /npm audit --audit-level=high/)
 })
 
@@ -64,12 +68,11 @@ test('frontend validation documentation and roadmap expose current green count',
   const roadmap = readRepoFile('docs', 'PRODUCT_COMPLETION_ROADMAP.md')
   const testResults = readRepoFile('TEST_RESULTS.md')
   const releases = JSON.parse(readRepoFile('backend', 'src', 'VpnPlatform.Api', 'AppReleases', 'releases.json')) as Array<{ releaseId: string, version: string }>
-  const latestRelease = releases.at(-1)
+  const frontendGateRelease = releases.find((release) => release.releaseId === '2026-06-13-frontend-validation-gate')
 
   assert.match(docs, /64\/64/)
   assert.match(roadmap, /\[x\] `P9-TST-002`/)
   assert.match(roadmap, /64\/64/)
   assert.match(testResults, /2026-06-13-frontend-validation-gate/)
-  assert.equal(latestRelease?.releaseId, '2026-06-13-frontend-validation-gate')
-  assert.equal(latestRelease?.version, '0.89.0')
+  assert.equal(frontendGateRelease?.version, '0.89.0')
 })

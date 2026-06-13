@@ -137,9 +137,25 @@ jobs:
         working-directory: frontend
         run: npm run test
 
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run public Playwright E2E
+        working-directory: frontend
+        run: npm run e2e:public
+
       - name: Audit frontend dependencies for high severity issues
         working-directory: frontend
         run: npm audit --audit-level=high
+
+      - name: Upload public Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-playwright-report
+          path: frontend/playwright-report/public
+          if-no-files-found: ignore
 
       - name: Upload frontend build output
         if: always()

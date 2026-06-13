@@ -11,7 +11,9 @@
     "dev:admin": "npm run dev --workspace apps/admin-panel",
     "build": "npm run build --workspace apps/public-web && npm run build --workspace apps/cabinet && npm run build --workspace apps/admin-panel",
     "typecheck": "npm run typecheck --workspace apps/public-web && npm run typecheck --workspace apps/cabinet && npm run typecheck --workspace apps/admin-panel",
-    "test": "npx --yes tsx@4.19.2 --test tests/**/*.test.ts tests/**/*.test.tsx"
+    "test": "npx --yes tsx@4.19.2 --test tests/**/*.test.ts tests/**/*.test.tsx",
+    "e2e": "playwright test",
+    "e2e:public": "playwright test --project=public-web"
   },
   "optionalDependencies": {
     "@rolldown/binding-linux-x64-gnu": "^1.0.2",
@@ -23,5 +25,8 @@
     "lightningcss-linux-x64-gnu": "^1.32.0",
     "lightningcss-linux-x64-musl": "^1.32.0",
     "lightningcss-win32-x64-msvc": "^1.32.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
   }
 }

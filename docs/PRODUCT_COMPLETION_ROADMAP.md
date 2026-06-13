@@ -572,9 +572,10 @@ git diff --check
   - Что сделано: добавлены отдельные frontend validation entrypoints `scripts/validate-frontend.ps1` и `scripts/validate-frontend.sh`: npm lock/config safety, `npm ci`, typecheck, production build, unit tests и high-severity audit. Документация `docs/frontend-validation-gate.md` фиксирует обязательные команды, текущий счетчик `64/64` и критерий готовности. Frontend guard-тесты проверяют, что локальные gates, `package.json`, CI workflow, roadmap, TEST_RESULTS и release seed не расходятся.
   - Доказательство: `frontend-validation-gate.test.ts`, `npm test` 64/64, `npm run typecheck`, `npm run build`, `npm audit --audit-level=high`, PowerShell syntax parse `scripts/validate-frontend.ps1`, local SQLite HTTP-smoke latest release `2026-06-13-frontend-validation-gate`.
 
-- [ ] `P9-TST-003` Playwright E2E public.
-  - Что сделать: главная, тарифы, FAQ, checkout start.
-  - Доказательство: Playwright report.
+- [x] `P9-TST-003` Playwright E2E public. 2026-06-13.
+  - Что сделать: держать зеленым пользовательский путь главная -> тарифы -> checkout start -> аккаунт -> FAQ.
+  - Что сделано: добавлен Playwright config `frontend/playwright.config.ts`, E2E spec `frontend/e2e/public.spec.ts`, npm-скрипты `e2e` и `e2e:public`, документация `docs/playwright-public-e2e.md`. Тест поднимает public-web на выделенном порту, мокирует публичные API endpoints без live-платежей, проверяет главную, managed FAQ preview, тарифы, web-provider select, создание public checkout session, сохраненную покупку на `/account`, FAQ search и отсутствие console/page errors. CI и staging-validation теперь устанавливают Chromium, запускают `npm run e2e:public` и сохраняют HTML-report.
+  - Доказательство: `npm run e2e:public` 1/1, frontend unit tests 64/64, frontend typecheck/build, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-playwright-public-e2e`.
 
 - [ ] `P9-TST-004` Playwright E2E cabinet.
   - Что сделать: register/login/order/payment status/subscription/access/support.

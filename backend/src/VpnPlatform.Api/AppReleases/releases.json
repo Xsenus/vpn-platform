@@ -2162,5 +2162,32 @@
         "text": "Добавлены frontend guard-тесты, которые не дают убрать npm ci, typecheck, build, unit tests, audit или CI-синхронизацию из обязательной проверки."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-playwright-public-e2e",
+    "version": "0.90.0",
+    "releasedAt": "2026-06-13T13:47:00+07:00",
+    "title": "Добавлен Playwright E2E для публичного сайта",
+    "summary": "Публичный сайт теперь проверяется браузерным E2E: главная, тарифы, FAQ и старт покупки проходят как единый пользовательский сценарий.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `frontend/e2e/public.spec.ts`: тест проверяет главную, managed FAQ preview, тарифы, способы оплаты и создание public checkout session."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `frontend/playwright.config.ts` и npm-скрипты `e2e` / `e2e:public` для локального запуска public-web E2E."
+      },
+      {
+        "type": "improved",
+        "text": "CI и staging-validation устанавливают Chromium, запускают `npm run e2e:public` и сохраняют HTML-report как artifact."
+      },
+      {
+        "type": "important",
+        "text": "E2E мокирует только публичные API endpoints и не ходит во внешние платежные системы, поэтому checkout start безопасен для локальной и CI-проверки."
+      }
+    ]
   }
 ]
