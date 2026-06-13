@@ -35,8 +35,8 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:public --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:cabinet --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:admin --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("451/451", readme, StringComparison.Ordinal);
-        Assert.Contains("64/64", readme, StringComparison.Ordinal);
+        Assert.Contains("454/454", readme, StringComparison.Ordinal);
+        Assert.Contains("65/65", readme, StringComparison.Ordinal);
         Assert.Contains("2 moderate advisory", readme, StringComparison.OrdinalIgnoreCase);
     }
 

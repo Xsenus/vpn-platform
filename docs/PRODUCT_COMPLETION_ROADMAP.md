@@ -608,9 +608,10 @@ git diff --check
   - Что сделано: добавлено `docs/admin-guide.md` с полным операторским runbook по всем вкладкам админки: вход и RBAC, дашборд, пользователи, платежные провайдеры, тарифы, подписки, VPN-доступы, серверы, 3x-ui панели, поддержка, аудит, Telegram-бот, "Что нового", FAQ, контент сайта, сценарии и подготовка VPS. Документ описывает provider-specific поля, write-only секреты, кнопку "Проверить подключение", sandbox/live границы, Telegram Stars как bot-only/fail-closed flow, 3x-ui inbound/client flow и быстрый приемочный чеклист.
   - Доказательство: `AdminGuideDocumentationTests` 3/3, backend full suite 451/451, frontend tests/typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-admin-operator-guide`.
 
-- [ ] `P10-DOC-003` Документация пользователя.
+- [x] `P10-DOC-003` Документация пользователя. 2026-06-13.
   - Что сделать: как купить, оплатить, подключить VPN, продлить, обратиться в поддержку.
-  - Доказательство: public/cabinet help pages.
+  - Что сделано: добавлено `docs/user-guide.md`, публичная страница `/help`, ссылка "Помощь" в навигации публичного сайта и блок "Как пользоваться сервисом" в личном кабинете. Пользовательский путь описывает выбор тарифа, оплату, возврат в кабинет, получение ссылки и QR-кода, подключение через VLESS/VMess/Trojan, продление, Telegram-привязку, поддержку и окно "Что нового".
+  - Доказательство: `UserGuideDocumentationTests` 3/3, frontend `user-help.test.ts`, backend full suite 454/454, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-user-help-pages`.
 
 - [ ] `P10-DOC-004` Документация разработчика.
   - Что сделать: архитектура, доменные сущности, state machines, тесты, добавление провайдера.

@@ -666,8 +666,57 @@
     font-size: 12px;
   }
 
-  .plan-card {
+.plan-card {
+  min-height: auto;
+  padding: 18px;
+}
+}
+
+.help-hero {
+  max-width: 760px;
+}
+
+.help-steps,
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.help-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.help-step-card {
+  min-height: 190px;
+}
+
+.help-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 800;
+}
+
+@media (max-width: 960px) {
+  .help-steps,
+  .help-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .help-steps,
+  .help-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .help-step-card {
     min-height: auto;
-    padding: 18px;
   }
 }

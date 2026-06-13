@@ -574,6 +574,23 @@ export function App() {
         <StatTile label="Открытых обращений" value={openSupportConversations} />
       </div>
 
+      <div id="user-help" className="section">
+        <Card className="cabinet-help-card">
+          <div>
+            <p className="eyebrow">Помощь</p>
+            <h3>Как пользоваться сервисом</h3>
+            <p className="muted">Основной путь: выбрать тариф, оплатить заказ, вернуться в кабинет и забрать ссылку подключения.</p>
+          </div>
+          <ol className="cabinet-help-steps">
+            <li><strong>Оплата.</strong> Выберите доступный способ оплаты и откройте ссылку платежа.</li>
+            <li><strong>VPN-доступ.</strong> Скопируйте ссылку или откройте QR-код в совместимом VPN-клиенте.</li>
+            <li><strong>Продление.</strong> Нажмите "Продлить" у активной подписки и оплатите новый заказ.</li>
+            <li><strong>Поддержка.</strong> Создайте обращение в поддержку, если платеж завис или ссылка не появилась.</li>
+          </ol>
+          <a className="button button-ghost" href={`${publicWebUrl}/help`}>Открыть полную инструкцию</a>
+        </Card>
+      </div>
+
       {token && (
         <div className="section">
           <Card className="cabinet-current-card">

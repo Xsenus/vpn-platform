@@ -197,9 +197,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-13 локально подтверждено:
 
-- backend на .NET 9: `451/451` unit tests;
+- backend на .NET 9: `454/454` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `64/64`;
+- frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
 - frontend audit по high severity: OK, остаются 2 moderate advisory по `react-router`;
 - Playwright E2E: public, cabinet и admin проходят;

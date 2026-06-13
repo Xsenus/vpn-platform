@@ -916,6 +916,60 @@ function AccountPage({
   )
 }
 
+function UserHelpPage() {
+  const steps = [
+    ['1', 'Выберите тариф', 'Откройте страницу тарифов, сравните срок, цену и количество устройств.'],
+    ['2', 'Оплатите заказ', 'Выберите доступный способ оплаты. Если вы еще не вошли, сайт предложит авторизоваться.'],
+    ['3', 'Вернитесь в кабинет', 'После оплаты обновите кабинет: подписка, ссылка подключения и QR-код появятся после подтверждения платежа.'],
+    ['4', 'Подключите устройство', 'Скопируйте ссылку или откройте QR-код в VPN-клиенте с поддержкой VLESS, VMess или Trojan.']
+  ]
+
+  return (
+    <PageShell title="Помощь">
+      <section className="landing-section help-hero">
+        <p className="eyebrow">Помощь пользователю</p>
+        <h2>Как купить и подключить VPN</h2>
+        <p className="muted">Короткий путь от выбора тарифа до готовой ссылки подключения. Все покупки, платежи, подписки и обращения в поддержку сохраняются в личном кабинете.</p>
+        <div className="hero-actions">
+          <Link to="/tariffs" className="button">Выбрать тариф</Link>
+          <Link to="/account" className="button button-ghost">Открыть кабинет</Link>
+        </div>
+      </section>
+
+      <section className="landing-section help-steps" aria-label="Шаги покупки и подключения">
+        {steps.map(([number, title, description]) => (
+          <Card key={number} className="help-step-card">
+            <span className="help-step-number">{number}</span>
+            <h3>{title}</h3>
+            <p>{description}</p>
+          </Card>
+        ))}
+      </section>
+
+      <section className="landing-section help-grid">
+        <Card>
+          <h3>Оплата</h3>
+          <p>Показываются только включенные и готовые web-способы оплаты. Если провайдеров нет, покупка временно недоступна.</p>
+          <p className="muted">После оплаты вернитесь в кабинет и нажмите обновление данных, если статус еще не изменился.</p>
+        </Card>
+        <Card>
+          <h3>Подключение</h3>
+          <p>Скопируйте ссылку подключения или используйте QR-код. Не передавайте ключ другим людям.</p>
+          <p className="muted">Если клиент не принимает ссылку, проверьте, что она скопирована полностью.</p>
+        </Card>
+        <Card>
+          <h3>Продление</h3>
+          <p>В кабинете выберите активную подписку и нажмите "Продлить". После оплаты срок действия будет обновлен.</p>
+        </Card>
+        <Card>
+          <h3>Поддержка</h3>
+          <p>Создайте обращение в кабинете, если платеж завис, ссылка не появилась или VPN-клиент не подключается.</p>
+        </Card>
+      </section>
+    </PageShell>
+  )
+}
+
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [profile, setProfile] = useState<UserProfileDto | null>(null)
@@ -986,6 +1040,7 @@ export function App() {
         <nav aria-label="Основная навигация">
           <NavLink to="/">Главная</NavLink>
           <NavLink to="/tariffs">Тарифы</NavLink>
+          <NavLink to="/help">Помощь</NavLink>
           <NavLink to="/faq">FAQ</NavLink>
           <NavLink to="/account">{navigationLabel}</NavLink>
         </nav>
@@ -1003,6 +1058,7 @@ export function App() {
             />
           )}
         />
+        <Route path="/help" element={<UserHelpPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route
           path="/account"
