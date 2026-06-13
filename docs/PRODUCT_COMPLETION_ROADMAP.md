@@ -582,9 +582,10 @@ git diff --check
   - Что сделано: добавлен Playwright spec `frontend/e2e/cabinet.spec.ts`, общий Vite helper `frontend/scripts/playwright-webservers.mjs`, npm-скрипт `e2e:cabinet`, документация `docs/playwright-cabinet-e2e.md`. Тест мокирует cabinet API без live-платежей и проверяет регистрацию, выход, повторный вход, активную подписку, VPN-ключ, QR-код, историю заказов/платежей/доступов, продление через web-провайдер и поддержку. CI и staging-validation запускают `npm run e2e:cabinet` после public E2E и сохраняют общий HTML-report.
   - Доказательство: `npm run e2e:cabinet` 1/1, `npm run e2e:public` 1/1, frontend unit tests 64/64, frontend typecheck/build, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-playwright-cabinet-e2e`.
 
-- [ ] `P9-TST-005` Playwright E2E admin.
-  - Что сделать: login, payments, tariffs, VPN, panels, scenarios, releases.
-  - Доказательство: Playwright report.
+- [x] `P9-TST-005` Playwright E2E admin. 2026-06-13.
+  - Что сделать: держать зеленым админский путь login/payments/tariffs/VPN/panels/scenarios/releases.
+  - Что сделано: добавлен Playwright spec `frontend/e2e/admin.spec.ts`, admin-panel подключен к общему helper `frontend/scripts/playwright-webservers.mjs`, добавлен npm-скрипт `e2e:admin`, документация `docs/playwright-admin-e2e.md`. Тест мокирует admin API без live-платежей, Telegram, VPS и 3x-ui, проверяет вход администратора, дашборд, оплату, создание тарифа, VPN-доступы, panel test/sync, создание сценария работы и релиза «Что нового». CI и staging-validation запускают `npm run e2e:admin` после public/cabinet E2E и сохраняют общий HTML-report.
+  - Доказательство: `npm run e2e:admin` 1/1, `npm run e2e:public` 1/1, `npm run e2e:cabinet` 1/1, frontend unit tests 64/64, frontend typecheck/build, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-playwright-admin-e2e`.
 
 - [ ] `P9-TST-006` Payment provider contract tests.
   - Что сделать: signature verification, webhook payloads, idempotency для всех провайдеров.

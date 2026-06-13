@@ -149,6 +149,10 @@ jobs:
         working-directory: frontend
         run: npm run e2e:cabinet
 
+      - name: Run admin Playwright E2E
+        working-directory: frontend
+        run: npm run e2e:admin
+
       - name: Audit frontend dependencies for high severity issues
         working-directory: frontend
         run: npm audit --audit-level=high

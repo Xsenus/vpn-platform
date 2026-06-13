@@ -18,10 +18,11 @@ cd frontend
 npm run e2e:cabinet
 ```
 
-Playwright поднимает два Vite-приложения через `frontend/scripts/playwright-webservers.mjs`:
+Playwright поднимает три Vite-приложения через `frontend/scripts/playwright-webservers.mjs`:
 
 - public web: `http://127.0.0.1:5293`;
-- cabinet: `http://127.0.0.1:5294`.
+- cabinet: `http://127.0.0.1:5294`;
+- admin-panel: `http://127.0.0.1:5295`.
 
 Оба приложения получают `VITE_API_BASE_URL=http://127.0.0.1:19080`, но сетевые запросы `/api/**` мокируются внутри теста. Поэтому сценарий безопасен для локального запуска и CI: он не обращается к реальной БД, платежным провайдерам, Telegram или VPN-серверам.
 

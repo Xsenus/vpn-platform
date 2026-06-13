@@ -14,6 +14,11 @@ const servers = [
     name: 'cabinet',
     appDir: 'apps/cabinet',
     port: '5294'
+  },
+  {
+    name: 'admin-panel',
+    appDir: 'apps/admin-panel',
+    port: '5295'
   }
 ]
 

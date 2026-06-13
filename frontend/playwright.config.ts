@@ -37,6 +37,14 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: 'http://127.0.0.1:5294'
       }
+    },
+    {
+      name: 'admin-panel',
+      testMatch: /admin\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://127.0.0.1:5295'
+      }
     }
   ]
 })

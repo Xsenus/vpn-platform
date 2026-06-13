@@ -2216,5 +2216,32 @@
         "text": "Cabinet E2E мокирует `/api/**`, не требует живой БД, Telegram, VPN-серверов или реальных платежных провайдеров и безопасен для регулярного запуска."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-playwright-admin-e2e",
+    "version": "0.92.0",
+    "releasedAt": "2026-06-13T14:20:00+07:00",
+    "title": "Добавлен Playwright E2E для админки",
+    "summary": "Админка теперь проверяется браузерным E2E: вход, дашборд, оплаты, тарифы, VPN-доступы, 3x-ui панели, сценарии и релизы проходят как единый админский сценарий.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `frontend/e2e/admin.spec.ts`: тест проверяет вход администратора, дашборд, оплату, создание тарифа, VPN-доступы, 3x-ui panel test/sync, сценарии и раздел «Что нового»."
+      },
+      {
+        "type": "improved",
+        "text": "`frontend/scripts/playwright-webservers.mjs` теперь поднимает public-web, cabinet и admin-panel на стабильных портах для локального и CI-запуска."
+      },
+      {
+        "type": "improved",
+        "text": "CI и staging-validation запускают `npm run e2e:admin` вместе с public/cabinet E2E и сохраняют общий HTML-report из `frontend/playwright-report/e2e`."
+      },
+      {
+        "type": "important",
+        "text": "Admin E2E мокирует admin API, ловит HTTP-ответы 400+ и console/page errors, поэтому сценарий безопасен без live-платежей, Telegram, VPS и 3x-ui."
+      }
+    ]
   }
 ]
