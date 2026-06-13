@@ -2,6 +2,48 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: fresh local setup
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P11-ACC-001` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `scripts/fresh-local-smoke.ps1` для чистого локального запуска API на SQLite.
+- Добавлена инструкция `docs/fresh-local-smoke.md` и ссылка в `docs/README.md`.
+- Исправлен SQLite-баг `/api/me/orders`: сортировка `DateTimeOffset` перенесена после `ToListAsync`.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/FreshLocalSetupSmokeTests.cs`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-fresh-local-smoke`.
+- Добавлен release entry `2026-06-13-fresh-local-smoke` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "FreshLocalSetupSmokeTests|ReadmeDocumentationTests|ReleaseDocumentationGuardTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); const latest=[...data].sort((a,b)=>new Date(b.releasedAt)-new Date(a.releasedAt))[0]; if (latest.releaseId!=='2026-06-13-fresh-local-smoke'||latest.version!=='0.99.0') throw new Error('unexpected latest'); console.log('latest ok', latest.releaseId, latest.version);"
+git diff --check
+```
+
+Итог:
+
+- Fresh local smoke tests: 1/1.
+- README/release/encoding documentation guard: OK.
+- Fresh local smoke script: OK; `tariffs=3`, `providers=8`, sandbox order/payment/subscription/access созданы.
+- Backend full suite: 459/459.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-13-fresh-local-smoke`, версия `0.99.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-13: защита кодировки документации
 
 Что проверено:

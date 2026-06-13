@@ -198,7 +198,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-13 локально подтверждено:
 
-- backend на .NET 9: `458/458` unit tests;
+- backend на .NET 9: `459/459` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;

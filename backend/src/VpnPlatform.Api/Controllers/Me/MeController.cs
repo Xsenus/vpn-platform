@@ -106,10 +106,9 @@ public class MeController : ControllerBase
             .Include(x => x.Tariff)
             .Include(x => x.PaymentAttempts)
             .Where(x => x.UserId == ResolveUserId())
-            .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return Ok(orders.Select(x => new
+        return Ok(orders.OrderByDescending(x => x.CreatedAt).Select(x => new
         {
             x.Id,
             x.UserId,

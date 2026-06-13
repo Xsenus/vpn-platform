@@ -2401,5 +2401,28 @@
         "text": "Счетчик backend suite обновлен до `458/458`, а доказательства проверки кодировки зафиксированы в roadmap и TEST_RESULTS."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-fresh-local-smoke",
+    "version": "0.99.0",
+    "releasedAt": "2026-06-13T15:59:00+07:00",
+    "title": "Добавлен fresh local smoke",
+    "summary": "Локальная приемка теперь воспроизводимо поднимает API на чистой SQLite-БД и проходит sandbox-покупку до активной подписки и VPN-доступа без Docker, внешних платежей и реального 3x-ui.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/fresh-local-smoke.ps1`: health, seed, публичные тарифы, sandbox payment providers, checkout session, регистрация, claim заказа, YooKassa sandbox payment init и local webhook."
+      },
+      {
+        "type": "fixed",
+        "text": "Исправлен `/api/me/orders` для SQLite: сортировка по `DateTimeOffset` выполняется после materialize, поэтому кабинетные заказы больше не падают на локальной БД."
+      },
+      {
+        "type": "improved",
+        "text": "Добавлена инструкция `docs/fresh-local-smoke.md` и тест `FreshLocalSetupSmokeTests`, который закрепляет обязательный сценарий fresh local setup."
+      }
+    ]
   }
 ]

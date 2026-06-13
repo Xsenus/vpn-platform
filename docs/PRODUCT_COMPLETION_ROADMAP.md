@@ -626,9 +626,10 @@ git diff --check
 
 ## P11. Финальная приемка production-ready
 
-- [ ] `P11-ACC-001` Fresh local setup.
+- [x] `P11-ACC-001` Fresh local setup. 2026-06-13.
   - Что сделать: с нуля поднять backend, frontend, локальную БД, seed, пройти sandbox purchase.
-  - Доказательство: fresh setup report.
+  - Что сделано: добавлен `scripts/fresh-local-smoke.ps1` и инструкция `docs/fresh-local-smoke.md`. Smoke поднимает API на чистой SQLite-БД, включает local seed, проверяет health, публичные тарифы и payment providers, создает checkout session, регистрирует пользователя, claim-ит заказ, инициализирует YooKassa sandbox payment, отправляет local sandbox webhook `payment.succeeded`, проверяет историю заказов/платежей, активную подписку и VPN-доступ с `vless://` URI. Во время проверки найден и исправлен SQLite-баг `/api/me/orders`: сортировка `DateTimeOffset` перенесена после `ToListAsync`.
+  - Доказательство: `FreshLocalSetupSmokeTests` 1/1, `powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101`, backend full suite 459/459, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-fresh-local-smoke`.
 
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.

@@ -13,6 +13,7 @@
 ## Запуск и проверка
 
 - [Локальная проверка](local-validation.md)
+- [Fresh local smoke](fresh-local-smoke.md)
 - [Backend validation gate](backend-validation-gate.md)
 - [Frontend validation gate](frontend-validation-gate.md)
 - [Build validation gate](build-validation-gate.md)
