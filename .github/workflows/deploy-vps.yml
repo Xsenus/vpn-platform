@@ -106,6 +106,10 @@ jobs:
       REQUESTED_DEPLOY_MODE: ${{ github.event.inputs.deploy_mode || secrets.VPS_DEPLOY_MODE || 'auto' }}
       VITE_API_BASE_URL_SECRET: ${{ secrets.VITE_API_BASE_URL }}
       VITE_PUBLIC_WEB_URL_SECRET: ${{ secrets.VITE_PUBLIC_WEB_URL }}
+      POST_DEPLOY_API_URL_SECRET: ${{ secrets.POST_DEPLOY_API_URL }}
+      POST_DEPLOY_PUBLIC_WEB_URL_SECRET: ${{ secrets.POST_DEPLOY_PUBLIC_WEB_URL }}
+      POST_DEPLOY_CABINET_WEB_URL_SECRET: ${{ secrets.POST_DEPLOY_CABINET_WEB_URL }}
+      POST_DEPLOY_ADMIN_WEB_URL_SECRET: ${{ secrets.POST_DEPLOY_ADMIN_WEB_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -399,3 +403,28 @@ jobs:
           find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d -name '[0-9a-f]*' | sort | head -n -5 | xargs -r rm -rf
           systemctl --no-pager --full status vpn-platform-api
           REMOTE
+
+      - name: Post-deploy smoke
+        env:
+          DEPLOY_MODE: ${{ steps.deploy_mode.outputs.mode }}
+        run: |
+          set -euo pipefail
+
+          api_url="${POST_DEPLOY_API_URL_SECRET:-http://$VPS_HOST:8080}"
+          if [ -n "${POST_DEPLOY_PUBLIC_WEB_URL_SECRET:-}" ]; then
+            public_web_url="$POST_DEPLOY_PUBLIC_WEB_URL_SECRET"
+          elif [ "$DEPLOY_MODE" = "docker" ]; then
+            public_web_url="http://$VPS_HOST:5173"
+          else
+            public_web_url="${VITE_PUBLIC_WEB_URL_SECRET:-http://$VPS_HOST}"
+          fi
+
+          cabinet_web_url="${POST_DEPLOY_CABINET_WEB_URL_SECRET:-http://$VPS_HOST:5174}"
+          admin_web_url="${POST_DEPLOY_ADMIN_WEB_URL_SECRET:-http://$VPS_HOST:5175}"
+
+          API_BASE_URL="$api_url" \
+          PUBLIC_WEB_URL="$public_web_url" \
+          CABINET_WEB_URL="$cabinet_web_url" \
+          ADMIN_WEB_URL="$admin_web_url" \
+          REQUIRE_PUBLIC_PAYMENT_PROVIDERS=true \
+          scripts/post-deploy-smoke.sh

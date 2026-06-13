@@ -553,9 +553,10 @@ git diff --check
   - Что сделано: добавлен `scripts/vps-maintenance.sh` с dry-run по умолчанию и явным `--apply`, отчетом `df -h/free -h/du -sh` до и после, защитой `APP_DIR/shared`, `APP_DIR/current`, текущего release и путей вне `APP_DIR`. Скрипт чистит только старые release-директории с именем git sha, старые release archives, app logs, systemd journal и apt cache; Docker prune включается только отдельным `--docker-prune` и не трогает volumes. Добавлена инструкция `docs/vps-maintenance.md`.
   - Доказательство: `VpsMaintenanceScriptTests`, `bash -n scripts/vps-maintenance.sh`, local dry-run на временном APP_DIR, backend full suite, local SQLite HTTP-smoke latest release `2026-06-13-vps-maintenance-safe-cleanup`; live VPS cleanup не запускался без отдельной команды оператора.
 
-- [ ] `P8-CI-005` Post-deploy smoke.
+- [x] `P8-CI-005` Post-deploy smoke. 2026-06-13.
   - Что сделать: после deploy автоматически проверять API health, public, cabinet, admin, public providers.
-  - Доказательство: Actions step log.
+  - Что сделано: добавлен `scripts/post-deploy-smoke.sh`, который проверяет `/health/live`, `/health/ready`, `/metrics`, `/api/public/payments/providers`, public web, cabinet web и admin web. Workflow `.github/workflows/deploy-vps.yml` запускает шаг `Post-deploy smoke` после docker или systemd deploy, вычисляет URL по режиму деплоя и optional secrets `POST_DEPLOY_*`, требует непустой список публичных платежных провайдеров для production и пишет результат в `$GITHUB_STEP_SUMMARY`.
+  - Доказательство: `PostDeploySmokeTests`, `GitHubSecretsAuditTests`, локальный post-deploy smoke на чистой SQLite API и тестовом HTML-сервере, backend full suite, local SQLite HTTP-smoke latest release `2026-06-13-post-deploy-smoke`; Actions log должен содержать `[ok] API live health`, `[ok] Public payment providers`, `[ok] Public web`, `[ok] Cabinet web`, `[ok] Admin web`.
 
 ## P9. Тестирование
 

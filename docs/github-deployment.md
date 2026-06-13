@@ -31,6 +31,8 @@ Workflow `deploy-vps` поддерживает три режима:
 
 Безопасная очистка диска/RAM на слабом VPS описана в `docs/vps-maintenance.md`.
 
+Автоматическая smoke-проверка после deploy описана в `docs/post-deploy-smoke.md`.
+
 ## GitHub Secrets
 
 В GitHub открой `Settings -> Secrets and variables -> Actions -> New repository secret` и добавь:

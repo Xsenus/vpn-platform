@@ -2081,5 +2081,32 @@
         "text": "Docker prune включается только через `--docker-prune` и никогда не выполняет `docker volume prune`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-post-deploy-smoke",
+    "version": "0.87.0",
+    "releasedAt": "2026-06-13T12:51:00+07:00",
+    "title": "Добавлен post-deploy smoke",
+    "summary": "После VPS deploy GitHub Actions автоматически проверяет API, публичные платежи и все frontend-приложения.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/post-deploy-smoke.sh` для проверки API health, readiness, metrics, public payment providers, public web, cabinet и admin."
+      },
+      {
+        "type": "improved",
+        "text": "Workflow `deploy-vps` запускает post-deploy smoke после docker или systemd deploy и пишет результат в `$GITHUB_STEP_SUMMARY`."
+      },
+      {
+        "type": "important",
+        "text": "Production smoke требует непустой список публичных платежных провайдеров, чтобы deploy не выглядел успешным без рабочего способа оплаты."
+      },
+      {
+        "type": "new",
+        "text": "Добавлены optional secrets `POST_DEPLOY_API_URL`, `POST_DEPLOY_PUBLIC_WEB_URL`, `POST_DEPLOY_CABINET_WEB_URL`, `POST_DEPLOY_ADMIN_WEB_URL` для нестандартных доменов."
+      }
+    ]
   }
 ]

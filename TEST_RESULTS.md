@@ -2,6 +2,46 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: post-deploy smoke
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P8-CI-005` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `scripts/post-deploy-smoke.sh` с проверками API live/ready, `/metrics`, `/api/public/payments/providers`, public web, cabinet web и admin web.
+- `.github/workflows/deploy-vps.yml` запускает шаг `Post-deploy smoke` после docker или systemd deploy.
+- Workflow вычисляет URL по режиму: docker public `:5173`, systemd public `VITE_PUBLIC_WEB_URL` или `http://VPS_HOST`, cabinet `:5174`, admin `:5175`, API `:8080`.
+- Добавлены optional secrets `POST_DEPLOY_API_URL`, `POST_DEPLOY_PUBLIC_WEB_URL`, `POST_DEPLOY_CABINET_WEB_URL`, `POST_DEPLOY_ADMIN_WEB_URL`.
+- `.github/github-secrets.audit.json` и `docs/github-secrets-audit.md` обновлены под новые optional smoke secrets.
+- Добавлена документация `docs/post-deploy-smoke.md`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-post-deploy-smoke`.
+- Добавлен release entry `2026-06-13-post-deploy-smoke` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+& 'C:\Program Files\Git\bin\bash.exe' -n scripts/post-deploy-smoke.sh
+powershell -ExecutionPolicy Bypass -File scripts/audit-github-secrets.ps1 -DryRun
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "PostDeploySmokeTests|GitHubSecretsAuditTests|ReleaseDocumentationGuardTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj
+node -e "const fs=require('fs'); const files=['.github/workflows/deploy-vps.yml','.github/github-secrets.audit.json','backend/src/VpnPlatform.Api/AppReleases/releases.json','backend/tests/VpnPlatform.UnitTests/PostDeploySmokeTests.cs','backend/tests/VpnPlatform.UnitTests/GitHubSecretsAuditTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/post-deploy-smoke.md','docs/github-deployment.md','docs/github-secrets-audit.md','scripts/post-deploy-smoke.sh','TEST_RESULTS.md']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- `bash -n scripts/post-deploy-smoke.sh`: OK.
+- GitHub secrets audit dry-run: OK, optional `POST_DEPLOY_*` names совпадают с workflow references.
+- Local post-deploy smoke на чистой SQLite API и тестовом HTML-сервере: OK, проверены `/health/live`, `/health/ready`, `/metrics`, `/api/public/payments/providers`, public/cabinet/admin HTML.
+- Targeted post-deploy/secrets/release guard tests: 9/9.
+- Backend full suite: 430/430.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-13-post-deploy-smoke`, версия `0.87.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: latest release `2026-06-13-post-deploy-smoke`, версия `0.87.0`; серверов `1`, provisioning-запусков `0`.
+- Live VPS post-deploy smoke будет выполнен GitHub Actions после следующего deploy; из локальной среды production deploy не запускался.
+
 ## Проверка 2026-06-13: безопасная очистка VPS
 
 Что проверено:

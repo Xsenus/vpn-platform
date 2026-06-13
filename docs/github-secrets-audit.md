@@ -20,6 +20,10 @@ Optional secrets:
 - `VPS_DEPLOY_MODE` - `auto`, `docker` или `systemd`; если не задан, используется `auto`.
 - `VITE_API_BASE_URL` - URL API для systemd-сборки frontend.
 - `VITE_PUBLIC_WEB_URL` - URL публичного сайта для systemd-сборки frontend.
+- `POST_DEPLOY_API_URL` - внешний API URL для post-deploy smoke, если отличается от `http://<VPS_HOST>:8080`.
+- `POST_DEPLOY_PUBLIC_WEB_URL` - внешний URL публичного сайта для post-deploy smoke.
+- `POST_DEPLOY_CABINET_WEB_URL` - внешний URL кабинета для post-deploy smoke.
+- `POST_DEPLOY_ADMIN_WEB_URL` - внешний URL админки для post-deploy smoke.
 
 Registry secrets сейчас не требуются: workflows собирают образы локально и не пушат их в container registry.
 
