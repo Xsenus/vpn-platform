@@ -613,9 +613,10 @@ git diff --check
   - Что сделано: добавлено `docs/user-guide.md`, публичная страница `/help`, ссылка "Помощь" в навигации публичного сайта и блок "Как пользоваться сервисом" в личном кабинете. Пользовательский путь описывает выбор тарифа, оплату, возврат в кабинет, получение ссылки и QR-кода, подключение через VLESS/VMess/Trojan, продление, Telegram-привязку, поддержку и окно "Что нового".
   - Доказательство: `UserGuideDocumentationTests` 3/3, frontend `user-help.test.ts`, backend full suite 454/454, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-user-help-pages`.
 
-- [ ] `P10-DOC-004` Документация разработчика.
+- [x] `P10-DOC-004` Документация разработчика. 2026-06-13.
   - Что сделать: архитектура, доменные сущности, state machines, тесты, добавление провайдера.
-  - Доказательство: docs index.
+  - Что сделано: добавлены `docs/developer-guide.md` и `docs/README.md`. Руководство разработчика описывает слои монорепозитория, доменные сущности, state machines, платежный поток, добавление `IPaymentProvider`/webhook verifier/status mapper, VPN/3x-ui flow, provisioning gates, frontend-правила, validation gates, PostgreSQL/SQLite, секреты и порядок обновления документации/"Что нового". Индекс документации связывает README, roadmap, руководства администратора/пользователя/разработчика, платежи, provisioning, безопасность и E2E.
+  - Доказательство: `DeveloperGuideDocumentationTests` 3/3, backend full suite 457/457, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-developer-guide`.
 
 - [ ] `P10-DOC-005` Убрать mojibake в старых документах.
   - Проблема: часть документов в консоли отображается как `Рџ...`, нужно проверить реальные файлы и перекодировать поврежденные.

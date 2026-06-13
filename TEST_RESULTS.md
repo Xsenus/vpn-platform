@@ -2,6 +2,46 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: руководство разработчика
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P10-DOC-004` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `docs/developer-guide.md` с описанием архитектуры, доменных сущностей, state machines, платежей, VPN, provisioning, frontend, БД, безопасности и validation gates.
+- Добавлен `docs/README.md` как индекс документации проекта.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/DeveloperGuideDocumentationTests.cs`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-developer-guide`.
+- Добавлен release entry `2026-06-13-developer-guide` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "DeveloperGuideDocumentationTests|ReadmeDocumentationTests|ReleaseDocumentationGuardTests"
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+node -e "const fs=require('fs'); const files=['README.md','TEST_RESULTS.md','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/developer-guide.md','docs/README.md','backend/tests/VpnPlatform.UnitTests/DeveloperGuideDocumentationTests.cs','backend/tests/VpnPlatform.UnitTests/ReadmeDocumentationTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','backend/src/VpnPlatform.Api/AppReleases/releases.json']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const strict=['README.md','docs/developer-guide.md','docs/README.md','backend/tests/VpnPlatform.UnitTests/DeveloperGuideDocumentationTests.cs']; for (const file of strict) { const text=fs.readFileSync(file,'utf8'); for (const marker of ['РЎ','Рџ','Рґ','СЃ']) if (text.includes(marker)) throw new Error('mojibake marker '+marker+' in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Developer guide documentation tests: 3/3.
+- README/release documentation guard: OK.
+- Backend full suite: 457/457.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-13-developer-guide`, версия `0.97.0`.
+- Encoding guard: OK, `U+FFFD` не найден в измененных файлах; developer guide, docs index и новый guard-тест дополнительно проверены на mojibake-маркеры.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, bootstrap login `smoke-admin@example.test`, `/api/app-version/latest`; latest release `2026-06-13-developer-guide`, версия `0.97.0`.
+
 ## Проверка 2026-06-13: пользовательская помощь
 
 Что проверено:

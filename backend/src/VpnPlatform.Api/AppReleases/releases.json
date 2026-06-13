@@ -2351,5 +2351,32 @@
         "text": "Добавлены `UserGuideDocumentationTests` и frontend `user-help.test.ts`, чтобы публичная помощь, кабинет и документация не расходились."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-developer-guide",
+    "version": "0.97.0",
+    "releasedAt": "2026-06-13T15:30:00+07:00",
+    "title": "Добавлено руководство разработчика",
+    "summary": "Разработчики получили единый вход в техническую документацию: архитектура, доменные сущности, state machines, платежи, VPN, provisioning, validation gates и правила обновления документации теперь собраны в одном месте.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `docs/developer-guide.md` с описанием слоев backend/frontend, ключевых доменных сущностей, state machines и безопасного порядка изменения бизнес-логики."
+      },
+      {
+        "type": "improved",
+        "text": "Руководство фиксирует порядок добавления платежного провайдера: enum, configuration rules, `IPaymentProvider`, webhook verifier, status mapper, DI, админская форма, sandbox seed и contract tests."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `docs/README.md` как индекс документации по запуску, платежам, VPN, Telegram, provisioning, безопасности, UX и Playwright E2E."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлен `DeveloperGuideDocumentationTests`, который защищает developer guide и docs index от устаревания ключевых тем и mojibake."
+      }
+    ]
   }
 ]
