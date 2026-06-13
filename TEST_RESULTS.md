@@ -2,6 +2,47 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: payment provider contract tests
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P9-TST-006` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/PaymentProviderContractTests.cs`.
+- Contract gate проверяет реальные DI-регистрации Application/Infrastructure для всех `PaymentProvider`.
+- Проверяется один `IPaymentProvider` на каждый enum-провайдер, webhook verifier/status mapper для всех web-провайдеров и bot-only/fail-closed контракт Telegram Stars.
+- Local sandbox checkout для YooMoney, YooKassa, RoboKassa, CloudPayments, TBank, Prodamus, Stripe и PayPal проходит без внешних API и без реальных денег.
+- Добавлена документация `docs/payment-provider-contract-tests.md`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-payment-provider-contract-tests`.
+- Добавлен release entry `2026-06-13-payment-provider-contract-tests` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "PaymentProviderContractTests"
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+node -e "const fs=require('fs'); const files=['TEST_RESULTS.md','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/payment-provider-contract-tests.md','backend/tests/VpnPlatform.UnitTests/PaymentProviderContractTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','backend/src/VpnPlatform.Api/AppReleases/releases.json']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- Payment provider contract tests: 12/12.
+- Backend full suite: 445/445.
+- API build: OK.
+- Frontend unit tests: 64/64.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-13-payment-provider-contract-tests`, версия `0.93.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, bootstrap login `smoke-admin@example.test`, `/api/app-version/latest`; latest release `2026-06-13-payment-provider-contract-tests`, версия `0.93.0`.
+
 ## Проверка 2026-06-13: Playwright E2E admin
 
 Что проверено:

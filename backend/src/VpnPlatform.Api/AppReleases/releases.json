@@ -2243,5 +2243,32 @@
         "text": "Admin E2E мокирует admin API, ловит HTTP-ответы 400+ и console/page errors, поэтому сценарий безопасен без live-платежей, Telegram, VPS и 3x-ui."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-payment-provider-contract-tests",
+    "version": "0.93.0",
+    "releasedAt": "2026-06-13T14:52:00+07:00",
+    "title": "Добавлены контрактные тесты платежных провайдеров",
+    "summary": "Платежная подсистема получила единый backend gate: CI теперь проверяет регистрацию всех провайдеров, sandbox-создание платежей без сетевых вызовов, webhook/status contracts и отдельный bot-only статус Telegram Stars.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `PaymentProviderContractTests`: тест поднимает реальные Application/Infrastructure DI-регистрации и проверяет, что каждый `PaymentProvider` имеет ровно одну реализацию."
+      },
+      {
+        "type": "improved",
+        "text": "Для YooMoney, YooKassa, RoboKassa, CloudPayments, TBank, Prodamus, Stripe и PayPal проверяется networkless local sandbox checkout без реальных денег и внешних API."
+      },
+      {
+        "type": "important",
+        "text": "Telegram Stars зафиксирован как отдельный bot-only/fail-closed контракт до полноценного Telegram invoice flow, чтобы он не попадал в web checkout как обычный провайдер."
+      },
+      {
+        "type": "fixed",
+        "text": "Capability rules теперь дополнительно проверяются на полный набор ключей и читаемые русские labels без признаков mojibake."
+      }
+    ]
   }
 ]

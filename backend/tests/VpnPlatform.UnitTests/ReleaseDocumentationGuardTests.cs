@@ -21,7 +21,8 @@ public class ReleaseDocumentationGuardTests
         new("P9-TST-002", "2026-06-13-frontend-validation-gate"),
         new("P9-TST-003", "2026-06-13-playwright-public-e2e"),
         new("P9-TST-004", "2026-06-13-playwright-cabinet-e2e"),
-        new("P9-TST-005", "2026-06-13-playwright-admin-e2e")
+        new("P9-TST-005", "2026-06-13-playwright-admin-e2e"),
+        new("P9-TST-006", "2026-06-13-payment-provider-contract-tests")
     ];
 
     [Fact]

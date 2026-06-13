@@ -587,9 +587,10 @@ git diff --check
   - Что сделано: добавлен Playwright spec `frontend/e2e/admin.spec.ts`, admin-panel подключен к общему helper `frontend/scripts/playwright-webservers.mjs`, добавлен npm-скрипт `e2e:admin`, документация `docs/playwright-admin-e2e.md`. Тест мокирует admin API без live-платежей, Telegram, VPS и 3x-ui, проверяет вход администратора, дашборд, оплату, создание тарифа, VPN-доступы, panel test/sync, создание сценария работы и релиза «Что нового». CI и staging-validation запускают `npm run e2e:admin` после public/cabinet E2E и сохраняют общий HTML-report.
   - Доказательство: `npm run e2e:admin` 1/1, `npm run e2e:public` 1/1, `npm run e2e:cabinet` 1/1, frontend unit tests 64/64, frontend typecheck/build, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-playwright-admin-e2e`.
 
-- [ ] `P9-TST-006` Payment provider contract tests.
-  - Что сделать: signature verification, webhook payloads, idempotency для всех провайдеров.
-  - Доказательство: backend test names/results.
+- [x] `P9-TST-006` Payment provider contract tests. 2026-06-13.
+  - Что сделать: signature verification, webhook payloads, idempotency и единый контракт регистрации для всех провайдеров.
+  - Что сделано: добавлен `PaymentProviderContractTests`, который поднимает реальные Application/Infrastructure DI-регистрации, проверяет один `IPaymentProvider` на каждый `PaymentProvider`, фиксирует webhook verifier/status mapper для всех web-провайдеров, проверяет networkless local sandbox create для YooMoney, YooKassa, RoboKassa, CloudPayments, TBank, Prodamus, Stripe и PayPal, а также bot-only/fail-closed контракт Telegram Stars. Capability rules проверяются на полный набор ключей и читаемые labels без mojibake.
+  - Доказательство: `PaymentProviderContractTests` 12/12, backend full suite 445/445, local SQLite HTTP-smoke latest release `2026-06-13-payment-provider-contract-tests`.
 
 - [ ] `P9-TST-007` Real staging smoke checklist.
   - Что сделать: вручную или полуавтоматически пройти покупку и выдачу VPN на staging.
