@@ -2,6 +2,46 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: frontend validation gate
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P9-TST-002` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Текущий обязательный frontend unit suite обновлен до `64/64`.
+- Добавлены `scripts/validate-frontend.ps1` и `scripts/validate-frontend.sh` для Windows/Linux: npm lock/config safety, `npm ci`, typecheck, production build, unit tests и high-severity audit.
+- Добавлена документация `docs/frontend-validation-gate.md` с критериями готовности и локальными командами.
+- Добавлен frontend guard-test `frontend-validation-gate.test.ts`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-frontend-validation-gate`.
+- Добавлен release entry `2026-06-13-frontend-validation-gate` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+[System.Management.Automation.PSParser]::Tokenize((Get-Content scripts/validate-frontend.ps1 -Raw), [ref]$null) | Out-Null
+powershell -ExecutionPolicy Bypass -File scripts/validate-frontend.ps1
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "ReleaseDocumentationGuardTests"
+node -e "const fs=require('fs'); const files=['TEST_RESULTS.md','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/frontend-validation-gate.md','scripts/validate-frontend.ps1','scripts/validate-frontend.sh','frontend/tests/frontend-validation-gate.test.ts','backend/src/VpnPlatform.Api/AppReleases/releases.json']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- PowerShell syntax parse `scripts/validate-frontend.ps1`: OK.
+- Frontend validation gate: OK.
+- Frontend unit tests: 64/64.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK, есть только moderate advisory по `react-router`.
+- Release documentation guard: OK.
+- JSON релизов валиден: latest seed `2026-06-13-frontend-validation-gate`, версия `0.89.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, bootstrap login `smoke-admin@example.test`, `/api/app-version/latest`; latest release `2026-06-13-frontend-validation-gate`, версия `0.89.0`.
+
 ## Проверка 2026-06-13: backend validation gate
 
 Что проверено:

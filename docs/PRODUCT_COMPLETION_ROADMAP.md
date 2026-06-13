@@ -566,10 +566,11 @@ git diff --check
   - Что сделано: добавлен Windows PowerShell entrypoint `scripts/validate-backend.ps1`, который повторяет обязательный backend gate: validation safety, secret scan, restore, build, full backend tests, dotnet tools, EF migrations list и EF model drift. Документация `docs/backend-validation-gate.md` фиксирует текущий зеленый счетчик `433/433`, safe defaults и обязательные команды для PR/roadmap задач. Guard-тесты проверяют, что bash и PowerShell gates не теряют full test suite, EF checks, secret scan и безопасные env defaults.
   - Доказательство: `BackendValidationGateTests`, `SecretScanTests.Validation_Entry_Points_Should_Run_Secret_Scan`, PowerShell syntax parse `scripts/validate-backend.ps1`, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-backend-validation-gate`.
 
-- [ ] `P9-TST-002` Frontend unit tests.
-  - Текущее состояние: проходит `49/49`.
-  - Что сделать: добавить тесты для новых UI-сценариев.
-  - Доказательство: npm test output.
+- [x] `P9-TST-002` Frontend unit tests. 2026-06-13.
+  - Текущее состояние: проходит `64/64`.
+  - Что сделать: держать зеленым после каждого UI/API-client изменения.
+  - Что сделано: добавлены отдельные frontend validation entrypoints `scripts/validate-frontend.ps1` и `scripts/validate-frontend.sh`: npm lock/config safety, `npm ci`, typecheck, production build, unit tests и high-severity audit. Документация `docs/frontend-validation-gate.md` фиксирует обязательные команды, текущий счетчик `64/64` и критерий готовности. Frontend guard-тесты проверяют, что локальные gates, `package.json`, CI workflow, roadmap, TEST_RESULTS и release seed не расходятся.
+  - Доказательство: `frontend-validation-gate.test.ts`, `npm test` 64/64, `npm run typecheck`, `npm run build`, `npm audit --audit-level=high`, PowerShell syntax parse `scripts/validate-frontend.ps1`, local SQLite HTTP-smoke latest release `2026-06-13-frontend-validation-gate`.
 
 - [ ] `P9-TST-003` Playwright E2E public.
   - Что сделать: главная, тарифы, FAQ, checkout start.

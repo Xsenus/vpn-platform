@@ -2135,5 +2135,32 @@
         "text": "Добавлены guard-тесты, которые не дают убрать secret scan, full test command, EF migrations list или EF drift из backend gate."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-frontend-validation-gate",
+    "version": "0.89.0",
+    "releasedAt": "2026-06-13T13:24:00+07:00",
+    "title": "Закреплен обязательный frontend validation gate",
+    "summary": "Frontend unit suite теперь имеет единый Windows/Linux запуск, документацию и guard-тесты против случайного ослабления проверок.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены `scripts/validate-frontend.ps1` и `scripts/validate-frontend.sh` для проверки npm lock/config, чистой установки, typecheck, production build, unit tests и npm audit."
+      },
+      {
+        "type": "improved",
+        "text": "Документация `docs/frontend-validation-gate.md` фиксирует обязательный frontend gate и текущий зеленый счетчик `64/64`."
+      },
+      {
+        "type": "important",
+        "text": "Frontend gate покрывает public web, личный кабинет, админку, общий API-клиент и UI-компоненты одним воспроизводимым запуском."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены frontend guard-тесты, которые не дают убрать npm ci, typecheck, build, unit tests, audit или CI-синхронизацию из обязательной проверки."
+      }
+    ]
   }
 ]
