@@ -618,10 +618,11 @@ git diff --check
   - Что сделано: добавлены `docs/developer-guide.md` и `docs/README.md`. Руководство разработчика описывает слои монорепозитория, доменные сущности, state machines, платежный поток, добавление `IPaymentProvider`/webhook verifier/status mapper, VPN/3x-ui flow, provisioning gates, frontend-правила, validation gates, PostgreSQL/SQLite, секреты и порядок обновления документации/"Что нового". Индекс документации связывает README, roadmap, руководства администратора/пользователя/разработчика, платежи, provisioning, безопасность и E2E.
   - Доказательство: `DeveloperGuideDocumentationTests` 3/3, backend full suite 457/457, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-developer-guide`.
 
-- [ ] `P10-DOC-005` Убрать mojibake в старых документах.
-  - Проблема: часть документов в консоли отображается как `Рџ...`, нужно проверить реальные файлы и перекодировать поврежденные.
+- [x] `P10-DOC-005` Убрать mojibake в старых документах. 2026-06-13.
+  - Проблема: часть документов в консоли отображалась как типовые последовательности UTF-8/CP1251 mojibake, нужно было проверить реальные файлы и перекодировать поврежденные.
   - Что сделать: проверить encoding всех `.md`, исправить поврежденные тексты.
-  - Доказательство: script/report + нормальное отображение русского текста.
+  - Что сделано: добавлен `DocumentationEncodingTests`, который сканирует `docs/**/*.md`, `README.md` и `TEST_RESULTS.md` на replacement character и типовые mojibake-маркеры без хранения этих маркеров в markdown. В roadmap убран последний реальный маркер битой строки, а проверка кодировки вынесена в обязательный backend suite.
+  - Доказательство: `DocumentationEncodingTests` 1/1, backend full suite 458/458, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-docs-encoding-guard`.
 
 ## P11. Финальная приемка production-ready
 

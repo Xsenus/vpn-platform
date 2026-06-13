@@ -26,7 +26,8 @@ public class ReleaseDocumentationGuardTests
         new("P10-DOC-001", "2026-06-13-readme-russian-local-runbook"),
         new("P10-DOC-002", "2026-06-13-admin-operator-guide"),
         new("P10-DOC-003", "2026-06-13-user-help-pages"),
-        new("P10-DOC-004", "2026-06-13-developer-guide")
+        new("P10-DOC-004", "2026-06-13-developer-guide"),
+        new("P10-DOC-005", "2026-06-13-docs-encoding-guard")
     ];
 
     [Fact]

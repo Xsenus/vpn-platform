@@ -2378,5 +2378,28 @@
         "text": "Добавлен `DeveloperGuideDocumentationTests`, который защищает developer guide и docs index от устаревания ключевых тем и mojibake."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-docs-encoding-guard",
+    "version": "0.98.0",
+    "releasedAt": "2026-06-13T15:45:00+07:00",
+    "title": "Добавлена защита кодировки документации",
+    "summary": "Русская документация теперь проверяется автоматическим guard-тестом: markdown-файлы не должны содержать replacement character и типовые следы mojibake после ошибочного чтения UTF-8 как CP1251.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Из roadmap убран последний реальный маркер битой кодировки, из-за которого проверка старых документов оставалась незакрытой."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `DocumentationEncodingTests`: он сканирует `docs/**/*.md`, `README.md` и `TEST_RESULTS.md` на признаки поврежденного русского текста."
+      },
+      {
+        "type": "improved",
+        "text": "Счетчик backend suite обновлен до `458/458`, а доказательства проверки кодировки зафиксированы в roadmap и TEST_RESULTS."
+      }
+    ]
   }
 ]
