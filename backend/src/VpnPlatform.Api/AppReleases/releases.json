@@ -2297,5 +2297,32 @@
         "text": "Добавлен `ReadmeDocumentationTests`, который защищает README от возврата mojibake, устаревших команд запуска и неправильных счетчиков проверок."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-admin-operator-guide",
+    "version": "0.95.0",
+    "releasedAt": "2026-06-13T15:10:00+07:00",
+    "title": "Добавлено руководство администратора",
+    "summary": "Администратор получил единый русский runbook по всем разделам панели: от входа и RBAC до тарифов, платежей, VPN, 3x-ui, Telegram, сценариев и подготовки VPS.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `docs/admin-guide.md` с описанием всех вкладок админки, технических id разделов и быстрого приемочного чеклиста оператора."
+      },
+      {
+        "type": "improved",
+        "text": "В платежном разделе документации зафиксированы provider-specific поля, write-only секреты, webhook-настройки, кнопка проверки подключения и границы sandbox/live режимов."
+      },
+      {
+        "type": "important",
+        "text": "Telegram Stars описан как отдельный bot-only/fail-closed сценарий до полноценного Telegram invoice flow, чтобы он не смешивался с обычным web checkout."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлен `AdminGuideDocumentationTests`, который сверяет руководство с фактической навигацией админки и защищает документ от mojibake."
+      }
+    ]
   }
 ]

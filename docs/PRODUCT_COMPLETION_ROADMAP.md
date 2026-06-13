@@ -603,9 +603,10 @@ git diff --check
   - Что сделано: README переписан как основной русский входной документ: описаны назначение платформы, структура монорепозитория, быстрый запуск без Docker на SQLite, ручной запуск API/frontend, восстановление локального администратора, команды проверки, Docker-режим, VPS/systemd контекст, платежи, VPN, режимы окружения и актуальный статус проекта.
   - Доказательство: `ReadmeDocumentationTests` 3/3, backend full suite 448/448, frontend tests/typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-readme-russian-local-runbook`.
 
-- [ ] `P10-DOC-002` Документация администратора.
+- [x] `P10-DOC-002` Документация администратора. 2026-06-13.
   - Что сделать: как настроить тарифы, платежи, VPN, 3x-ui, Telegram, сценарии.
-  - Доказательство: review по каждому разделу админки.
+  - Что сделано: добавлено `docs/admin-guide.md` с полным операторским runbook по всем вкладкам админки: вход и RBAC, дашборд, пользователи, платежные провайдеры, тарифы, подписки, VPN-доступы, серверы, 3x-ui панели, поддержка, аудит, Telegram-бот, "Что нового", FAQ, контент сайта, сценарии и подготовка VPS. Документ описывает provider-specific поля, write-only секреты, кнопку "Проверить подключение", sandbox/live границы, Telegram Stars как bot-only/fail-closed flow, 3x-ui inbound/client flow и быстрый приемочный чеклист.
+  - Доказательство: `AdminGuideDocumentationTests` 3/3, backend full suite 451/451, frontend tests/typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-admin-operator-guide`.
 
 - [ ] `P10-DOC-003` Документация пользователя.
   - Что сделать: как купить, оплатить, подключить VPN, продлить, обратиться в поддержку.

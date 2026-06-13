@@ -12,6 +12,7 @@ VPN Platform - монорепозиторий платформы для прод
 
 Главный roadmap: [docs/PRODUCT_COMPLETION_ROADMAP.md](docs/PRODUCT_COMPLETION_ROADMAP.md).
 Инструкция по GitHub Actions и деплою на VPS: [docs/github-deployment.md](docs/github-deployment.md).
+Руководство администратора: [docs/admin-guide.md](docs/admin-guide.md).
 
 ## Состав проекта
 
@@ -196,7 +197,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-13 локально подтверждено:
 
-- backend на .NET 9: `448/448` unit tests;
+- backend на .NET 9: `451/451` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `64/64`;
 - frontend typecheck и production build: OK;
