@@ -598,9 +598,10 @@ git diff --check
 
 ## P10. Документация
 
-- [ ] `P10-DOC-001` README на русском.
+- [x] `P10-DOC-001` README на русском. 2026-06-13.
   - Что сделать: запуск без Docker, запуск с Docker, env, DB, tests, deploy.
-  - Доказательство: fresh clone local run.
+  - Что сделано: README переписан как основной русский входной документ: описаны назначение платформы, структура монорепозитория, быстрый запуск без Docker на SQLite, ручной запуск API/frontend, восстановление локального администратора, команды проверки, Docker-режим, VPS/systemd контекст, платежи, VPN, режимы окружения и актуальный статус проекта.
+  - Доказательство: `ReadmeDocumentationTests` 3/3, backend full suite 448/448, frontend tests/typecheck/build, local SQLite HTTP-smoke latest release `2026-06-13-readme-russian-local-runbook`.
 
 - [ ] `P10-DOC-002` Документация администратора.
   - Что сделать: как настроить тарифы, платежи, VPN, 3x-ui, Telegram, сценарии.

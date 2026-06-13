@@ -1,29 +1,37 @@
 # VPN Platform
 
-Инструкция по публикации репозитория и автодеплою на VPS находится в [docs/github-deployment.md](docs/github-deployment.md).
+VPN Platform - монорепозиторий платформы для продажи VPN-подписок через публичный сайт, личный кабинет, админку и Telegram-бота.
 
-Актуальный master-roadmap по доведению проекта до production-ready находится в [docs/PRODUCT_COMPLETION_ROADMAP.md](docs/PRODUCT_COMPLETION_ROADMAP.md).
+Платформа решает полный продуктовый сценарий:
 
-Монорепозиторий платформы продажи VPN-подписок. Внутри есть backend на ASP.NET Core/.NET 9, три frontend-приложения на React/Vite, Telegram bot, background workers, платежные адаптеры, интеграция с 3x-ui/x-ui и provisioning через Ansible.
+- пользователь выбирает тариф, регистрируется, создает заказ и оплачивает подписку;
+- backend принимает webhook платежного провайдера, активирует подписку и выдает VPN-доступ;
+- личный кабинет показывает активную подписку, ссылку подключения, QR-код, историю заказов, платежей и обращений в поддержку;
+- администратор управляет тарифами, пользователями, платежами, возвратами, FAQ, текстами сайта, сценариями работы, VPN-серверами, 3x-ui панелями, inbound-ами, клиентами и Telegram-ботом;
+- фоновые worker-сценарии обрабатывают outbox, lifecycle подписок, health/sync VPN-панелей и provisioning.
+
+Главный roadmap: [docs/PRODUCT_COMPLETION_ROADMAP.md](docs/PRODUCT_COMPLETION_ROADMAP.md).
+Инструкция по GitHub Actions и деплою на VPS: [docs/github-deployment.md](docs/github-deployment.md).
 
 ## Состав проекта
 
-- `backend/src/VpnPlatform.Domain` - доменные сущности и статусы.
-- `backend/src/VpnPlatform.Application` - бизнес-сервисы и сценарии.
-- `backend/src/VpnPlatform.Infrastructure` - EF Core, PostgreSQL/SQLite, платежи, 3x-ui, JWT, секреты, hosted workers.
-- `backend/src/VpnPlatform.Api` - HTTP API, auth, публичные endpoints, личный кабинет, админка, webhooks и фоновые задачи.
+- `backend/src/VpnPlatform.Domain` - доменные сущности, enum-статусы и базовые правила.
+- `backend/src/VpnPlatform.Application` - бизнес-сервисы, DTO, orchestration платежей, подписок и VPN-доступов.
+- `backend/src/VpnPlatform.Infrastructure` - EF Core, PostgreSQL/SQLite, платежные адаптеры, 3x-ui, provisioning, секреты, hosted workers.
+- `backend/src/VpnPlatform.Api` - ASP.NET Core API, auth, публичные endpoints, кабинет, админка, webhooks, health и metrics.
 - `backend/src/VpnPlatform.TelegramBot` - Telegram bot process.
-- `frontend/apps/public-web` - публичный сайт с тарифами и покупкой.
+- `frontend/apps/public-web` - публичный сайт с тарифами, FAQ и покупкой.
 - `frontend/apps/cabinet` - личный кабинет пользователя.
 - `frontend/apps/admin-panel` - административная панель.
-- `frontend/packages/api-client` и `frontend/packages/ui` - общие frontend-пакеты.
+- `frontend/packages/api-client` - общий typed API client.
+- `frontend/packages/ui` - общие UI-примитивы.
 - `infra/` - Ansible, Prometheus, Grafana, Loki.
-- `scripts/` - локальные скрипты запуска и проверки.
-- `docs/` - русская документация по архитектуре, запуску, оплатам, Telegram, provisioning и проверкам.
+- `scripts/` - локальный запуск, валидация, аудит секретов, deploy/smoke helpers.
+- `docs/` - русская документация по запуску, платежам, Telegram, provisioning, CI/CD и проверкам.
 
 ## Быстрый запуск без Docker
 
-Этот режим предназначен для локальной проверки на Windows/PowerShell. Он использует SQLite-файл `data/vpnplatform-local.db`, поэтому PostgreSQL, Redis, RabbitMQ и Docker не нужны.
+Локальный режим предназначен для проверки на рабочей машине без Docker. Он использует SQLite-файл `data/vpnplatform-local.db`, поэтому PostgreSQL, Redis и RabbitMQ не нужны.
 
 Требования:
 
@@ -31,10 +39,9 @@
 - Node.js 22+ и npm.
 - PowerShell.
 
-Первый запуск:
+Первый запуск из корня репозитория:
 
 ```powershell
-cd C:\Users\User16\Desktop\vpn-platform
 dotnet restore backend\VpnPlatform.sln
 cd frontend
 npm install
@@ -45,19 +52,16 @@ powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
 После запуска доступны:
 
 - API и Swagger: `http://127.0.0.1:8080/swagger`
-- Публичный сайт: `http://127.0.0.1:5173`
-- Личный кабинет: `http://127.0.0.1:5174`
-- Админка: `http://127.0.0.1:5175`
-- Локальный администратор: `admin@local.test` / `LocalAdminPassword123!`
+- публичный сайт: `http://127.0.0.1:5173`
+- личный кабинет: `http://127.0.0.1:5174`
+- админка: `http://127.0.0.1:5175`
+- локальный администратор: `admin@local.test` / `LocalAdminPassword123!`
 
-Если локальная SQLite-база уже существовала и пароль администратора был изменен, его можно восстановить без запуска HTTP-сервера:
+Если стандартные порты заняты:
 
 ```powershell
-$env:ASPNETCORE_ENVIRONMENT="Local"
-dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj -- admin-bootstrap
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -ApiPort 8081 -PublicPort 5373 -CabinetPort 5374 -AdminPort 5375
 ```
-
-Команда использует секцию `AdminBootstrap`, создает администратора при отсутствии или сбрасывает пароль существующего администратора только для явного CLI-запуска. Пароль в вывод команды не печатается.
 
 Остановка:
 
@@ -65,7 +69,18 @@ dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj -- admin
 powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1
 ```
 
-Логи локального запуска пишутся в `data/logs/`. SQLite-база и логи игнорируются git через `data/`.
+Логи локального запуска пишутся в `data/logs/`. SQLite-база, логи и runtime-файлы в `data/` не должны попадать в git.
+
+## Восстановление локального администратора
+
+Если локальная SQLite-база уже существовала и пароль администратора был изменен, сбросьте его без запуска HTTP-сервера:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT="Local"
+dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj -- admin-bootstrap
+```
+
+Команда использует секцию `AdminBootstrap`, создает администратора при отсутствии или сбрасывает пароль существующего администратора только при явном CLI-запуске. Пароль в вывод команды не печатается.
 
 ## Ручной запуск без Docker
 
@@ -77,7 +92,7 @@ $env:DataProtection__KeyPath="../../../tmp/dataprotection-keys"
 dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --urls http://127.0.0.1:8080
 ```
 
-`DataProtection__KeyPath` нужен, чтобы локальный API хранил ключи авторизации внутри рабочей папки проекта, а не в профиле Windows. Это устраняет ошибки доступа к `AppData\Local\ASP.NET\DataProtection-Keys` при запуске из другого пользователя или sandbox-среды.
+`DataProtection__KeyPath` нужен, чтобы локальный API хранил ключи авторизации внутри рабочей папки проекта, а не в профиле Windows.
 
 Frontend в отдельных терминалах:
 
@@ -89,87 +104,103 @@ npm run dev:cabinet
 npm run dev:admin
 ```
 
+## Проверка, что все работает
+
+Backend:
+
+```powershell
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release
+```
+
+Frontend:
+
+```powershell
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+```
+
+Playwright E2E:
+
+```powershell
+npm run e2e:public --prefix frontend
+npm run e2e:cabinet --prefix frontend
+npm run e2e:admin --prefix frontend
+```
+
+Проверка health локального API:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8080/health/live
+Invoke-RestMethod http://127.0.0.1:8080/health/ready
+```
+
 ## Запуск через Docker
 
-Docker-режим нужен для проверки PostgreSQL/Redis/RabbitMQ и production-like compose-сборки:
+Docker-режим нужен для production-like проверки PostgreSQL, Redis, RabbitMQ и compose-сборки:
 
 ```powershell
 docker compose up -d postgres redis rabbitmq prometheus grafana loki
 docker compose up --build backend-api public-web cabinet admin-panel
 ```
 
-Если Docker Desktop не запущен, compose-команды завершатся ошибкой подключения к `dockerDesktopLinuxEngine`.
+Если Docker Desktop не запущен, compose-команды завершатся ошибкой подключения к Docker engine. Это не влияет на локальный SQLite-режим без Docker.
 
-## VPS/staging без Docker
+## VPS и staging
 
-Текущий staging на VPS запускается без Docker: backend опубликован как self-contained Linux x64 приложение, frontend отдаётся nginx, база данных - PostgreSQL 16.
+Поддерживаются два режима deploy:
 
-Основные пути на сервере:
+- Docker deploy - если на сервере доступен Docker/Compose.
+- Systemd deploy без Docker - self-contained Linux x64 API, nginx для frontend и PostgreSQL 16.
+
+Основные пути systemd-режима:
 
 - API: `/opt/vpn-platform/api`
 - frontend: `/opt/vpn-platform/web/public`, `/opt/vpn-platform/web/cabinet`, `/opt/vpn-platform/web/admin`
 - env-файл API: `/etc/vpn-platform/api.env`
 - systemd service: `vpn-platform-api`
-- PostgreSQL database: `vpnplatform`, пользователь `vpnplatform`, подключение только через `127.0.0.1:5432`
+- PostgreSQL database: `vpnplatform`
 
-Проверка на сервере:
+Проверки на сервере:
 
 ```bash
 systemctl status vpn-platform-api --no-pager
 systemctl status postgresql --no-pager
 curl -fsS http://127.0.0.1:8080/health/live
+curl -fsS http://127.0.0.1:8080/health/ready
 curl -fsS http://127.0.0.1:8080/api/public/tariffs
 curl -fsS http://127.0.0.1:8080/api/public/payments/providers
 ```
 
-Публичные адреса staging:
+Post-deploy smoke описан в [docs/post-deploy-smoke.md](docs/post-deploy-smoke.md).
 
-- `http://<staging-host>` или `http://<staging-host>:5173` - публичный сайт.
-- `http://<staging-host>:5174` - личный кабинет.
-- `http://<staging-host>:5175` - админка.
-- `http://<staging-host>:8080/swagger` - Swagger API.
+## Платежи и VPN
 
-## Проверки
+В коде есть адаптеры YooMoney, YooKassa, RoboKassa, CloudPayments, TBank Acquiring, Prodamus, Stripe, PayPal и Telegram Stars.
 
-Backend:
+Локальный sandbox безопасен: checkout создается без реальных денег и без внешних API. Live-провайдеры требуют реальные учетные данные, webhook-секреты и отдельный smoke по каждому кабинету провайдера.
 
-```powershell
-dotnet restore backend\VpnPlatform.sln
-dotnet build backend\VpnPlatform.sln --no-restore
-dotnet test backend\VpnPlatform.sln --no-restore
-dotnet tool restore
-dotnet ef migrations list --project backend\src\VpnPlatform.Infrastructure\VpnPlatform.Infrastructure.csproj --startup-project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --no-connect
-```
+Telegram Stars сейчас закреплен как bot-only/fail-closed контракт до полноценного Telegram invoice flow.
 
-Frontend:
-
-```powershell
-cd frontend
-npm ci
-npm run typecheck
-npm run build
-npm run test
-npm audit --audit-level=moderate
-```
-
-Provisioning runner:
-
-```powershell
-python -m unittest discover -s infra\ansible\runner\tests -v
-```
-
-## Что делает платформа
-
-Пользователь выбирает тариф, регистрируется, создаёт заказ, выбирает платёжный провайдер и получает VPN-доступ после успешной оплаты. Backend создаёт подписку, выбирает VPN-узел, формирует доступ, отдаёт URI/QR и ведёт историю платежей, webhooks, outbox/inbox и audit-событий.
-
-Администратор управляет пользователями, тарифами, заказами, платежами, возвратами, support-диалогами, VPN-серверами, 3x-ui панелями, inbound-контуром, клиентами, provisioning runs и настройками Telegram bot.
+VPN-выдача поддерживает sandbox-режим и интеграцию с 3x-ui/x-ui. Реальная production-выдача требует подключенной панели, inbound-а, VPN-ноды и успешного live smoke.
 
 ## Важные режимы
 
-- `ASPNETCORE_ENVIRONMENT=Local` - локальный режим без Docker, SQLite, demo admin, sandbox payments/VPN.
-- `ASPNETCORE_ENVIRONMENT=Development` - режим разработки с PostgreSQL из локальной инфраструктуры.
-- `ASPNETCORE_ENVIRONMENT=Production` - строгий режим: PostgreSQL обязателен, SQLite, sandbox-платежи, demo seed и небезопасные placeholders запрещены startup validator-ом.
+- `ASPNETCORE_ENVIRONMENT=Local` - локальный режим без Docker: SQLite, demo admin, sandbox payments/VPN.
+- `ASPNETCORE_ENVIRONMENT=Development` - режим разработки с локальной инфраструктурой.
+- `ASPNETCORE_ENVIRONMENT=Production` - строгий режим: PostgreSQL обязателен, SQLite и небезопасные placeholders запрещены startup validator-ом.
 
 ## Текущий статус
 
-Локальный запуск без Docker проверен: API, публичный сайт, кабинет и админка отвечают HTTP 200. Frontend проходит typecheck/build/tests, npm audit сейчас без moderate+ уязвимостей. Backend на .NET 9 собирается без предупреждений, backend unit suite проходит 180/180. Staging на VPS переведён на PostgreSQL 16, API и фронтенды отвечают HTTP 200.
+На 2026-06-13 локально подтверждено:
+
+- backend на .NET 9: `448/448` unit tests;
+- API Release build: без ошибок и предупреждений;
+- frontend unit tests: `64/64`;
+- frontend typecheck и production build: OK;
+- frontend audit по high severity: OK, остаются 2 moderate advisory по `react-router`;
+- Playwright E2E: public, cabinet и admin проходят;
+- local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
+- roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.
