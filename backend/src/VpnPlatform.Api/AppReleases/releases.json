@@ -2108,5 +2108,32 @@
         "text": "Добавлены optional secrets `POST_DEPLOY_API_URL`, `POST_DEPLOY_PUBLIC_WEB_URL`, `POST_DEPLOY_CABINET_WEB_URL`, `POST_DEPLOY_ADMIN_WEB_URL` для нестандартных доменов."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-13-backend-validation-gate",
+    "version": "0.88.0",
+    "releasedAt": "2026-06-13T13:02:00+07:00",
+    "title": "Закреплен обязательный backend validation gate",
+    "summary": "Backend suite теперь имеет единый Windows/Linux запуск, документацию и guard-тесты против случайного ослабления проверок.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/validate-backend.ps1` для Windows: restore, build, полный backend test suite, EF migrations list и EF drift."
+      },
+      {
+        "type": "improved",
+        "text": "Документация `docs/backend-validation-gate.md` фиксирует обязательные команды, safe defaults и текущий зеленый счетчик `433/433`."
+      },
+      {
+        "type": "important",
+        "text": "Backend validation gate отключает live side effects: production migrations, demo seed, admin bootstrap, Telegram, live provisioning и реальные платежные провайдеры."
+      },
+      {
+        "type": "fixed",
+        "text": "Добавлены guard-тесты, которые не дают убрать secret scan, full test command, EF migrations list или EF drift из backend gate."
+      }
+    ]
   }
 ]

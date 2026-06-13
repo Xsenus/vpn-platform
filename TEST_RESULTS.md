@@ -2,6 +2,43 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-13: backend validation gate
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P9-TST-001` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Текущий обязательный backend suite обновлен до `433/433`.
+- Добавлен `scripts/validate-backend.ps1` для Windows/PowerShell: validation safety, secret scan, restore, build, full backend tests, dotnet tools, EF migrations list и EF model drift.
+- `scripts/validate-backend.sh` остается Linux/Git Bash entrypoint с тем же обязательным набором.
+- Добавлена документация `docs/backend-validation-gate.md` с safe defaults и командами доказательства.
+- Добавлен `BackendValidationGateTests`.
+- `SecretScanTests` расширен проверкой, что PowerShell backend gate запускает `scan-secrets.ps1`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-13-backend-validation-gate`.
+- Добавлен release entry `2026-06-13-backend-validation-gate` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+[System.Management.Automation.PSParser]::Tokenize((Get-Content scripts/validate-backend.ps1 -Raw), [ref]$null) | Out-Null
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --filter "BackendValidationGateTests|SecretScanTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts/validate-backend.ps1
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+node -e "const fs=require('fs'); const files=['backend/src/VpnPlatform.Api/AppReleases/releases.json','backend/tests/VpnPlatform.UnitTests/BackendValidationGateTests.cs','backend/tests/VpnPlatform.UnitTests/SecretScanTests.cs','backend/tests/VpnPlatform.UnitTests/ReleaseDocumentationGuardTests.cs','docs/PRODUCT_COMPLETION_ROADMAP.md','docs/backend-validation-gate.md','scripts/validate-backend.ps1','scripts/validate-backend.sh','TEST_RESULTS.md']; for (const file of files) { const text=fs.readFileSync(file,'utf8'); if (text.includes(String.fromCharCode(0xfffd))) throw new Error('U+FFFD in '+file); } const data=JSON.parse(fs.readFileSync('backend/src/VpnPlatform.Api/AppReleases/releases.json','utf8')); console.log('encoding guard ok', data.at(-1).releaseId, data.at(-1).version);"
+git diff --check
+```
+
+Итог:
+
+- PowerShell syntax parse `scripts/validate-backend.ps1`: OK.
+- Targeted backend validation/release/secret guard tests: 9/9.
+- Backend full suite: 433/433.
+- API build: OK, предупреждений 0.
+- JSON релизов валиден: latest seed `2026-06-13-backend-validation-gate`, версия `0.88.0`.
+- Encoding guard: OK, `U+FFFD` не найден.
+- `git diff --check`: OK.
+- Local SQLite HTTP-smoke на чистой временной БД: `/health/live`, `/health/ready`, `/metrics`, bootstrap login `smoke-admin@example.test`, `/api/app-version/latest`; latest release `2026-06-13-backend-validation-gate`, версия `0.88.0`.
+
 ## Проверка 2026-06-13: post-deploy smoke
 
 Что проверено:

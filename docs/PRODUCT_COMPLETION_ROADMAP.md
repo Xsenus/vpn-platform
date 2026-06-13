@@ -560,10 +560,11 @@ git diff --check
 
 ## P9. Тестирование
 
-- [ ] `P9-TST-001` Backend обязательный suite.
-  - Текущее состояние: проходит `226/226`.
+- [x] `P9-TST-001` Backend обязательный suite. 2026-06-13.
+  - Текущее состояние: проходит `433/433`.
   - Что сделать: держать зеленым после каждого изменения.
-  - Доказательство: test output.
+  - Что сделано: добавлен Windows PowerShell entrypoint `scripts/validate-backend.ps1`, который повторяет обязательный backend gate: validation safety, secret scan, restore, build, full backend tests, dotnet tools, EF migrations list и EF model drift. Документация `docs/backend-validation-gate.md` фиксирует текущий зеленый счетчик `433/433`, safe defaults и обязательные команды для PR/roadmap задач. Guard-тесты проверяют, что bash и PowerShell gates не теряют full test suite, EF checks, secret scan и безопасные env defaults.
+  - Доказательство: `BackendValidationGateTests`, `SecretScanTests.Validation_Entry_Points_Should_Run_Secret_Scan`, PowerShell syntax parse `scripts/validate-backend.ps1`, backend full suite 433/433, local SQLite HTTP-smoke latest release `2026-06-13-backend-validation-gate`.
 
 - [ ] `P9-TST-002` Frontend unit tests.
   - Текущее состояние: проходит `49/49`.

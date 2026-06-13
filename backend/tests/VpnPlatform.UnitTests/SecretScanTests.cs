@@ -38,10 +38,12 @@ public class SecretScanTests
         var root = FindRepositoryRoot();
         var validateAll = File.ReadAllText(Path.Combine(root, "scripts", "validate-all.sh"));
         var validateBackend = File.ReadAllText(Path.Combine(root, "scripts", "validate-backend.sh"));
+        var validateBackendPowerShell = File.ReadAllText(Path.Combine(root, "scripts", "validate-backend.ps1"));
         var validationSafety = File.ReadAllText(Path.Combine(root, "scripts", "check-validation-safety.sh"));
 
         Assert.Contains("scan-secrets.sh", validateAll, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scan-secrets.sh", validateBackend, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("scan-secrets.ps1", validateBackendPowerShell, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scan-secrets.sh", validationSafety, StringComparison.OrdinalIgnoreCase);
     }
 
