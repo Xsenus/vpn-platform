@@ -168,14 +168,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 482/482;
+- backend full suite: 483/483;
 - frontend tests: 65/65;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - high-severity frontend audit: OK, остаются 2 moderate advisory по `react-router`;
-- latest "Что нового": `2026-06-14-roadmap-bug-register-sync`, версия `0.109.0`.
+- latest "Что нового": `2026-06-14-provisioning-secret-bug-sync`, версия `0.110.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

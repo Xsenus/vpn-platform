@@ -2,6 +2,51 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: синхронизация provisioning secret materialization
+
+Что проверено:
+
+- `BUG-006` переведен из `open` в `Исправлено` в части secret materialization.
+- `docs/SECURITY_HARDENING_MVP.md` синхронизирован с фактическим поведением `ProvisioningSecretMaterializer`.
+- Добавлен guard `ProvisioningSecretStatusConsistencyTests`, который проверяет roadmap, security docs, production secret storage docs, live Ansible credentials docs и код provisioning materializer/executor.
+- Live-блокеры не закрывались: live VPS/provisioning smoke, реальные 3x-ui, платежные кабинеты и `P11-ACC-002` остаются открытыми.
+- Добавлена запись "Что нового" `2026-06-14-provisioning-secret-bug-sync`, версия `0.110.0`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "ProvisioningSecretStatusConsistencyTests|BugRegisterConsistencyTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|DocumentationEncodingTests|ProvisioningSecretMaterializerTests"
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail fresh-admin@example.test -AdminPassword LocalSmokePassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Provisioning secret status consistency guard: 1/1.
+- Targeted provisioning/docs/encoding guard suite: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 9/9.
+- Backend full suite: 483/483.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-provisioning-secret-bug-sync`, версия `0.110.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: синхронизация журнала ошибок roadmap
 
 Что проверено:

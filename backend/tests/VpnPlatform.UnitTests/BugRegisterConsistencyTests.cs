@@ -26,7 +26,7 @@ public class BugRegisterConsistencyTests
     }
 
     [Fact]
-    public void Bug_Register_Should_Keep_Live_External_Blockers_Open()
+    public void Bug_Register_Should_Keep_Only_Live_External_Blockers_Open()
     {
         var root = FindRepositoryRoot();
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
@@ -35,8 +35,7 @@ public class BugRegisterConsistencyTests
                  {
                      "| BUG-001 | P0 | VPS/Admin |",
                      "| BUG-002 | P0 | VPN |",
-                     "| BUG-003 | P0 | Payments |",
-                     "| BUG-006 | P1 | Provisioning |"
+                     "| BUG-003 | P0 | Payments |"
                  })
         {
             Assert.Contains(expectedOpenBug, roadmap, StringComparison.Ordinal);
@@ -45,7 +44,9 @@ public class BugRegisterConsistencyTests
         Assert.Contains("| BUG-001 | P0 | VPS/Admin | Не подтвержден рабочий вход в админку на VPS | partial |", roadmap, StringComparison.Ordinal);
         Assert.Contains("| BUG-002 | P0 | VPN | Не подтверждена live-выдача через реальный 3x-ui | open |", roadmap, StringComparison.Ordinal);
         Assert.Contains("| BUG-003 | P0 | Payments | Не все payment providers подтверждены live/sandbox smoke | open |", roadmap, StringComparison.Ordinal);
-        Assert.Contains("| BUG-006 | P1 | Provisioning | Live Ansible provisioning не production-ready из-за secret materialization | open |", roadmap, StringComparison.Ordinal);
+        Assert.DoesNotContain("| BUG-006 | P1 | Provisioning | Live Ansible provisioning не production-ready из-за secret materialization | open |", roadmap, StringComparison.Ordinal);
+        Assert.Contains("| BUG-006 | P1 | Provisioning | Live Ansible provisioning не production-ready из-за secret materialization | Исправлено |", roadmap, StringComparison.Ordinal);
+        Assert.Contains("live VPS/provisioning smoke остается отдельным P0/P11-блокером", roadmap, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

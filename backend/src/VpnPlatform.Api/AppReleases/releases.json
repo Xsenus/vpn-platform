@@ -2686,5 +2686,32 @@
         "text": "Live-блокеры по VPS, платежам, реальному 3x-ui и provisioning остаются открытыми до проверки на внешнем окружении."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-provisioning-secret-bug-sync",
+    "version": "0.110.0",
+    "releasedAt": "2026-06-14T16:20:00+07:00",
+    "title": "Синхронизирован статус provisioning-секретов",
+    "summary": "Журнал ошибок и security-документация приведены к фактическому состоянию: protected SSH key временно материализуется безопасным materializer-ом, а live smoke остается отдельным блокером.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`BUG-006` больше не остается open из-за secret materialization: supported protected `ssh_key` передается Ansible через временный файл."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/SECURITY_HARDENING_MVP.md` теперь описывает текущий fail-closed контракт: password-based SSH и production smoke не считаются готовыми без реального staging/VPS прогона."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `ProvisioningSecretStatusConsistencyTests`, который проверяет roadmap, security docs и код materializer/executor."
+      },
+      {
+        "type": "important",
+        "text": "Live VPS/provisioning smoke, реальные 3x-ui и платежные провайдеры остаются открытыми production-блокерами."
+      }
+    ]
   }
 ]

@@ -17,7 +17,7 @@ Stage 7 introduces the first production-hardening layer without enabling live in
 ## Still not production-ready
 
 - Legacy plaintext fields remain in the schema for backward compatibility until a verified data migration clears them.
-- Own VPS live provisioning still cannot materialize protected SSH credentials to Ansible.
+- Own VPS live provisioning can materialize protected `ssh_key` credentials only through `ProvisioningSecretMaterializer`: the runner receives a temporary path, the plaintext and path are redacted, and the file is deleted in `finally`. Password-based live SSH and full production smoke remain fail-closed until a real staging/VPS run is approved.
 - Password reset uses outbox/mock delivery only; no live email provider is enabled.
 - Backend/Docker validation must still pass on CI/server with `.NET 9 SDK` and Docker.
 - External secret manager integration is not implemented.

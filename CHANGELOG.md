@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.110.0 - 2026-06-14
+
+Release entry: `2026-06-14-provisioning-secret-bug-sync`.
+
+### Добавлено
+
+- Guard-тест `ProvisioningSecretStatusConsistencyTests`, который связывает `BUG-006`, security-документацию, `ProvisioningSecretMaterializer` и открытые live smoke блокеры.
+
+### Исправлено
+
+- `BUG-006` больше не числится открытым из-за secret materialization: protected `ssh_key` временно материализуется только через `ProvisioningSecretMaterializer`, runner получает path, а файл удаляется в `finally`.
+- `docs/SECURITY_HARDENING_MVP.md` больше не содержит устаревшую формулировку, что protected SSH credentials невозможно передать в Ansible.
+
+### Проверено
+
+- Backend full suite: 483/483.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- Полный live provisioning smoke, VPS production smoke, реальные 3x-ui и платежные кабинеты остаются открытыми P0/P11-блокерами.
+
 ## 0.109.0 - 2026-06-14
 
 Release entry: `2026-06-14-roadmap-bug-register-sync`.
