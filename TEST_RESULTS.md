@@ -2,6 +2,52 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: final docs and changelog
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P11-ACC-006` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен корневой `CHANGELOG.md`.
+- Добавлен финальный runbook `docs/final-runbook.md`.
+- README обновлен ссылками на changelog/runbook, командами `e2e:mobile` и `e2e:console`, статусом `467/467`.
+- Индекс `docs/README.md` ссылается на changelog и финальный runbook.
+- Secret scan дополнительно исключает runtime `tmp`, чтобы full backend suite не конфликтовал с fresh local smoke artifacts.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/FinalDocsChangelogTests.cs`.
+- Добавлен release entry `2026-06-14-final-docs-changelog` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "FinalDocsChangelogTests|ReleaseDocumentationGuardTests|ReadmeDocumentationTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Final docs/changelog guard: 3/3.
+- Documentation guard suite: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 6/6.
+- Fresh local SQLite smoke: OK.
+- Backend full suite: 467/467.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-final-docs-changelog`, версия `0.103.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: security final checklist
 
 Что проверено:

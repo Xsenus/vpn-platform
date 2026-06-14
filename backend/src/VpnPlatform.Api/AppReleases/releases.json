@@ -2497,5 +2497,32 @@
         "text": "Secret scan scripts теперь исключают generated Playwright artifacts `test-results` и `.playwright-artifacts-*`, чтобы проверка не падала на временных файлах после E2E."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-final-docs-changelog",
+    "version": "0.103.0",
+    "releasedAt": "2026-06-14T14:32:00+07:00",
+    "title": "Обновлены финальные инструкции и changelog",
+    "summary": "Добавлены `CHANGELOG.md` и `docs/final-runbook.md`: запуск без Docker, полный validation gate, deploy на VPS, post-deploy smoke и ограничения перед production собраны в одном порядке действий.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен корневой `CHANGELOG.md` с текущим состоянием проекта, проверками и ограничениями production-ready."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `docs/final-runbook.md` с командами локального запуска, fresh SQLite smoke, browser smoke, security gate, deploy и post-deploy smoke."
+      },
+      {
+        "type": "improved",
+        "text": "README и индекс документации теперь напрямую ведут к финальному runbook и changelog."
+      },
+      {
+        "type": "important",
+        "text": "Guard `FinalDocsChangelogTests` закрепляет синхронизацию README, docs index, roadmap, changelog, `TEST_RESULTS.md` и раздела \"Что нового\"."
+      }
+    ]
   }
 ]

@@ -11,6 +11,8 @@ VPN Platform - монорепозиторий платформы для прод
 - фоновые worker-сценарии обрабатывают outbox, lifecycle подписок, health/sync VPN-панелей и provisioning.
 
 Главный roadmap: [docs/PRODUCT_COMPLETION_ROADMAP.md](docs/PRODUCT_COMPLETION_ROADMAP.md).
+Changelog: [CHANGELOG.md](CHANGELOG.md).
+Финальный runbook запуска, проверки и deploy: [docs/final-runbook.md](docs/final-runbook.md).
 Инструкция по GitHub Actions и деплою на VPS: [docs/github-deployment.md](docs/github-deployment.md).
 Руководство администратора: [docs/admin-guide.md](docs/admin-guide.md).
 Индекс документации: [docs/README.md](docs/README.md).
@@ -130,6 +132,8 @@ Playwright E2E:
 npm run e2e:public --prefix frontend
 npm run e2e:cabinet --prefix frontend
 npm run e2e:admin --prefix frontend
+npm run e2e:mobile --prefix frontend
+npm run e2e:console --prefix frontend
 ```
 
 Проверка health локального API:
@@ -196,13 +200,14 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 ## Текущий статус
 
-На 2026-06-13 локально подтверждено:
+На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `464/464` unit tests;
+- backend на .NET 9: `467/467` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
 - frontend audit по high severity: OK, остаются 2 moderate advisory по `react-router`;
-- Playwright E2E: public, cabinet и admin проходят;
+- Playwright E2E: public, cabinet, admin, mobile и console smoke проходят;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
+- changelog и финальный runbook синхронизированы с разделом "Что нового": `2026-06-14-final-docs-changelog`;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

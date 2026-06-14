@@ -5,6 +5,7 @@
 ## Основные руководства
 
 - [README проекта](../README.md) - назначение платформы, локальный запуск, Docker/VPS контекст и текущий статус проверок.
+- [Changelog](../CHANGELOG.md) - сводка заметных релизов и текущего состояния.
 - [Roadmap](PRODUCT_COMPLETION_ROADMAP.md) - рабочая карта проекта с отметками выполнения и доказательствами.
 - [Руководство администратора](admin-guide.md) - настройка тарифов, платежей, VPN, 3x-ui, Telegram, сценариев и VPS.
 - [Руководство пользователя](user-guide.md) - покупка, оплата, подключение VPN, продление, Telegram и поддержка.
@@ -14,6 +15,7 @@
 
 - [Локальная проверка](local-validation.md)
 - [Fresh local smoke](fresh-local-smoke.md)
+- [Финальный runbook запуска и проверки](final-runbook.md)
 - [Backend validation gate](backend-validation-gate.md)
 - [Frontend validation gate](frontend-validation-gate.md)
 - [Build validation gate](build-validation-gate.md)

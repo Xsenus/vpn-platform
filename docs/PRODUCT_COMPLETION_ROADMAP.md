@@ -650,9 +650,10 @@ git diff --check
   - Что сделано: добавлен финальный checklist `docs/security-final-checklist.md` и guard `SecurityFinalChecklistTests`. Проверка связывает уже существующие security gates по секретам, auth/RBAC, headers, rate limits, webhook idempotency, GitHub secrets и provisioning secrets, а также отражением проверяет все admin-контроллеры на отсутствие `AllowAnonymous`, наличие class-level `Authorize` и write/manage policy у write endpoints. Actual secret scan дополнительно защищен от generated Playwright artifacts `test-results` и `.playwright-artifacts-*`, чтобы E2E-прогоны не ломали проверку исчезающими временными файлами.
   - Доказательство: `SecurityFinalChecklistTests` 3/3, targeted security suite, actual `scan-secrets.ps1`, `npm run e2e:console --prefix frontend` 6/6, backend full suite 464/464, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-security-final-checklist`; security checklist фиксирует ограничение: перед production нужна ротация любых раскрытых секретов и отдельный VPS smoke.
 
-- [ ] `P11-ACC-006` Final docs and changelog.
+- [x] `P11-ACC-006` Final docs and changelog. 2026-06-14.
   - Что сделать: обновить README, roadmap, "Что нового", инструкции запуска и deploy.
-  - Доказательство: docs commit.
+  - Что сделано: добавлены `CHANGELOG.md` и `docs/final-runbook.md`, README получил прямые ссылки на changelog/runbook, команды `e2e:mobile` и `e2e:console`, актуальный статус проверок и связь с разделом "Что нового". Индекс документации ссылается на changelog и финальный runbook. Добавлен guard `FinalDocsChangelogTests`, который проверяет синхронизацию README, docs index, roadmap, changelog, `TEST_RESULTS.md` и release seed.
+  - Доказательство: `FinalDocsChangelogTests` 3/3, documentation guard suite, backend full suite 467/467, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-final-docs-changelog`; production-ready решение вынесено в `P11-ACC-007`.
 
 - [ ] `P11-ACC-007` Release decision.
   - Что сделать: принять решение: sandbox-ready, staging-ready или production-ready.

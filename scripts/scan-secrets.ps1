@@ -16,6 +16,7 @@ $excludeDirectories = @(
     'build',
     'TestResults',
     'test-results',
+    'tmp',
     'artifacts',
     'coverage',
     'playwright-report',

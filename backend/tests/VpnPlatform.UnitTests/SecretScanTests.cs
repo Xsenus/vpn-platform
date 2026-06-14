@@ -26,6 +26,7 @@ public class SecretScanTests
             Assert.Contains("node_modules", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("artifacts", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("test-results", script, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("tmp", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(".playwright-artifacts-", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("local-validation", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("must-not-leak", script, StringComparison.OrdinalIgnoreCase);
@@ -66,6 +67,7 @@ public class SecretScanTests
             "build",
             "TestResults",
             "test-results",
+            "tmp",
             "artifacts",
             "coverage",
             "playwright-report",
