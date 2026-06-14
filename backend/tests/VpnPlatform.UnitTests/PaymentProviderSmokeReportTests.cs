@@ -83,6 +83,41 @@ public class PaymentProviderSmokeReportTests
     }
 
     [Fact]
+    public void Smoke_Report_Generator_Should_Create_Safe_Blocked_Report()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-payment-provider-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "payment-provider-smoke.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "payment-provider-smoke-report.template.json",
+                     "validate-payment-provider-smoke-report.ps1",
+                     "ConvertTo-Json -Depth 8",
+                     "Set-Content",
+                     "-Encoding UTF8",
+                     "blocked",
+                     "TODO: run $Mode smoke",
+                     "Output file already exists. Pass -Force",
+                     "Get-LatestReleaseId"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var field in new[] { "OutputPath", "EnvironmentName", "Operator", "ReleaseId", "Mode" })
+        {
+            Assert.Contains(field, script, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("new-payment-provider-smoke-report.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("-Mode sandbox", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("password=", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bearer ", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Documentation_Should_Link_Provider_Smoke_Report_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

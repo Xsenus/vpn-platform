@@ -18,7 +18,15 @@ Telegram Stars не входит в этот отчет: это не web checkou
 
 ## Шаблон отчета
 
-Шаблон находится в `docs/payment-provider-smoke-report.template.json`. В нем перечислены все обязательные web-провайдеры:
+Шаблон находится в `docs/payment-provider-smoke-report.template.json`. Черновик лучше создавать скриптом, а не копировать JSON вручную:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-payment-provider-smoke-report.ps1 -OutputPath tmp\payment-provider-smoke-report.json -EnvironmentName staging -Operator local-test -Mode sandbox
+```
+
+Скрипт подставляет latest release из раздела "Что нового", выставляет все проверки в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
+
+В шаблоне перечислены все обязательные web-провайдеры:
 
 - `YooKassa`
 - `RoboKassa`

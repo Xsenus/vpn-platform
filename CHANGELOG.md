@@ -2,6 +2,36 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.121.0 - 2026-06-14
+
+Release entry: `2026-06-14-payment-provider-smoke-generator`.
+
+### Added
+
+- `scripts/new-payment-provider-smoke-report.ps1` создает безопасный черновик payment provider smoke report из `docs/payment-provider-smoke-report.template.json`.
+- Генератор принимает `EnvironmentName`, `Operator`, `ReleaseId`, `Mode` (`sandbox` или `live`) и подставляет latest release из seed "Что нового", если `ReleaseId` не задан.
+- Все провайдеры создаются со статусом `blocked`, пустыми gate-флагами и TODO evidence, поэтому real provider smoke остается fail-closed до внешней проверки.
+
+### Changed
+
+- `docs/payment-provider-smoke.md` теперь рекомендует начинать отчет через генератор, а не ручное копирование JSON.
+- Current status обновлен до backend `501/501`, latest release `2026-06-14-payment-provider-smoke-generator`.
+
+### Verified
+
+- Generated payment provider smoke report passes normal validation.
+- Generated blocked report fails `-RequireAllPassed` as expected.
+- `PaymentProviderSmokeReportTests`: 5/5.
+- Backend full suite: 501/501.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Реальные provider smoke reports для YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe и PayPal еще нужно заполнить после внешних sandbox/live проверок.
+
 ## 0.120.0 - 2026-06-14
 
 Release entry: `2026-06-14-payment-provider-smoke-report`.

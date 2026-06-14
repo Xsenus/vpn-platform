@@ -2983,5 +2983,28 @@
         "text": "Telegram Stars остается отдельным Telegram invoice flow и не смешивается с web checkout провайдерами."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-payment-provider-smoke-generator",
+    "version": "0.121.0",
+    "releasedAt": "2026-06-14T20:00:00+07:00",
+    "title": "Генератор smoke-отчета по платежным провайдерам",
+    "summary": "Добавлен безопасный генератор черновика отчета для sandbox/live проверки всех web-провайдеров оплаты.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-payment-provider-smoke-report.ps1` создает готовый черновик payment provider smoke report без ручного копирования JSON."
+      },
+      {
+        "type": "improved",
+        "text": "Генератор подставляет latest release, окружение, оператора и режим `sandbox` или `live`, а затем сразу запускает валидатор."
+      },
+      {
+        "type": "important",
+        "text": "Все провайдеры остаются в статусе `blocked`, пока оператор не пройдет реальные внешние кабинеты и не добавит безопасные evidence."
+      }
+    ]
   }
 ]
