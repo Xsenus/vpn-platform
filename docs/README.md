@@ -66,6 +66,7 @@
 - [Playwright public E2E](playwright-public-e2e.md)
 - [Playwright cabinet E2E](playwright-cabinet-e2e.md)
 - [Playwright admin E2E](playwright-admin-e2e.md)
+- [Mobile smoke](mobile-smoke.md)
 
 ## Правило обновления
 

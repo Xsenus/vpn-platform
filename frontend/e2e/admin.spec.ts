@@ -456,7 +456,7 @@ async function openAdminSection(page: Page, name: string, id: string) {
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
 
-test('admin panel covers login, payments, tariffs, VPN panels, scenarios and releases', async ({ page }) => {
+test('admin panel covers login, payments, tariffs, VPN panels, scenarios and releases', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   const failedResponses: string[] = []
   page.on('console', (message) => {
@@ -530,5 +530,9 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   expect(api.getLastRequest('/api/admin/work-scenarios')).toBeTruthy()
   expect(api.getLastRequest('/api/app-version/admin/releases')).toBeTruthy()
   expect(failedResponses).toEqual([])
+  if (testInfo.project.name.startsWith('mobile-')) {
+    await page.screenshot({ path: testInfo.outputPath('admin-mobile.png'), fullPage: true })
+  }
+
   expect(consoleErrors).toEqual([])
 })

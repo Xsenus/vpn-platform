@@ -2,6 +2,52 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: mobile smoke
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P11-ACC-003` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлены Playwright-проекты `mobile-public`, `mobile-cabinet`, `mobile-admin`.
+- Добавлен npm-скрипт `e2e:mobile`.
+- Existing E2E public/cabinet/admin теперь сохраняют mobile-скриншоты при запуске mobile-проектов.
+- Добавлена инструкция `docs/mobile-smoke.md` и ссылка в `docs/README.md`.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/MobileSmokeDocumentationTests.cs`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-14-mobile-smoke`.
+- Добавлен release entry `2026-06-14-mobile-smoke` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+npm run e2e:mobile --prefix frontend
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "MobileSmokeDocumentationTests|ReadmeDocumentationTests|ReleaseDocumentationGuardTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Mobile Playwright smoke: 3/3.
+- Скриншоты созданы в `frontend/test-results`: `public-mobile.png`, `cabinet-mobile.png`, `admin-mobile.png`.
+- Визуальный просмотр скриншотов: public/cabinet/admin не пустые, основные действия доступны; остаточный UX-риск - плотность кабинета и админки на 393px.
+- Mobile smoke documentation tests: 1/1.
+- README/release/encoding documentation guard: OK.
+- Fresh local SQLite smoke: OK.
+- Backend full suite: 460/460.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-mobile-smoke`, версия `0.100.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-13: fresh local setup
 
 Что проверено:

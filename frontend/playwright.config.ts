@@ -45,6 +45,30 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: 'http://127.0.0.1:5295'
       }
+    },
+    {
+      name: 'mobile-public',
+      testMatch: /public\.spec\.ts/,
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: 'http://127.0.0.1:5293'
+      }
+    },
+    {
+      name: 'mobile-cabinet',
+      testMatch: /cabinet\.spec\.ts/,
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: 'http://127.0.0.1:5294'
+      }
+    },
+    {
+      name: 'mobile-admin',
+      testMatch: /admin\.spec\.ts/,
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: 'http://127.0.0.1:5295'
+      }
     }
   ]
 })

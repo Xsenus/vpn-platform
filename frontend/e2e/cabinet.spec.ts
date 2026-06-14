@@ -363,7 +363,7 @@ async function mockCabinetApi(page: Page) {
   }
 }
 
-test('cabinet covers register, login, payments, subscription access and support', async ({ page }) => {
+test('cabinet covers register, login, payments, subscription access and support', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
@@ -435,5 +435,9 @@ test('cabinet covers register, login, payments, subscription access and support'
   expect(api.getLastRequest('/api/auth/login')?.body).toMatchObject({
     email: user.email
   })
+  if (testInfo.project.name.startsWith('mobile-')) {
+    await page.screenshot({ path: testInfo.outputPath('cabinet-mobile.png'), fullPage: true })
+  }
+
   expect(consoleErrors).toEqual([])
 })

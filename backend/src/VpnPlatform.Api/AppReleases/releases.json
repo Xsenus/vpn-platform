@@ -2424,5 +2424,28 @@
         "text": "Добавлена инструкция `docs/fresh-local-smoke.md` и тест `FreshLocalSetupSmokeTests`, который закрепляет обязательный сценарий fresh local setup."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-mobile-smoke",
+    "version": "0.100.0",
+    "releasedAt": "2026-06-14T13:55:00+07:00",
+    "title": "Добавлен мобильный smoke",
+    "summary": "Public site, личный кабинет и админка теперь проходят Playwright-проверку на мобильном viewport Pixel 5 с сохранением скриншотов и контролем console/page errors.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены Playwright-проекты `mobile-public`, `mobile-cabinet` и `mobile-admin`, которые используют основные E2E-сценарии на мобильном viewport."
+      },
+      {
+        "type": "new",
+        "text": "Команда `npm run e2e:mobile --prefix frontend` сохраняет `public-mobile.png`, `cabinet-mobile.png` и `admin-mobile.png` в `frontend/test-results`."
+      },
+      {
+        "type": "improved",
+        "text": "Добавлена инструкция `docs/mobile-smoke.md` и guard-тест `MobileSmokeDocumentationTests`; mobile smoke фиксирует отсутствие console/page errors и остаточный UX-риск плотных экранов."
+      }
+    ]
   }
 ]

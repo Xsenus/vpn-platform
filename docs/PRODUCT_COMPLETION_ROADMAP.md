@@ -635,9 +635,10 @@ git diff --check
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Доказательство: smoke report.
 
-- [ ] `P11-ACC-003` Mobile smoke.
+- [x] `P11-ACC-003` Mobile smoke. 2026-06-14.
   - Что сделать: public/cabinet/admin на мобильном viewport.
-  - Доказательство: screenshots.
+  - Что сделано: добавлены Playwright-проекты `mobile-public`, `mobile-cabinet`, `mobile-admin`, npm-скрипт `e2e:mobile`, сохранение скриншотов `public-mobile.png`, `cabinet-mobile.png`, `admin-mobile.png` и инструкция `docs/mobile-smoke.md`. Mobile smoke прогоняет существующие E2E-сценарии public/cabinet/admin на viewport Pixel 5, проверяет отсутствие `console.error`/`pageerror` и сохраняет PNG-артефакты в `frontend/test-results`. Визуальный просмотр показал, что экраны не пустые и основные действия доступны; остаточный UX-риск: интерфейсы кабинета и админки на 393px остаются плотными и требуют финальной ручной полировки перед production-ready.
+  - Доказательство: `npm run e2e:mobile --prefix frontend` 3/3, `MobileSmokeDocumentationTests` 1/1, backend full suite 460/460, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-mobile-smoke`.
 
 - [ ] `P11-ACC-004` No console errors.
   - Что сделать: проверить основные экраны в браузере.

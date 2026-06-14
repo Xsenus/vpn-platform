@@ -54,6 +54,9 @@ test('frontend package and CI keep the same mandatory commands', () => {
   assert.match(packageJson.scripts['e2e:public'], /playwright test --project=public-web/)
   assert.match(packageJson.scripts['e2e:cabinet'], /playwright test --project=cabinet/)
   assert.match(packageJson.scripts['e2e:admin'], /playwright test --project=admin-panel/)
+  assert.match(packageJson.scripts['e2e:mobile'], /mobile-public/)
+  assert.match(packageJson.scripts['e2e:mobile'], /mobile-cabinet/)
+  assert.match(packageJson.scripts['e2e:mobile'], /mobile-admin/)
 
   assert.match(ciWorkflow, /check-frontend-lockfile\.sh/)
   assert.match(ciWorkflow, /npm ci/)

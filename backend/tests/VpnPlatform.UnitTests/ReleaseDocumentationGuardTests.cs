@@ -28,7 +28,8 @@ public class ReleaseDocumentationGuardTests
         new("P10-DOC-003", "2026-06-13-user-help-pages"),
         new("P10-DOC-004", "2026-06-13-developer-guide"),
         new("P10-DOC-005", "2026-06-13-docs-encoding-guard"),
-        new("P11-ACC-001", "2026-06-13-fresh-local-smoke")
+        new("P11-ACC-001", "2026-06-13-fresh-local-smoke"),
+        new("P11-ACC-003", "2026-06-14-mobile-smoke")
     ];
 
     [Fact]

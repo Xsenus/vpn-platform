@@ -128,7 +128,7 @@ async function mockPublicApi(page: Page) {
   }
 }
 
-test('public website covers landing, tariffs, FAQ and checkout start', async ({ page }) => {
+test('public website covers landing, tariffs, FAQ and checkout start', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
@@ -168,6 +168,10 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   await page.getByLabel('Поиск по FAQ').fill('подключение')
   await expect(page.getByText('Когда появится подключение?')).toBeVisible()
   await expect(page.getByText('Как оплатить VPN?')).not.toBeVisible()
+
+  if (testInfo.project.name.startsWith('mobile-')) {
+    await page.screenshot({ path: testInfo.outputPath('public-mobile.png'), fullPage: true })
+  }
 
   expect(consoleErrors).toEqual([])
 })

@@ -15,7 +15,8 @@
     "e2e": "playwright test",
     "e2e:public": "playwright test --project=public-web",
     "e2e:cabinet": "playwright test --project=cabinet",
-    "e2e:admin": "playwright test --project=admin-panel"
+    "e2e:admin": "playwright test --project=admin-panel",
+    "e2e:mobile": "playwright test --project=mobile-public --project=mobile-cabinet --project=mobile-admin"
   },
   "optionalDependencies": {
     "@rolldown/binding-linux-x64-gnu": "^1.0.2",
