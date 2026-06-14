@@ -2713,5 +2713,32 @@
         "text": "Live VPS/provisioning smoke, реальные 3x-ui и платежные провайдеры остаются открытыми production-блокерами."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-product-admin-roadmap-sync",
+    "version": "0.111.0",
+    "releasedAt": "2026-06-14T16:28:00+07:00",
+    "title": "Синхронизирован продуктовый UI-roadmap",
+    "summary": "Product/admin UI roadmap приведен к текущему состоянию: локальный сайт, кабинет, админка, UX и E2E закрыты, а live-платежи, реальный 3x-ui и VPS smoke оставлены отдельными блокерами.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`docs/product-admin-ui-roadmap.md` больше не показывает старые unchecked пункты для уже закрытых локальных UX/API/E2E задач."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `ProductAdminUiRoadmapSyncTests`, который связывает продуктовый roadmap с текущими счетчиками, latest release и live-блокерами."
+      },
+      {
+        "type": "fixed",
+        "text": "Product roadmap теперь явно отделяет закрытый локальный продуктовый слой от production-ready блокеров."
+      },
+      {
+        "type": "important",
+        "text": "Live-платежи, реальный 3x-ui, VPS admin/live smoke и production-ready решение остаются открытыми в master roadmap."
+      }
+    ]
   }
 ]

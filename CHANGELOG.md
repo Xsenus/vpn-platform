@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.111.0 - 2026-06-14
+
+Release entry: `2026-06-14-product-admin-roadmap-sync`.
+
+### Добавлено
+
+- Guard-тест `ProductAdminUiRoadmapSyncTests`, который проверяет актуальность продуктового UI-roadmap и отсутствие старых незакрытых чекбоксов по уже покрытым локальным UX/API/E2E задачам.
+
+### Обновлено
+
+- `docs/product-admin-ui-roadmap.md` переписан как компактный актуальный продуктовый срез: локальный сайт, кабинет, админка, UX, API и smoke-проверки закрыты, а live-платежи, реальный 3x-ui и VPS smoke оставлены открытыми.
+- Current status обновлен до backend `484/484`, latest release `0.111.0`.
+
+### Проверено
+
+- Backend full suite: 484/484.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- Product/UI roadmap не закрывает production-ready: P0/live-задачи по VPS, платежам и 3x-ui остаются в master roadmap.
+
 ## 0.110.0 - 2026-06-14
 
 Release entry: `2026-06-14-provisioning-secret-bug-sync`.
