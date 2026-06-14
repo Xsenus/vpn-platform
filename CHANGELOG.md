@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.109.0 - 2026-06-14
+
+Release entry: `2026-06-14-roadmap-bug-register-sync`.
+
+### Добавлено
+
+- Guard-тест `BugRegisterConsistencyTests`, который проверяет, что локально закрытые баги в журнале ошибок не остаются в статусе `open`.
+
+### Исправлено
+
+- `BUG-004` в roadmap больше не числится открытым: полный browser E2E public/cabinet/admin уже закрыт через `P9-TST-008`, all-screens и console smoke.
+- `BUG-005` в roadmap больше не числится открытым: синхронизация документации и проверка кодировки закрыты через `P10-DOC-005`, `STATE-014` и guard-тесты.
+
+### Проверено
+
+- Backend full suite: 482/482.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- `BUG-001`, `BUG-002`, `BUG-003`, `BUG-006` и P0/live-задачи остаются открытыми до реального VPS, платежных кабинетов, 3x-ui и provisioning smoke.
+
 ## 0.108.0 - 2026-06-14
 
 Release entry: `2026-06-14-roadmap-current-state-sync`.

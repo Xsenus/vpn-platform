@@ -2659,5 +2659,32 @@
         "text": "Live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются открытыми задачами до проверки на реальном окружении."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-roadmap-bug-register-sync",
+    "version": "0.109.0",
+    "releasedAt": "2026-06-14T16:12:00+07:00",
+    "title": "Синхронизирован журнал ошибок roadmap",
+    "summary": "Журнал найденных ошибок в roadmap приведен в соответствие с уже закрытыми локальными проверками: browser E2E и документация больше не числятся открытыми проблемами.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`BUG-004` больше не отмечен как open: public/cabinet/admin browser E2E закрыт через all-screens и console smoke."
+      },
+      {
+        "type": "fixed",
+        "text": "`BUG-005` больше не отмечен как open: roadmap/docs синхронизированы, а кодировка проверяется guard-тестами."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `BugRegisterConsistencyTests`, который закрепляет статусы закрытых локальных багов и не трогает live-блокеры."
+      },
+      {
+        "type": "important",
+        "text": "Live-блокеры по VPS, платежам, реальному 3x-ui и provisioning остаются открытыми до проверки на внешнем окружении."
+      }
+    ]
   }
 ]

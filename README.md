@@ -207,7 +207,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `480/480` unit tests;
+- backend на .NET 9: `482/482` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
@@ -215,6 +215,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
-- changelog, финальный runbook, release decision и roadmap синхронизированы с разделом "Что нового": `2026-06-14-roadmap-current-state-sync`, версия `0.108.0`;
+- changelog, финальный runbook, release decision, roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-roadmap-bug-register-sync`, версия `0.109.0`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

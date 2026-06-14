@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `480/480`.
+- [x] `STATE-001` Backend test suite проходит: `482/482`.
 - [x] `STATE-002` Frontend test suite проходит: `65/65`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS и seed "Что нового" приведены к одному состоянию: backend `480/480`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-roadmap-current-state-sync`, версия `0.108.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS и seed "Что нового" приведены к одному состоянию: backend `482/482`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-roadmap-bug-register-sync`, версия `0.109.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `480/480`, frontend tests `65/65`, latest "Что нового" `2026-06-14-roadmap-current-state-sync`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `482/482`, frontend tests `65/65`, latest "Что нового" `2026-06-14-roadmap-bug-register-sync`.
 
 ## P0. Блокеры production-запуска
 
@@ -714,6 +714,6 @@ git diff --check
 | BUG-001 | P0 | VPS/Admin | Не подтвержден рабочий вход в админку на VPS | partial | CLI-механизм восстановления добавлен; дальше выполнить reset на VPS и пройти smoke |
 | BUG-002 | P0 | VPN | Не подтверждена live-выдача через реальный 3x-ui | open | Подключить panel/inbound/node и провести production smoke |
 | BUG-003 | P0 | Payments | Не все payment providers подтверждены live/sandbox smoke | open | Пройти матрицу провайдеров |
-| BUG-004 | P1 | Frontend | Нет полного browser E2E по public/cabinet/admin | open | Добавить Playwright/smoke проверки |
-| BUG-005 | P1 | Docs | Часть roadmap/docs устарела, возможен mojibake в старых `.md` | open | Синхронизировать и проверить кодировку |
+| BUG-004 | P1 | Frontend | Нет полного browser E2E по public/cabinet/admin | Исправлено | Закрыто через `P9-TST-008`, `AllScreensBrowserSmokeTests`, `npm run e2e:all-screens --prefix frontend` и `npm run e2e:console --prefix frontend`. |
+| BUG-005 | P1 | Docs | Часть roadmap/docs устарела, возможен mojibake в старых `.md` | Исправлено | Закрыто через `P10-DOC-005`, `STATE-014`, `DocumentationEncodingTests`, `RoadmapCurrentStateTests` и `BugRegisterConsistencyTests`. |
 | BUG-006 | P1 | Provisioning | Live Ansible provisioning не production-ready из-за secret materialization | open | Реализовать безопасную передачу секретов |
