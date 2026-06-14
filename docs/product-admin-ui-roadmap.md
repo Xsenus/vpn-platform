@@ -65,12 +65,12 @@
 - [ ] Подключить реальную 3x-ui панель, inbound и VPN node.
 - [ ] Провести production-like order smoke: checkout, payment, webhook, subscription, VPN access.
 - [ ] Проверить live/sandbox кабинеты YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe, PayPal.
-- [ ] Реализовать или подтвердить полноценный Telegram Stars invoice flow.
+- [x] Реализовать или подтвердить полноценный Telegram Stars invoice flow на локальном invoice gate; live BotFather smoke остается внешней проверкой.
 - [ ] Заполнить staging/VPS smoke report без секретов, cookies и приватных headers.
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `493/493`.
+- [x] Backend full suite: `495/495`.
 - [x] Frontend unit tests: `65/65`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -80,7 +80,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-14-telegram-webhook-boundary`, версия `0.117.0`.
+- [x] Latest "Что нового": `2026-06-14-telegram-stars-invoice-gate`, версия `0.118.0`.
 
 ## Как вести дальше
 

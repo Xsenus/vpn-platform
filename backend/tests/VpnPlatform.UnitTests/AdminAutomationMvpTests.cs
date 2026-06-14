@@ -456,6 +456,7 @@ public class AdminAutomationMvpTests
         await using var db = CreateDbContext();
         var account = PaymentAccount(PaymentProvider.TelegramStars, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "vpnplatform_bot", secret: "protected-secret");
         account.ApiBaseUrl = string.Empty;
+        account.ExtraSettingsJson = """{"status":"bot-only"}""";
         db.PaymentProviderAccounts.Add(account);
         await db.SaveChangesAsync();
 
@@ -467,7 +468,34 @@ public class AdminAutomationMvpTests
         Assert.False(check.IsReady);
         Assert.Equal("Unhealthy", check.HealthStatus);
         Assert.Contains(check.Details, x => x.Contains("Telegram invoice flow", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(check.Details, x => x.Contains("web checkout скрыт", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(check.Details, x => x.Contains("invoice-flow", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(check.Details, x => x.Contains("web checkout", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Provider_Account_Check_Should_Enable_TelegramStars_When_Invoice_Flow_Is_Explicit()
+    {
+        await using var db = CreateDbContext();
+        var account = PaymentAccount(PaymentProvider.TelegramStars, PaymentProviderMode.Production, isEnabled: true, shopId: "vpnplatform_bot", secret: string.Empty);
+        account.ApiBaseUrl = string.Empty;
+        account.SecretKeyProtected = string.Empty;
+        account.ExtraSettingsJson = """{"status":"invoice-flow"}""";
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        var controller = CreateOperationsController(db);
+        var result = await controller.CheckPaymentProviderAccount(account.Id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
+        Assert.True(check.IsReady);
+        Assert.Equal("Healthy", check.HealthStatus);
+        Assert.Contains(check.Account.RequiredFields, x => x.Key == "telegramBotFlow" && x.Required && x.Configured);
+        Assert.Contains(check.Account.RequiredFields, x => x.Key == "shopId" && x.Required && x.Configured);
+        Assert.Empty(check.Account.ReadinessBlockers);
+
+        var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
+        Assert.Equal(HealthStatus.Healthy, saved.HealthStatus);
     }
 
     [Fact]

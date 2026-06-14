@@ -665,7 +665,8 @@ public class TelegramBotPurchaseFlowTests
             ApiBaseUrl = "https://api.telegram.org",
             ReturnUrl = "https://cabinet.test/payments",
             SecretKeyProtected = string.Empty,
-            WebhookSecretProtected = string.Empty
+            WebhookSecretProtected = string.Empty,
+            ExtraSettingsJson = """{"status":"invoice-flow"}"""
         });
         await db.SaveChangesAsync();
     }

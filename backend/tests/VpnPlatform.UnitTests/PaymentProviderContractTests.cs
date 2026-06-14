@@ -105,8 +105,13 @@ public class PaymentProviderContractTests
 
         Assert.False(PaymentProviderConfigurationRules.SupportsWebCheckout(PaymentProvider.TelegramStars));
         Assert.True(PaymentProviderConfigurationRules.SupportsTelegramCheckout(PaymentProvider.TelegramStars));
-        Assert.True(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
+        Assert.False(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
         Assert.False(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
+
+        account.ShopId = "vpnplatform_bot";
+        account.ExtraSettingsJson = """{"status":"invoice-flow"}""";
+
+        Assert.True(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
     }
 
     [Fact]

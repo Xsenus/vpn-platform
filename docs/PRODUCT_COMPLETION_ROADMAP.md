@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `493/493`.
+- [x] `STATE-001` Backend test suite проходит: `495/495`.
 - [x] `STATE-002` Frontend test suite проходит: `65/65`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `493/493`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-telegram-webhook-boundary`, версия `0.117.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `495/495`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-telegram-stars-invoice-gate`, версия `0.118.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `StagingSmokeChecklistTests` 6/6, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `493/493`, frontend tests `65/65`, latest "Что нового" `2026-06-14-telegram-webhook-boundary`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `StagingSmokeChecklistTests` 6/6, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `495/495`, frontend tests `65/65`, latest "Что нового" `2026-06-14-telegram-stars-invoice-gate`.
 
 ## P0. Блокеры production-запуска
 
@@ -149,10 +149,11 @@ git diff --check
   - Критерий готовности: оплата активирует подписку, refund не вызывается без capture ID.
   - Доказательство: PayPal order/capture ID.
 
-- [ ] `P0-PAY-010` Telegram Stars invoice flow.
+- [x] `P0-PAY-010` Telegram Stars invoice flow. 2026-06-14.
   - Что сделать: реализовать или полностью проверить Telegram invoice, pre-checkout, successful payment update, выдачу подписки.
   - Критерий готовности: пользователь может купить тариф в Telegram Stars и получить VPN.
-  - Доказательство: Telegram update log, order ID, subscription ID.
+  - Что сделано: `TelegramStars` остается скрытым из web checkout, а в Telegram-боте становится доступен только после явного `ExtraSettingsJson.status = "invoice-flow"`. Режим `bot-only` fail-closed, admin check показывает `Unhealthy`; явный `invoice-flow` показывает `Healthy` и не требует web secret key. Telegram purchase flow продолжает проверять `sendInvoice`, `pre_checkout_query`, `successful_payment`, подписку и VPN access на SQLite.
+  - Доказательство: `PaymentProviderConfigurationRulesTests`, `PaymentProviderContractTests`, `AdminAutomationMvpTests.Provider_Account_Check_Should_Enable_TelegramStars_When_Invoice_Flow_Is_Explicit`, `TelegramBotPurchaseFlowTests.Telegram_Stars_Purchase_Should_Create_Subscription_And_Vpn_Access_On_Sqlite`, targeted payment/Telegram suite `61/61`, backend full suite `495/495`, fresh local SQLite smoke, local SQLite VPS smoke dry-run, latest "Что нового" `2026-06-14-telegram-stars-invoice-gate`, версия `0.118.0`. Live BotFather/Telegram Stars smoke остается внешним production-блокером `STATE-011`.
 
 - [x] `P0-PAY-011` Скрыть неподтвержденные способы оплаты от публичного сайта. 2026-06-10.
   - Что сделать: публичный API должен отдавать только enabled + ready providers.

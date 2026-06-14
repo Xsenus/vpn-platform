@@ -16,14 +16,39 @@ public class PaymentProviderConfigurationRulesTests
             Mode = PaymentProviderMode.Sandbox,
             IsEnabled = true,
             Name = "telegram-stars",
-            PublicName = "Telegram Stars"
+            PublicName = "Telegram Stars",
+            ShopId = "vpnplatform_bot",
+            ExtraSettingsJson = """{"status":"bot-only"}"""
         };
 
         Assert.False(PaymentProviderConfigurationRules.SupportsWebCheckout(account.Provider));
         Assert.True(PaymentProviderConfigurationRules.SupportsTelegramCheckout(account.Provider));
         Assert.False(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
-        Assert.True(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
+        Assert.False(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
         Assert.Contains("Telegram bot", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("invoice-flow", PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        account.ExtraSettingsJson = """{"status":"invoice-flow"}""";
+
+        Assert.True(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
+        Assert.Null(PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account));
+    }
+
+    [Fact]
+    public void TelegramStars_Should_Require_Bot_Username_For_Invoice_Flow()
+    {
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.TelegramStars,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true,
+            Name = "telegram-stars",
+            PublicName = "Telegram Stars",
+            ExtraSettingsJson = """{"status":"invoice-flow"}"""
+        };
+
+        Assert.False(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
+        Assert.Contains("bot username", PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

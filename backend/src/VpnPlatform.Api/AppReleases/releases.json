@@ -2902,5 +2902,32 @@
         "text": "Реальный Telegram/BotFather webhook и live Telegram Stars smoke остаются внешними production-блокерами."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-telegram-stars-invoice-gate",
+    "version": "0.118.0",
+    "releasedAt": "2026-06-14T18:30:00+07:00",
+    "title": "Telegram Stars включается только через invoice-flow",
+    "summary": "Админка и бот теперь различают безопасный режим bot-only и полноценный Telegram Stars invoice flow перед продажей тарифа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Telegram Stars больше не считается готовым для продаж только по факту включенного аккаунта: нужен явный `ExtraSettingsJson.status = \"invoice-flow\"`."
+      },
+      {
+        "type": "improved",
+        "text": "Кнопка проверки провайдера в админке показывает Stars как unhealthy в режиме `bot-only` и healthy после включения `invoice-flow`."
+      },
+      {
+        "type": "fixed",
+        "text": "Production-настройка Telegram Stars больше не требует web secret key, потому что оплата проходит через Telegram invoice, а не через браузерный checkout."
+      },
+      {
+        "type": "important",
+        "text": "Live BotFather/Telegram Stars smoke остается внешней production-проверкой с реальным BotToken и Telegram окружением."
+      }
+    ]
   }
 ]

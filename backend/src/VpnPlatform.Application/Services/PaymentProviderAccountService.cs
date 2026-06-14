@@ -87,7 +87,9 @@ public class PaymentProviderAccountService
             account = new PaymentProviderAccount { Provider = command.Provider, CreatedAt = _clock.UtcNow };
             _db.PaymentProviderAccounts.Add(account);
 
-            if (command.Mode == PaymentProviderMode.Production && string.IsNullOrWhiteSpace(command.SecretKey))
+            if (command.Provider != PaymentProvider.TelegramStars
+                && command.Mode == PaymentProviderMode.Production
+                && string.IsNullOrWhiteSpace(command.SecretKey))
             {
                 return Result<PaymentProviderAccountDto>.Failure("SecretKey is required when creating a production provider account.");
             }
@@ -159,7 +161,9 @@ public class PaymentProviderAccountService
 
         var details = new List<string>();
         var blockingIssues = new List<string>();
-        var readinessIssue = PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account);
+        var readinessIssue = account.Provider == PaymentProvider.TelegramStars
+            ? PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account)
+            : PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account);
         if (readinessIssue is null)
         {
             details.Add("Готово: базовая конфигурация checkout заполнена.");
@@ -296,6 +300,7 @@ public class PaymentProviderAccountService
     {
         var production = account.Mode == PaymentProviderMode.Production;
         var webCheckout = PaymentProviderConfigurationRules.SupportsWebCheckout(account.Provider);
+        var telegramStars = account.Provider == PaymentProvider.TelegramStars;
         var webhookSecretRequired = production && account.Provider is PaymentProvider.RoboKassa or PaymentProvider.YooMoney or PaymentProvider.Stripe or PaymentProvider.PayPal or PaymentProvider.Prodamus;
         var hostedCheckoutUrl = PaymentProviderConfigurationRules.ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl");
 
@@ -303,7 +308,7 @@ public class PaymentProviderAccountService
         {
             Field("enabled", "Аккаунт включен", true, account.IsEnabled, "Включите аккаунт, иначе пользователи не увидят способ оплаты."),
             Field("mode", "Режим Sandbox или Production", true, account.Mode != PaymentProviderMode.Disabled, "Выберите Sandbox или Production."),
-            Field("shopId", account.Provider == PaymentProvider.TelegramStars ? "Bot username" : "ShopId / merchant id", webCheckout, !string.IsNullOrWhiteSpace(account.ShopId), "Укажите идентификатор магазина или мерчанта."),
+            Field("shopId", telegramStars ? "Bot username" : "ShopId / merchant id", webCheckout || telegramStars, !string.IsNullOrWhiteSpace(account.ShopId), telegramStars ? "Укажите username Telegram-бота для Stars invoice flow." : "Укажите идентификатор магазина или мерчанта."),
             Field("secretKey", "Secret key", production && webCheckout, !string.IsNullOrWhiteSpace(account.SecretKeyProtected), "Для production нужен защищенный secret key."),
             Field("webhookSecret", "Webhook secret", webhookSecretRequired, !string.IsNullOrWhiteSpace(account.WebhookSecretProtected), "Для production-уведомлений нужен webhook secret."),
             Field("apiBaseUrl", "API base URL", webCheckout && account.Provider != PaymentProvider.CloudPayments, !string.IsNullOrWhiteSpace(account.ApiBaseUrl), "Укажите API URL провайдера."),
@@ -320,7 +325,9 @@ public class PaymentProviderAccountService
     private static IReadOnlyCollection<string> BuildReadinessBlockers(PaymentProviderAccount account)
     {
         var blockers = new List<string>();
-        var checkoutIssue = PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account);
+        var checkoutIssue = account.Provider == PaymentProvider.TelegramStars
+            ? PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account)
+            : PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account);
         if (!string.IsNullOrWhiteSpace(checkoutIssue))
         {
             blockers.Add(checkoutIssue);
@@ -472,7 +479,9 @@ public class PaymentProviderAccountService
             return "Production provider account requires ShopId/MerchantLogin/Receiver.";
         }
 
-        if (account.Mode == PaymentProviderMode.Production && string.IsNullOrWhiteSpace(account.SecretKeyProtected))
+        if (account.Provider != PaymentProvider.TelegramStars
+            && account.Mode == PaymentProviderMode.Production
+            && string.IsNullOrWhiteSpace(account.SecretKeyProtected))
         {
             return $"Production {account.Provider} provider account requires an encrypted SecretKey.";
         }

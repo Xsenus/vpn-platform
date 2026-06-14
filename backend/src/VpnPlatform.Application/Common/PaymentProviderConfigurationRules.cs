@@ -7,6 +7,10 @@ public sealed record PaymentProviderCapabilityRule(string Key, string Label, boo
 
 public static class PaymentProviderConfigurationRules
 {
+    public const string TelegramStarsStatusKey = "status";
+    public const string TelegramStarsBotOnlyStatus = "bot-only";
+    public const string TelegramStarsInvoiceFlowStatus = "invoice-flow";
+
     public static bool SupportsWebCheckout(PaymentProvider provider)
         => provider != PaymentProvider.TelegramStars;
 
@@ -69,6 +73,17 @@ public static class PaymentProviderConfigurationRules
         if (account.Mode == PaymentProviderMode.Disabled)
         {
             return "Provider mode is Disabled.";
+        }
+
+        if (string.IsNullOrWhiteSpace(account.ShopId))
+        {
+            return "Telegram Stars bot username is required before invoice flow can be enabled.";
+        }
+
+        var status = ReadExtraSetting(account.ExtraSettingsJson, TelegramStarsStatusKey);
+        if (!string.Equals(status, TelegramStarsInvoiceFlowStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            return "Telegram Stars invoice flow must be explicitly enabled with ExtraSettingsJson.status = \"invoice-flow\".";
         }
 
         return null;

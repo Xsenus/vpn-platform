@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.118.0 - 2026-06-14
+
+Release entry: `2026-06-14-telegram-stars-invoice-gate`.
+
+### Changed
+
+- Telegram Stars теперь считается готовым для bot checkout только при явном `ExtraSettingsJson.status = "invoice-flow"`.
+- Режим `bot-only` остается безопасным состоянием: Stars скрыт из web checkout и не появляется в Telegram-клавиатуре оплаты как готовый способ.
+- Проверка подключения платежного провайдера в админке показывает Stars как `Unhealthy` для `bot-only` и `Healthy` для явного `invoice-flow`.
+- Production-настройка Telegram Stars больше не требует web secret key, потому что Stars работает через Telegram invoice update flow.
+- Current status обновлен до backend `495/495`, latest release `2026-06-14-telegram-stars-invoice-gate`.
+
+### Verified
+
+- Targeted payment/Telegram suite: 61/61.
+- Backend full suite: 495/495.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Live BotFather/Telegram Stars smoke с реальным BotToken и Telegram окружением остается внешним production-блокером вместе с live-платежами и VPS/3x-ui проверками.
+
 ## 0.117.0 - 2026-06-14
 
 Release entry: `2026-06-14-telegram-webhook-boundary`.
@@ -30,7 +55,7 @@ Release entry: `2026-06-14-telegram-webhook-boundary`.
 
 ### Ограничения
 
-- Реальный Telegram/BotFather webhook и Telegram Stars live/sandbox smoke остаются внешними production-блокерами `P0-PAY-010`, `P11-ACC-002` и `P9-TST-007`.
+- Реальный Telegram/BotFather webhook и Telegram Stars live/sandbox smoke остаются внешними production-блокерами `STATE-011`, `P11-ACC-002` и `P9-TST-007`.
 
 ## 0.116.0 - 2026-06-14
 
@@ -60,7 +85,7 @@ Release entry: `2026-06-14-api-telegram-webhook`.
 
 ### Ограничения
 
-- Live Telegram webhook с реальным BotFather/Bot API и реальные Telegram Stars платежи остаются частью production/staging smoke: `P0-PAY-010`, `P11-ACC-002` и `P9-TST-007` не закрывались.
+- Live Telegram webhook с реальным BotFather/Bot API и реальные Telegram Stars платежи остаются частью production/staging smoke: `STATE-011`, `P11-ACC-002` и `P9-TST-007`; live smoke не закрывался.
 
 ## 0.115.0 - 2026-06-14
 

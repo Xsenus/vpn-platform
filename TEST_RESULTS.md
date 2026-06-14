@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: Telegram Stars invoice gate
+
+Что проверялось:
+
+- `TelegramStars` не считается готовым для продаж, если платежный аккаунт просто включен в режиме `bot-only`.
+- Telegram bot checkout включает Stars только при явном `ExtraSettingsJson.status = "invoice-flow"`.
+- Админская кнопка "Проверить подключение" показывает `Unhealthy` для `bot-only` и `Healthy` для `invoice-flow`.
+- Production-настройка Stars не требует web secret key, потому что оплата идет через Telegram invoice update flow.
+- Раздел "Что нового" получил релиз `2026-06-14-telegram-stars-invoice-gate`, версия `0.118.0`.
+
+Команды:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "PaymentProviderConfigurationRulesTests|PaymentProviderContractTests|AdminAutomationMvpTests|TelegramBotPurchaseFlowTests|PaymentProviderSandboxSeedTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+npm audit --audit-level=high --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+git diff --check
+```
+
+Результат:
+
+- Targeted payment/Telegram suite: `61/61`.
+- Backend full suite: `495/495`.
+- Frontend unit tests: `65/65`.
+- Typecheck/build: OK.
+- Browser console E2E: `9/9`.
+- Fresh local SQLite smoke: OK, latest `2026-06-14-telegram-stars-invoice-gate`.
+- Local SQLite VPS smoke dry-run: OK.
+- Secret scan: 0 findings.
+- Encoding guard: OK.
+- `npm audit --audit-level=high`: OK; остаются 2 moderate advisory по `react-router`.
+- Push не выполнялся.
+
 ## Проверка 2026-06-14: Telegram webhook boundary
 
 Что проверено:
