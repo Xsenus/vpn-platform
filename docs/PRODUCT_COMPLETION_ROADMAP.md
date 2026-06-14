@@ -2,7 +2,7 @@
 
 Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
 
-Дата актуализации: 2026-06-10.
+Дата актуализации: 2026-06-14.
 
 ## Как вести этот roadmap
 
@@ -31,14 +31,14 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-06-10:
+Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `279/279`.
-- [x] `STATE-002` Frontend test suite проходит: `55/55`.
+- [x] `STATE-001` Backend test suite проходит: `480/480`.
+- [x] `STATE-002` Frontend test suite проходит: `65/65`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
-- [x] `STATE-004` Frontend build проходит для public-web, cabinet и admin-panel.
-- [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` прошли успешно.
-- [x] `STATE-006` VPS отвечает: `/health/live`, `/health/ready`, `/`, `/cabinet/`, `/admin/`.
+- [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
+- [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
+- [x] `STATE-006` Локальный SQLite smoke и VPS smoke runner проверяют health, admin login, checkout, payment init, sandbox webhook, подписку и VPN access; live VPS report еще нужен.
 - [x] `STATE-007` Sandbox-покупка и sandbox-выдача VPN реализованы.
 - [x] `STATE-008` Production и sandbox VPN-выдача разделены.
 - [x] `STATE-009` Генерация VPN-ссылок поддерживает VLESS, VMess и Trojan.
@@ -46,7 +46,10 @@ git diff --check
 - [ ] `STATE-011` Live-платежи всех провайдеров не подтверждены.
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
-- [ ] `STATE-014` Roadmap и старая документация частично устарели и требуют синхронизации.
+- [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS и seed "Что нового" приведены к одному состоянию: backend `480/480`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-roadmap-current-state-sync`, версия `0.108.0`.
+  - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `480/480`, frontend tests `65/65`, latest "Что нового" `2026-06-14-roadmap-current-state-sync`.
 
 ## P0. Блокеры production-запуска
 

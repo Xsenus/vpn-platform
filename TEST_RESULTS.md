@@ -2,6 +2,51 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: синхронизация текущего состояния roadmap
+
+Что проверено:
+
+- Верхний блок `docs/PRODUCT_COMPLETION_ROADMAP.md` обновлен до состояния на 2026-06-14.
+- `STATE-014` закрыт как локально выполненная синхронизация текущего статуса документации.
+- README, `docs/final-runbook.md`, `docs/release-decision.md`, `CHANGELOG.md`, TEST_RESULTS и seed "Что нового" приведены к latest release `2026-06-14-roadmap-current-state-sync`.
+- Добавлен guard `RoadmapCurrentStateTests`, который не дает снова оставить верхний статус roadmap устаревшим.
+- Live-блокеры не закрывались: `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002`, live payments, 3x-ui и VPS остаются отдельными задачами.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail fresh-admin@example.test -AdminPassword LocalSmokePassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Roadmap current state guard: 2/2.
+- Targeted documentation/release guard suite: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 9/9.
+- Backend full suite: 480/480.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-roadmap-current-state-sync`, версия `0.108.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: all screens browser smoke
 
 Что проверено:

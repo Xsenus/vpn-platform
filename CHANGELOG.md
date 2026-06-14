@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.108.0 - 2026-06-14
+
+Release entry: `2026-06-14-roadmap-current-state-sync`.
+
+### Добавлено
+
+- Guard-тест `RoadmapCurrentStateTests`, который закрепляет актуальный верхний статус roadmap и связь с README, release decision, final runbook, TEST_RESULTS, changelog и seed "Что нового".
+- Запись "Что нового" `2026-06-14-roadmap-current-state-sync`.
+
+### Обновлено
+
+- Верхний блок `docs/PRODUCT_COMPLETION_ROADMAP.md` синхронизирован с текущими проверками: backend `480/480`, frontend `65/65`, browser console smoke `9/9`, latest release `0.108.0`.
+- README, `docs/final-runbook.md` и `docs/release-decision.md` теперь показывают один и тот же latest release.
+
+### Проверено
+
+- Backend full suite: 480/480.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- Production-ready статус все еще заблокирован live-платежами, реальной 3x-ui выдачей, VPS admin/live smoke и заполненным staging/VPS smoke report.
+
 ## 0.107.0 - 2026-06-14
 
 Release entry: `2026-06-14-all-screens-browser-smoke`.

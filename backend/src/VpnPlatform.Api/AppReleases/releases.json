@@ -2632,5 +2632,32 @@
         "text": "Проверка остается mock-based и не заменяет live smoke платежей, 3x-ui и VPS."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-roadmap-current-state-sync",
+    "version": "0.108.0",
+    "releasedAt": "2026-06-14T16:05:00+07:00",
+    "title": "Синхронизирован текущий roadmap",
+    "summary": "Roadmap, README, финальный runbook, release decision, changelog и результаты проверок приведены к одному текущему состоянию проекта без закрытия live-блокеров.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Верхний статус roadmap обновлен до актуальных проверок: backend `480/480`, frontend `65/65`, browser console smoke `9/9`."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен guard `RoadmapCurrentStateTests`, который связывает roadmap, README, final runbook, release decision, changelog, TEST_RESULTS и seed `Что нового`."
+      },
+      {
+        "type": "fixed",
+        "text": "`STATE-014` закрыт как синхронизация текущего состояния документации и release seed."
+      },
+      {
+        "type": "important",
+        "text": "Live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются открытыми задачами до проверки на реальном окружении."
+      }
+    ]
   }
 ]
