@@ -7,6 +7,7 @@
 - [README проекта](../README.md) - назначение платформы, локальный запуск, Docker/VPS контекст и текущий статус проверок.
 - [Changelog](../CHANGELOG.md) - сводка заметных релизов и текущего состояния.
 - [Release decision](release-decision.md) - текущее решение о готовности: staging-ready baseline и блокеры production-ready.
+- [Production readiness gate](production-readiness-gate.md) - fail-closed проверка smoke-отчета, roadmap и release decision перед production-ready.
 - [Roadmap](PRODUCT_COMPLETION_ROADMAP.md) - рабочая карта проекта с отметками выполнения и доказательствами.
 - [Руководство администратора](admin-guide.md) - настройка тарифов, платежей, VPN, 3x-ui, Telegram, сценариев и VPS.
 - [Руководство пользователя](user-guide.md) - покупка, оплата, подключение VPN, продление, Telegram и поддержка.
@@ -24,6 +25,7 @@
 - [Post-deploy smoke](post-deploy-smoke.md)
 - [VPS production smoke](vps-production-smoke.md)
 - [Staging smoke checklist](staging-smoke-checklist.md)
+- [Production readiness gate](production-readiness-gate.md)
 - [Staging validation runbook](STAGING_VALIDATION_RUNBOOK.md)
 
 ## Платежи

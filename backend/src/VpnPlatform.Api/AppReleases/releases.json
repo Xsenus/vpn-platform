@@ -2740,5 +2740,32 @@
         "text": "Live-платежи, реальный 3x-ui, VPS admin/live smoke и production-ready решение остаются открытыми в master roadmap."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-production-readiness-gate",
+    "version": "0.112.0",
+    "releasedAt": "2026-06-14T16:36:00+07:00",
+    "title": "Добавлен production readiness gate",
+    "summary": "Перед сменой статуса на production-ready теперь есть отдельная fail-closed проверка: smoke report должен быть полностью passed, а roadmap и release decision не должны содержать открытых live-блокеров.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/assert-production-readiness.ps1`, который запускает staging smoke validator с `-RequireAllPassed` и проверяет открытые P0/P11/STATE blockers."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен документ `docs/production-readiness-gate.md` с инструкцией запуска и критериями, когда проект можно переводить из staging-ready baseline в production-ready."
+      },
+      {
+        "type": "improved",
+        "text": "README, final runbook, release decision и master roadmap синхронизированы с новым latest release `0.112.0`."
+      },
+      {
+        "type": "important",
+        "text": "Live-платежи, реальный 3x-ui, VPS admin/live smoke и `P11-ACC-002` остаются открытыми: gate только запрещает закрыть production-ready без доказательств."
+      }
+    ]
   }
 ]

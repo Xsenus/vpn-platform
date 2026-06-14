@@ -71,6 +71,14 @@ VPS/staging HTTP smoke runner:
 powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18101 -AllowSandboxWebhook
 ```
 
+Production readiness gate:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
+```
+
+На текущем baseline эта команда должна завершаться ошибкой: шаблон smoke-отчета содержит `blocked`, а live-блокеры еще открыты в roadmap и release decision.
+
 Security gate:
 
 ```powershell
@@ -168,14 +176,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 484/484;
+- backend full suite: 486/486;
 - frontend tests: 65/65;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - high-severity frontend audit: OK, остаются 2 moderate advisory по `react-router`;
-- latest "Что нового": `2026-06-14-product-admin-roadmap-sync`, версия `0.111.0`.
+- latest "Что нового": `2026-06-14-production-readiness-gate`, версия `0.112.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production
@@ -187,4 +195,4 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - проверка backup/restore на staging PostgreSQL;
 - реальные sandbox-кабинеты платежных провайдеров;
 - реальная 3x-ui панель, inbound и выдача VPN-доступа;
-- отдельное решение `P11-ACC-007 Release decision`.
+- отдельный fail-closed `P11-ACC-008 Production readiness gate` перед сменой статуса на production-ready.

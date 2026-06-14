@@ -23,7 +23,7 @@ public class ReleaseDecisionTests
         Assert.Contains("[x] `P11-ACC-007`", roadmap, StringComparison.Ordinal);
 
         Assert.Contains("staging-ready baseline", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-14-product-admin-roadmap-sync", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-14-production-readiness-gate", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0.104.0 - 2026-06-14", changelog, StringComparison.Ordinal);
         Assert.Contains("staging-ready baseline", changelog, StringComparison.OrdinalIgnoreCase);
     }
@@ -58,6 +58,7 @@ public class ReleaseDecisionTests
                      "dotnet test backend/VpnPlatform.sln --configuration Release",
                      "powershell -ExecutionPolicy Bypass -File scripts\\fresh-local-smoke.ps1 -ApiPort 18101",
                      "powershell -ExecutionPolicy Bypass -File scripts\\scan-secrets.ps1",
+                     "powershell -ExecutionPolicy Bypass -File scripts\\assert-production-readiness.ps1 -ReportPath docs\\staging-smoke-report.template.json",
                      "npm run e2e:console --prefix frontend",
                      "npm audit --audit-level=high --prefix frontend",
                      "successful GitHub Actions deploy",

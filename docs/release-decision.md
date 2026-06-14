@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `484/484`.
+- Backend full suite: `486/486`.
 - API Release build: OK.
 - Frontend unit tests: `65/65`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - High-severity frontend audit: OK; остаются 2 moderate advisory по `react-router`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-14-product-admin-roadmap-sync`, версия `0.111.0`; синхронизированы roadmap, продуктовый UI-roadmap, журнал ошибок, README, final runbook, release decision, changelog и TEST_RESULTS, но live VPS/staging evidence еще требуется.
+- Latest "Что нового": `2026-06-14-production-readiness-gate`, версия `0.112.0`; добавлен fail-closed `scripts/assert-production-readiness.ps1`, синхронизированы roadmap, README, final runbook, release decision, changelog и TEST_RESULTS, но live VPS/staging evidence еще требуется.
 
 ## Команды проверки
 
@@ -40,6 +40,7 @@ Production-ready решение заблокировано следующими 
 dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDecisionTests|ReleaseDocumentationGuardTests|ReadmeDocumentationTests|DocumentationEncodingTests"
 powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
 powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
 npm run e2e:console --prefix frontend
 dotnet test backend/VpnPlatform.sln --configuration Release
 dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
@@ -53,6 +54,8 @@ git diff --check
 ## Следующий шаг
 
 Следующий технический шаг перед production: закрыть `P11-ACC-002` на реальном VPS или staging-домене.
+
+Перед изменением решения на production-ready дополнительно должен пройти `scripts/assert-production-readiness.ps1` с реальным smoke-отчетом, где все обязательные checks имеют статус `passed`, а roadmap и этот документ больше не содержат открытых production-блокеров.
 
 Минимальное доказательство для повышения статуса до production-ready:
 

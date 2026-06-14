@@ -18,8 +18,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("484/484", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-06-14-product-admin-roadmap-sync", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("486/486", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-06-14-production-readiness-gate", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -44,7 +44,7 @@ public class FinalDocsChangelogTests
                      ".github/workflows/deploy-vps.yml",
                      "VPS_DEPLOY_MODE",
                      "scripts/post-deploy-smoke.sh",
-                     "P11-ACC-007 Release decision"
+                     "P11-ACC-008 Production readiness gate"
                  })
         {
             Assert.Contains(expected, runbook, StringComparison.OrdinalIgnoreCase);

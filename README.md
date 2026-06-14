@@ -14,6 +14,7 @@ VPN Platform - монорепозиторий платформы для прод
 Changelog: [CHANGELOG.md](CHANGELOG.md).
 Финальный runbook запуска, проверки и deploy: [docs/final-runbook.md](docs/final-runbook.md).
 Release decision: [docs/release-decision.md](docs/release-decision.md).
+Production readiness gate: [docs/production-readiness-gate.md](docs/production-readiness-gate.md).
 VPS production smoke: [docs/vps-production-smoke.md](docs/vps-production-smoke.md).
 Staging smoke checklist: [docs/staging-smoke-checklist.md](docs/staging-smoke-checklist.md).
 All screens browser smoke: [docs/all-screens-browser-smoke.md](docs/all-screens-browser-smoke.md).
@@ -207,7 +208,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `484/484` unit tests;
+- backend на .NET 9: `486/486` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
@@ -215,6 +216,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-product-admin-roadmap-sync`, версия `0.111.0`;
+- production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-production-readiness-gate`, версия `0.112.0`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

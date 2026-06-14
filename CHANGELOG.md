@@ -2,6 +2,35 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.112.0 - 2026-06-14
+
+Release entry: `2026-06-14-production-readiness-gate`.
+
+### Добавлено
+
+- Fail-closed gate `scripts/assert-production-readiness.ps1`, который проверяет staging/VPS smoke report через `validate-staging-smoke-report.ps1 -RequireAllPassed` и дополнительно блокирует production-ready при открытых P0/P11/STATE blockers в roadmap или текущем решении `staging-ready baseline`.
+- Документ `docs/production-readiness-gate.md` с инструкцией запуска и объяснением, почему текущий baseline должен падать до реального smoke-отчета.
+- Guard-тест `ProductionReadinessGateTests`, который закрепляет наличие скрипта, документации, roadmap-пункта `P11-ACC-008`, release seed и TEST_RESULTS.
+
+### Обновлено
+
+- README, финальный runbook, release decision, docs index и master roadmap синхронизированы с latest release `0.112.0`.
+- Current status обновлен до backend `486/486`, latest release `2026-06-14-production-readiness-gate`.
+
+### Проверено
+
+- Backend full suite: 486/486.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+- `assert-production-readiness.ps1` на текущем шаблоне ожидаемо падает fail-closed, потому что smoke checks еще `blocked`.
+
+### Ограничения
+
+- Gate не закрывает live-платежи, реальный 3x-ui и VPS admin/live smoke; он только запрещает пометить проект production-ready без их доказательств.
+
 ## 0.111.0 - 2026-06-14
 
 Release entry: `2026-06-14-product-admin-roadmap-sync`.

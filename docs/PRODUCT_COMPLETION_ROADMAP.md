@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `484/484`.
+- [x] `STATE-001` Backend test suite проходит: `486/486`.
 - [x] `STATE-002` Frontend test suite проходит: `65/65`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `484/484`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-product-admin-roadmap-sync`, версия `0.111.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `486/486`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-production-readiness-gate`, версия `0.112.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `484/484`, frontend tests `65/65`, latest "Что нового" `2026-06-14-product-admin-roadmap-sync`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `486/486`, frontend tests `65/65`, latest "Что нового" `2026-06-14-production-readiness-gate`.
 
 ## P0. Блокеры production-запуска
 
@@ -672,6 +672,11 @@ git diff --check
   - Критерий production-ready: все P0 закрыты, P1 критические сценарии закрыты, validation gate зеленый, VPS smoke успешен.
   - Что сделано: добавлен документ `docs/release-decision.md` и guard `ReleaseDecisionTests`. Решение зафиксировано как `staging-ready baseline, не production-ready`, потому что `P11-ACC-002 VPS production smoke` остается открытым и нет live доказательства полного production сценария на реальном VPS. Документ перечисляет блокеры production-ready: ротация раскрытых секретов, домен/HTTPS, staging PostgreSQL backup/restore, реальные sandbox-кабинеты платежных провайдеров, 3x-ui panel/inbound/access smoke и Telegram bot webhook/invoice flow.
   - Доказательство: `ReleaseDecisionTests` 3/3, release decision documentation guard, backend full suite 478/478, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`.
+
+- [x] `P11-ACC-008` Production readiness gate. 2026-06-14.
+  - Что сделать: добавить fail-closed команду, которая не позволит считать проект production-ready без реального staging/VPS smoke report и закрытых P0/P11/STATE blockers.
+  - Что сделано: добавлен `scripts/assert-production-readiness.ps1`, документ `docs/production-readiness-gate.md` и guard `ProductionReadinessGateTests`. Скрипт запускает `validate-staging-smoke-report.ps1 -RequireAllPassed`, затем проверяет `docs/PRODUCT_COMPLETION_ROADMAP.md` и `docs/release-decision.md`; если остаются открытые live-блокеры или решение `staging-ready baseline`, команда падает с `Production readiness blocked`.
+  - Доказательство: `ProductionReadinessGateTests` 2/2, fail-closed запуск на текущем шаблоне staging smoke report, backend full suite `486/486`, latest "Что нового" `2026-06-14-production-readiness-gate`, версия `0.112.0`.
 
 ## Журнал проверок
 

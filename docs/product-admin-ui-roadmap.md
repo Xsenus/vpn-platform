@@ -70,7 +70,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `484/484`.
+- [x] Backend full suite: `486/486`.
 - [x] Frontend unit tests: `65/65`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -80,7 +80,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-14-product-admin-roadmap-sync`, версия `0.111.0`.
+- [x] Latest "Что нового": `2026-06-14-production-readiness-gate`, версия `0.112.0`.
 
 ## Как вести дальше
 
