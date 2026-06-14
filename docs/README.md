@@ -67,6 +67,7 @@
 - [Playwright cabinet E2E](playwright-cabinet-e2e.md)
 - [Playwright admin E2E](playwright-admin-e2e.md)
 - [Mobile smoke](mobile-smoke.md)
+- [No console errors smoke](no-console-errors-smoke.md)
 
 ## Правило обновления
 

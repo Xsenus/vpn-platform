@@ -2,6 +2,51 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: browser console smoke
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P11-ACC-004` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен npm-скрипт `e2e:console`.
+- Проверка покрывает `public-web`, `cabinet`, `admin-panel`, `mobile-public`, `mobile-cabinet`, `mobile-admin`.
+- Существующие Playwright E2E public/cabinet/admin падают при `console.error` и `pageerror`.
+- Добавлена инструкция `docs/no-console-errors-smoke.md` и ссылка в `docs/README.md`.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/NoConsoleErrorsSmokeTests.cs`.
+- `ReleaseDocumentationGuardTests` расширен ожиданием releaseId `2026-06-14-no-console-errors-smoke`.
+- Добавлен release entry `2026-06-14-no-console-errors-smoke` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+npm run e2e:console --prefix frontend
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "NoConsoleErrorsSmokeTests|ReadmeDocumentationTests|ReleaseDocumentationGuardTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Browser console smoke: 6/6.
+- Browser console report: `console.error=0`, `pageerror=0`.
+- No console errors smoke tests: 1/1.
+- README/release/encoding documentation guard: OK.
+- Fresh local SQLite smoke: OK.
+- Backend full suite: 461/461.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-no-console-errors-smoke`, версия `0.101.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: mobile smoke
 
 Что проверено:

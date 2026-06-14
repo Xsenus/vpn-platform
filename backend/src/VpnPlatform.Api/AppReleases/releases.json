@@ -2447,5 +2447,28 @@
         "text": "Добавлена инструкция `docs/mobile-smoke.md` и guard-тест `MobileSmokeDocumentationTests`; mobile smoke фиксирует отсутствие console/page errors и остаточный UX-риск плотных экранов."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-no-console-errors-smoke",
+    "version": "0.101.0",
+    "releasedAt": "2026-06-14T14:04:00+07:00",
+    "title": "Добавлен browser console smoke",
+    "summary": "Основные public, cabinet и admin сценарии теперь прогоняются на desktop и mobile как единый browser console smoke: проверка падает при console.error или pageerror.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлена команда `npm run e2e:console --prefix frontend`, которая запускает public, cabinet, admin и их mobile-проекты Playwright."
+      },
+      {
+        "type": "improved",
+        "text": "Browser console report фиксирует `console.error=0` и `pageerror=0` для шести основных frontend-поверхностей."
+      },
+      {
+        "type": "new",
+        "text": "Добавлена инструкция `docs/no-console-errors-smoke.md` и guard-тест `NoConsoleErrorsSmokeTests`, чтобы команда console smoke не выпала из проекта."
+      }
+    ]
   }
 ]

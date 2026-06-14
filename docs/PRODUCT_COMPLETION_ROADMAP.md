@@ -640,9 +640,10 @@ git diff --check
   - Что сделано: добавлены Playwright-проекты `mobile-public`, `mobile-cabinet`, `mobile-admin`, npm-скрипт `e2e:mobile`, сохранение скриншотов `public-mobile.png`, `cabinet-mobile.png`, `admin-mobile.png` и инструкция `docs/mobile-smoke.md`. Mobile smoke прогоняет существующие E2E-сценарии public/cabinet/admin на viewport Pixel 5, проверяет отсутствие `console.error`/`pageerror` и сохраняет PNG-артефакты в `frontend/test-results`. Визуальный просмотр показал, что экраны не пустые и основные действия доступны; остаточный UX-риск: интерфейсы кабинета и админки на 393px остаются плотными и требуют финальной ручной полировки перед production-ready.
   - Доказательство: `npm run e2e:mobile --prefix frontend` 3/3, `MobileSmokeDocumentationTests` 1/1, backend full suite 460/460, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-mobile-smoke`.
 
-- [ ] `P11-ACC-004` No console errors.
+- [x] `P11-ACC-004` No console errors. 2026-06-14.
   - Что сделать: проверить основные экраны в браузере.
-  - Доказательство: browser console report.
+  - Что сделано: добавлен npm-скрипт `e2e:console`, который прогоняет desktop и mobile Playwright-проекты `public-web`, `cabinet`, `admin-panel`, `mobile-public`, `mobile-cabinet`, `mobile-admin`. Существующие E2E-сценарии public/cabinet/admin подписаны на `page.on('console')` и `page.on('pageerror')` и падают при `console.error` или необработанном browser exception. Добавлена инструкция `docs/no-console-errors-smoke.md`.
+  - Доказательство: `npm run e2e:console --prefix frontend` 6/6, browser console report `console.error=0`, `pageerror=0`, `NoConsoleErrorsSmokeTests` 1/1, backend full suite 461/461, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-no-console-errors-smoke`.
 
 - [ ] `P11-ACC-005` Security final check.
   - Что сделать: secrets, auth, headers, rate limits, permissions.
