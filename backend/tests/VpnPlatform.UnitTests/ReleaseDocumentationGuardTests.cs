@@ -27,6 +27,7 @@ public class ReleaseDocumentationGuardTests
         new("P9-TST-007B", "2026-06-14-staging-smoke-report-consistency"),
         new("P9-TST-007C", "2026-06-14-staging-smoke-report-url-validation"),
         new("P1-TG-005", "2026-06-14-api-telegram-webhook"),
+        new("P1-TG-006", "2026-06-14-telegram-webhook-boundary"),
         new("P10-DOC-001", "2026-06-13-readme-russian-local-runbook"),
         new("P10-DOC-002", "2026-06-13-admin-operator-guide"),
         new("P10-DOC-003", "2026-06-13-user-help-pages"),

@@ -2,6 +2,36 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.117.0 - 2026-06-14
+
+Release entry: `2026-06-14-telegram-webhook-boundary`.
+
+### Добавлено
+
+- Guard-тесты `TelegramBotProcessBoundaryTests`, которые запрещают возвращать `/telegram/webhook` в standalone bot-процесс и проверяют документацию по основному API webhook.
+- Roadmap-пункт `P1-TG-006` для явной границы ответственности между основным API и standalone Telegram bot process.
+
+### Обновлено
+
+- `VpnPlatform.TelegramBot` больше не мапит webhook route и остается для LongPolling, очереди Telegram-уведомлений и health endpoints.
+- `docs/phase-3-telegram-foundation.md`, `docs/telegram-bot-setup.md`, README и production example указывают webhook на `/api/channels/telegram/webhook` основного API.
+- Current status обновлен до backend `493/493`, latest release `2026-06-14-telegram-webhook-boundary`.
+
+### Проверено
+
+- Targeted Telegram boundary/API suite: 41/41.
+- Standalone TelegramBot build: OK, предупреждений 0.
+- Backend full suite: 493/493.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- Реальный Telegram/BotFather webhook и Telegram Stars live/sandbox smoke остаются внешними production-блокерами `P0-PAY-010`, `P11-ACC-002` и `P9-TST-007`.
+
 ## 0.116.0 - 2026-06-14
 
 Release entry: `2026-06-14-api-telegram-webhook`.

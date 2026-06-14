@@ -28,7 +28,7 @@ All screens browser smoke: [docs/all-screens-browser-smoke.md](docs/all-screens-
 - `backend/src/VpnPlatform.Application` - бизнес-сервисы, DTO, orchestration платежей, подписок и VPN-доступов.
 - `backend/src/VpnPlatform.Infrastructure` - EF Core, PostgreSQL/SQLite, платежные адаптеры, 3x-ui, provisioning, секреты, hosted workers.
 - `backend/src/VpnPlatform.Api` - ASP.NET Core API, auth, публичные endpoints, кабинет, админка, webhooks, health и metrics.
-- `backend/src/VpnPlatform.TelegramBot` - Telegram bot process.
+- `backend/src/VpnPlatform.TelegramBot` - отдельный процесс LongPolling и отправки Telegram-уведомлений; webhook принимает основной API.
 - `frontend/apps/public-web` - публичный сайт с тарифами, FAQ и покупкой.
 - `frontend/apps/cabinet` - личный кабинет пользователя.
 - `frontend/apps/admin-panel` - административная панель.
@@ -208,7 +208,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `491/491` unit tests;
+- backend на .NET 9: `493/493` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
@@ -217,6 +217,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-api-telegram-webhook`, версия `0.116.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-telegram-webhook-boundary`, версия `0.117.0`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

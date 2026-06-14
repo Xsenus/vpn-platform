@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `491/491`",
+                     "Backend full suite: `493/493`",
                      "Frontend unit tests: `65/65`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-06-14-api-telegram-webhook",
-                     "0.116.0"
+                     "2026-06-14-telegram-webhook-boundary",
+                     "0.117.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-06-14-api-telegram-webhook", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-14-api-telegram-webhook", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-14-telegram-webhook-boundary", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-14-telegram-webhook-boundary", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

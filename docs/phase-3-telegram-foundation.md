@@ -96,10 +96,7 @@ export TelegramBot__PublicBotUsername='<bot-username-without-at>'
 
 ## Running Webhook
 
-```bash
-cd backend
-dotnet run --project src/VpnPlatform.TelegramBot --environment Production
-```
+Webhook mode is handled by the main API, not by the standalone `VpnPlatform.TelegramBot` process. Keep the standalone process for LongPolling and notification dispatching when needed.
 
 Required env vars:
 
@@ -107,14 +104,14 @@ Required env vars:
 export TelegramBot__Enabled=true
 export TelegramBot__Mode=Webhook
 export TelegramBot__BotToken='<bot-token>'
-export TelegramBot__WebhookUrl='https://api.example.com/telegram/webhook'
+export TelegramBot__WebhookUrl='https://api.example.com/api/channels/telegram/webhook'
 export TelegramBot__SecretToken='<random-secret>'
 ```
 
-Service endpoint:
+Main API endpoint:
 
 ```http
-POST /telegram/webhook
+POST /api/channels/telegram/webhook
 X-Telegram-Bot-Api-Secret-Token: <random-secret>
 ```
 

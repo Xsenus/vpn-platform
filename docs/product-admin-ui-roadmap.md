@@ -70,7 +70,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `491/491`.
+- [x] Backend full suite: `493/493`.
 - [x] Frontend unit tests: `65/65`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -80,7 +80,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-14-api-telegram-webhook`, версия `0.116.0`.
+- [x] Latest "Что нового": `2026-06-14-telegram-webhook-boundary`, версия `0.117.0`.
 
 ## Как вести дальше
 
