@@ -2,6 +2,53 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: consistency staging smoke report
+
+Что проверено:
+
+- `scripts/validate-staging-smoke-report.ps1` теперь отклоняет отчет, где `completedAt` раньше `startedAt`.
+- Валидатор отклоняет duplicate check id, чтобы один и тот же smoke-пункт нельзя было скрыть вторым `passed`-дублем.
+- Добавлен roadmap-подпункт `P9-TST-007B` и запись "Что нового" `2026-06-14-staging-smoke-report-consistency`, версия `0.114.0`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "StagingSmokeChecklistTests|ReleaseDocumentationGuardTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|DocumentationEncodingTests|ProductAdminUiRoadmapSyncTests"
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail fresh-admin@example.test -AdminPassword LocalSmokePassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Staging smoke checklist guard: 5/5.
+- Targeted documentation/release/encoding guard suite: OK.
+- Runtime consistency check: unsafe report with `completedAt < startedAt` rejected.
+- Runtime duplicate check: unsafe report with duplicate check id rejected.
+- `assert-production-readiness.ps1` на текущем шаблоне ожидаемо завершился fail-closed из-за `blocked` checks.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 9/9.
+- Backend full suite: 488/488.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-staging-smoke-report-consistency`, версия `0.114.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: sanitizer staging smoke report
 
 Что проверено:

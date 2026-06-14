@@ -2794,5 +2794,32 @@
         "text": "`P9-TST-007` остается `[~]`: реальный staging/VPS smoke report все еще нужен перед production-ready."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-staging-smoke-report-consistency",
+    "version": "0.114.0",
+    "releasedAt": "2026-06-14T16:52:00+07:00",
+    "title": "Усилена согласованность staging smoke отчетов",
+    "summary": "Валидатор staging smoke report теперь проверяет хронологию startedAt/completedAt и запрещает duplicate check id.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/validate-staging-smoke-report.ps1` отклоняет отчет, если `completedAt` раньше `startedAt`."
+      },
+      {
+        "type": "improved",
+        "text": "Повторяющиеся check id теперь считаются ошибкой, чтобы один smoke-пункт нельзя было скрыть вторым дублем."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен roadmap-подпункт `P9-TST-007B` и guard в `StagingSmokeChecklistTests`."
+      },
+      {
+        "type": "important",
+        "text": "`P9-TST-007` остается `[~]`: реальный staging/VPS smoke report все еще нужен перед production-ready."
+      }
+    ]
   }
 ]

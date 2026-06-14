@@ -176,14 +176,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 487/487;
+- backend full suite: 488/488;
 - frontend tests: 65/65;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - high-severity frontend audit: OK, остаются 2 moderate advisory по `react-router`;
-- latest "Что нового": `2026-06-14-staging-smoke-secret-sanitizer`, версия `0.113.0`.
+- latest "Что нового": `2026-06-14-staging-smoke-report-consistency`, версия `0.114.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

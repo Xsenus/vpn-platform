@@ -67,6 +67,20 @@ public class StagingSmokeChecklistTests
     }
 
     [Fact]
+    public void Staging_Smoke_Report_Validator_Should_Reject_Inconsistent_Time_And_Duplicate_Checks()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-staging-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+
+        Assert.Contains("completedAt must be greater than or equal to startedAt", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Duplicate staging smoke check id", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$completedAt -lt $startedAt", script, StringComparison.Ordinal);
+        Assert.Contains("completedAt", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("duplicate", guide, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Staging_Smoke_Report_Template_Should_Be_Valid_Safe_Json()
     {
         var root = FindRepositoryRoot();

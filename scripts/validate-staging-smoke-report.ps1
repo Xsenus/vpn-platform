@@ -47,12 +47,18 @@ foreach ($field in @("reportId", "environmentName", "apiBaseUrl", "startedAt", "
     Assert-ReportValue $report.$field "Required report field '$field' is empty."
 }
 
-if (-not (Test-ReportIsoDate ([string]$report.startedAt))) {
+$startedAt = [DateTimeOffset]::MinValue
+if (-not [DateTimeOffset]::TryParse([string]$report.startedAt, [ref]$startedAt)) {
     throw "startedAt must be an ISO-compatible DateTimeOffset value."
 }
 
-if (-not (Test-ReportIsoDate ([string]$report.completedAt))) {
+$completedAt = [DateTimeOffset]::MinValue
+if (-not [DateTimeOffset]::TryParse([string]$report.completedAt, [ref]$completedAt)) {
     throw "completedAt must be an ISO-compatible DateTimeOffset value."
+}
+
+if ($completedAt -lt $startedAt) {
+    throw "completedAt must be greater than or equal to startedAt."
 }
 
 $checks = ConvertTo-ReportArray $report.checks
@@ -88,6 +94,11 @@ foreach ($check in $checks) {
     Assert-ReportValue $check.status "Check '$($check.id)' must contain status."
     Assert-ReportValue $check.evidence "Check '$($check.id)' must contain evidence."
 
+    $checkId = [string]$check.id
+    if ($checkIds.ContainsKey($checkId)) {
+        throw "Duplicate staging smoke check id '$checkId'."
+    }
+
     $status = ([string]$check.status).ToLowerInvariant()
     if ($allowedStatuses -notcontains $status) {
         throw "Check '$($check.id)' has unsupported status '$($check.status)'."
@@ -97,7 +108,7 @@ foreach ($check in $checks) {
         throw "Check '$($check.id)' must be passed when -RequireAllPassed is set."
     }
 
-    $checkIds[[string]$check.id] = $true
+    $checkIds[$checkId] = $true
 }
 
 foreach ($requiredId in $requiredCheckIds) {

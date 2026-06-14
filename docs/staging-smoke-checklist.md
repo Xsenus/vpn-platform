@@ -49,6 +49,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.p
 
 Валидатор также ищет типовые признаки утечки секретов в любом поле отчета: `Authorization:`, `Bearer`, `Cookie:`, `Set-Cookie:`, `.env`, `client_secret`, `api_key`, `private header`, `x-api-key`, `X-Telegram-Bot-Api-Secret-Token`, `PRODUCTION_ENV_FILE`, `VPS_SSH_KEY`, private keys и webhook secrets. Если такой маркер найден, отчет считается небезопасным и не проходит проверку.
 
+Дополнительно валидатор проверяет внутреннюю согласованность отчета: `startedAt` и `completedAt` должны быть ISO-compatible DateTimeOffset, `completedAt` не может быть раньше `startedAt`, а check id не должны повторяться. Duplicate check id считается ошибкой, даже если один из дублей имеет статус `passed`.
+
 ## Связь с автоматическими smoke
 
 Для API/VPS сценария используйте:
@@ -65,5 +67,6 @@ powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBa
 - Добавлен шаблон `docs/staging-smoke-report.template.json`.
 - Добавлены guard-тесты `StagingSmokeChecklistTests`.
 - Валидатор расширен sanitizer-маркерами для cookies, `.env`, client secrets, API keys, private headers, Telegram secret header и GitHub/VPS secret names.
+- Валидатор проверяет порядок `startedAt`/`completedAt` и запрещает duplicate check id.
 - `P9-TST-007` получил воспроизводимый чеклист и валидатор.
 - Реальный live/staging smoke report пока не заполнен, поэтому внешние блокеры `P0-*`, `P11-ACC-002` и production-ready статус остаются открытыми.

@@ -2,6 +2,34 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.114.0 - 2026-06-14
+
+Release entry: `2026-06-14-staging-smoke-report-consistency`.
+
+### Добавлено
+
+- Guard-проверка в `StagingSmokeChecklistTests`, которая закрепляет запрет на `completedAt` раньше `startedAt` и duplicate check id в staging smoke report.
+- Roadmap-подпункт `P9-TST-007B` для локально закрытого consistency guard.
+
+### Обновлено
+
+- `scripts/validate-staging-smoke-report.ps1` теперь проверяет хронологию `startedAt`/`completedAt` и не принимает повторяющиеся check id.
+- `docs/staging-smoke-checklist.md` описывает эти правила как обязательную часть report validation.
+- Current status обновлен до backend `488/488`, latest release `2026-06-14-staging-smoke-report-consistency`.
+
+### Проверено
+
+- Backend full suite: 488/488.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- `P9-TST-007` остается `[~]`: consistency guard закрыт локально, но реальный staging/VPS smoke report все еще нужен.
+
 ## 0.113.0 - 2026-06-14
 
 Release entry: `2026-06-14-staging-smoke-secret-sanitizer`.
