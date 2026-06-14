@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `470/470`.
+- Backend full suite: `473/473`.
 - API Release build: OK.
 - Frontend unit tests: `65/65`.
 - Frontend typecheck/build: OK.
@@ -31,7 +31,8 @@ Production-ready решение заблокировано следующими 
 - Actual PowerShell secret scan: OK.
 - High-severity frontend audit: OK; остаются 2 moderate advisory по `react-router`.
 - UTF-8/encoding guard: OK.
-- Latest "Что нового": `2026-06-14-release-decision`, версия `0.104.0`.
+- Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
+- Latest "Что нового": `2026-06-14-vps-production-smoke-runner`, версия `0.105.0`; добавлен runner для VPS/staging smoke, но live VPS evidence еще требуется.
 
 ## Команды проверки
 

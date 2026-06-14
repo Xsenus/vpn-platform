@@ -36,14 +36,12 @@ public class ReleaseDecisionTests
         var docsIndex = File.ReadAllText(Path.Combine(root, "docs", "README.md"));
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.Api", "AppReleases", "releases.json")));
 
-        var latest = releasesJson.RootElement
+        var releaseDecision = releasesJson.RootElement
             .EnumerateArray()
-            .OrderByDescending(x => DateTimeOffset.Parse(x.GetProperty("releasedAt").GetString()!))
-            .First();
+            .Single(x => string.Equals(x.GetProperty("releaseId").GetString(), "2026-06-14-release-decision", StringComparison.Ordinal));
 
-        Assert.Equal("2026-06-14-release-decision", latest.GetProperty("releaseId").GetString());
-        Assert.Equal("0.104.0", latest.GetProperty("version").GetString());
-        Assert.Contains("staging-ready baseline", latest.GetProperty("summary").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("0.104.0", releaseDecision.GetProperty("version").GetString());
+        Assert.Contains("staging-ready baseline", releaseDecision.GetProperty("summary").GetString(), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("2026-06-14-release-decision", testResults, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ReleaseDecisionTests", testResults, StringComparison.Ordinal);
         Assert.Contains("release-decision.md", docsIndex, StringComparison.OrdinalIgnoreCase);

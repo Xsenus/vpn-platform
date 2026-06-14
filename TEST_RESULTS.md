@@ -2,6 +2,53 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: VPS production smoke runner
+
+Что проверено:
+
+- Добавлен воспроизводимый runner `scripts/vps-production-smoke.ps1` для проверки VPS/staging API.
+- Runner покрывает health live/ready, опциональные public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и payment providers, checkout session, регистрацию, claim заказа, payment init, sandbox webhook, историю заказов/платежей, активную подписку, VPN access и latest "Что нового".
+- Sandbox webhook работает только при явном `-AllowSandboxWebhook` и запрещен, если `/health/live` сообщает `Production`.
+- Добавлена инструкция `docs/vps-production-smoke.md` и ссылка из `docs/README.md`.
+- Добавлена запись "Что нового" `2026-06-14-vps-production-smoke-runner`, версия `0.105.0`.
+- `P11-ACC-002` дополнен технической частью, но live VPS smoke report остается обязательным для полного закрытия пункта.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "VpsProductionSmokeTests|ReleaseDecisionTests|ReadmeDocumentationTests|DocumentationEncodingTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail fresh-admin@example.test -AdminPassword LocalSmokePassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- VPS production smoke guard: 3/3.
+- Targeted documentation/release guard suite: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 6/6.
+- Backend full suite: 473/473.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-vps-production-smoke-runner`, версия `0.105.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+- Live VPS smoke на реальном сервере не выполнялся в этом коммите; для production-ready нужен отдельный smoke report после deploy и ротации секретов.
+
 ## Проверка 2026-06-14: release decision
 
 Что проверено:

@@ -2551,5 +2551,32 @@
         "text": "Следующий шаг перед production: закрыть `P11-ACC-002` на реальном VPS или staging-домене с payment sandbox и 3x-ui проверкой."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-vps-production-smoke-runner",
+    "version": "0.105.0",
+    "releasedAt": "2026-06-14T15:06:00+07:00",
+    "title": "Добавлен VPS production smoke runner",
+    "summary": "Добавлен воспроизводимый PowerShell smoke-runner для проверки deploy на VPS: health, web apps, admin login, checkout, payment init, sandbox webhook в non-Production, подписка и VPN access.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/vps-production-smoke.ps1` для запуска полного HTTP smoke против VPS или staging API."
+      },
+      {
+        "type": "important",
+        "text": "Скрипт fail-closed: `-AllowSandboxWebhook` запрещен, если `/health/live` сообщает `Production`."
+      },
+      {
+        "type": "new",
+        "text": "Добавлена инструкция `docs/vps-production-smoke.md` с локальным SQLite dry-run и production checklist."
+      },
+      {
+        "type": "improved",
+        "text": "`VpsProductionSmokeTests` закрепляет покрытие admin login, checkout, payment, subscription и VPN access сценария."
+      }
+    ]
   }
 ]

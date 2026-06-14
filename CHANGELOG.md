@@ -2,6 +2,39 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.105.0 - 2026-06-14
+
+### Добавлено
+
+- `scripts/vps-production-smoke.ps1` для полного HTTP-smoke против VPS или staging API.
+- Документация `docs/vps-production-smoke.md`.
+- Guard-тест `VpsProductionSmokeTests`.
+
+### Проверяется
+
+- health live/ready;
+- optional public/cabinet/admin web URLs;
+- optional admin login и dashboard;
+- public checkout session;
+- user registration;
+- order claim;
+- payment init;
+- sandbox webhook только в non-Production;
+- active subscription;
+- VPN access URI.
+
+### Ограничения
+
+- Live VPS smoke должен запускаться отдельно после deploy и ротации раскрытых секретов.
+- `-AllowSandboxWebhook` запрещен, если API сообщает `Production`.
+
+### Проверено
+
+- Backend full suite: 473/473.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Browser console smoke: 6/6.
+
 ## 0.104.0 - 2026-06-14
 
 ### Добавлено

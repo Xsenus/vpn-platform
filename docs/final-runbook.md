@@ -64,6 +64,12 @@ npm run e2e:mobile --prefix frontend
 npm run e2e:console --prefix frontend
 ```
 
+VPS/staging HTTP smoke runner:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18101 -AllowSandboxWebhook
+```
+
 Security gate:
 
 ```powershell
@@ -161,14 +167,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 470/470;
+- backend full suite: 473/473;
 - frontend tests: 65/65;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 6/6;
 - high-severity frontend audit: OK, остаются 2 moderate advisory по `react-router`;
-- latest "Что нового": `2026-06-14-release-decision`, версия `0.104.0`.
+- latest "Что нового": `2026-06-14-vps-production-smoke-runner`, версия `0.105.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -14,6 +14,7 @@ VPN Platform - монорепозиторий платформы для прод
 Changelog: [CHANGELOG.md](CHANGELOG.md).
 Финальный runbook запуска, проверки и deploy: [docs/final-runbook.md](docs/final-runbook.md).
 Release decision: [docs/release-decision.md](docs/release-decision.md).
+VPS production smoke: [docs/vps-production-smoke.md](docs/vps-production-smoke.md).
 Инструкция по GitHub Actions и деплою на VPS: [docs/github-deployment.md](docs/github-deployment.md).
 Руководство администратора: [docs/admin-guide.md](docs/admin-guide.md).
 Индекс документации: [docs/README.md](docs/README.md).
@@ -203,13 +204,14 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `470/470` unit tests;
+- backend на .NET 9: `473/473` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
 - frontend audit по high severity: OK, остаются 2 moderate advisory по `react-router`;
 - Playwright E2E: public, cabinet, admin, mobile и console smoke проходят;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
-- changelog, финальный runbook и release decision синхронизированы с разделом "Что нового": `2026-06-14-release-decision`;
+- VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
+- changelog, финальный runbook и release decision синхронизированы с разделом "Что нового": `2026-06-14-release-decision`; latest seed: `2026-06-14-vps-production-smoke-runner`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.
