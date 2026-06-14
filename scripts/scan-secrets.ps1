@@ -15,6 +15,7 @@ $excludeDirectories = @(
     'dist',
     'build',
     'TestResults',
+    'test-results',
     'artifacts',
     'coverage',
     'playwright-report',
@@ -68,7 +69,7 @@ function Test-SkippedPath {
     param([string]$Path)
     $relative = Get-RelativePath $Path
     foreach ($part in $relative.Split('/')) {
-        if ($excludeDirectories -contains $part) {
+        if ($excludeDirectories -contains $part -or $part -like '.playwright-artifacts-*') {
             return $true
         }
     }

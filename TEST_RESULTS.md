@@ -2,6 +2,59 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: security final checklist
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P11-ACC-005` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен финальный checklist `docs/security-final-checklist.md`.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/SecurityFinalChecklistTests.cs`.
+- Guard отражением проверяет все admin-контроллеры на class-level `Authorize`, отсутствие `AllowAnonymous` и write/manage policy у write endpoints.
+- Checklist связывает существующие gates: `SecretScanTests`, `SecurityHardeningMvpTests`, `AdminAuthorizationPolicyTests`, `RateLimitingSecurityTests`, `SecurityHeadersTests`, `GitHubSecretsAuditTests`, `ProvisioningSecretMaterializerTests`, `PaymentWebhookIdempotencyContractTests`.
+- `scan-secrets.ps1` и `scan-secrets.sh` исключают generated Playwright artifacts (`test-results`, `.playwright-artifacts-*`), чтобы actual secret scan не падал на исчезающих временных файлах после E2E.
+- Добавлен release entry `2026-06-14-security-final-checklist` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "SecurityFinalChecklistTests|SecretScanTests|SecurityHardeningMvpTests|AdminAuthorizationPolicyTests|RateLimitingSecurityTests|SecurityHeadersTests|GitHubSecretsAuditTests|ProvisioningSecretMaterializerTests|PaymentWebhookIdempotencyContractTests|DocumentationEncodingTests|ReleaseDocumentationGuardTests|ReadmeDocumentationTests"
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Security final checklist tests: 3/3.
+- Targeted security suite: OK.
+- Admin anonymous routes: 0.
+- Admin write endpoints без write/manage policy: 0.
+- Secret scan: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 6/6.
+- Security headers: OK.
+- Rate limits: OK.
+- RBAC matrix: OK.
+- GitHub secrets audit: OK.
+- Webhook idempotency contract: OK.
+- Fresh local SQLite smoke: OK.
+- Backend full suite: 464/464.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-security-final-checklist`, версия `0.102.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: browser console smoke
 
 Что проверено:

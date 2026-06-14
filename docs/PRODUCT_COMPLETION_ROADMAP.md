@@ -645,9 +645,10 @@ git diff --check
   - Что сделано: добавлен npm-скрипт `e2e:console`, который прогоняет desktop и mobile Playwright-проекты `public-web`, `cabinet`, `admin-panel`, `mobile-public`, `mobile-cabinet`, `mobile-admin`. Существующие E2E-сценарии public/cabinet/admin подписаны на `page.on('console')` и `page.on('pageerror')` и падают при `console.error` или необработанном browser exception. Добавлена инструкция `docs/no-console-errors-smoke.md`.
   - Доказательство: `npm run e2e:console --prefix frontend` 6/6, browser console report `console.error=0`, `pageerror=0`, `NoConsoleErrorsSmokeTests` 1/1, backend full suite 461/461, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-no-console-errors-smoke`.
 
-- [ ] `P11-ACC-005` Security final check.
+- [x] `P11-ACC-005` Security final check. 2026-06-14.
   - Что сделать: secrets, auth, headers, rate limits, permissions.
-  - Доказательство: security checklist.
+  - Что сделано: добавлен финальный checklist `docs/security-final-checklist.md` и guard `SecurityFinalChecklistTests`. Проверка связывает уже существующие security gates по секретам, auth/RBAC, headers, rate limits, webhook idempotency, GitHub secrets и provisioning secrets, а также отражением проверяет все admin-контроллеры на отсутствие `AllowAnonymous`, наличие class-level `Authorize` и write/manage policy у write endpoints. Actual secret scan дополнительно защищен от generated Playwright artifacts `test-results` и `.playwright-artifacts-*`, чтобы E2E-прогоны не ломали проверку исчезающими временными файлами.
+  - Доказательство: `SecurityFinalChecklistTests` 3/3, targeted security suite, actual `scan-secrets.ps1`, `npm run e2e:console --prefix frontend` 6/6, backend full suite 464/464, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-security-final-checklist`; security checklist фиксирует ограничение: перед production нужна ротация любых раскрытых секретов и отдельный VPS smoke.
 
 - [ ] `P11-ACC-006` Final docs and changelog.
   - Что сделать: обновить README, roadmap, "Что нового", инструкции запуска и deploy.

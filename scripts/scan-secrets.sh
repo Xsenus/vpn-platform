@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 is_skipped_path() {
   local path="${1#$ROOT_DIR/}"
   case "$path" in
-    .git/*|.serena/*|.playwright-mcp/*|*/node_modules/*|node_modules/*|*/bin/*|bin/*|*/obj/*|obj/*|*/dist/*|dist/*|*/build/*|build/*|*/TestResults/*|TestResults/*|*/artifacts/*|artifacts/*|*/coverage/*|coverage/*|*/playwright-report/*|playwright-report/*|*/backups/*|backups/*)
+    .git/*|.serena/*|.playwright-mcp/*|*/node_modules/*|node_modules/*|*/bin/*|bin/*|*/obj/*|obj/*|*/dist/*|dist/*|*/build/*|build/*|*/TestResults/*|TestResults/*|*/test-results/*|test-results/*|*/.playwright-artifacts-*/*|.playwright-artifacts-*/*|*/artifacts/*|artifacts/*|*/coverage/*|coverage/*|*/playwright-report/*|playwright-report/*|*/backups/*|backups/*)
       return 0
       ;;
   esac

@@ -25,6 +25,8 @@ public class SecretScanTests
             Assert.Contains("Private key PEM", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("node_modules", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("artifacts", script, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("test-results", script, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(".playwright-artifacts-", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("local-validation", script, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("must-not-leak", script, StringComparison.OrdinalIgnoreCase);
         }
@@ -63,6 +65,7 @@ public class SecretScanTests
             "dist",
             "build",
             "TestResults",
+            "test-results",
             "artifacts",
             "coverage",
             "playwright-report",
@@ -72,7 +75,10 @@ public class SecretScanTests
         foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
         {
             var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
-            if (relative.Split('/').Any(excludedSegments.Contains) || !IsTextCandidate(file))
+            var segments = relative.Split('/');
+            if (segments.Any(excludedSegments.Contains)
+                || segments.Any(segment => segment.StartsWith(".playwright-artifacts-", StringComparison.OrdinalIgnoreCase))
+                || !IsTextCandidate(file))
             {
                 continue;
             }

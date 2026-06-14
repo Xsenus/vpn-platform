@@ -49,6 +49,7 @@
 - [RBAC matrix](rbac-policy-matrix.md)
 - [Rate limiting](rate-limiting.md)
 - [Security headers](security-headers.md)
+- [Security final checklist](security-final-checklist.md)
 - [Secret scan](secret-scan.md)
 - [Secret rotation](secret-rotation.md)
 - [Production secret storage](production-secret-storage.md)
