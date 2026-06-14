@@ -51,6 +51,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.p
 
 Дополнительно валидатор проверяет внутреннюю согласованность отчета: `startedAt` и `completedAt` должны быть ISO-compatible DateTimeOffset, `completedAt` не может быть раньше `startedAt`, а check id не должны повторяться. Duplicate check id считается ошибкой, даже если один из дублей имеет статус `passed`.
 
+URL-поля также валидируются: `apiBaseUrl` обязателен, `publicWebUrl`, `cabinetWebUrl` и `adminWebUrl` опциональны, но если заполнены, должны быть absolute http/https URL. Относительные пути, пустой `apiBaseUrl`, `ftp://` и произвольный текст не принимаются.
+
 ## Связь с автоматическими smoke
 
 Для API/VPS сценария используйте:
@@ -68,5 +70,6 @@ powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBa
 - Добавлены guard-тесты `StagingSmokeChecklistTests`.
 - Валидатор расширен sanitizer-маркерами для cookies, `.env`, client secrets, API keys, private headers, Telegram secret header и GitHub/VPS secret names.
 - Валидатор проверяет порядок `startedAt`/`completedAt` и запрещает duplicate check id.
+- Валидатор проверяет `apiBaseUrl`, `publicWebUrl`, `cabinetWebUrl` и `adminWebUrl` как absolute http/https URL.
 - `P9-TST-007` получил воспроизводимый чеклист и валидатор.
 - Реальный live/staging smoke report пока не заполнен, поэтому внешние блокеры `P0-*`, `P11-ACC-002` и production-ready статус остаются открытыми.

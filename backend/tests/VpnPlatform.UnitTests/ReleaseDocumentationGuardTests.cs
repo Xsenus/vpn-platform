@@ -25,6 +25,7 @@ public class ReleaseDocumentationGuardTests
         new("P9-TST-006", "2026-06-13-payment-provider-contract-tests"),
         new("P9-TST-007A", "2026-06-14-staging-smoke-secret-sanitizer"),
         new("P9-TST-007B", "2026-06-14-staging-smoke-report-consistency"),
+        new("P9-TST-007C", "2026-06-14-staging-smoke-report-url-validation"),
         new("P10-DOC-001", "2026-06-13-readme-russian-local-runbook"),
         new("P10-DOC-002", "2026-06-13-admin-operator-guide"),
         new("P10-DOC-003", "2026-06-13-user-help-pages"),

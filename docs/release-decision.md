@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `488/488`.
+- Backend full suite: `489/489`.
 - API Release build: OK.
 - Frontend unit tests: `65/65`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - High-severity frontend audit: OK; остаются 2 moderate advisory по `react-router`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-14-staging-smoke-report-consistency`, версия `0.114.0`; усилена проверка согласованности staging smoke report, синхронизированы roadmap, README, final runbook, release decision, changelog и TEST_RESULTS, но live VPS/staging evidence еще требуется.
+- Latest "Что нового": `2026-06-14-staging-smoke-report-url-validation`, версия `0.115.0`; усилена проверка URL в staging smoke report, синхронизированы roadmap, README, final runbook, release decision, changelog и TEST_RESULTS, но live VPS/staging evidence еще требуется.
 
 ## Команды проверки
 

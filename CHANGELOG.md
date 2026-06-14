@@ -2,6 +2,34 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.115.0 - 2026-06-14
+
+Release entry: `2026-06-14-staging-smoke-report-url-validation`.
+
+### Добавлено
+
+- Guard-проверка в `StagingSmokeChecklistTests`, которая закрепляет обязательные absolute http/https URL для `apiBaseUrl`, `publicWebUrl`, `cabinetWebUrl` и `adminWebUrl`.
+- Roadmap-подпункт `P9-TST-007C` для локально закрытого URL validation слоя.
+
+### Обновлено
+
+- `scripts/validate-staging-smoke-report.ps1` теперь отклоняет пустой или невалидный `apiBaseUrl`, а также непустые web URL без абсолютной `http`/`https` схемы.
+- `docs/staging-smoke-checklist.md` описывает URL-правила для staging smoke report.
+- Current status обновлен до backend `489/489`, latest release `2026-06-14-staging-smoke-report-url-validation`.
+
+### Проверено
+
+- Backend full suite: 489/489.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- `P9-TST-007` остается `[~]`: URL validation закрыт локально, но реальный staging/VPS smoke report все еще нужен.
+
 ## 0.114.0 - 2026-06-14
 
 Release entry: `2026-06-14-staging-smoke-report-consistency`.

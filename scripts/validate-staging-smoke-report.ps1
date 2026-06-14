@@ -29,6 +29,29 @@ function Test-ReportIsoDate {
     return [DateTimeOffset]::TryParse($Value, [ref]$parsed)
 }
 
+function Assert-ReportHttpUrl {
+    param(
+        [object]$Value,
+        [string]$FieldName,
+        [bool]$Required
+    )
+
+    if ($null -eq $Value -or [string]::IsNullOrWhiteSpace([string]$Value)) {
+        if ($Required) {
+            throw "Required report field '$FieldName' is empty."
+        }
+
+        return
+    }
+
+    $parsed = $null
+    $isAbsoluteUrl = [Uri]::TryCreate([string]$Value, [UriKind]::Absolute, [ref]$parsed)
+    $isHttpUrl = $isAbsoluteUrl -and ($parsed.Scheme -eq "http" -or $parsed.Scheme -eq "https")
+    if (-not $isHttpUrl) {
+        throw "Report field '$FieldName' must be an absolute http or https URL."
+    }
+}
+
 $fullPath = if (Test-Path -LiteralPath $ReportPath) {
     (Resolve-Path -LiteralPath $ReportPath).Path
 }
@@ -46,6 +69,11 @@ $report = $raw | ConvertFrom-Json
 foreach ($field in @("reportId", "environmentName", "apiBaseUrl", "startedAt", "completedAt", "releaseId", "operator")) {
     Assert-ReportValue $report.$field "Required report field '$field' is empty."
 }
+
+Assert-ReportHttpUrl -Value $report.apiBaseUrl -FieldName "apiBaseUrl" -Required $true
+Assert-ReportHttpUrl -Value $report.publicWebUrl -FieldName "publicWebUrl" -Required $false
+Assert-ReportHttpUrl -Value $report.cabinetWebUrl -FieldName "cabinetWebUrl" -Required $false
+Assert-ReportHttpUrl -Value $report.adminWebUrl -FieldName "adminWebUrl" -Required $false
 
 $startedAt = [DateTimeOffset]::MinValue
 if (-not [DateTimeOffset]::TryParse([string]$report.startedAt, [ref]$startedAt)) {

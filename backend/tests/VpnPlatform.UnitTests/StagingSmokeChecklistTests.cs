@@ -81,6 +81,22 @@ public class StagingSmokeChecklistTests
     }
 
     [Fact]
+    public void Staging_Smoke_Report_Validator_Should_Require_Absolute_Http_Urls()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-staging-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+
+        Assert.Contains("Assert-ReportHttpUrl", script, StringComparison.Ordinal);
+        Assert.Contains("absolute http or https URL", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("apiBaseUrl", script, StringComparison.Ordinal);
+        Assert.Contains("publicWebUrl", script, StringComparison.Ordinal);
+        Assert.Contains("cabinetWebUrl", script, StringComparison.Ordinal);
+        Assert.Contains("adminWebUrl", script, StringComparison.Ordinal);
+        Assert.Contains("absolute http/https", guide, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Staging_Smoke_Report_Template_Should_Be_Valid_Safe_Json()
     {
         var root = FindRepositoryRoot();

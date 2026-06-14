@@ -2821,5 +2821,32 @@
         "text": "`P9-TST-007` остается `[~]`: реальный staging/VPS smoke report все еще нужен перед production-ready."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-staging-smoke-report-url-validation",
+    "version": "0.115.0",
+    "releasedAt": "2026-06-14T17:00:00+07:00",
+    "title": "Добавлена проверка URL в staging smoke отчетах",
+    "summary": "Валидатор staging smoke report теперь требует absolute http/https URL для API и заполненных web-адресов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`apiBaseUrl` теперь обязателен и должен быть absolute `http` или `https` URL."
+      },
+      {
+        "type": "improved",
+        "text": "`publicWebUrl`, `cabinetWebUrl` и `adminWebUrl` остаются опциональными, но при заполнении валидируются как absolute `http`/`https` URL."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен roadmap-подпункт `P9-TST-007C` и guard в `StagingSmokeChecklistTests`."
+      },
+      {
+        "type": "important",
+        "text": "`P9-TST-007` остается `[~]`: реальный staging/VPS smoke report все еще нужен перед production-ready."
+      }
+    ]
   }
 ]
