@@ -25,11 +25,24 @@
 
 ## Как заполнить отчет
 
-1. Скопируйте `docs/staging-smoke-report.template.json` в отдельный файл отчета, например `tmp/staging-smoke-report.json`.
-2. Заполните адреса API, публичного сайта, кабинета и админки.
-3. Пройдите каждый пункт smoke и замените `blocked` на `passed`, `failed` или `skipped`.
-4. В поле `evidence` оставляйте только безопасные доказательства: URL GitHub Actions run, sanitized curl output, номер заказа, provider payment id, id подписки, id VPN access, скриншот без секретов.
-5. Не вставляйте в отчет пароли, токены, cookies, private keys, webhook secrets и приватные headers.
+1. Сгенерируйте безопасный черновик отчета из шаблона:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-staging-smoke-report.ps1 `
+  -OutputPath tmp\staging-smoke-report.json `
+  -ApiBaseUrl https://api.example.test `
+  -PublicWebUrl https://example.test/ `
+  -CabinetWebUrl https://example.test/cabinet/ `
+  -AdminWebUrl https://example.test/admin/ `
+  -EnvironmentName staging `
+  -Operator "name-or-ci-run-id"
+```
+
+2. Скрипт создаст все обязательные checks со статусом `blocked`, подставит latest release из seed "Что нового" и сразу прогонит структурную валидацию.
+3. Если файл уже существует, используйте `-Force` только когда уверены, что старый отчет больше не нужен.
+4. Пройдите каждый пункт smoke и замените `blocked` на `passed`, `failed` или `skipped`.
+5. В поле `evidence` оставляйте только безопасные доказательства: URL GitHub Actions run, sanitized curl output, номер заказа, provider payment id, id подписки, id VPN access, скриншот без секретов.
+6. Не вставляйте в отчет пароли, токены, cookies, private keys, webhook secrets и приватные headers.
 
 ## Валидация отчета
 
@@ -66,6 +79,7 @@ powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBa
 ## Результат 2026-06-14
 
 - Добавлен `scripts/validate-staging-smoke-report.ps1`.
+- Добавлен `scripts/new-staging-smoke-report.ps1` для безопасной генерации черновика отчета.
 - Добавлен шаблон `docs/staging-smoke-report.template.json`.
 - Добавлены guard-тесты `StagingSmokeChecklistTests`.
 - Валидатор расширен sanitizer-маркерами для cookies, `.env`, client secrets, API keys, private headers, Telegram secret header и GitHub/VPS secret names.

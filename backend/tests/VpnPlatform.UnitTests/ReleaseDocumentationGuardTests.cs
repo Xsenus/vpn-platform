@@ -26,6 +26,7 @@ public class ReleaseDocumentationGuardTests
         new("P9-TST-007A", "2026-06-14-staging-smoke-secret-sanitizer"),
         new("P9-TST-007B", "2026-06-14-staging-smoke-report-consistency"),
         new("P9-TST-007C", "2026-06-14-staging-smoke-report-url-validation"),
+        new("P9-TST-007D", "2026-06-14-staging-smoke-report-generator"),
         new("P0-PAY-010", "2026-06-14-telegram-stars-invoice-gate"),
         new("P1-TG-005", "2026-06-14-api-telegram-webhook"),
         new("P1-TG-006", "2026-06-14-telegram-webhook-boundary"),

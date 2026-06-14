@@ -2929,5 +2929,32 @@
         "text": "Live BotFather/Telegram Stars smoke остается внешней production-проверкой с реальным BotToken и Telegram окружением."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-staging-smoke-report-generator",
+    "version": "0.119.0",
+    "releasedAt": "2026-06-14T19:00:00+07:00",
+    "title": "Генератор staging smoke report",
+    "summary": "Добавлен безопасный скрипт, который создает черновик staging/VPS smoke report из шаблона и сразу проверяет его валидатором.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-staging-smoke-report.ps1` генерирует отчет с обязательными checks, URL окружения, оператором и latest release из раздела \"Что нового\"."
+      },
+      {
+        "type": "improved",
+        "text": "Все checks создаются в безопасном статусе `blocked`, поэтому production readiness gate остается fail-closed до реального staging/VPS прогона."
+      },
+      {
+        "type": "improved",
+        "text": "Документация staging smoke теперь рекомендует начинать отчет с генератора, а не с ручного копирования JSON."
+      },
+      {
+        "type": "important",
+        "text": "Скрипт не записывает секреты и не перезаписывает существующий отчет без явного `-Force`."
+      }
+    ]
   }
 ]

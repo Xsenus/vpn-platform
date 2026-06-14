@@ -16,6 +16,7 @@ public class StagingSmokeChecklistTests
                  {
                      "P9-TST-007",
                      "staging-smoke-report.template.json",
+                     "new-staging-smoke-report.ps1",
                      "validate-staging-smoke-report.ps1",
                      "-RequireAllPassed",
                      "fail-closed",
@@ -36,6 +37,40 @@ public class StagingSmokeChecklistTests
         Assert.Contains("password=", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Bearer ", script, StringComparison.Ordinal);
         Assert.Contains("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Staging_Smoke_Report_Generator_Should_Create_Safe_Blocked_Report()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-staging-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "staging-smoke-report.template.json",
+                     "validate-staging-smoke-report.ps1",
+                     "ConvertTo-Json -Depth 8",
+                     "Set-Content",
+                     "-Encoding UTF8",
+                     "blocked",
+                     "TODO: run staging/VPS smoke",
+                     "Output file already exists. Pass -Force",
+                     "Get-LatestReleaseId"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var field in new[] { "ApiBaseUrl", "PublicWebUrl", "CabinetWebUrl", "AdminWebUrl", "EnvironmentName", "Operator", "ReleaseId" })
+        {
+            Assert.Contains(field, script, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("new-staging-smoke-report.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("password=", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bearer ", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
     }
 
     [Fact]

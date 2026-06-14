@@ -176,14 +176,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 495/495;
+- backend full suite: 496/496;
 - frontend tests: 65/65;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - high-severity frontend audit: OK, остаются 2 moderate advisory по `react-router`;
-- latest "Что нового": `2026-06-14-telegram-stars-invoice-gate`, версия `0.118.0`.
+- latest "Что нового": `2026-06-14-staging-smoke-report-generator`, версия `0.119.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

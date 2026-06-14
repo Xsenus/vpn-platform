@@ -2,6 +2,47 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: staging smoke report generator
+
+Что проверялось:
+
+- `scripts/new-staging-smoke-report.ps1` создает безопасный черновик staging/VPS smoke report.
+- Сгенерированный отчет содержит все 18 обязательных checks в статусе `blocked`.
+- Обычный валидатор принимает структуру отчета.
+- `-RequireAllPassed` остается fail-closed и отклоняет сгенерированный blocked report.
+- Раздел "Что нового" получил релиз `2026-06-14-staging-smoke-report-generator`, версия `0.119.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-staging-smoke-report.ps1 -OutputPath tmp\generated-staging-smoke-report.json -ApiBaseUrl https://api.example.test -PublicWebUrl https://example.test/ -CabinetWebUrl https://example.test/cabinet/ -AdminWebUrl https://example.test/admin/ -EnvironmentName staging -Operator local-test
+powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.ps1 -ReportPath tmp\generated-staging-smoke-report.json
+powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.ps1 -ReportPath tmp\generated-staging-smoke-report.json -RequireAllPassed
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "StagingSmokeChecklistTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+git diff --check
+```
+
+Результат:
+
+- Generator smoke: OK.
+- `-RequireAllPassed` для blocked report: expected failure.
+- `StagingSmokeChecklistTests`: `7/7`.
+- Backend full suite: `496/496`.
+- Frontend unit tests: `65/65`.
+- Browser console E2E: `9/9`.
+- Fresh local SQLite smoke: OK, latest `2026-06-14-staging-smoke-report-generator`.
+- Local SQLite VPS smoke dry-run: OK.
+- Secret scan: 0 findings.
+- Encoding guard: OK.
+- Push не выполнялся.
+
 ## Проверка 2026-06-14: Telegram Stars invoice gate
 
 Что проверялось:

@@ -2,6 +2,36 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.119.0 - 2026-06-14
+
+Release entry: `2026-06-14-staging-smoke-report-generator`.
+
+### Added
+
+- `scripts/new-staging-smoke-report.ps1` создает безопасный черновик staging/VPS smoke report из `docs/staging-smoke-report.template.json`.
+- Генератор принимает `ApiBaseUrl`, web URL-ы, `EnvironmentName`, `Operator`, `ReleaseId` и подставляет latest release из seed "Что нового", если `ReleaseId` не задан.
+- Все обязательные checks создаются со статусом `blocked` и TODO evidence, поэтому production readiness gate остается fail-closed до реального прогона.
+
+### Changed
+
+- `docs/staging-smoke-checklist.md` теперь рекомендует начинать заполнение отчета через генератор, а не ручное копирование JSON.
+- Current status обновлен до backend `496/496`, latest release `2026-06-14-staging-smoke-report-generator`.
+
+### Verified
+
+- `StagingSmokeChecklistTests`: 7/7.
+- Generated staging smoke report passes normal validation.
+- Generated blocked report fails `-RequireAllPassed` as expected.
+- Backend full suite: 496/496.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Реальный staging/VPS smoke report пока не заполнен; live-платежи, 3x-ui и production-ready решение остаются внешними блокерами.
+
 ## 0.118.0 - 2026-06-14
 
 Release entry: `2026-06-14-telegram-stars-invoice-gate`.
