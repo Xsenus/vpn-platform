@@ -6,7 +6,7 @@
 
 Команда `scripts/assert-production-readiness.ps1` выполняет две группы проверок:
 
-- запускает `scripts/validate-staging-smoke-report.ps1 -RequireAllPassed`, поэтому все обязательные smoke-пункты должны быть `passed`, а отчет не должен содержать секреты, cookies, auth headers, private keys или provider tokens;
+- запускает `scripts/validate-staging-smoke-report.ps1 -RequireAllPassed`, поэтому все обязательные smoke-пункты должны быть `passed`, а отчет не должен содержать секреты, cookies, `.env`, auth headers, private headers, private keys, provider tokens, client secrets или API keys;
 - читает `docs/PRODUCT_COMPLETION_ROADMAP.md` и `docs/release-decision.md`, затем блокирует production-ready, если остаются открытые `STATE-011`, `STATE-012`, `STATE-013`, `P0-*`, `P11-ACC-002`, `BUG-001`, `BUG-002`, `BUG-003` или решение все еще равно `staging-ready baseline`.
 
 Это не заменяет реальные live-проверки. Gate нужен, чтобы не забыть зафиксировать доказательства и не выдать локально зеленый проект за production-ready.
@@ -26,7 +26,7 @@ powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
 
 - smoke report валиден и все checks имеют статус `passed`;
-- секреты, cookies, `.env`, auth headers и provider keys не попали в отчет;
+- секреты, cookies, `.env`, auth headers, private headers, provider keys, client secrets и API keys не попали в отчет;
 - roadmap обновлен: live-блокеры закрыты с доказательствами;
 - `docs/release-decision.md` больше не содержит решение `staging-ready baseline, не production-ready`.
 

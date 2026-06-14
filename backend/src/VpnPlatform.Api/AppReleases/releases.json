@@ -2767,5 +2767,32 @@
         "text": "Live-платежи, реальный 3x-ui, VPS admin/live smoke и `P11-ACC-002` остаются открытыми: gate только запрещает закрыть production-ready без доказательств."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-staging-smoke-secret-sanitizer",
+    "version": "0.113.0",
+    "releasedAt": "2026-06-14T16:44:00+07:00",
+    "title": "Усилена защита staging smoke отчетов",
+    "summary": "Валидатор staging smoke report теперь дополнительно блокирует cookies, .env, client secrets, API keys, private headers, Telegram secret header и GitHub/VPS secret names.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/validate-staging-smoke-report.ps1` расширен forbidden-маркерами `Cookie:`, `Set-Cookie:`, `.env`, `client_secret`, `api_key`, `private header`, `X-Telegram-Bot-Api-Secret-Token`, `PRODUCTION_ENV_FILE` и `VPS_SSH_KEY`."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен roadmap-подпункт `P9-TST-007A`, который закрывает локальную часть sanitizer для staging smoke report."
+      },
+      {
+        "type": "new",
+        "text": "`StagingSmokeChecklistTests` теперь закрепляет полный набор запрещенных маркеров для smoke evidence."
+      },
+      {
+        "type": "important",
+        "text": "`P9-TST-007` остается `[~]`: реальный staging/VPS smoke report все еще нужен перед production-ready."
+      }
+    ]
   }
 ]

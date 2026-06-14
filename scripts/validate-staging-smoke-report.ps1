@@ -110,11 +110,22 @@ $secretMarkers = @(
     "password=",
     "Authorization:",
     "Bearer ",
+    "Cookie:",
+    "Set-Cookie:",
     "BEGIN OPENSSH PRIVATE KEY",
     "BEGIN RSA PRIVATE KEY",
     "x-api-key",
+    "api_key",
+    "api-key",
+    "client_secret",
+    "client-secret",
+    "private header",
     "bot token",
-    "webhook secret"
+    "webhook secret",
+    "X-Telegram-Bot-Api-Secret-Token",
+    ".env",
+    "PRODUCTION_ENV_FILE",
+    "VPS_SSH_KEY"
 )
 
 foreach ($marker in $secretMarkers) {

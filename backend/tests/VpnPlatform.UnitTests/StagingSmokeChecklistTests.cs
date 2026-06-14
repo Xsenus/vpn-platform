@@ -39,6 +39,34 @@ public class StagingSmokeChecklistTests
     }
 
     [Fact]
+    public void Staging_Smoke_Report_Validator_Should_Block_Header_Env_And_Client_Secret_Leaks()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-staging-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+        var productionGate = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+
+        foreach (var forbiddenMarker in new[]
+                 {
+                     "Cookie:",
+                     "Set-Cookie:",
+                     ".env",
+                     "client_secret",
+                     "api_key",
+                     "private header",
+                     "X-Telegram-Bot-Api-Secret-Token",
+                     "PRODUCTION_ENV_FILE",
+                     "VPS_SSH_KEY"
+                 })
+        {
+            Assert.Contains(forbiddenMarker, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("cookies, `.env`, auth headers", productionGate, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("private headers", guide, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Staging_Smoke_Report_Template_Should_Be_Valid_Safe_Json()
     {
         var root = FindRepositoryRoot();
