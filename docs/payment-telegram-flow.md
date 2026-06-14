@@ -54,7 +54,7 @@ Covered event types:
 
 `pay:<orderId>:TelegramStars` creates a pending `PaymentAttempt` with `Currency=XTR` and payload `tgstars:<paymentAttemptId>`.
 
-If the bot service is configured with BotToken, it calls `sendInvoice` through `ITelegramInvoiceProvider`. Otherwise it fails closed with a clear message and does not mark payment successful.
+If the main API or LongPolling bot process has an effective BotToken from the admin panel or app configuration, it calls `sendInvoice` through `ITelegramInvoiceProvider`. Otherwise it fails closed with a clear message and does not mark payment successful.
 
 Handlers:
 

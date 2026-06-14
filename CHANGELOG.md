@@ -2,6 +2,36 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.116.0 - 2026-06-14
+
+Release entry: `2026-06-14-api-telegram-webhook`.
+
+### Добавлено
+
+- API endpoint `/api/channels/telegram/webhook` теперь обрабатывает Telegram updates в основном backend вместо `501 NotImplemented`.
+- Runtime-настройки Telegram-бота читаются из админки/БД с fallback на `appsettings`, включая protected BotToken и webhook secret.
+- Infrastructure получил `TelegramBotHttpClient`, который отправляет Telegram Stars invoice, отвечает на `pre_checkout_query` и отправляет сообщения через общий `ITelegramInvoiceProvider`.
+- Guard-тесты `ChannelWebhooksControllerTests` проверяют успешную обработку webhook, duplicate update и выключенный Telegram-бот.
+
+### Обновлено
+
+- Current status обновлен до backend `491/491`, latest release `2026-06-14-api-telegram-webhook`.
+- Roadmap получил закрытый пункт `P1-TG-005` для Telegram webhook в основном API.
+
+### Проверено
+
+- Targeted Telegram/API suite: 39/39.
+- Backend full suite: 491/491.
+- Frontend unit tests: 65/65.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Encoding guard: OK.
+- Secret scan: OK.
+
+### Ограничения
+
+- Live Telegram webhook с реальным BotFather/Bot API и реальные Telegram Stars платежи остаются частью production/staging smoke: `P0-PAY-010`, `P11-ACC-002` и `P9-TST-007` не закрывались.
+
 ## 0.115.0 - 2026-06-14
 
 Release entry: `2026-06-14-staging-smoke-report-url-validation`.

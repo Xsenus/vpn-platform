@@ -1110,7 +1110,7 @@ public class TelegramBotService
         var payload = $"tgstars:{existing.Id:N}";
         if (_invoiceProvider is null || !chatId.HasValue)
         {
-            return new RouteResult($"Telegram Stars invoice не настроен в этом сервисе. Платеж подготовлен без fake-success: payload {payload}. Используйте внешнего провайдера или запустите TelegramBot service с BotToken.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+            return new RouteResult($"Telegram Stars invoice не настроен. Платеж подготовлен без fake-success: payload {payload}. Настройте BotToken в админке или конфигурации API либо выберите внешний платежный провайдер.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
         }
 
         var amount = decimal.Round(existing.Amount, 0, MidpointRounding.AwayFromZero);

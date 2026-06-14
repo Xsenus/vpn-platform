@@ -96,6 +96,7 @@ public interface ITelegramInvoiceProvider
 {
     Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken);
     Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken);
+    Task SendMessageAsync(long chatId, string text, string? replyMarkupJson, CancellationToken cancellationToken);
 }
 
 public interface IX3UiClient

@@ -8,7 +8,7 @@ Status: draft operational guide.
 TelegramBot__Enabled=true
 TelegramBot__Mode=LongPolling # or Webhook
 TelegramBot__BotToken=<telegram-bot-token>
-TelegramBot__WebhookUrl=https://api.example.com/telegram/webhook
+TelegramBot__WebhookUrl=https://api.example.com/api/channels/telegram/webhook
 TelegramBot__SecretToken=<random-secret-for-webhook-mode>
 TelegramBot__PublicBotUsername=vpnplatform_bot
 TelegramBot__WebAppUrl=https://cabinet.example.com
@@ -42,9 +42,9 @@ cd backend
 TelegramBot__Enabled=true \
 TelegramBot__Mode=Webhook \
 TelegramBot__BotToken='<token>' \
-TelegramBot__WebhookUrl='https://api.example.com/telegram/webhook' \
+TelegramBot__WebhookUrl='https://api.example.com/api/channels/telegram/webhook' \
 TelegramBot__SecretToken='<secret>' \
-dotnet run --project src/VpnPlatform.TelegramBot --environment Production
+dotnet run --project src/VpnPlatform.Api --environment Production
 ```
 
 Telegram must send:
@@ -52,6 +52,8 @@ Telegram must send:
 ```http
 X-Telegram-Bot-Api-Secret-Token: <secret>
 ```
+
+The main API endpoint `POST /api/channels/telegram/webhook` reads Telegram bot settings from the admin panel database first and falls back to `appsettings`. The standalone `VpnPlatform.TelegramBot` process is still useful for LongPolling, but Webhook mode does not require a separate bot process.
 
 ## Account linking
 
@@ -75,5 +77,5 @@ The placeholder email is intended to be replaced in cabinet later.
 
 - `Invalid Telegram webhook secret token`: check `TelegramBot:SecretToken` and Telegram webhook configuration.
 - Bot does not send messages: verify `TelegramBot:Enabled=true`, valid BotToken and network connectivity.
-- Stars invoice not sent: run `VpnPlatform.TelegramBot`, not only API, and configure BotToken.
+- Stars invoice not sent: configure BotToken in the admin panel or API app settings and verify API network access to `api.telegram.org`.
 - Duplicate updates: safe by design; check `TelegramBotUpdates` table.

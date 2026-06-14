@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Infrastructure.Auth;
 using VpnPlatform.Infrastructure.Configuration;
 using VpnPlatform.Infrastructure.HostedServices;
@@ -61,7 +62,13 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<ISecretProtector, SecretProtector>();
         services.AddSingleton<AdminBootstrapService>();
-        services.AddScoped<ITelegramInvoiceProvider, DisabledTelegramInvoiceProvider>();
+        services.AddScoped<TelegramBotRuntimeSettingsService>();
+        services.AddHttpClient<TelegramBotHttpClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("VpnPlatform/1.0");
+        });
+        services.AddScoped<ITelegramInvoiceProvider>(sp => sp.GetRequiredService<TelegramBotHttpClient>());
 
         services.AddScoped<IPaymentProvider, YooMoneyPaymentProvider>();
         services.AddScoped<IPaymentProvider, YooKassaPaymentProvider>();

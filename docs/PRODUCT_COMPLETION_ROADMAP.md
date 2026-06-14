@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `489/489`.
+- [x] `STATE-001` Backend test suite проходит: `491/491`.
 - [x] `STATE-002` Frontend test suite проходит: `65/65`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `489/489`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-staging-smoke-report-url-validation`, версия `0.115.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `491/491`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-api-telegram-webhook`, версия `0.116.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `StagingSmokeChecklistTests` 6/6, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `489/489`, frontend tests `65/65`, latest "Что нового" `2026-06-14-staging-smoke-report-url-validation`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `StagingSmokeChecklistTests` 6/6, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `491/491`, frontend tests `65/65`, latest "Что нового" `2026-06-14-api-telegram-webhook`.
 
 ## P0. Блокеры production-запуска
 
@@ -240,6 +240,11 @@ git diff --check
 - [x] `P1-TG-004` Уведомления.
   - Что сделано: Telegram-очередь покрывает ожидание оплаты, успешную оплату, ошибку/отмену оплаты, активацию подписки, готовность VPN-доступа, ошибку выдачи доступа, приближение окончания и окончание подписки.
   - Доказательство: `PaymentWebhookProcessingTests.YooKassa_Failed_Webhook_Should_Queue_Telegram_Payment_Failed_Once_On_Sqlite`, `TelegramBotPurchaseFlowTests`, `SubscriptionLifecycleExpiryTests`, `X3UiIntegrationTests.Real_Vpn_Provider_Should_Auto_Create_Inbound_And_Client`.
+
+- [x] `P1-TG-005` Telegram webhook в основном API. 2026-06-14.
+  - Что сделать: убрать `501` с `/api/channels/telegram/webhook`, обрабатывать Telegram update через основной backend, читать режим/секреты из настроек админки и не дублировать ответы при повторной доставке update.
+  - Что сделано: `ChannelWebhooksController` читает raw body, проверяет enabled/mode/secret через `TelegramBotRuntimeSettingsService`, вызывает `TelegramBotService.ProcessUpdateAsync`, отвечает на `pre_checkout_query` и отправляет сообщение через `ITelegramInvoiceProvider`. `TelegramBotHttpClient` перенесен в Infrastructure и использует BotToken из БД-настроек админки или fallback из config.
+  - Доказательство: `ChannelWebhooksControllerTests` 2/2, targeted Telegram/API suite 39/39, backend full suite `491/491`, fresh local SQLite smoke, local SQLite VPS smoke dry-run, latest "Что нового" `2026-06-14-api-telegram-webhook`, версия `0.116.0`.
 
 ## P2. Админка как полноценный центр управления
 

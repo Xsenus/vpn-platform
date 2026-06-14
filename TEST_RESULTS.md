@@ -2,6 +2,54 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: API Telegram webhook
+
+Что проверено:
+
+- `/api/channels/telegram/webhook` больше не возвращает `501`, а обрабатывает Telegram update через основной API.
+- Runtime-настройки Telegram-бота читаются из админки/БД: `telegram_bot.enabled`, `telegram_bot.mode`, protected BotToken и protected webhook secret.
+- Повторная доставка одного `update_id` остается идемпотентной: повторный webhook получает `duplicate` и не отправляет второе сообщение.
+- Добавлен roadmap-пункт `P1-TG-005` и запись "Что нового" `2026-06-14-api-telegram-webhook`, версия `0.116.0`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "ChannelWebhooksControllerTests|TelegramBotFoundationTests|TelegramBotPurchaseFlowTests|AdminTelegramBotSettingsControllerTests"
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDocumentationGuardTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|DocumentationEncodingTests|ProductAdminUiRoadmapSyncTests"
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail fresh-admin@example.test -AdminPassword LocalSmokePassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Channel webhook controller tests: 2/2.
+- Targeted Telegram/API suite: 39/39.
+- Targeted documentation/release/encoding guard suite: OK.
+- `assert-production-readiness.ps1` на текущем шаблоне ожидаемо завершился fail-closed из-за `blocked` checks.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 9/9.
+- Backend full suite: 491/491.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-api-telegram-webhook`, версия `0.116.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: URL validation staging smoke report
 
 Что проверено:
