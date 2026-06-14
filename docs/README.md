@@ -6,6 +6,7 @@
 
 - [README проекта](../README.md) - назначение платформы, локальный запуск, Docker/VPS контекст и текущий статус проверок.
 - [Changelog](../CHANGELOG.md) - сводка заметных релизов и текущего состояния.
+- [Release decision](release-decision.md) - текущее решение о готовности: staging-ready baseline и блокеры production-ready.
 - [Roadmap](PRODUCT_COMPLETION_ROADMAP.md) - рабочая карта проекта с отметками выполнения и доказательствами.
 - [Руководство администратора](admin-guide.md) - настройка тарифов, платежей, VPN, 3x-ui, Telegram, сценариев и VPS.
 - [Руководство пользователя](user-guide.md) - покупка, оплата, подключение VPN, продление, Telegram и поддержка.

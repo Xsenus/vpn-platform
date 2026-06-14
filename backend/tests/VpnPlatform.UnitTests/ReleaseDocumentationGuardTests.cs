@@ -32,7 +32,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-003", "2026-06-14-mobile-smoke"),
         new("P11-ACC-004", "2026-06-14-no-console-errors-smoke"),
         new("P11-ACC-005", "2026-06-14-security-final-checklist"),
-        new("P11-ACC-006", "2026-06-14-final-docs-changelog")
+        new("P11-ACC-006", "2026-06-14-final-docs-changelog"),
+        new("P11-ACC-007", "2026-06-14-release-decision")
     ];
 
     [Fact]

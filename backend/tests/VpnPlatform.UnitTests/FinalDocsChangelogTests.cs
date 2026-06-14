@@ -18,8 +18,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("467/467", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-06-14-final-docs-changelog", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("470/470", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-06-14-release-decision", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -61,10 +61,9 @@ public class FinalDocsChangelogTests
         var root = FindRepositoryRoot();
         var changelog = File.ReadAllText(Path.Combine(root, "CHANGELOG.md"));
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.Api", "AppReleases", "releases.json")));
-        var latest = releasesJson.RootElement
+        var finalDocsRelease = releasesJson.RootElement
             .EnumerateArray()
-            .OrderByDescending(x => DateTimeOffset.Parse(x.GetProperty("releasedAt").GetString()!))
-            .First();
+            .Single(x => string.Equals(x.GetProperty("releaseId").GetString(), "2026-06-14-final-docs-changelog", StringComparison.Ordinal));
 
         Assert.Contains("0.103.0 - 2026-06-14", changelog, StringComparison.Ordinal);
         Assert.Contains("docs/final-runbook.md", changelog, StringComparison.OrdinalIgnoreCase);
@@ -73,9 +72,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("staging-ready baseline", changelog, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("production-ready", changelog, StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal("2026-06-14-final-docs-changelog", latest.GetProperty("releaseId").GetString());
-        Assert.Equal("0.103.0", latest.GetProperty("version").GetString());
-        Assert.Contains("final-runbook.md", latest.GetProperty("summary").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("0.103.0", finalDocsRelease.GetProperty("version").GetString());
+        Assert.Contains("final-runbook.md", finalDocsRelease.GetProperty("summary").GetString(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

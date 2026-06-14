@@ -2,6 +2,51 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: release decision
+
+Что проверено:
+
+- Закрыт roadmap-пункт `P11-ACC-007` в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
+- Добавлен документ `docs/release-decision.md`.
+- Release decision зафиксирован как `staging-ready baseline`, не production-ready.
+- Production-ready явно заблокирован до закрытия `P11-ACC-002 VPS production smoke`, ротации раскрытых секретов, домена/HTTPS, staging PostgreSQL backup/restore, provider-specific sandbox smoke, 3x-ui smoke и Telegram webhook/invoice smoke.
+- README, changelog, final runbook и docs index ссылаются на release decision.
+- Добавлен `backend/tests/VpnPlatform.UnitTests/ReleaseDecisionTests.cs`.
+- Добавлен release entry `2026-06-14-release-decision` в `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "ReleaseDecisionTests|ReleaseDocumentationGuardTests|ReadmeDocumentationTests|DocumentationEncodingTests|FinalDocsChangelogTests"
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- Release decision guard: 3/3.
+- Documentation guard suite: OK.
+- Fresh local SQLite smoke: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 6/6.
+- Backend full suite: 470/470.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-release-decision`, версия `0.104.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: final docs and changelog
 
 Что проверено:

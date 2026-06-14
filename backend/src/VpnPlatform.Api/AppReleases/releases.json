@@ -2524,5 +2524,32 @@
         "text": "Guard `FinalDocsChangelogTests` закрепляет синхронизацию README, docs index, roadmap, changelog, `TEST_RESULTS.md` и раздела \"Что нового\"."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-release-decision",
+    "version": "0.104.0",
+    "releasedAt": "2026-06-14T14:48:00+07:00",
+    "title": "Зафиксировано release decision",
+    "summary": "Проект получил формальный статус staging-ready baseline: локальные проверки зеленые, но production-ready заблокирован до live VPS smoke, ротации секретов, реальных платежных sandbox-проверок и 3x-ui smoke.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "important",
+        "text": "Текущее решение: staging-ready baseline, не production-ready."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен `docs/release-decision.md` с доказательствами, командами проверки и блокерами production-ready."
+      },
+      {
+        "type": "improved",
+        "text": "`ReleaseDecisionTests` закрепляет, что проект нельзя маркировать production-ready без закрытого VPS production smoke."
+      },
+      {
+        "type": "important",
+        "text": "Следующий шаг перед production: закрыть `P11-ACC-002` на реальном VPS или staging-домене с payment sandbox и 3x-ui проверкой."
+      }
+    ]
   }
 ]

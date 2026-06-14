@@ -655,10 +655,11 @@ git diff --check
   - Что сделано: добавлены `CHANGELOG.md` и `docs/final-runbook.md`, README получил прямые ссылки на changelog/runbook, команды `e2e:mobile` и `e2e:console`, актуальный статус проверок и связь с разделом "Что нового". Индекс документации ссылается на changelog и финальный runbook. Добавлен guard `FinalDocsChangelogTests`, который проверяет синхронизацию README, docs index, roadmap, changelog, `TEST_RESULTS.md` и release seed.
   - Доказательство: `FinalDocsChangelogTests` 3/3, documentation guard suite, backend full suite 467/467, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-final-docs-changelog`; production-ready решение вынесено в `P11-ACC-007`.
 
-- [ ] `P11-ACC-007` Release decision.
+- [x] `P11-ACC-007` Release decision. 2026-06-14.
   - Что сделать: принять решение: sandbox-ready, staging-ready или production-ready.
   - Критерий production-ready: все P0 закрыты, P1 критические сценарии закрыты, validation gate зеленый, VPS smoke успешен.
-  - Доказательство: tagged release или зафиксированная версия.
+  - Что сделано: добавлен документ `docs/release-decision.md` и guard `ReleaseDecisionTests`. Решение зафиксировано как `staging-ready baseline, не production-ready`, потому что `P11-ACC-002 VPS production smoke` остается открытым и нет live доказательства полного production сценария на реальном VPS. Документ перечисляет блокеры production-ready: ротация раскрытых секретов, домен/HTTPS, staging PostgreSQL backup/restore, реальные sandbox-кабинеты платежных провайдеров, 3x-ui panel/inbound/access smoke и Telegram bot webhook/invoice flow.
+  - Доказательство: `ReleaseDecisionTests` 3/3, release decision documentation guard, backend full suite 470/470, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-release-decision`, версия `0.104.0`.
 
 ## Журнал проверок
 
