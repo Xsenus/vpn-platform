@@ -2,6 +2,37 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.120.0 - 2026-06-14
+
+Release entry: `2026-06-14-payment-provider-smoke-report`.
+
+### Added
+
+- `docs/payment-provider-smoke-report.template.json` фиксирует обязательную smoke-матрицу для YooKassa, RoboKassa, YooMoney, CloudPayments, TBankAcquiring, Prodamus, Stripe и PayPal.
+- `scripts/validate-payment-provider-smoke-report.ps1` проверяет структуру отчета, даты, дубли провайдеров, обязательные payment gates, безопасные evidence и forbidden secret markers.
+- `docs/payment-provider-smoke.md` описывает, как заполнять provider smoke report и почему Telegram Stars проверяется отдельным Telegram invoice flow.
+- `PaymentProviderSmokeReportTests` закрепляет fail-closed шаблон и связь отчета с roadmap.
+
+### Changed
+
+- Current status обновлен до backend `500/500`, latest release `2026-06-14-payment-provider-smoke-report`.
+- `STATE-011` и `P0-PAY-002` ... `P0-PAY-009` остаются открытыми до реального sandbox/live отчета по внешним кабинетам.
+
+### Verified
+
+- Payment provider smoke report validator: OK.
+- `-RequireAllPassed` для blocked шаблона: expected failure.
+- `PaymentProviderSmokeReportTests`: 4/4.
+- Backend full suite: 500/500.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Реальные YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe и PayPal кабинеты еще нужно пройти и приложить safe evidence без секретов.
+
 ## 0.119.0 - 2026-06-14
 
 Release entry: `2026-06-14-staging-smoke-report-generator`.

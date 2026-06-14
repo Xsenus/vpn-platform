@@ -14,6 +14,7 @@
 - [x] VPN-серверы, 3x-ui панели, inbound-ы и клиенты управляются из админки; sandbox-выдача VPN работает.
 - [x] Общая UI-система, состояния loading/empty/error, мобильные viewport, доступность и русская локализация покрыты тестами и smoke-проверками.
 - [~] Staging/VPS smoke checklist готов, но реальный заполненный отчет после deploy еще нужен.
+- [x] Payment provider smoke report template и validator готовы для всех web-провайдеров, но реальные кабинеты еще нужно пройти.
 - [ ] Live-платежи всех провайдеров не подтверждены реальными кабинетами.
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
@@ -67,11 +68,12 @@
 - [ ] Проверить live/sandbox кабинеты YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe, PayPal.
 - [x] Реализовать или подтвердить полноценный Telegram Stars invoice flow на локальном invoice gate; live BotFather smoke остается внешней проверкой.
 - [x] Сгенерировать безопасный staging/VPS smoke report draft через `scripts/new-staging-smoke-report.ps1`.
+- [x] Подготовить безопасный payment provider smoke report template и validator через `docs/payment-provider-smoke-report.template.json`.
 - [ ] Заполнить staging/VPS smoke report без секретов, cookies и приватных headers.
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `496/496`.
+- [x] Backend full suite: `500/500`.
 - [x] Frontend unit tests: `65/65`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -81,7 +83,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-14-staging-smoke-report-generator`, версия `0.119.0`.
+- [x] Latest "Что нового": `2026-06-14-payment-provider-smoke-report`, версия `0.120.0`.
 
 ## Как вести дальше
 

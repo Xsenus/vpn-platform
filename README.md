@@ -194,7 +194,7 @@ Post-deploy smoke описан в [docs/post-deploy-smoke.md](docs/post-deploy-s
 
 Локальный sandbox безопасен: checkout создается без реальных денег и без внешних API. Live-провайдеры требуют реальные учетные данные, webhook-секреты и отдельный smoke по каждому кабинету провайдера.
 
-Telegram Stars сейчас закреплен как bot-only/fail-closed контракт до полноценного Telegram invoice flow.
+Telegram Stars работает через отдельный Telegram invoice flow и не входит в web checkout провайдеров.
 
 VPN-выдача поддерживает sandbox-режим и интеграцию с 3x-ui/x-ui. Реальная production-выдача требует подключенной панели, inbound-а, VPN-ноды и успешного live smoke.
 
@@ -208,7 +208,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `496/496` unit tests;
+- backend на .NET 9: `500/500` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
@@ -217,6 +217,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-staging-smoke-report-generator`, версия `0.119.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-payment-provider-smoke-report`, версия `0.120.0`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

@@ -33,6 +33,7 @@
 - [Провайдеры оплаты](payment-providers.md)
 - [Управление провайдерами оплаты](payment-provider-management.md)
 - [Контрактные тесты провайдеров](payment-provider-contract-tests.md)
+- [Smoke-проверка платежных провайдеров](payment-provider-smoke.md)
 - [YooKassa](phase-2-payments-yookassa.md)
 - [TBank](payment-tbank.md)
 - [CloudPayments](payment-cloudpayments.md)

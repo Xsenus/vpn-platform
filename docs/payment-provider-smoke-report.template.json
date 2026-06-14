@@ -1,0 +1,107 @@
+{
+  "reportId": "payment-provider-smoke-YYYYMMDD-HHMM",
+  "environmentName": "staging",
+  "startedAt": "2026-06-14T00:00:00+07:00",
+  "completedAt": "2026-06-14T00:00:00+07:00",
+  "releaseId": "2026-06-14-payment-provider-smoke-report",
+  "operator": "TODO: operator name",
+  "notes": "Fill this report after real sandbox or live provider checks. Do not store credentials, cookies, sensitive request headers or raw provider payloads.",
+  "providers": [
+    {
+      "provider": "YooKassa",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: payment id, webhook event id, order id, subscription id without secrets"
+    },
+    {
+      "provider": "RoboKassa",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: invoice id, result callback id, order id, subscription id without secrets"
+    },
+    {
+      "provider": "YooMoney",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: operation id, notification id, order id, subscription id without secrets"
+    },
+    {
+      "provider": "CloudPayments",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: invoice id, hosted checkout/widget check, notification id, subscription id without secrets"
+    },
+    {
+      "provider": "TBankAcquiring",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: payment id, terminal notification id, order id, subscription id without secrets"
+    },
+    {
+      "provider": "Prodamus",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: payform invoice id, callback id, order id, subscription id without secrets"
+    },
+    {
+      "provider": "Stripe",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: checkout session id, event id, payment intent id, subscription id without secrets"
+    },
+    {
+      "provider": "PayPal",
+      "mode": "sandbox",
+      "status": "blocked",
+      "accountConfigured": false,
+      "checkoutCreated": false,
+      "providerConfirmation": false,
+      "webhookProcessed": false,
+      "subscriptionActivated": false,
+      "refundChecked": false,
+      "evidence": "TODO: order id, capture id, webhook event id, subscription id without secrets"
+    }
+  ]
+}

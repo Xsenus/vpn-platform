@@ -2956,5 +2956,32 @@
         "text": "Скрипт не записывает секреты и не перезаписывает существующий отчет без явного `-Force`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-payment-provider-smoke-report",
+    "version": "0.120.0",
+    "releasedAt": "2026-06-14T19:30:00+07:00",
+    "title": "Матрица smoke-проверки платежных провайдеров",
+    "summary": "Добавлены безопасный шаблон и валидатор отчета для sandbox/live smoke всех web-провайдеров оплаты.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`docs/payment-provider-smoke-report.template.json` фиксирует обязательную проверку YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe и PayPal."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/validate-payment-provider-smoke-report.ps1` проверяет структуру отчета, evidence без секретов и fail-closed режим `-RequireAllPassed`."
+      },
+      {
+        "type": "improved",
+        "text": "Roadmap теперь отделяет готовый локальный контроль доказательств от реального sandbox/live smoke внешних кабинетов."
+      },
+      {
+        "type": "important",
+        "text": "Telegram Stars остается отдельным Telegram invoice flow и не смешивается с web checkout провайдерами."
+      }
+    ]
   }
 ]
