@@ -2,6 +2,36 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.106.0 - 2026-06-14
+
+Release entry: `2026-06-14-staging-smoke-checklist`.
+
+### Добавлено
+
+- `docs/staging-smoke-checklist.md` с обязательным staging smoke checklist для покупки, оплаты, подписки, VPN-доступа, админки, поддержки и отсутствия browser console errors.
+- `docs/staging-smoke-report.template.json` как безопасный шаблон отчета без секретов.
+- `scripts/validate-staging-smoke-report.ps1` для структурной проверки отчета и fail-closed release gate через `-RequireAllPassed`.
+- Guard-тест `StagingSmokeChecklistTests`.
+
+### Проверяется
+
+- обязательные check id для deploy, health, public/cabinet/admin web, admin login, tariffs, payment providers, checkout, payment init, provider confirmation, subscription, VPN access, support, console, secret rotation и no secret leak;
+- запрет на пароли, bearer-токены, private keys и webhook secrets в отчете;
+- связка docs index, changelog, TEST_RESULTS и seed "Что нового".
+
+### Проверено
+
+- Backend full suite: 476/476.
+- Staging smoke report validator: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Browser console smoke: 6/6.
+
+### Ограничения
+
+- Реальный staging/VPS smoke report еще должен быть заполнен после deploy и настройки внешних sandbox-интеграций.
+- Production-ready статус остается заблокированным до live evidence по платежам, 3x-ui и VPS.
+
 ## 0.105.0 - 2026-06-14
 
 ### Добавлено

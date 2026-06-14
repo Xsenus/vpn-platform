@@ -22,6 +22,7 @@
 - [Build validation gate](build-validation-gate.md)
 - [Post-deploy smoke](post-deploy-smoke.md)
 - [VPS production smoke](vps-production-smoke.md)
+- [Staging smoke checklist](staging-smoke-checklist.md)
 - [Staging validation runbook](STAGING_VALIDATION_RUNBOOK.md)
 
 ## Платежи

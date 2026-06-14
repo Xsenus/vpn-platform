@@ -592,9 +592,11 @@ git diff --check
   - Что сделано: добавлен `PaymentProviderContractTests`, который поднимает реальные Application/Infrastructure DI-регистрации, проверяет один `IPaymentProvider` на каждый `PaymentProvider`, фиксирует webhook verifier/status mapper для всех web-провайдеров, проверяет networkless local sandbox create для YooMoney, YooKassa, RoboKassa, CloudPayments, TBank, Prodamus, Stripe и PayPal, а также bot-only/fail-closed контракт Telegram Stars. Capability rules проверяются на полный набор ключей и читаемые labels без mojibake.
   - Доказательство: `PaymentProviderContractTests` 12/12, backend full suite 445/445, local SQLite HTTP-smoke latest release `2026-06-13-payment-provider-contract-tests`.
 
-- [ ] `P9-TST-007` Real staging smoke checklist.
+- [~] `P9-TST-007` Real staging smoke checklist.
   - Что сделать: вручную или полуавтоматически пройти покупку и выдачу VPN на staging.
-  - Доказательство: заполненный smoke report.
+  - Что сделано: добавлен `docs/staging-smoke-checklist.md`, безопасный шаблон `docs/staging-smoke-report.template.json` и валидатор `scripts/validate-staging-smoke-report.ps1`. Валидатор проверяет обязательные пункты deploy, health, public/cabinet/admin web, admin login, tariffs, payment providers, checkout, payment init, provider confirmation, subscription, VPN access, support, browser console, secret rotation и отсутствие секретов в отчете. Режим `-RequireAllPassed` fail-closed и не принимает `blocked`, `failed` или `skipped`.
+  - Что осталось: заполнить реальный staging/VPS smoke report после deploy, ротации секретов, настройки provider sandbox и production-like 3x-ui окружения.
+  - Доказательство: `StagingSmokeChecklistTests` 3/3, validator structural check, backend full suite 476/476, local SQLite HTTP-smoke latest release `2026-06-14-staging-smoke-checklist`, версия `0.106.0`; заполненный live/staging smoke report еще нужен.
 
 ## P10. Документация
 
@@ -635,7 +637,7 @@ git diff --check
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
   - Что осталось: выполнить live/staging прогон после deploy, ротации раскрытых секретов, настройки домена/HTTPS, реальных provider sandbox кабинетов и production-like VPN/3x-ui окружения.
-  - Доказательство: `VpsProductionSmokeTests` 3/3, local SQLite VPS smoke dry-run, backend full suite 473/473, local SQLite HTTP-smoke latest release `2026-06-14-vps-production-smoke-runner`, версия `0.105.0`; live VPS smoke report еще нужен для закрытия пункта.
+  - Доказательство: `VpsProductionSmokeTests` 3/3, local SQLite VPS smoke dry-run, backend full suite 476/476, local SQLite HTTP-smoke latest release `2026-06-14-staging-smoke-checklist`, версия `0.106.0`; live VPS smoke report еще нужен для закрытия пункта.
 
 - [x] `P11-ACC-003` Mobile smoke. 2026-06-14.
   - Что сделать: public/cabinet/admin на мобильном viewport.
@@ -661,7 +663,7 @@ git diff --check
   - Что сделать: принять решение: sandbox-ready, staging-ready или production-ready.
   - Критерий production-ready: все P0 закрыты, P1 критические сценарии закрыты, validation gate зеленый, VPS smoke успешен.
   - Что сделано: добавлен документ `docs/release-decision.md` и guard `ReleaseDecisionTests`. Решение зафиксировано как `staging-ready baseline, не production-ready`, потому что `P11-ACC-002 VPS production smoke` остается открытым и нет live доказательства полного production сценария на реальном VPS. Документ перечисляет блокеры production-ready: ротация раскрытых секретов, домен/HTTPS, staging PostgreSQL backup/restore, реальные sandbox-кабинеты платежных провайдеров, 3x-ui panel/inbound/access smoke и Telegram bot webhook/invoice flow.
-  - Доказательство: `ReleaseDecisionTests` 3/3, release decision documentation guard, backend full suite 473/473, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-vps-production-smoke-runner`, версия `0.105.0`.
+  - Доказательство: `ReleaseDecisionTests` 3/3, release decision documentation guard, backend full suite 476/476, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-staging-smoke-checklist`, версия `0.106.0`.
 
 ## Журнал проверок
 

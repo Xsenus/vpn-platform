@@ -2578,5 +2578,32 @@
         "text": "`VpsProductionSmokeTests` закрепляет покрытие admin login, checkout, payment, subscription и VPN access сценария."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-staging-smoke-checklist",
+    "version": "0.106.0",
+    "releasedAt": "2026-06-14T15:30:00+07:00",
+    "title": "Добавлен staging smoke checklist",
+    "summary": "Добавлен валидируемый staging smoke checklist: безопасный JSON-отчет, PowerShell-валидатор, fail-closed release gate и обязательные проверки покупки, оплаты, подписки, VPN-доступа, админки, поддержки и секретов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `docs/staging-smoke-checklist.md` с обязательным порядком staging smoke и перечнем доказательств."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен безопасный шаблон `docs/staging-smoke-report.template.json` без паролей, tokens, cookies, private keys и webhook secrets."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/validate-staging-smoke-report.ps1 -RequireAllPassed` fail-closed и не принимает `blocked`, `failed` или `skipped` как зеленый release gate."
+      },
+      {
+        "type": "improved",
+        "text": "`StagingSmokeChecklistTests` закрепляет обязательные check id, secret-leak markers, ссылки в документации и запись в TEST_RESULTS."
+      }
+    ]
   }
 ]

@@ -1,0 +1,33 @@
+{
+  "reportId": "staging-smoke-YYYY-MM-DD",
+  "environmentName": "staging",
+  "apiBaseUrl": "https://api.example.test",
+  "publicWebUrl": "https://example.test/",
+  "cabinetWebUrl": "https://example.test/cabinet/",
+  "adminWebUrl": "https://example.test/admin/",
+  "startedAt": "2026-06-14T00:00:00+07:00",
+  "completedAt": "2026-06-14T00:30:00+07:00",
+  "releaseId": "2026-06-14-staging-smoke-checklist",
+  "operator": "name-or-ci-run-id",
+  "notes": "Do not put credentials, auth headers, cookies, keys or provider secrets into this report.",
+  "checks": [
+    { "id": "deploy", "status": "blocked", "evidence": "GitHub Actions deploy run URL or manual deploy log URL." },
+    { "id": "health-live", "status": "blocked", "evidence": "GET /health/live returns status=ok." },
+    { "id": "health-ready", "status": "blocked", "evidence": "GET /health/ready returns status=Ready." },
+    { "id": "public-web", "status": "blocked", "evidence": "Public SPA opens without blank screen or console errors." },
+    { "id": "cabinet-web", "status": "blocked", "evidence": "Cabinet SPA opens and login/register screen is visible." },
+    { "id": "admin-web", "status": "blocked", "evidence": "Admin SPA opens and login screen is visible." },
+    { "id": "admin-login", "status": "blocked", "evidence": "Admin login succeeds and dashboard summary loads." },
+    { "id": "tariffs", "status": "blocked", "evidence": "Public tariffs endpoint and UI show active tariffs." },
+    { "id": "payment-providers", "status": "blocked", "evidence": "Enabled and ready payment providers are visible in public checkout." },
+    { "id": "checkout", "status": "blocked", "evidence": "Checkout session can be created from public site." },
+    { "id": "payment-init", "status": "blocked", "evidence": "Payment init creates provider payment id and redirect/widget URL." },
+    { "id": "provider-confirmation", "status": "blocked", "evidence": "Provider sandbox or manual test confirms payment without real money." },
+    { "id": "subscription", "status": "blocked", "evidence": "User receives active subscription after provider confirmation." },
+    { "id": "vpn-access", "status": "blocked", "evidence": "User receives VLESS, VMess or Trojan access and QR code." },
+    { "id": "support", "status": "blocked", "evidence": "User can create support request and admin can answer." },
+    { "id": "no-console-errors", "status": "blocked", "evidence": "Browser console smoke has zero console.error and pageerror." },
+    { "id": "secret-rotation", "status": "blocked", "evidence": "Any exposed VPS, payment, Telegram and JWT/DataProtection secrets are rotated." },
+    { "id": "no-secret-leak", "status": "blocked", "evidence": "Report and logs contain no credentials, auth headers, cookies, keys or provider secrets." }
+  ]
+}
