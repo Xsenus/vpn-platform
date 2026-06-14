@@ -3033,5 +3033,32 @@
         "text": "Реальный `P0-ADMIN-002` остается открытым, пока отчет не заполнен после проверки `/admin/` на VPS под production admin-аккаунтом."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-vpn-live-smoke-report",
+    "version": "0.123.0",
+    "releasedAt": "2026-06-14T21:00:00+07:00",
+    "title": "Smoke-отчет для live VPN и 3x-ui",
+    "summary": "Добавлены безопасный шаблон, генератор и валидатор отчета для production-like проверки VPN выдачи через реальную 3x-ui/x-ui панель.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`docs/vpn-live-smoke-report.template.json` фиксирует обязательные checks для панели, inbound, VPN node, заказа, webhook, подписки, клиента и fail-closed поведения."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/new-vpn-live-smoke-report.ps1` создает blocked-черновик отчета и сразу проверяет его валидатором."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/validate-vpn-live-smoke-report.ps1` запрещает сохранять секреты и полные `vless://`, `vmess://`, `trojan://` ссылки в evidence."
+      },
+      {
+        "type": "important",
+        "text": "Реальные `P0-VPN-001` ... `P0-VPN-005` остаются открытыми, пока отчет не заполнен после проверки настоящей 3x-ui панели и VPN node."
+      }
+    ]
   }
 ]

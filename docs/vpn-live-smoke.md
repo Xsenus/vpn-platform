@@ -1,0 +1,47 @@
+# Live smoke-проверка VPN и 3x-ui
+
+Этот документ описывает безопасную проверку production-like выдачи VPN через реальную 3x-ui/x-ui панель, inbound и VPN node. Локальные SQLite-smoke и unit-тесты доказывают sandbox-сценарии, но не подтверждают, что реальная панель создает клиента и что кабинет показывает рабочий доступ.
+
+## Черновик отчета
+
+Создайте fail-closed отчет перед проверкой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-vpn-live-smoke-report.ps1 -OutputPath tmp\vpn-live-smoke-report.json -ApiBaseUrl https://api.example.test -AdminWebUrl https://example.test/admin/ -X3uiPanelUrl https://x3ui.example.test -EnvironmentName staging -Operator local-test
+```
+
+Скрипт берет `docs/vpn-live-smoke-report.template.json`, подставляет latest release из раздела "Что нового", URL окружения и оператора, выставляет все checks в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
+
+## Что проверять
+
+Перед отметкой `passed` нужно подтвердить:
+
+- 3x-ui/x-ui panel доступна и проходит проверку подключения;
+- inbound синхронизирован в админке с протоколом, портом и режимом stream/security;
+- VPN node находится в production-режиме, не sandbox, не maintenance и готов принимать клиентов;
+- production provisioning включен только явно и не подменяется sandbox fallback;
+- тестовый заказ проходит оплату или sandbox/live webhook выбранного провайдера;
+- подписка активируется;
+- клиент создается в 3x-ui;
+- кабинет показывает URI и QR, но полный URI не сохраняется в отчете;
+- при отключенном inbound/node система fail-closed и не создает fake VPN access.
+
+## Валидатор
+
+Обычная структурная проверка:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-vpn-live-smoke-report.ps1 -ReportPath tmp\vpn-live-smoke-report.json
+```
+
+Production gate для заполненного отчета:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-vpn-live-smoke-report.ps1 -ReportPath tmp\vpn-live-smoke-report.json -RequireAllPassed
+```
+
+`-RequireAllPassed` должен падать на черновике, потому что все checks и top-level gates изначально находятся в безопасном состоянии `blocked`/`false`. Перед закрытием `P0-VPN-001` ... `P0-VPN-005` нужно заменить статусы на `passed`, заполнить все gates и приложить safe evidence.
+
+## Что нельзя хранить
+
+В отчете нельзя сохранять пароли, cookies, bearer-токены, private headers, `.env`, SSH-ключи, webhook secrets, полные `vless://`, `vmess://`, `trojan://` ссылки, приватные ключи и raw provider payloads.

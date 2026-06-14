@@ -47,6 +47,7 @@
 - [3x-ui panel setup](x3ui-panel-setup.md)
 - [Managed VPN servers](managed-vpn-servers.md)
 - [Managed 3x-ui panels](managed-x3ui-panels.md)
+- [Live smoke-проверка VPN и 3x-ui](vpn-live-smoke.md)
 - [Telegram bot setup](telegram-bot-setup.md)
 - [Telegram account linking](telegram-account-linking.md)
 - [Provisioning](provisioning.md)

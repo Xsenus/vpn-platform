@@ -1,0 +1,65 @@
+{
+  "reportId": "vpn-live-smoke-YYYYMMDD-HHMM",
+  "environmentName": "staging",
+  "apiBaseUrl": "https://api.example.test",
+  "adminWebUrl": "https://admin.example.test",
+  "x3uiPanelUrl": "https://x3ui.example.test",
+  "startedAt": "2026-06-14T00:00:00+07:00",
+  "completedAt": "2026-06-14T00:00:00+07:00",
+  "releaseId": "2026-06-14-vpn-live-smoke-report",
+  "operator": "TODO: operator name",
+  "notes": "Fill this report after real 3x-ui/VPN smoke. Do not store credentials, cookies, auth headers, private keys, subscription URLs with secrets or raw provider payloads.",
+  "panelConnected": false,
+  "inboundSynced": false,
+  "nodeReady": false,
+  "productionProvisioningEnabled": false,
+  "noSandboxFallback": false,
+  "failClosedChecked": false,
+  "checks": [
+    {
+      "id": "panel-connection",
+      "status": "blocked",
+      "evidence": "TODO: panel health/check result without secrets"
+    },
+    {
+      "id": "inbound-sync",
+      "status": "blocked",
+      "evidence": "TODO: inbound id/protocol/port summary without secrets"
+    },
+    {
+      "id": "node-ready",
+      "status": "blocked",
+      "evidence": "TODO: VPN node id, region and readiness state without secrets"
+    },
+    {
+      "id": "order-create",
+      "status": "blocked",
+      "evidence": "TODO: order id without customer PII"
+    },
+    {
+      "id": "payment-webhook",
+      "status": "blocked",
+      "evidence": "TODO: safe payment attempt id and webhook event id"
+    },
+    {
+      "id": "subscription-activated",
+      "status": "blocked",
+      "evidence": "TODO: subscription id and active state"
+    },
+    {
+      "id": "vpn-client-created",
+      "status": "blocked",
+      "evidence": "TODO: 3x-ui client id/email alias without access secret"
+    },
+    {
+      "id": "access-uri-qr",
+      "status": "blocked",
+      "evidence": "TODO: confirm cabinet shows URI and QR, do not paste full URI"
+    },
+    {
+      "id": "fail-closed-disabled-inbound",
+      "status": "blocked",
+      "evidence": "TODO: disabled inbound/node does not create fake VPN access"
+    }
+  ]
+}

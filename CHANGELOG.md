@@ -2,6 +2,37 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.123.0 - 2026-06-14
+
+Release entry: `2026-06-14-vpn-live-smoke-report`.
+
+### Added
+
+- `docs/vpn-live-smoke-report.template.json` фиксирует обязательный smoke-отчет для production-like VPN выдачи через реальную 3x-ui/x-ui панель.
+- `scripts/new-vpn-live-smoke-report.ps1` создает безопасный blocked-черновик отчета с latest release, API URL, admin URL, 3x-ui URL и оператором.
+- `scripts/validate-vpn-live-smoke-report.ps1` проверяет URL, даты, top-level VPN gates, обязательные checks и forbidden secret markers, включая полные VPN URI.
+- `docs/vpn-live-smoke.md` описывает, как пройти 3x-ui/inbound/node/order/webhook/subscription/client/fail-closed smoke без сохранения секретов.
+
+### Changed
+
+- Current status обновлен до backend `509/509`, latest release `2026-06-14-vpn-live-smoke-report`.
+- `P0-VPN-001` ... `P0-VPN-005` остаются открытыми до реальной 3x-ui проверки, но теперь у них есть обязательный формат safe evidence.
+
+### Verified
+
+- Generated VPN live smoke report passes normal validation.
+- Generated blocked report fails `-RequireAllPassed` as expected.
+- `VpnLiveSmokeReportTests`: 4/4.
+- Backend full suite: 509/509.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Нужно пройти реальную 3x-ui/x-ui панель, inbound, production VPN node и production-like order smoke, затем заполнить отчет safe evidence.
+
 ## 0.122.0 - 2026-06-14
 
 Release entry: `2026-06-14-admin-vps-smoke-report`.

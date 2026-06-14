@@ -28,6 +28,7 @@ public class ReleaseDocumentationGuardTests
         new("P9-TST-007C", "2026-06-14-staging-smoke-report-url-validation"),
         new("P9-TST-007D", "2026-06-14-staging-smoke-report-generator"),
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
+        new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-PAY-012", "2026-06-14-payment-provider-smoke-report"),
         new("P0-PAY-013", "2026-06-14-payment-provider-smoke-generator"),
         new("P0-PAY-010", "2026-06-14-telegram-stars-invoice-gate"),
