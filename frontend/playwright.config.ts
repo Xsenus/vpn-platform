@@ -47,6 +47,14 @@ export default defineConfig({
       }
     },
     {
+      name: 'all-screens',
+      testMatch: /all-screens\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://127.0.0.1:5293'
+      }
+    },
+    {
       name: 'mobile-public',
       testMatch: /public\.spec\.ts/,
       use: {

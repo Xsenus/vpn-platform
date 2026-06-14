@@ -16,6 +16,7 @@ Changelog: [CHANGELOG.md](CHANGELOG.md).
 Release decision: [docs/release-decision.md](docs/release-decision.md).
 VPS production smoke: [docs/vps-production-smoke.md](docs/vps-production-smoke.md).
 Staging smoke checklist: [docs/staging-smoke-checklist.md](docs/staging-smoke-checklist.md).
+All screens browser smoke: [docs/all-screens-browser-smoke.md](docs/all-screens-browser-smoke.md).
 Инструкция по GitHub Actions и деплою на VPS: [docs/github-deployment.md](docs/github-deployment.md).
 Руководство администратора: [docs/admin-guide.md](docs/admin-guide.md).
 Индекс документации: [docs/README.md](docs/README.md).
@@ -135,6 +136,7 @@ Playwright E2E:
 npm run e2e:public --prefix frontend
 npm run e2e:cabinet --prefix frontend
 npm run e2e:admin --prefix frontend
+npm run e2e:all-screens --prefix frontend
 npm run e2e:mobile --prefix frontend
 npm run e2e:console --prefix frontend
 ```
@@ -205,14 +207,14 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `476/476` unit tests;
+- backend на .NET 9: `478/478` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `65/65`;
 - frontend typecheck и production build: OK;
 - frontend audit по high severity: OK, остаются 2 moderate advisory по `react-router`;
-- Playwright E2E: public, cabinet, admin, mobile и console smoke проходят;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
-- changelog, финальный runbook и release decision синхронизированы с разделом "Что нового": `2026-06-14-release-decision`; latest seed: `2026-06-14-staging-smoke-checklist`;
+- changelog, финальный runbook и release decision синхронизированы с разделом "Что нового": `2026-06-14-release-decision`; latest seed: `2026-06-14-all-screens-browser-smoke`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

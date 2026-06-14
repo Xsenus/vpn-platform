@@ -32,6 +32,6 @@ npx playwright install chromium
 - `npm run e2e:public` проходит в проекте `public-web`;
 - в консоли браузера нет ошибок;
 - HTML-report создается в `frontend/playwright-report/e2e`;
-- `.github/workflows/ci.yml` и `.github/workflows/staging-validation.yml` устанавливают Chromium, запускают `npm run e2e:public`, `npm run e2e:cabinet`, `npm run e2e:admin` и сохраняют report artifact;
+- `.github/workflows/ci.yml` и `.github/workflows/staging-validation.yml` устанавливают Chromium, запускают `npm run e2e:public`, `npm run e2e:cabinet`, `npm run e2e:admin`, `npm run e2e:all-screens` и сохраняют report artifact;
 - `TEST_RESULTS.md` содержит актуальный результат;
 - release seed содержит `2026-06-13-playwright-public-e2e`.

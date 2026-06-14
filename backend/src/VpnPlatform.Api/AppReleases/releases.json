@@ -2605,5 +2605,32 @@
         "text": "`StagingSmokeChecklistTests` закрепляет обязательные check id, secret-leak markers, ссылки в документации и запись в TEST_RESULTS."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-all-screens-browser-smoke",
+    "version": "0.107.0",
+    "releasedAt": "2026-06-14T15:45:00+07:00",
+    "title": "Добавлен browser smoke всех экранов",
+    "summary": "Добавлен mock-based Playwright smoke, который открывает основные public routes, личный кабинет и все разделы админки, проверяя отсутствие белых экранов, console.error и pageerror.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `frontend/e2e/all-screens.spec.ts` для проверки public web, cabinet и admin-panel поверхностей."
+      },
+      {
+        "type": "new",
+        "text": "Добавлен npm-скрипт `e2e:all-screens`, а `e2e:console` расширен project-ом `all-screens`."
+      },
+      {
+        "type": "improved",
+        "text": "Smoke проходит public routes `/`, `/tariffs`, `/faq`, `/help`, `/account`, cabinet auth/dashboard и все 16 admin sections."
+      },
+      {
+        "type": "important",
+        "text": "Проверка остается mock-based и не заменяет live smoke платежей, 3x-ui и VPS."
+      }
+    ]
   }
 ]

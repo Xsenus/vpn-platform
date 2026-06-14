@@ -42,7 +42,7 @@ git diff --check
 - [x] `STATE-007` Sandbox-покупка и sandbox-выдача VPN реализованы.
 - [x] `STATE-008` Production и sandbox VPN-выдача разделены.
 - [x] `STATE-009` Генерация VPN-ссылок поддерживает VLESS, VMess и Trojan.
-- [ ] `STATE-010` Полный browser E2E всех экранов не завершен.
+- [x] `STATE-010` Полный mock-based browser E2E основных экранов завершен. 2026-06-14.
 - [ ] `STATE-011` Live-платежи всех провайдеров не подтверждены.
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
@@ -596,7 +596,12 @@ git diff --check
   - Что сделать: вручную или полуавтоматически пройти покупку и выдачу VPN на staging.
   - Что сделано: добавлен `docs/staging-smoke-checklist.md`, безопасный шаблон `docs/staging-smoke-report.template.json` и валидатор `scripts/validate-staging-smoke-report.ps1`. Валидатор проверяет обязательные пункты deploy, health, public/cabinet/admin web, admin login, tariffs, payment providers, checkout, payment init, provider confirmation, subscription, VPN access, support, browser console, secret rotation и отсутствие секретов в отчете. Режим `-RequireAllPassed` fail-closed и не принимает `blocked`, `failed` или `skipped`.
   - Что осталось: заполнить реальный staging/VPS smoke report после deploy, ротации секретов, настройки provider sandbox и production-like 3x-ui окружения.
-  - Доказательство: `StagingSmokeChecklistTests` 3/3, validator structural check, backend full suite 476/476, local SQLite HTTP-smoke latest release `2026-06-14-staging-smoke-checklist`, версия `0.106.0`; заполненный live/staging smoke report еще нужен.
+  - Доказательство: `StagingSmokeChecklistTests` 3/3, validator structural check, backend full suite 478/478, local SQLite HTTP-smoke latest release `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`; заполненный live/staging smoke report еще нужен.
+
+- [x] `P9-TST-008` All screens browser smoke. 2026-06-14.
+  - Что сделать: пройти все основные public/cabinet/admin экраны в браузере, проверить отсутствие белых экранов, `console.error` и `pageerror`.
+  - Что сделано: добавлен Playwright spec `frontend/e2e/all-screens.spec.ts`, project `all-screens`, npm-скрипт `e2e:all-screens` и документация `docs/all-screens-browser-smoke.md`. Smoke открывает public routes `/`, `/tariffs`, `/faq`, `/help`, `/account`, проверяет cabinet auth screen и авторизованный dashboard, а также все admin sections: `dashboard`, `users`, `payments`, `tariffs`, `subscriptions`, `vpn`, `nodes`, `panels`, `support`, `audit`, `bot`, `releases`, `faq`, `content`, `scenarios`, `provisioning`. `e2e:console` теперь включает project `all-screens`.
+  - Доказательство: `npm run e2e:all-screens --prefix frontend` 3/3, `npm run e2e:console --prefix frontend` 9/9, `AllScreensBrowserSmokeTests` 2/2, backend full suite 478/478, local SQLite HTTP-smoke latest release `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`.
 
 ## P10. Документация
 
@@ -637,7 +642,7 @@ git diff --check
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
   - Что осталось: выполнить live/staging прогон после deploy, ротации раскрытых секретов, настройки домена/HTTPS, реальных provider sandbox кабинетов и production-like VPN/3x-ui окружения.
-  - Доказательство: `VpsProductionSmokeTests` 3/3, local SQLite VPS smoke dry-run, backend full suite 476/476, local SQLite HTTP-smoke latest release `2026-06-14-staging-smoke-checklist`, версия `0.106.0`; live VPS smoke report еще нужен для закрытия пункта.
+  - Доказательство: `VpsProductionSmokeTests` 3/3, local SQLite VPS smoke dry-run, backend full suite 478/478, local SQLite HTTP-smoke latest release `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`; live VPS smoke report еще нужен для закрытия пункта.
 
 - [x] `P11-ACC-003` Mobile smoke. 2026-06-14.
   - Что сделать: public/cabinet/admin на мобильном viewport.
@@ -646,8 +651,8 @@ git diff --check
 
 - [x] `P11-ACC-004` No console errors. 2026-06-14.
   - Что сделать: проверить основные экраны в браузере.
-  - Что сделано: добавлен npm-скрипт `e2e:console`, который прогоняет desktop и mobile Playwright-проекты `public-web`, `cabinet`, `admin-panel`, `mobile-public`, `mobile-cabinet`, `mobile-admin`. Существующие E2E-сценарии public/cabinet/admin подписаны на `page.on('console')` и `page.on('pageerror')` и падают при `console.error` или необработанном browser exception. Добавлена инструкция `docs/no-console-errors-smoke.md`.
-  - Доказательство: `npm run e2e:console --prefix frontend` 6/6, browser console report `console.error=0`, `pageerror=0`, `NoConsoleErrorsSmokeTests` 1/1, backend full suite 461/461, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-no-console-errors-smoke`.
+  - Что сделано: добавлен npm-скрипт `e2e:console`, который прогоняет desktop, all-screens и mobile Playwright-проекты `public-web`, `cabinet`, `admin-panel`, `all-screens`, `mobile-public`, `mobile-cabinet`, `mobile-admin`. E2E-сценарии подписаны на `page.on('console')` и `page.on('pageerror')` и падают при `console.error` или необработанном browser exception. Добавлена инструкция `docs/no-console-errors-smoke.md`.
+  - Доказательство: `npm run e2e:console --prefix frontend` 9/9, browser console report `console.error=0`, `pageerror=0`, `NoConsoleErrorsSmokeTests` 1/1, backend full suite 478/478, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-all-screens-browser-smoke`.
 
 - [x] `P11-ACC-005` Security final check. 2026-06-14.
   - Что сделать: secrets, auth, headers, rate limits, permissions.
@@ -663,7 +668,7 @@ git diff --check
   - Что сделать: принять решение: sandbox-ready, staging-ready или production-ready.
   - Критерий production-ready: все P0 закрыты, P1 критические сценарии закрыты, validation gate зеленый, VPS smoke успешен.
   - Что сделано: добавлен документ `docs/release-decision.md` и guard `ReleaseDecisionTests`. Решение зафиксировано как `staging-ready baseline, не production-ready`, потому что `P11-ACC-002 VPS production smoke` остается открытым и нет live доказательства полного production сценария на реальном VPS. Документ перечисляет блокеры production-ready: ротация раскрытых секретов, домен/HTTPS, staging PostgreSQL backup/restore, реальные sandbox-кабинеты платежных провайдеров, 3x-ui panel/inbound/access smoke и Telegram bot webhook/invoice flow.
-  - Доказательство: `ReleaseDecisionTests` 3/3, release decision documentation guard, backend full suite 476/476, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-staging-smoke-checklist`, версия `0.106.0`.
+  - Доказательство: `ReleaseDecisionTests` 3/3, release decision documentation guard, backend full suite 478/478, frontend tests 65/65, frontend typecheck/build, local SQLite HTTP-smoke latest release `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`.
 
 ## Журнал проверок
 

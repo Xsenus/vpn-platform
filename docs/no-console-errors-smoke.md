@@ -9,6 +9,7 @@
 - `public-web`;
 - `cabinet`;
 - `admin-panel`;
+- `all-screens`;
 - `mobile-public`;
 - `mobile-cabinet`;
 - `mobile-admin`.
@@ -32,13 +33,14 @@ npm run e2e:console --prefix frontend
 
 ## Результат проверки 2026-06-14
 
-Команда `npm run e2e:console --prefix frontend` прошла `6/6`.
+Команда `npm run e2e:console --prefix frontend` прошла `9/9`.
 
 Проверенные поверхности:
 
 - public desktop;
 - cabinet desktop;
 - admin desktop;
+- all screens desktop: public routes, cabinet auth/dashboard и все admin sections;
 - public mobile;
 - cabinet mobile;
 - admin mobile.

@@ -60,6 +60,7 @@ Browser smoke:
 npm run e2e:public --prefix frontend
 npm run e2e:cabinet --prefix frontend
 npm run e2e:admin --prefix frontend
+npm run e2e:all-screens --prefix frontend
 npm run e2e:mobile --prefix frontend
 npm run e2e:console --prefix frontend
 ```
@@ -167,14 +168,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 476/476;
+- backend full suite: 478/478;
 - frontend tests: 65/65;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 6/6;
+- browser console smoke: 9/9;
 - high-severity frontend audit: OK, остаются 2 moderate advisory по `react-router`;
-- latest "Что нового": `2026-06-14-staging-smoke-checklist`, версия `0.106.0`.
+- latest "Что нового": `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

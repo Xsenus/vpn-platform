@@ -22,17 +22,17 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `476/476`.
+- Backend full suite: `478/478`.
 - API Release build: OK.
 - Frontend unit tests: `65/65`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `6/6`.
+- Browser console smoke: `9/9`.
 - Actual PowerShell secret scan: OK.
 - High-severity frontend audit: OK; остаются 2 moderate advisory по `react-router`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-14-staging-smoke-checklist`, версия `0.106.0`; добавлен валидируемый staging smoke checklist, но live VPS/staging evidence еще требуется.
+- Latest "Что нового": `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`; добавлен полный mock-based browser smoke всех основных экранов, но live VPS/staging evidence еще требуется.
 
 ## Команды проверки
 

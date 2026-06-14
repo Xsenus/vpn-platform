@@ -2,6 +2,38 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.107.0 - 2026-06-14
+
+Release entry: `2026-06-14-all-screens-browser-smoke`.
+
+### Добавлено
+
+- `frontend/e2e/all-screens.spec.ts` с mock-based browser smoke для всех основных экранов public web, кабинета и админки.
+- Playwright project `all-screens`.
+- npm-скрипт `e2e:all-screens`.
+- Документация `docs/all-screens-browser-smoke.md`.
+- Guard-тест `AllScreensBrowserSmokeTests`.
+
+### Проверяется
+
+- public routes `/`, `/tariffs`, `/faq`, `/help`, `/account`;
+- cabinet auth screen и авторизованный dashboard;
+- admin sections `dashboard`, `users`, `payments`, `tariffs`, `subscriptions`, `vpn`, `nodes`, `panels`, `support`, `audit`, `bot`, `releases`, `faq`, `content`, `scenarios`, `provisioning`;
+- отсутствие пустого body;
+- отсутствие `console.error` и `pageerror`.
+
+### Проверено
+
+- Backend full suite: 478/478.
+- `npm run e2e:all-screens --prefix frontend`: 3/3.
+- Browser console smoke: 9/9.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+
+### Ограничения
+
+- Smoke использует mock API и не подтверждает live-платежи, live 3x-ui или реальный VPS.
+
 ## 0.106.0 - 2026-06-14
 
 Release entry: `2026-06-14-staging-smoke-checklist`.

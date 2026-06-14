@@ -2,6 +2,58 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: all screens browser smoke
+
+Что проверено:
+
+- Добавлен `frontend/e2e/all-screens.spec.ts`.
+- Добавлен Playwright project `all-screens`.
+- Добавлен npm-скрипт `e2e:all-screens`.
+- `e2e:console` расширен project-ом `all-screens`.
+- Проверяются public routes `/`, `/tariffs`, `/faq`, `/help`, `/account`.
+- Проверяются cabinet auth screen и авторизованный dashboard.
+- Проверяются все admin sections: `dashboard`, `users`, `payments`, `tariffs`, `subscriptions`, `vpn`, `nodes`, `panels`, `support`, `audit`, `bot`, `releases`, `faq`, `content`, `scenarios`, `provisioning`.
+- Проверяется отсутствие пустого `body`, `console.error` и `pageerror`.
+- Добавлена запись "Что нового" `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`.
+- `STATE-010` закрыт для локального mock-based browser smoke; live/staging проверки внешних интеграций остаются отдельными roadmap-задачами.
+
+Команды и результат:
+
+```powershell
+dotnet test backend/tests/VpnPlatform.UnitTests/VpnPlatform.UnitTests.csproj --configuration Release --filter "AllScreensBrowserSmokeTests|ReadmeDocumentationTests|DocumentationEncodingTests|ReleaseDecisionTests"
+npm run e2e:all-screens --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail fresh-admin@example.test -AdminPassword LocalSmokePassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npm run e2e:console --prefix frontend
+dotnet test backend/VpnPlatform.sln --configuration Release
+dotnet build backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+git diff --check
+```
+
+Итог:
+
+- All screens browser smoke guard: 2/2.
+- Targeted documentation/release guard suite: OK.
+- `npm run e2e:all-screens --prefix frontend`: 3/3.
+- Local SQLite VPS smoke dry-run: OK.
+- Fresh local SQLite smoke: OK.
+- Actual PowerShell secret scan: OK.
+- Browser console smoke: 9/9.
+- Backend full suite: 478/478.
+- API build: OK.
+- Frontend unit tests: 65/65.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- JSON релизов валиден: latest seed `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`.
+- Encoding guard: OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-14: staging smoke checklist
 
 Что проверено:

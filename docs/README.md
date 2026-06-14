@@ -16,6 +16,7 @@
 
 - [Локальная проверка](local-validation.md)
 - [Fresh local smoke](fresh-local-smoke.md)
+- [All screens browser smoke](all-screens-browser-smoke.md)
 - [Финальный runbook запуска и проверки](final-runbook.md)
 - [Backend validation gate](backend-validation-gate.md)
 - [Frontend validation gate](frontend-validation-gate.md)

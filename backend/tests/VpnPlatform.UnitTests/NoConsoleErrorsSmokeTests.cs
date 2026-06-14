@@ -18,7 +18,7 @@ public class NoConsoleErrorsSmokeTests
         var docsIndex = File.ReadAllText(Path.Combine(root, "docs", "README.md"));
 
         var consoleScript = packageJson.RootElement.GetProperty("scripts").GetProperty("e2e:console").GetString() ?? string.Empty;
-        foreach (var project in new[] { "public-web", "cabinet", "admin-panel", "mobile-public", "mobile-cabinet", "mobile-admin" })
+        foreach (var project in new[] { "public-web", "cabinet", "admin-panel", "all-screens", "mobile-public", "mobile-cabinet", "mobile-admin" })
         {
             Assert.Contains($"--project={project}", consoleScript, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(project, config, StringComparison.OrdinalIgnoreCase);
@@ -40,6 +40,7 @@ public class NoConsoleErrorsSmokeTests
             "public desktop",
             "cabinet desktop",
             "admin desktop",
+            "all screens desktop",
             "public mobile",
             "cabinet mobile",
             "admin mobile",
