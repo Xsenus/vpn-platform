@@ -2,6 +2,52 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-14: admin VPS smoke report
+
+Что проверялось:
+
+- `docs/admin-vps-smoke-report.template.json` содержит все обязательные разделы админки.
+- `scripts/new-admin-vps-smoke-report.ps1` создает безопасный черновик admin VPS smoke report.
+- `scripts/validate-admin-vps-smoke-report.ps1` проверяет URL, даты, login/console/API gates, разделы и forbidden secret markers.
+- `-RequireAllPassed` остается fail-closed и отклоняет сгенерированный blocked report.
+- Раздел "Что нового" получил релиз `2026-06-14-admin-vps-smoke-report`, версия `0.122.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-admin-vps-smoke-report.ps1 -OutputPath tmp\generated-admin-vps-smoke-report.json -ApiBaseUrl https://api.example.test -AdminWebUrl https://example.test/admin/ -EnvironmentName staging -Operator local-test
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report.ps1 -ReportPath tmp\generated-admin-vps-smoke-report.json
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report.ps1 -ReportPath tmp\generated-admin-vps-smoke-report.json -RequireAllPassed
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|PaymentProviderSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+npm audit --audit-level=high --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+git diff --check
+```
+
+Результат:
+
+- Generator smoke: OK.
+- `-RequireAllPassed` для generated blocked report: expected failure.
+- `AdminVpsSmokeReportTests`: `4/4`.
+- Backend full suite: `505/505`.
+- API/TBot Release build: OK, предупреждений 0.
+- Frontend unit tests: `65/65`.
+- Browser console E2E: `9/9`.
+- Fresh local SQLite smoke: OK, latest `2026-06-14-admin-vps-smoke-report`.
+- Local SQLite VPS smoke dry-run: OK.
+- Secret scan: 0 findings.
+- Encoding guard: OK.
+- Push не выполнялся.
+
 ## Проверка 2026-06-14: payment provider smoke report generator
 
 Что проверялось:

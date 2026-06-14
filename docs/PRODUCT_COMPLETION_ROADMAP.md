@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `501/501`.
+- [x] `STATE-001` Backend test suite проходит: `505/505`.
 - [x] `STATE-002` Frontend test suite проходит: `65/65`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `501/501`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-payment-provider-smoke-generator`, версия `0.121.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `505/505`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-admin-vps-smoke-report`, версия `0.122.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `501/501`, frontend tests `65/65`, latest "Что нового" `2026-06-14-payment-provider-smoke-generator`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `505/505`, frontend tests `65/65`, latest "Что нового" `2026-06-14-admin-vps-smoke-report`.
 
 ## P0. Блокеры production-запуска
 
@@ -70,6 +70,11 @@ git diff --check
   - Что сделать: открыть dashboard, users, payments, tariffs, subscriptions, vpn, nodes, panels, support, bot, releases, faq, content, scenarios, provisioning.
   - Критерий готовности: нет белого экрана, JS-ошибок, 401/403 после логина, сломанных таблиц и пустых обязательных состояний без объяснения.
   - Доказательство: browser smoke-отчет, список найденных ошибок или отметка "ошибок нет".
+
+- [x] `P0-ADMIN-003` Добавить безопасный admin VPS smoke report. 2026-06-14.
+  - Что сделать: зафиксировать шаблон, генератор и валидатор отчета для проверки `/admin/` на VPS под реальным admin-аккаунтом.
+  - Критерий готовности: отчет содержит все обязательные разделы админки, URL API/admin валидируются как absolute http/https, `-RequireAllPassed` требует успешный логин, отсутствие JS/API ошибок и `passed` по каждому разделу.
+  - Доказательство: `docs/admin-vps-smoke-report.template.json`, `scripts/new-admin-vps-smoke-report.ps1`, `scripts/validate-admin-vps-smoke-report.ps1`, `docs/admin-vps-smoke.md`, `AdminVpsSmokeReportTests` 4/4, generator smoke, expected fail-closed `-RequireAllPassed`.
 
 ### P0.2 Реальная production-выдача VPN
 

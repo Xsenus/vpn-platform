@@ -1,0 +1,145 @@
+{
+  "reportId": "admin-vps-smoke-YYYYMMDD-HHMM",
+  "environmentName": "staging",
+  "apiBaseUrl": "https://api.example.test",
+  "adminWebUrl": "https://admin.example.test",
+  "startedAt": "2026-06-14T00:00:00+07:00",
+  "completedAt": "2026-06-14T00:00:00+07:00",
+  "releaseId": "2026-06-14-admin-vps-smoke-report",
+  "operator": "TODO: operator name",
+  "notes": "Fill this report after real VPS admin smoke. Do not store credentials, cookies, auth headers, screenshots with secrets or raw provider payloads.",
+  "accountBootstrapChecked": false,
+  "adminLoginPassed": false,
+  "noJsErrors": false,
+  "noUnauthorizedAfterLogin": false,
+  "sections": [
+    {
+      "id": "dashboard",
+      "route": "/admin/#dashboard",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "users",
+      "route": "/admin/#users",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "payments",
+      "route": "/admin/#payments",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "tariffs",
+      "route": "/admin/#tariffs",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "subscriptions",
+      "route": "/admin/#subscriptions",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "vpn",
+      "route": "/admin/#vpn",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "nodes",
+      "route": "/admin/#nodes",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "panels",
+      "route": "/admin/#panels",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "support",
+      "route": "/admin/#support",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "audit",
+      "route": "/admin/#audit",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "bot",
+      "route": "/admin/#bot",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "releases",
+      "route": "/admin/#releases",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "faq",
+      "route": "/admin/#faq",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "content",
+      "route": "/admin/#content",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "scenarios",
+      "route": "/admin/#scenarios",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
+      "id": "provisioning",
+      "route": "/admin/#provisioning",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    }
+  ]
+}

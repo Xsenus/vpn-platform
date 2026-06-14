@@ -2,6 +2,37 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.122.0 - 2026-06-14
+
+Release entry: `2026-06-14-admin-vps-smoke-report`.
+
+### Added
+
+- `docs/admin-vps-smoke-report.template.json` фиксирует обязательный smoke-отчет для проверки всех разделов админки на VPS.
+- `scripts/new-admin-vps-smoke-report.ps1` создает безопасный blocked-черновик отчета с latest release, API URL, admin URL и оператором.
+- `scripts/validate-admin-vps-smoke-report.ps1` проверяет URL, даты, общие login/console/API gates, все admin sections и forbidden secret markers.
+- `docs/admin-vps-smoke.md` описывает, как пройти VPS admin smoke без сохранения секретов.
+
+### Changed
+
+- Current status обновлен до backend `505/505`, latest release `2026-06-14-admin-vps-smoke-report`.
+- `P0-ADMIN-002` остается открытым до реального VPS admin smoke, но теперь у него есть обязательный формат безопасного evidence.
+
+### Verified
+
+- Generated admin VPS smoke report passes normal validation.
+- Generated blocked report fails `-RequireAllPassed` as expected.
+- `AdminVpsSmokeReportTests`: 4/4.
+- Backend full suite: 505/505.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Нужно пройти `/admin/` на реальном VPS под production admin-аккаунтом и заполнить отчет safe evidence по всем разделам.
+
 ## 0.121.0 - 2026-06-14
 
 Release entry: `2026-06-14-payment-provider-smoke-generator`.

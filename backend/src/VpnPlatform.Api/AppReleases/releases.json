@@ -3006,5 +3006,32 @@
         "text": "Все провайдеры остаются в статусе `blocked`, пока оператор не пройдет реальные внешние кабинеты и не добавит безопасные evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-14-admin-vps-smoke-report",
+    "version": "0.122.0",
+    "releasedAt": "2026-06-14T20:30:00+07:00",
+    "title": "Smoke-отчет для проверки админки на VPS",
+    "summary": "Добавлены безопасный шаблон, генератор и валидатор отчета для проверки всех разделов админки на VPS.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`docs/admin-vps-smoke-report.template.json` фиксирует все обязательные разделы админки для VPS smoke."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/new-admin-vps-smoke-report.ps1` создает blocked-черновик отчета и сразу проверяет его валидатором."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/validate-admin-vps-smoke-report.ps1` требует валидные URL, успешный login gate, отсутствие JS/API ошибок и safe evidence по каждому разделу."
+      },
+      {
+        "type": "important",
+        "text": "Реальный `P0-ADMIN-002` остается открытым, пока отчет не заполнен после проверки `/admin/` на VPS под production admin-аккаунтом."
+      }
+    ]
   }
 ]

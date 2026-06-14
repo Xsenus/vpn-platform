@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `501/501`.
+- Backend full suite: `505/505`.
 - API Release build: OK.
 - Frontend unit tests: `65/65`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - High-severity frontend audit: OK; остаются 2 moderate advisory по `react-router`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-14-payment-provider-smoke-generator`, версия `0.121.0`; для всех web-провайдеров добавлены безопасный smoke-шаблон, генератор и валидатор, staging smoke report можно генерировать из шаблона, Telegram Stars включается для продаж только через явный `invoice-flow`, Webhook Telegram закреплен за основным API, синхронизированы roadmap, README, final runbook, release decision, changelog и TEST_RESULTS, но live VPS/staging evidence еще требуется.
+- Latest "Что нового": `2026-06-14-admin-vps-smoke-report`, версия `0.122.0`; для проверки админки на VPS добавлены безопасный smoke-шаблон, генератор и валидатор, для всех web-провайдеров добавлены smoke-шаблон, генератор и валидатор, staging smoke report можно генерировать из шаблона, Telegram Stars включается для продаж только через явный `invoice-flow`, Webhook Telegram закреплен за основным API, синхронизированы roadmap, README, final runbook, release decision, changelog и TEST_RESULTS, но live VPS/staging evidence еще требуется.
 
 ## Команды проверки
 
