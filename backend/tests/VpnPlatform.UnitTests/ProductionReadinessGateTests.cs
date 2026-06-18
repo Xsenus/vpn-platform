@@ -109,6 +109,36 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-production-evidence-bundle.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "new-staging-smoke-report.ps1",
+                     "new-payment-provider-smoke-report.ps1",
+                     "new-admin-vps-smoke-report.ps1",
+                     "new-vpn-live-smoke-report.ps1",
+                     "staging-smoke-report.json",
+                     "payment-provider-smoke-report.json",
+                     "admin-vps-smoke-report.json",
+                     "vpn-live-smoke-report.json",
+                     "RunProductionGate",
+                     "productionGateStatus",
+                     "assert-production-readiness.ps1"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("new-production-evidence-bundle.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-011`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

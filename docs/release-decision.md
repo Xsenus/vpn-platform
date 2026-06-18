@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `511/511`.
+- Backend full suite: `512/512`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-18-production-evidence-aggregate-gate`, версия `0.125.0`; production readiness gate теперь агрегирует полный пакет evidence reports: staging/VPS, платежные провайдеры, админка VPS и live VPN/3x-ui. Если несколько отчетов еще заблокированы, gate возвращает все ошибки в `evidenceReports`, но live VPS/staging evidence все еще требуется.
+- Latest "Что нового": `2026-06-18-production-evidence-bundle-generator`, версия `0.126.0`; production readiness gate теперь агрегирует полный пакет evidence reports, а `new-production-evidence-bundle.ps1` создает все четыре безопасных черновика одной командой. Live VPS/staging evidence все еще требуется.
 
 ## Команды проверки
 

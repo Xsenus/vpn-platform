@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.126.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-bundle-generator`.
+
+### Added
+
+- `scripts/new-production-evidence-bundle.ps1` создает весь production evidence bundle одной командой: staging/VPS, payment provider, admin VPS и VPN live reports.
+- Генератор вызывает существующие безопасные генераторы отчетов, прогоняет их validators и при `-RunProductionGate` возвращает статус агрегированного production gate.
+- Документация `docs/production-readiness-gate.md` получила команду создания полного bundle без ручного копирования JSON.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 5/5.
+- Bundle generator smoke: OK, созданы 4 JSON-отчета.
+- Expected aggregate gate status for generated drafts: `blocked`.
+- Backend full suite: 512/512.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Frontend audit: `0 vulnerabilities`.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Generated reports остаются черновиками `blocked`, пока оператор не заменит TODO на реальные sanitized evidence после live/staging прогонов.
+
 ## 0.125.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-aggregate-gate`.
