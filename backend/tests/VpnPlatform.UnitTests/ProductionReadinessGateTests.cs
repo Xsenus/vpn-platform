@@ -554,6 +554,35 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Validator_Should_Verify_Zip_And_Package()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-package-archive.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ArchivePath",
+                     "ExpectedArchiveSha256",
+                     "RequireProductionReady",
+                     "validate-production-evidence-handoff-package.ps1",
+                     "ZipArchive",
+                     "production-evidence-handoff-package-index.json",
+                     "SHA256SUMS.txt",
+                     "unexpected entry",
+                     "duplicated entry",
+                     "production evidence handoff package archive valid"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-production-evidence-handoff-package-archive.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-026`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

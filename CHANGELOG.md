@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.141.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-validator`.
+
+### Added
+
+- `scripts/validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP-архив handoff package.
+- Валидатор сверяет SHA256 внешнего ZIP, запрещает неожиданные и вложенные entries, временно извлекает package и повторно запускает package validator.
+
+### Changed
+
+- Production readiness gate документация теперь описывает отдельную проверку финального ZIP-архива handoff package.
+- Roadmap и release docs синхронизированы с backend suite `527/527` и latest release `0.141.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 20/20.
+- Production evidence handoff package archive validator smoke: OK.
+- Backend full suite: 527/527.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Archive validator проверяет локально собранный ZIP; production-ready по-прежнему требует реальные live/VPS/payment evidence reports.
+
 ## 0.140.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive`.

@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `526/526`.
+- [x] `STATE-001` Backend test suite проходит: `527/527`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `526/526`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive`, версия `0.140.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `527/527`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-validator`, версия `0.141.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 19/19, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `526/526`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 20/20, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `527/527`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-validator`.
 
 ## P0. Блокеры production-запуска
 
@@ -797,6 +797,10 @@ git diff --check
   - Что сделать: добавить упаковку проверенного handoff package в один ZIP, чтобы оператор или CI могли передать единый архив с SHA256.
   - Что сделано: добавлен `scripts/new-production-evidence-handoff-package-archive.ps1`, который повторно запускает package validator, добавляет в ZIP только разрешенные package files и возвращает SHA256/размер архива, entries, исходный SHA256 production evidence ZIP и SHA256 manifest.
   - Доказательство: `ProductionReadinessGateTests` 19/19, handoff package archive smoke в `tmp/production-evidence-handoff-package-archive-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive`, версия `0.140.0`.
+- [x] `P11-ACC-026` Production evidence handoff package archive validator. 2026-06-18.
+  - Что сделать: добавить независимую fail-closed проверку ZIP-архива handoff package, чтобы оператор или CI могли доказать, что переданный финальный архив не содержит лишних entries, совпадает по SHA256 и после извлечения проходит package validator.
+  - Что сделано: добавлен `scripts/validate-production-evidence-handoff-package-archive.ps1`, который проверяет SHA256 внешнего ZIP, whitelist entries, отсутствие вложенных/опасных путей, временно извлекает package и повторно запускает `validate-production-evidence-handoff-package.ps1`.
+  - Доказательство: `ProductionReadinessGateTests` 20/20, handoff package archive validator smoke в `tmp/production-evidence-handoff-package-archive-validator-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-validator`, версия `0.141.0`.
 
 ## Журнал проверок
 

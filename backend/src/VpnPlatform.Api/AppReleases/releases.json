@@ -3459,5 +3459,28 @@
         "text": "Команда возвращает SHA256 и размер ZIP, entries, исходный SHA256 production evidence ZIP и SHA256 manifest."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-validator",
+    "version": "0.141.0",
+    "releasedAt": "2026-06-18T14:36:00+07:00",
+    "title": "Валидатор ZIP-архива handoff package",
+    "summary": "Добавлена независимая проверка ZIP-архива handoff package с повторной валидацией package.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP-архив handoff package."
+      },
+      {
+        "type": "improved",
+        "text": "Валидатор сверяет SHA256 внешнего ZIP, whitelist entries, временно извлекает package и повторно запускает package validator."
+      },
+      {
+        "type": "important",
+        "text": "Строгий режим `-RequireProductionReady` требует production-ready handoff на уровне package validator."
+      }
+    ]
   }
 ]
