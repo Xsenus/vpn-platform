@@ -464,6 +464,36 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Should_Copy_Only_Verified_Artifacts()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-production-evidence-handoff-package.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ChecklistPath",
+                     "OutputDirectory",
+                     "ExpectedArchiveSha256",
+                     "validate-production-evidence-handoff-checklist.ps1",
+                     "production-evidence-handoff-package",
+                     "production-evidence-handoff-package-index.json",
+                     "production-evidence-handoff-package-index.md",
+                     "SHA256SUMS.txt",
+                     "Package contains only archive, receipt, checklist and hash indexes",
+                     "Do not add .env files, cookies, private headers, provider secrets or API keys",
+                     "production evidence handoff package created"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("new-production-evidence-handoff-package.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-023`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

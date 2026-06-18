@@ -3390,5 +3390,28 @@
         "text": "Строгий режим `-RequireProductionReady` требует `production-ready-handoff`, все gates `passed` и summary со статусом `production-ready`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package",
+    "version": "0.138.0",
+    "releasedAt": "2026-06-18T14:01:00+07:00",
+    "title": "Package для handoff production evidence",
+    "summary": "Добавлена сборка минимального handoff package из проверенных ZIP, receipt и checklist artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-production-evidence-handoff-package.ps1` собирает отдельный каталог handoff package после проверки checklist."
+      },
+      {
+        "type": "improved",
+        "text": "Package содержит только ZIP, JSON/Markdown receipt, JSON/Markdown checklist, index и `SHA256SUMS.txt`."
+      },
+      {
+        "type": "important",
+        "text": "Строгий режим `-RequireProductionReady` не позволит собрать package из blocked checklist."
+      }
+    ]
   }
 ]
