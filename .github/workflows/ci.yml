@@ -97,6 +97,31 @@ jobs:
           path: backend/TestResults/**/*.trx
           if-no-files-found: ignore
 
+  production-evidence:
+    name: production evidence handoff archive regression
+    runs-on: ubuntu-latest
+    needs: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run production evidence handoff archive CI regression
+        shell: pwsh
+        run: |
+          ./scripts/test-production-evidence-handoff-package-archive-ci-regression.ps1 `
+            -OutputDirectory tmp/production-evidence-handoff-package-archive-ci-regression `
+            -Force
+
+      - name: Upload production evidence regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-handoff-package-archive-ci-regression
+          path: |
+            tmp/production-evidence-handoff-package-archive-ci-regression/production-evidence-handoff-package-archive-ci-regression-result.json
+            tmp/production-evidence-handoff-package-archive-ci-regression/production-evidence-handoff-package-archive-ci-regression-result.md
+          if-no-files-found: error
+
   frontend:
     name: frontend install, typecheck, build, test
     runs-on: ubuntu-latest

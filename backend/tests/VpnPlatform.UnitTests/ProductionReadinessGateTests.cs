@@ -815,6 +815,36 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Ci_Regression_Should_Run_In_GitHub_Actions()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "production-evidence:",
+                     "production evidence handoff archive regression",
+                     "needs: backend",
+                     "shell: pwsh",
+                     "test-production-evidence-handoff-package-archive-ci-regression.ps1",
+                     "tmp/production-evidence-handoff-package-archive-ci-regression",
+                     "actions/upload-artifact@v4",
+                     "production-evidence-handoff-package-archive-ci-regression-result.json",
+                     "production-evidence-handoff-package-archive-ci-regression-result.md",
+                     "if-no-files-found: error"
+                 })
+        {
+            Assert.Contains(expected, workflow, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("GitHub Actions", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("production-evidence", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-035`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

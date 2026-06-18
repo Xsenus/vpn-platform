@@ -3670,5 +3670,28 @@
         "text": "Команда сохраняет единые JSON/Markdown result artifacts для CI и handoff evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-ci-workflow",
+    "version": "0.150.0",
+    "releasedAt": "2026-06-18T16:18:00+07:00",
+    "title": "CI job для handoff archive regression",
+    "summary": "GitHub Actions теперь запускает production evidence handoff package archive regression и публикует JSON/Markdown evidence artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "В `.github/workflows/ci.yml` добавлен job `production-evidence`, который запускает `test-production-evidence-handoff-package-archive-ci-regression.ps1` после backend-проверок."
+      },
+      {
+        "type": "improved",
+        "text": "CI сохраняет `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md` как GitHub Actions artifact."
+      },
+      {
+        "type": "important",
+        "text": "Регрессия handoff archive больше не зависит только от ручного локального запуска и проверяется в общей validation pipeline."
+      }
+    ]
   }
 ]

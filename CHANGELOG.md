@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.150.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-workflow`.
+
+### Added
+
+- В `.github/workflows/ci.yml` добавлен job `production-evidence`, который запускает production evidence handoff package archive CI regression после backend-проверок.
+- GitHub Actions публикует artifact `production-evidence-handoff-package-archive-ci-regression` с JSON/Markdown результатами wrapper.
+
+### Changed
+
+- Production readiness gate документация теперь описывает, где в GitHub Actions брать CI evidence artifacts.
+- Roadmap и release docs синхронизированы с backend suite `536/536` и latest release `0.150.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 29/29.
+- Production evidence handoff package archive CI regression wrapper smoke: OK.
+- Backend full suite: 536/536.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- CI job проверяет локальные evidence regressions в validation pipeline, но live/VPS/payment blockers все еще закрываются только реальными smoke reports.
+
 ## 0.149.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-regression`.

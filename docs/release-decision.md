@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `535/535`.
+- Backend full suite: `536/536`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-ci-regression`, версия `0.149.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP с коротким hash-based default-именем, `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP, `test-production-evidence-handoff-package-archive-validator.ps1` покрывает tamper-сценарии, а `test-production-evidence-handoff-package-archive-flow.ps1` выполняет всю локальную evidence цепочку одной командой, защищает рекурсивную очистку output-папки, сохраняет JSON/Markdown result artifacts и запускает `validate-production-evidence-handoff-package-archive-flow-result.ps1` для отдельной проверки итогового результата; `test-production-evidence-handoff-package-archive-flow-result-validator.ps1` проверяет fail-closed поведение этого validator на испорченных result artifacts, `test-production-evidence-handoff-package-archive-long-path.ps1` закрывает regression для длинных release id на Windows, а `test-production-evidence-handoff-package-archive-ci-regression.ps1` объединяет локальные harnesses в один CI-friendly запуск. Live VPS/staging evidence все еще требуется.
+- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-ci-workflow`, версия `0.150.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP с коротким hash-based default-именем, `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP, `test-production-evidence-handoff-package-archive-validator.ps1` покрывает tamper-сценарии, а `test-production-evidence-handoff-package-archive-flow.ps1` выполняет всю локальную evidence цепочку одной командой, защищает рекурсивную очистку output-папки, сохраняет JSON/Markdown result artifacts и запускает `validate-production-evidence-handoff-package-archive-flow-result.ps1` для отдельной проверки итогового результата; `test-production-evidence-handoff-package-archive-flow-result-validator.ps1` проверяет fail-closed поведение этого validator на испорченных result artifacts, `test-production-evidence-handoff-package-archive-long-path.ps1` закрывает regression для длинных release id на Windows, `test-production-evidence-handoff-package-archive-ci-regression.ps1` объединяет локальные harnesses в один CI-friendly запуск, а GitHub Actions job `production-evidence` запускает этот wrapper и публикует JSON/Markdown artifacts. Live VPS/staging evidence все еще требуется.
 
 ## Команды проверки
 

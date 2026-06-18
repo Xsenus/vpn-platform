@@ -271,6 +271,8 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handof
 
 Wrapper сохраняет `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md` с путями к основному result, финальному handoff package archive и результатам regression harnesses.
 
+В GitHub Actions этот wrapper запускается отдельным job `production-evidence` в `.github/workflows/ci.yml` после backend-проверок. Job публикует artifact `production-evidence-handoff-package-archive-ci-regression` с итоговыми `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md`, поэтому CI evidence можно скачать без повторного ручного запуска.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
