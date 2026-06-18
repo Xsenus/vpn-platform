@@ -3482,5 +3482,28 @@
         "text": "Строгий режим `-RequireProductionReady` требует production-ready handoff на уровне package validator."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-validator-regression",
+    "version": "0.142.0",
+    "releasedAt": "2026-06-18T14:46:00+07:00",
+    "title": "Regression-проверка ZIP-архива handoff package",
+    "summary": "Добавлен harness, который проверяет fail-closed поведение валидатора финального ZIP-архива handoff package.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-validator.ps1` запускает happy path и tamper-сценарии для финального ZIP."
+      },
+      {
+        "type": "improved",
+        "text": "Проверка создает временные испорченные копии архива и ожидает ошибки для неверного SHA256, лишнего entry и отсутствующего `SHA256SUMS.txt`."
+      },
+      {
+        "type": "important",
+        "text": "Regression harness помогает не сломать fail-closed гарантии production evidence handoff при следующих изменениях."
+      }
+    ]
   }
 ]

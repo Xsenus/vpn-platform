@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `527/527`.
+- Backend full suite: `528/528`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-validator`, версия `0.141.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP, а `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP и повторно валидирует package после временного извлечения. Live VPS/staging evidence все еще требуется.
+- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-validator-regression`, версия `0.142.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP, `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP, а `test-production-evidence-handoff-package-archive-validator.ps1` покрывает tamper-сценарии лишнего entry, отсутствующего `SHA256SUMS.txt` и неверного expected SHA256. Live VPS/staging evidence все еще требуется.
 
 ## Команды проверки
 

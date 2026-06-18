@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.142.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-validator-regression`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-validator.ps1` запускает happy path и tamper-сценарии для финального ZIP-архива handoff package.
+- Regression harness создает временные испорченные копии архива и проверяет ошибки для неверного SHA256, лишнего entry и отсутствующего `SHA256SUMS.txt`.
+
+### Changed
+
+- Production readiness gate документация теперь описывает regression-проверку archive validator.
+- Roadmap и release docs синхронизированы с backend suite `528/528` и latest release `0.142.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 21/21.
+- Production evidence handoff package archive validator regression smoke: OK.
+- Backend full suite: 528/528.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Regression harness проверяет локально собранный ZIP; production-ready по-прежнему требует реальные live/VPS/payment evidence reports.
+
 ## 0.141.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-validator`.
