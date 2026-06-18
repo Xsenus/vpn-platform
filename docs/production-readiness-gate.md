@@ -180,6 +180,15 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-handoff
 
 Package generator повторно запускает checklist validator, копирует только ZIP, JSON/Markdown receipt, JSON/Markdown checklist и создает `production-evidence-handoff-package-index.json`, `.md` и `SHA256SUMS.txt`. Для финального production handoff добавьте `-RequireProductionReady`, чтобы package не собирался из blocked checklist.
 
+Проверить готовый package можно отдельной командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-package.ps1 `
+  -PackageDirectory tmp\production-evidence\production-evidence-handoff-package
+```
+
+Package validator проверяет whitelist файлов, `production-evidence-handoff-package-index.json`, `SHA256SUMS.txt`, пересчитывает SHA256 каждого artifact и повторно запускает checklist validator. В режиме `-RequireProductionReady` package должен иметь `production-ready-handoff` и проходить строгую проверку checklist.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

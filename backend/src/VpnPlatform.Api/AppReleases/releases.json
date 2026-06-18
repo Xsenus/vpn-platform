@@ -3413,5 +3413,28 @@
         "text": "Строгий режим `-RequireProductionReady` не позволит собрать package из blocked checklist."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-validator",
+    "version": "0.139.0",
+    "releasedAt": "2026-06-18T14:13:00+07:00",
+    "title": "Валидатор package для handoff evidence",
+    "summary": "Добавлена независимая проверка handoff package: index, SHA256SUMS, whitelist файлов и checklist validator.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-evidence-handoff-package.ps1` проверяет готовый каталог handoff package после сборки."
+      },
+      {
+        "type": "improved",
+        "text": "Валидатор запрещает лишние файлы, сверяет `production-evidence-handoff-package-index.json`, `SHA256SUMS.txt` и SHA256 каждого artifact."
+      },
+      {
+        "type": "important",
+        "text": "Проверка повторно запускает checklist validator и в строгом режиме требует production-ready handoff."
+      }
+    ]
   }
 ]
