@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `519/519`.
+- [x] `STATE-001` Backend test suite проходит: `520/520`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `519/519`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-archive-validator`, версия `0.133.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `520/520`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-receipt`, версия `0.134.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 12/12, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `519/519`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-archive-validator`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 13/13, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `520/520`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-receipt`.
 
 ## P0. Блокеры production-запуска
 
@@ -769,6 +769,10 @@ git diff --check
   - Что сделать: добавить fail-closed проверку ZIP-архива production evidence, чтобы опубликованный handoff artifact можно было сверить без распаковки и ручного сравнения.
   - Что сделано: добавлен `scripts/validate-production-evidence-archive.ps1`, который читает manifest из ZIP, запрещает лишние entries, проверяет обязательные файлы, размеры, `totalBytes`, SHA256 каждого entry и опциональный `-ExpectedArchiveSha256`.
   - Доказательство: `ProductionReadinessGateTests` 12/12, archive validator smoke в `tmp/production-evidence-archive-validator-test`, latest "Что нового" `2026-06-18-production-evidence-archive-validator`, версия `0.133.0`.
+- [x] `P11-ACC-019` Production evidence handoff receipt. 2026-06-18.
+  - Что сделать: добавить JSON/Markdown receipt для проверенного ZIP-архива, чтобы оператор или CI могли передать один ZIP и отдельный hash-чек без содержимого evidence reports.
+  - Что сделано: добавлен `scripts/new-production-evidence-handoff-receipt.ps1`, который сначала запускает `validate-production-evidence-archive.ps1`, затем пишет receipt с release id, SHA256 архива, SHA256 manifest, размером, entries и verified files.
+  - Доказательство: `ProductionReadinessGateTests` 13/13, handoff receipt smoke в `tmp/production-evidence-handoff-receipt-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-receipt`, версия `0.134.0`.
 
 ## Журнал проверок
 

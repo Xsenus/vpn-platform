@@ -3298,5 +3298,28 @@
         "text": "Команда поддерживает `-ExpectedArchiveSha256`, чтобы CI мог сверить опубликованный handoff artifact с зафиксированным hash."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-receipt",
+    "version": "0.134.0",
+    "releasedAt": "2026-06-18T13:05:00+07:00",
+    "title": "Receipt для handoff production evidence",
+    "summary": "Добавлена генерация JSON/Markdown receipt для проверенного ZIP-архива production evidence без содержимого отчетов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-production-evidence-handoff-receipt.ps1` создает JSON и Markdown receipt после успешной проверки ZIP-архива."
+      },
+      {
+        "type": "improved",
+        "text": "Receipt фиксирует release id, SHA256 архива, SHA256 manifest, размер архива, entries и verified files без копирования содержимого evidence reports."
+      },
+      {
+        "type": "important",
+        "text": "Оператор или CI может передать ZIP и receipt вместе, чтобы сверить handoff artifact без доступа к локальной рабочей директории."
+      }
+    ]
   }
 ]

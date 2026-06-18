@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.134.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-receipt`.
+
+### Added
+
+- `scripts/new-production-evidence-handoff-receipt.ps1` создает JSON/Markdown receipt для проверенного ZIP-архива production evidence.
+- Receipt запускает archive validator, затем фиксирует release id, SHA256 архива, SHA256 manifest, размер архива, entries и verified files.
+- Receipt не копирует содержимое evidence reports и подходит для передачи вместе с ZIP в CI или операторский handoff.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 13/13.
+- Production evidence handoff receipt smoke: OK, JSON/Markdown receipt создан после archive validation.
+- Backend full suite: 520/520.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Frontend audit: `0 vulnerabilities`.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Receipt фиксирует локальный handoff artifact; production-ready по-прежнему требует реальные passed evidence reports и закрытие live/VPS/payment blockers.
+
 ## 0.133.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-archive-validator`.

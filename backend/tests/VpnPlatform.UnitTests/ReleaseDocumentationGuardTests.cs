@@ -55,7 +55,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-015", "2026-06-18-production-evidence-manifest"),
         new("P11-ACC-016", "2026-06-18-production-evidence-manifest-validator"),
         new("P11-ACC-017", "2026-06-18-production-evidence-archive"),
-        new("P11-ACC-018", "2026-06-18-production-evidence-archive-validator")
+        new("P11-ACC-018", "2026-06-18-production-evidence-archive-validator"),
+        new("P11-ACC-019", "2026-06-18-production-evidence-handoff-receipt")
     ];
 
     [Fact]
