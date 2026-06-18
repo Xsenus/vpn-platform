@@ -540,6 +540,9 @@ public class ProductionReadinessGateTests
                      "validate-production-evidence-handoff-package.ps1",
                      "ZipArchive",
                      "Get-SafeEntryName",
+                     "Get-DefaultArchiveName",
+                     "Get-TextSha256",
+                     "Substring(0, 12)",
                      "duplicated entry",
                      "production evidence handoff package archive created",
                      "packageArchiveSourceSha256",
@@ -723,6 +726,35 @@ public class ProductionReadinessGateTests
         Assert.Contains("validate-production-evidence-handoff-package-archive-flow-result.ps1", flow, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("validate-production-evidence-handoff-package-archive-flow-result.ps1", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P11-ACC-031`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Flow_Result_Validator_Should_Have_Regression_Harness()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-flow-result-validator.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "validate-production-evidence-handoff-package-archive-flow-result.ps1",
+                     "bad-status",
+                     "bad-handoff-archive-sha256",
+                     "missing-regression-failure",
+                     "bad-markdown",
+                     "status must be passed",
+                     "SHA256 does not match",
+                     "missing regression failure",
+                     "markdown is missing",
+                     "production evidence handoff package archive flow result validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-package-archive-flow-result-validator.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-032`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

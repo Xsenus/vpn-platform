@@ -199,6 +199,8 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-handoff
 
 Package archive generator повторно запускает package validator, добавляет в ZIP только разрешенные package files и возвращает `archiveSha256`, `archiveBytes`, `entries`, исходный SHA256 production evidence ZIP и SHA256 manifest. В режиме `-RequireProductionReady` архив не будет создан из blocked package.
 
+Default-имя ZIP использует короткий hash `releaseId`, а полный `releaseId` остается в JSON result. Это защищает локальные и CI-запуски на Windows от path-limit при длинных release id и глубокой `OutputDirectory`.
+
 Финальный ZIP-архив handoff package можно проверить отдельным валидатором:
 
 ```powershell
@@ -239,6 +241,15 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ha
 ```
 
 Валидатор проверяет `status = passed`, `regressionStatus = passed`, SHA256 production evidence archive и handoff package archive, Markdown-пару, обязательные tamper-сценарии regression harness и повторно запускает `validate-production-evidence-handoff-package-archive.ps1` для финального ZIP.
+
+Для проверки fail-closed поведения самого result validator используйте regression harness:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-flow-result-validator.ps1 `
+  -ResultJsonPath tmp\production-evidence-handoff-package-archive-flow-test\production-evidence-handoff-package-archive-flow-result.json
+```
+
+Harness ожидает ошибки для испорченного `status`, неверного SHA256 handoff package archive, отсутствующего tamper-сценария и Markdown без обязательного блока `Tested failures`.
 
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 

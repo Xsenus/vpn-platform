@@ -3597,5 +3597,32 @@
         "text": "Валидатор сверяет SHA256 архивов, Markdown-пару, обязательные tamper-сценарии и повторно запускает archive validator."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-flow-result-validator-regression",
+    "version": "0.147.0",
+    "releasedAt": "2026-06-18T15:43:00+07:00",
+    "title": "Regression harness для result validator",
+    "summary": "Проверка итоговых artifacts полного handoff flow теперь покрыта fail-closed regression harness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-evidence-handoff-package-archive-flow-result-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Harness проверяет, что result validator падает на испорченный статус, неверный SHA256, неполные tamper-сценарии и поврежденный Markdown."
+      },
+      {
+        "type": "improved",
+        "text": "Default-имя handoff package ZIP сокращено через hash release id, чтобы длинные release id не упирались в Windows path-limit."
+      },
+      {
+        "type": "important",
+        "text": "Это снижает риск принять поврежденный или неполный result artifact как корректное production evidence handoff доказательство."
+      }
+    ]
   }
 ]

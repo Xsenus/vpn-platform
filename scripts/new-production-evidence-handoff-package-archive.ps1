@@ -39,6 +39,27 @@ function Get-FileSha256 {
     }
 }
 
+function Get-TextSha256 {
+    param([string]$Value)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+        $hash = $sha256.ComputeHash($bytes)
+        return -join ($hash | ForEach-Object { $_.ToString("x2") })
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
+function Get-DefaultArchiveName {
+    param([string]$ReleaseId)
+
+    $releaseHash = (Get-TextSha256 -Value $ReleaseId).Substring(0, 12)
+    return "production-evidence-handoff-package-$releaseHash-$([DateTimeOffset]::UtcNow.ToString("yyyyMMdd-HHmmss")).zip"
+}
+
 function Get-SafeEntryName {
     param([string]$FileName)
 
@@ -99,7 +120,7 @@ if ($RequireProductionReady) {
 $packageValidationJson = & (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package.ps1") @validatorArgs
 $packageValidation = $packageValidationJson | ConvertFrom-Json
 
-$archiveName = "production-evidence-handoff-package-$($packageValidation.releaseId)-$([DateTimeOffset]::UtcNow.ToString("yyyyMMdd-HHmmss")).zip"
+$archiveName = Get-DefaultArchiveName -ReleaseId ([string]$packageValidation.releaseId)
 $archiveFullPath = if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     Join-Path (Split-Path -Parent $packageFullPath) $archiveName
 }

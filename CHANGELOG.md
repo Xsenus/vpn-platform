@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.147.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator-regression`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-flow-result-validator.ps1` проверяет fail-closed поведение validator результата полного handoff flow.
+- Regression harness ожидает ошибки для испорченного `status`, неверного SHA256 handoff archive, отсутствующего tamper-сценария и Markdown без блока `Tested failures`.
+
+### Changed
+
+- Production readiness gate документация теперь описывает отдельный regression harness для result validator.
+- Default-имя handoff package ZIP теперь использует короткий hash release id, чтобы длинные release id не ломали сборку на Windows path-limit.
+- Roadmap и release docs синхронизированы с backend suite `533/533` и latest release `0.147.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 26/26.
+- Production evidence handoff package archive flow result validator regression smoke: OK.
+- Backend full suite: 533/533.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Regression harness проверяет только целостность локального evidence result validator; live/VPS/payment blockers остаются открытыми до реальных smoke reports.
+
 ## 0.146.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`.

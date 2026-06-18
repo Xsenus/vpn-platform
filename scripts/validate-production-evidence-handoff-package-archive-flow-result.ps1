@@ -115,14 +115,14 @@ Assert-Equal `
     -Message "Production evidence handoff package archive flow result package status does not match archive validation."
 
 $testedFailures = @($result.testedFailures)
-if ($testedFailures.Count -lt 3) {
-    throw "Production evidence handoff package archive flow result must include regression tested failures."
-}
-
 foreach ($expectedFailure in @("wrong-expected-sha256", "unexpected-entry", "missing-required-entry")) {
     if (-not ($testedFailures | Where-Object { [string]$_.name -eq $expectedFailure })) {
         throw "Production evidence handoff package archive flow result is missing regression failure: $expectedFailure"
     }
+}
+
+if ($testedFailures.Count -lt 3) {
+    throw "Production evidence handoff package archive flow result must include regression tested failures."
 }
 
 $markdown = Get-Content -LiteralPath $resultMarkdownFullPath -Raw -Encoding UTF8
