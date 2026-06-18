@@ -694,6 +694,38 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Flow_Result_Validator_Should_Verify_Result_Artifacts()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-package-archive-flow-result.ps1"));
+        var flow = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-flow.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ResultJsonPath",
+                     "ResultMarkdownPath",
+                     "productionEvidenceArchiveSha256",
+                     "handoffPackageArchiveSha256",
+                     "regressionStatus must be passed",
+                     "testedFailures",
+                     "wrong-expected-sha256",
+                     "unexpected-entry",
+                     "missing-required-entry",
+                     "validate-production-evidence-handoff-package-archive.ps1",
+                     "production evidence handoff package archive flow result valid"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-production-evidence-handoff-package-archive-flow-result.ps1", flow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-production-evidence-handoff-package-archive-flow-result.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-031`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

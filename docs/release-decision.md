@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `531/531`.
+- Backend full suite: `532/532`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-flow-result`, версия `0.145.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP, `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP, `test-production-evidence-handoff-package-archive-validator.ps1` покрывает tamper-сценарии, а `test-production-evidence-handoff-package-archive-flow.ps1` выполняет всю локальную evidence цепочку одной командой, защищает рекурсивную очистку output-папки и сохраняет JSON/Markdown result artifacts. Live VPS/staging evidence все еще требуется.
+- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`, версия `0.146.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP, `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP, `test-production-evidence-handoff-package-archive-validator.ps1` покрывает tamper-сценарии, а `test-production-evidence-handoff-package-archive-flow.ps1` выполняет всю локальную evidence цепочку одной командой, защищает рекурсивную очистку output-папки, сохраняет JSON/Markdown result artifacts и запускает `validate-production-evidence-handoff-package-archive-flow-result.ps1` для отдельной проверки итогового результата. Live VPS/staging evidence все еще требуется.
 
 ## Команды проверки
 

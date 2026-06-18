@@ -3574,5 +3574,28 @@
         "text": "CI или оператор могут приложить короткий итог flow без ручного копирования console output."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-flow-result-validator",
+    "version": "0.146.0",
+    "releasedAt": "2026-06-18T15:32:00+07:00",
+    "title": "Валидатор result artifacts для handoff flow",
+    "summary": "Итоговые JSON/Markdown artifacts полного production evidence handoff flow теперь проверяются отдельной командой.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1` для проверки result artifacts."
+      },
+      {
+        "type": "improved",
+        "text": "Flow автоматически запускает result validator после записи JSON/Markdown результата."
+      },
+      {
+        "type": "important",
+        "text": "Валидатор сверяет SHA256 архивов, Markdown-пару, обязательные tamper-сценарии и повторно запускает archive validator."
+      }
+    ]
   }
 ]

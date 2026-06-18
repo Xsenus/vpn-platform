@@ -231,6 +231,15 @@ Flow harness создает evidence bundle, summary, manifest, production evide
 
 После успешного запуска flow сохраняет итоговые artifacts `production-evidence-handoff-package-archive-flow-result.json` и `production-evidence-handoff-package-archive-flow-result.md` в `OutputDirectory`. В них фиксируются release id, package status, production evidence archive SHA256, handoff package archive SHA256, пути к artifacts и tamper-сценарии, которые прошел regression harness.
 
+Flow сразу запускает `scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1`, а оператор может повторить проверку отдельно:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-package-archive-flow-result.ps1 `
+  -ResultJsonPath tmp\production-evidence-handoff-package-archive-flow-test\production-evidence-handoff-package-archive-flow-result.json
+```
+
+Валидатор проверяет `status = passed`, `regressionStatus = passed`, SHA256 production evidence archive и handoff package archive, Markdown-пару, обязательные tamper-сценарии regression harness и повторно запускает `validate-production-evidence-handoff-package-archive.ps1` для финального ZIP.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `531/531`.
+- [x] `STATE-001` Backend test suite проходит: `532/532`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `531/531`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-flow-result`, версия `0.145.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `532/532`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`, версия `0.146.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 24/24, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `531/531`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-flow-result`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 25/25, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `532/532`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`.
 
 ## P0. Блокеры production-запуска
 
@@ -817,6 +817,11 @@ git diff --check
   - Что сделать: сохранять итог полного flow в JSON/Markdown artifacts, чтобы CI или оператор могли приложить короткий результат без ручного копирования console output.
   - Что сделано: `scripts/test-production-evidence-handoff-package-archive-flow.ps1` теперь пишет `production-evidence-handoff-package-archive-flow-result.json` и `.md` с release id, package status, SHA256 архивов, путями artifacts и tamper-сценариями regression harness.
   - Доказательство: `ProductionReadinessGateTests` 24/24, flow result artifacts smoke в `tmp/production-evidence-handoff-package-archive-flow-result-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-flow-result`, версия `0.145.0`.
+
+- [x] `P11-ACC-031` Production evidence handoff package archive flow result validator. 2026-06-18.
+  - Что сделать: добавить standalone-валидатор для JSON/Markdown результата полного flow, чтобы итоговые artifacts можно было проверять отдельно от console output.
+  - Что сделано: добавлен `scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1`; flow запускает его после записи result artifacts. Валидатор сверяет `status`, `regressionStatus`, SHA256 production evidence archive, SHA256 handoff package archive, Markdown-пару, обязательные tamper-сценарии и повторно запускает archive validator.
+  - Доказательство: `ProductionReadinessGateTests` 25/25, flow result validator smoke в `tmp/production-evidence-handoff-package-archive-flow-result-validator-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`, версия `0.146.0`.
 
 ## Журнал проверок
 

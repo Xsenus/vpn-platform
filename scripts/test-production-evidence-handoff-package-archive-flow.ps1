@@ -221,6 +221,17 @@ $resultJson = $result | ConvertTo-Json -Depth 10
 Write-Utf8NoBomFile -PathValue $flowResultJsonPath -Content $resultJson
 Write-Utf8NoBomFile -PathValue $flowResultMarkdownPath -Content (ConvertTo-FlowMarkdown -Result ([pscustomobject]$result))
 
+$flowResultValidatorArgs = @{
+    ResultJsonPath = $flowResultJsonPath
+    ResultMarkdownPath = $flowResultMarkdownPath
+}
+
+if ($RequireProductionReady) {
+    $flowResultValidatorArgs.RequireProductionReady = $true
+}
+
+& (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1") @flowResultValidatorArgs | Out-Host
+
 if ($WriteJson) {
     Write-Output $resultJson
 }

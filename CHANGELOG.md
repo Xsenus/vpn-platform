@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.146.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`.
+
+### Added
+
+- `scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1` проверяет JSON/Markdown итог полного production evidence handoff flow.
+- Flow автоматически запускает result validator после записи `production-evidence-handoff-package-archive-flow-result.json` и `.md`.
+
+### Changed
+
+- Production readiness gate документация теперь описывает отдельную проверку result artifacts полного flow.
+- Roadmap и release docs синхронизированы с backend suite `532/532` и latest release `0.146.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 25/25.
+- Production evidence handoff package archive flow result validator smoke: OK.
+- Backend full suite: 532/532.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Result validator не закрывает внешние live-блокеры; он проверяет локальный evidence flow outcome и целостность ссылок на handoff artifacts.
+
 ## 0.145.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-result`.

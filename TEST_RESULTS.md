@@ -2,6 +2,55 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-18: production evidence handoff package archive flow result validator
+
+Что проверялось:
+
+- `scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1` проверяет JSON/Markdown результат полного flow.
+- Flow автоматически запускает validator после записи `production-evidence-handoff-package-archive-flow-result.json` и `.md`.
+- Раздел "Что нового" получил релиз `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`, версия `0.146.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-flow.ps1 -OutputDirectory tmp\production-evidence-handoff-package-archive-flow-result-validator-test -Force
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-package-archive-flow-result.ps1 -ResultJsonPath tmp\production-evidence-handoff-package-archive-flow-result-validator-test\production-evidence-handoff-package-archive-flow-result.json -WriteJson
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-restore
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release --no-restore
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+$utf8Strict = [System.Text.UTF8Encoding]::new($false, $true); git diff --name-only | % { $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $_)); [void]$utf8Strict.GetString($bytes); if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { throw "UTF-8 BOM found: $_" } }
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -ApiPort 18102 -PublicPort 5183 -CabinetPort 5184 -AdminPort 5185
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1
+git diff --check
+```
+
+Результат:
+
+- Production evidence handoff package archive flow result validator smoke: OK.
+- Targeted release/docs suite: `41/41`.
+- Backend full suite: `532/532`.
+- API build: OK.
+- TelegramBot build: OK.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Frontend build: OK.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных файлов: strict UTF-8 without BOM, `17` tracked-файлов и новый validator-файл.
+- Fresh local SQLite smoke: OK, latest `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`.
+- Local VPS smoke dry-run: OK, latest `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator`.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-18: production evidence handoff package archive flow result artifacts
 
 Что проверялось:
