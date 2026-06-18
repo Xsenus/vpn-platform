@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.156.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-readiness-assertion-result-artifacts`.
+
+### Added
+
+- `scripts/assert-production-readiness.ps1` получил `-OutputPath`, `-JsonOutputPath` и `-Force` для сохранения JSON/Markdown result artifacts.
+
+### Changed
+
+- Production readiness gate теперь пишет result artifacts даже при ожидаемом `blocked`, а затем продолжает fail-closed падать.
+- Result JSON/Markdown фиксирует `failedEvidenceReportsCount`, `blockersCount`, пути всех evidence reports, `evidenceReports`, `blockers`, `resultJsonPath` и `resultMarkdownPath`.
+- Roadmap и release docs синхронизированы с backend suite `542/542` и latest release `0.156.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 35/35.
+- Blocked production readiness assertion artifact smoke: OK.
+- Targeted release/docs suite: 51/51.
+- Backend full suite: 542/542.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Artifacts не делают проект production-ready: live/VPS/payment/3x-ui blockers остаются открытыми до реальных passed evidence reports.
+
 ## 0.155.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-result-validator-regression`.

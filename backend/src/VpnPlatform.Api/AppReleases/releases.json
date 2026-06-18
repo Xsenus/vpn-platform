@@ -3808,5 +3808,28 @@
         "text": "Harness проверяет fail-closed ошибки для неверного статуса, пустого `releaseId`, отсутствующего summary-validator failure и сломанного Markdown."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-readiness-assertion-result-artifacts",
+    "version": "0.156.0",
+    "releasedAt": "2026-06-18T17:40:00+07:00",
+    "title": "Artifacts для production readiness assertion",
+    "summary": "Production readiness gate теперь сохраняет JSON/Markdown result artifacts даже при ожидаемой blocked-ошибке.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/assert-production-readiness.ps1` получил параметры `-OutputPath`, `-JsonOutputPath` и `-Force`."
+      },
+      {
+        "type": "improved",
+        "text": "При `blocked` gate пишет Markdown/JSON artifacts со счетчиками failed evidence reports, roadmap blockers и путями всех evidence reports."
+      },
+      {
+        "type": "important",
+        "text": "Fail-closed поведение сохранено: после записи artifacts команда все равно падает, пока live/VPS/payment evidence не passed."
+      }
+    ]
   }
 ]

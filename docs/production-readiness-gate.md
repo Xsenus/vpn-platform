@@ -14,6 +14,8 @@
 
 Gate агрегирует результаты всех четырех evidence validators и только после этого падает. Если несколько отчетов остаются `blocked` или `failed`, payload `Production readiness blocked` содержит массив `evidenceReports` с `name`, `status`, `reportPath`, `validatorPath` и `message` по каждому отчету, а также roadmap/release `blockers`. Это нужно, чтобы оператор видел полный список недостающих доказательств, а не только первую ошибку staging/VPS-шаблона.
 
+Для CI и handoff можно передать `-OutputPath`: gate запишет Markdown и соседний JSON result artifact даже при ожидаемом `blocked`, а затем продолжит fail-closed падать. Result содержит `failedEvidenceReportsCount`, `blockersCount`, пути всех reports, `evidenceReports`, `blockers`, `resultJsonPath` и `resultMarkdownPath`.
+
 Это не заменяет реальные live-проверки. Gate нужен, чтобы не забыть зафиксировать доказательства и не выдать локально зеленый проект за production-ready.
 
 ## Как запускать
@@ -24,6 +26,15 @@ Gate агрегирует результаты всех четырех evidence 
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
+```
+
+Проверка с result artifacts:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 `
+  -ReportPath docs\staging-smoke-report.template.json `
+  -OutputPath tmp\production-readiness-assertion.md `
+  -Force
 ```
 
 Если отчеты лежат не в стандартных местах, передайте их явно:

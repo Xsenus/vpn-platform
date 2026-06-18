@@ -5,7 +5,10 @@ param(
     [string]$AdminVpsReportPath,
     [string]$VpnLiveReportPath,
     [string]$RoadmapPath,
-    [string]$ReleaseDecisionPath
+    [string]$ReleaseDecisionPath,
+    [string]$OutputPath = "",
+    [string]$JsonOutputPath = "",
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -58,6 +61,109 @@ function Invoke-EvidenceValidator {
             validatorPath = $ValidatorPath
             message = $_.Exception.Message
         }
+    }
+}
+
+function Write-Utf8NoBomFile {
+    param(
+        [string]$PathValue,
+        [string]$Content
+    )
+
+    [System.IO.File]::WriteAllText($PathValue, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+function ConvertTo-ReadinessMarkdown {
+    param([object]$Result)
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add("# Production readiness assertion")
+    $lines.Add("")
+    $lines.Add("- Status: ``$($Result.status)``")
+    $lines.Add("- Failed evidence reports: ``$($Result.failedEvidenceReportsCount)``")
+    $lines.Add("- Blockers: ``$($Result.blockersCount)``")
+    $lines.Add("- Staging/VPS report: ``$($Result.reportPath)``")
+    $lines.Add("- Payment provider report: ``$($Result.paymentProviderReportPath)``")
+    $lines.Add("- Admin VPS report: ``$($Result.adminVpsReportPath)``")
+    $lines.Add("- VPN live report: ``$($Result.vpnLiveReportPath)``")
+    $lines.Add("")
+    $lines.Add("## Evidence reports")
+    foreach ($report in @($Result.evidenceReports)) {
+        $message = [string]$report.message
+        if ([string]::IsNullOrWhiteSpace($message)) {
+            $message = "ok"
+        }
+
+        $lines.Add("- ``$($report.name)``: ``$($report.status)`` - $message")
+    }
+
+    $lines.Add("")
+    $lines.Add("## Blockers")
+    if (@($Result.blockers).Count -eq 0) {
+        $lines.Add("- none")
+    }
+    else {
+        foreach ($blocker in @($Result.blockers)) {
+            $lines.Add("- ``$blocker``")
+        }
+    }
+
+    return ($lines -join [Environment]::NewLine) + [Environment]::NewLine
+}
+
+function Write-ReadinessResult {
+    param([object]$Result)
+
+    if ([string]::IsNullOrWhiteSpace($OutputPath) -and [string]::IsNullOrWhiteSpace($JsonOutputPath)) {
+        return
+    }
+
+    $markdownPath = ""
+    if (-not [string]::IsNullOrWhiteSpace($OutputPath)) {
+        $markdownPath = [System.IO.Path]::GetFullPath($OutputPath)
+        if ((Test-Path -LiteralPath $markdownPath) -and -not $Force) {
+            throw "Production readiness assertion output already exists. Pass -Force to overwrite: $markdownPath"
+        }
+
+        $markdownParent = Split-Path -Parent $markdownPath
+        if (-not [string]::IsNullOrWhiteSpace($markdownParent)) {
+            New-Item -ItemType Directory -Path $markdownParent -Force | Out-Null
+        }
+    }
+
+    $jsonPath = ""
+    if (-not [string]::IsNullOrWhiteSpace($JsonOutputPath)) {
+        $jsonPath = [System.IO.Path]::GetFullPath($JsonOutputPath)
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($markdownPath)) {
+        $jsonPath = [System.IO.Path]::ChangeExtension($markdownPath, ".json")
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($jsonPath)) {
+        if ((Test-Path -LiteralPath $jsonPath) -and -not $Force) {
+            throw "Production readiness assertion JSON output already exists. Pass -Force to overwrite: $jsonPath"
+        }
+
+        $jsonParent = Split-Path -Parent $jsonPath
+        if (-not [string]::IsNullOrWhiteSpace($jsonParent)) {
+            New-Item -ItemType Directory -Path $jsonParent -Force | Out-Null
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($markdownPath)) {
+        $Result.resultMarkdownPath = $markdownPath
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($jsonPath)) {
+        $Result.resultJsonPath = $jsonPath
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($jsonPath)) {
+        Write-Utf8NoBomFile -PathValue $jsonPath -Content ($Result | ConvertTo-Json -Depth 8)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($markdownPath)) {
+        Write-Utf8NoBomFile -PathValue $markdownPath -Content (ConvertTo-ReadinessMarkdown -Result ([pscustomobject]$Result))
     }
 }
 
@@ -122,29 +228,40 @@ foreach ($decisionMarker in @('staging-ready baseline', 'не production-ready',
 }
 
 $failedEvidenceReports = @($evidenceReports | Where-Object { $_.status -ne "passed" })
-if ($failedEvidenceReports.Count -gt 0 -or $foundBlockers.Count -gt 0) {
-    $payload = @{
+$status = if ($failedEvidenceReports.Count -gt 0 -or $foundBlockers.Count -gt 0) { "blocked" } else { "production-ready" }
+$summary = [ordered]@{
+    status = $status
+    generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
+    reportPath = $reportFullPath
+    paymentProviderReportPath = $paymentProviderReportFullPath
+    adminVpsReportPath = $adminVpsReportFullPath
+    vpnLiveReportPath = $vpnLiveReportFullPath
+    evidenceReports = $evidenceReports
+    failedEvidenceReportsCount = $failedEvidenceReports.Count
+    blockers = $foundBlockers
+    blockersCount = $foundBlockers.Count
+    roadmapPath = $roadmapFullPath
+    releaseDecisionPath = $releaseDecisionFullPath
+}
+
+Write-ReadinessResult -Result $summary
+
+if ($status -eq "blocked") {
+    $payload = [ordered]@{
         status = "blocked"
         reportPath = $reportFullPath
         paymentProviderReportPath = $paymentProviderReportFullPath
         adminVpsReportPath = $adminVpsReportFullPath
         vpnLiveReportPath = $vpnLiveReportFullPath
         evidenceReports = $evidenceReports
+        failedEvidenceReportsCount = $failedEvidenceReports.Count
         blockers = $foundBlockers
+        blockersCount = $foundBlockers.Count
+        resultJsonPath = $summary.resultJsonPath
+        resultMarkdownPath = $summary.resultMarkdownPath
     } | ConvertTo-Json -Depth 8 -Compress
 
     throw "Production readiness blocked: $payload"
-}
-
-$summary = @{
-    status = "production-ready"
-    reportPath = $reportFullPath
-    paymentProviderReportPath = $paymentProviderReportFullPath
-    adminVpsReportPath = $adminVpsReportFullPath
-    vpnLiveReportPath = $vpnLiveReportFullPath
-    evidenceReports = $evidenceReports
-    roadmapPath = $roadmapFullPath
-    releaseDecisionPath = $releaseDecisionFullPath
 }
 
 Write-Output ("production readiness valid " + ($summary | ConvertTo-Json -Depth 8 -Compress))

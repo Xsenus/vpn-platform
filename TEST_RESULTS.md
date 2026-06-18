@@ -2,6 +2,54 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-18: production readiness assertion result artifacts
+
+Что проверялось:
+
+- `scripts/assert-production-readiness.ps1` сохраняет JSON/Markdown result artifacts при expected fail-closed `blocked`.
+- Result artifacts фиксируют failed evidence reports, roadmap/release blockers, пути reports и итоговый статус.
+- Раздел "Что нового" получил релиз `2026-06-18-production-readiness-assertion-result-artifacts`, версия `0.156.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json -OutputPath tmp\production-readiness-assertion.md -Force
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-restore
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release --no-restore
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+$utf8Strict = [System.Text.UTF8Encoding]::new($false, $true); $files = @(); $files += git diff --name-only; $files += git ls-files --others --exclude-standard; $files | ? { $_ -and (Test-Path $_) -and $_ -notlike 'tmp/*' -and $_ -notlike 'tmp\*' } | select -Unique | % { $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $_)); [void]$utf8Strict.GetString($bytes); if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { throw "UTF-8 BOM found: $_" } }
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -ApiPort 18102 -PublicPort 5183 -CabinetPort 5184 -AdminPort 5185
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1
+git diff --check
+```
+
+Результат:
+
+- Production readiness assertion expected blocked artifact smoke: OK.
+- Targeted release/docs suite: `51/51`.
+- Backend full suite: `542/542`.
+- API build: OK.
+- TelegramBot build: OK.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Frontend build: OK.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- Fresh local SQLite smoke: OK, latest `2026-06-18-production-readiness-assertion-result-artifacts`.
+- Local VPS smoke dry-run: OK, latest `2026-06-18-production-readiness-assertion-result-artifacts`.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-18: production evidence handoff package archive CI result validator regression
 
 Что проверялось:

@@ -109,6 +109,37 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Gate_Should_Write_Result_Artifacts()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "assert-production-readiness.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "OutputPath",
+                     "JsonOutputPath",
+                     "Write-ReadinessResult",
+                     "ConvertTo-ReadinessMarkdown",
+                     "Production readiness assertion",
+                     "Failed evidence reports",
+                     "Blockers",
+                     "failedEvidenceReportsCount",
+                     "blockersCount",
+                     "resultJsonPath",
+                     "resultMarkdownPath"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("assert-production-readiness.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("-OutputPath", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-041`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();
