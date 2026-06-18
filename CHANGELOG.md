@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.136.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-checklist`.
+
+### Added
+
+- `scripts/new-production-evidence-handoff-checklist.ps1` формирует JSON/Markdown checklist для передачи production evidence после проверки receipt.
+- Checklist запускает `validate-production-evidence-handoff-receipt.ps1`, читает `production-readiness-summary.json` и фиксирует gates, статус handoff, release id, SHA256 архива и SHA256 manifest.
+
+### Changed
+
+- Production readiness gate документация теперь описывает финальный operator handoff step после ZIP, receipt и receipt validation.
+- Roadmap и release docs синхронизированы с backend suite `522/522` и latest release `0.136.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 15/15.
+- Production evidence handoff checklist smoke: OK.
+- Backend full suite: 522/522.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Checklist не закрывает внешние production-блокеры сам по себе: для production-ready по-прежнему нужны live payment/VPS/3x-ui evidence reports.
+
 ## 0.135.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-receipt-validator`.

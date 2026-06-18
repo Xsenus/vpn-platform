@@ -3344,5 +3344,28 @@
         "text": "Receipt validator помогает CI и оператору подтвердить, что переданный ZIP и receipt относятся к одному handoff artifact."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-checklist",
+    "version": "0.136.0",
+    "releasedAt": "2026-06-18T13:24:00+07:00",
+    "title": "Checklist для handoff production evidence",
+    "summary": "Добавлен операторский JSON/Markdown checklist поверх проверенного ZIP и receipt production evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-production-evidence-handoff-checklist.ps1` запускает receipt validator и формирует checklist для передачи production evidence artifact."
+      },
+      {
+        "type": "improved",
+        "text": "Checklist фиксирует release id, SHA256 архива, SHA256 manifest, gates, статус handoff и действия оператора без сохранения секретов."
+      },
+      {
+        "type": "important",
+        "text": "Строгий режим `-RequireProductionReady` fail-closed блокирует handoff, если summary не подтверждает production-ready evidence."
+      }
+    ]
   }
 ]
