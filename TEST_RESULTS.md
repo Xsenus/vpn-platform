@@ -2,6 +2,49 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-18: production evidence aggregate gate
+
+Что проверялось:
+
+- `scripts/assert-production-readiness.ps1` запускает все четыре evidence validators и не останавливается на первой ошибке.
+- Fail-closed payload содержит `evidenceReports` по `staging-vps`, `payment-providers`, `admin-vps`, `vpn-live`.
+- Roadmap/release blockers остаются в том же payload вместе с evidence failures.
+- Раздел "Что нового" получил релиз `2026-06-18-production-evidence-aggregate-gate`, версия `0.125.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+npm audit --audit-level=high --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+git diff --check
+```
+
+Результат:
+
+- Production evidence aggregate gate на текущих blocked templates: expected failure, payload содержит все `evidenceReports`.
+- `ProductionReadinessGateTests`: `4/4`.
+- Backend full suite: `511/511`.
+- API/TBot Release build: OK, предупреждений 0.
+- Frontend unit tests: `66/66`.
+- Frontend audit: `0 vulnerabilities`.
+- Browser console E2E: `9/9`.
+- Fresh local SQLite smoke: OK, latest `2026-06-18-production-evidence-aggregate-gate`.
+- Local SQLite VPS smoke dry-run: OK.
+- Secret scan: 0 findings.
+- Encoding guard: OK.
+- Push не выполнялся.
+
 ## Проверка 2026-06-18: production evidence bundle gate
 
 Что проверялось:

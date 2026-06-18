@@ -12,6 +12,8 @@
 - запускает `scripts/validate-vpn-live-smoke-report.ps1 -RequireAllPassed`, поэтому реальная 3x-ui/x-ui панель, inbound, VPN node, заказ, webhook, подписка, клиент, URI/QR и fail-closed поведение должны быть подтверждены;
 - читает `docs/PRODUCT_COMPLETION_ROADMAP.md` и `docs/release-decision.md`, затем блокирует production-ready, если остаются открытые `STATE-011`, `STATE-012`, `STATE-013`, `P0-*`, `P11-ACC-002`, `BUG-001`, `BUG-002`, `BUG-003` или решение все еще равно `staging-ready baseline`.
 
+Gate агрегирует результаты всех четырех evidence validators и только после этого падает. Если несколько отчетов остаются `blocked` или `failed`, payload `Production readiness blocked` содержит массив `evidenceReports` с `name`, `status`, `reportPath`, `validatorPath` и `message` по каждому отчету, а также roadmap/release `blockers`. Это нужно, чтобы оператор видел полный список недостающих доказательств, а не только первую ошибку staging/VPS-шаблона.
+
 Это не заменяет реальные live-проверки. Gate нужен, чтобы не забыть зафиксировать доказательства и не выдать локально зеленый проект за production-ready.
 
 ## Как запускать

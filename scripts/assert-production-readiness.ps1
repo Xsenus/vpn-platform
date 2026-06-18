@@ -33,6 +33,34 @@ function Resolve-RepoPath {
     throw "Required file was not found: $candidate"
 }
 
+function Invoke-EvidenceValidator {
+    param(
+        [string]$Name,
+        [string]$ValidatorPath,
+        [string]$EvidenceReportPath
+    )
+
+    try {
+        & $ValidatorPath -ReportPath $EvidenceReportPath -RequireAllPassed | Out-Host
+        return [ordered]@{
+            name = $Name
+            status = "passed"
+            reportPath = $EvidenceReportPath
+            validatorPath = $ValidatorPath
+            message = ""
+        }
+    }
+    catch {
+        return [ordered]@{
+            name = $Name
+            status = "failed"
+            reportPath = $EvidenceReportPath
+            validatorPath = $ValidatorPath
+            message = $_.Exception.Message
+        }
+    }
+}
+
 $reportFullPath = Resolve-RepoPath -PathValue $ReportPath -DefaultRelativePath ""
 $paymentProviderReportFullPath = Resolve-RepoPath -PathValue $PaymentProviderReportPath -DefaultRelativePath "docs/payment-provider-smoke-report.template.json"
 $adminVpsReportFullPath = Resolve-RepoPath -PathValue $AdminVpsReportPath -DefaultRelativePath "docs/admin-vps-smoke-report.template.json"
@@ -44,10 +72,12 @@ $paymentProviderValidator = Resolve-RepoPath -PathValue "" -DefaultRelativePath 
 $adminVpsValidator = Resolve-RepoPath -PathValue "" -DefaultRelativePath "scripts/validate-admin-vps-smoke-report.ps1"
 $vpnLiveValidator = Resolve-RepoPath -PathValue "" -DefaultRelativePath "scripts/validate-vpn-live-smoke-report.ps1"
 
-& $stagingValidator -ReportPath $reportFullPath -RequireAllPassed | Out-Host
-& $paymentProviderValidator -ReportPath $paymentProviderReportFullPath -RequireAllPassed | Out-Host
-& $adminVpsValidator -ReportPath $adminVpsReportFullPath -RequireAllPassed | Out-Host
-& $vpnLiveValidator -ReportPath $vpnLiveReportFullPath -RequireAllPassed | Out-Host
+$evidenceReports = @(
+    Invoke-EvidenceValidator -Name "staging-vps" -ValidatorPath $stagingValidator -EvidenceReportPath $reportFullPath
+    Invoke-EvidenceValidator -Name "payment-providers" -ValidatorPath $paymentProviderValidator -EvidenceReportPath $paymentProviderReportFullPath
+    Invoke-EvidenceValidator -Name "admin-vps" -ValidatorPath $adminVpsValidator -EvidenceReportPath $adminVpsReportFullPath
+    Invoke-EvidenceValidator -Name "vpn-live" -ValidatorPath $vpnLiveValidator -EvidenceReportPath $vpnLiveReportFullPath
+)
 
 $roadmap = Get-Content -LiteralPath $roadmapFullPath -Raw -Encoding UTF8
 $releaseDecision = Get-Content -LiteralPath $releaseDecisionFullPath -Raw -Encoding UTF8
@@ -91,15 +121,17 @@ foreach ($decisionMarker in @('staging-ready baseline', 'не production-ready',
     }
 }
 
-if ($foundBlockers.Count -gt 0) {
+$failedEvidenceReports = @($evidenceReports | Where-Object { $_.status -ne "passed" })
+if ($failedEvidenceReports.Count -gt 0 -or $foundBlockers.Count -gt 0) {
     $payload = @{
         status = "blocked"
         reportPath = $reportFullPath
         paymentProviderReportPath = $paymentProviderReportFullPath
         adminVpsReportPath = $adminVpsReportFullPath
         vpnLiveReportPath = $vpnLiveReportFullPath
+        evidenceReports = $evidenceReports
         blockers = $foundBlockers
-    } | ConvertTo-Json -Compress
+    } | ConvertTo-Json -Depth 8 -Compress
 
     throw "Production readiness blocked: $payload"
 }
@@ -110,8 +142,9 @@ $summary = @{
     paymentProviderReportPath = $paymentProviderReportFullPath
     adminVpsReportPath = $adminVpsReportFullPath
     vpnLiveReportPath = $vpnLiveReportFullPath
+    evidenceReports = $evidenceReports
     roadmapPath = $roadmapFullPath
     releaseDecisionPath = $releaseDecisionFullPath
 }
 
-Write-Output ("production readiness valid " + ($summary | ConvertTo-Json -Compress))
+Write-Output ("production readiness valid " + ($summary | ConvertTo-Json -Depth 8 -Compress))

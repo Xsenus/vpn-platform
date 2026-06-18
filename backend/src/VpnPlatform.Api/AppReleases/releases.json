@@ -3091,5 +3091,28 @@
         "text": "Production-ready остается заблокированным, пока все evidence reports не заполнены безопасными passed-доказательствами."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-aggregate-gate",
+    "version": "0.125.0",
+    "releasedAt": "2026-06-18T11:30:00+07:00",
+    "title": "Production gate показывает все недостающие evidence",
+    "summary": "Production readiness gate теперь агрегирует результаты всех evidence validators и возвращает полный список заблокированных отчетов вместе с roadmap-блокерами.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/assert-production-readiness.ps1` запускает validators staging/VPS, платежей, admin VPS и live VPN независимо, даже если первый отчет еще `blocked`."
+      },
+      {
+        "type": "new",
+        "text": "Fail-closed payload содержит `evidenceReports` с `name`, `status`, `reportPath`, `validatorPath` и `message` по каждому evidence report."
+      },
+      {
+        "type": "important",
+        "text": "Production-ready остается заблокированным до реальных passed reports, но оператор теперь видит весь список недостающих доказательств за один запуск gate."
+      }
+    ]
   }
 ]
