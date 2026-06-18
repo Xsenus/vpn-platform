@@ -3229,5 +3229,28 @@
         "text": "Manifest помогает проверить, что handoff bundle не изменился между локальной проверкой, CI и production оператором."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-manifest-validator",
+    "version": "0.131.0",
+    "releasedAt": "2026-06-18T12:35:00+07:00",
+    "title": "Валидатор manifest production evidence",
+    "summary": "Добавлена проверка production evidence manifest с пересчетом SHA256 и размеров файлов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-evidence-manifest.ps1` проверяет manifest и пересчитывает SHA256 каждого файла bundle."
+      },
+      {
+        "type": "improved",
+        "text": "Валидатор сверяет schema, release id, relative paths, размеры, timestamps, total files и total bytes."
+      },
+      {
+        "type": "important",
+        "text": "Manifest validation помогает обнаружить изменение handoff bundle после локальной проверки или CI."
+      }
+    ]
   }
 ]

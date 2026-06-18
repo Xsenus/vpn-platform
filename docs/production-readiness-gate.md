@@ -98,6 +98,16 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-manifes
 
 Manifest пишет `production-evidence-manifest.json` с release id, relative paths, SHA256, размером файлов и UTC timestamp. Он не содержит секреты и не копирует содержимое evidence reports.
 
+Проверить, что bundle не изменился после генерации manifest, можно отдельной fail-closed командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-manifest.ps1 `
+  -ManifestPath tmp\production-evidence\production-evidence-manifest.json `
+  -RequireAllFiles
+```
+
+Валидатор перечитывает manifest, проверяет обязательные файлы, относительные пути, размеры, timestamps, total files/bytes и пересчитывает SHA256 каждого файла bundle.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
