@@ -277,6 +277,8 @@ Wrapper сохраняет `production-evidence-handoff-package-archive-ci-regre
 
 Wrapper запускает `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1` для result Markdown и для `GITHUB_STEP_SUMMARY`, если summary-файл доступен. Валидатор fail-closed сверяет JSON result artifact с Markdown: `status = passed`, release id, статусы основного flow, result validator regression, long-path regression и пути к обязательным artifacts.
 
+Дополнительно wrapper запускает `scripts/test-production-evidence-handoff-package-archive-ci-summary-validator.ps1`. Regression harness портит JSON/Markdown summary и ожидает fail-closed ошибки для неверного статуса, чужого release id, отсутствующего artifact path и неверного long-path статуса. Итог записывается в поле `ciSummaryValidatorRegression` result JSON/Markdown.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

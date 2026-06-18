@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.153.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator-regression`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-ci-summary-validator.ps1` проверяет fail-closed поведение CI summary validator на испорченных JSON/Markdown artifacts.
+
+### Changed
+
+- `scripts/test-production-evidence-handoff-package-archive-ci-regression.ps1` теперь запускает summary validator regression и сохраняет `ciSummaryValidatorRegression` в result artifacts.
+- Production readiness gate документация описывает regression harness для CI summary validator.
+- Roadmap и release docs синхронизированы с backend suite `539/539` и latest release `0.153.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 32/32.
+- Production evidence handoff package archive CI wrapper smoke with summary validator regression: OK.
+- Backend full suite: 539/539.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Regression harness проверяет неверный main flow status, чужой release id в summary, отсутствующий artifact path и неверный long-path status.
+
 ## 0.152.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator`.

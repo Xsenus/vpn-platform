@@ -3739,5 +3739,28 @@
         "text": "Если Markdown summary не совпадает с JSON result artifact по статусам, release id или artifact paths, CI evidence gate завершается ошибкой."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator-regression",
+    "version": "0.153.0",
+    "releasedAt": "2026-06-18T16:57:00+07:00",
+    "title": "Regression harness для CI summary validator",
+    "summary": "CI summary validator production evidence handoff archive теперь покрыт fail-closed regression harness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-evidence-handoff-package-archive-ci-summary-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Основной CI wrapper запускает summary validator regression и записывает результат в `ciSummaryValidatorRegression`."
+      },
+      {
+        "type": "important",
+        "text": "Harness проверяет ошибки на неверном статусе, чужом release id, отсутствующем artifact path и неверном long-path статусе."
+      }
+    ]
   }
 ]

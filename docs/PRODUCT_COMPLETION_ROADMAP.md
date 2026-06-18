@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `538/538`.
+- [x] `STATE-001` Backend test suite проходит: `539/539`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `538/538`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator`, версия `0.152.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `539/539`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator-regression`, версия `0.153.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 31/31, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `538/538`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 32/32, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `539/539`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator-regression`.
 
 ## P0. Блокеры production-запуска
 
@@ -852,6 +852,11 @@ git diff --check
   - Что сделать: добавить fail-closed проверку CI summary, чтобы Markdown в `GITHUB_STEP_SUMMARY` не расходился с JSON result artifact.
   - Что сделано: добавлен `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1`; wrapper запускает validator для result Markdown и для `GITHUB_STEP_SUMMARY`, если summary-файл доступен.
   - Доказательство: `ProductionReadinessGateTests` 31/31, локальный smoke wrapper с summary validator, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator`, версия `0.152.0`.
+
+- [x] `P11-ACC-038` Production evidence handoff package archive CI summary validator regression harness. 2026-06-18.
+  - Что сделать: добавить regression harness для CI summary validator, чтобы проверять fail-closed поведение на испорченном JSON и Markdown.
+  - Что сделано: добавлен `scripts/test-production-evidence-handoff-package-archive-ci-summary-validator.ps1`; основной CI wrapper запускает harness, добавляет `ciSummaryValidatorRegression` в JSON/Markdown result artifacts и обновляет `GITHUB_STEP_SUMMARY`.
+  - Доказательство: `ProductionReadinessGateTests` 32/32, локальный smoke wrapper с summary validator regression, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator-regression`, версия `0.153.0`.
 
 ## Журнал проверок
 
