@@ -290,6 +290,34 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Archive_Should_Be_Built_From_Validated_Manifest()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-production-evidence-archive.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ManifestPath",
+                     "RequireAllFiles",
+                     "validate-production-evidence-manifest.ps1",
+                     "ZipArchive",
+                     "Get-FileSha256",
+                     "archiveSha256",
+                     "manifestSha256",
+                     "must stay inside bundle directory",
+                     "production evidence archive created"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("new-production-evidence-archive.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-017`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

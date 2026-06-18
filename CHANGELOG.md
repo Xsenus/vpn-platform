@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.132.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-archive`.
+
+### Added
+
+- `scripts/new-production-evidence-archive.ps1` собирает ZIP-архив production evidence bundle после успешной проверки manifest.
+- Архиватор добавляет в ZIP сам `production-evidence-manifest.json` и только файлы, перечисленные в manifest.
+- Результат содержит SHA256 архива, SHA256 manifest, release id, размер архива и список entries.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 11/11.
+- Production evidence archive smoke: OK, ZIP создан после manifest validation.
+- Backend full suite: 518/518.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Frontend audit: `0 vulnerabilities`.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Архив фиксирует локальный handoff artifact; production-ready по-прежнему требует реальные passed evidence reports и закрытие live/VPS/payment blockers.
+
 ## 0.131.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-manifest-validator`.

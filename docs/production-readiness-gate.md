@@ -108,6 +108,17 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ma
 
 Валидатор перечитывает manifest, проверяет обязательные файлы, относительные пути, размеры, timestamps, total files/bytes и пересчитывает SHA256 каждого файла bundle.
 
+После успешной проверки manifest можно собрать единый ZIP-архив для handoff:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-archive.ps1 `
+  -ManifestPath tmp\production-evidence\production-evidence-manifest.json `
+  -RequireAllFiles `
+  -Force
+```
+
+Архиватор сначала запускает manifest validator, затем добавляет в ZIP сам manifest и только файлы, перечисленные в manifest. В результате выводятся путь к архиву, SHA256 архива, SHA256 manifest и список entries.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

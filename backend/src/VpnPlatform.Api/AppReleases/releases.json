@@ -3252,5 +3252,28 @@
         "text": "Manifest validation помогает обнаружить изменение handoff bundle после локальной проверки или CI."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-archive",
+    "version": "0.132.0",
+    "releasedAt": "2026-06-18T12:50:00+07:00",
+    "title": "Архив production evidence bundle",
+    "summary": "Добавлена упаковка проверенного production evidence bundle в ZIP с SHA256 архива и manifest.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-production-evidence-archive.ps1` собирает ZIP-архив после успешной проверки production evidence manifest."
+      },
+      {
+        "type": "improved",
+        "text": "Архиватор добавляет в ZIP только manifest и файлы, перечисленные в manifest, с проверкой relative paths внутри bundle."
+      },
+      {
+        "type": "important",
+        "text": "Результат содержит SHA256 архива и manifest, чтобы CI или оператор могли сверить handoff artifact перед публикацией."
+      }
+    ]
   }
 ]
