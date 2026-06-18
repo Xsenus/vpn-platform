@@ -53,6 +53,20 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-bundle.
 
 Скрипт создает `staging-smoke-report.json`, `payment-provider-smoke-report.json`, `admin-vps-smoke-report.json` и `vpn-live-smoke-report.json`, прогоняет обычные validators каждого отчета и при `-RunProductionGate` сохраняет статус агрегированного gate в итоговом сообщении. Черновики остаются `blocked`, пока оператор не заменит TODO на реальные sanitized evidence.
 
+После этого можно собрать человекочитаемый summary для оператора:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-production-readiness-summary.ps1 `
+  -OutputPath tmp\production-evidence\production-readiness-summary.md `
+  -ReportPath tmp\production-evidence\staging-smoke-report.json `
+  -PaymentProviderReportPath tmp\production-evidence\payment-provider-smoke-report.json `
+  -AdminVpsReportPath tmp\production-evidence\admin-vps-smoke-report.json `
+  -VpnLiveReportPath tmp\production-evidence\vpn-live-smoke-report.json `
+  -Force
+```
+
+Summary пишет Markdown и соседний JSON-файл: статус каждого evidence report, количество passed/blocked/failed checks, список платежных провайдеров и открытые roadmap blockers. В summary нельзя добавлять секреты, cookies, auth headers, private keys или полные VPN access URI.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

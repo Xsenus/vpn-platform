@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `512/512`.
+- [x] `STATE-001` Backend test suite проходит: `513/513`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `512/512`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-bundle-generator`, версия `0.126.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `513/513`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-readiness-summary`, версия `0.127.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 5/5, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `512/512`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-bundle-generator`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 6/6, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `513/513`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-readiness-summary`.
 
 ## P0. Блокеры production-запуска
 
@@ -741,6 +741,10 @@ git diff --check
   - Что сделать: дать оператору одну безопасную команду для создания всех четырех черновиков evidence reports, чтобы не копировать JSON вручную и не забыть часть production gate.
   - Что сделано: добавлен `scripts/new-production-evidence-bundle.ps1`, который создает `staging-smoke-report.json`, `payment-provider-smoke-report.json`, `admin-vps-smoke-report.json` и `vpn-live-smoke-report.json`, запускает их обычные validators и при `-RunProductionGate` возвращает статус агрегированного gate без раскрытия секретов.
   - Доказательство: `ProductionReadinessGateTests` 5/5, generator smoke в `tmp/production-evidence-test`, expected aggregate gate status `blocked`, latest "Что нового" `2026-06-18-production-evidence-bundle-generator`, версия `0.126.0`.
+- [x] `P11-ACC-012` Production readiness summary. 2026-06-18.
+  - Что сделать: после генерации evidence bundle дать оператору один человекочитаемый Markdown/JSON summary с состоянием четырех отчетов, платежных провайдеров и roadmap-блокеров.
+  - Что сделано: добавлен `scripts/new-production-readiness-summary.ps1`, который читает staging/VPS, payment provider, admin VPS и VPN live reports, считает passed/blocked/failed по checks и required flags, выводит платежных провайдеров и открытые production blockers без секретов.
+  - Доказательство: `ProductionReadinessGateTests` 6/6, summary smoke в `tmp/production-evidence-summary-test`, status `blocked` для generated drafts, latest "Что нового" `2026-06-18-production-readiness-summary`, версия `0.127.0`.
 
 ## Журнал проверок
 

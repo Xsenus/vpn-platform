@@ -139,6 +139,35 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Summary_Should_Expose_Human_Readable_Blockers()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-production-readiness-summary.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Production readiness summary",
+                     "Payment providers",
+                     "Roadmap blockers",
+                     "staging-vps",
+                     "payment-providers",
+                     "admin-vps",
+                     "vpn-live",
+                     "reportPaths",
+                     "roadmapBlockers",
+                     "production readiness summary generated"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("new-production-readiness-summary.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-012`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

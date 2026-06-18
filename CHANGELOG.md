@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.127.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-readiness-summary`.
+
+### Added
+
+- `scripts/new-production-readiness-summary.ps1` создает Markdown и JSON summary по полному production evidence bundle.
+- Summary показывает статус staging/VPS, payment providers, admin VPS и VPN live reports, количество passed/blocked/failed checks и required flags.
+- Summary отдельно выводит все платежные провайдеры и открытые roadmap blockers, чтобы оператор видел, почему production-ready еще заблокирован.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 6/6.
+- Production readiness summary smoke: OK, status `blocked` для generated drafts.
+- Backend full suite: 513/513.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Frontend audit: `0 vulnerabilities`.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Summary является локальным operator artifact. Production-ready по-прежнему требует реальные sanitized evidence после live/staging прогонов VPS, 3x-ui и платежных провайдеров.
+
 ## 0.126.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-bundle-generator`.

@@ -3137,5 +3137,28 @@
         "text": "Сгенерированные reports остаются безопасными `blocked`-черновиками: реальные evidence нужно добавлять только после live/staging smoke без секретов, cookies и приватных headers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-readiness-summary",
+    "version": "0.127.0",
+    "releasedAt": "2026-06-18T11:55:00+07:00",
+    "title": "Summary готовности production evidence",
+    "summary": "Добавлен Markdown/JSON summary, который показывает состояние всех production evidence reports, платежных провайдеров и открытых roadmap-блокеров.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-production-readiness-summary.ps1` собирает человекочитаемый production readiness summary из staging/VPS, payment provider, admin VPS и VPN live reports."
+      },
+      {
+        "type": "improved",
+        "text": "Оператор видит passed/blocked/failed checks, required flags, список платежных провайдеров и причины, по которым production-ready еще заблокирован."
+      },
+      {
+        "type": "important",
+        "text": "Summary не требует секретов и напоминает хранить только sanitized evidence: безопасные id, timestamps, section names и имена screenshot-файлов."
+      }
+    ]
   }
 ]
