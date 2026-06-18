@@ -197,6 +197,36 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Assertion_Should_Have_Ci_Regression_Wrapper()
+    {
+        var root = FindRepositoryRoot();
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-regression.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "assert-production-readiness.ps1",
+                     "validate-production-readiness-assertion-result.ps1",
+                     "test-production-readiness-assertion-result-validator.ps1",
+                     "production-readiness-assertion-ci-regression-result.json",
+                     "production-readiness-assertion-ci-regression-result.md",
+                     "GITHUB_STEP_SUMMARY",
+                     "production readiness assertion CI regression passed"
+                 })
+        {
+            Assert.Contains(expected, wrapper, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("production-readiness-assertion", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-production-readiness-assertion-ci-regression.ps1", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("production-readiness-assertion-ci-regression", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-production-readiness-assertion-ci-regression.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-044`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

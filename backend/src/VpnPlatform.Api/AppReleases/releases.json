@@ -3877,5 +3877,28 @@
         "text": "Проверка использует временные копии artifacts и не меняет исходный result assertion."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-readiness-assertion-ci-regression",
+    "version": "0.159.0",
+    "releasedAt": "2026-06-18T18:25:00+07:00",
+    "title": "CI regression для readiness assertion",
+    "summary": "Production readiness assertion artifacts теперь проверяются CI-friendly wrapper и отдельным GitHub Actions job.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-readiness-assertion-ci-regression.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Validation workflow получил job `production-readiness-assertion`, который запускает wrapper после backend job и публикует assertion JSON/Markdown/log artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Wrapper сохраняет краткий JSON/Markdown result и добавляет Markdown-итог в `GITHUB_STEP_SUMMARY`, если переменная доступна."
+      }
+    ]
   }
 ]

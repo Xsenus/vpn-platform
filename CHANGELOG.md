@@ -2,6 +2,34 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.159.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-readiness-assertion-ci-regression`.
+
+### Added
+
+- `scripts/test-production-readiness-assertion-ci-regression.ps1` запускает production readiness assertion, result validator и validator regression в одном CI-friendly flow.
+- `.github/workflows/ci.yml` получил job `production-readiness-assertion` после backend job.
+
+### Changed
+
+- GitHub Actions validation публикует artifact `production-readiness-assertion-ci-regression` с assertion JSON/Markdown/log и итоговым CI regression result.
+- Production readiness gate документация описывает локальный запуск wrapper и artifact в CI.
+- Roadmap и release docs синхронизированы с backend suite `545/545` и latest release `0.159.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 38/38.
+- Production readiness assertion CI regression smoke: OK.
+- Targeted release/docs suite: 54/54.
+- Backend full suite: 545/545.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Wrapper добавляет Markdown-итог в `GITHUB_STEP_SUMMARY`, если переменная доступна, и не закрывает live-блокеры без реального VPS/payment/3x-ui evidence.
+
 ## 0.158.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-readiness-assertion-result-validator-regression`.

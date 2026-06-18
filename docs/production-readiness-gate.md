@@ -54,6 +54,16 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-asser
   -WriteJson
 ```
 
+CI-friendly wrapper для assertion artifacts:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-ci-regression.ps1 `
+  -OutputDirectory tmp\production-readiness-assertion-ci-regression-test `
+  -Force
+```
+
+Wrapper запускает `assert-production-readiness.ps1`, сохраняет `production-readiness-assertion.json`, `.md` и `.log`, проверяет result через `validate-production-readiness-assertion-result.ps1`, запускает regression harness для blocked-result и пишет `production-readiness-assertion-ci-regression-result.json` и `.md`. В GitHub Actions он запускается job `production-readiness-assertion` в `.github/workflows/ci.yml` после backend job и публикует artifact `production-readiness-assertion-ci-regression`. Если доступна `GITHUB_STEP_SUMMARY`, wrapper добавляет краткий Markdown-итог в summary job.
+
 Если отчеты лежат не в стандартных местах, передайте их явно:
 
 ```powershell
