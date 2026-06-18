@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.130.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-manifest`.
+
+### Added
+
+- `scripts/new-production-evidence-manifest.ps1` создает безопасный manifest для handoff production evidence bundle.
+- Manifest валидирует bundle перед созданием, затем записывает `production-evidence-manifest.json` с release id, relative paths, SHA256, размерами файлов и UTC timestamps.
+- Manifest фиксирует состав evidence bundle без копирования содержимого отчетов и без сохранения секретов.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 9/9.
+- Production evidence manifest smoke: OK, 6 файлов с SHA256.
+- Backend full suite: 516/516.
+- Fresh local SQLite smoke: OK.
+- Local SQLite VPS smoke dry-run: OK.
+- Frontend tests/typecheck/build/E2E console: OK.
+- Frontend audit: `0 vulnerabilities`.
+- Encoding guard and secret scan: OK.
+
+### Remaining
+
+- Manifest фиксирует локальный handoff artifact; production-ready по-прежнему требует реальные passed evidence reports и закрытые live/VPS/payment blockers.
+
 ## 0.129.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-bundle-validator`.

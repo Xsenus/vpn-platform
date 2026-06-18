@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `515/515`.
+- [x] `STATE-001` Backend test suite проходит: `516/516`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `515/515`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-bundle-validator`, версия `0.129.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `516/516`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-manifest`, версия `0.130.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 8/8, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `515/515`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-bundle-validator`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 9/9, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `516/516`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-manifest`.
 
 ## P0. Блокеры production-запуска
 
@@ -753,6 +753,10 @@ git diff --check
   - Что сделать: добавить одну fail-closed проверку всего каталога production evidence bundle, чтобы оператор или CI не валидировал четыре отчета и summary вручную.
   - Что сделано: добавлен `scripts/validate-production-evidence-bundle.ps1`, который требует `staging-smoke-report.json`, `payment-provider-smoke-report.json`, `admin-vps-smoke-report.json`, `vpn-live-smoke-report.json`, опционально `production-readiness-summary.md/json`, запускает все validators и поддерживает `-RequireProductionReady`.
   - Доказательство: `ProductionReadinessGateTests` 8/8, bundle validator smoke в `tmp/production-evidence-bundle-validator-test`, latest "Что нового" `2026-06-18-production-evidence-bundle-validator`, версия `0.129.0`.
+- [x] `P11-ACC-015` Production evidence manifest. 2026-06-18.
+  - Что сделать: добавить безопасный manifest для handoff, чтобы фиксировать состав evidence bundle по SHA256 без копирования содержимого отчетов.
+  - Что сделано: добавлен `scripts/new-production-evidence-manifest.ps1`, который валидирует bundle, читает release id, пишет `production-evidence-manifest.json` с relative paths, SHA256, size, timestamps, total files и total bytes.
+  - Доказательство: `ProductionReadinessGateTests` 9/9, manifest smoke в `tmp/production-evidence-manifest-test`, generated manifest содержит 6 файлов с SHA256, latest "Что нового" `2026-06-18-production-evidence-manifest`, версия `0.130.0`.
 
 ## Журнал проверок
 

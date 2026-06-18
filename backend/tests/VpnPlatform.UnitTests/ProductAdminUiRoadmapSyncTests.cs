@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `515/515`",
+                     "Backend full suite: `516/516`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-06-18-production-evidence-bundle-validator",
-                     "0.129.0"
+                     "2026-06-18-production-evidence-manifest",
+                     "0.130.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-06-18-production-evidence-bundle-validator", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-18-production-evidence-bundle-validator", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-18-production-evidence-manifest", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-18-production-evidence-manifest", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

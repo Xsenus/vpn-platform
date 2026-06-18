@@ -3206,5 +3206,28 @@
         "text": "`-RequireProductionReady` включает строгий режим: все reports и summary должны быть production-ready, иначе handoff fail-closed."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-manifest",
+    "version": "0.130.0",
+    "releasedAt": "2026-06-18T12:25:00+07:00",
+    "title": "Manifest для production evidence handoff",
+    "summary": "Добавлен безопасный manifest-файл с SHA256 и размерами файлов production evidence bundle для передачи оператору или CI.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-production-evidence-manifest.ps1` создает `production-evidence-manifest.json` после успешной проверки evidence bundle."
+      },
+      {
+        "type": "improved",
+        "text": "Manifest фиксирует release id, relative paths, SHA256, размеры файлов, total bytes и UTC timestamps без копирования содержимого reports."
+      },
+      {
+        "type": "important",
+        "text": "Manifest помогает проверить, что handoff bundle не изменился между локальной проверкой, CI и production оператором."
+      }
+    ]
   }
 ]
