@@ -161,6 +161,15 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-handoff
 
 Checklist сначала запускает receipt validator, затем пишет `production-evidence-handoff-checklist.json` и `.md` со статусом handoff, release id, SHA256 архива, SHA256 manifest, gates и действиями оператора. В строгом режиме `-RequireProductionReady` команда fail-closed завершится ошибкой, если `production-readiness-summary.json` не подтверждает `production-ready`.
 
+Проверить checklist перед передачей можно отдельной командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-checklist.ps1 `
+  -ChecklistPath tmp\production-evidence\production-evidence-handoff-checklist.json
+```
+
+Checklist validator заново запускает receipt validator, сверяет release id, SHA256 архива, SHA256 manifest, Markdown-пару, gates и operator actions. Для финального production handoff добавьте `-RequireProductionReady`: валидатор потребует `production-ready-handoff`, все gates `passed` и `production-readiness-summary.json` со статусом `production-ready`.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

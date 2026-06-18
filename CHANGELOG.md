@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.137.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-checklist-validator`.
+
+### Added
+
+- `scripts/validate-production-evidence-handoff-checklist.ps1` проверяет JSON/Markdown checklist после генерации handoff artifact.
+- Валидатор повторно запускает receipt validator и сверяет release id, SHA256 архива, SHA256 manifest, gates, operator actions и Markdown-пару checklist.
+
+### Changed
+
+- Production readiness gate документация теперь описывает отдельную проверку checklist и строгий режим `-RequireProductionReady`.
+- Roadmap и release docs синхронизированы с backend suite `523/523` и latest release `0.137.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 16/16.
+- Production evidence handoff checklist validator smoke: OK.
+- Backend full suite: 523/523.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Validator проверяет локальный handoff artifact. Production-ready по-прежнему требует реальные live payment/VPS/3x-ui evidence reports.
+
 ## 0.136.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-checklist`.

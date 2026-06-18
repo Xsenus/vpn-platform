@@ -434,6 +434,36 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Checklist_Validator_Should_Verify_Checklist_Against_Receipt()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-checklist.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ChecklistPath",
+                     "ReceiptPath",
+                     "ExpectedArchiveSha256",
+                     "RequireProductionReady",
+                     "validate-production-evidence-handoff-receipt.ps1",
+                     "production-ready-handoff",
+                     "Production evidence handoff checklist markdown",
+                     "operatorActions",
+                     "forbidden secret marker",
+                     "archiveSha256 does not match receipt",
+                     "production evidence handoff checklist valid"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-production-evidence-handoff-checklist.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-022`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

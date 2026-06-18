@@ -3367,5 +3367,28 @@
         "text": "Строгий режим `-RequireProductionReady` fail-closed блокирует handoff, если summary не подтверждает production-ready evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-checklist-validator",
+    "version": "0.137.0",
+    "releasedAt": "2026-06-18T13:45:00+07:00",
+    "title": "Валидатор checklist для handoff evidence",
+    "summary": "Добавлена независимая проверка JSON/Markdown checklist против receipt, Markdown и production-ready summary.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-evidence-handoff-checklist.ps1` проверяет checklist после генерации и повторно запускает receipt validator."
+      },
+      {
+        "type": "improved",
+        "text": "Валидация сверяет release id, SHA256 архива, SHA256 manifest, gates, operator actions и Markdown-пару checklist."
+      },
+      {
+        "type": "important",
+        "text": "Строгий режим `-RequireProductionReady` требует `production-ready-handoff`, все gates `passed` и summary со статусом `production-ready`."
+      }
+    ]
   }
 ]
