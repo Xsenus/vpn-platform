@@ -2,6 +2,28 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.151.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-summary`.
+
+### Changed
+
+- `scripts/test-production-evidence-handoff-package-archive-ci-regression.ps1` теперь дописывает Markdown-результат в `GITHUB_STEP_SUMMARY`, если wrapper запускается в GitHub Actions.
+- Production readiness gate документация описывает GitHub Actions job summary и локальную проверку через временный summary-файл.
+- Roadmap и release docs синхронизированы с backend suite `537/537` и latest release `0.151.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 30/30.
+- Production evidence handoff package archive CI regression wrapper smoke with `GITHUB_STEP_SUMMARY`: OK.
+- Backend full suite: 537/537.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Job summary ускоряет диагностику CI evidence gate, но финальные JSON/Markdown artifacts остаются основным handoff-доказательством.
+
 ## 0.150.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-workflow`.

@@ -819,6 +819,7 @@ public class ProductionReadinessGateTests
     {
         var root = FindRepositoryRoot();
         var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-ci-regression.ps1"));
         var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
@@ -833,15 +834,43 @@ public class ProductionReadinessGateTests
                      "actions/upload-artifact@v4",
                      "production-evidence-handoff-package-archive-ci-regression-result.json",
                      "production-evidence-handoff-package-archive-ci-regression-result.md",
-                     "if-no-files-found: error"
+                     "if-no-files-found: error",
+                     "GITHUB_STEP_SUMMARY"
                  })
         {
-            Assert.Contains(expected, workflow, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(expected, workflow + script, StringComparison.OrdinalIgnoreCase);
         }
 
         Assert.Contains("GitHub Actions", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("production-evidence", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P11-ACC-035`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Ci_Regression_Should_Write_GitHub_Step_Summary()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-ci-regression.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Add-GitHubStepSummary",
+                     "$env:GITHUB_STEP_SUMMARY",
+                     "AppendAllText",
+                     "ConvertTo-CiMarkdown",
+                     "Production evidence handoff package archive CI regression",
+                     "Main flow status",
+                     "Result validator regression",
+                     "Long path regression"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("GITHUB_STEP_SUMMARY", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-036`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

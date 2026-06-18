@@ -43,6 +43,26 @@ function ConvertTo-CiMarkdown {
     return ($lines -join [Environment]::NewLine) + [Environment]::NewLine
 }
 
+function Add-GitHubStepSummary {
+    param([string]$Markdown)
+
+    $summaryPath = $env:GITHUB_STEP_SUMMARY
+    if ([string]::IsNullOrWhiteSpace($summaryPath)) {
+        return
+    }
+
+    $fullSummaryPath = [System.IO.Path]::GetFullPath($summaryPath)
+    $summaryDirectory = Split-Path -Parent $fullSummaryPath
+    if (-not [string]::IsNullOrWhiteSpace($summaryDirectory)) {
+        New-Item -ItemType Directory -Path $summaryDirectory -Force | Out-Null
+    }
+
+    [System.IO.File]::AppendAllText(
+        $fullSummaryPath,
+        $Markdown + [Environment]::NewLine,
+        [System.Text.UTF8Encoding]::new($false))
+}
+
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path (Resolve-RepoPath "tmp") "production-evidence-handoff-package-archive-ci-regression-test"
 }
@@ -105,8 +125,10 @@ $result = [ordered]@{
 }
 
 $resultJson = $result | ConvertTo-Json -Depth 12
+$resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
 Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
-Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content (ConvertTo-CiMarkdown -Result ([pscustomobject]$result))
+Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
+Add-GitHubStepSummary -Markdown $resultMarkdown
 
 if ($WriteJson) {
     Write-Output $resultJson

@@ -3693,5 +3693,28 @@
         "text": "Регрессия handoff archive больше не зависит только от ручного локального запуска и проверяется в общей validation pipeline."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-ci-summary",
+    "version": "0.151.0",
+    "releasedAt": "2026-06-18T16:31:00+07:00",
+    "title": "CI summary для handoff archive regression",
+    "summary": "Production evidence handoff archive regression теперь выводит краткий Markdown-результат прямо в GitHub Actions job summary.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`test-production-evidence-handoff-package-archive-ci-regression.ps1` автоматически дописывает Markdown-результат в `GITHUB_STEP_SUMMARY`, когда запускается в GitHub Actions."
+      },
+      {
+        "type": "improved",
+        "text": "В summary видны общий статус, release id, статусы основного flow, result validator regression и long-path regression."
+      },
+      {
+        "type": "important",
+        "text": "Оператор может быстро проверить результат CI evidence gate в интерфейсе Actions, не скачивая artifacts для первичной диагностики."
+      }
+    ]
   }
 ]

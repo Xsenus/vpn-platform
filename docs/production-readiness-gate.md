@@ -273,6 +273,8 @@ Wrapper сохраняет `production-evidence-handoff-package-archive-ci-regre
 
 В GitHub Actions этот wrapper запускается отдельным job `production-evidence` в `.github/workflows/ci.yml` после backend-проверок. Job публикует artifact `production-evidence-handoff-package-archive-ci-regression` с итоговыми `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md`, поэтому CI evidence можно скачать без повторного ручного запуска.
 
+Если доступна переменная `GITHUB_STEP_SUMMARY`, wrapper дополнительно дописывает тот же Markdown-результат в GitHub Actions job summary: общий статус, release id, статус основного flow, result validator regression и long-path regression. Локально это можно проверить, задав `GITHUB_STEP_SUMMARY` на временный `.md` файл перед запуском wrapper.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
