@@ -800,6 +800,7 @@ public class ProductionReadinessGateTests
                      "test-production-evidence-handoff-package-archive-long-path.ps1",
                      "test-production-evidence-handoff-package-archive-ci-summary-validator.ps1",
                      "validate-production-evidence-handoff-package-archive-ci-regression-result.ps1",
+                     "test-production-evidence-handoff-package-archive-ci-regression-result-validator.ps1",
                      "production-evidence-handoff-package-archive-ci-regression-result.json",
                      "production-evidence-handoff-package-archive-ci-regression-result.md",
                      "ConvertTo-CiMarkdown",
@@ -807,6 +808,7 @@ public class ProductionReadinessGateTests
                      "resultValidatorRegression",
                      "longPathRegression",
                      "ciSummaryValidatorRegression",
+                     "ciResultValidatorRegression",
                      "production evidence handoff package archive CI regression passed"
                  })
         {
@@ -968,6 +970,38 @@ public class ProductionReadinessGateTests
         Assert.Contains("validate-production-evidence-handoff-package-archive-ci-regression-result.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("validate-production-evidence-handoff-package-archive-ci-regression-result.ps1", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P11-ACC-039`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Ci_Regression_Result_Validator_Should_Have_Regression_Harness()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-ci-regression-result-validator.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-ci-regression.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "validate-production-evidence-handoff-package-archive-ci-regression-result.ps1",
+                     "bad-status",
+                     "missing-release-id",
+                     "missing-summary-validator-failure",
+                     "bad-markdown",
+                     "status must be passed",
+                     "releaseId is required",
+                     "missing summary validator failure",
+                     "markdown is missing",
+                     "production evidence handoff package archive CI regression result validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-package-archive-ci-regression-result-validator.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ciResultValidatorRegression", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-production-evidence-handoff-package-archive-ci-regression-result-validator.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-040`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

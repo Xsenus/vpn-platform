@@ -3785,5 +3785,28 @@
         "text": "Validator проверяет все вложенные regression statuses, `ciSummaryValidatorRegression`, Markdown-пару и обязательные artifact paths."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-ci-result-validator-regression",
+    "version": "0.155.0",
+    "releasedAt": "2026-06-18T17:25:00+07:00",
+    "title": "Regression harness для CI result validator",
+    "summary": "Standalone validator итогового CI regression result теперь покрыт fail-closed harness на испорченных JSON/Markdown artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-evidence-handoff-package-archive-ci-regression-result-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Основной CI wrapper запускает новый harness, записывает результат в `ciResultValidatorRegression` и повторно валидирует финальный CI result artifact."
+      },
+      {
+        "type": "important",
+        "text": "Harness проверяет fail-closed ошибки для неверного статуса, пустого `releaseId`, отсутствующего summary-validator failure и сломанного Markdown."
+      }
+    ]
   }
 ]

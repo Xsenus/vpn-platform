@@ -36,6 +36,9 @@ function ConvertTo-CiMarkdown {
     if ($null -ne $Result.ciSummaryValidatorRegression) {
         $lines.Add("- CI summary validator regression: ``$($Result.ciSummaryValidatorRegression.status)``")
     }
+    if ($null -ne $Result.ciResultValidatorRegression) {
+        $lines.Add("- CI result validator regression: ``$($Result.ciResultValidatorRegression.status)``")
+    }
     $lines.Add("")
     $lines.Add("## Artifacts")
     $lines.Add("- Main flow result: ``$($Result.mainFlow.resultJsonPath)``")
@@ -166,6 +169,30 @@ if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
     & (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1") `
         -ResultJsonPath $resultJsonPath `
         -SummaryPath $githubStepSummaryPath | Out-Null
+}
+
+& (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package-archive-ci-regression-result.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath | Out-Null
+
+$ciResultValidatorRegressionJson = & (Resolve-RepoPath "scripts/test-production-evidence-handoff-package-archive-ci-regression-result-validator.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath `
+    -WriteJson
+$ciResultValidatorRegression = $ciResultValidatorRegressionJson | ConvertFrom-Json
+
+if ([string]$ciResultValidatorRegression.status -ne "passed") {
+    throw "Production evidence handoff package archive CI regression result validator regression did not pass."
+}
+
+$result["ciResultValidatorRegression"] = $ciResultValidatorRegression
+$resultJson = $result | ConvertTo-Json -Depth 12
+$resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
+Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
+Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
+
+if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
+    Write-Utf8NoBomFile -PathValue $githubStepSummaryPath -Content $resultMarkdown
 }
 
 & (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package-archive-ci-regression-result.ps1") `

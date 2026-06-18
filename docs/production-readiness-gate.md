@@ -288,6 +288,15 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ha
 
 Этот валидатор сверяет общий статус, статусы всех вложенных regression harnesses, наличие `ciSummaryValidatorRegression`, обязательные failure-сценарии summary validator regression, Markdown-пару и пути к artifacts.
 
+Fail-closed поведение этого standalone validator проверяется отдельным regression harness:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-ci-regression-result-validator.ps1 `
+  -ResultJsonPath tmp\production-evidence-handoff-package-archive-ci-regression-test\production-evidence-handoff-package-archive-ci-regression-result.json
+```
+
+Harness портит итоговый CI result JSON/Markdown и ожидает ошибки для неверного общего статуса, пустого `releaseId`, отсутствующего failure-сценария summary validator и сломанного Markdown. Основной CI wrapper запускает его автоматически, записывает результат в `ciResultValidatorRegression`, обновляет JSON/Markdown artifacts и повторно валидирует финальный result artifact.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
