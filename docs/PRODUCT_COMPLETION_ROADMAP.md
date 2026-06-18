@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `534/534`.
+- [x] `STATE-001` Backend test suite проходит: `535/535`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `534/534`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-long-path-regression`, версия `0.148.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `535/535`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-ci-regression`, версия `0.149.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 27/27, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `534/534`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-long-path-regression`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 28/28, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `535/535`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-ci-regression`.
 
 ## P0. Блокеры production-запуска
 
@@ -832,6 +832,11 @@ git diff --check
   - Что сделать: закрепить отдельной проверкой Windows path-limit regression для длинных release id и глубокой `OutputDirectory`.
   - Что сделано: добавлен `scripts/test-production-evidence-handoff-package-archive-long-path.ps1`. Harness запускает полный flow, проверяет hash-based имя handoff package ZIP, короткую длину имени, отсутствие полного release id в имени ZIP и сохранение полного release id в result JSON.
   - Доказательство: `ProductionReadinessGateTests` 27/27, long-path regression smoke в `tmp/production-evidence-handoff-package-archive-long-release-id-path-regression-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-long-path-regression`, версия `0.148.0`.
+
+- [x] `P11-ACC-034` Production evidence handoff package archive CI regression wrapper. 2026-06-18.
+  - Что сделать: объединить локальные regression harnesses archive flow в одну CI-friendly команду и единый result artifact.
+  - Что сделано: добавлен `scripts/test-production-evidence-handoff-package-archive-ci-regression.ps1`. Wrapper запускает основной archive flow, result validator regression и long-path regression, затем сохраняет `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md`.
+  - Доказательство: `ProductionReadinessGateTests` 28/28, CI regression wrapper smoke в `tmp/production-evidence-handoff-package-archive-ci-regression-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-ci-regression`, версия `0.149.0`.
 
 ## Журнал проверок
 

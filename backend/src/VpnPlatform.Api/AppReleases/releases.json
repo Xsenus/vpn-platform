@@ -3647,5 +3647,28 @@
         "text": "Полный `releaseId` остается в result JSON, но больше не растягивает имя ZIP до Windows path-limit."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-ci-regression",
+    "version": "0.149.0",
+    "releasedAt": "2026-06-18T16:05:00+07:00",
+    "title": "CI wrapper для handoff archive regression",
+    "summary": "Локальные regression harnesses production evidence handoff package archive объединены в один CI-friendly запуск.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-evidence-handoff-package-archive-ci-regression.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Wrapper запускает основной archive flow, result validator regression и long-path regression одной командой."
+      },
+      {
+        "type": "important",
+        "text": "Команда сохраняет единые JSON/Markdown result artifacts для CI и handoff evidence."
+      }
+    ]
   }
 ]

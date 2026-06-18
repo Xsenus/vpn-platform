@@ -261,6 +261,16 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handof
 
 Harness ожидает ошибки для испорченного `status`, неверного SHA256 handoff package archive, отсутствующего tamper-сценария и Markdown без обязательного блока `Tested failures`.
 
+Для CI можно запускать единый локальный wrapper, который последовательно выполняет основной flow, result validator regression и long-path regression:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-ci-regression.ps1 `
+  -OutputDirectory tmp\production-evidence-handoff-package-archive-ci-regression-test `
+  -Force
+```
+
+Wrapper сохраняет `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md` с путями к основному result, финальному handoff package archive и результатам regression harnesses.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

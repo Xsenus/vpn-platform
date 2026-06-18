@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.149.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-ci-regression`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-ci-regression.ps1` объединяет локальные archive flow regression harnesses в один CI-friendly запуск.
+- Wrapper сохраняет `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md`.
+
+### Changed
+
+- Production readiness gate документация теперь описывает единый CI wrapper для основного flow, result validator regression и long-path regression.
+- Roadmap и release docs синхронизированы с backend suite `535/535` и latest release `0.149.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 28/28.
+- Production evidence handoff package archive CI regression wrapper smoke: OK.
+- Backend full suite: 535/535.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- CI wrapper остается локальным evidence regression gate; live/VPS/payment blockers закрываются только реальными smoke reports.
+
 ## 0.148.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-long-path-regression`.
