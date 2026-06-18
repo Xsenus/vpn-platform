@@ -67,6 +67,16 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-readiness-summar
 
 Summary пишет Markdown и соседний JSON-файл: статус каждого evidence report, количество passed/blocked/failed checks, список платежных провайдеров и открытые roadmap blockers. В summary нельзя добавлять секреты, cookies, auth headers, private keys или полные VPN access URI.
 
+Проверить summary можно отдельным валидатором:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-summary.ps1 `
+  -SummaryPath tmp\production-evidence\production-readiness-summary.md `
+  -RequireReportFiles
+```
+
+Для финального production handoff добавьте `-RequireProductionReady`: валидатор потребует `production-ready`, четыре `passed` evidence reports и отсутствие roadmap blockers.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

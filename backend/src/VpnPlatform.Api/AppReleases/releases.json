@@ -3160,5 +3160,28 @@
         "text": "Summary не требует секретов и напоминает хранить только sanitized evidence: безопасные id, timestamps, section names и имена screenshot-файлов."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-readiness-summary-validator",
+    "version": "0.128.0",
+    "releasedAt": "2026-06-18T12:05:00+07:00",
+    "title": "Валидатор production readiness summary",
+    "summary": "Добавлена fail-closed проверка Markdown/JSON summary перед передачей operator artifact в CI или production handoff.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-readiness-summary.ps1` проверяет структуру Markdown/JSON summary, четыре evidence reports и открытые roadmap blockers."
+      },
+      {
+        "type": "improved",
+        "text": "Валидатор сверяет status/count/flag consistency, report paths и запрещает очевидные secret markers в summary artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Для финального handoff можно включить `-RequireProductionReady`: он пройдет только при четырех passed reports и отсутствии roadmap blockers."
+      }
+    ]
   }
 ]

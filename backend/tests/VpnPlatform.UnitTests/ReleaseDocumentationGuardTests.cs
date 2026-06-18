@@ -49,7 +49,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-009", "2026-06-18-production-evidence-bundle-gate"),
         new("P11-ACC-010", "2026-06-18-production-evidence-aggregate-gate"),
         new("P11-ACC-011", "2026-06-18-production-evidence-bundle-generator"),
-        new("P11-ACC-012", "2026-06-18-production-readiness-summary")
+        new("P11-ACC-012", "2026-06-18-production-readiness-summary"),
+        new("P11-ACC-013", "2026-06-18-production-readiness-summary-validator")
     ];
 
     [Fact]

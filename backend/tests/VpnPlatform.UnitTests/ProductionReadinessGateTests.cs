@@ -168,6 +168,37 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Summary_Validator_Should_Check_Markdown_Json_And_Production_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-summary.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "SummaryPath",
+                     "JsonSummaryPath",
+                     "RequireProductionReady",
+                     "RequireReportFiles",
+                     "Production readiness summary valid",
+                     "staging-vps",
+                     "payment-providers",
+                     "admin-vps",
+                     "vpn-live",
+                     "roadmapBlockers",
+                     "reportPaths",
+                     "forbidden secret marker"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-production-readiness-summary.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-013`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();
