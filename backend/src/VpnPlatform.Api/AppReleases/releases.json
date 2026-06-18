@@ -3275,5 +3275,28 @@
         "text": "Результат содержит SHA256 архива и manifest, чтобы CI или оператор могли сверить handoff artifact перед публикацией."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-archive-validator",
+    "version": "0.133.0",
+    "releasedAt": "2026-06-18T13:00:00+07:00",
+    "title": "Валидатор архива production evidence",
+    "summary": "Добавлена fail-closed проверка ZIP-архива production evidence bundle по manifest, entries, размерам и SHA256.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-evidence-archive.ps1` проверяет ZIP-архив production evidence перед публикацией или передачей оператору."
+      },
+      {
+        "type": "improved",
+        "text": "Валидатор читает manifest из ZIP, запрещает лишние entries и сверяет размеры, total bytes и SHA256 каждого файла."
+      },
+      {
+        "type": "important",
+        "text": "Команда поддерживает `-ExpectedArchiveSha256`, чтобы CI мог сверить опубликованный handoff artifact с зафиксированным hash."
+      }
+    ]
   }
 ]

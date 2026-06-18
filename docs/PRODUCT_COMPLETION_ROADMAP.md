@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `518/518`.
+- [x] `STATE-001` Backend test suite проходит: `519/519`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `518/518`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-archive`, версия `0.132.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `519/519`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-archive-validator`, версия `0.133.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 11/11, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `518/518`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-archive`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 12/12, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `519/519`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-archive-validator`.
 
 ## P0. Блокеры production-запуска
 
@@ -765,6 +765,10 @@ git diff --check
   - Что сделать: добавить безопасную упаковку проверенного production evidence bundle в ZIP, чтобы CI или оператор могли передать один artifact с SHA256 архива и manifest.
   - Что сделано: добавлен `scripts/new-production-evidence-archive.ps1`, который сначала запускает `validate-production-evidence-manifest.ps1`, затем добавляет в архив сам manifest и только перечисленные в manifest файлы, проверяя relative paths и запрет выхода за пределы bundle.
   - Доказательство: `ProductionReadinessGateTests` 11/11, archive smoke в `tmp/production-evidence-archive-test`, latest "Что нового" `2026-06-18-production-evidence-archive`, версия `0.132.0`.
+- [x] `P11-ACC-018` Production evidence archive validator. 2026-06-18.
+  - Что сделать: добавить fail-closed проверку ZIP-архива production evidence, чтобы опубликованный handoff artifact можно было сверить без распаковки и ручного сравнения.
+  - Что сделано: добавлен `scripts/validate-production-evidence-archive.ps1`, который читает manifest из ZIP, запрещает лишние entries, проверяет обязательные файлы, размеры, `totalBytes`, SHA256 каждого entry и опциональный `-ExpectedArchiveSha256`.
+  - Доказательство: `ProductionReadinessGateTests` 12/12, archive validator smoke в `tmp/production-evidence-archive-validator-test`, latest "Что нового" `2026-06-18-production-evidence-archive-validator`, версия `0.133.0`.
 
 ## Журнал проверок
 
