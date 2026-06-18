@@ -61,6 +61,8 @@ function Add-GitHubStepSummary {
         $fullSummaryPath,
         $Markdown + [Environment]::NewLine,
         [System.Text.UTF8Encoding]::new($false))
+
+    return $fullSummaryPath
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
@@ -128,7 +130,17 @@ $resultJson = $result | ConvertTo-Json -Depth 12
 $resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
 Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
 Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
-Add-GitHubStepSummary -Markdown $resultMarkdown
+$githubStepSummaryPath = Add-GitHubStepSummary -Markdown $resultMarkdown
+
+& (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -SummaryPath $resultMarkdownPath | Out-Null
+
+if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
+    & (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1") `
+        -ResultJsonPath $resultJsonPath `
+        -SummaryPath $githubStepSummaryPath | Out-Null
+}
 
 if ($WriteJson) {
     Write-Output $resultJson

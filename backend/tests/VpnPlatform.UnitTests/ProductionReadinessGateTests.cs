@@ -874,6 +874,38 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Ci_Summary_Should_Have_Fail_Closed_Validator()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-package-archive-ci-summary.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-ci-regression.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ResultJsonPath",
+                     "SummaryPath",
+                     "must be passed",
+                     "releaseId is required",
+                     "Production evidence handoff package archive CI regression",
+                     "Main flow status",
+                     "Result validator regression",
+                     "Long path regression",
+                     "CI regression JSON",
+                     "CI regression Markdown",
+                     "production evidence handoff package archive CI summary valid"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-production-evidence-handoff-package-archive-ci-summary.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-production-evidence-handoff-package-archive-ci-summary.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-037`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

@@ -3716,5 +3716,28 @@
         "text": "Оператор может быстро проверить результат CI evidence gate в интерфейсе Actions, не скачивая artifacts для первичной диагностики."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator",
+    "version": "0.152.0",
+    "releasedAt": "2026-06-18T16:44:00+07:00",
+    "title": "Validator для CI summary handoff archive",
+    "summary": "CI summary production evidence handoff archive regression теперь fail-closed сверяется с JSON result artifact.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Wrapper проверяет result Markdown и `GITHUB_STEP_SUMMARY`, если summary-файл доступен."
+      },
+      {
+        "type": "important",
+        "text": "Если Markdown summary не совпадает с JSON result artifact по статусам, release id или artifact paths, CI evidence gate завершается ошибкой."
+      }
+    ]
   }
 ]
