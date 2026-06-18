@@ -3436,5 +3436,28 @@
         "text": "Проверка повторно запускает checklist validator и в строгом режиме требует production-ready handoff."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive",
+    "version": "0.140.0",
+    "releasedAt": "2026-06-18T14:23:00+07:00",
+    "title": "ZIP-архив handoff package",
+    "summary": "Добавлена упаковка проверенного production evidence handoff package в единый ZIP с SHA256.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/new-production-evidence-handoff-package-archive.ps1` создает ZIP из проверенного handoff package."
+      },
+      {
+        "type": "improved",
+        "text": "Перед упаковкой повторно запускается package validator, а в архив попадают только разрешенные package files."
+      },
+      {
+        "type": "important",
+        "text": "Команда возвращает SHA256 и размер ZIP, entries, исходный SHA256 production evidence ZIP и SHA256 manifest."
+      }
+    ]
   }
 ]
