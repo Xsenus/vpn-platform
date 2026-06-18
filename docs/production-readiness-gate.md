@@ -140,6 +140,16 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-handoff
 
 Receipt сначала запускает archive validator, затем пишет `production-evidence-handoff-receipt.json` и `.md` с release id, SHA256 архива, SHA256 manifest, размером архива и списком проверенных entries.
 
+Проверить receipt перед передачей можно отдельной командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-receipt.ps1 `
+  -ReceiptPath tmp\production-evidence\production-evidence-handoff-receipt.json `
+  -RequireAllFiles
+```
+
+Валидатор receipt сверяет JSON и Markdown receipt с ZIP-архивом, повторно запускает archive validator, проверяет SHA256 архива, SHA256 manifest, entries и verified files.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

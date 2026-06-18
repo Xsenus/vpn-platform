@@ -3321,5 +3321,28 @@
         "text": "Оператор или CI может передать ZIP и receipt вместе, чтобы сверить handoff artifact без доступа к локальной рабочей директории."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-receipt-validator",
+    "version": "0.135.0",
+    "releasedAt": "2026-06-18T13:15:00+07:00",
+    "title": "Валидатор receipt для handoff evidence",
+    "summary": "Добавлена проверка JSON/Markdown receipt против ZIP-архива production evidence и archive validator.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-evidence-handoff-receipt.ps1` сверяет receipt с ZIP-архивом и повторно запускает archive validator."
+      },
+      {
+        "type": "improved",
+        "text": "Проверяются release id, SHA256 архива, SHA256 manifest, размер архива, entries, verified files и Markdown-пара receipt."
+      },
+      {
+        "type": "important",
+        "text": "Receipt validator помогает CI и оператору подтвердить, что переданный ZIP и receipt относятся к одному handoff artifact."
+      }
+    ]
   }
 ]

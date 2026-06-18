@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `520/520`.
+- Backend full suite: `521/521`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-18-production-evidence-handoff-receipt`, версия `0.134.0`; production readiness gate агрегирует полный пакет evidence reports, manifest и archive validators сверяют SHA256, а `new-production-evidence-handoff-receipt.ps1` пишет JSON/Markdown receipt для передачи ZIP без содержимого отчетов. Live VPS/staging evidence все еще требуется.
+- Latest "Что нового": `2026-06-18-production-evidence-handoff-receipt-validator`, версия `0.135.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt generator пишет JSON/Markdown handoff, а `validate-production-evidence-handoff-receipt.ps1` сверяет receipt с ZIP. Live VPS/staging evidence все еще требуется.
 
 ## Команды проверки
 

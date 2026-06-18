@@ -2,6 +2,60 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-18: production evidence handoff receipt validator
+
+Что проверялось:
+
+- `scripts/validate-production-evidence-handoff-receipt.ps1` проверяет JSON/Markdown receipt против ZIP-архива production evidence.
+- Валидатор повторно запускает archive validator и сверяет release id, SHA256 архива, SHA256 manifest, размер архива, entries и verified files.
+- Раздел "Что нового" получил релиз `2026-06-18-production-evidence-handoff-receipt-validator`, версия `0.135.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-bundle.ps1 -OutputDirectory tmp\production-evidence-handoff-receipt-validator-test -ApiBaseUrl https://api.example.test -PublicWebUrl https://example.test -CabinetWebUrl https://example.test/cabinet -AdminWebUrl https://example.test/admin -X3uiPanelUrl https://x3ui.example.test -EnvironmentName staging -Operator local-test -RunProductionGate -Force
+powershell -ExecutionPolicy Bypass -File scripts\new-production-readiness-summary.ps1 -OutputPath tmp\production-evidence-handoff-receipt-validator-test\production-readiness-summary.md -ReportPath tmp\production-evidence-handoff-receipt-validator-test\staging-smoke-report.json -PaymentProviderReportPath tmp\production-evidence-handoff-receipt-validator-test\payment-provider-smoke-report.json -AdminVpsReportPath tmp\production-evidence-handoff-receipt-validator-test\admin-vps-smoke-report.json -VpnLiveReportPath tmp\production-evidence-handoff-receipt-validator-test\vpn-live-smoke-report.json -Force
+powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-manifest.ps1 -BundleDirectory tmp\production-evidence-handoff-receipt-validator-test -RequireSummary -Force
+powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-archive.ps1 -ManifestPath tmp\production-evidence-handoff-receipt-validator-test\production-evidence-manifest.json -OutputPath tmp\production-evidence-handoff-receipt-validator-test\production-evidence.zip -RequireAllFiles -Force
+$archiveSha256 = (Get-FileHash -LiteralPath tmp\production-evidence-handoff-receipt-validator-test\production-evidence.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-handoff-receipt.ps1 -ArchivePath tmp\production-evidence-handoff-receipt-validator-test\production-evidence.zip -ExpectedArchiveSha256 $archiveSha256 -RequireAllFiles -Force
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-receipt.ps1 -ReceiptPath tmp\production-evidence-handoff-receipt-validator-test\production-evidence-handoff-receipt.json -ExpectedArchiveSha256 $archiveSha256 -RequireAllFiles
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-restore
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release --no-restore
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -ApiPort 18102 -PublicPort 5183 -CabinetPort 5184 -AdminPort 5185
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1
+git diff --check
+```
+
+Результат:
+
+- Production evidence handoff receipt validator smoke: OK.
+- `ProductionReadinessGateTests`: `14/14`.
+- Backend full suite: `521/521`.
+- API Release build: OK.
+- TelegramBot Release build: OK.
+- Frontend unit tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Frontend audit: `0 vulnerabilities`.
+- Playwright console smoke: `9/9`.
+- Secret scan: OK.
+- Encoding guard: OK.
+- Fresh local SQLite smoke: OK, latest `2026-06-18-production-evidence-handoff-receipt-validator`.
+- Local SQLite VPS smoke dry-run: OK.
+- `git diff --check`: OK.
+- `STATE-014` остается закрытым и синхронизированным; production-ready blockers остаются внешними.
+
 ## Проверка 2026-06-18: production evidence handoff receipt
 
 Что проверялось:
