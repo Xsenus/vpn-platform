@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `542/542`.
+- [x] Backend full suite: `543/543`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-18-production-readiness-assertion-result-artifacts`, версия `0.156.0`.
+- [x] Latest "Что нового": `2026-06-18-production-readiness-assertion-result-validator`, версия `0.157.0`.
 
 ## Как вести дальше
 

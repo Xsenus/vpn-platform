@@ -78,7 +78,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-038", "2026-06-18-production-evidence-handoff-package-archive-ci-summary-validator-regression"),
         new("P11-ACC-039", "2026-06-18-production-evidence-handoff-package-archive-ci-result-validator"),
         new("P11-ACC-040", "2026-06-18-production-evidence-handoff-package-archive-ci-result-validator-regression"),
-        new("P11-ACC-041", "2026-06-18-production-readiness-assertion-result-artifacts")
+        new("P11-ACC-041", "2026-06-18-production-readiness-assertion-result-artifacts"),
+        new("P11-ACC-042", "2026-06-18-production-readiness-assertion-result-validator")
     ];
 
     [Fact]

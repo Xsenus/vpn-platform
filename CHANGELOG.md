@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.157.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-readiness-assertion-result-validator`.
+
+### Added
+
+- `scripts/validate-production-readiness-assertion-result.ps1` проверяет JSON/Markdown result artifacts production readiness assertion без повторного запуска gate.
+
+### Changed
+
+- `scripts/assert-production-readiness.ps1` теперь запускает validator сразу после записи result artifacts и до fail-closed ошибки.
+- Production readiness gate документация описывает отдельную проверку скачанного assertion result artifact.
+- Roadmap и release docs синхронизированы с backend suite `543/543` и latest release `0.157.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 36/36.
+- Blocked production readiness assertion artifact smoke with standalone validator: OK.
+- Targeted release/docs suite: 52/52.
+- Backend full suite: 543/543.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Validator проверяет статус, четыре evidence report entries, счетчики, пути reports, roadmap/release decision и Markdown-пару.
+
 ## 0.156.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-readiness-assertion-result-artifacts`.

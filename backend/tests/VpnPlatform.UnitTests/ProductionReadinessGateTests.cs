@@ -140,6 +140,37 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Assertion_Result_Should_Have_Standalone_Validator()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-assertion-result.ps1"));
+        var gate = File.ReadAllText(Path.Combine(root, "scripts", "assert-production-readiness.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ResultJsonPath",
+                     "ResultMarkdownPath",
+                     "RequireProductionReady",
+                     "failedEvidenceReportsCount",
+                     "blockersCount",
+                     "staging-vps",
+                     "payment-providers",
+                     "admin-vps",
+                     "vpn-live",
+                     "production readiness assertion result valid"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-production-readiness-assertion-result.ps1", gate, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-production-readiness-assertion-result.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-042`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

@@ -3831,5 +3831,28 @@
         "text": "Fail-closed поведение сохранено: после записи artifacts команда все равно падает, пока live/VPS/payment evidence не passed."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-readiness-assertion-result-validator",
+    "version": "0.157.0",
+    "releasedAt": "2026-06-18T17:55:00+07:00",
+    "title": "Validator для production readiness assertion",
+    "summary": "JSON/Markdown result artifacts production readiness assertion теперь можно проверять отдельным validator без повторного запуска gate.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/validate-production-readiness-assertion-result.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "`assert-production-readiness.ps1` запускает validator сразу после записи result artifacts и до fail-closed ошибки."
+      },
+      {
+        "type": "important",
+        "text": "Validator сверяет статус, четыре evidence report entries, счетчики, пути reports, roadmap/release decision и Markdown-пару."
+      }
+    ]
   }
 ]

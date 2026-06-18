@@ -36,6 +36,13 @@ function Resolve-RepoPath {
     throw "Required file was not found: $candidate"
 }
 
+function Resolve-RepoRelativePath {
+    param([string]$RelativePath)
+
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    return Join-Path $repoRoot $RelativePath
+}
+
 function Invoke-EvidenceValidator {
     param(
         [string]$Name,
@@ -164,6 +171,23 @@ function Write-ReadinessResult {
 
     if (-not [string]::IsNullOrWhiteSpace($markdownPath)) {
         Write-Utf8NoBomFile -PathValue $markdownPath -Content (ConvertTo-ReadinessMarkdown -Result ([pscustomobject]$Result))
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($jsonPath)) {
+        $validatorArgs = @{
+            ResultJsonPath = $jsonPath
+            WriteJson = $true
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($markdownPath)) {
+            $validatorArgs.ResultMarkdownPath = $markdownPath
+        }
+
+        if ([string]$Result.status -eq "production-ready") {
+            $validatorArgs.RequireProductionReady = $true
+        }
+
+        & (Resolve-RepoRelativePath "scripts/validate-production-readiness-assertion-result.ps1") @validatorArgs | Out-Null
     }
 }
 

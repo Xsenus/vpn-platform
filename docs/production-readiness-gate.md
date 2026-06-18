@@ -16,6 +16,8 @@ Gate агрегирует результаты всех четырех evidence 
 
 Для CI и handoff можно передать `-OutputPath`: gate запишет Markdown и соседний JSON result artifact даже при ожидаемом `blocked`, а затем продолжит fail-closed падать. Result содержит `failedEvidenceReportsCount`, `blockersCount`, пути всех reports, `evidenceReports`, `blockers`, `resultJsonPath` и `resultMarkdownPath`.
 
+Скачанный result artifact можно проверить без повторного запуска gate через `scripts/validate-production-readiness-assertion-result.ps1`. Валидатор сверяет статус `blocked`/`production-ready`, четыре evidence report entries, счетчики, пути reports, roadmap/release decision и Markdown-пару.
+
 Это не заменяет реальные live-проверки. Gate нужен, чтобы не забыть зафиксировать доказательства и не выдать локально зеленый проект за production-ready.
 
 ## Как запускать
@@ -35,6 +37,13 @@ powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1
   -ReportPath docs\staging-smoke-report.template.json `
   -OutputPath tmp\production-readiness-assertion.md `
   -Force
+```
+
+Отдельная проверка result artifact:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-result.ps1 `
+  -ResultJsonPath tmp\production-readiness-assertion.json
 ```
 
 Если отчеты лежат не в стандартных местах, передайте их явно:

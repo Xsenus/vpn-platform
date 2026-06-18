@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `542/542`.
+- [x] `STATE-001` Backend test suite проходит: `543/543`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `542/542`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-readiness-assertion-result-artifacts`, версия `0.156.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `543/543`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-readiness-assertion-result-validator`, версия `0.157.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 35/35, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `542/542`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-readiness-assertion-result-artifacts`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 36/36, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `543/543`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-readiness-assertion-result-validator`.
 
 ## P0. Блокеры production-запуска
 
@@ -872,6 +872,11 @@ git diff --check
   - Что сделать: добавить JSON/Markdown result artifacts для `assert-production-readiness.ps1`, чтобы CI и оператор получали структурированное доказательство даже при ожидаемом fail-closed `blocked`.
   - Что сделано: `assert-production-readiness.ps1` получил `-OutputPath`, `-JsonOutputPath` и `-Force`; скрипт пишет `production-readiness-assertion.md/json` со статусом, счетчиками failed evidence reports, roadmap blockers, путями отчетов и результатами всех validators, а затем продолжает падать для `blocked`.
   - Доказательство: `ProductionReadinessGateTests` 35/35, blocked assertion artifact smoke, latest "Что нового" `2026-06-18-production-readiness-assertion-result-artifacts`, версия `0.156.0`.
+
+- [x] `P11-ACC-042` Production readiness assertion result validator. 2026-06-18.
+  - Что сделать: добавить standalone validator для JSON/Markdown result artifacts `assert-production-readiness.ps1`, чтобы скачанный blocked/production-ready assertion result можно было проверить без повторного запуска gate.
+  - Что сделано: добавлен `scripts/validate-production-readiness-assertion-result.ps1`; `assert-production-readiness.ps1` запускает validator сразу после записи artifacts и до fail-closed ошибки.
+  - Доказательство: `ProductionReadinessGateTests` 36/36, standalone assertion result validator smoke, latest "Что нового" `2026-06-18-production-readiness-assertion-result-validator`, версия `0.157.0`.
 
 ## Журнал проверок
 
