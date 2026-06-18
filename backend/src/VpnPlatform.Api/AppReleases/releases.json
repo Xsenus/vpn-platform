@@ -3551,5 +3551,28 @@
         "text": "Roadmap и runbook фиксируют безопасный шаблон output directory для локальных и CI evidence-проверок."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-flow-result",
+    "version": "0.145.0",
+    "releasedAt": "2026-06-18T15:21:00+07:00",
+    "title": "Result artifacts для handoff package archive flow",
+    "summary": "End-to-end flow production evidence handoff package archive теперь сохраняет JSON/Markdown итог проверки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-flow.ps1` сохраняет `production-evidence-handoff-package-archive-flow-result.json` и `.md`."
+      },
+      {
+        "type": "improved",
+        "text": "Result artifacts фиксируют release id, package status, SHA256 архивов, пути artifacts и tamper-сценарии regression harness."
+      },
+      {
+        "type": "important",
+        "text": "CI или оператор могут приложить короткий итог flow без ручного копирования console output."
+      }
+    ]
   }
 ]

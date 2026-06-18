@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.145.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-result`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-flow.ps1` сохраняет `production-evidence-handoff-package-archive-flow-result.json` и `.md`.
+- Result artifacts фиксируют release id, package status, SHA256 production evidence archive, SHA256 handoff package archive, пути artifacts и tamper-сценарии regression harness.
+
+### Changed
+
+- Production readiness gate документация теперь описывает result artifacts полного flow.
+- Roadmap и release docs синхронизированы с backend suite `531/531` и latest release `0.145.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 24/24.
+- Production evidence handoff package archive flow result artifacts smoke: OK.
+- Backend full suite: 531/531.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Result artifacts не заменяют live/VPS/payment evidence reports; они фиксируют локальный flow outcome и SHA256 handoff artifacts.
+
 ## 0.144.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-safety`.

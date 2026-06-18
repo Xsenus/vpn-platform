@@ -492,8 +492,13 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await tariffsPanel.getByRole('spinbutton', { name: 'Цена' }).fill('790')
   await tariffsPanel.getByLabel('Короткое описание').fill('Тариф создан браузерным E2E.')
   await tariffsPanel.getByLabel('Преимущества, по одному в строке').fill('5 устройств\nПриоритетный сервер')
+  const createTariffRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url())
+    return request.method() === 'POST' && url.pathname === '/api/admin/tariffs'
+  })
   await tariffsPanel.getByRole('button', { name: 'Создать тариф' }).click()
-  await expect(page.getByText('E2E Premium 45').first()).toBeVisible()
+  await createTariffRequest
+  await expect(tariffsPanel.locator('.list-item-vertical strong').filter({ hasText: 'E2E Premium 45' })).toBeVisible()
   expect(api.getLastRequest('/api/admin/tariffs')).toBeTruthy()
 
   await openAdminSection(page, 'VPN-доступы', 'vpn')

@@ -229,6 +229,8 @@ Flow harness создает evidence bundle, summary, manifest, production evide
 
 При `-Force` flow harness удаляет и пересоздает `OutputDirectory`, поэтому команда защищена fail-closed проверкой: путь не может быть корнем файловой системы, корнем репозитория и должен быть явно назван под `production-evidence` artifacts. Для CI используйте отдельный каталог вида `tmp\production-evidence-...`.
 
+После успешного запуска flow сохраняет итоговые artifacts `production-evidence-handoff-package-archive-flow-result.json` и `production-evidence-handoff-package-archive-flow-result.md` в `OutputDirectory`. В них фиксируются release id, package status, production evidence archive SHA256, handoff package archive SHA256, пути к artifacts и tamper-сценарии, которые прошел regression harness.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

@@ -66,7 +66,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-026", "2026-06-18-production-evidence-handoff-package-archive-validator"),
         new("P11-ACC-027", "2026-06-18-production-evidence-handoff-package-archive-validator-regression"),
         new("P11-ACC-028", "2026-06-18-production-evidence-handoff-package-archive-flow"),
-        new("P11-ACC-029", "2026-06-18-production-evidence-handoff-package-archive-flow-safety")
+        new("P11-ACC-029", "2026-06-18-production-evidence-handoff-package-archive-flow-safety"),
+        new("P11-ACC-030", "2026-06-18-production-evidence-handoff-package-archive-flow-result")
     ];
 
     [Fact]

@@ -27,6 +27,44 @@ function Get-FileSha256 {
     return (Get-FileHash -LiteralPath $PathValue -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+function Write-Utf8NoBomFile {
+    param(
+        [string]$PathValue,
+        [string]$Content
+    )
+
+    [System.IO.File]::WriteAllText($PathValue, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+function ConvertTo-FlowMarkdown {
+    param([object]$Result)
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add("# Production evidence handoff package archive flow")
+    $lines.Add("")
+    $lines.Add("- Status: ``$($Result.status)``")
+    $lines.Add("- Release: ``$($Result.releaseId)``")
+    $lines.Add("- Package status: ``$($Result.packageStatus)``")
+    $lines.Add("- Production ready: ``$($Result.productionReady)``")
+    $lines.Add("- Output directory: ``$($Result.outputDirectory)``")
+    $lines.Add("- Production evidence archive SHA256: ``$($Result.productionEvidenceArchiveSha256)``")
+    $lines.Add("- Handoff package archive SHA256: ``$($Result.handoffPackageArchiveSha256)``")
+    $lines.Add("- Regression status: ``$($Result.regressionStatus)``")
+    $lines.Add("")
+    $lines.Add("## Tested failures")
+    foreach ($failure in @($Result.testedFailures)) {
+        $lines.Add("- ``$($failure.name)``: $($failure.message)")
+    }
+
+    $lines.Add("")
+    $lines.Add("## Artifacts")
+    $lines.Add("- Production evidence archive: ``$($Result.productionEvidenceArchivePath)``")
+    $lines.Add("- Handoff package directory: ``$($Result.handoffPackageDirectory)``")
+    $lines.Add("- Handoff package archive: ``$($Result.handoffPackageArchivePath)``")
+
+    return ($lines -join [Environment]::NewLine) + [Environment]::NewLine
+}
+
 function Assert-SafeOutputDirectory {
     param(
         [string]$PathValue,
@@ -159,6 +197,8 @@ if ($RequireProductionReady) {
 }
 
 $regression = & (Resolve-RepoPath "scripts/test-production-evidence-handoff-package-archive-validator.ps1") @regressionArgs | ConvertFrom-Json
+$flowResultJsonPath = Join-Path $bundleDirectory "production-evidence-handoff-package-archive-flow-result.json"
+$flowResultMarkdownPath = Join-Path $bundleDirectory "production-evidence-handoff-package-archive-flow-result.md"
 
 $result = [ordered]@{
     status = "passed"
@@ -173,10 +213,16 @@ $result = [ordered]@{
     handoffPackageArchiveSha256 = [string]$packageArchive.archiveSha256
     regressionStatus = [string]$regression.status
     testedFailures = @($regression.testedFailures)
+    resultJsonPath = $flowResultJsonPath
+    resultMarkdownPath = $flowResultMarkdownPath
 }
 
+$resultJson = $result | ConvertTo-Json -Depth 10
+Write-Utf8NoBomFile -PathValue $flowResultJsonPath -Content $resultJson
+Write-Utf8NoBomFile -PathValue $flowResultMarkdownPath -Content (ConvertTo-FlowMarkdown -Result ([pscustomobject]$result))
+
 if ($WriteJson) {
-    Write-Output ($result | ConvertTo-Json -Depth 10)
+    Write-Output $resultJson
 }
 else {
     Write-Host "production evidence handoff package archive flow passed $($result | ConvertTo-Json -Depth 10 -Compress)"
