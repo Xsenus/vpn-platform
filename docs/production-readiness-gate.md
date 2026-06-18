@@ -46,6 +46,14 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-a
   -ResultJsonPath tmp\production-readiness-assertion.json
 ```
 
+Regression-проверка validator на испорченных копиях result artifacts:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-result-validator.ps1 `
+  -ResultJsonPath tmp\production-readiness-assertion.json `
+  -WriteJson
+```
+
 Если отчеты лежат не в стандартных местах, передайте их явно:
 
 ```powershell

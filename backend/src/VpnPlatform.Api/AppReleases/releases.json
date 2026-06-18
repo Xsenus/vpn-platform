@@ -3854,5 +3854,28 @@
         "text": "Validator сверяет статус, четыре evidence report entries, счетчики, пути reports, roadmap/release decision и Markdown-пару."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-readiness-assertion-result-validator-regression",
+    "version": "0.158.0",
+    "releasedAt": "2026-06-18T18:10:00+07:00",
+    "title": "Regression harness для readiness assertion validator",
+    "summary": "Standalone validator production readiness assertion теперь покрыт fail-closed regression harness для испорченных JSON/Markdown artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-readiness-assertion-result-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Harness проверяет happy path, затем ожидает ошибки для bad status, неверного failedEvidenceReportsCount, отсутствующего evidence report, сломанного Markdown и `-RequireProductionReady` на blocked result."
+      },
+      {
+        "type": "important",
+        "text": "Проверка использует временные копии artifacts и не меняет исходный result assertion."
+      }
+    ]
   }
 ]

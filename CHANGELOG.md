@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.158.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-readiness-assertion-result-validator-regression`.
+
+### Added
+
+- `scripts/test-production-readiness-assertion-result-validator.ps1` проверяет fail-closed поведение standalone validator production readiness assertion result artifacts.
+
+### Changed
+
+- Production readiness gate документация получила команду regression-проверки assertion result validator.
+- Roadmap и release docs синхронизированы с backend suite `544/544` и latest release `0.158.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 37/37.
+- Production readiness assertion result validator regression smoke: OK.
+- Targeted release/docs suite: 53/53.
+- Backend full suite: 544/544.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Harness портит только временные копии JSON/Markdown artifacts и ожидает ошибки для bad status, неверного `failedEvidenceReportsCount`, missing `vpn-live`, сломанного Markdown и `-RequireProductionReady` на blocked result.
+
 ## 0.157.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-readiness-assertion-result-validator`.
