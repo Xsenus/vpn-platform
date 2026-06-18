@@ -3505,5 +3505,28 @@
         "text": "Regression harness помогает не сломать fail-closed гарантии production evidence handoff при следующих изменениях."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-flow",
+    "version": "0.143.0",
+    "releasedAt": "2026-06-18T14:56:00+07:00",
+    "title": "End-to-end flow для handoff package archive",
+    "summary": "Добавлена одна команда для полной локальной сборки и проверки production evidence handoff package archive.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-flow.ps1` собирает весь локальный evidence handoff flow одной командой."
+      },
+      {
+        "type": "improved",
+        "text": "Flow создает bundle, summary, manifest, production evidence ZIP, receipt, checklist, package, финальный ZIP и запускает regression harness."
+      },
+      {
+        "type": "important",
+        "text": "Команда снижает риск ручных ошибок в длинной последовательности production evidence handoff проверок."
+      }
+    ]
   }
 ]

@@ -217,6 +217,16 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handof
 
 Harness сначала проверяет исходный ZIP, затем создает временные испорченные копии и ожидает fail-closed ошибки для неверного expected SHA256, лишнего `unexpected-entry.txt` и отсутствующего `SHA256SUMS.txt`.
 
+Чтобы не собирать всю локальную цепочку вручную, можно запустить end-to-end flow одной командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-flow.ps1 `
+  -OutputDirectory tmp\production-evidence-handoff-package-archive-flow-test `
+  -Force
+```
+
+Flow harness создает evidence bundle, summary, manifest, production evidence ZIP, handoff receipt, checklist, package, финальный handoff package ZIP и сразу запускает archive validator regression. Это снижает риск ошибок в ручной последовательности команд при локальной проверке и CI.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

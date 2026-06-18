@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.143.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-flow.ps1` собирает весь локальный production evidence handoff flow одной командой.
+- Flow создает evidence bundle, summary, manifest, production evidence ZIP, handoff receipt, checklist, package, финальный ZIP и запускает archive validator regression.
+
+### Changed
+
+- Production readiness gate документация теперь предлагает одну команду для полной локальной evidence handoff проверки.
+- Roadmap и release docs синхронизированы с backend suite `529/529` и latest release `0.143.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 22/22.
+- Production evidence handoff package archive end-to-end flow smoke: OK.
+- Backend full suite: 529/529.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Flow harness проверяет локально собранный blocked/staging evidence; production-ready по-прежнему требует реальные live/VPS/payment evidence reports.
+
 ## 0.142.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-validator-regression`.

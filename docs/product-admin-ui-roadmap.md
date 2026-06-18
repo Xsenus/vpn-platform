@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `528/528`.
+- [x] Backend full suite: `529/529`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-validator-regression`, версия `0.142.0`.
+- [x] Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-flow`, версия `0.143.0`.
 
 ## Как вести дальше
 

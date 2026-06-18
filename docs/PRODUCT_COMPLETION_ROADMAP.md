@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `528/528`.
+- [x] `STATE-001` Backend test suite проходит: `529/529`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `528/528`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-validator-regression`, версия `0.142.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `529/529`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-handoff-package-archive-flow`, версия `0.143.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 21/21, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `528/528`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-validator-regression`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 22/22, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `529/529`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-flow`.
 
 ## P0. Блокеры production-запуска
 
@@ -805,6 +805,10 @@ git diff --check
   - Что сделать: добавить исполняемый regression harness, который проверяет не только happy path финального ZIP, но и fail-closed поведение при tamper-сценариях.
   - Что сделано: добавлен `scripts/test-production-evidence-handoff-package-archive-validator.ps1`, который проверяет исходный ZIP, затем создает временные испорченные копии и ожидает ошибки для неверного expected SHA256, лишнего `unexpected-entry.txt` и отсутствующего `SHA256SUMS.txt`.
   - Доказательство: `ProductionReadinessGateTests` 21/21, archive validator regression smoke в `tmp/production-evidence-handoff-package-archive-validator-regression-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-validator-regression`, версия `0.142.0`.
+- [x] `P11-ACC-028` Production evidence handoff package archive end-to-end flow harness. 2026-06-18.
+  - Что сделать: заменить длинную ручную последовательность команд для локального evidence handoff одной исполняемой командой, чтобы не ошибаться в путях receipt/checklist и сразу проверять финальный ZIP.
+  - Что сделано: добавлен `scripts/test-production-evidence-handoff-package-archive-flow.ps1`, который собирает evidence bundle, summary, manifest, production evidence ZIP, handoff receipt, checklist, package, финальный ZIP и запускает archive validator regression.
+  - Доказательство: `ProductionReadinessGateTests` 22/22, end-to-end flow smoke в `tmp/production-evidence-handoff-package-archive-flow-test`, latest "Что нового" `2026-06-18-production-evidence-handoff-package-archive-flow`, версия `0.143.0`.
 
 ## Журнал проверок
 
