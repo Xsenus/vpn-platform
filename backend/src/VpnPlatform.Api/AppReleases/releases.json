@@ -3624,5 +3624,28 @@
         "text": "Это снижает риск принять поврежденный или неполный result artifact как корректное production evidence handoff доказательство."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-long-path-regression",
+    "version": "0.148.0",
+    "releasedAt": "2026-06-18T15:54:00+07:00",
+    "title": "Long-path regression для handoff archive",
+    "summary": "Проверка handoff package archive теперь защищает evidence flow от Windows path-limit при длинных release id.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-evidence-handoff-package-archive-long-path.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Harness запускает полный flow в длинной output-директории и проверяет короткое hash-based имя handoff package ZIP."
+      },
+      {
+        "type": "important",
+        "text": "Полный `releaseId` остается в result JSON, но больше не растягивает имя ZIP до Windows path-limit."
+      }
+    ]
   }
 ]

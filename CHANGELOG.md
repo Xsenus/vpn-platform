@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.148.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-long-path-regression`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-long-path.ps1` запускает полный handoff flow в длинной production-evidence директории.
+- Long-path harness проверяет hash-based имя handoff package ZIP и сохранение полного `releaseId` в result JSON.
+
+### Changed
+
+- Production readiness gate документация теперь описывает отдельную проверку Windows path-limit regression.
+- Roadmap и release docs синхронизированы с backend suite `534/534` и latest release `0.148.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 27/27.
+- Production evidence handoff package archive long path regression smoke: OK.
+- Backend full suite: 534/534.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Проверка не закрывает live/VPS/payment blockers; она защищает локальный и CI evidence flow от Windows path-limit на длинных release id.
+
 ## 0.147.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-result-validator-regression`.

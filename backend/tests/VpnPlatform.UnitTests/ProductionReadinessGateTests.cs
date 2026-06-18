@@ -758,6 +758,34 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Long_Path_Should_Have_Regression_Harness()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-long-path.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "test-production-evidence-handoff-package-archive-flow.ps1",
+                     "production-evidence-handoff-package-archive-long-release-id-path-regression-test",
+                     "Get-TextSha256",
+                     "Substring(0, 12)",
+                     "archive name still contains full release id",
+                     "archive name does not contain expected release hash",
+                     "archive name is too long",
+                     "result JSON lost full release id",
+                     "production evidence handoff package archive long path regression passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-package-archive-long-path.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-033`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

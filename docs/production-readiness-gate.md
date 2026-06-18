@@ -201,6 +201,16 @@ Package archive generator повторно запускает package validator,
 
 Default-имя ZIP использует короткий hash `releaseId`, а полный `releaseId` остается в JSON result. Это защищает локальные и CI-запуски на Windows от path-limit при длинных release id и глубокой `OutputDirectory`.
 
+Регрессию длинных путей можно проверить отдельной командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-long-path.ps1 `
+  -OutputDirectory tmp\production-evidence-handoff-package-archive-long-release-id-path-regression-test `
+  -Force
+```
+
+Harness запускает полный flow, проверяет, что имя handoff package ZIP не содержит полный `releaseId`, содержит 12-символьный hash release id, остается коротким, а result JSON сохраняет полный release id.
+
 Финальный ZIP-архив handoff package можно проверить отдельным валидатором:
 
 ```powershell
