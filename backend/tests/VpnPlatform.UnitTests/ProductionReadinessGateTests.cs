@@ -642,6 +642,31 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Flow_Should_Guard_Output_Directory_Cleanup()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-flow.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-SafeOutputDirectory",
+                     "filesystem root",
+                     "repository root",
+                     "clearly named for production-evidence artifacts",
+                     "Remove-Item -LiteralPath $bundleDirectory -Recurse -Force",
+                     "production evidence handoff package archive flow output directory"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("production-evidence", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-029`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

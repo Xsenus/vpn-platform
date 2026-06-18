@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.144.0 - 2026-06-18
+
+Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow-safety`.
+
+### Changed
+
+- `scripts/test-production-evidence-handoff-package-archive-flow.ps1` теперь проверяет output directory перед рекурсивной очисткой.
+- Flow запрещает корень файловой системы, корень репозитория и папку без явного `production-evidence` в имени.
+
+### Added
+
+- Production readiness gate документация описывает безопасный шаблон output directory для локальных и CI evidence-проверок.
+- Roadmap получил пункт `P11-ACC-029` для защиты `-Force` в end-to-end flow.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 23/23.
+- Guarded production evidence handoff package archive flow smoke: OK.
+- Backend full suite: 530/530.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Safety guard не меняет формат evidence artifacts; он защищает только выбор директории для перезаписи при `-Force`.
+
 ## 0.143.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-evidence-handoff-package-archive-flow`.

@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `529/529`.
+- Backend full suite: `530/530`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-flow`, версия `0.143.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP, `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP, `test-production-evidence-handoff-package-archive-validator.ps1` покрывает tamper-сценарии, а `test-production-evidence-handoff-package-archive-flow.ps1` выполняет всю локальную evidence цепочку одной командой. Live VPS/staging evidence все еще требуется.
+- Latest "Что нового": `2026-06-18-production-evidence-handoff-package-archive-flow-safety`, версия `0.144.0`; production readiness gate агрегирует полный пакет evidence reports, manifest/archive validators сверяют SHA256, receipt/checklist/package validators проверяют handoff, `new-production-evidence-handoff-package-archive.ps1` упаковывает проверенный handoff package в единый ZIP, `validate-production-evidence-handoff-package-archive.ps1` проверяет финальный ZIP, `test-production-evidence-handoff-package-archive-validator.ps1` покрывает tamper-сценарии, а `test-production-evidence-handoff-package-archive-flow.ps1` выполняет всю локальную evidence цепочку одной командой и защищает рекурсивную очистку output-папки. Live VPS/staging evidence все еще требуется.
 
 ## Команды проверки
 

@@ -2,6 +2,53 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-18: production evidence handoff package archive flow safety
+
+Что проверялось:
+
+- `scripts/test-production-evidence-handoff-package-archive-flow.ps1` проверяет output directory перед рекурсивной очисткой.
+- Flow запрещает корень файловой системы, корень репозитория и папку без явного `production-evidence` в имени.
+- Раздел "Что нового" получил релиз `2026-06-18-production-evidence-handoff-package-archive-flow-safety`, версия `0.144.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-flow.ps1 -OutputDirectory tmp\production-evidence-handoff-package-archive-flow-safety-test -Force
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-restore
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release --no-restore
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -ApiPort 18102 -PublicPort 5183 -CabinetPort 5184 -AdminPort 5185
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1
+git diff --check
+```
+
+Результат:
+
+- Guarded production evidence handoff package archive flow smoke: OK.
+- Targeted release/docs suite: OK.
+- Backend full suite: `530/530`.
+- API build: OK.
+- TelegramBot build: OK.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Frontend build: OK.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных файлов: U+FFFD не найден.
+- Fresh local SQLite smoke: OK, latest `2026-06-18-production-evidence-handoff-package-archive-flow-safety`.
+- Local VPS smoke dry-run: OK, latest `2026-06-18-production-evidence-handoff-package-archive-flow-safety`.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-18: production evidence handoff package archive end-to-end flow
 
 Что проверялось:

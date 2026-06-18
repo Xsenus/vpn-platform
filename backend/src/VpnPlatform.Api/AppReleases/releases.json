@@ -3528,5 +3528,28 @@
         "text": "Команда снижает риск ручных ошибок в длинной последовательности production evidence handoff проверок."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-flow-safety",
+    "version": "0.144.0",
+    "releasedAt": "2026-06-18T15:11:00+07:00",
+    "title": "Безопасный output для handoff package archive flow",
+    "summary": "End-to-end flow для production evidence handoff package archive получил защиту рекурсивной очистки output-папки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-flow.ps1` теперь проверяет output path перед удалением и пересозданием директории."
+      },
+      {
+        "type": "important",
+        "text": "Flow не позволит использовать корень файловой системы, корень репозитория или папку без явного `production-evidence` в имени."
+      },
+      {
+        "type": "new",
+        "text": "Roadmap и runbook фиксируют безопасный шаблон output directory для локальных и CI evidence-проверок."
+      }
+    ]
   }
 ]

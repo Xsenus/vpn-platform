@@ -27,6 +27,36 @@ function Get-FileSha256 {
     return (Get-FileHash -LiteralPath $PathValue -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+function Assert-SafeOutputDirectory {
+    param(
+        [string]$PathValue,
+        [string]$RepositoryRoot
+    )
+
+    $fullPath = [System.IO.Path]::GetFullPath($PathValue).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar)
+    $repoPath = [System.IO.Path]::GetFullPath($RepositoryRoot).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar)
+    $volumeRoot = [System.IO.Path]::GetPathRoot($fullPath).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar)
+    $leafName = Split-Path -Leaf $fullPath
+
+    if ([string]::Equals($fullPath, $volumeRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Production evidence handoff package archive flow output directory must not be a filesystem root: $fullPath"
+    }
+
+    if ([string]::Equals($fullPath, $repoPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Production evidence handoff package archive flow output directory must not be the repository root: $fullPath"
+    }
+
+    if ($leafName -notlike "*production-evidence*") {
+        throw "Production evidence handoff package archive flow output directory must be clearly named for production-evidence artifacts: $fullPath"
+    }
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $bundleDirectory = if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     Join-Path $repoRoot "tmp/production-evidence-handoff-package-archive-flow-test"
@@ -34,6 +64,8 @@ $bundleDirectory = if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 else {
     [System.IO.Path]::GetFullPath($OutputDirectory)
 }
+
+Assert-SafeOutputDirectory -PathValue $bundleDirectory -RepositoryRoot $repoRoot
 
 if ((Test-Path -LiteralPath $bundleDirectory) -and -not $Force) {
     throw "Production evidence handoff package archive flow output directory already exists. Pass -Force to overwrite: $bundleDirectory"

@@ -227,6 +227,8 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handof
 
 Flow harness создает evidence bundle, summary, manifest, production evidence ZIP, handoff receipt, checklist, package, финальный handoff package ZIP и сразу запускает archive validator regression. Это снижает риск ошибок в ручной последовательности команд при локальной проверке и CI.
 
+При `-Force` flow harness удаляет и пересоздает `OutputDirectory`, поэтому команда защищена fail-closed проверкой: путь не может быть корнем файловой системы, корнем репозитория и должен быть явно назван под `production-evidence` artifacts. Для CI используйте отдельный каталог вида `tmp\production-evidence-...`.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
