@@ -33,8 +33,8 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `509/509`.
-- [x] `STATE-002` Frontend test suite проходит: `65/65`.
+- [x] `STATE-001` Backend test suite проходит: `510/510`.
+- [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `509/509`, frontend `65/65`, browser console smoke `9/9`, latest release `2026-06-14-vpn-live-smoke-report`, версия `0.123.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `510/510`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-evidence-bundle-gate`, версия `0.124.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 2/2, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `509/509`, frontend tests `65/65`, latest "Что нового" `2026-06-14-vpn-live-smoke-report`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 3/3, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `510/510`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-evidence-bundle-gate`.
 
 ## P0. Блокеры production-запуска
 
@@ -728,6 +728,11 @@ git diff --check
   - Что сделать: добавить fail-closed команду, которая не позволит считать проект production-ready без реального staging/VPS smoke report и закрытых P0/P11/STATE blockers.
   - Что сделано: добавлен `scripts/assert-production-readiness.ps1`, документ `docs/production-readiness-gate.md` и guard `ProductionReadinessGateTests`. Скрипт запускает `validate-staging-smoke-report.ps1 -RequireAllPassed`, затем проверяет `docs/PRODUCT_COMPLETION_ROADMAP.md` и `docs/release-decision.md`; если остаются открытые live-блокеры или решение `staging-ready baseline`, команда падает с `Production readiness blocked`.
   - Доказательство: `ProductionReadinessGateTests` 2/2, fail-closed запуск на текущем шаблоне staging smoke report, backend full suite `486/486`, latest "Что нового" `2026-06-14-production-readiness-gate`, версия `0.112.0`.
+
+- [x] `P11-ACC-009` Production evidence bundle gate. 2026-06-18.
+  - Что сделать: усилить production readiness gate так, чтобы он требовал полный пакет evidence: staging/VPS, платежные провайдеры, админка VPS и live VPN/3x-ui.
+  - Что сделано: `scripts/assert-production-readiness.ps1` принимает `PaymentProviderReportPath`, `AdminVpsReportPath`, `VpnLiveReportPath`, запускает все профильные валидаторы с `-RequireAllPassed` и включает пути отчетов в summary/blocking payload. Дополнительно закрыт frontend audit до `0 vulnerabilities`, а Playwright webServer helper стал устойчив к hoisted Vite workspace-зависимостям.
+  - Доказательство: `ProductionReadinessGateTests` 3/3, expected fail-closed `assert-production-readiness.ps1` на текущих blocked templates, latest "Что нового" `2026-06-18-production-evidence-bundle-gate`, версия `0.124.0`.
 
 ## Журнал проверок
 

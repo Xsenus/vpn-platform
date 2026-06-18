@@ -17,6 +17,7 @@
 - [x] Payment provider smoke report template, generator и validator готовы для всех web-провайдеров, но реальные кабинеты еще нужно пройти.
 - [x] Admin VPS smoke report template, generator и validator готовы для проверки всех разделов админки, но реальный VPS admin smoke еще нужно пройти.
 - [x] VPN live smoke report template, generator и validator готовы для 3x-ui/inbound/node проверки, но реальную 3x-ui выдачу еще нужно пройти.
+- [x] Production readiness gate требует полный пакет evidence reports: staging/VPS, платежи, админка VPS и live VPN/3x-ui.
 - [ ] Live-платежи всех провайдеров не подтверждены реальными кабинетами.
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
@@ -74,12 +75,13 @@
 - [x] Сгенерировать безопасный payment provider smoke report draft через `scripts/new-payment-provider-smoke-report.ps1`.
 - [x] Подготовить безопасный admin VPS smoke report через `docs/admin-vps-smoke-report.template.json` и `scripts/new-admin-vps-smoke-report.ps1`.
 - [x] Подготовить безопасный VPN live smoke report через `docs/vpn-live-smoke-report.template.json` и `scripts/new-vpn-live-smoke-report.ps1`.
+- [x] Усилить production readiness gate полным evidence bundle через `scripts/assert-production-readiness.ps1`.
 - [ ] Заполнить staging/VPS smoke report без секретов, cookies и приватных headers.
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `509/509`.
-- [x] Frontend unit tests: `65/65`.
+- [x] Backend full suite: `510/510`.
+- [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -88,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-14-vpn-live-smoke-report`, версия `0.123.0`.
+- [x] Latest "Что нового": `2026-06-18-production-evidence-bundle-gate`, версия `0.124.0`.
 
 ## Как вести дальше
 

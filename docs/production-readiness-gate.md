@@ -7,6 +7,9 @@
 Команда `scripts/assert-production-readiness.ps1` выполняет две группы проверок:
 
 - запускает `scripts/validate-staging-smoke-report.ps1 -RequireAllPassed`, поэтому все обязательные smoke-пункты должны быть `passed`, а отчет не должен содержать секреты, cookies, `.env`, auth headers, private headers, private keys, provider tokens, client secrets или API keys;
+- запускает `scripts/validate-payment-provider-smoke-report.ps1 -RequireAllPassed`, поэтому YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe и PayPal должны иметь passed evidence;
+- запускает `scripts/validate-admin-vps-smoke-report.ps1 -RequireAllPassed`, поэтому вход в админку на VPS, отсутствие JS/API ошибок и все разделы админки должны быть подтверждены;
+- запускает `scripts/validate-vpn-live-smoke-report.ps1 -RequireAllPassed`, поэтому реальная 3x-ui/x-ui панель, inbound, VPN node, заказ, webhook, подписка, клиент, URI/QR и fail-closed поведение должны быть подтверждены;
 - читает `docs/PRODUCT_COMPLETION_ROADMAP.md` и `docs/release-decision.md`, затем блокирует production-ready, если остаются открытые `STATE-011`, `STATE-012`, `STATE-013`, `P0-*`, `P11-ACC-002`, `BUG-001`, `BUG-002`, `BUG-003` или решение все еще равно `staging-ready baseline`.
 
 Это не заменяет реальные live-проверки. Gate нужен, чтобы не забыть зафиксировать доказательства и не выдать локально зеленый проект за production-ready.
@@ -21,11 +24,24 @@
 powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
 ```
 
+Если отчеты лежат не в стандартных местах, передайте их явно:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 `
+  -ReportPath tmp\staging-smoke-report.json `
+  -PaymentProviderReportPath tmp\payment-provider-smoke-report.json `
+  -AdminVpsReportPath tmp\admin-vps-smoke-report.json `
+  -VpnLiveReportPath tmp\vpn-live-smoke-report.json
+```
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
 
-- smoke report валиден и все checks имеют статус `passed`;
+- staging/VPS smoke report валиден и все checks имеют статус `passed`;
+- payment provider smoke report валиден и все провайдеры имеют статус `passed`;
+- admin VPS smoke report валиден, все общие gates истинные и все разделы имеют статус `passed`;
+- VPN live smoke report валиден, все top-level gates истинные и все checks имеют статус `passed`;
 - секреты, cookies, `.env`, auth headers, private headers, provider keys, client secrets и API keys не попали в отчет;
 - roadmap обновлен: live-блокеры закрыты с доказательствами;
 - `docs/release-decision.md` больше не содержит решение `staging-ready baseline, не production-ready`.

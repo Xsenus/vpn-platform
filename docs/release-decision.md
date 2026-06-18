@@ -22,17 +22,17 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `509/509`.
+- Backend full suite: `510/510`.
 - API Release build: OK.
-- Frontend unit tests: `65/65`.
+- Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `9/9`.
 - Actual PowerShell secret scan: OK.
-- High-severity frontend audit: OK; остаются 2 moderate advisory по `react-router`.
+- Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-14-vpn-live-smoke-report`, версия `0.123.0`; для VPN/3x-ui live smoke добавлены безопасный шаблон, генератор и валидатор, для проверки админки на VPS добавлены smoke-шаблон, генератор и валидатор, для всех web-провайдеров добавлены smoke-шаблон, генератор и валидатор, staging smoke report можно генерировать из шаблона, Telegram Stars включается для продаж только через явный `invoice-flow`, Webhook Telegram закреплен за основным API, синхронизированы roadmap, README, final runbook, release decision, changelog и TEST_RESULTS, но live VPS/staging evidence еще требуется.
+- Latest "Что нового": `2026-06-18-production-evidence-bundle-gate`, версия `0.124.0`; production readiness gate теперь требует полный пакет evidence reports: staging/VPS, платежные провайдеры, админка VPS и live VPN/3x-ui. Для VPN/3x-ui live smoke, админки на VPS и web-провайдеров есть безопасные шаблоны, генераторы и валидаторы, но live VPS/staging evidence еще требуется.
 
 ## Команды проверки
 

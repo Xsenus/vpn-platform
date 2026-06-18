@@ -16,7 +16,13 @@ public class ProductionReadinessGateTests
         foreach (var expected in new[]
                  {
                      "validate-staging-smoke-report.ps1",
+                     "validate-payment-provider-smoke-report.ps1",
+                     "validate-admin-vps-smoke-report.ps1",
+                     "validate-vpn-live-smoke-report.ps1",
                      "-RequireAllPassed",
+                     "PaymentProviderReportPath",
+                     "AdminVpsReportPath",
+                     "VpnLiveReportPath",
                      "Production readiness blocked",
                      "[ ] `STATE-011`",
                      "[ ] `STATE-012`",
@@ -34,8 +40,41 @@ public class ProductionReadinessGateTests
         Assert.Contains("P11-ACC-008", docs, StringComparison.Ordinal);
         Assert.Contains("fail-closed", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scripts\\assert-production-readiness.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("PaymentProviderReportPath", docs, StringComparison.Ordinal);
+        Assert.Contains("AdminVpsReportPath", docs, StringComparison.Ordinal);
+        Assert.Contains("VpnLiveReportPath", docs, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-008`", roadmap, StringComparison.Ordinal);
         Assert.Contains("assert-production-readiness.ps1", releaseDecision, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Production_Readiness_Gate_Should_Require_All_Evidence_Reports()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "assert-production-readiness.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "docs/payment-provider-smoke-report.template.json",
+                     "docs/admin-vps-smoke-report.template.json",
+                     "docs/vpn-live-smoke-report.template.json",
+                     "$paymentProviderValidator -ReportPath $paymentProviderReportFullPath -RequireAllPassed",
+                     "$adminVpsValidator -ReportPath $adminVpsReportFullPath -RequireAllPassed",
+                     "$vpnLiveValidator -ReportPath $vpnLiveReportFullPath -RequireAllPassed",
+                     "paymentProviderReportPath",
+                     "adminVpsReportPath",
+                     "vpnLiveReportPath"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("payment provider smoke report", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("admin VPS smoke report", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VPN live smoke report", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-009`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -76,9 +76,9 @@ git diff --check
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
 - Backend full suite: 464/464.
-- Frontend tests: 65/65.
+- Frontend tests: 66/66.
 - Frontend typecheck/build: OK.
-- Frontend high-severity audit: OK; остаются 2 moderate advisory по `react-router`.
+- Frontend audit: OK, `0 vulnerabilities`.
 
 ## Ограничения
 

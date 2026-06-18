@@ -3060,5 +3060,36 @@
         "text": "Реальные `P0-VPN-001` ... `P0-VPN-005` остаются открытыми, пока отчет не заполнен после проверки настоящей 3x-ui панели и VPN node."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-bundle-gate",
+    "version": "0.124.0",
+    "releasedAt": "2026-06-18T10:00:00+07:00",
+    "title": "Production gate требует полный пакет evidence",
+    "summary": "Production readiness gate теперь проверяет не только общий staging/VPS отчет, но и отдельные отчеты по платежам, админке VPS и live VPN/3x-ui.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/assert-production-readiness.ps1` запускает четыре валидатора с `-RequireAllPassed`: staging/VPS, платежные провайдеры, admin VPS и live VPN."
+      },
+      {
+        "type": "new",
+        "text": "Добавлены параметры `PaymentProviderReportPath`, `AdminVpsReportPath` и `VpnLiveReportPath` для явной передачи заполненных production reports."
+      },
+      {
+        "type": "fixed",
+        "text": "`frontend/package-lock.json` обновлен через `npm audit fix`; текущий frontend audit проходит с `0 vulnerabilities`."
+      },
+      {
+        "type": "fixed",
+        "text": "`frontend/scripts/playwright-webservers.mjs` теперь ищет Vite CLI в корневом workspace и fallback app workspace, поэтому console E2E проходит после hoisting зависимостей."
+      },
+      {
+        "type": "important",
+        "text": "Production-ready остается заблокированным, пока все evidence reports не заполнены безопасными passed-доказательствами."
+      }
+    ]
   }
 ]

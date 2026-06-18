@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -23,7 +24,7 @@ const servers = [
 ]
 
 const children = servers.map((server) => {
-  const viteCli = resolve(root, server.appDir, 'node_modules/vite/bin/vite.js')
+  const viteCli = resolveViteCli(server.appDir)
   const child = spawn(
     process.execPath,
     [viteCli, server.appDir, '--host', '127.0.0.1', '--port', server.port, '--strictPort'],
@@ -64,3 +65,17 @@ function shutdown(exitCode = 0) {
 
 process.on('SIGINT', () => shutdown(0))
 process.on('SIGTERM', () => shutdown(0))
+
+function resolveViteCli(appDir) {
+  const candidates = [
+    resolve(root, 'node_modules/vite/bin/vite.js'),
+    resolve(root, appDir, 'node_modules/vite/bin/vite.js')
+  ]
+
+  const found = candidates.find((candidate) => existsSync(candidate))
+  if (!found) {
+    throw new Error(`Vite CLI was not found. Checked: ${candidates.join(', ')}`)
+  }
+
+  return found
+}

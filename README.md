@@ -208,15 +208,15 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `509/509` unit tests;
+- backend на .NET 9: `510/510` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `65/65`;
+- frontend unit tests: `66/66`;
 - frontend typecheck и production build: OK;
-- frontend audit по high severity: OK, остаются 2 moderate advisory по `react-router`;
+- frontend audit: OK, `0 vulnerabilities`;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-14-vpn-live-smoke-report`, версия `0.123.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-18-production-evidence-bundle-gate`, версия `0.124.0`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

@@ -2,6 +2,50 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-18: production evidence bundle gate
+
+Что проверялось:
+
+- `scripts/assert-production-readiness.ps1` требует полный пакет evidence reports.
+- Gate запускает `validate-staging-smoke-report.ps1`, `validate-payment-provider-smoke-report.ps1`, `validate-admin-vps-smoke-report.ps1` и `validate-vpn-live-smoke-report.ps1` с `-RequireAllPassed`.
+- Текущие blocked templates ожидаемо не проходят production-ready gate.
+- Playwright webServer helper проверен на hoisted Vite workspace-зависимости после `npm audit fix`.
+- Раздел "Что нового" получил релиз `2026-06-18-production-evidence-bundle-gate`, версия `0.124.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\assert-production-readiness.ps1 -ReportPath docs\staging-smoke-report.template.json
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|VpnLiveSmokeReportTests|AdminVpsSmokeReportTests|PaymentProviderSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+npm audit --audit-level=high --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+git diff --check
+```
+
+Результат:
+
+- Production evidence bundle gate на текущих blocked templates: expected failure.
+- `ProductionReadinessGateTests`: `3/3`.
+- Backend full suite: `510/510`.
+- API/TBot Release build: OK, предупреждений 0.
+- Frontend unit tests: `66/66`.
+- Frontend audit: `0 vulnerabilities`.
+- Browser console E2E: `9/9`.
+- Fresh local SQLite smoke: OK, latest `2026-06-18-production-evidence-bundle-gate`.
+- Local SQLite VPS smoke dry-run: OK.
+- Secret scan: 0 findings.
+- Encoding guard: OK.
+- Push не выполнялся.
+
 ## Проверка 2026-06-14: VPN live smoke report
 
 Что проверялось:

@@ -80,6 +80,15 @@ test('frontend package and CI keep the same mandatory commands', () => {
   assert.match(ciWorkflow, /npm audit --audit-level=high/)
 })
 
+test('playwright webserver helper supports hoisted Vite workspaces', () => {
+  const helper = readRepoFile('frontend', 'scripts', 'playwright-webservers.mjs')
+
+  assert.match(helper, /existsSync/)
+  assert.match(helper, /resolveViteCli/)
+  assert.match(helper, /root, 'node_modules\/vite\/bin\/vite\.js'/)
+  assert.match(helper, /appDir, 'node_modules\/vite\/bin\/vite\.js'/)
+})
+
 test('frontend validation documentation and roadmap expose current green count', () => {
   const docs = readRepoFile('docs', 'frontend-validation-gate.md')
   const roadmap = readRepoFile('docs', 'PRODUCT_COMPLETION_ROADMAP.md')
