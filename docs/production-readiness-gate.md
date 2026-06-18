@@ -77,6 +77,16 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-s
 
 Для финального production handoff добавьте `-RequireProductionReady`: валидатор потребует `production-ready`, четыре `passed` evidence reports и отсутствие roadmap blockers.
 
+Проверить весь каталог evidence bundle одной командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-bundle.ps1 `
+  -BundleDirectory tmp\production-evidence `
+  -RequireSummary
+```
+
+Для финального production handoff используйте `-RequireProductionReady`: bundle validator запустит строгие validators всех четырех reports и summary.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:

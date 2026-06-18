@@ -3183,5 +3183,28 @@
         "text": "Для финального handoff можно включить `-RequireProductionReady`: он пройдет только при четырех passed reports и отсутствии roadmap blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-bundle-validator",
+    "version": "0.129.0",
+    "releasedAt": "2026-06-18T12:15:00+07:00",
+    "title": "Валидатор полного production evidence bundle",
+    "summary": "Добавлена одна команда для проверки всего каталога production evidence: четыре отчета, summary и строгий production-ready режим.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-production-evidence-bundle.ps1` проверяет весь каталог evidence bundle и запускает validators всех обязательных reports."
+      },
+      {
+        "type": "improved",
+        "text": "Bundle validator поддерживает `-RequireSummary` и проверяет `production-readiness-summary.md/json` через отдельный summary validator."
+      },
+      {
+        "type": "important",
+        "text": "`-RequireProductionReady` включает строгий режим: все reports и summary должны быть production-ready, иначе handoff fail-closed."
+      }
+    ]
   }
 ]

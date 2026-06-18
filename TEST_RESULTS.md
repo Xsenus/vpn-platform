@@ -2,6 +2,52 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-18: production evidence bundle validator
+
+Что проверялось:
+
+- `scripts/validate-production-evidence-bundle.ps1` проверяет весь каталог production evidence bundle.
+- Bundle validator запускает validators для staging/VPS, payment providers, admin VPS, VPN live и production readiness summary.
+- Bundle validator поддерживает `-RequireSummary` и строгий `-RequireProductionReady`.
+- Раздел "Что нового" получил релиз `2026-06-18-production-evidence-bundle-validator`, версия `0.129.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-bundle.ps1 -OutputDirectory tmp\production-evidence-bundle-validator-test -ApiBaseUrl https://api.example.test -PublicWebUrl https://example.test -CabinetWebUrl https://example.test/cabinet -AdminWebUrl https://example.test/admin -X3uiPanelUrl https://x3ui.example.test -EnvironmentName staging -Operator local-test -RunProductionGate -Force
+powershell -ExecutionPolicy Bypass -File scripts\new-production-readiness-summary.ps1 -OutputPath tmp\production-evidence-bundle-validator-test\production-readiness-summary.md -ReportPath tmp\production-evidence-bundle-validator-test\staging-smoke-report.json -PaymentProviderReportPath tmp\production-evidence-bundle-validator-test\payment-provider-smoke-report.json -AdminVpsReportPath tmp\production-evidence-bundle-validator-test\admin-vps-smoke-report.json -VpnLiveReportPath tmp\production-evidence-bundle-validator-test\vpn-live-smoke-report.json -Force
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-bundle.ps1 -BundleDirectory tmp\production-evidence-bundle-validator-test -RequireSummary
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release
+dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm run e2e:console --prefix frontend
+npm audit --audit-level=high --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBaseUrl http://127.0.0.1:18102 -AdminEmail admin@local.test -AdminPassword LocalAdminPassword123! -AllowSandboxWebhook
+git diff --check
+```
+
+Результат:
+
+- Production evidence bundle validator: OK.
+- Bundle validation status: `valid` для generated drafts в non-production режиме.
+- `ProductionReadinessGateTests`: `8/8`.
+- Backend full suite: `515/515`.
+- API/TBot Release build: OK, предупреждений 0.
+- Frontend unit tests: `66/66`.
+- Frontend audit: `0 vulnerabilities`.
+- Browser console E2E: `9/9`.
+- Fresh local SQLite smoke: OK, latest `2026-06-18-production-evidence-bundle-validator`.
+- Local SQLite VPS smoke dry-run: OK.
+- Secret scan: 0 findings.
+- Encoding guard: OK.
+- Push не выполнялся.
+
 ## Проверка 2026-06-18: production readiness summary validator
 
 Что проверялось:
