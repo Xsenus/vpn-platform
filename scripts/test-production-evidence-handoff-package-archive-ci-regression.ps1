@@ -168,6 +168,10 @@ if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
         -SummaryPath $githubStepSummaryPath | Out-Null
 }
 
+& (Resolve-RepoPath "scripts/validate-production-evidence-handoff-package-archive-ci-regression-result.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath | Out-Null
+
 if ($WriteJson) {
     Write-Output $resultJson
 }

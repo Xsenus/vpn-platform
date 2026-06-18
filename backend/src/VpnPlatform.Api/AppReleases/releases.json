@@ -3762,5 +3762,28 @@
         "text": "Harness проверяет ошибки на неверном статусе, чужом release id, отсутствующем artifact path и неверном long-path статусе."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-18-production-evidence-handoff-package-archive-ci-result-validator",
+    "version": "0.154.0",
+    "releasedAt": "2026-06-18T17:10:00+07:00",
+    "title": "Validator для CI regression result",
+    "summary": "Итоговый production evidence handoff archive CI regression result теперь можно проверять отдельным standalone validator.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/validate-production-evidence-handoff-package-archive-ci-regression-result.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Основной CI wrapper запускает validator после финальной записи JSON/Markdown result artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Validator проверяет все вложенные regression statuses, `ciSummaryValidatorRegression`, Markdown-пару и обязательные artifact paths."
+      }
+    ]
   }
 ]

@@ -279,6 +279,15 @@ Wrapper запускает `scripts/validate-production-evidence-handoff-package
 
 Дополнительно wrapper запускает `scripts/test-production-evidence-handoff-package-archive-ci-summary-validator.ps1`. Regression harness портит JSON/Markdown summary и ожидает fail-closed ошибки для неверного статуса, чужого release id, отсутствующего artifact path и неверного long-path статуса. Итог записывается в поле `ciSummaryValidatorRegression` result JSON/Markdown.
 
+Финальный CI result artifact можно проверить отдельно:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-package-archive-ci-regression-result.ps1 `
+  -ResultJsonPath tmp\production-evidence-handoff-package-archive-ci-regression-test\production-evidence-handoff-package-archive-ci-regression-result.json
+```
+
+Этот валидатор сверяет общий статус, статусы всех вложенных regression harnesses, наличие `ciSummaryValidatorRegression`, обязательные failure-сценарии summary validator regression, Markdown-пару и пути к artifacts.
+
 На текущем состоянии проекта команда должна завершаться ошибкой: шаблон содержит `blocked`, а master roadmap честно держит открытыми live-платежи, реальный 3x-ui, VPS admin smoke и `P11-ACC-002`.
 
 После реального staging/VPS smoke команда сможет пройти только если одновременно выполнены условия:
