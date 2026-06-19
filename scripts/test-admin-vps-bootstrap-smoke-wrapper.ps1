@@ -62,6 +62,7 @@ function Invoke-BootstrapSmokeScenario {
     $smokeReportPath = Join-Path $scenarioPath "admin-vps-smoke-report.json"
     $preflightReportPath = Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"
     $bootstrapSmokeReportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-report.json"
+    $readinessReportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-readiness-report.json"
     $wrapperPath = Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke.ps1"
     $previous = @{}
 
@@ -80,6 +81,7 @@ function Invoke-BootstrapSmokeScenario {
             "-SmokeReportPath", $smokeReportPath,
             "-PreflightReportPath", $preflightReportPath,
             "-BootstrapSmokeReportPath", $bootstrapSmokeReportPath,
+            "-ReadinessReportPath", $readinessReportPath,
             "-EnvironmentName", "Local",
             "-Operator", "admin-vps-bootstrap-smoke-wrapper-regression",
             "-FrontendPath", "frontend"

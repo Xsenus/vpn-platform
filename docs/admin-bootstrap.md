@@ -53,6 +53,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
   -ApiBaseUrl https://api.example.test `
   -AdminWebUrl https://example.test/admin/ `
   -AdminEmail owner@example.com `
+  -ReadinessReportPath tmp\admin-vps-bootstrap-smoke-readiness-report.json `
   -BootstrapSmokeReportPath tmp\admin-vps-bootstrap-smoke-report.json `
   -EnvironmentName Production `
   -Operator operator-name `
@@ -71,6 +72,13 @@ Fail-closed regression wrapper-а проверяет `missing-password`, `missin
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+```
+
+Readiness gate перед reset-ом пишет sanitized `admin-vps-bootstrap-smoke-readiness-report.json` без пароля и connection string. Он должен пройти до `admin-bootstrap.ps1`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -ReportPath tmp\admin-vps-bootstrap-smoke-readiness-report.json -RequireReady
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
 ```
 
 После успешного bootstrap+smoke wrapper пишет sanitized `admin-vps-bootstrap-smoke-report.json`. Отдельная проверка report:

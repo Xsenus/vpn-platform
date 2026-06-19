@@ -72,6 +72,7 @@ public class AdminBootstrapCliScriptTests
                  {
                      "admin-bootstrap.ps1",
                      "admin-vps-smoke.ps1",
+                     "admin-vps-bootstrap-smoke-readiness.ps1",
                      "validate-admin-vps-bootstrap-smoke-report.ps1",
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "AdminBootstrap__Password",
@@ -86,7 +87,9 @@ public class AdminBootstrapCliScriptTests
                      "Password: [hidden]",
                      "Dry-run mode: admin VPS smoke was not started",
                      "BootstrapSmokeReportPath",
+                     "ReadinessReportPath",
                      "admin-vps-bootstrap-smoke-report.json",
+                     "admin-vps-bootstrap-smoke-readiness-report.json",
                      "Validated bootstrap smoke report",
                      "Admin VPS bootstrap+smoke flow completed"
                  })
@@ -121,6 +124,7 @@ public class AdminBootstrapCliScriptTests
                      "Database__UseEnsureCreatedForLocalSqlite",
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "BootstrapSmokeReportPath",
+                     "ReadinessReportPath",
                      "Assert-InWorkspace",
                      "Stop-ProcessTree",
                      "local admin vps bootstrap smoke ok"
@@ -173,6 +177,62 @@ public class AdminBootstrapCliScriptTests
     }
 
     [Fact]
+    public void Admin_Vps_Bootstrap_Smoke_Readiness_Should_Fail_Closed_Before_Reset()
+    {
+        var root = FindRepositoryRoot();
+        var readiness = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-bootstrap-smoke-readiness.ps1"));
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-bootstrap-smoke-readiness-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-bootstrap-smoke-readiness.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-bootstrap-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "readyForBootstrapSmoke",
+                     "passwordEnvPresent",
+                     "passwordLengthOk",
+                     "connectionStringPresent",
+                     "confirmBootstrapReset",
+                     "local-or-confirm-reset",
+                     "connection-string",
+                     "ReadinessReportPath",
+                     "admin-vps-bootstrap-smoke-readiness-report.json",
+                     "admin vps bootstrap smoke readiness report valid",
+                     "contains forbidden secret marker",
+                     "WriteAllText",
+                     "UTF8Encoding"
+                 })
+        {
+            Assert.Contains(expected, readiness + validator + wrapper, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "local-ready",
+                     "missing-password",
+                     "missing-confirm-bootstrap-reset",
+                     "missing-connection-string",
+                     "leaked password",
+                     "leaked connection string",
+                     "UTF-8 BOM",
+                     "admin vps bootstrap smoke readiness regression passed"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.True(
+            wrapper.IndexOf("& $readinessScript", StringComparison.OrdinalIgnoreCase)
+            < wrapper.IndexOf("& $bootstrapScript", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("[string]$Password", readiness, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host \"Password: $password", readiness, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-admin-vps-bootstrap-smoke-readiness.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001F`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Bootstrap_Smoke_Wrapper_Regression_Should_Fail_Closed_Before_Smoke()
     {
         var root = FindRepositoryRoot();
@@ -192,6 +252,7 @@ public class AdminBootstrapCliScriptTests
                      "missing-connection-string",
                      "dry-run-no-smoke",
                      "admin-vps-bootstrap-smoke-report.json",
+                     "admin-vps-bootstrap-smoke-readiness-report.json",
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
                      "Pass -ConfirmBootstrapReset",

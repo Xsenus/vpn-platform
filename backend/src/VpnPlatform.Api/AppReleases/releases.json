@@ -4728,5 +4728,28 @@
         "text": "`scripts/local-admin-vps-bootstrap-smoke.ps1` проверяет этот report на SQLite, но live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-bootstrap-smoke-readiness",
+    "version": "0.196.0",
+    "releasedAt": "2026-06-19T00:40:00+07:00",
+    "title": "Readiness bootstrap smoke админки VPS",
+    "summary": "Bootstrap+smoke wrapper админки VPS теперь fail-closed проверяет live-параметры до reset-а и пишет sanitized readiness report без секретов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/admin-vps-bootstrap-smoke-readiness.ps1` проверяет live URL, admin email, provider, password env, reset confirmation и connection string до запуска `admin-bootstrap.ps1`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` проверяет sanitized readiness report, обязательные checks и отсутствие secret markers."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` покрывает fail-closed сценарии, а live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS evidence."
+      }
+    ]
   }
 ]

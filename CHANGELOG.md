@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.196.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-bootstrap-smoke-readiness`.
+
+### Added
+- Добавлен `scripts/admin-vps-bootstrap-smoke-readiness.ps1` для fail-closed проверки параметров live bootstrap+smoke до reset-а.
+- Добавлен `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` для проверки sanitized readiness report.
+- Добавлен `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` с regression-сценариями `local-ready`, `missing-password`, `missing-confirm-bootstrap-reset` и `missing-connection-string`.
+
+### Changed
+- `scripts/admin-vps-bootstrap-smoke.ps1` теперь запускает readiness gate до `admin-bootstrap.ps1` и пишет `admin-vps-bootstrap-smoke-readiness-report.json` без пароля и connection string.
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` теперь доказывает readiness/bootstrap/smoke цепочку на временной SQLite-БД.
+
+### Verified
+- `AdminBootstrapCliScriptTests`: 8/8.
+- Admin VPS bootstrap smoke readiness regression: OK.
+- Local CLI bootstrap admin smoke на SQLite: OK, readiness report valid, bootstrap smoke report valid, preflight report valid, Playwright `1/1`, report validator `16 passed`, evidence validator OK.
+- Backend full suite: 588/588.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.195.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-bootstrap-smoke-report`.

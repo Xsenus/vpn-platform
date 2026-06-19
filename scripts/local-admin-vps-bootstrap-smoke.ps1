@@ -107,6 +107,7 @@ $keyPath = Join-Path $tmp "keys"
 $reportRelativePath = "tmp/local-admin-vps-bootstrap-smoke/admin-vps-smoke-report.json"
 $preflightReportRelativePath = "tmp/local-admin-vps-bootstrap-smoke/admin-vps-smoke-preflight-report.json"
 $bootstrapSmokeReportRelativePath = "tmp/local-admin-vps-bootstrap-smoke/admin-vps-bootstrap-smoke-report.json"
+$readinessReportRelativePath = "tmp/local-admin-vps-bootstrap-smoke/admin-vps-bootstrap-smoke-readiness-report.json"
 $password = "LocalBootstrapSmokePassword123!"
 $previousEnv = @{}
 $apiProcess = $null
@@ -177,6 +178,7 @@ try {
         -SmokeReportPath $reportRelativePath `
         -PreflightReportPath $preflightReportRelativePath `
         -BootstrapSmokeReportPath $bootstrapSmokeReportRelativePath `
+        -ReadinessReportPath $readinessReportRelativePath `
         -EnvironmentName "Local" `
         -Operator "local-admin-vps-bootstrap-smoke" `
         -LocalSqlite

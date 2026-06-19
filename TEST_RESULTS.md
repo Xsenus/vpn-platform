@@ -2,6 +2,53 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS bootstrap smoke readiness
+
+Что проверялось:
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` пишет sanitized readiness report до `admin-bootstrap.ps1`.
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -RequireReady` проверяет URL, email, provider, readiness flags, `passwordEnvPresent`, `passwordLengthOk`, `confirmBootstrapReset`, `connectionStringPresent`, обязательные checks и absence of secret markers.
+- `scripts/admin-vps-bootstrap-smoke.ps1` запускает readiness gate перед reset-ом и не пишет пароль/connection string в report.
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` проверяет readiness/bootstrap/smoke wrapper на временной SQLite-БД с `AdminBootstrap__Enabled=false` после начального CLI bootstrap.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-bootstrap-smoke-readiness`, версия `0.196.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -ReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-readiness-report.json -RequireReady
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-report.ps1 -ReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-report.json -RequirePassed
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+changed/new files strict UTF-8 without BOM check
+```
+
+Результат:
+
+- Admin VPS bootstrap smoke readiness regression: OK.
+- `AdminBootstrapCliScriptTests`: `8/8`.
+- Targeted release/docs suite: `38/38`.
+- Local CLI bootstrap admin smoke на SQLite: OK, readiness report valid, readiness/bootstrap reports UTF-8 without BOM, bootstrap smoke report valid, preflight report valid, Playwright `1/1`, report validator `16 passed`, evidence validator OK.
+- Backend full suite: `588/588`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings, 555 files scanned.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM, 23 files.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS bootstrap smoke report
 
 Что проверялось:

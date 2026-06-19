@@ -147,6 +147,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
   -ApiBaseUrl https://api.example.test `
   -AdminWebUrl https://example.test/admin/ `
   -AdminEmail owner@example.com `
+  -ReadinessReportPath tmp\admin-vps-bootstrap-smoke-readiness-report.json `
   -BootstrapSmokeReportPath tmp\admin-vps-bootstrap-smoke-report.json `
   -EnvironmentName Production `
   -Operator operator-name `
@@ -165,6 +166,13 @@ Regression wrapper-а проверяет fail-closed сценарии до за�
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+```
+
+Перед reset-ом wrapper запускает readiness gate и пишет sanitized report без пароля и connection string:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -ReportPath tmp\admin-vps-bootstrap-smoke-readiness-report.json -RequireReady
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
 ```
 
 Успешный bootstrap+smoke проход дополнительно пишет sanitized report и проверяет его через validator:

@@ -12,6 +12,7 @@ param(
     [string]$SmokeReportPath = "tmp/admin-vps-smoke-report.json",
     [string]$PreflightReportPath = "tmp/admin-vps-smoke-preflight-report.json",
     [string]$BootstrapSmokeReportPath = "tmp/admin-vps-bootstrap-smoke-report.json",
+    [string]$ReadinessReportPath = "tmp/admin-vps-bootstrap-smoke-readiness-report.json",
     [string]$EnvironmentName = $(if ($env:ADMIN_VPS_SMOKE_ENVIRONMENT) { $env:ADMIN_VPS_SMOKE_ENVIRONMENT } else { "Production" }),
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
@@ -27,6 +28,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $bootstrapScript = Join-Path $repoRoot "scripts/admin-bootstrap.ps1"
 $smokeScript = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"
+$readinessScript = Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke-readiness.ps1"
 $bootstrapSmokeReportValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-report.ps1"
 
 function Set-ProcessEnv {
@@ -44,7 +46,7 @@ function Set-ProcessEnv {
     }
 }
 
-foreach ($requiredScript in @($bootstrapScript, $smokeScript, $bootstrapSmokeReportValidatorScript)) {
+foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
     }
@@ -89,7 +91,44 @@ try {
     Write-Host "Smoke report path: $SmokeReportPath"
     Write-Host "Preflight report path: $PreflightReportPath"
     Write-Host "Bootstrap smoke report path: $BootstrapSmokeReportPath"
+    Write-Host "Readiness report path: $ReadinessReportPath"
     Write-Host "Bootstrap reset confirmed: $ConfirmBootstrapReset"
+
+    $readinessArgs = @{
+        ApiBaseUrl = $ApiBaseUrl
+        AdminWebUrl = $AdminWebUrl
+        AdminEmail = $AdminEmail
+        AdminPasswordEnvName = $AdminPasswordEnvName
+        Provider = $Provider
+        ProjectPath = $ProjectPath
+        SmokeReportPath = $SmokeReportPath
+        PreflightReportPath = $PreflightReportPath
+        BootstrapSmokeReportPath = $BootstrapSmokeReportPath
+        ReadinessReportPath = $ReadinessReportPath
+        EnvironmentName = $EnvironmentName
+        Operator = $Operator
+        ReleaseId = $ReleaseId
+        FrontendPath = $FrontendPath
+        RequireReady = $true
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ConnectionString)) {
+        $readinessArgs["ConnectionString"] = $ConnectionString
+    }
+
+    if ($LocalSqlite) {
+        $readinessArgs["LocalSqlite"] = $true
+    }
+
+    if ($ApplyMigrations) {
+        $readinessArgs["ApplyMigrations"] = $true
+    }
+
+    if ($ConfirmBootstrapReset) {
+        $readinessArgs["ConfirmBootstrapReset"] = $true
+    }
+
+    & $readinessScript @readinessArgs | Out-Host
 
     $bootstrapArgs = @{
         EnvironmentName = $EnvironmentName
