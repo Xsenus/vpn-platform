@@ -90,6 +90,13 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-art
 ```
 
 Aggregate запускает readiness assertion workflow guard, readiness assertion fail-closed validator, production evidence workflow guard и production evidence fail-closed validator. В GitHub Actions он выполняется step `Guard production CI workflow artifacts contracts` сразу после checkout в backend job, чтобы сломанный artifact contract падал до тяжелых сборок и тестов.
+Fail-closed regression для aggregate guard:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson
+```
+
+Harness проверяет happy path aggregate guard, затем портит копию workflow и ожидает ошибки для `missing-readiness-guard-step`, `missing-readiness-assertion-log-artifact`, `missing-production-evidence-result-artifact` и `missing-if-no-files-found-error`.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-regression-result.ps1 `

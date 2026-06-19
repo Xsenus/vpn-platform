@@ -4199,5 +4199,28 @@
         "text": "GitHub Actions backend job запускает `Guard production CI workflow artifacts contracts` сразу после checkout, чтобы broken artifact contract падал до тяжелых сборок и тестов."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression",
+    "version": "0.173.0",
+    "releasedAt": "2026-06-18T20:50:00+07:00",
+    "title": "Regression для aggregate production CI workflow artifacts guard",
+    "summary": "Aggregate guard production CI workflow artifacts теперь покрыт fail-closed regression harness на tampered CI workflow.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-ci-workflow-artifacts-guards-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Harness проверяет happy path aggregate guard и ожидает ошибки для readiness assertion и production evidence artifact contract tamper-сценариев."
+      },
+      {
+        "type": "important",
+        "text": "`ProductionReadinessGateTests` закрепляет наличие aggregate regression harness и связь с roadmap `P11-ACC-058`."
+      }
+    ]
   }
 ]

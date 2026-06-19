@@ -597,6 +597,32 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Ci_Workflow_Artifacts_Guards_Aggregate_Should_Have_Fail_Closed_Regression()
+    {
+        var root = FindRepositoryRoot();
+        var harness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-ci-workflow-artifacts-guards-validator.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "test-production-ci-workflow-artifacts-guards.ps1",
+                     "missing-readiness-guard-step",
+                     "missing-readiness-assertion-log-artifact",
+                     "missing-production-evidence-result-artifact",
+                     "missing-if-no-files-found-error",
+                     "testedFailures",
+                     "production CI workflow artifacts aggregate guard validator passed"
+                 })
+        {
+            Assert.Contains(expected, harness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-ci-workflow-artifacts-guards-validator.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-058`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();
