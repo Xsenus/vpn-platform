@@ -4038,5 +4038,28 @@
         "text": "Harness проверяет `missing-required-artifact`, `bad-output-directory`, `bad-assertion-log-path`, `bad-result-markdown` и `bad-step-summary`; CI result/summary validators проверяют новый regression-блок."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-summary-artifacts-regression",
+    "version": "0.166.0",
+    "releasedAt": "2026-06-18T19:40:00+07:00",
+    "title": "Regression для строки artifacts в CI summary",
+    "summary": "Summary validator regression теперь отдельно проверяет строку `CI artifacts validator regression` в readiness assertion CI summary.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-production-readiness-assertion-ci-summary-validator.ps1` проверяет `bad-ci-artifacts-validator-regression`."
+      },
+      {
+        "type": "improved",
+        "text": "Readiness assertion CI wrapper запускает artifacts validator regression до summary validator regression, чтобы summary harness проверял новую строку."
+      },
+      {
+        "type": "important",
+        "text": "`validate-production-readiness-assertion-ci-regression-result.ps1` требует failure-case `bad-ci-artifacts-validator-regression` внутри `ciSummaryValidatorRegression`."
+      }
+    ]
   }
 ]

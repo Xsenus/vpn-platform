@@ -130,7 +130,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-asser
   -WriteJson
 ```
 
-Regression harness копирует валидный bundle во временные директории и проверяет tamper-сценарии `missing-required-artifact`, `bad-output-directory`, `bad-assertion-log-path`, `bad-result-markdown` и `bad-step-summary`. Wrapper `test-production-readiness-assertion-ci-regression.ps1` запускает harness автоматически и пишет `ciArtifactsValidatorRegression` в итоговый JSON/Markdown.
+Regression harness копирует валидный bundle во временные директории и проверяет tamper-сценарии `missing-required-artifact`, `bad-output-directory`, `bad-assertion-log-path`, `bad-result-markdown` и `bad-step-summary`. Wrapper `test-production-readiness-assertion-ci-regression.ps1` запускает harness автоматически, пишет `ciArtifactsValidatorRegression` в итоговый JSON/Markdown, а summary validator regression дополнительно проверяет `bad-ci-artifacts-validator-regression`, чтобы строка `CI artifacts validator regression` не могла исчезнуть из GitHub Step Summary.
 
 Validator сверяет статус wrapper, assertion exit code, linked assertion JSON/Markdown/log, result validator, validator regression, обязательные failure-сценарии и Markdown-пару.
 

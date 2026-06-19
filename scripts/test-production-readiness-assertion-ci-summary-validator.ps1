@@ -124,6 +124,13 @@ try {
         Invoke-SummaryValidator -JsonPath $resultJsonFullPath -MarkdownPath $badCiResultValidatorRegressionPath
     }
 
+    $badCiArtifactsValidatorRegressionPath = Join-Path $tempRoot "bad-ci-artifacts-validator-regression-summary.md"
+    $badCiArtifactsValidatorRegression = $summary.Replace("- CI artifacts validator regression: ``passed``", "- CI artifacts validator regression: ``failed``")
+    Write-Utf8NoBomFile -PathValue $badCiArtifactsValidatorRegressionPath -Content $badCiArtifactsValidatorRegression
+    $badCiArtifactsValidatorRegressionMessage = Assert-FailsWith -ExpectedMessage "markdown is missing" -Action {
+        Invoke-SummaryValidator -JsonPath $resultJsonFullPath -MarkdownPath $badCiArtifactsValidatorRegressionPath
+    }
+
     $regression = [ordered]@{
         status = "passed"
         resultJsonPath = $resultJsonFullPath
@@ -134,7 +141,8 @@ try {
             [ordered]@{ name = "bad-assertion-status"; message = $badAssertionStatusMessage },
             [ordered]@{ name = "missing-artifact-path"; message = $missingArtifactMessage },
             [ordered]@{ name = "bad-result-validator-regression"; message = $badResultValidatorRegressionMessage },
-            [ordered]@{ name = "bad-ci-result-validator-regression"; message = $badCiResultValidatorRegressionMessage }
+            [ordered]@{ name = "bad-ci-result-validator-regression"; message = $badCiResultValidatorRegressionMessage },
+            [ordered]@{ name = "bad-ci-artifacts-validator-regression"; message = $badCiArtifactsValidatorRegressionMessage }
         )
     }
 

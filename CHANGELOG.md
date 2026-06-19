@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.166.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-summary-artifacts-regression`.
+
+### Added
+
+- `scripts/test-production-readiness-assertion-ci-summary-validator.ps1` теперь проверяет tamper-сценарий `bad-ci-artifacts-validator-regression`.
+
+### Changed
+
+- `scripts/test-production-readiness-assertion-ci-regression.ps1` запускает artifacts validator regression до summary validator regression, чтобы summary harness проверял строку `CI artifacts validator regression`.
+- `scripts/validate-production-readiness-assertion-ci-regression-result.ps1` требует failure-case `bad-ci-artifacts-validator-regression` внутри `ciSummaryValidatorRegression`.
+- Roadmap и release docs синхронизированы с backend suite `552/552` и latest release `0.166.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 45/45.
+- Production readiness assertion CI summary artifacts regression smoke: OK.
+- Targeted release/docs suite: 61/61.
+- Backend full suite: 552/552.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Новый regression-case защищает GitHub Step Summary от потери строки `CI artifacts validator regression`.
+
 ## 0.165.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-readiness-assertion-ci-artifacts-validator-regression`.

@@ -431,6 +431,39 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Assertion_Ci_Summary_Regression_Should_Cover_Artifacts_Regression_Line()
+    {
+        var root = FindRepositoryRoot();
+        var summaryHarness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-summary-validator.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-regression.ps1"));
+        var resultValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-assertion-ci-regression-result.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "bad-ci-artifacts-validator-regression",
+                     "CI artifacts validator regression",
+                     "ciArtifactsValidatorRegression",
+                     "markdown is missing",
+                     "Production readiness assertion CI summary validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, summaryHarness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("ciArtifactsValidatorRegression", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ciSummaryValidatorRegression", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            wrapper.IndexOf("scripts/test-production-readiness-assertion-ci-artifacts-validator.ps1", StringComparison.OrdinalIgnoreCase)
+                < wrapper.IndexOf("scripts/test-production-readiness-assertion-ci-summary-validator.ps1", StringComparison.OrdinalIgnoreCase),
+            "Artifact regression harness must run before summary regression tests the summary line.");
+        Assert.Contains("bad-ci-artifacts-validator-regression", resultValidator, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("bad-ci-artifacts-validator-regression", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-051`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

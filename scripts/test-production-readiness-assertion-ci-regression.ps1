@@ -210,32 +210,6 @@ Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
     -SummaryPath $resultMarkdownPath `
     -WriteJson | Out-Null
 
-$ciSummaryValidatorRegressionJson = & (Resolve-RepoPath "scripts/test-production-readiness-assertion-ci-summary-validator.ps1") `
-    -ResultJsonPath $resultJsonPath `
-    -SummaryPath $resultMarkdownPath `
-    -WriteJson
-$ciSummaryValidatorRegression = $ciSummaryValidatorRegressionJson | ConvertFrom-Json
-
-if ([string]$ciSummaryValidatorRegression.status -ne "passed") {
-    throw "Production readiness assertion CI summary validator regression did not pass."
-}
-
-$result["ciSummaryValidatorRegression"] = $ciSummaryValidatorRegression
-$resultJson = $result | ConvertTo-Json -Depth 12
-$resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
-Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
-Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
-
-& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-regression-result.ps1") `
-    -ResultJsonPath $resultJsonPath `
-    -ResultMarkdownPath $resultMarkdownPath `
-    -WriteJson | Out-Null
-
-& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-summary.ps1") `
-    -ResultJsonPath $resultJsonPath `
-    -SummaryPath $resultMarkdownPath `
-    -WriteJson | Out-Null
-
 $artifactValidatorArgs = @{
     ArtifactDirectory = $fullOutputDirectory
     WriteJson = $true
@@ -253,6 +227,32 @@ if ([string]$ciArtifactsValidatorRegression.status -ne "passed") {
 }
 
 $result["ciArtifactsValidatorRegression"] = $ciArtifactsValidatorRegression
+$resultJson = $result | ConvertTo-Json -Depth 12
+$resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
+Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
+Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-regression-result.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-summary.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -SummaryPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
+$ciSummaryValidatorRegressionJson = & (Resolve-RepoPath "scripts/test-production-readiness-assertion-ci-summary-validator.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -SummaryPath $resultMarkdownPath `
+    -WriteJson
+$ciSummaryValidatorRegression = $ciSummaryValidatorRegressionJson | ConvertFrom-Json
+
+if ([string]$ciSummaryValidatorRegression.status -ne "passed") {
+    throw "Production readiness assertion CI summary validator regression did not pass."
+}
+
+$result["ciSummaryValidatorRegression"] = $ciSummaryValidatorRegression
 $resultJson = $result | ConvertTo-Json -Depth 12
 $resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
 Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson

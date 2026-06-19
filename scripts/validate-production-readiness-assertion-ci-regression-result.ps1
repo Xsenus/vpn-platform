@@ -181,7 +181,8 @@ if ($null -ne $ciSummaryValidatorRegression) {
             "bad-assertion-status",
             "missing-artifact-path",
             "bad-result-validator-regression",
-            "bad-ci-result-validator-regression"
+            "bad-ci-result-validator-regression",
+            "bad-ci-artifacts-validator-regression"
         )) {
         Assert-RegressionFailure -TestedFailures $ciSummaryTestedFailures -Name $expectedFailure
     }
