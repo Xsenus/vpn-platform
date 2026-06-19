@@ -74,6 +74,14 @@ try {
 
     $testedFailures = @()
     $testedFailures += Assert-AggregateGuardFails `
+        -Name "missing-aggregate-ci-step-guard-command" `
+        -WorkflowContent ($workflow.Replace("test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson", "missing-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson")) `
+        -ExpectedMessage "aggregate CI step guard command"
+    $testedFailures += Assert-AggregateGuardFails `
+        -Name "missing-aggregate-ci-step-validator" `
+        -WorkflowContent ($workflow.Replace("name: Guard production CI workflow artifacts guard steps regression", "name: Removed production CI workflow artifacts guard steps regression")) `
+        -ExpectedMessage "aggregate CI step guard validator"
+    $testedFailures += Assert-AggregateGuardFails `
         -Name "missing-readiness-guard-step" `
         -WorkflowContent ($workflow.Replace("Guard production readiness assertion workflow artifacts", "Removed production readiness assertion workflow artifacts")) `
         -ExpectedMessage "Production readiness assertion CI workflow artifacts missing workflow guard step"

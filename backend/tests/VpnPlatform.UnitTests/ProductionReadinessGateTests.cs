@@ -649,6 +649,29 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Ci_Workflow_Artifacts_Guards_Aggregate_Validator_Should_Cover_Ci_Step_Guards()
+    {
+        var root = FindRepositoryRoot();
+        var harness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-ci-workflow-artifacts-guards-validator.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "missing-aggregate-ci-step-guard-command",
+                     "missing-aggregate-ci-step-validator",
+                     "aggregate CI step guard command",
+                     "aggregate CI step guard validator"
+                 })
+        {
+            Assert.Contains(expected, harness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-ci-workflow-artifacts-guards-validator.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-063`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Ci_Workflow_Artifacts_Aggregate_Validator_Should_Run_In_Ci()
     {
         var root = FindRepositoryRoot();

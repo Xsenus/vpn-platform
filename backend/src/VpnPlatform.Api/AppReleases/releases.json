@@ -4314,5 +4314,28 @@
         "text": "Одна CI-friendly команда теперь покрывает CI wiring guard, его regression, readiness assertion guards и production evidence guards."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression",
+    "version": "0.178.0",
+    "releasedAt": "2026-06-18T21:40:00+07:00",
+    "title": "Regression aggregate guard для CI step checks",
+    "summary": "Aggregate fail-closed validator теперь проверяет tamper-сценарии CI-step guard command и regression step вместе с readiness/evidence artifact contracts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-ci-workflow-artifacts-guards-validator.ps1` проверяет `missing-aggregate-ci-step-guard-command`."
+      },
+      {
+        "type": "improved",
+        "text": "Validator проверяет `missing-aggregate-ci-step-validator`, чтобы aggregate regression step не мог потерять CI-step guard regression."
+      },
+      {
+        "type": "important",
+        "text": "Общий fail-closed harness теперь покрывает CI-step guard, readiness assertion и production evidence contracts."
+      }
+    ]
   }
 ]

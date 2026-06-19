@@ -2,6 +2,23 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.178.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
+
+### Added
+- Aggregate fail-closed validator теперь проверяет tamper-сценарии `missing-aggregate-ci-step-guard-command` и `missing-aggregate-ci-step-validator`.
+
+### Changed
+- `scripts/test-production-ci-workflow-artifacts-guards-validator.ps1` покрывает CI-step guard command/regression step вместе с readiness/evidence artifact contracts.
+- Roadmap и release docs синхронизированы с backend suite `564/564` и latest release `0.178.0`.
+
+### Verified
+- Production CI workflow artifacts aggregate guard validator: OK, включая CI-step tamper cases.
+- `ProductionReadinessGateTests`: 57/57.
+- Targeted release/docs suite: 73/73.
+- Backend full suite: 564/564.
+
 ## 0.177.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.

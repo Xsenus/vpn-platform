@@ -2,13 +2,14 @@
 
 Дата проверки: 2026-05-25.
 
-## Проверка 2026-06-19: production CI workflow artifacts aggregate includes CI step guards
+## Проверка 2026-06-19: production CI workflow artifacts aggregate validator covers CI step tamper
 
 Что проверялось:
 
-- `scripts/test-production-ci-workflow-artifacts-guards.ps1` теперь запускает 6 guards: aggregate CI step guard, его validator, readiness assertion guard, readiness assertion validator, production evidence guard и production evidence validator.
-- Aggregate command включает `production-ci-workflow-artifacts-ci-step` и `production-ci-workflow-artifacts-ci-step-validator`, чтобы один локальный/CI entrypoint проверял весь production workflow artifacts contract.
-- Раздел "Что нового" получил релиз `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`, версия `0.177.0`.
+- `scripts/test-production-ci-workflow-artifacts-guards-validator.ps1` теперь проверяет CI-step tamper-сценарии `missing-aggregate-ci-step-guard-command` и `missing-aggregate-ci-step-validator`.
+- Aggregate validator продолжает проверять readiness/evidence artifact contracts: `missing-readiness-guard-step`, `missing-readiness-assertion-log-artifact`, `missing-production-evidence-result-artifact` и `missing-if-no-files-found-error`.
+- Раздел "Что нового" получил релиз `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`, версия `0.178.0`.
+- Связанный предыдущий aggregate baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.
 - Связанный предыдущий CI step regression baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`.
 - Связанный предыдущий CI step guard baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`.
 - Связанный предыдущий CI baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression-ci-step`.
@@ -43,9 +44,10 @@ git diff --check
 - Production CI workflow artifacts aggregate CI step guard: OK.
 - Production CI workflow artifacts aggregate CI step guard validator: OK.
 - Production CI workflow artifacts guards aggregate: OK, `guardsCount = 6`.
-- Production CI workflow artifacts aggregate guard validator: OK.
-- Targeted release/docs suite: `72/72`.
-- Backend full suite: `563/563`.
+- Production CI workflow artifacts aggregate guard validator: OK, включая CI-step tamper cases.
+- Production CI workflow artifacts aggregate guard validator CI-step tamper cases: OK.
+- Targeted release/docs suite: `73/73`.
+- Backend full suite: `564/564`.
 - API build: OK.
 - TelegramBot build: OK.
 - Frontend tests: `66/66`.
@@ -55,8 +57,8 @@ git diff --check
 - Playwright console E2E: `9/9`.
 - Secret scan: 0 findings.
 - Кодировка измененных и новых файлов: strict UTF-8 without BOM.
-- Fresh local SQLite smoke: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.
-- Local VPS smoke dry-run: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.
+- Fresh local SQLite smoke: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
+- Local VPS smoke dry-run: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
 - `git diff --check`: OK.
 
 ## Проверка 2026-06-19: production CI workflow artifacts aggregate guard regression
