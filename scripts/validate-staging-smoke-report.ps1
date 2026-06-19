@@ -136,6 +136,10 @@ foreach ($check in $checks) {
         throw "Check '$($check.id)' must be passed when -RequireAllPassed is set."
     }
 
+    if ($RequireAllPassed -and ([string]$check.evidence).IndexOf("TODO", [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        throw "Check '$($check.id)' must contain real evidence without TODO placeholders when -RequireAllPassed is set."
+    }
+
     $checkIds[$checkId] = $true
 }
 

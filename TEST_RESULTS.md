@@ -2,14 +2,18 @@
 
 Дата проверки: 2026-05-25.
 
-## Проверка 2026-06-19: payment provider smoke report acceptance gates
+## Проверка 2026-06-19: staging smoke report evidence placeholders
 
 Что проверялось:
 
+- `scripts/validate-staging-smoke-report.ps1` в режиме `-RequireAllPassed` теперь запрещает `TODO` в evidence.
+- Staging smoke report нельзя принять с `status = passed`, если доказательства остались шаблонными placeholder-строками.
+- `docs/staging-smoke-checklist.md` уточняет правило real evidence для acceptance mode.
+- Раздел "Что нового" получил релиз `2026-06-19-staging-smoke-report-evidence-placeholders`, версия `0.181.0`.
+- Связанный предыдущий payment provider baseline сохранен как `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
 - `scripts/validate-payment-provider-smoke-report.ps1` при `-RequireAllPassed` теперь требует `true` для всех provider gates.
 - Приемочный payment provider smoke report больше нельзя закрыть одним `status = passed`, если не подтверждены account, checkout, provider confirmation, webhook, subscription и refund.
 - `docs/payment-provider-smoke.md` уточняет gates `accountConfigured`, `checkoutCreated`, `providerConfirmation`, `webhookProcessed`, `subscriptionActivated`, `refundChecked`.
-- Раздел "Что нового" получил релиз `2026-06-19-payment-provider-smoke-report-acceptance-gates`, версия `0.180.0`.
 - Связанный предыдущий VPS smoke report baseline сохранен как `2026-06-19-vps-production-smoke-report-contract`.
 - Связанный предыдущий aggregate baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
 - Связанный предыдущий aggregate baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.
@@ -20,6 +24,9 @@
 Команды:
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-staging-smoke-report.ps1 -OutputPath tmp\generated-staging-smoke-report.json -ApiBaseUrl http://127.0.0.1:18102 -PublicWebUrl http://127.0.0.1:5183 -CabinetWebUrl http://127.0.0.1:5184 -AdminWebUrl http://127.0.0.1:5185 -EnvironmentName staging -Operator local-test -Force
+powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.ps1 -ReportPath tmp\generated-staging-smoke-report.json
+powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.ps1 -ReportPath tmp\generated-staging-smoke-report.json -RequireAllPassed
 powershell -ExecutionPolicy Bypass -File scripts\new-vps-production-smoke-report.ps1 -OutputPath tmp\vps-production-smoke-report.json -ApiBaseUrl http://127.0.0.1:18102 -PublicWebUrl http://127.0.0.1:5183 -CabinetWebUrl http://127.0.0.1:5184 -AdminWebUrl http://127.0.0.1:5185 -Force
 powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-report.ps1 -ReportPath tmp\vps-production-smoke-report.json
 powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-report.ps1 -ReportPath tmp\vps-production-smoke-report.json -RequireAllPassed
@@ -30,7 +37,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-art
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson
-dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "PaymentProviderSmokeReportTests|VpsProductionSmokeTests|ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "StagingSmokeChecklistTests|PaymentProviderSmokeReportTests|VpsProductionSmokeTests|ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
 dotnet test backend\VpnPlatform.sln --configuration Release
 dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-restore
 dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release --no-restore
@@ -50,6 +57,11 @@ git diff --check
 
 Результат:
 
+- Staging smoke report generator: OK.
+- Staging smoke report validator: OK.
+- Staging expected fail-closed `-RequireAllPassed`: OK.
+- Staging TODO evidence fail-closed: OK.
+- `StagingSmokeChecklistTests`: `8/8`.
 - Payment provider smoke report generator: OK.
 - Payment provider smoke report validator: OK.
 - Payment provider expected fail-closed `-RequireAllPassed`: OK.
@@ -63,8 +75,8 @@ git diff --check
 - Production CI workflow artifacts guards aggregate: OK, `guardsCount = 6`.
 - Production CI workflow artifacts aggregate guard validator: OK, включая CI-step tamper cases.
 - Production CI workflow artifacts aggregate guard validator CI-step tamper cases: OK.
-- Targeted release/docs suite: `86/86`.
-- Backend full suite: `569/569`.
+- Targeted release/docs suite: `94/94`.
+- Backend full suite: `570/570`.
 - API build: OK.
 - TelegramBot build: OK.
 - Frontend tests: `66/66`.
@@ -74,8 +86,8 @@ git diff --check
 - Playwright console E2E: `9/9`.
 - Secret scan: 0 findings.
 - Кодировка измененных и новых файлов: strict UTF-8 without BOM.
-- Fresh local SQLite smoke: OK, latest `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
-- Local VPS smoke dry-run: OK, latest `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
+- Fresh local SQLite smoke: OK, latest `2026-06-19-staging-smoke-report-evidence-placeholders`.
+- Local VPS smoke dry-run: OK, latest `2026-06-19-staging-smoke-report-evidence-placeholders`.
 - `git diff --check`: OK.
 
 ## Проверка 2026-06-19: production CI workflow artifacts aggregate guard regression

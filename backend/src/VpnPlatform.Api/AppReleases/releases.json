@@ -4383,5 +4383,28 @@
         "text": "`docs/payment-provider-smoke.md` описывает обязательные gates и правило для недоступного refund flow."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-staging-smoke-report-evidence-placeholders",
+    "version": "0.181.0",
+    "releasedAt": "2026-06-18T22:10:00+07:00",
+    "title": "Staging smoke не принимает TODO evidence",
+    "summary": "Staging smoke validator теперь отклоняет placeholder evidence в acceptance mode, даже если check помечен `passed`.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`validate-staging-smoke-report.ps1 -RequireAllPassed` запрещает `TODO` в evidence."
+      },
+      {
+        "type": "important",
+        "text": "Staging/VPS smoke нельзя принять с шаблонными доказательствами после механической замены статусов на `passed`."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/staging-smoke-checklist.md` описывает требование real evidence для acceptance mode."
+      }
+    ]
   }
 ]

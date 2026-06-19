@@ -132,6 +132,22 @@ public class StagingSmokeChecklistTests
     }
 
     [Fact]
+    public void Staging_Smoke_Report_Validator_Should_Reject_Todo_Evidence_In_Acceptance_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-staging-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Contains("TODO", script, StringComparison.Ordinal);
+        Assert.Contains("must contain real evidence without TODO placeholders", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("RequireAllPassed", script, StringComparison.Ordinal);
+        Assert.Contains("TODO", guide, StringComparison.Ordinal);
+        Assert.Contains("real evidence", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P9-TST-007E`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Staging_Smoke_Report_Template_Should_Be_Valid_Safe_Json()
     {
         var root = FindRepositoryRoot();

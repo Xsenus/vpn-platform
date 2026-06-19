@@ -58,7 +58,7 @@ Release-gate проверка, которую нужно использоват�
 powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.ps1 -ReportPath tmp\staging-smoke-report.json -RequireAllPassed
 ```
 
-Если в отчете есть `blocked`, `failed` или `skipped`, команда с `-RequireAllPassed` завершится ошибкой. Это намеренное fail-closed поведение.
+Если в отчете есть `blocked`, `failed` или `skipped`, команда с `-RequireAllPassed` завершится ошибкой. Это намеренное fail-closed поведение. Acceptance-режим также запрещает placeholder evidence: строка с `TODO` не считается real evidence даже при `status = passed`.
 
 Валидатор также ищет типовые признаки утечки секретов в любом поле отчета: `Authorization:`, `Bearer`, `Cookie:`, `Set-Cookie:`, `.env`, `client_secret`, `api_key`, `private header`, `x-api-key`, `X-Telegram-Bot-Api-Secret-Token`, `PRODUCTION_ENV_FILE`, `VPS_SSH_KEY`, private keys и webhook secrets. Если такой маркер найден, отчет считается небезопасным и не проходит проверку.
 
@@ -85,5 +85,6 @@ powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBa
 - Валидатор расширен sanitizer-маркерами для cookies, `.env`, client secrets, API keys, private headers, Telegram secret header и GitHub/VPS secret names.
 - Валидатор проверяет порядок `startedAt`/`completedAt` и запрещает duplicate check id.
 - Валидатор проверяет `apiBaseUrl`, `publicWebUrl`, `cabinetWebUrl` и `adminWebUrl` как absolute http/https URL.
+- Валидатор в `-RequireAllPassed` запрещает `TODO` в evidence, чтобы staging smoke нельзя было принять с незаполненными доказательствами.
 - `P9-TST-007` получил воспроизводимый чеклист и валидатор.
 - Реальный live/staging smoke report пока не заполнен, поэтому внешние блокеры `P0-*`, `P11-ACC-002` и production-ready статус остаются открытыми.

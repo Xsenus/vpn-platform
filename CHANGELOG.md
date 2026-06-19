@@ -2,6 +2,22 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.181.0 - 2026-06-19
+
+Release entry: `2026-06-19-staging-smoke-report-evidence-placeholders`.
+
+### Changed
+- `scripts/validate-staging-smoke-report.ps1` в режиме `-RequireAllPassed` теперь отклоняет checks с `TODO` в evidence.
+- `docs/staging-smoke-checklist.md` уточняет, что `status = passed` с placeholder evidence не является приемочным staging smoke.
+- Roadmap и release docs синхронизированы с backend suite `570/570` и latest release `0.181.0`.
+
+### Verified
+- `StagingSmokeChecklistTests`: 8/8.
+- Staging smoke report generator/validator smoke: OK.
+- Expected fail-closed `-RequireAllPassed` для passed checks с TODO evidence: OK.
+- Targeted release/docs suite: 94/94.
+- Backend full suite: 570/570.
+
 ## 0.180.0 - 2026-06-19
 
 Release entry: `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
