@@ -4820,5 +4820,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-bootstrap-smoke-route-regression",
+    "version": "0.200.0",
+    "releasedAt": "2026-06-19T01:20:00+07:00",
+    "title": "Route regression bootstrap smoke админки VPS",
+    "summary": "Bootstrap smoke evidence regression теперь синхронизирован с route contract admin VPS smoke и fail-closed ловит устаревшие маршруты.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` генерирует synthetic smoke sections с маршрутами `/admin/#<id>` из актуального route contract."
+      },
+      {
+        "type": "new",
+        "text": "Regression harness добавил fail-closed сценарий `bad-smoke-route`, который проходит через bootstrap evidence validator и отклоняет smoke report с устаревшим route."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

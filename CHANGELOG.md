@@ -2,6 +2,21 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.200.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-bootstrap-smoke-route-regression`.
+
+### Fixed
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` снова проходит valid-сценарий после route contract: synthetic smoke report генерирует route в формате `/admin/#<id>`.
+
+### Added
+- Regression harness покрывает fail-closed tamper-сценарий `bad-smoke-route`, который доказывает, что bootstrap evidence chain не примет smoke report с route вне `docs/admin-vps-smoke-sections.json`.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, `valid`, `mismatched-admin-url`, `readiness-not-ready`, `bad-timing`, `bad-smoke-route`.
+- `AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests`: 24/24.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.199.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-report-route-contract`.

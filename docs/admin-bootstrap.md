@@ -89,6 +89,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
 ```
 
+Regression harness также покрывает `bad-smoke-route`, чтобы bootstrap+smoke evidence не принимал устаревшие admin routes вне `docs/admin-vps-smoke-sections.json`.
+
 ## Dry-run
 
 Dry-run проверяет параметры и показывает только безопасные значения:

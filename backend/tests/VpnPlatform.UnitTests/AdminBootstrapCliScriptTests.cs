@@ -268,6 +268,8 @@ public class AdminBootstrapCliScriptTests
                      "mismatched-admin-url",
                      "readiness-not-ready",
                      "bad-timing",
+                     "bad-smoke-route",
+                     "route must match sections contract",
                      "admin vps bootstrap smoke evidence validator regression passed"
                  })
         {

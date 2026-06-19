@@ -157,7 +157,7 @@ function New-SmokeReport {
     ) | ForEach-Object {
         [ordered]@{
             id = $_
-            route = "/admin/$_"
+            route = "/admin/#$_"
             status = "passed"
             loaded = $true
             httpStatus = 200
@@ -301,6 +301,12 @@ $results += Invoke-ValidatorScenario -Name "bad-timing" -ExpectedExitCode 1 -Exp
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.generatedAt = ([DateTimeOffset]::Parse([string]$readiness.generatedAt).AddMinutes(-1)).ToString("o")
     Write-JsonFile -Path $bootstrapPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "bad-smoke-route" -ExpectedExitCode 1 -ExpectedMessage "route must match sections contract" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    $report = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.sections[0].route = "/admin/$($report.sections[0].id)"
+    Write-JsonFile -Path $smokePath -Value $report
 }
 
 Write-Host "admin vps bootstrap smoke evidence validator regression passed $($results | ConvertTo-Json -Compress)"

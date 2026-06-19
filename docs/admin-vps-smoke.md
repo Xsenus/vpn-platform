@@ -197,6 +197,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
 ```
 
+Regression harness также проверяет `bad-smoke-route`: bootstrap evidence chain должен отклонять smoke report, если route раздела расходится с `docs/admin-vps-smoke-sections.json`.
+
 ## Браузерный live-smoke
 
 Низкоуровневый browser runner можно запускать отдельно для диагностики, если preflight уже пройден и нужно повторить только Playwright smoke без пересоздания preflight report:
