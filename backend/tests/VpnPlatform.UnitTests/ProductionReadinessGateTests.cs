@@ -256,6 +256,35 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Assertion_Ci_Result_Validator_Should_Have_Regression_Harness()
+    {
+        var root = FindRepositoryRoot();
+        var harness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-regression-result-validator.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-regression.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "validate-production-readiness-assertion-ci-regression-result.ps1",
+                     "bad-status",
+                     "bad-assertion-exit-code",
+                     "missing-regression-failure",
+                     "bad-markdown",
+                     "wrong-validator-count",
+                     "production readiness assertion CI regression result validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, harness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-readiness-assertion-ci-regression-result-validator.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ciResultValidatorRegression", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-production-readiness-assertion-ci-regression-result-validator.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-046`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

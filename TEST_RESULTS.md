@@ -2,18 +2,20 @@
 
 Дата проверки: 2026-05-25.
 
-## Проверка 2026-06-19: production readiness assertion CI result validator
+## Проверка 2026-06-19: production readiness assertion CI result validator regression
 
 Что проверялось:
 
-- `scripts/validate-production-readiness-assertion-ci-regression-result.ps1` проверяет итоговый JSON/Markdown artifact от `scripts/test-production-readiness-assertion-ci-regression.ps1`.
-- CI wrapper запускает validator после записи result JSON/Markdown и до вывода результата.
-- Раздел "Что нового" получил релиз `2026-06-19-production-readiness-assertion-ci-result-validator`, версия `0.160.0`.
+- `scripts/test-production-readiness-assertion-ci-regression-result-validator.ps1` проверяет fail-closed поведение `validate-production-readiness-assertion-ci-regression-result.ps1` на испорченных копиях CI result JSON/Markdown.
+- CI wrapper запускает новый harness автоматически, сохраняет `ciResultValidatorRegression` в result JSON/Markdown и повторно валидирует итоговый artifact.
+- Раздел "Что нового" получил релиз `2026-06-19-production-readiness-assertion-ci-result-validator-regression`, версия `0.161.0`.
+- Предыдущий релиз standalone validator сохранен в журнале: `2026-06-19-production-readiness-assertion-ci-result-validator`, версия `0.160.0`.
 
 Команды:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-ci-regression.ps1 -OutputDirectory tmp\production-readiness-assertion-ci-regression-test -Force -WriteJson
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-ci-regression-result-validator.ps1 -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-regression-result.ps1 -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json -WriteJson
 dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
 dotnet test backend\VpnPlatform.sln --configuration Release
@@ -35,10 +37,11 @@ git diff --check
 
 Результат:
 
-- Production readiness assertion CI wrapper smoke with result validator: OK.
+- Production readiness assertion CI wrapper smoke with CI result validator regression: OK.
+- Standalone production readiness assertion CI result validator regression: OK.
 - Standalone production readiness assertion CI result validator: OK.
-- Targeted release/docs suite: `55/55`.
-- Backend full suite: `546/546`.
+- Targeted release/docs suite: `56/56`.
+- Backend full suite: `547/547`.
 - API build: OK.
 - TelegramBot build: OK.
 - Frontend tests: `66/66`.
@@ -48,8 +51,8 @@ git diff --check
 - Playwright console E2E: `9/9`.
 - Secret scan: 0 findings.
 - Кодировка измененных и новых файлов: strict UTF-8 without BOM.
-- Fresh local SQLite smoke: OK, latest `2026-06-19-production-readiness-assertion-ci-result-validator`.
-- Local VPS smoke dry-run: OK, latest `2026-06-19-production-readiness-assertion-ci-result-validator`.
+- Fresh local SQLite smoke: OK, latest `2026-06-19-production-readiness-assertion-ci-result-validator-regression`.
+- Local VPS smoke dry-run: OK, latest `2026-06-19-production-readiness-assertion-ci-result-validator-regression`.
 - `git diff --check`: OK.
 
 ## Проверка 2026-06-18: production readiness assertion CI regression

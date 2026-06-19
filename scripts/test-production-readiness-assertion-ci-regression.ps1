@@ -34,6 +34,9 @@ function ConvertTo-CiMarkdown {
     $lines.Add("- Blockers: ``$($Result.assertion.blockersCount)``")
     $lines.Add("- Result validator: ``$($Result.resultValidator.status)``")
     $lines.Add("- Result validator regression: ``$($Result.resultValidatorRegression.status)``")
+    if ($null -ne $Result.ciResultValidatorRegression) {
+        $lines.Add("- CI result validator regression: ``$($Result.ciResultValidatorRegression.status)``")
+    }
     $lines.Add("")
     $lines.Add("## Artifacts")
     $lines.Add("- Assertion JSON: ``$($Result.assertion.resultJsonPath)``")
@@ -169,12 +172,34 @@ $resultJson = $result | ConvertTo-Json -Depth 12
 $resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
 Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
 Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
-Add-GitHubStepSummary -Markdown $resultMarkdown | Out-Null
 
 & (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-regression-result.ps1") `
     -ResultJsonPath $resultJsonPath `
     -ResultMarkdownPath $resultMarkdownPath `
     -WriteJson | Out-Null
+
+$ciResultValidatorRegressionJson = & (Resolve-RepoPath "scripts/test-production-readiness-assertion-ci-regression-result-validator.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath `
+    -WriteJson
+$ciResultValidatorRegression = $ciResultValidatorRegressionJson | ConvertFrom-Json
+
+if ([string]$ciResultValidatorRegression.status -ne "passed") {
+    throw "Production readiness assertion CI regression result validator regression did not pass."
+}
+
+$result["ciResultValidatorRegression"] = $ciResultValidatorRegression
+$resultJson = $result | ConvertTo-Json -Depth 12
+$resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
+Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
+Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-regression-result.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
+Add-GitHubStepSummary -Markdown $resultMarkdown | Out-Null
 
 if ($WriteJson) {
     Write-Output $resultJson

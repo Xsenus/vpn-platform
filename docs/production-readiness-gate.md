@@ -71,6 +71,16 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-a
   -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json
 ```
 
+Regression-проверка CI result validator на испорченных копиях CI result artifacts:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-ci-regression-result-validator.ps1 `
+  -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json `
+  -WriteJson
+```
+
+Wrapper запускает этот harness автоматически и записывает `ciResultValidatorRegression` в итоговые JSON/Markdown artifacts.
+
 Validator сверяет статус wrapper, assertion exit code, linked assertion JSON/Markdown/log, result validator, validator regression, обязательные failure-сценарии и Markdown-пару.
 
 Если отчеты лежат не в стандартных местах, передайте их явно:

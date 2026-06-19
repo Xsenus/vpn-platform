@@ -3923,5 +3923,28 @@
         "text": "Validator сверяет assertion exit code, linked artifacts, result validator, validator regression и Markdown-пару."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-result-validator-regression",
+    "version": "0.161.0",
+    "releasedAt": "2026-06-18T18:50:00+07:00",
+    "title": "Regression harness для readiness assertion CI result validator",
+    "summary": "Standalone validator итогового production readiness assertion CI result теперь покрыт fail-closed regression harness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-readiness-assertion-ci-regression-result-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-readiness-assertion-ci-regression.ps1` запускает harness автоматически и сохраняет `ciResultValidatorRegression` в итоговый JSON/Markdown artifact."
+      },
+      {
+        "type": "important",
+        "text": "Harness проверяет happy path и fail-closed сценарии: bad status, неверный assertion exit code, пропавший regression failure, сломанный Markdown и неверный evidenceReportsCount."
+      }
+    ]
   }
 ]

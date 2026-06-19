@@ -151,6 +151,24 @@ else {
     }
 }
 
+$ciResultValidatorRegression = $result.ciResultValidatorRegression
+if ($null -ne $ciResultValidatorRegression) {
+    if ([string]$ciResultValidatorRegression.status -ne "passed") {
+        throw "Production readiness assertion CI regression result CI result validator regression status must be passed."
+    }
+
+    $ciTestedFailures = @($ciResultValidatorRegression.testedFailures)
+    foreach ($expectedFailure in @(
+            "bad-status",
+            "bad-assertion-exit-code",
+            "missing-regression-failure",
+            "bad-markdown",
+            "wrong-validator-count"
+        )) {
+        Assert-RegressionFailure -TestedFailures $ciTestedFailures -Name $expectedFailure
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($ResultMarkdownPath)) {
     $ResultMarkdownPath = [string]$result.resultMarkdownPath
 }
@@ -184,6 +202,15 @@ foreach ($expected in @(
     Assert-MarkdownContains -Markdown $markdown -Expected $expected
 }
 
+if ($null -ne $ciResultValidatorRegression) {
+    Assert-MarkdownContains -Markdown $markdown -Expected "- CI result validator regression: ``passed``"
+}
+
+$ciResultValidatorRegressionStatus = ""
+if ($null -ne $ciResultValidatorRegression) {
+    $ciResultValidatorRegressionStatus = [string]$ciResultValidatorRegression.status
+}
+
 $validation = [ordered]@{
     status = "valid"
     resultJsonPath = $resultJsonFullPath
@@ -195,6 +222,7 @@ $validation = [ordered]@{
     blockersCount = [int]$assertion.blockersCount
     resultValidatorStatus = [string]$resultValidator.status
     resultValidatorRegressionStatus = [string]$regression.status
+    ciResultValidatorRegressionStatus = $ciResultValidatorRegressionStatus
     assertionJsonPath = $assertionJsonPath
     assertionMarkdownPath = $assertionMarkdownPath
     assertionLogPath = $assertionLogPath

@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.161.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-result-validator-regression`.
+
+### Added
+
+- `scripts/test-production-readiness-assertion-ci-regression-result-validator.ps1` проверяет fail-closed поведение validator итогового production readiness assertion CI result.
+
+### Changed
+
+- `scripts/test-production-readiness-assertion-ci-regression.ps1` запускает новый harness автоматически, сохраняет `ciResultValidatorRegression` в JSON/Markdown result и повторно валидирует итоговый artifact.
+- `scripts/validate-production-readiness-assertion-ci-regression-result.ps1` проверяет `ciResultValidatorRegression`, если секция уже присутствует в result.
+- Roadmap и release docs синхронизированы с backend suite `547/547` и latest release `0.161.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 40/40.
+- Production readiness assertion CI result validator regression smoke: OK.
+- Targeted release/docs suite: 56/56.
+- Backend full suite: 547/547.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Harness покрывает bad status, неверный assertion exit code, пропавший regression failure, сломанный Markdown и неверный `evidenceReportsCount`.
+
 ## 0.160.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-readiness-assertion-ci-result-validator`.
