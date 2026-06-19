@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `573/573`.
+- [x] `STATE-001` Backend test suite проходит: `574/574`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `573/573`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-admin-bootstrap-wrapper`, версия `0.182.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `574/574`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-admin-vps-browser-smoke`, версия `0.183.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `573/573`, frontend tests `66/66`, latest "Что нового" `2026-06-19-admin-bootstrap-wrapper`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 5/5, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `574/574`, frontend tests `66/66`, latest "Что нового" `2026-06-19-admin-vps-browser-smoke`.
 
 ## P0. Блокеры production-запуска
 
@@ -75,6 +75,10 @@ git diff --check
   - Что сделать: открыть dashboard, users, payments, tariffs, subscriptions, vpn, nodes, panels, support, bot, releases, faq, content, scenarios, provisioning.
   - Критерий готовности: нет белого экрана, JS-ошибок, 401/403 после логина, сломанных таблиц и пустых обязательных состояний без объяснения.
   - Доказательство: browser smoke-отчет, список найденных ошибок или отметка "ошибок нет".
+
+- [x] `P0-ADMIN-002A` Добавить безопасный browser runner для admin VPS smoke. 2026-06-19.
+  - Что сделано: добавлен `frontend/e2e/admin-vps-smoke.spec.ts`, отдельный `frontend/playwright.vps-smoke.config.ts` без trace/video/screenshot artifacts и wrapper `scripts/admin-vps-browser-smoke.ps1`, который берет пароль только из `ADMIN_VPS_SMOKE_ADMIN_PASSWORD` и пишет sanitized JSON report.
+  - Доказательство: `AdminVpsSmokeReportTests` 5/5, Playwright test discovery для проекта `admin-vps-smoke`, latest "Что нового" `2026-06-19-admin-vps-browser-smoke`, версия `0.183.0`. Реальный VPS smoke остается в `P0-ADMIN-001`/`P0-ADMIN-002`.
 
 - [x] `P0-ADMIN-003` Добавить безопасный admin VPS smoke report. 2026-06-14.
   - Что сделать: зафиксировать шаблон, генератор и валидатор отчета для проверки `/admin/` на VPS под реальным admin-аккаунтом.

@@ -4429,5 +4429,28 @@
         "text": "`docs/admin-bootstrap.md` описывает восстановление доступа к админке и дальнейший VPS smoke без секретов в evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-browser-smoke",
+    "version": "0.183.0",
+    "releasedAt": "2026-06-18T22:30:00+07:00",
+    "title": "Browser smoke админки VPS",
+    "summary": "Добавлен отдельный безопасный Playwright runner для реальной проверки входа и всех разделов админки на VPS.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/admin-vps-browser-smoke.ps1` запускает live-smoke админки с паролем только из env-переменной и выводом `Password: [hidden]`."
+      },
+      {
+        "type": "important",
+        "text": "Отдельный Playwright config отключает trace, video и screenshots, чтобы не сохранять cookies, bearer-токены или пароль в artifacts."
+      },
+      {
+        "type": "improved",
+        "text": "Smoke записывает sanitized `admin-vps-smoke-report.json` и проверяет его через `validate-admin-vps-smoke-report.ps1`."
+      }
+    ]
   }
 ]

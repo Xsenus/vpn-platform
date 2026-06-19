@@ -2,6 +2,27 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.183.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-browser-smoke`.
+
+### Added
+- Добавлен `frontend/e2e/admin-vps-smoke.spec.ts` для явного live-smoke входа в админку и обхода всех обязательных разделов VPS admin UI.
+- Добавлен `frontend/playwright.vps-smoke.config.ts` без локального webServer, trace, video и screenshots, чтобы live-прогон не сохранял пароль, cookie или токены в artifacts.
+- Добавлен `scripts/admin-vps-browser-smoke.ps1`, который принимает URL/email, берет пароль только из `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, печатает `Password: [hidden]` и валидирует JSON через `validate-admin-vps-smoke-report.ps1`.
+
+### Verified
+- `AdminVpsSmokeReportTests`: 5/5.
+- Playwright admin VPS smoke test discovery: OK.
+- Backend full suite: 574/574.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.182.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-bootstrap-wrapper`.

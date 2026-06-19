@@ -112,6 +112,45 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Admin_Vps_Browser_Smoke_Should_Run_Only_Explicit_Live_Check_And_Write_Safe_Report()
+    {
+        var root = FindRepositoryRoot();
+        var spec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "admin-vps-smoke.spec.ts"));
+        var config = File.ReadAllText(Path.Combine(root, "frontend", "playwright.vps-smoke.config.ts"));
+        var packageJson = File.ReadAllText(Path.Combine(root, "frontend", "package.json"));
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-browser-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+
+        foreach (var section in RequiredSections)
+        {
+            Assert.Contains(section, spec, StringComparison.Ordinal);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "ADMIN_VPS_SMOKE_API_BASE_URL",
+                     "ADMIN_VPS_SMOKE_ADMIN_WEB_URL",
+                     "ADMIN_VPS_SMOKE_ADMIN_EMAIL",
+                     "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
+                     "ADMIN_VPS_SMOKE_REPORT_PATH",
+                     "No credentials, cookies, auth headers, tokens or screenshots are stored",
+                     "Завершить сессию",
+                     "validate-admin-vps-smoke-report.ps1",
+                     "Password: [hidden]"
+                 })
+        {
+            Assert.Contains(expected, spec + config + packageJson + script + guide, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("trace: 'off'", config, StringComparison.Ordinal);
+        Assert.Contains("screenshot: 'off'", config, StringComparison.Ordinal);
+        Assert.Contains("video: 'off'", config, StringComparison.Ordinal);
+        Assert.Contains("e2e:admin-vps-smoke", packageJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("console.log(password", spec, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host \"Password: $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Docs_Should_Link_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

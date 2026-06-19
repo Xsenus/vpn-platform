@@ -58,6 +58,26 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report
 
 `-RequireAllPassed` должен падать на черновике, потому что все разделы изначально находятся в статусе `blocked`. Перед закрытием `P0-ADMIN-002` нужно заменить статусы на `passed`, выставить `loaded=true`, `httpStatus=200`, заполнить общие флаги и приложить безопасные evidence.
 
+## Браузерный live-smoke
+
+Если VPS уже развернут и production/staging admin-аккаунт восстановлен через безопасный bootstrap/reset, можно запустить явный Playwright smoke без сохранения пароля, cookie, bearer-токенов, trace, video и screenshots:
+
+```powershell
+$env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD="<temporary-admin-password>"
+
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-browser-smoke.ps1 `
+  -ApiBaseUrl https://api.example.test `
+  -AdminWebUrl https://example.test/admin/ `
+  -AdminEmail owner@example.com `
+  -OutputPath tmp\admin-vps-smoke-report.json `
+  -EnvironmentName staging `
+  -Operator operator-name `
+  -AccountBootstrapChecked `
+  -RequireAllPassed
+```
+
+Wrapper печатает `Password: [hidden]`, запускает `npm run e2e:admin-vps-smoke` из `frontend`, обходит все обязательные вкладки админки, проверяет отсутствие `console.error`, `pageerror` и 401/403 после логина, затем валидирует JSON через `scripts/validate-admin-vps-smoke-report.ps1`. Без `-AccountBootstrapChecked` отчет останется неприемочным для `-RequireAllPassed`, даже если логин и вкладки прошли.
+
 ## Что нельзя хранить
 
 В отчете нельзя сохранять пароли, cookies, bearer-токены, private headers, `.env`, SSH-ключи, webhook secrets, raw provider payloads и скриншоты, где видны секреты.

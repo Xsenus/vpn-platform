@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS browser smoke runner
+
+Что проверялось:
+
+- `frontend/e2e/admin-vps-smoke.spec.ts` готовит live-smoke входа в `/admin/` и обхода всех обязательных разделов админки.
+- `frontend/playwright.vps-smoke.config.ts` запускает этот smoke отдельно от локальных E2E, без webServer, trace, video и screenshots.
+- `scripts/admin-vps-browser-smoke.ps1` принимает URL и email, пароль берет только из `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, печатает `Password: [hidden]` и валидирует отчет.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-browser-smoke`, версия `0.183.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся из-за отсутствия live URL/секретов в рабочей папке.
+
+Команды:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+npx playwright test --config=playwright.vps-smoke.config.ts --list
+git diff --check
+```
+
+Результат:
+
+- `AdminVpsSmokeReportTests`: `5/5`.
+- Targeted release/docs suite: `21/21`.
+- Backend full suite: `574/574`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Playwright admin VPS smoke test discovery: OK, найден 1 test в проекте `admin-vps-smoke`.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin bootstrap wrapper
 
 Что проверялось:
