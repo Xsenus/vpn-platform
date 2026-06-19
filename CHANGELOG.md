@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.174.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression-ci-step`.
+
+### Added
+
+- GitHub Actions backend job запускает `scripts/test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson` отдельным step до backend setup/build/test.
+
+### Changed
+
+- Production readiness gate docs описывают порядок aggregate guard -> aggregate validator -> backend setup.
+- Roadmap и release docs синхронизированы с backend suite `560/560` и latest release `0.174.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 53/53.
+- Production CI workflow artifacts aggregate validator CI step guard: OK.
+- Targeted release/docs suite: 69/69.
+- Backend full suite: 560/560.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- CI теперь запускает fail-closed aggregate validator сразу после aggregate guard, поэтому broken workflow artifact contract должен падать до тяжелых backend-команд.
+
 ## 0.173.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression`.

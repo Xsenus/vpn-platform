@@ -4222,5 +4222,28 @@
         "text": "`ProductionReadinessGateTests` закрепляет наличие aggregate regression harness и связь с roadmap `P11-ACC-058`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression-ci-step",
+    "version": "0.174.0",
+    "releasedAt": "2026-06-18T21:00:00+07:00",
+    "title": "CI step для aggregate production workflow artifacts regression",
+    "summary": "GitHub Actions теперь запускает fail-closed aggregate validator для production workflow artifacts до backend setup/build/test.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "В backend job добавлен step `Guard production CI workflow artifacts contracts regression`."
+      },
+      {
+        "type": "improved",
+        "text": "Step запускает `scripts/test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson` сразу после aggregate guard."
+      },
+      {
+        "type": "important",
+        "text": "`ProductionReadinessGateTests` проверяет порядок aggregate guard -> aggregate validator -> backend setup."
+      }
+    ]
   }
 ]

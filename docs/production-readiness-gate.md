@@ -97,6 +97,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-art
 ```
 
 Harness проверяет happy path aggregate guard, затем портит копию workflow и ожидает ошибки для `missing-readiness-guard-step`, `missing-readiness-assertion-log-artifact`, `missing-production-evidence-result-artifact` и `missing-if-no-files-found-error`.
+GitHub Actions запускает aggregate validator отдельным step `Guard production CI workflow artifacts contracts regression` сразу после aggregate guard и до `Setup .NET SDK from global.json`, чтобы tamper regression падал до backend restore/build/test.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-regression-result.ps1 `

@@ -52,6 +52,10 @@ jobs:
         shell: pwsh
         run: ./scripts/test-production-ci-workflow-artifacts-guards.ps1 -WriteJson
 
+      - name: Guard production CI workflow artifacts contracts regression
+        shell: pwsh
+        run: ./scripts/test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson
+
       - name: Setup .NET SDK from global.json
         uses: actions/setup-dotnet@v4
         with:

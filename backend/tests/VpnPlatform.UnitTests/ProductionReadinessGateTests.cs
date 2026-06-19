@@ -623,6 +623,35 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Ci_Workflow_Artifacts_Aggregate_Validator_Should_Run_In_Ci()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        var aggregateGuardIndex = workflow.IndexOf(
+            "Guard production CI workflow artifacts contracts",
+            StringComparison.OrdinalIgnoreCase);
+        var validatorStepIndex = workflow.IndexOf(
+            "Guard production CI workflow artifacts contracts regression",
+            StringComparison.OrdinalIgnoreCase);
+        var validatorCommandIndex = workflow.IndexOf(
+            "test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson",
+            StringComparison.OrdinalIgnoreCase);
+        var setupDotnetIndex = workflow.IndexOf(
+            "Setup .NET SDK from global.json",
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(aggregateGuardIndex >= 0, "Aggregate production CI workflow artifacts guard step must be present in CI.");
+        Assert.True(validatorStepIndex > aggregateGuardIndex, "Aggregate validator step must run after the aggregate guard step.");
+        Assert.True(validatorCommandIndex > validatorStepIndex, "Aggregate validator command must be inside the validator step.");
+        Assert.True(validatorCommandIndex < setupDotnetIndex, "Aggregate validator must run before backend setup and tests.");
+        Assert.Contains("test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-059`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();
