@@ -4153,5 +4153,28 @@
         "text": "`ProductionReadinessGateTests` закрепляет наличие regression harness и связь с roadmap `P11-ACC-055`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-workflow-artifacts-guard-regression",
+    "version": "0.171.0",
+    "releasedAt": "2026-06-18T20:30:00+07:00",
+    "title": "Regression для readiness assertion workflow artifacts guard",
+    "summary": "Workflow artifacts guard для readiness assertion CI теперь покрыт fail-closed regression harness на tampered CI workflow.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-readiness-assertion-ci-workflow-artifacts-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Harness проверяет happy path и ожидает ошибки для `missing-guard-step`, `missing-assertion-log-artifact`, `bad-artifact-name` и `missing-if-no-files-found-error`."
+      },
+      {
+        "type": "important",
+        "text": "`ProductionReadinessGateTests` закрепляет наличие regression harness и связь с roadmap `P11-ACC-056`."
+      }
+    ]
   }
 ]

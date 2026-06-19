@@ -76,6 +76,14 @@ Guard проверяет, что `.github/workflows/ci.yml` содержит job
 
 GitHub Actions запускает этот guard отдельным step `Guard production readiness assertion workflow artifacts` до `Run production readiness assertion CI regression`, поэтому broken published artifacts contract должен падать до запуска wrapper и upload step.
 
+Fail-closed regression для guard:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-ci-workflow-artifacts-validator.ps1 -WriteJson
+```
+
+Harness проверяет happy path, затем портит копию workflow и ожидает ошибки для `missing-guard-step`, `missing-assertion-log-artifact`, `bad-artifact-name` и `missing-if-no-files-found-error`.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-regression-result.ps1 `
   -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json
