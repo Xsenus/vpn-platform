@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `555/555`.
+- [x] `STATE-001` Backend test suite проходит: `556/556`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `555/555`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-evidence-ci-workflow-artifacts-guard`, версия `0.169.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `556/556`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-evidence-ci-workflow-artifacts-guard-regression`, версия `0.170.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 48/48, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `555/555`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-evidence-ci-workflow-artifacts-guard`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 49/49, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `556/556`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-evidence-ci-workflow-artifacts-guard-regression`.
 
 ## P0. Блокеры production-запуска
 
@@ -937,6 +937,11 @@ git diff --check
   - Что сделать: закрепить published artifacts contract для GitHub Actions job `production-evidence`, чтобы CI не мог молча перестать публиковать JSON/Markdown result artifacts handoff archive regression.
   - Что сделано: добавлен `scripts/test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1`; в `.github/workflows/ci.yml` добавлен step `Guard production evidence workflow artifacts`, который запускает guard до `Run production evidence handoff archive CI regression`; `ProductionReadinessGateTests` проверяет guard-скрипт, workflow step, команду и порядок guard -> wrapper -> upload.
   - Доказательство: `ProductionReadinessGateTests` 48/48, production evidence workflow artifacts guard smoke, latest "Что нового" `2026-06-19-production-evidence-ci-workflow-artifacts-guard`, версия `0.169.0`.
+
+- [x] `P11-ACC-055` Production evidence CI workflow artifacts guard regression. 2026-06-19.
+  - Что сделать: добавить fail-closed regression harness для workflow artifacts guard, чтобы поврежденный `.github/workflows/ci.yml` не мог пройти локальную проверку.
+  - Что сделано: добавлен `scripts/test-production-evidence-handoff-package-archive-ci-workflow-artifacts-validator.ps1`; harness копирует workflow во временную директорию, проверяет happy path, затем ожидает ошибки для `missing-guard-step`, `missing-result-json-artifact`, `bad-artifact-name` и `missing-if-no-files-found-error`.
+  - Доказательство: `ProductionReadinessGateTests` 49/49, production evidence workflow artifacts guard validator smoke, latest "Что нового" `2026-06-19-production-evidence-ci-workflow-artifacts-guard-regression`, версия `0.170.0`.
 
 ## Журнал проверок
 

@@ -399,6 +399,14 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handof
 
 GitHub Actions запускает этот guard отдельным step `Guard production evidence workflow artifacts` до `Run production evidence handoff archive CI regression`, поэтому broken published artifacts contract должен падать до запуска wrapper и upload step.
 
+Fail-closed regression для guard:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-ci-workflow-artifacts-validator.ps1 -WriteJson
+```
+
+Harness проверяет happy path, затем портит копию workflow и ожидает ошибки для `missing-guard-step`, `missing-result-json-artifact`, `bad-artifact-name` и `missing-if-no-files-found-error`.
+
 Если доступна переменная `GITHUB_STEP_SUMMARY`, wrapper дополнительно дописывает тот же Markdown-результат в GitHub Actions job summary: общий статус, release id, статус основного flow, result validator regression и long-path regression. Локально это можно проверить, задав `GITHUB_STEP_SUMMARY` на временный `.md` файл перед запуском wrapper.
 
 Wrapper запускает `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1` для result Markdown и для `GITHUB_STEP_SUMMARY`, если summary-файл доступен. Валидатор fail-closed сверяет JSON result artifact с Markdown: `status = passed`, release id, статусы основного flow, result validator regression, long-path regression и пути к обязательным artifacts.

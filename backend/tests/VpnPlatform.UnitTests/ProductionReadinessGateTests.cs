@@ -1328,6 +1328,32 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Ci_Workflow_Guard_Should_Have_Fail_Closed_Regression()
+    {
+        var root = FindRepositoryRoot();
+        var harness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-ci-workflow-artifacts-validator.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1",
+                     "missing-guard-step",
+                     "missing-result-json-artifact",
+                     "bad-artifact-name",
+                     "missing-if-no-files-found-error",
+                     "testedFailures",
+                     "production evidence CI workflow artifacts guard validator passed"
+                 })
+        {
+            Assert.Contains(expected, harness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-package-archive-ci-workflow-artifacts-validator.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-055`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Package_Archive_Ci_Regression_Should_Write_GitHub_Step_Summary()
     {
         var root = FindRepositoryRoot();

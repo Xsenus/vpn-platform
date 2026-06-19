@@ -4130,5 +4130,28 @@
         "text": "`ProductionReadinessGateTests` проверяет published artifact name, `if-no-files-found: error`, JSON/Markdown result paths и порядок guard -> wrapper -> upload."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-evidence-ci-workflow-artifacts-guard-regression",
+    "version": "0.170.0",
+    "releasedAt": "2026-06-18T20:20:00+07:00",
+    "title": "Regression для production evidence workflow artifacts guard",
+    "summary": "Workflow artifacts guard для production-evidence теперь покрыт fail-closed regression harness на tampered CI workflow.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-evidence-handoff-package-archive-ci-workflow-artifacts-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Harness проверяет happy path и ожидает ошибки для `missing-guard-step`, `missing-result-json-artifact`, `bad-artifact-name` и `missing-if-no-files-found-error`."
+      },
+      {
+        "type": "important",
+        "text": "`ProductionReadinessGateTests` закрепляет наличие regression harness и связь с roadmap `P11-ACC-055`."
+      }
+    ]
   }
 ]

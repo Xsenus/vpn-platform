@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.170.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-evidence-ci-workflow-artifacts-guard-regression`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-ci-workflow-artifacts-validator.ps1` проверяет fail-closed поведение production evidence workflow artifacts guard.
+
+### Changed
+
+- Production readiness gate docs описывают workflow guard regression для tampered `.github/workflows/ci.yml`.
+- Roadmap и release docs синхронизированы с backend suite `556/556` и latest release `0.170.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 49/49.
+- Production evidence CI workflow artifacts guard validator smoke: OK.
+- Targeted release/docs suite: 65/65.
+- Backend full suite: 556/556.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Regression harness проверяет `missing-guard-step`, `missing-result-json-artifact`, `bad-artifact-name` и `missing-if-no-files-found-error`.
+
 ## 0.169.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-evidence-ci-workflow-artifacts-guard`.
