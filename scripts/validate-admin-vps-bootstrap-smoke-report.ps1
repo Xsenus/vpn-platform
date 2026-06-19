@@ -47,6 +47,18 @@ function Assert-BooleanField {
     }
 }
 
+function Assert-Same {
+    param(
+        [AllowEmptyString()][string]$Left,
+        [AllowEmptyString()][string]$Right,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if (-not [string]::Equals($Left, $Right, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Admin VPS bootstrap smoke report mismatch for $Name."
+    }
+}
+
 $fullReportPath = Resolve-WorkspacePath $ReportPath
 if (-not (Test-Path -LiteralPath $fullReportPath -PathType Leaf)) {
     throw "Admin VPS bootstrap smoke report was not found: $fullReportPath"
@@ -142,6 +154,11 @@ if ($RequirePassed) {
     & $evidenceValidator `
         -PreflightReportPath ([string]$report.preflightReportPath) `
         -SmokeReportPath ([string]$report.smokeReportPath) | Out-Host
+
+    $preflightReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.preflightReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    $smokeReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.smokeReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-Same ([string]$report.releaseId) ([string]$preflightReport.releaseId) "preflight releaseId"
+    Assert-Same ([string]$report.releaseId) ([string]$smokeReport.releaseId) "smoke releaseId"
 }
 
 $summary = [ordered]@{

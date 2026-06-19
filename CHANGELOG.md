@@ -2,6 +2,21 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.204.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-bootstrap-smoke-report-release-link`.
+
+### Fixed
+- `scripts/validate-admin-vps-bootstrap-smoke-report.ps1` теперь сверяет `releaseId` итогового bootstrap smoke report с `releaseId` preflight и smoke reports после успешной проверки smoke evidence.
+
+### Added
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `mismatched-smoke-release-id`, где preflight/smoke согласованы между собой, но не совпадают с bootstrap report.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, включая `mismatched-release-id` и `mismatched-smoke-release-id`.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.203.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-bootstrap-smoke-release-id-chain`.

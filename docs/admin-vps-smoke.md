@@ -191,7 +191,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
 ```
 
-Успешный bootstrap+smoke проход дополнительно пишет sanitized report и проверяет его через validator:
+Успешный bootstrap+smoke проход дополнительно пишет sanitized report и проверяет его через validator. Validator сверяет `releaseId` итогового bootstrap report с preflight и smoke reports:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-report.ps1 -ReportPath tmp\admin-vps-bootstrap-smoke-report.json -RequirePassed
@@ -199,7 +199,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
 ```
 
-Regression harness также проверяет `bad-smoke-route` и `mismatched-release-id`: bootstrap evidence chain должен отклонять smoke report, если route раздела расходится с `docs/admin-vps-smoke-sections.json`, и не должен смешивать readiness/bootstrap reports от разных release evidence.
+Regression harness также проверяет `bad-smoke-route`, `mismatched-release-id` и `mismatched-smoke-release-id`: bootstrap evidence chain должен отклонять smoke report, если route раздела расходится с `docs/admin-vps-smoke-sections.json`, и не должен смешивать readiness/bootstrap/preflight/smoke reports от разных release evidence.
 
 ## Браузерный live-smoke
 

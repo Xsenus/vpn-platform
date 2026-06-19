@@ -4912,5 +4912,28 @@
         "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `mismatched-release-id`, а wrapper regression проверяет release id в dry-run readiness; live VPS evidence остается обязательным отдельно."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-bootstrap-smoke-report-release-link",
+    "version": "0.204.0",
+    "releasedAt": "2026-06-19T02:00:00+07:00",
+    "title": "Release link bootstrap smoke report админки VPS",
+    "summary": "Итоговый bootstrap smoke report теперь fail-closed сверяет свой release id с preflight/smoke evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-report.ps1` после smoke evidence validation сверяет `releaseId` итогового bootstrap report с preflight и smoke reports."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `mismatched-smoke-release-id`, где preflight/smoke согласованы между собой, но не совпадают с bootstrap report."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

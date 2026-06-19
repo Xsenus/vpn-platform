@@ -297,9 +297,18 @@ $results += Invoke-ValidatorScenario -Name "readiness-not-ready" -ExpectedExitCo
 }
 $results += Invoke-ValidatorScenario -Name "mismatched-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for releaseId" -Mutate {
     param($readinessPath, $bootstrapPath)
-    $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.releaseId = "bootstrap-smoke-evidence-validator-other-release"
-    Write-JsonFile -Path $bootstrapPath -Value $report
+    Write-JsonFile -Path $readinessPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight releaseId" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $smoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $preflight.releaseId = "bootstrap-smoke-evidence-validator-other-smoke-release"
+    $smoke.releaseId = "bootstrap-smoke-evidence-validator-other-smoke-release"
+    Write-JsonFile -Path $preflightPath -Value $preflight
+    Write-JsonFile -Path $smokePath -Value $smoke
 }
 $results += Invoke-ValidatorScenario -Name "bad-timing" -ExpectedExitCode 1 -ExpectedMessage "generated after readiness report" -Mutate {
     param($readinessPath, $bootstrapPath)
