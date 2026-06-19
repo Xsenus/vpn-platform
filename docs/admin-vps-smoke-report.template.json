@@ -3,6 +3,7 @@
   "environmentName": "staging",
   "apiBaseUrl": "https://api.example.test",
   "adminWebUrl": "https://admin.example.test",
+  "adminEmail": "admin@example.test",
   "startedAt": "2026-06-14T00:00:00+07:00",
   "completedAt": "2026-06-14T00:00:00+07:00",
   "releaseId": "2026-06-14-admin-vps-smoke-report",

@@ -8,6 +8,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$AdminWebUrl,
 
+    [string]$AdminEmail = $(if ($env:ADMIN_VPS_SMOKE_ADMIN_EMAIL) { $env:ADMIN_VPS_SMOKE_ADMIN_EMAIL } else { "admin@example.test" }),
     [string]$EnvironmentName = "staging",
     [string]$Operator = "",
     [string]$ReleaseId = "",
@@ -54,6 +55,10 @@ function Get-LatestReleaseId {
 Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
 Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
 
+if ([string]::IsNullOrWhiteSpace($AdminEmail) -or -not $AdminEmail.Contains("@")) {
+    throw "AdminEmail must contain an email address."
+}
+
 $templatePath = Resolve-RepoPath "docs/admin-vps-smoke-report.template.json"
 if (-not (Test-Path -LiteralPath $templatePath)) {
     throw "Template was not found: $templatePath"
@@ -87,6 +92,7 @@ $report.reportId = "admin-vps-smoke-" + $now.ToString("yyyyMMdd-HHmmss")
 $report.environmentName = $EnvironmentName.Trim()
 $report.apiBaseUrl = $ApiBaseUrl.TrimEnd("/")
 $report.adminWebUrl = $AdminWebUrl.TrimEnd("/")
+$report.adminEmail = $AdminEmail.Trim()
 $report.startedAt = $now.ToString("o")
 $report.completedAt = $now.ToString("o")
 $report.releaseId = $releaseValue

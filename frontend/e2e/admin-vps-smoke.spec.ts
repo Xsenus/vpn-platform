@@ -66,6 +66,7 @@ type SmokeReport = {
   environmentName: string
   apiBaseUrl: string
   adminWebUrl: string
+  adminEmail: string
   startedAt: string
   completedAt: string
   releaseId: string
@@ -118,12 +119,13 @@ function sanitizeResponse(responseUrl: string, status: number) {
   return `${status} ${parsed.pathname}`
 }
 
-function createReport(startedAt: Date, apiBaseUrl: string, adminWebUrl: string): SmokeReport {
+function createReport(startedAt: Date, apiBaseUrl: string, adminWebUrl: string, adminEmail: string): SmokeReport {
   return {
     reportId: `admin-vps-smoke-${formatReportTimestamp(startedAt)}`,
     environmentName: optionalEnv('ADMIN_VPS_SMOKE_ENVIRONMENT', 'staging'),
     apiBaseUrl: apiBaseUrl.replace(/\/+$/, ''),
     adminWebUrl: adminWebUrl.replace(/\/+$/, ''),
+    adminEmail,
     startedAt: startedAt.toISOString(),
     completedAt: startedAt.toISOString(),
     releaseId: optionalEnv('ADMIN_VPS_SMOKE_RELEASE_ID', latestReleaseId()),
@@ -174,7 +176,7 @@ test('admin VPS smoke covers login and every admin section without storing secre
   assertHttpUrl(adminWebUrl, 'ADMIN_VPS_SMOKE_ADMIN_WEB_URL')
 
   const startedAt = new Date()
-  const report = createReport(startedAt, apiBaseUrl, adminWebUrl)
+  const report = createReport(startedAt, apiBaseUrl, adminWebUrl, email)
   const consoleErrors: string[] = []
   const failedResponses: string[] = []
   let collectFailedResponses = false

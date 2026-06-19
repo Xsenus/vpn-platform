@@ -125,6 +125,7 @@ try {
         environmentName = "Local"
         apiBaseUrl = "http://127.0.0.1:18201"
         adminWebUrl = "http://127.0.0.1:18205/admin/"
+        adminEmail = "fresh-admin@example.test"
         startedAt = $now.AddMinutes(-1).ToString("O")
         completedAt = $now.ToString("O")
         releaseId = "manual-admin-vps-smoke-validator-regression"

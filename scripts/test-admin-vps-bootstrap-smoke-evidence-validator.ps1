@@ -174,6 +174,7 @@ function New-SmokeReport {
         releaseId = "bootstrap-smoke-evidence-validator-test"
         apiBaseUrl = "http://127.0.0.1:18211"
         adminWebUrl = "http://127.0.0.1:18215"
+        adminEmail = "admin@example.test"
         notes = "Synthetic real evidence for bootstrap smoke evidence validator."
         adminLoginPassed = $true
         accountBootstrapChecked = $true

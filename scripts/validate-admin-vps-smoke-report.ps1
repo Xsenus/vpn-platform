@@ -130,7 +130,7 @@ catch {
     throw "Admin VPS smoke report is not valid JSON: $($_.Exception.Message)"
 }
 
-foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "adminWebUrl", "startedAt", "completedAt", "releaseId", "operator", "notes")) {
+foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "adminWebUrl", "adminEmail", "startedAt", "completedAt", "releaseId", "operator", "notes")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Admin VPS smoke report is missing required field: $propertyName"
     }
@@ -142,6 +142,10 @@ foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "adminW
 
 Assert-ReportHttpUrl -Value ([string]$report.apiBaseUrl) -Name "apiBaseUrl"
 Assert-ReportHttpUrl -Value ([string]$report.adminWebUrl) -Name "adminWebUrl"
+
+if (-not ([string]$report.adminEmail).Contains("@")) {
+    throw "Admin VPS smoke report field adminEmail must contain an email address."
+}
 
 $startedAt = [DateTimeOffset]::MinValue
 $completedAt = [DateTimeOffset]::MinValue

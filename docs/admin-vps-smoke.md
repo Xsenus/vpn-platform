@@ -7,7 +7,7 @@
 Создайте fail-closed отчет перед ручной или браузерной проверкой:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\new-admin-vps-smoke-report.ps1 -OutputPath tmp\admin-vps-smoke-report.json -ApiBaseUrl https://api.example.test -AdminWebUrl https://example.test/admin/ -EnvironmentName staging -Operator local-test
+powershell -ExecutionPolicy Bypass -File scripts\new-admin-vps-smoke-report.ps1 -OutputPath tmp\admin-vps-smoke-report.json -ApiBaseUrl https://api.example.test -AdminWebUrl https://example.test/admin/ -AdminEmail owner@example.com -EnvironmentName staging -Operator local-test
 ```
 
 Скрипт берет `docs/admin-vps-smoke-report.template.json`, подставляет latest release из раздела "Что нового", URL окружения и оператора, выставляет все разделы в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
@@ -127,7 +127,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
   -AccountBootstrapChecked
 ```
 
-`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, вычисляет release id один раз, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword` с этим же release id, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` с тем же значением. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
+`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, вычисляет release id один раз, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword` с этим же release id, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` с тем же значением. Browser smoke report пишет sanitized `adminEmail`, а парный evidence validator сверяет его с preflight report, чтобы нельзя было смешать preflight и smoke от разных admin-аккаунтов. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
 
 Локальная regression-проверка wrapper, включая fail-closed сценарии `missing-password`, `bad-api-url` и `missing-frontend`, доказывает, что browser smoke не стартует до valid preflight, smoke report не создается, пароль не попадает в stdout/stderr, а preflight report получает непустой release id еще до отказа browser smoke:
 

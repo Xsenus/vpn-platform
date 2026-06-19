@@ -143,6 +143,7 @@ function New-EvidencePair {
         environmentName = "staging"
         apiBaseUrl = $apiBaseUrl
         adminWebUrl = $adminWebUrl
+        adminEmail = "owner@example.test"
         startedAt = $startedAt.ToString("O")
         completedAt = $completedAt.ToString("O")
         releaseId = $releaseId
@@ -184,6 +185,17 @@ try {
         name = "mismatched-api-url"
         message = Assert-FailsWith -ExpectedMessage "mismatch for apiBaseUrl" -Action {
             Invoke-EvidenceValidator -PreflightPath $badApiPreflight -SmokePath $smokePath
+        }
+    }
+
+    $badEmailSmokePath = Join-Path $outputFullPath "bad-admin-email-smoke.json"
+    $badEmailSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badEmailSmoke.adminEmail = "other-owner@example.test"
+    Write-Utf8NoBomJson -Path $badEmailSmokePath -Value $badEmailSmoke
+    $testedFailures += [ordered]@{
+        name = "mismatched-admin-email"
+        message = Assert-FailsWith -ExpectedMessage "mismatch for adminEmail" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $badEmailSmokePath
         }
     }
 

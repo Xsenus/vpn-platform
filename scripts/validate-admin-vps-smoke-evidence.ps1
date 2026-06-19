@@ -66,6 +66,7 @@ $smoke = Read-JsonFile -Path $smokeFullPath
 
 Assert-Equal -Actual (Normalize-Url $smoke.apiBaseUrl) -Expected (Normalize-Url $preflight.apiBaseUrl) -Name "apiBaseUrl"
 Assert-Equal -Actual (Normalize-Url $smoke.adminWebUrl) -Expected (Normalize-Url $preflight.adminWebUrl) -Name "adminWebUrl"
+Assert-Equal -Actual ([string]$smoke.adminEmail) -Expected ([string]$preflight.adminEmail) -Name "adminEmail"
 Assert-Equal -Actual ([string]$smoke.environmentName) -Expected ([string]$preflight.environmentName) -Name "environmentName"
 Assert-Equal -Actual ([string]$smoke.operator) -Expected ([string]$preflight.operator) -Name "operator"
 

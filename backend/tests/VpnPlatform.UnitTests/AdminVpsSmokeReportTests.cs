@@ -35,6 +35,7 @@ public class AdminVpsSmokeReportTests
         Assert.False(json.RootElement.GetProperty("adminLoginPassed").GetBoolean());
         Assert.False(json.RootElement.GetProperty("noJsErrors").GetBoolean());
         Assert.False(json.RootElement.GetProperty("noUnauthorizedAfterLogin").GetBoolean());
+        Assert.Contains("@", json.RootElement.GetProperty("adminEmail").GetString(), StringComparison.Ordinal);
 
         var sections = json.RootElement.GetProperty("sections").EnumerateArray().ToArray();
         Assert.Equal(RequiredSections.Order(StringComparer.Ordinal), sections.Select(x => x.GetProperty("id").GetString()).Order(StringComparer.Ordinal));
@@ -61,6 +62,7 @@ public class AdminVpsSmokeReportTests
                      "sections contract",
                      "apiBaseUrl",
                      "adminWebUrl",
+                     "adminEmail",
                      "accountBootstrapChecked",
                      "adminLoginPassed",
                      "noJsErrors",
@@ -99,7 +101,7 @@ public class AdminVpsSmokeReportTests
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
         }
 
-        foreach (var field in new[] { "OutputPath", "ApiBaseUrl", "AdminWebUrl", "EnvironmentName", "Operator", "ReleaseId" })
+        foreach (var field in new[] { "OutputPath", "ApiBaseUrl", "AdminWebUrl", "AdminEmail", "EnvironmentName", "Operator", "ReleaseId" })
         {
             Assert.Contains(field, script, StringComparison.Ordinal);
         }
@@ -135,6 +137,7 @@ public class AdminVpsSmokeReportTests
                      "Get-LatestReleaseId",
                      "Release id:",
                      "No credentials, cookies, auth headers, tokens or screenshots are stored",
+                     "adminEmail",
                      "Завершить сессию",
                      "validate-admin-vps-smoke-report.ps1",
                      "Password: [hidden]"
@@ -448,6 +451,7 @@ public class AdminVpsSmokeReportTests
                      "RequireAllPassed",
                      "apiBaseUrl",
                      "adminWebUrl",
+                     "adminEmail",
                      "environmentName",
                      "operator",
                      "smokeReportPath",
@@ -464,6 +468,7 @@ public class AdminVpsSmokeReportTests
                  {
                      "admin-vps-smoke-evidence-validator-regression-test",
                      "mismatched-api-url",
+                     "mismatched-admin-email",
                      "mismatched-smoke-report-path",
                      "mismatched-release-id",
                      "missing-preflight-release-id",
