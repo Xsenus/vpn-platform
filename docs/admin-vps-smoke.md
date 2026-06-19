@@ -153,7 +153,7 @@ Regression harness покрывает `missing-preflight-release-id`: preflight/
 
 ## Bootstrap + live-smoke
 
-Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked`.
+Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он вычисляет release id один раз для readiness/smoke/bootstrap evidence, запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked`.
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5432;Database=vpnplatform;Username=vpnplatform;Password=<db-password>"
@@ -199,7 +199,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
 ```
 
-Regression harness также проверяет `bad-smoke-route`: bootstrap evidence chain должен отклонять smoke report, если route раздела расходится с `docs/admin-vps-smoke-sections.json`.
+Regression harness также проверяет `bad-smoke-route` и `mismatched-release-id`: bootstrap evidence chain должен отклонять smoke report, если route раздела расходится с `docs/admin-vps-smoke-sections.json`, и не должен смешивать readiness/bootstrap reports от разных release evidence.
 
 ## Браузерный live-smoke
 

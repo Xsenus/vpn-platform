@@ -295,6 +295,12 @@ $results += Invoke-ValidatorScenario -Name "readiness-not-ready" -ExpectedExitCo
     $report.readyForBootstrapSmoke = $false
     Write-JsonFile -Path $readinessPath -Value $report
 }
+$results += Invoke-ValidatorScenario -Name "mismatched-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for releaseId" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.releaseId = "bootstrap-smoke-evidence-validator-other-release"
+    Write-JsonFile -Path $bootstrapPath -Value $report
+}
 $results += Invoke-ValidatorScenario -Name "bad-timing" -ExpectedExitCode 1 -ExpectedMessage "generated after readiness report" -Mutate {
     param($readinessPath, $bootstrapPath)
     $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json

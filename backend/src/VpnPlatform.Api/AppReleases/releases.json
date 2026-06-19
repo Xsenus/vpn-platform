@@ -4889,5 +4889,28 @@
         "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` проверяет, что fail-closed preflight reports получают непустой release id; live VPS smoke evidence все еще требуется отдельно."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-bootstrap-smoke-release-id-chain",
+    "version": "0.203.0",
+    "releasedAt": "2026-06-19T01:50:00+07:00",
+    "title": "Release id chain bootstrap smoke админки VPS",
+    "summary": "Bootstrap+smoke flow админки VPS теперь передает один release id через readiness, smoke и итоговый bootstrap evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` вычисляет `releaseValue` один раз и передает его в readiness gate, admin VPS smoke и итоговый bootstrap smoke report."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` fail-closed отклоняет readiness/bootstrap evidence с разным `releaseId`."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `mismatched-release-id`, а wrapper regression проверяет release id в dry-run readiness; live VPS evidence остается обязательным отдельно."
+      }
+    ]
   }
 ]

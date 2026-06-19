@@ -134,11 +134,25 @@ function Invoke-BootstrapSmokeScenario {
             }
         }
 
+        $readinessReleaseId = ""
+        if ($DryRun) {
+            if (-not (Test-Path -LiteralPath $readinessReportPath -PathType Leaf)) {
+                throw "Readiness report should exist for dry-run scenario '$Name'."
+            }
+
+            $readinessReport = Get-Content -LiteralPath $readinessReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $readinessReleaseId = [string]$readinessReport.releaseId
+            if ([string]::IsNullOrWhiteSpace($readinessReleaseId)) {
+                throw "Readiness report releaseId should be resolved before dry-run smoke stop in scenario '$Name'."
+            }
+        }
+
         return [ordered]@{
             name = $Name
             exitCode = $process.ExitCode
             expectedMessage = $ExpectedMessage
             smokeArtifactsCreated = $false
+            readinessReleaseId = $readinessReleaseId
         }
     }
     finally {

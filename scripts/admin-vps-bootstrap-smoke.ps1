@@ -47,6 +47,21 @@ function Set-ProcessEnv {
     }
 }
 
+function Get-LatestReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        return "manual-admin-vps-bootstrap-smoke"
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property releasedAt -Descending | Select-Object -First 1)
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        return "manual-admin-vps-bootstrap-smoke"
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
@@ -78,6 +93,8 @@ if (-not $LocalSqlite -and [string]::IsNullOrWhiteSpace($ConnectionString)) {
     throw "Connection string is required for non-local admin bootstrap/reset."
 }
 
+$releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
+
 $previousBootstrapPassword = [Environment]::GetEnvironmentVariable("AdminBootstrap__Password", "Process")
 $previousSmokePassword = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", "Process")
 
@@ -93,6 +110,7 @@ try {
     Write-Host "Preflight report path: $PreflightReportPath"
     Write-Host "Bootstrap smoke report path: $BootstrapSmokeReportPath"
     Write-Host "Readiness report path: $ReadinessReportPath"
+    Write-Host "Release id: $releaseValue"
     Write-Host "Bootstrap reset confirmed: $ConfirmBootstrapReset"
 
     $readinessArgs = @{
@@ -108,7 +126,7 @@ try {
         ReadinessReportPath = $ReadinessReportPath
         EnvironmentName = $EnvironmentName
         Operator = $Operator
-        ReleaseId = $ReleaseId
+        ReleaseId = $releaseValue
         FrontendPath = $FrontendPath
         RequireReady = $true
     }
@@ -178,7 +196,7 @@ try {
         -PreflightReportPath $PreflightReportPath `
         -EnvironmentName $EnvironmentName `
         -Operator $Operator `
-        -ReleaseId $ReleaseId `
+        -ReleaseId $releaseValue `
         -FrontendPath $FrontendPath `
         -AccountBootstrapChecked
 
@@ -191,26 +209,6 @@ try {
 
     if ([string]::IsNullOrWhiteSpace($operatorValue)) {
         $operatorValue = "manual-operator"
-    }
-
-    $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) {
-        $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
-        if (Test-Path -LiteralPath $releasesPath -PathType Leaf) {
-            $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property releasedAt -Descending | Select-Object -First 1)
-            if ($latest.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
-                [string]$latest[0].releaseId
-            }
-            else {
-                "manual-admin-vps-bootstrap-smoke"
-            }
-        }
-        else {
-            "manual-admin-vps-bootstrap-smoke"
-        }
-    }
-    else {
-        $ReleaseId.Trim()
     }
 
     $bootstrapSmokeReportFullPath = if ([System.IO.Path]::IsPathRooted($BootstrapSmokeReportPath)) {
