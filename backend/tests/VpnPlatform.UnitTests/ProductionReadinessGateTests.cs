@@ -564,6 +564,39 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Ci_Workflow_Artifacts_Guards_Should_Have_Aggregate_Command()
+    {
+        var root = FindRepositoryRoot();
+        var harness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-ci-workflow-artifacts-guards.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "test-production-readiness-assertion-ci-workflow-artifacts.ps1",
+                     "test-production-readiness-assertion-ci-workflow-artifacts-validator.ps1",
+                     "test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1",
+                     "test-production-evidence-handoff-package-archive-ci-workflow-artifacts-validator.ps1",
+                     "guardsCount",
+                     "production CI workflow artifacts guards passed"
+                 })
+        {
+            Assert.Contains(expected, harness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var aggregateStepIndex = workflow.IndexOf("Guard production CI workflow artifacts contracts", StringComparison.OrdinalIgnoreCase);
+        var aggregateCommandIndex = workflow.IndexOf("test-production-ci-workflow-artifacts-guards.ps1 -WriteJson", StringComparison.OrdinalIgnoreCase);
+        var setupDotnetIndex = workflow.IndexOf("Setup .NET SDK from global.json", StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(aggregateStepIndex >= 0, "Aggregate production CI workflow artifacts guard step must be present in CI.");
+        Assert.True(aggregateCommandIndex > aggregateStepIndex, "Aggregate production CI workflow artifacts guard command must be in the guard step.");
+        Assert.True(aggregateCommandIndex < setupDotnetIndex, "Aggregate production CI workflow artifacts guard must run before backend setup and tests.");
+        Assert.Contains("test-production-ci-workflow-artifacts-guards.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-057`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

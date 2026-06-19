@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `557/557`.
+- [x] `STATE-001` Backend test suite проходит: `558/558`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `557/557`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-readiness-assertion-ci-workflow-artifacts-guard-regression`, версия `0.171.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `558/558`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-ci-workflow-artifacts-guards-aggregate`, версия `0.172.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 50/50, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `557/557`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-workflow-artifacts-guard-regression`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 51/51, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `558/558`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-aggregate`.
 
 ## P0. Блокеры production-запуска
 
@@ -947,6 +947,11 @@ git diff --check
   - Что сделать: добавить fail-closed regression harness для readiness assertion workflow artifacts guard, чтобы поврежденный `.github/workflows/ci.yml` не мог пройти локальную проверку.
   - Что сделано: добавлен `scripts/test-production-readiness-assertion-ci-workflow-artifacts-validator.ps1`; harness копирует workflow во временную директорию, проверяет happy path, затем ожидает ошибки для `missing-guard-step`, `missing-assertion-log-artifact`, `bad-artifact-name` и `missing-if-no-files-found-error`.
   - Доказательство: `ProductionReadinessGateTests` 50/50, readiness assertion workflow artifacts guard validator smoke, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-workflow-artifacts-guard-regression`, версия `0.171.0`.
+
+- [x] `P11-ACC-057` Production CI workflow artifacts guards aggregate. 2026-06-19.
+  - Что сделать: добавить один локальный и CI-friendly entrypoint для проверки всех production workflow artifacts guards, чтобы release handoff не зависел от ручного запуска четырех отдельных команд.
+  - Что сделано: добавлен `scripts/test-production-ci-workflow-artifacts-guards.ps1`; aggregate запускает readiness assertion guard, readiness assertion fail-closed validator, production evidence guard и production evidence fail-closed validator; GitHub Actions backend job запускает aggregate step `Guard production CI workflow artifacts contracts` сразу после checkout.
+  - Доказательство: `ProductionReadinessGateTests` 51/51, production CI workflow artifacts guards aggregate smoke, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-aggregate`, версия `0.172.0`.
 
 ## Журнал проверок
 
