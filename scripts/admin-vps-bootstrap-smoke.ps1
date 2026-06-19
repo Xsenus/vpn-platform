@@ -27,6 +27,21 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $bootstrapScript = Join-Path $repoRoot "scripts/admin-bootstrap.ps1"
 $smokeScript = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"
 
+function Set-ProcessEnv {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [AllowNull()][string]$Value
+    )
+
+    [Environment]::SetEnvironmentVariable($Name, $Value, "Process")
+    if ($null -eq $Value) {
+        Remove-Item -LiteralPath "Env:\$Name" -ErrorAction SilentlyContinue
+    }
+    else {
+        Set-Item -LiteralPath "Env:\$Name" -Value $Value
+    }
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
@@ -58,6 +73,7 @@ if (-not $LocalSqlite -and [string]::IsNullOrWhiteSpace($ConnectionString)) {
     throw "Connection string is required for non-local admin bootstrap/reset."
 }
 
+$previousBootstrapPassword = [Environment]::GetEnvironmentVariable("AdminBootstrap__Password", "Process")
 $previousSmokePassword = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", "Process")
 
 try {
@@ -72,36 +88,36 @@ try {
     Write-Host "Preflight report path: $PreflightReportPath"
     Write-Host "Bootstrap reset confirmed: $ConfirmBootstrapReset"
 
-    $bootstrapArgs = @(
-        "-EnvironmentName", $EnvironmentName,
-        "-Email", $AdminEmail,
-        "-Password", $password,
-        "-DisplayName", $DisplayName,
-        "-RolesCsv", $RolesCsv,
-        "-Provider", $Provider,
-        "-ProjectPath", $ProjectPath
-    )
+    $bootstrapArgs = @{
+        EnvironmentName = $EnvironmentName
+        Email = $AdminEmail
+        DisplayName = $DisplayName
+        RolesCsv = $RolesCsv
+        Provider = $Provider
+        ProjectPath = $ProjectPath
+    }
 
     if (-not [string]::IsNullOrWhiteSpace($ConnectionString)) {
-        $bootstrapArgs += @("-ConnectionString", $ConnectionString)
+        $bootstrapArgs["ConnectionString"] = $ConnectionString
     }
 
     if (-not [string]::IsNullOrWhiteSpace($DataProtectionKeyPath)) {
-        $bootstrapArgs += @("-DataProtectionKeyPath", $DataProtectionKeyPath)
+        $bootstrapArgs["DataProtectionKeyPath"] = $DataProtectionKeyPath
     }
 
     if ($LocalSqlite) {
-        $bootstrapArgs += "-LocalSqlite"
+        $bootstrapArgs["LocalSqlite"] = $true
     }
 
     if ($ApplyMigrations) {
-        $bootstrapArgs += "-ApplyMigrations"
+        $bootstrapArgs["ApplyMigrations"] = $true
     }
 
     if ($DryRun) {
-        $bootstrapArgs += "-DryRun"
+        $bootstrapArgs["DryRun"] = $true
     }
 
+    Set-ProcessEnv "AdminBootstrap__Password" $password
     & $bootstrapScript @bootstrapArgs
 
     if ($DryRun) {
@@ -109,7 +125,7 @@ try {
         return
     }
 
-    [Environment]::SetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", $password, "Process")
+    Set-ProcessEnv "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" $password
 
     & $smokeScript `
         -ApiBaseUrl $ApiBaseUrl `
@@ -126,5 +142,6 @@ try {
     Write-Host "Admin VPS bootstrap+smoke flow completed."
 }
 finally {
-    [Environment]::SetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", $previousSmokePassword, "Process")
+    Set-ProcessEnv "AdminBootstrap__Password" $previousBootstrapPassword
+    Set-ProcessEnv "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" $previousSmokePassword
 }

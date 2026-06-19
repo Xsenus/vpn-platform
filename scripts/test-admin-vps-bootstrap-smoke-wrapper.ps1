@@ -1,0 +1,206 @@
+param(
+    [string]$OutputDirectory = "tmp/admin-vps-bootstrap-smoke-wrapper-regression-test",
+    [switch]$KeepArtifacts,
+    [switch]$WriteJson
+)
+
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+
+function Resolve-WorkspacePath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return [System.IO.Path]::GetFullPath($Path)
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
+}
+
+function Assert-InWorkspace {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $fullRoot = [System.IO.Path]::GetFullPath($repoRoot)
+    if (-not $fullPath.StartsWith($fullRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Path must stay inside repository workspace: $fullPath"
+    }
+}
+
+function Set-ScopedEnv {
+    param(
+        [hashtable]$Previous,
+        [string]$Name,
+        [AllowNull()][string]$Value
+    )
+
+    if (-not $Previous.ContainsKey($Name)) {
+        $Previous[$Name] = [Environment]::GetEnvironmentVariable($Name, "Process")
+    }
+
+    [Environment]::SetEnvironmentVariable($Name, $Value, "Process")
+}
+
+function Invoke-BootstrapSmokeScenario {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [AllowNull()][string]$Password,
+        [AllowNull()][string]$ConnectionString,
+        [switch]$ConfirmBootstrapReset,
+        [switch]$LocalSqlite,
+        [switch]$DryRun,
+        [Parameter(Mandatory = $true)][int]$ExpectedExitCode,
+        [Parameter(Mandatory = $true)][string]$ExpectedMessage
+    )
+
+    $scenarioPath = Join-Path $outputFullPath $Name
+    New-Item -ItemType Directory -Path $scenarioPath -Force | Out-Null
+
+    $stdoutPath = Join-Path $scenarioPath "stdout.log"
+    $stderrPath = Join-Path $scenarioPath "stderr.log"
+    $smokeReportPath = Join-Path $scenarioPath "admin-vps-smoke-report.json"
+    $preflightReportPath = Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"
+    $wrapperPath = Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke.ps1"
+    $previous = @{}
+
+    try {
+        Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD" -Value $Password
+        Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" -Value $null
+        Set-ScopedEnv -Previous $previous -Name "ConnectionStrings__DefaultConnection" -Value $ConnectionString
+
+        $arguments = @(
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", $wrapperPath,
+            "-ApiBaseUrl", "http://127.0.0.1:18211",
+            "-AdminWebUrl", "http://127.0.0.1:18215/admin/",
+            "-AdminEmail", "fresh-bootstrap-admin@example.test",
+            "-SmokeReportPath", $smokeReportPath,
+            "-PreflightReportPath", $preflightReportPath,
+            "-EnvironmentName", "Local",
+            "-Operator", "admin-vps-bootstrap-smoke-wrapper-regression",
+            "-FrontendPath", "frontend"
+        )
+
+        if ($ConfirmBootstrapReset) {
+            $arguments += "-ConfirmBootstrapReset"
+        }
+
+        if ($LocalSqlite) {
+            $arguments += "-LocalSqlite"
+        }
+
+        if ($DryRun) {
+            $arguments += "-DryRun"
+        }
+
+        $process = Start-Process -FilePath "powershell" `
+            -ArgumentList $arguments `
+            -WorkingDirectory $repoRoot `
+            -RedirectStandardOutput $stdoutPath `
+            -RedirectStandardError $stderrPath `
+            -PassThru `
+            -Wait `
+            -WindowStyle Hidden
+
+        $output = ((Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue))
+
+        if ($process.ExitCode -ne $ExpectedExitCode) {
+            throw "Expected scenario '$Name' exit code $ExpectedExitCode, got $($process.ExitCode). Output: $output"
+        }
+
+        if ($output.IndexOf($ExpectedMessage, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Expected scenario '$Name' output to contain '$ExpectedMessage'. Actual output: $output"
+        }
+
+        if (-not [string]::IsNullOrEmpty($Password) -and $output.Contains($Password)) {
+            throw "Admin VPS bootstrap smoke wrapper leaked password in scenario '$Name'."
+        }
+
+        foreach ($forbiddenOutput in @("Admin VPS smoke flow is ready to run.", "Admin VPS browser smoke is ready to run.", "e2e:admin-vps-smoke", "Admin VPS bootstrap+smoke flow completed.")) {
+            if ($output.IndexOf($forbiddenOutput, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                throw "Admin smoke appears to have started in scenario '$Name'."
+            }
+        }
+
+        foreach ($forbiddenArtifact in @($smokeReportPath, $preflightReportPath)) {
+            if (Test-Path -LiteralPath $forbiddenArtifact -PathType Leaf) {
+                throw "Smoke artifact should not exist after scenario '$Name': $forbiddenArtifact"
+            }
+        }
+
+        return [ordered]@{
+            name = $Name
+            exitCode = $process.ExitCode
+            expectedMessage = $ExpectedMessage
+            smokeArtifactsCreated = $false
+        }
+    }
+    finally {
+        foreach ($key in $previous.Keys) {
+            [Environment]::SetEnvironmentVariable($key, $previous[$key], "Process")
+        }
+    }
+}
+
+$outputFullPath = Resolve-WorkspacePath $OutputDirectory
+Assert-InWorkspace $outputFullPath
+
+if (Test-Path -LiteralPath $outputFullPath) {
+    Remove-Item -LiteralPath $outputFullPath -Recurse -Force
+}
+
+New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
+
+try {
+    $testedScenarios = @()
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "missing-password" `
+        -Password $null `
+        -ConnectionString "Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=local-only" `
+        -ConfirmBootstrapReset `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "Admin password env 'ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD' is required"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "missing-confirm-bootstrap-reset" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=local-only" `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "Pass -ConfirmBootstrapReset"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "missing-connection-string" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString $null `
+        -ConfirmBootstrapReset `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "Connection string is required for non-local admin bootstrap/reset"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-no-smoke" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-no-smoke/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started"
+
+    $result = [ordered]@{
+        status = "passed"
+        testedScenarios = @($testedScenarios)
+    }
+
+    if ($WriteJson) {
+        Write-Output ($result | ConvertTo-Json -Depth 8)
+    }
+    else {
+        Write-Host "admin vps bootstrap smoke wrapper regression passed $($result | ConvertTo-Json -Depth 8 -Compress)"
+    }
+}
+finally {
+    if (-not $KeepArtifacts -and (Test-Path -LiteralPath $outputFullPath)) {
+        Remove-Item -LiteralPath $outputFullPath -Recurse -Force
+    }
+}

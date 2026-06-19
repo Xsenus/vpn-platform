@@ -2,6 +2,48 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS bootstrap smoke wrapper regression
+
+Что проверялось:
+
+- `scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` запускает `scripts/admin-vps-bootstrap-smoke.ps1` в fail-closed сценариях до browser smoke.
+- Проверяются `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke`.
+- Проверяется, что smoke/preflight artifacts не создаются, browser smoke не стартует, пароль не попадает в stdout/stderr.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-bootstrap-smoke-wrapper-regression`, версия `0.194.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Admin VPS bootstrap smoke wrapper regression: OK, tested scenarios `4/4`.
+- `AdminBootstrapCliScriptTests`: `6/6`.
+- Targeted release/docs suite: `36/36`.
+- Local CLI bootstrap admin smoke на SQLite: OK, preflight report valid, Playwright `1/1`, report validator `16 passed`, evidence validator OK.
+- Backend full suite: `586/586`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings, files scanned `551`.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM, files checked `19`.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS bootstrap smoke wrapper
 
 Что проверялось:

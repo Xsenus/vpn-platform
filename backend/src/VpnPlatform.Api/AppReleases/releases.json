@@ -4682,5 +4682,28 @@
         "text": "Пароль берется только из `ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD`, в логах остается `Password: [hidden]`, а live `P0-ADMIN-001`/`P0-ADMIN-002` не закрываются без VPS evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-bootstrap-smoke-wrapper-regression",
+    "version": "0.194.0",
+    "releasedAt": "2026-06-19T00:20:00+07:00",
+    "title": "Regression bootstrap smoke wrapper админки VPS",
+    "summary": "Bootstrap+smoke wrapper админки VPS получил fail-closed regression harness для опасных сценариев перед реальным VPS reset.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` проверяет `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke`."
+      },
+      {
+        "type": "important",
+        "text": "Regression убеждается, что browser smoke не стартует, smoke/preflight artifacts не создаются и пароль не попадает в stdout/stderr."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/admin-bootstrap.md` и `docs/admin-vps-smoke.md` содержат команду локальной regression-проверки перед реальным VPS bootstrap+smoke."
+      }
+    ]
   }
 ]
