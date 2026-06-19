@@ -171,6 +171,11 @@ Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
 Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
 Add-GitHubStepSummary -Markdown $resultMarkdown | Out-Null
 
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-regression-result.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
 if ($WriteJson) {
     Write-Output $resultJson
 }

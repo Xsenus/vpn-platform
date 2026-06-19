@@ -3900,5 +3900,28 @@
         "text": "Wrapper сохраняет краткий JSON/Markdown result и добавляет Markdown-итог в `GITHUB_STEP_SUMMARY`, если переменная доступна."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-result-validator",
+    "version": "0.160.0",
+    "releasedAt": "2026-06-18T18:40:00+07:00",
+    "title": "Validator для readiness assertion CI result",
+    "summary": "Итоговый JSON/Markdown artifact production readiness assertion CI regression теперь можно проверять отдельным validator.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/validate-production-readiness-assertion-ci-regression-result.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-readiness-assertion-ci-regression.ps1` запускает validator после записи result JSON/Markdown."
+      },
+      {
+        "type": "important",
+        "text": "Validator сверяет assertion exit code, linked artifacts, result validator, validator regression и Markdown-пару."
+      }
+    ]
   }
 ]

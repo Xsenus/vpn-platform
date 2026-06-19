@@ -64,6 +64,15 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-asser
 
 Wrapper запускает `assert-production-readiness.ps1`, сохраняет `production-readiness-assertion.json`, `.md` и `.log`, проверяет result через `validate-production-readiness-assertion-result.ps1`, запускает regression harness для blocked-result и пишет `production-readiness-assertion-ci-regression-result.json` и `.md`. В GitHub Actions он запускается job `production-readiness-assertion` в `.github/workflows/ci.yml` после backend job и публикует artifact `production-readiness-assertion-ci-regression`. Если доступна `GITHUB_STEP_SUMMARY`, wrapper добавляет краткий Markdown-итог в summary job.
 
+Скачанный CI regression result можно проверить отдельно:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-regression-result.ps1 `
+  -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json
+```
+
+Validator сверяет статус wrapper, assertion exit code, linked assertion JSON/Markdown/log, result validator, validator regression, обязательные failure-сценарии и Markdown-пару.
+
 Если отчеты лежат не в стандартных местах, передайте их явно:
 
 ```powershell

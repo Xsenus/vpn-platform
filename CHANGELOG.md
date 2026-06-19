@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.160.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-result-validator`.
+
+### Added
+
+- `scripts/validate-production-readiness-assertion-ci-regression-result.ps1` проверяет итоговый JSON/Markdown artifact production readiness assertion CI regression.
+
+### Changed
+
+- `scripts/test-production-readiness-assertion-ci-regression.ps1` запускает validator после записи result JSON/Markdown.
+- Production readiness gate документация описывает отдельную проверку скачанного CI regression result artifact.
+- Roadmap и release docs синхронизированы с backend suite `546/546` и latest release `0.160.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 39/39.
+- Production readiness assertion CI result validator smoke: OK.
+- Targeted release/docs suite: 55/55.
+- Backend full suite: 546/546.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Validator сверяет status, assertion exit code, linked assertion JSON/Markdown/log, result validator, validator regression failure-сценарии и Markdown-пару.
+
 ## 0.159.0 - 2026-06-18
 
 Release entry: `2026-06-18-production-readiness-assertion-ci-regression`.

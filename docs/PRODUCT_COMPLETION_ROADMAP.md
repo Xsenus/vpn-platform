@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `545/545`.
+- [x] `STATE-001` Backend test suite проходит: `546/546`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `545/545`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-18-production-readiness-assertion-ci-regression`, версия `0.159.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `546/546`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-readiness-assertion-ci-result-validator`, версия `0.160.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 38/38, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `545/545`, frontend tests `66/66`, latest "Что нового" `2026-06-18-production-readiness-assertion-ci-regression`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 39/39, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `546/546`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-result-validator`.
 
 ## P0. Блокеры production-запуска
 
@@ -887,6 +887,11 @@ git diff --check
   - Что сделать: добавить CI-friendly wrapper для assertion result artifacts, чтобы GitHub Actions автоматически сохранял blocked/production-ready assertion evidence и проверял validator regression без ручных команд.
   - Что сделано: добавлен `scripts/test-production-readiness-assertion-ci-regression.ps1`; `.github/workflows/ci.yml` получил job `production-readiness-assertion`, который запускается после backend job и публикует assertion JSON/Markdown/log и итоговый CI regression result.
   - Доказательство: `ProductionReadinessGateTests` 38/38, production readiness assertion CI regression smoke, latest "Что нового" `2026-06-18-production-readiness-assertion-ci-regression`, версия `0.159.0`.
+
+- [x] `P11-ACC-045` Production readiness assertion CI regression result validator. 2026-06-19.
+  - Что сделать: добавить standalone validator для итогового JSON/Markdown artifact `test-production-readiness-assertion-ci-regression.ps1`, чтобы скачанный из GitHub Actions result можно было проверить отдельно от wrapper.
+  - Что сделано: добавлен `scripts/validate-production-readiness-assertion-ci-regression-result.ps1`; CI wrapper запускает validator после записи result JSON/Markdown и до вывода результата.
+  - Доказательство: `ProductionReadinessGateTests` 39/39, production readiness assertion CI result validator smoke, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-result-validator`, версия `0.160.0`.
 
 ## Журнал проверок
 
