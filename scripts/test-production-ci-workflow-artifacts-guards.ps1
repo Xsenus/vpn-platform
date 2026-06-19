@@ -41,6 +41,14 @@ if ([string]::IsNullOrWhiteSpace($WorkflowPath) -or -not (Test-Path -LiteralPath
 $workflowFullPath = (Resolve-Path -LiteralPath $WorkflowPath).Path
 $guards = @(
     [ordered]@{
+        name = "production-ci-workflow-artifacts-ci-step"
+        script = Resolve-RepoPath "scripts/test-production-ci-workflow-artifacts-guards-ci-step.ps1"
+    },
+    [ordered]@{
+        name = "production-ci-workflow-artifacts-ci-step-validator"
+        script = Resolve-RepoPath "scripts/test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1"
+    },
+    [ordered]@{
         name = "production-readiness-assertion-workflow-artifacts"
         script = Resolve-RepoPath "scripts/test-production-readiness-assertion-ci-workflow-artifacts.ps1"
     },

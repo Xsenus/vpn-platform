@@ -98,7 +98,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-058", "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression"),
         new("P11-ACC-059", "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression-ci-step"),
         new("P11-ACC-060", "2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard"),
-        new("P11-ACC-061", "2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression")
+        new("P11-ACC-061", "2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression"),
+        new("P11-ACC-062", "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards")
     ];
 
     [Fact]

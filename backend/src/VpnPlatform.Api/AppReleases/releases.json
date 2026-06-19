@@ -4291,5 +4291,28 @@
         "text": "Backend job запускает `Guard production CI workflow artifacts guard steps regression` сразу после CI-step guard и до aggregate guard."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards",
+    "version": "0.177.0",
+    "releasedAt": "2026-06-18T21:30:00+07:00",
+    "title": "Aggregate guard включает CI step guards",
+    "summary": "Общий production CI workflow artifacts guard теперь запускает все 6 проверок, включая aggregate CI step guard и его fail-closed validator.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-ci-workflow-artifacts-guards.ps1` теперь запускает `production-ci-workflow-artifacts-ci-step` и `production-ci-workflow-artifacts-ci-step-validator`."
+      },
+      {
+        "type": "improved",
+        "text": "Aggregate JSON result возвращает `guardsCount = 6`, чтобы evidence ясно показывал полный набор workflow artifacts checks."
+      },
+      {
+        "type": "important",
+        "text": "Одна CI-friendly команда теперь покрывает CI wiring guard, его regression, readiness assertion guards и production evidence guards."
+      }
+    ]
   }
 ]

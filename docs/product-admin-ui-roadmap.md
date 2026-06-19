@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `562/562`.
+- [x] Backend full suite: `563/563`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`, версия `0.176.0`.
+- [x] Latest "Что нового": `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`, версия `0.177.0`.
 
 ## Как вести дальше
 

@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `562/562`.
+- [x] `STATE-001` Backend test suite проходит: `563/563`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `562/562`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`, версия `0.176.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `563/563`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`, версия `0.177.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 55/55, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `562/562`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 56/56, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `563/563`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.
 
 ## P0. Блокеры production-запуска
 
@@ -972,6 +972,11 @@ git diff --check
   - Что сделать: добавить fail-closed regression harness для aggregate CI step guard, чтобы tampered `.github/workflows/ci.yml` не мог пройти локальную и CI-проверку при удалении guard step, команды validator или нарушении порядка.
   - Что сделано: добавлен `scripts/test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1`; harness запускает happy path guard и ожидает ошибки для `missing-ci-step-guard`, `missing-ci-step-guard-command`, `missing-ci-step-validator`, `ci-step-guard-after-aggregate-guard`; GitHub Actions запускает step `Guard production CI workflow artifacts guard steps regression` до aggregate guard.
   - Доказательство: `ProductionReadinessGateTests` 55/55, production CI workflow artifacts aggregate CI step guard validator smoke, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`, версия `0.176.0`.
+
+- [x] `P11-ACC-062` Production CI workflow artifacts aggregate includes CI step guards. 2026-06-19.
+  - Что сделать: расширить общий `scripts/test-production-ci-workflow-artifacts-guards.ps1`, чтобы одна команда проверяла не только readiness/evidence workflow artifacts guards, но и aggregate CI step guard вместе с его fail-closed validator.
+  - Что сделано: aggregate entrypoint теперь запускает `production-ci-workflow-artifacts-ci-step`, `production-ci-workflow-artifacts-ci-step-validator`, readiness assertion guard, readiness assertion validator, production evidence guard и production evidence validator; итоговый JSON возвращает `guardsCount = 6`.
+  - Доказательство: `ProductionReadinessGateTests` 56/56, production CI workflow artifacts guards aggregate smoke с `guardsCount = 6`, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`, версия `0.177.0`.
 
 ## Журнал проверок
 

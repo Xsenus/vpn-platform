@@ -597,6 +597,32 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Ci_Workflow_Artifacts_Guards_Aggregate_Should_Include_Ci_Step_Guards()
+    {
+        var root = FindRepositoryRoot();
+        var harness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-ci-workflow-artifacts-guards.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "production-ci-workflow-artifacts-ci-step",
+                     "test-production-ci-workflow-artifacts-guards-ci-step.ps1",
+                     "production-ci-workflow-artifacts-ci-step-validator",
+                     "test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1",
+                     "production-readiness-assertion-workflow-artifacts",
+                     "production-evidence-workflow-artifacts",
+                     "guardsCount"
+                 })
+        {
+            Assert.Contains(expected, harness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-ci-workflow-artifacts-guards.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-062`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Ci_Workflow_Artifacts_Guards_Aggregate_Should_Have_Fail_Closed_Regression()
     {
         var root = FindRepositoryRoot();

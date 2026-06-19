@@ -89,7 +89,7 @@ Aggregate guard для всех production CI workflow artifacts contracts:
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards.ps1 -WriteJson
 ```
 
-Aggregate запускает readiness assertion workflow guard, readiness assertion fail-closed validator, production evidence workflow guard и production evidence fail-closed validator. В GitHub Actions он выполняется step `Guard production CI workflow artifacts contracts` сразу после checkout в backend job, чтобы сломанный artifact contract падал до тяжелых сборок и тестов.
+Aggregate запускает 6 checks: aggregate CI step guard, aggregate CI step guard validator, readiness assertion workflow guard, readiness assertion fail-closed validator, production evidence workflow guard и production evidence fail-closed validator. В GitHub Actions он выполняется step `Guard production CI workflow artifacts contracts` до backend setup/build/test, чтобы сломанный artifact contract падал до тяжелых сборок и тестов.
 Fail-closed regression для aggregate guard:
 
 ```powershell
