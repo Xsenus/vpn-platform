@@ -94,7 +94,25 @@ $failedCheck = $checks | Where-Object { -not $_.passed } | Select-Object -First 
 $readyForBootstrapSmoke = $null -eq $failedCheck
 $generatedAt = [DateTimeOffset]::UtcNow
 $operatorValue = if ([string]::IsNullOrWhiteSpace($Operator)) { "manual-operator" } else { $Operator.Trim() }
-$releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { "manual-admin-vps-bootstrap-smoke-readiness" } else { $ReleaseId.Trim() }
+$releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (Test-Path -LiteralPath $releasesPath -PathType Leaf) {
+        $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property releasedAt -Descending | Select-Object -First 1)
+        if ($latest.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+            [string]$latest[0].releaseId
+        }
+        else {
+            "manual-admin-vps-bootstrap-smoke-readiness"
+        }
+    }
+    else {
+        "manual-admin-vps-bootstrap-smoke-readiness"
+    }
+}
+else {
+    $ReleaseId.Trim()
+}
 
 $report = [ordered]@{
     reportId = "admin-vps-bootstrap-smoke-readiness-" + $generatedAt.ToString("yyyyMMdd-HHmmss")

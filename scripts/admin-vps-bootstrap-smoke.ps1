@@ -30,6 +30,7 @@ $bootstrapScript = Join-Path $repoRoot "scripts/admin-bootstrap.ps1"
 $smokeScript = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"
 $readinessScript = Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke-readiness.ps1"
 $bootstrapSmokeReportValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-report.ps1"
+$bootstrapSmokeEvidenceValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1"
 
 function Set-ProcessEnv {
     param(
@@ -46,7 +47,7 @@ function Set-ProcessEnv {
     }
 }
 
-foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript)) {
+foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
     }
@@ -254,6 +255,7 @@ try {
         ($bootstrapSmokeReport | ConvertTo-Json -Depth 6),
         [System.Text.UTF8Encoding]::new($false))
     & $bootstrapSmokeReportValidatorScript -ReportPath $bootstrapSmokeReportFullPath -RequirePassed | Out-Host
+    & $bootstrapSmokeEvidenceValidatorScript -ReadinessReportPath $ReadinessReportPath -BootstrapSmokeReportPath $bootstrapSmokeReportFullPath | Out-Host
 
     Write-Host "Admin VPS bootstrap+smoke flow completed."
     Write-Host "Validated bootstrap smoke report: $BootstrapSmokeReportPath"

@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.197.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-bootstrap-smoke-evidence`.
+
+### Added
+- Добавлен `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` для парной проверки readiness report и итогового bootstrap+smoke report.
+- Добавлен `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` для fail-closed regression сценариев `valid`, `mismatched-admin-url`, `readiness-not-ready` и `bad-timing`.
+
+### Changed
+- `scripts/admin-vps-bootstrap-smoke.ps1` после успешного smoke теперь валидирует, что readiness и bootstrap reports относятся к одному запуску.
+
+### Verified
+- `AdminBootstrapCliScriptTests`: 9/9.
+- Admin VPS bootstrap smoke evidence validator regression: OK.
+- Local CLI bootstrap admin smoke на SQLite: OK, readiness report valid, bootstrap smoke report valid, paired evidence validator OK, preflight report valid, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: 589/589.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.196.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-bootstrap-smoke-readiness`.

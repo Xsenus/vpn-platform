@@ -74,6 +74,7 @@ public class AdminBootstrapCliScriptTests
                      "admin-vps-smoke.ps1",
                      "admin-vps-bootstrap-smoke-readiness.ps1",
                      "validate-admin-vps-bootstrap-smoke-report.ps1",
+                     "validate-admin-vps-bootstrap-smoke-evidence.ps1",
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "AdminBootstrap__Password",
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
@@ -230,6 +231,55 @@ public class AdminBootstrapCliScriptTests
         Assert.DoesNotContain("Write-Host \"Password: $password", readiness, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-readiness.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-001F`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Admin_Vps_Bootstrap_Smoke_Evidence_Should_Link_Readiness_And_Final_Report()
+    {
+        var root = FindRepositoryRoot();
+        var evidenceValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-bootstrap-smoke-evidence.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-bootstrap-smoke-evidence-validator.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-bootstrap-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ReadinessReportPath",
+                     "BootstrapSmokeReportPath",
+                     "validate-admin-vps-bootstrap-smoke-readiness-report.ps1",
+                     "validate-admin-vps-bootstrap-smoke-report.ps1",
+                     "readyForBootstrapSmoke",
+                     "bootstrapResetConfirmed",
+                     "passwordEnvPresent",
+                     "Assert-Same",
+                     "mismatch for $Name",
+                     "bootstrap report must be generated after readiness report",
+                     "admin vps bootstrap smoke evidence valid"
+                 })
+        {
+            Assert.Contains(expected, evidenceValidator + wrapper, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "valid",
+                     "mismatched-admin-url",
+                     "readiness-not-ready",
+                     "bad-timing",
+                     "admin vps bootstrap smoke evidence validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.True(
+            wrapper.IndexOf("validate-admin-vps-bootstrap-smoke-report.ps1", StringComparison.OrdinalIgnoreCase)
+            < wrapper.IndexOf("validate-admin-vps-bootstrap-smoke-evidence.ps1", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("validate-admin-vps-bootstrap-smoke-evidence.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-admin-vps-bootstrap-smoke-evidence-validator.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001G`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
