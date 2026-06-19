@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `576/576`.
+- [x] `STATE-001` Backend test suite проходит: `577/577`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `576/576`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-admin-vps-smoke-acceptance-evidence`, версия `0.185.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `577/577`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-admin-vps-smoke-preflight`, версия `0.186.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 7/7, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke, backend full suite `576/576`, frontend tests `66/66`, latest "Что нового" `2026-06-19-admin-vps-smoke-acceptance-evidence`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 8/8, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke, admin VPS smoke preflight, backend full suite `577/577`, frontend tests `66/66`, latest "Что нового" `2026-06-19-admin-vps-smoke-preflight`.
 
 ## P0. Блокеры production-запуска
 
@@ -87,6 +87,10 @@ git diff --check
 - [x] `P0-ADMIN-002C` Усилить acceptance gate для admin VPS smoke evidence. 2026-06-19.
   - Что сделано: `validate-admin-vps-smoke-report.ps1 -RequireAllPassed` требует успешный `httpStatus` по каждой секции и отклоняет placeholder evidence вроде `TODO`, `Not checked yet`, `safe screenshot name` и шаблонных browser smoke notes.
   - Доказательство: `AdminVpsSmokeReportTests` 7/7, local SQLite admin browser smoke `1/1`, latest "Что нового" `2026-06-19-admin-vps-smoke-acceptance-evidence`, версия `0.185.0`. Реальный VPS smoke остается в `P0-ADMIN-001`/`P0-ADMIN-002`.
+
+- [x] `P0-ADMIN-002D` Добавить preflight перед admin VPS smoke. 2026-06-19.
+  - Что сделано: `scripts/admin-vps-smoke-preflight.ps1` проверяет live URL, admin email, наличие `ADMIN_VPS_SMOKE_ADMIN_PASSWORD` без вывода секрета, frontend runner, npm command и validator, затем пишет sanitized preflight report с `readyForLiveSmoke`.
+  - Доказательство: `AdminVpsSmokeReportTests` 8/8, локальный preflight на тестовых URL и env-пароле, local SQLite admin browser smoke `1/1`, latest "Что нового" `2026-06-19-admin-vps-smoke-preflight`, версия `0.186.0`. Реальный VPS smoke остается в `P0-ADMIN-001`/`P0-ADMIN-002`.
 
 - [x] `P0-ADMIN-003` Добавить безопасный admin VPS smoke report. 2026-06-14.
   - Что сделать: зафиксировать шаблон, генератор и валидатор отчета для проверки `/admin/` на VPS под реальным admin-аккаунтом.

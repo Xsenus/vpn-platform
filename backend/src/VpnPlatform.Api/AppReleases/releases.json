@@ -4498,5 +4498,28 @@
         "text": "`docs/admin-vps-smoke.md` явно требует real evidence перед закрытием `P0-ADMIN-002`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-preflight",
+    "version": "0.186.0",
+    "releasedAt": "2026-06-18T23:00:00+07:00",
+    "title": "Preflight перед admin VPS smoke",
+    "summary": "Добавлена безопасная проверка live-параметров перед запуском admin VPS smoke без вывода пароля.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` проверяет live URL, admin email, password env, frontend runner, npm command и validator."
+      },
+      {
+        "type": "important",
+        "text": "Preflight не принимает пароль параметром, выводит только `present [hidden]` и сохраняет в JSON только `passwordEnvPresent`."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/admin-vps-smoke.md` теперь описывает preflight report перед реальным browser smoke админки VPS."
+      }
+    ]
   }
 ]

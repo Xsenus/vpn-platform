@@ -2,6 +2,49 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS smoke preflight
+
+Что проверялось:
+
+- `scripts/admin-vps-smoke-preflight.ps1` проверяет live URL, admin email, наличие `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, frontend runner, npm command и validator перед реальным VPS smoke.
+- Preflight пишет sanitized JSON report с `readyForLiveSmoke` и `passwordEnvPresent`, но не принимает пароль параметром и не выводит секрет.
+- `docs/admin-vps-smoke.md` описывает preflight перед `scripts/admin-vps-browser-smoke.ps1`.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-smoke-preflight`, версия `0.186.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+$env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD="LocalAdminPassword123!"
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke-preflight.ps1 -ApiBaseUrl http://127.0.0.1:18201 -AdminWebUrl http://127.0.0.1:18205/admin/ -AdminEmail fresh-admin@example.test -SmokeReportPath tmp\admin-vps-smoke-report.json -PreflightReportPath tmp\admin-vps-smoke-preflight-report.json -EnvironmentName Local -Operator local-test -RequirePassword
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- `AdminVpsSmokeReportTests`: `8/8`.
+- Targeted release/docs suite: `24/24`.
+- Admin VPS smoke preflight: OK, `readyForLiveSmoke=true`, password output hidden.
+- Local SQLite admin browser smoke: OK, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: `577/577`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS smoke acceptance evidence
 
 Что проверялось:

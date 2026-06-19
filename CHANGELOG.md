@@ -2,6 +2,28 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.186.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-preflight`.
+
+### Added
+- Добавлен `scripts/admin-vps-smoke-preflight.ps1` для проверки live URL, admin email, password env, frontend runner, npm command и validator перед реальным admin VPS smoke.
+- Preflight пишет sanitized JSON `admin-vps-smoke-preflight-report.json` с `readyForLiveSmoke` и `passwordEnvPresent`, но не принимает пароль параметром и не выводит секрет.
+
+### Verified
+- `AdminVpsSmokeReportTests`: 8/8.
+- Admin VPS smoke preflight: OK на тестовых URL и process env password.
+- Local SQLite admin browser smoke: OK, 16/16 admin sections passed.
+- Backend full suite: 577/577.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.185.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-acceptance-evidence`.

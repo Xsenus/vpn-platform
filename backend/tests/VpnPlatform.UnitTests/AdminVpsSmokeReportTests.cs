@@ -208,6 +208,37 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Admin_Vps_Smoke_Preflight_Should_Check_Live_Inputs_Without_Printing_Secrets()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-smoke-preflight.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ADMIN_VPS_SMOKE_API_BASE_URL",
+                     "ADMIN_VPS_SMOKE_ADMIN_WEB_URL",
+                     "ADMIN_VPS_SMOKE_ADMIN_EMAIL",
+                     "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
+                     "passwordEnvPresent",
+                     "readyForLiveSmoke",
+                     "e2e:admin-vps-smoke",
+                     "validate-admin-vps-smoke-report.ps1",
+                     "present [hidden]",
+                     "admin-vps-smoke-preflight-report.json"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.DoesNotContain("[string]$Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host \"Password: $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("admin-vps-smoke-preflight.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002D`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Docs_Should_Link_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

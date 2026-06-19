@@ -58,6 +58,25 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report
 
 `-RequireAllPassed` должен падать на черновике, потому что все разделы изначально находятся в статусе `blocked`. Перед закрытием `P0-ADMIN-002` нужно заменить статусы на `passed`, выставить `loaded=true`, `httpStatus=200`, заполнить общие флаги и приложить безопасные real evidence. Acceptance mode также отклоняет placeholder evidence вроде `TODO`, `Not checked yet`, `safe screenshot name` и шаблонных browser smoke notes.
 
+## Preflight перед live-smoke
+
+Перед реальным запуском можно проверить готовность параметров без подключения к админке и без вывода секрета:
+
+```powershell
+$env:ADMIN_VPS_SMOKE_API_BASE_URL="https://api.example.test"
+$env:ADMIN_VPS_SMOKE_ADMIN_WEB_URL="https://example.test/admin/"
+$env:ADMIN_VPS_SMOKE_ADMIN_EMAIL="owner@example.com"
+$env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD="<temporary-admin-password>"
+
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke-preflight.ps1 `
+  -SmokeReportPath tmp\admin-vps-smoke-report.json `
+  -PreflightReportPath tmp\admin-vps-smoke-preflight-report.json `
+  -EnvironmentName staging `
+  -Operator operator-name
+```
+
+`scripts/admin-vps-smoke-preflight.ps1` проверяет `ADMIN_VPS_SMOKE_API_BASE_URL`, `ADMIN_VPS_SMOKE_ADMIN_WEB_URL`, `ADMIN_VPS_SMOKE_ADMIN_EMAIL`, наличие `ADMIN_VPS_SMOKE_ADMIN_PASSWORD` в process env, каталог `frontend`, команду `e2e:admin-vps-smoke`, browser runner и validator. Пароль не принимается параметром и не записывается в отчет: в JSON сохраняется только `passwordEnvPresent`, а в консоль выводится `present [hidden]`. Если `readyForLiveSmoke=false`, реальный smoke запускать нельзя.
+
 ## Браузерный live-smoke
 
 Если VPS уже развернут и production/staging admin-аккаунт восстановлен через безопасный bootstrap/reset, можно запустить явный Playwright smoke без сохранения пароля, cookie, bearer-токенов, trace, video и screenshots:
