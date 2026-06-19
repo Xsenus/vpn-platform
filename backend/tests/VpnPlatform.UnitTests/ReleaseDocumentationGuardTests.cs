@@ -86,7 +86,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-046", "2026-06-19-production-readiness-assertion-ci-result-validator-regression"),
         new("P11-ACC-047", "2026-06-19-production-readiness-assertion-ci-summary-validator"),
         new("P11-ACC-048", "2026-06-19-production-readiness-assertion-ci-step-summary-smoke"),
-        new("P11-ACC-049", "2026-06-19-production-readiness-assertion-ci-artifacts-validator")
+        new("P11-ACC-049", "2026-06-19-production-readiness-assertion-ci-artifacts-validator"),
+        new("P11-ACC-050", "2026-06-19-production-readiness-assertion-ci-artifacts-validator-regression")
     ];
 
     [Fact]

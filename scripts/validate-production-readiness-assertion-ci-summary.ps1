@@ -122,6 +122,15 @@ if ($null -ne $ciResultValidatorRegression) {
     Assert-MarkdownContains -Markdown $summary -Expected "- CI result validator regression: ``passed``"
 }
 
+$ciArtifactsValidatorRegression = $result.ciArtifactsValidatorRegression
+if ($null -ne $ciArtifactsValidatorRegression) {
+    if ([string]$ciArtifactsValidatorRegression.status -ne "passed") {
+        throw "Production readiness assertion CI summary CI artifacts validator regression status must be passed."
+    }
+
+    Assert-MarkdownContains -Markdown $summary -Expected "- CI artifacts validator regression: ``passed``"
+}
+
 $ciSummaryValidatorRegressionStatus = ""
 if ($null -ne $ciSummaryValidatorRegression) {
     $ciSummaryValidatorRegressionStatus = [string]$ciSummaryValidatorRegression.status
@@ -130,6 +139,11 @@ if ($null -ne $ciSummaryValidatorRegression) {
 $ciResultValidatorRegressionStatus = ""
 if ($null -ne $ciResultValidatorRegression) {
     $ciResultValidatorRegressionStatus = [string]$ciResultValidatorRegression.status
+}
+
+$ciArtifactsValidatorRegressionStatus = ""
+if ($null -ne $ciArtifactsValidatorRegression) {
+    $ciArtifactsValidatorRegressionStatus = [string]$ciArtifactsValidatorRegression.status
 }
 
 $validation = [ordered]@{
@@ -143,6 +157,7 @@ $validation = [ordered]@{
     resultValidatorRegressionStatus = [string]$resultValidatorRegression.status
     ciSummaryValidatorRegressionStatus = $ciSummaryValidatorRegressionStatus
     ciResultValidatorRegressionStatus = $ciResultValidatorRegressionStatus
+    ciArtifactsValidatorRegressionStatus = $ciArtifactsValidatorRegressionStatus
 }
 
 if ($WriteJson) {

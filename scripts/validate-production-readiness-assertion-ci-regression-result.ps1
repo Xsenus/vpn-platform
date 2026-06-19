@@ -187,6 +187,24 @@ if ($null -ne $ciSummaryValidatorRegression) {
     }
 }
 
+$ciArtifactsValidatorRegression = $result.ciArtifactsValidatorRegression
+if ($null -ne $ciArtifactsValidatorRegression) {
+    if ([string]$ciArtifactsValidatorRegression.status -ne "passed") {
+        throw "Production readiness assertion CI regression result CI artifacts validator regression status must be passed."
+    }
+
+    $ciArtifactsTestedFailures = @($ciArtifactsValidatorRegression.testedFailures)
+    foreach ($expectedFailure in @(
+            "missing-required-artifact",
+            "bad-output-directory",
+            "bad-assertion-log-path",
+            "bad-result-markdown",
+            "bad-step-summary"
+        )) {
+        Assert-RegressionFailure -TestedFailures $ciArtifactsTestedFailures -Name $expectedFailure
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($ResultMarkdownPath)) {
     $ResultMarkdownPath = [string]$result.resultMarkdownPath
 }
@@ -228,6 +246,10 @@ if ($null -ne $ciSummaryValidatorRegression) {
     Assert-MarkdownContains -Markdown $markdown -Expected "- CI summary validator regression: ``passed``"
 }
 
+if ($null -ne $ciArtifactsValidatorRegression) {
+    Assert-MarkdownContains -Markdown $markdown -Expected "- CI artifacts validator regression: ``passed``"
+}
+
 $ciResultValidatorRegressionStatus = ""
 if ($null -ne $ciResultValidatorRegression) {
     $ciResultValidatorRegressionStatus = [string]$ciResultValidatorRegression.status
@@ -236,6 +258,11 @@ if ($null -ne $ciResultValidatorRegression) {
 $ciSummaryValidatorRegressionStatus = ""
 if ($null -ne $ciSummaryValidatorRegression) {
     $ciSummaryValidatorRegressionStatus = [string]$ciSummaryValidatorRegression.status
+}
+
+$ciArtifactsValidatorRegressionStatus = ""
+if ($null -ne $ciArtifactsValidatorRegression) {
+    $ciArtifactsValidatorRegressionStatus = [string]$ciArtifactsValidatorRegression.status
 }
 
 $validation = [ordered]@{
@@ -251,6 +278,7 @@ $validation = [ordered]@{
     resultValidatorRegressionStatus = [string]$regression.status
     ciSummaryValidatorRegressionStatus = $ciSummaryValidatorRegressionStatus
     ciResultValidatorRegressionStatus = $ciResultValidatorRegressionStatus
+    ciArtifactsValidatorRegressionStatus = $ciArtifactsValidatorRegressionStatus
     assertionJsonPath = $assertionJsonPath
     assertionMarkdownPath = $assertionMarkdownPath
     assertionLogPath = $assertionLogPath

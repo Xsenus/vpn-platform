@@ -4015,5 +4015,28 @@
         "text": "Validator проверяет пять обязательных artifact-файлов, согласованность путей в result JSON, result validator, summary validator и optional `StepSummaryPath`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-artifacts-validator-regression",
+    "version": "0.165.0",
+    "releasedAt": "2026-06-18T19:30:00+07:00",
+    "title": "Regression для artifact-validator readiness assertion CI",
+    "summary": "Artifact-directory validator readiness assertion CI теперь имеет fail-closed regression harness и фиксирует результат в CI JSON/Markdown.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-readiness-assertion-ci-artifacts-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-readiness-assertion-ci-regression.ps1` запускает artifacts validator regression автоматически и пишет `ciArtifactsValidatorRegression` в итоговые artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Harness проверяет `missing-required-artifact`, `bad-output-directory`, `bad-assertion-log-path`, `bad-result-markdown` и `bad-step-summary`; CI result/summary validators проверяют новый regression-блок."
+      }
+    ]
   }
 ]

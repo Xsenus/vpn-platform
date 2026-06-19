@@ -83,6 +83,7 @@ try {
             "- Assertion status: ``$([string]$wrapper.assertion.status)``",
             "- CI summary validator regression: ``passed``",
             "- CI result validator regression: ``passed``",
+            "- CI artifacts validator regression: ``passed``",
             "## Artifacts",
             [string]$wrapper.resultJsonPath,
             [string]$wrapper.resultMarkdownPath
@@ -102,6 +103,7 @@ try {
         summaryValidatorStatus = [string]$summaryValidator.status
         ciSummaryValidatorRegressionStatus = [string]$wrapper.ciSummaryValidatorRegression.status
         ciResultValidatorRegressionStatus = [string]$wrapper.ciResultValidatorRegression.status
+        ciArtifactsValidatorRegressionStatus = [string]$wrapper.ciArtifactsValidatorRegression.status
     }
 
     if ($WriteJson) {

@@ -348,6 +348,7 @@ public class ProductionReadinessGateTests
                      "production-readiness-assertion-ci-step-summary.md",
                      "CI summary validator regression",
                      "CI result validator regression",
+                     "CI artifacts validator regression",
                      "Markdown does not match result Markdown",
                      "production readiness assertion CI step summary passed"
                  })
@@ -392,6 +393,41 @@ public class ProductionReadinessGateTests
         Assert.Contains("validate-production-readiness-assertion-ci-artifacts.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("validate-production-readiness-assertion-ci-artifacts.ps1", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P11-ACC-049`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_Readiness_Assertion_Ci_Artifacts_Validator_Should_Have_Regression_Harness()
+    {
+        var root = FindRepositoryRoot();
+        var harness = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-artifacts-validator.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-regression.ps1"));
+        var resultValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-assertion-ci-regression-result.ps1"));
+        var summaryValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-assertion-ci-summary.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "missing-required-artifact",
+                     "bad-output-directory",
+                     "bad-assertion-log-path",
+                     "bad-result-markdown",
+                     "bad-step-summary",
+                     "Copy-ArtifactDirectory",
+                     "validate-production-readiness-assertion-ci-artifacts.ps1",
+                     "production readiness assertion CI artifacts validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, harness, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-readiness-assertion-ci-artifacts-validator.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ciArtifactsValidatorRegression", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CI artifacts validator regression", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ciArtifactsValidatorRegression", resultValidator, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ciArtifactsValidatorRegression", summaryValidator, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-production-readiness-assertion-ci-artifacts-validator.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-050`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

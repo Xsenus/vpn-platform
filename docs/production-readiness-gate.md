@@ -122,6 +122,16 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-a
 
 Validator проверяет наличие `production-readiness-assertion-ci-regression-result.json`, `.md`, `production-readiness-assertion.json`, `.md`, `.log`, согласованность путей внутри result JSON, standalone result validator, summary validator и optional `-StepSummaryPath`.
 
+Fail-closed regression для всего artifact-директория:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-ci-artifacts-validator.ps1 `
+  -ArtifactDirectory tmp\production-readiness-assertion-ci-regression-test `
+  -WriteJson
+```
+
+Regression harness копирует валидный bundle во временные директории и проверяет tamper-сценарии `missing-required-artifact`, `bad-output-directory`, `bad-assertion-log-path`, `bad-result-markdown` и `bad-step-summary`. Wrapper `test-production-readiness-assertion-ci-regression.ps1` запускает harness автоматически и пишет `ciArtifactsValidatorRegression` в итоговый JSON/Markdown.
+
 Validator сверяет статус wrapper, assertion exit code, linked assertion JSON/Markdown/log, result validator, validator regression, обязательные failure-сценарии и Markdown-пару.
 
 Если отчеты лежат не в стандартных местах, передайте их явно:

@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.165.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-artifacts-validator-regression`.
+
+### Added
+
+- `scripts/test-production-readiness-assertion-ci-artifacts-validator.ps1` проверяет fail-closed поведение validator всего readiness assertion CI artifact-директория.
+
+### Changed
+
+- `scripts/test-production-readiness-assertion-ci-regression.ps1` запускает artifacts validator regression автоматически и записывает `ciArtifactsValidatorRegression` в итоговый JSON/Markdown.
+- CI result и summary validators теперь проверяют `ciArtifactsValidatorRegression`, если этот блок присутствует в result artifact.
+- Roadmap и release docs синхронизированы с backend suite `551/551` и latest release `0.165.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 44/44.
+- Production readiness assertion CI artifacts validator regression smoke: OK.
+- Targeted release/docs suite: 60/60.
+- Backend full suite: 551/551.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Regression harness проверяет `missing-required-artifact`, `bad-output-directory`, `bad-assertion-log-path`, `bad-result-markdown` и `bad-step-summary`.
+
 ## 0.164.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-readiness-assertion-ci-artifacts-validator`.

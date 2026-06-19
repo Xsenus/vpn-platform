@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `550/550`.
+- [x] `STATE-001` Backend test suite проходит: `551/551`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `550/550`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-readiness-assertion-ci-artifacts-validator`, версия `0.164.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `551/551`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-readiness-assertion-ci-artifacts-validator-regression`, версия `0.165.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 43/43, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `550/550`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-artifacts-validator`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 44/44, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `551/551`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-artifacts-validator-regression`.
 
 ## P0. Блокеры production-запуска
 
@@ -912,6 +912,11 @@ git diff --check
   - Что сделать: добавить одну команду проверки всего artifact-директория readiness assertion CI перед публикацией или после локального запуска, чтобы оператор не валидировал JSON/Markdown/summary вручную по отдельности.
   - Что сделано: добавлен `scripts/validate-production-readiness-assertion-ci-artifacts.ps1`; CI wrapper запускает validator перед выводом результата. Validator проверяет наличие пяти обязательных файлов, согласованность путей в result JSON, result validator, summary validator и optional `StepSummaryPath`.
   - Доказательство: `ProductionReadinessGateTests` 43/43, CI artifacts validator smoke, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-artifacts-validator`, версия `0.164.0`.
+
+- [x] `P11-ACC-050` Production readiness assertion CI artifact directory validator regression. 2026-06-19.
+  - Что сделать: добавить fail-closed harness для validator всего artifact-директория, чтобы поврежденный CI bundle нельзя было принять как валидный.
+  - Что сделано: добавлен `scripts/test-production-readiness-assertion-ci-artifacts-validator.ps1`; CI wrapper запускает harness автоматически и пишет `ciArtifactsValidatorRegression` в итоговый JSON/Markdown. Harness проверяет `missing-required-artifact`, `bad-output-directory`, `bad-assertion-log-path`, `bad-result-markdown` и `bad-step-summary`; CI result/summary validators проверяют этот новый regression-блок.
+  - Доказательство: `ProductionReadinessGateTests` 44/44, CI artifacts validator regression smoke, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-artifacts-validator-regression`, версия `0.165.0`.
 
 ## Журнал проверок
 

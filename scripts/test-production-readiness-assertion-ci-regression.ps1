@@ -40,6 +40,9 @@ function ConvertTo-CiMarkdown {
     if ($null -ne $Result.ciResultValidatorRegression) {
         $lines.Add("- CI result validator regression: ``$($Result.ciResultValidatorRegression.status)``")
     }
+    if ($null -ne $Result.ciArtifactsValidatorRegression) {
+        $lines.Add("- CI artifacts validator regression: ``$($Result.ciArtifactsValidatorRegression.status)``")
+    }
     $lines.Add("")
     $lines.Add("## Artifacts")
     $lines.Add("- Assertion JSON: ``$($Result.assertion.resultJsonPath)``")
@@ -233,6 +236,38 @@ Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
     -SummaryPath $resultMarkdownPath `
     -WriteJson | Out-Null
 
+$artifactValidatorArgs = @{
+    ArtifactDirectory = $fullOutputDirectory
+    WriteJson = $true
+}
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-artifacts.ps1") @artifactValidatorArgs | Out-Null
+
+$ciArtifactsValidatorRegressionJson = & (Resolve-RepoPath "scripts/test-production-readiness-assertion-ci-artifacts-validator.ps1") `
+    -ArtifactDirectory $fullOutputDirectory `
+    -WriteJson
+$ciArtifactsValidatorRegression = $ciArtifactsValidatorRegressionJson | ConvertFrom-Json
+
+if ([string]$ciArtifactsValidatorRegression.status -ne "passed") {
+    throw "Production readiness assertion CI artifacts validator regression did not pass."
+}
+
+$result["ciArtifactsValidatorRegression"] = $ciArtifactsValidatorRegression
+$resultJson = $result | ConvertTo-Json -Depth 12
+$resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
+Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
+Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-regression-result.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-summary.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -SummaryPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
 $githubStepSummaryPath = Add-GitHubStepSummary -Markdown $resultMarkdown
 
 if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
@@ -240,13 +275,6 @@ if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
         -ResultJsonPath $resultJsonPath `
         -SummaryPath $githubStepSummaryPath `
         -WriteJson | Out-Null
-}
-
-$artifactValidatorArgs = @{
-    ArtifactDirectory = $fullOutputDirectory
-    WriteJson = $true
-}
-if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
     $artifactValidatorArgs.StepSummaryPath = $githubStepSummaryPath
 }
 
