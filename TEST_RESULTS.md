@@ -2,20 +2,22 @@
 
 Дата проверки: 2026-05-25.
 
-## Проверка 2026-06-19: production CI workflow artifacts aggregate CI step guard
+## Проверка 2026-06-19: production CI workflow artifacts aggregate CI step guard regression
 
 Что проверялось:
 
-- GitHub Actions backend job запускает `Guard production CI workflow artifacts guard steps` сразу после checkout.
-- Новый guard проверяет наличие и порядок aggregate guard, aggregate validator и `Setup .NET SDK from global.json`.
-- Step выполняет `scripts/test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson`, то есть CI сначала проверяет собственную wiring-цепочку guard-ов.
-- Раздел "Что нового" получил релиз `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`, версия `0.175.0`.
+- GitHub Actions backend job запускает `Guard production CI workflow artifacts guard steps regression` сразу после aggregate CI step guard и до aggregate guard.
+- Новый validator проверяет happy path aggregate CI step guard и tamper-сценарии `missing-ci-step-guard`, `missing-ci-step-guard-command`, `missing-ci-step-validator`, `ci-step-guard-after-aggregate-guard`.
+- Step выполняет `scripts/test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson`, то есть CI проверяет fail-closed поведение wiring guard.
+- Раздел "Что нового" получил релиз `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`, версия `0.176.0`.
+- Связанный предыдущий CI guard baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`.
 - Связанный предыдущий CI baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression-ci-step`.
 
 Команды:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson
+powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson
 dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
@@ -39,10 +41,11 @@ git diff --check
 Результат:
 
 - Production CI workflow artifacts aggregate CI step guard: OK.
+- Production CI workflow artifacts aggregate CI step guard validator: OK.
 - Production CI workflow artifacts guards aggregate: OK.
 - Production CI workflow artifacts aggregate guard validator: OK.
-- Targeted release/docs suite: `70/70`.
-- Backend full suite: `561/561`.
+- Targeted release/docs suite: `71/71`.
+- Backend full suite: `562/562`.
 - API build: OK.
 - TelegramBot build: OK.
 - Frontend tests: `66/66`.
@@ -52,8 +55,8 @@ git diff --check
 - Playwright console E2E: `9/9`.
 - Secret scan: 0 findings.
 - Кодировка измененных и новых файлов: strict UTF-8 without BOM.
-- Fresh local SQLite smoke: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`.
-- Local VPS smoke dry-run: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`.
+- Fresh local SQLite smoke: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`.
+- Local VPS smoke dry-run: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`.
 - `git diff --check`: OK.
 
 ## Проверка 2026-06-19: production CI workflow artifacts aggregate guard regression

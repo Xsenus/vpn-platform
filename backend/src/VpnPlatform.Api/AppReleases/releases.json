@@ -4268,5 +4268,28 @@
         "text": "Backend job запускает `Guard production CI workflow artifacts guard steps` сразу после checkout."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression",
+    "version": "0.176.0",
+    "releasedAt": "2026-06-18T21:20:00+07:00",
+    "title": "Regression для aggregate CI workflow artifacts guard",
+    "summary": "Aggregate CI step guard теперь покрыт fail-closed validator, который проверяет tamper-сценарии `.github/workflows/ci.yml` и запускается в GitHub Actions до aggregate guard.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Validator проверяет `missing-ci-step-guard`, `missing-ci-step-guard-command`, `missing-ci-step-validator` и `ci-step-guard-after-aggregate-guard`."
+      },
+      {
+        "type": "important",
+        "text": "Backend job запускает `Guard production CI workflow artifacts guard steps regression` сразу после CI-step guard и до aggregate guard."
+      }
+    ]
   }
 ]

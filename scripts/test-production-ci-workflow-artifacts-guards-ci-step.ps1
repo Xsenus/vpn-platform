@@ -52,32 +52,42 @@ $workflowFullPath = (Resolve-Path -LiteralPath $WorkflowPath).Path
 $workflow = Get-Content -LiteralPath $workflowFullPath -Raw -Encoding UTF8
 
 Assert-ContainsText -Content $workflow -Expected "backend:" -Label "backend job"
-Assert-ContainsText -Content $workflow -Expected "Guard production CI workflow artifacts guard steps" -Label "aggregate CI step guard"
+Assert-ContainsText -Content $workflow -Expected "name: Guard production CI workflow artifacts guard steps" -Label "aggregate CI step guard"
 Assert-ContainsText -Content $workflow -Expected "test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson" -Label "aggregate CI step guard command"
-Assert-ContainsText -Content $workflow -Expected "Guard production CI workflow artifacts contracts" -Label "aggregate guard step"
+Assert-ContainsText -Content $workflow -Expected "name: Guard production CI workflow artifacts guard steps regression" -Label "aggregate CI step guard validator"
+Assert-ContainsText -Content $workflow -Expected "test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson" -Label "aggregate CI step guard validator command"
+Assert-ContainsText -Content $workflow -Expected "name: Guard production CI workflow artifacts contracts" -Label "aggregate guard step"
 Assert-ContainsText -Content $workflow -Expected "test-production-ci-workflow-artifacts-guards.ps1 -WriteJson" -Label "aggregate guard command"
-Assert-ContainsText -Content $workflow -Expected "Guard production CI workflow artifacts contracts regression" -Label "aggregate validator step"
+Assert-ContainsText -Content $workflow -Expected "name: Guard production CI workflow artifacts contracts regression" -Label "aggregate validator step"
 Assert-ContainsText -Content $workflow -Expected "test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson" -Label "aggregate validator command"
 Assert-ContainsText -Content $workflow -Expected "Setup .NET SDK from global.json" -Label "backend setup step"
 
 Assert-Order -Content $workflow `
-    -Before "Guard production CI workflow artifacts guard steps" `
+    -Before "name: Guard production CI workflow artifacts guard steps" `
     -After "test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson" `
     -Label "aggregate CI step guard contains command"
 Assert-Order -Content $workflow `
     -Before "test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson" `
-    -After "Guard production CI workflow artifacts contracts" `
-    -Label "aggregate CI step guard before aggregate guard"
+    -After "name: Guard production CI workflow artifacts guard steps regression" `
+    -Label "aggregate CI step guard before validator"
 Assert-Order -Content $workflow `
-    -Before "Guard production CI workflow artifacts contracts" `
+    -Before "name: Guard production CI workflow artifacts guard steps regression" `
+    -After "test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson" `
+    -Label "aggregate CI step guard validator contains command"
+Assert-Order -Content $workflow `
+    -Before "test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson" `
+    -After "name: Guard production CI workflow artifacts contracts" `
+    -Label "aggregate CI step guard validator before aggregate guard"
+Assert-Order -Content $workflow `
+    -Before "name: Guard production CI workflow artifacts contracts" `
     -After "test-production-ci-workflow-artifacts-guards.ps1 -WriteJson" `
     -Label "aggregate guard step contains command"
 Assert-Order -Content $workflow `
     -Before "test-production-ci-workflow-artifacts-guards.ps1 -WriteJson" `
-    -After "Guard production CI workflow artifacts contracts regression" `
+    -After "name: Guard production CI workflow artifacts contracts regression" `
     -Label "aggregate guard before aggregate validator"
 Assert-Order -Content $workflow `
-    -Before "Guard production CI workflow artifacts contracts regression" `
+    -Before "name: Guard production CI workflow artifacts contracts regression" `
     -After "test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson" `
     -Label "aggregate validator step contains command"
 Assert-Order -Content $workflow `
@@ -89,6 +99,7 @@ $result = [ordered]@{
     status = "passed"
     workflowPath = $workflowFullPath
     aggregateCiStepGuardStep = "Guard production CI workflow artifacts guard steps"
+    aggregateCiStepGuardValidatorStep = "Guard production CI workflow artifacts guard steps regression"
     aggregateGuardStep = "Guard production CI workflow artifacts contracts"
     aggregateValidatorStep = "Guard production CI workflow artifacts contracts regression"
 }

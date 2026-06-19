@@ -107,6 +107,14 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-art
 
 Guard проверяет, что GitHub Actions backend job запускает `Guard production CI workflow artifacts guard steps`, затем aggregate guard, затем aggregate validator и только после этого `Setup .NET SDK from global.json`.
 
+Fail-closed regression для CI wiring guard:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson
+```
+
+Harness проверяет happy path CI wiring guard, затем портит копию workflow и ожидает ошибки для `missing-ci-step-guard`, `missing-ci-step-guard-command`, `missing-ci-step-validator` и `ci-step-guard-after-aggregate-guard`. GitHub Actions запускает этот validator отдельным step `Guard production CI workflow artifacts guard steps regression` сразу после CI-step guard и до aggregate guard.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-regression-result.ps1 `
   -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json
