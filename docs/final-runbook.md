@@ -176,14 +176,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 560/560;
+- backend full suite: 561/561;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - frontend audit: OK, `0 vulnerabilities`;
-- latest "Что нового": `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression-ci-step`, версия `0.174.0`.
+- latest "Что нового": `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`, версия `0.175.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -4245,5 +4245,28 @@
         "text": "`ProductionReadinessGateTests` проверяет порядок aggregate guard -> aggregate validator -> backend setup."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard",
+    "version": "0.175.0",
+    "releasedAt": "2026-06-18T21:10:00+07:00",
+    "title": "Guard CI wiring для aggregate production workflow artifacts",
+    "summary": "GitHub Actions теперь имеет быстрый guard, который проверяет наличие и порядок aggregate workflow artifacts steps до backend setup/build/test.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-ci-workflow-artifacts-guards-ci-step.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Guard проверяет aggregate guard step, aggregate validator step, команды `-WriteJson` и порядок до `Setup .NET SDK from global.json`."
+      },
+      {
+        "type": "important",
+        "text": "Backend job запускает `Guard production CI workflow artifacts guard steps` сразу после checkout."
+      }
+    ]
   }
 ]

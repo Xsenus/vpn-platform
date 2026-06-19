@@ -652,6 +652,47 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Ci_Workflow_Artifacts_Aggregate_Ci_Steps_Should_Have_Guard()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-ci-workflow-artifacts-guards-ci-step.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Guard production CI workflow artifacts guard steps",
+                     "test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson",
+                     "Guard production CI workflow artifacts contracts",
+                     "test-production-ci-workflow-artifacts-guards.ps1 -WriteJson",
+                     "Guard production CI workflow artifacts contracts regression",
+                     "test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson",
+                     "Setup .NET SDK from global.json",
+                     "production CI workflow artifacts aggregate CI step guard passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var ciStepGuardIndex = workflow.IndexOf(
+            "Guard production CI workflow artifacts guard steps",
+            StringComparison.OrdinalIgnoreCase);
+        var ciStepGuardCommandIndex = workflow.IndexOf(
+            "test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson",
+            StringComparison.OrdinalIgnoreCase);
+        var aggregateGuardIndex = workflow.IndexOf(
+            "Guard production CI workflow artifacts contracts",
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(ciStepGuardIndex >= 0, "Aggregate CI step guard must run in CI.");
+        Assert.True(ciStepGuardCommandIndex > ciStepGuardIndex, "Aggregate CI step guard command must be inside the step.");
+        Assert.True(ciStepGuardCommandIndex < aggregateGuardIndex, "Aggregate CI step guard must run before the aggregate guard.");
+        Assert.Contains("test-production-ci-workflow-artifacts-guards-ci-step.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-060`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

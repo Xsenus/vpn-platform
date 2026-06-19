@@ -2,6 +2,23 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.175.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`.
+
+### Added
+- Добавлен `scripts/test-production-ci-workflow-artifacts-guards-ci-step.ps1` для проверки GitHub Actions wiring aggregate production workflow artifacts steps.
+
+### Changed
+- Backend CI запускает `Guard production CI workflow artifacts guard steps` после checkout, до aggregate guard, aggregate validator и .NET setup.
+- Roadmap и release docs синхронизированы с backend suite `561/561` и latest release `0.175.0`.
+
+### Verified
+- Production CI workflow artifacts aggregate CI step guard: OK.
+- `ProductionReadinessGateTests`: 54/54.
+- Targeted release/docs suite: 70/70.
+- Backend full suite: 561/561.
+
 ## 0.174.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-regression-ci-step`.
