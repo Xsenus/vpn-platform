@@ -476,6 +476,8 @@ public class ProductionReadinessGateTests
                  {
                      "production-readiness-assertion:",
                      "needs: backend",
+                     "Guard production readiness assertion workflow artifacts",
+                     "test-production-readiness-assertion-ci-workflow-artifacts.ps1 -WriteJson",
                      "test-production-readiness-assertion-ci-regression.ps1",
                      "actions/upload-artifact@v4",
                      "if-no-files-found: error",
@@ -504,6 +506,35 @@ public class ProductionReadinessGateTests
 
         Assert.Contains("test-production-readiness-assertion-ci-workflow-artifacts.ps1", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P11-ACC-052`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_Readiness_Assertion_Ci_Workflow_Should_Run_Workflow_Artifacts_Guard()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        var guardStepIndex = workflow.IndexOf(
+            "Guard production readiness assertion workflow artifacts",
+            StringComparison.OrdinalIgnoreCase);
+        var guardCommandIndex = workflow.IndexOf(
+            "test-production-readiness-assertion-ci-workflow-artifacts.ps1 -WriteJson",
+            StringComparison.OrdinalIgnoreCase);
+        var wrapperIndex = workflow.IndexOf(
+            "Run production readiness assertion CI regression",
+            StringComparison.OrdinalIgnoreCase);
+        var uploadIndex = workflow.IndexOf(
+            "Upload production readiness assertion artifacts",
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(guardStepIndex >= 0, "Production readiness assertion workflow guard step must be present in CI.");
+        Assert.True(guardCommandIndex > guardStepIndex, "Production readiness assertion workflow guard command must be in the guard step.");
+        Assert.True(guardCommandIndex < wrapperIndex, "Workflow artifacts guard must run before the readiness assertion wrapper.");
+        Assert.True(wrapperIndex < uploadIndex, "Readiness assertion wrapper must still run before artifacts upload.");
+        Assert.Contains("test-production-readiness-assertion-ci-workflow-artifacts.ps1 -WriteJson", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-053`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

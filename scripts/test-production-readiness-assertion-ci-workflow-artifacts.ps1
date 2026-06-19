@@ -45,6 +45,8 @@ $requiredArtifacts = @(
 
 Assert-ContainsText -Content $workflow -Expected "production-readiness-assertion:" -Label "job id"
 Assert-ContainsText -Content $workflow -Expected "needs: backend" -Label "backend dependency"
+Assert-ContainsText -Content $workflow -Expected "Guard production readiness assertion workflow artifacts" -Label "workflow guard step"
+Assert-ContainsText -Content $workflow -Expected "test-production-readiness-assertion-ci-workflow-artifacts.ps1 -WriteJson" -Label "workflow guard command"
 Assert-ContainsText -Content $workflow -Expected "Run production readiness assertion CI regression" -Label "run step"
 Assert-ContainsText -Content $workflow -Expected "./scripts/test-production-readiness-assertion-ci-regression.ps1" -Label "wrapper script"
 Assert-ContainsText -Content $workflow -Expected "-OutputDirectory tmp/production-readiness-assertion-ci-regression" -Label "output directory"

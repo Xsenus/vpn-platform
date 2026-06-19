@@ -130,6 +130,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Guard production readiness assertion workflow artifacts
+        shell: pwsh
+        run: ./scripts/test-production-readiness-assertion-ci-workflow-artifacts.ps1 -WriteJson
+
       - name: Run production readiness assertion CI regression
         shell: pwsh
         run: |

@@ -4084,5 +4084,28 @@
         "text": "Проверяются пять обязательных published files: CI result JSON/Markdown, assertion JSON/Markdown и assertion log."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-workflow-guard-step",
+    "version": "0.168.0",
+    "releasedAt": "2026-06-18T20:00:00+07:00",
+    "title": "CI запускает guard published artifacts readiness assertion",
+    "summary": "GitHub Actions job readiness assertion теперь сам запускает workflow artifacts guard перед wrapper и upload step.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "В job `production-readiness-assertion` добавлен step `Guard production readiness assertion workflow artifacts`."
+      },
+      {
+        "type": "improved",
+        "text": "Step запускает `scripts/test-production-readiness-assertion-ci-workflow-artifacts.ps1 -WriteJson` до `Run production readiness assertion CI regression`."
+      },
+      {
+        "type": "important",
+        "text": "`ProductionReadinessGateTests` проверяет порядок guard -> wrapper -> upload, чтобы CI fail-closed защищал published artifacts contract."
+      }
+    ]
   }
 ]

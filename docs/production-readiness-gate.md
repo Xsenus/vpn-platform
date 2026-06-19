@@ -74,6 +74,8 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-asser
 
 Guard проверяет, что `.github/workflows/ci.yml` содержит job `production-readiness-assertion`, зависит от `backend`, запускает `test-production-readiness-assertion-ci-regression.ps1`, публикует artifact `production-readiness-assertion-ci-regression`, включает `if-no-files-found: error` и перечисляет пять обязательных файлов: CI result JSON/Markdown, assertion JSON/Markdown и assertion log.
 
+GitHub Actions запускает этот guard отдельным step `Guard production readiness assertion workflow artifacts` до `Run production readiness assertion CI regression`, поэтому broken published artifacts contract должен падать до запуска wrapper и upload step.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-regression-result.ps1 `
   -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json
