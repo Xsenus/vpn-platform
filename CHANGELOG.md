@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.199.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-report-route-contract`.
+
+### Changed
+- `scripts/validate-admin-vps-smoke-report.ps1` теперь читает `docs/admin-vps-smoke-sections.json` и проверяет, что route каждого раздела smoke report совпадает с sections contract.
+- `scripts/validate-admin-vps-smoke-sections-contract.ps1` обновлен под manifest-driven report validator.
+
+### Added
+- `scripts/test-admin-vps-smoke-report-validator.ps1` покрывает fail-closed tamper-сценарий `bad-route`.
+
+### Verified
+- Admin VPS smoke report validator regression: OK, включая `bad-route`.
+- Admin VPS smoke sections contract validator/regression: OK.
+- `AdminVpsSmokeReportTests`: 15/15.
+- Targeted release/docs suite: OK.
+- Local CLI bootstrap admin smoke на SQLite: OK, readiness/bootstrap/smoke/preflight reports UTF-8 without BOM, bootstrap smoke report valid, paired evidence validator OK, preflight report valid, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: 590/590.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.198.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-sections-contract`.

@@ -160,10 +160,12 @@ $guide = Read-TextFile -PathValue $guideFullPath -Name "operator guide"
 
 Assert-Contains -Text $browserSmokeSpec -Needle "admin-vps-smoke-sections.json" -Message "Admin VPS smoke sections contract browser smoke spec must read admin-vps-smoke-sections.json."
 Assert-Contains -Text $browserSmokeSpec -Needle "route: section.route" -Message "Admin VPS smoke sections contract browser smoke spec must write routes from manifest."
+Assert-Contains -Text $reportValidator -Needle "admin-vps-smoke-sections.json" -Message "Admin VPS smoke sections contract report validator must read admin-vps-smoke-sections.json."
+Assert-Contains -Text $reportValidator -Needle "Get-SectionsContract" -Message "Admin VPS smoke sections contract report validator must parse sections contract."
+Assert-Contains -Text $reportValidator -Needle "route must match sections contract" -Message "Admin VPS smoke sections contract report validator must enforce section routes."
 Assert-Contains -Text $guide -Needle "validate-admin-vps-smoke-sections-contract.ps1" -Message "Admin VPS smoke sections contract guide must document validator command."
 
 foreach ($id in $contractIds) {
-    Assert-Contains -Text $reportValidator -Needle "`"$id`"" -Message "Admin VPS smoke sections contract report validator is missing section: $id"
     Assert-ContainsAny -Text $browserSmokeSpec -Needles @("'$id'", "$id`:") -Message "Admin VPS smoke sections contract browser smoke spec is missing section label: $id"
     Assert-Contains -Text $allScreensSpec -Needle "'$id'" -Message "Admin VPS smoke sections contract all-screens spec is missing section: $id"
 }

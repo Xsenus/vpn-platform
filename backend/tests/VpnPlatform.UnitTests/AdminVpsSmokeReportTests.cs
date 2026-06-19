@@ -53,14 +53,12 @@ public class AdminVpsSmokeReportTests
         var root = FindRepositoryRoot();
         var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-smoke-report.ps1"));
 
-        foreach (var section in RequiredSections)
-        {
-            Assert.Contains(section, script, StringComparison.Ordinal);
-        }
-
         foreach (var expected in new[]
                  {
                      "Assert-ReportHttpUrl",
+                     "admin-vps-smoke-sections.json",
+                     "Get-SectionsContract",
+                     "sections contract",
                      "apiBaseUrl",
                      "adminWebUrl",
                      "accountBootstrapChecked",
@@ -68,7 +66,8 @@ public class AdminVpsSmokeReportTests
                      "noJsErrors",
                      "noUnauthorizedAfterLogin",
                      "RequireAllPassed",
-                     "must be passed when -RequireAllPassed is used"
+                     "must be passed when -RequireAllPassed is used",
+                     "route must match sections contract"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
@@ -369,6 +368,7 @@ public class AdminVpsSmokeReportTests
                      "validate-admin-vps-smoke-report.ps1",
                      "Assert-FailsWith",
                      "bad-http-status",
+                     "bad-route",
                      "placeholder-evidence",
                      "failed-status",
                      "missing-section",

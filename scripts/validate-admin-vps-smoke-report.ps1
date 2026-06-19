@@ -2,6 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ReportPath,
 
+    [string]$SectionsContractPath = "docs/admin-vps-smoke-sections.json",
+
     [switch]$RequireAllPassed
 )
 
@@ -10,25 +12,6 @@ $ErrorActionPreference = "Stop"
 if (-not (Test-Path -LiteralPath $ReportPath)) {
     throw "Admin VPS smoke report was not found: $ReportPath"
 }
-
-$requiredSections = @(
-    "dashboard",
-    "users",
-    "payments",
-    "tariffs",
-    "subscriptions",
-    "vpn",
-    "nodes",
-    "panels",
-    "support",
-    "audit",
-    "bot",
-    "releases",
-    "faq",
-    "content",
-    "scenarios",
-    "provisioning"
-)
 
 $allowedStatuses = @("passed", "failed", "blocked", "skipped")
 $placeholderEvidenceMarkers = @(
@@ -69,6 +52,68 @@ function Assert-ReportHttpUrl {
         throw "Admin VPS smoke report field $Name must be an absolute http or https URL."
     }
 }
+
+function Resolve-RepoPath {
+    param([Parameter(Mandatory = $true)][string]$PathValue)
+
+    if ([System.IO.Path]::IsPathRooted($PathValue)) {
+        return [System.IO.Path]::GetFullPath($PathValue)
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $PathValue))
+}
+
+function Get-SectionsContract {
+    param([Parameter(Mandatory = $true)][string]$PathValue)
+
+    if (-not (Test-Path -LiteralPath $PathValue -PathType Leaf)) {
+        throw "Admin VPS smoke report sections contract was not found: $PathValue"
+    }
+
+    try {
+        $contract = (Get-Content -LiteralPath $PathValue -Raw -Encoding UTF8) | ConvertFrom-Json
+    }
+    catch {
+        throw "Admin VPS smoke report sections contract is not valid JSON: $($_.Exception.Message)"
+    }
+
+    if ([string]$contract.contractId -ne "admin-vps-smoke-sections") {
+        throw "Admin VPS smoke report sections contractId must be admin-vps-smoke-sections."
+    }
+
+    $sections = @($contract.sections)
+    if ($sections.Count -eq 0) {
+        throw "Admin VPS smoke report sections contract must contain sections."
+    }
+
+    $map = [ordered]@{}
+    foreach ($section in $sections) {
+        $id = [string]$section.id
+        $route = [string]$section.route
+
+        if ([string]::IsNullOrWhiteSpace($id)) {
+            throw "Admin VPS smoke report sections contract contains section without id."
+        }
+
+        if ($map.Contains($id)) {
+            throw "Admin VPS smoke report sections contract contains duplicated section: $id"
+        }
+
+        $expectedRoute = "/admin/#$id"
+        if ($route -ne $expectedRoute) {
+            throw "Admin VPS smoke report sections contract route for $id must be $expectedRoute."
+        }
+
+        $map[$id] = $route
+    }
+
+    return $map
+}
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$sectionsContractFullPath = Resolve-RepoPath $SectionsContractPath
+$requiredSectionRoutes = Get-SectionsContract -PathValue $sectionsContractFullPath
+$requiredSections = @($requiredSectionRoutes.Keys)
 
 $raw = Get-Content -LiteralPath $ReportPath -Raw -Encoding UTF8
 $lowerRaw = $raw.ToLowerInvariant()
@@ -153,8 +198,13 @@ foreach ($entry in $report.sections) {
         throw "Admin VPS smoke report section $section has unsupported status: $status"
     }
 
-    if ([string]::IsNullOrWhiteSpace([string]$entry.route)) {
+    $route = [string]$entry.route
+    if ([string]::IsNullOrWhiteSpace($route)) {
         throw "Admin VPS smoke report section $section must contain route."
+    }
+
+    if ($route -ne $requiredSectionRoutes[$section]) {
+        throw "Admin VPS smoke report section $section route must match sections contract."
     }
 
     if ($entry.PSObject.Properties.Name -notcontains "httpStatus" -or ($entry.httpStatus -isnot [int] -and $entry.httpStatus -isnot [long])) {
@@ -195,6 +245,7 @@ $summary = [ordered]@{
     reportId = $report.reportId
     environmentName = $report.environmentName
     releaseId = $report.releaseId
+    sectionsContractPath = $sectionsContractFullPath
     sections = $sectionIds.Count
     passed = @($report.sections | Where-Object { $_.status -eq "passed" }).Count
     failed = @($report.sections | Where-Object { $_.status -eq "failed" }).Count

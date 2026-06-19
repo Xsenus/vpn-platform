@@ -4797,5 +4797,28 @@
         "text": "`scripts/test-admin-vps-smoke-sections-contract.ps1` проверяет fail-closed tamper-сценарии, но live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-report-route-contract",
+    "version": "0.199.0",
+    "releasedAt": "2026-06-19T01:10:00+07:00",
+    "title": "Route contract admin VPS smoke report",
+    "summary": "Admin VPS smoke report validator теперь читает manifest разделов и fail-closed сверяет route каждого раздела.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/validate-admin-vps-smoke-report.ps1` читает `docs/admin-vps-smoke-sections.json` и требует, чтобы route каждого раздела соответствовал manifest."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-smoke-report-validator.ps1` покрывает tamper-сценарий `bad-route` для расхождения report route и sections contract."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

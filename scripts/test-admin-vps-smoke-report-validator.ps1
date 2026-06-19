@@ -111,7 +111,7 @@ try {
             [ordered]@{
                 id = $section
                 label = $section
-                route = "/admin/$section"
+                route = "/admin/#$section"
                 status = "passed"
                 httpStatus = 200
                 loaded = $true
@@ -149,6 +149,16 @@ try {
         name = "bad-http-status"
         message = Assert-FailsWith -ExpectedMessage "must contain successful httpStatus" -Action {
             Invoke-SmokeReportValidator -ReportPath $badHttpStatusPath
+        }
+    }
+
+    $badRoute = Get-Content -LiteralPath $validReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badRoute.sections[0].route = "/admin/dashboard"
+    $badRoutePath = Copy-ReportJson -Source $badRoute -DestinationPath (Join-Path $outputFullPath "bad-route.json")
+    $testedFailures += [ordered]@{
+        name = "bad-route"
+        message = Assert-FailsWith -ExpectedMessage "route must match sections contract" -Action {
+            Invoke-SmokeReportValidator -ReportPath $badRoutePath
         }
     }
 

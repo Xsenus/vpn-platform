@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-19-admin-vps-smoke-sections-contract`, версия `0.198.0`.
+- [x] Latest "Что нового": `2026-06-19-admin-vps-smoke-report-route-contract`, версия `0.199.0`.
 
 ## Как вести дальше
 
