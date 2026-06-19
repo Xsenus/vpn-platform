@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `580/580`",
+                     "Backend full suite: `581/581`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-06-19-admin-vps-smoke-report-validator-regression",
-                     "0.189.0"
+                     "2026-06-19-admin-vps-smoke-flow-wrapper",
+                     "0.190.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-06-19-admin-vps-smoke-report-validator-regression", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-19-admin-vps-smoke-report-validator-regression", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-19-admin-vps-smoke-flow-wrapper", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-19-admin-vps-smoke-flow-wrapper", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

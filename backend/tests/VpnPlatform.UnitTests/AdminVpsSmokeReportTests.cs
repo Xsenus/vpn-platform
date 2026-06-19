@@ -164,10 +164,10 @@ public class AdminVpsSmokeReportTests
                      "AdminBootstrap__Enabled",
                      "fresh-admin@example.test",
                      "VITE_API_BASE_URL",
-                     "admin-vps-browser-smoke.ps1",
+                     "admin-vps-smoke.ps1",
+                     "PreflightReportPath",
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
                      "-AccountBootstrapChecked",
-                     "-RequireAllPassed",
                      "Assert-InWorkspace",
                      "Stop-Process",
                      "local admin vps browser smoke ok"
@@ -331,6 +331,41 @@ public class AdminVpsSmokeReportTests
 
         Assert.Contains("test-admin-vps-smoke-report-validator.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002G`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Admin_Vps_Smoke_Flow_Should_Run_Preflight_Before_Browser_Smoke()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-smoke.ps1"));
+        var localSmoke = File.ReadAllText(Path.Combine(root, "scripts", "local-admin-vps-browser-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "admin-vps-smoke-preflight.ps1",
+                     "admin-vps-browser-smoke.ps1",
+                     "validate-admin-vps-smoke-report.ps1",
+                     "validate-admin-vps-smoke-preflight-report.ps1",
+                     "-RequirePassword",
+                     "-RequireAllPassed",
+                     "Password: [hidden]",
+                     "Admin VPS smoke flow completed",
+                     "admin-vps-smoke-preflight-report.json"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.True(
+            script.IndexOf("admin-vps-smoke-preflight.ps1", StringComparison.OrdinalIgnoreCase)
+            < script.IndexOf("admin-vps-browser-smoke.ps1", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("[string]$Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ADMIN_VPS_SMOKE_ADMIN_PASSWORD\"", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("admin-vps-smoke.ps1", localSmoke, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("admin-vps-smoke.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002H`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -95,9 +95,29 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-prefli
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-preflight-validator.ps1
 ```
 
+## Единая команда live-smoke
+
+Для реального VPS-прогона используйте fail-closed wrapper, который сначала запускает preflight и валидирует sanitized preflight report, а затем выполняет browser smoke только при готовых параметрах:
+
+```powershell
+$env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD="<temporary-admin-password>"
+
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
+  -ApiBaseUrl https://api.example.test `
+  -AdminWebUrl https://example.test/admin/ `
+  -AdminEmail owner@example.com `
+  -SmokeReportPath tmp\admin-vps-smoke-report.json `
+  -PreflightReportPath tmp\admin-vps-smoke-preflight-report.json `
+  -EnvironmentName staging `
+  -Operator operator-name `
+  -AccountBootstrapChecked
+```
+
+`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword`, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed`. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
+
 ## Браузерный live-smoke
 
-Если VPS уже развернут и production/staging admin-аккаунт восстановлен через безопасный bootstrap/reset, можно запустить явный Playwright smoke без сохранения пароля, cookie, bearer-токенов, trace, video и screenshots:
+Низкоуровневый browser runner можно запускать отдельно для диагностики, если preflight уже пройден и нужно повторить только Playwright smoke без пересоздания preflight report:
 
 ```powershell
 $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD="<temporary-admin-password>"
@@ -113,7 +133,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-browser-smoke.ps1 `
   -RequireAllPassed
 ```
 
-Wrapper печатает `Password: [hidden]`, запускает `npm run e2e:admin-vps-smoke` из `frontend`, обходит все обязательные вкладки админки, проверяет отсутствие `console.error`, `pageerror` и 401/403 после логина, затем валидирует JSON через `scripts/validate-admin-vps-smoke-report.ps1`. Без `-AccountBootstrapChecked` отчет останется неприемочным для `-RequireAllPassed`, даже если логин и вкладки прошли.
+Browser runner печатает `Password: [hidden]`, запускает `npm run e2e:admin-vps-smoke` из `frontend`, обходит все обязательные вкладки админки, проверяет отсутствие `console.error`, `pageerror` и 401/403 после логина, затем валидирует JSON через `scripts/validate-admin-vps-smoke-report.ps1`. Без `-AccountBootstrapChecked` отчет останется неприемочным для `-RequireAllPassed`, даже если логин и вкладки прошли.
 
 ## Локальная проверка runner на SQLite
 
@@ -123,7 +143,7 @@ Wrapper печатает `Password: [hidden]`, запускает `npm run e2e:a
 powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
 ```
 
-Скрипт поднимает API в окружении `Local`, создает временную SQLite-БД в `tmp/local-admin-vps-browser-smoke`, включает demo seed и admin bootstrap, запускает admin-panel через Vite с `VITE_API_BASE_URL` на временный API, выполняет `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed`, затем останавливает процессы и удаляет временные файлы. Для диагностики можно добавить `-KeepArtifacts`.
+Скрипт поднимает API в окружении `Local`, создает временную SQLite-БД в `tmp/local-admin-vps-browser-smoke`, включает demo seed и admin bootstrap, запускает admin-panel через Vite с `VITE_API_BASE_URL` на временный API, выполняет `scripts/admin-vps-smoke.ps1`, затем останавливает процессы и удаляет временные файлы. Для диагностики можно добавить `-KeepArtifacts`.
 
 ## Что нельзя хранить
 

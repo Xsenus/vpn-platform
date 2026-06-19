@@ -4590,5 +4590,28 @@
         "text": "`docs/admin-vps-smoke.md` теперь содержит команду regression-проверки validator заполненного admin VPS smoke report."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-flow-wrapper",
+    "version": "0.190.0",
+    "releasedAt": "2026-06-18T23:40:00+07:00",
+    "title": "Единый wrapper admin VPS smoke",
+    "summary": "Admin VPS smoke получил одну fail-closed команду, которая запускает preflight перед browser smoke и проверяется локально на SQLite.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/admin-vps-smoke.ps1` запускает preflight с `-RequirePassword`, затем browser smoke с `-RequireAllPassed` и не принимает пароль параметром."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/local-admin-vps-browser-smoke.ps1` теперь проверяет тот же end-to-end flow на временной SQLite-БД."
+      },
+      {
+        "type": "important",
+        "text": "Реальные `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до VPS smoke report без секретов."
+      }
+    ]
   }
 ]

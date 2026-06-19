@@ -102,6 +102,7 @@ New-Item -ItemType Directory -Path $logDir | Out-Null
 $apiUrl = "http://127.0.0.1:$ApiPort"
 $adminUrl = "http://127.0.0.1:$AdminPort"
 $reportRelativePath = "tmp/local-admin-vps-browser-smoke/admin-vps-smoke-report.json"
+$preflightReportRelativePath = "tmp/local-admin-vps-browser-smoke/admin-vps-smoke-preflight-report.json"
 $password = "LocalSmokePassword123!"
 $previousEnv = @{}
 $apiProcess = $null
@@ -174,15 +175,15 @@ try {
 
     Set-ScopedEnv -Previous $previousEnv -Name "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" -Value $password
 
-    & (Join-Path $PSScriptRoot "admin-vps-browser-smoke.ps1") `
+    & (Join-Path $PSScriptRoot "admin-vps-smoke.ps1") `
         -ApiBaseUrl $apiUrl `
         -AdminWebUrl $adminUrl `
         -AdminEmail "fresh-admin@example.test" `
-        -OutputPath $reportRelativePath `
+        -SmokeReportPath $reportRelativePath `
+        -PreflightReportPath $preflightReportRelativePath `
         -EnvironmentName "Local" `
         -Operator "local-admin-vps-browser-smoke" `
-        -AccountBootstrapChecked `
-        -RequireAllPassed
+        -AccountBootstrapChecked
 
     Write-Output "local admin vps browser smoke ok api=$apiUrl admin=$adminUrl report=$reportRelativePath"
 }
