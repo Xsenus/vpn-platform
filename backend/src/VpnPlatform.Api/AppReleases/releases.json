@@ -4936,4 +4936,28 @@
       }
     ]
   }
+,
+  {
+    "releaseId": "2026-06-20-admin-vps-bootstrap-smoke-readiness-path-link",
+    "version": "0.205.0",
+    "releasedAt": "2026-06-20T09:00:00+07:00",
+    "title": "Readiness path link bootstrap smoke админки VPS",
+    "summary": "Bootstrap smoke evidence validator теперь fail-closed сверяет readinessReportPath с фактически проверяемым readiness JSON.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` сверяет `readinessReportPath` внутри readiness report с фактическим readiness JSON, переданным в validator."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает fail-closed сценарий `mismatched-readiness-report-path`."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
+  }
 ]

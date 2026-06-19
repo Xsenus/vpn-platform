@@ -89,7 +89,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
 ```
 
-Regression harness также покрывает `bad-smoke-route`, чтобы bootstrap+smoke evidence не принимал устаревшие admin routes вне `docs/admin-vps-smoke-sections.json`.
+Regression harness также покрывает `mismatched-readiness-report-path` и `bad-smoke-route`, чтобы bootstrap+smoke evidence не принимал чужой readiness report path и устаревшие admin routes вне `docs/admin-vps-smoke-sections.json`.
 Внутри этого flow `scripts/admin-vps-bootstrap-smoke.ps1` вычисляет latest release один раз и передает один `releaseId` в readiness gate, `scripts/admin-vps-smoke.ps1` и итоговый bootstrap smoke report. Evidence validator отклоняет readiness/bootstrap пару с разным `releaseId`, а preflight report не проходит validation с пустым `releaseId`.
 
 ## Dry-run

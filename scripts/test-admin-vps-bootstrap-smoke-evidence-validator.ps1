@@ -301,6 +301,12 @@ $results += Invoke-ValidatorScenario -Name "mismatched-release-id" -ExpectedExit
     $report.releaseId = "bootstrap-smoke-evidence-validator-other-release"
     Write-JsonFile -Path $readinessPath -Value $report
 }
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readinessReportPath" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.readinessReportPath = Join-Path (Split-Path -Parent $readinessPath) "other-readiness-report.json"
+    Write-JsonFile -Path $readinessPath -Value $report
+}
 $results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight releaseId" -Mutate {
     param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
     $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json

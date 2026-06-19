@@ -2,6 +2,21 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.205.0 - 2026-06-20
+
+Release entry: `2026-06-20-admin-vps-bootstrap-smoke-readiness-path-link`.
+
+### Fixed
+- `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` теперь сверяет `readinessReportPath` внутри readiness report с фактическим readiness JSON, переданным в validator.
+
+### Added
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает fail-closed `mismatched-readiness-report-path`.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, включая `mismatched-readiness-report-path`.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.204.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-bootstrap-smoke-report-release-link`.
