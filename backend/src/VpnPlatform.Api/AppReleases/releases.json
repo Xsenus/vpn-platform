@@ -4452,5 +4452,28 @@
         "text": "Smoke записывает sanitized `admin-vps-smoke-report.json` и проверяет его через `validate-admin-vps-smoke-report.ps1`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-local-admin-vps-browser-smoke",
+    "version": "0.184.0",
+    "releasedAt": "2026-06-18T22:40:00+07:00",
+    "title": "Локальная проверка browser smoke админки",
+    "summary": "Admin browser smoke теперь проверяется на временной SQLite-БД с реальным API и admin-panel перед VPS-прогоном.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/local-admin-vps-browser-smoke.ps1` поднимает временный Local API, SQLite-БД и admin-panel для проверки runner."
+      },
+      {
+        "type": "improved",
+        "text": "Локальная проверка запускает `admin-vps-browser-smoke.ps1 -RequireAllPassed` и валидирует отчет с 16 разделами админки."
+      },
+      {
+        "type": "fixed",
+        "text": "Cleanup останавливает дерево процессов, чтобы дочерний Vite `node.exe` не оставался слушать тестовый порт."
+      }
+    ]
   }
 ]

@@ -151,6 +151,36 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Local_Admin_Vps_Browser_Smoke_Should_Start_Temporary_Sqlite_And_Validate_Report()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "local-admin-vps-browser-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Database__UseEnsureCreatedForLocalSqlite",
+                     "Database__SeedDemoData",
+                     "AdminBootstrap__Enabled",
+                     "fresh-admin@example.test",
+                     "VITE_API_BASE_URL",
+                     "admin-vps-browser-smoke.ps1",
+                     "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
+                     "-AccountBootstrapChecked",
+                     "-RequireAllPassed",
+                     "Assert-InWorkspace",
+                     "Stop-Process",
+                     "local admin vps browser smoke ok"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("local-admin-vps-browser-smoke.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host \"Password: $password", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Docs_Should_Link_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

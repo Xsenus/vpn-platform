@@ -2,6 +2,30 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.184.0 - 2026-06-19
+
+Release entry: `2026-06-19-local-admin-vps-browser-smoke`.
+
+### Added
+- Добавлен `scripts/local-admin-vps-browser-smoke.ps1` для полной локальной проверки admin browser smoke на временной SQLite-БД.
+- Локальный harness поднимает API с `AdminBootstrap__Enabled=true`, admin-panel через Vite с `VITE_API_BASE_URL` на временный API, запускает `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` и удаляет временные файлы по умолчанию.
+
+### Fixed
+- Cleanup локального smoke останавливает дерево процессов, чтобы дочерний Vite `node.exe` не оставался слушать порт после проверки.
+
+### Verified
+- `AdminVpsSmokeReportTests`: 6/6.
+- Local SQLite admin browser smoke: OK, 16/16 admin sections passed.
+- Backend full suite: 575/575.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.183.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-browser-smoke`.

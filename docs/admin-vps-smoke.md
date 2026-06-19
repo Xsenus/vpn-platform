@@ -78,6 +78,16 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-browser-smoke.ps1 `
 
 Wrapper печатает `Password: [hidden]`, запускает `npm run e2e:admin-vps-smoke` из `frontend`, обходит все обязательные вкладки админки, проверяет отсутствие `console.error`, `pageerror` и 401/403 после логина, затем валидирует JSON через `scripts/validate-admin-vps-smoke-report.ps1`. Без `-AccountBootstrapChecked` отчет останется неприемочным для `-RequireAllPassed`, даже если логин и вкладки прошли.
 
+## Локальная проверка runner на SQLite
+
+Перед VPS-прогоном можно проверить сам browser runner на временной локальной SQLite-БД:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
+```
+
+Скрипт поднимает API в окружении `Local`, создает временную SQLite-БД в `tmp/local-admin-vps-browser-smoke`, включает demo seed и admin bootstrap, запускает admin-panel через Vite с `VITE_API_BASE_URL` на временный API, выполняет `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed`, затем останавливает процессы и удаляет временные файлы. Для диагностики можно добавить `-KeepArtifacts`.
+
 ## Что нельзя хранить
 
 В отчете нельзя сохранять пароли, cookies, bearer-токены, private headers, `.env`, SSH-ключи, webhook secrets, raw provider payloads и скриншоты, где видны секреты.

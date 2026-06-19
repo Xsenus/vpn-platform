@@ -2,6 +2,52 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: local admin VPS browser smoke runner
+
+Что проверялось:
+
+- `scripts/local-admin-vps-browser-smoke.ps1` поднимает временную SQLite-БД, API и admin-panel без Docker.
+- Скрипт включает local admin bootstrap, запускает `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` и валидирует sanitized `admin-vps-smoke-report.json`.
+- Cleanup останавливает дерево процессов, поэтому дочерний Vite `node.exe` не оставляет порт занятым.
+- Раздел "Что нового" получил релиз `2026-06-19-local-admin-vps-browser-smoke`, версия `0.184.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1 -KeepArtifacts
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report.ps1 -ReportPath tmp\local-admin-vps-browser-smoke\admin-vps-smoke-report.json -RequireAllPassed
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+npx playwright test --config=playwright.vps-smoke.config.ts --list
+git diff --check
+```
+
+Результат:
+
+- `AdminVpsSmokeReportTests`: `6/6`.
+- Local SQLite admin browser smoke: OK, Playwright `1/1`, report validator `16 passed`.
+- Local smoke cleanup: OK, временные artifacts удаляются без `-KeepArtifacts`.
+- Targeted release/docs suite: `22/22`.
+- Backend full suite: `575/575`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Playwright admin VPS smoke test discovery: OK, найден 1 test в проекте `admin-vps-smoke`.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS browser smoke runner
 
 Что проверялось:
