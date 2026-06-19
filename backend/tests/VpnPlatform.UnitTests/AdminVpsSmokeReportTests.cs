@@ -304,6 +304,36 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Admin_Vps_Smoke_Report_Validator_Regression_Should_Cover_Tamper_Scenarios()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-report-validator.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "admin-vps-smoke-report-validator-regression-test",
+                     "validate-admin-vps-smoke-report.ps1",
+                     "Assert-FailsWith",
+                     "bad-http-status",
+                     "placeholder-evidence",
+                     "failed-status",
+                     "missing-section",
+                     "false-gate",
+                     "secret-marker",
+                     "Synthetic sanitized validator regression report",
+                     "admin vps smoke report validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-smoke-report-validator.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002G`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Docs_Should_Link_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

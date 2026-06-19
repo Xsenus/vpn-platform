@@ -2,6 +2,47 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS smoke report validator regression
+
+Что проверялось:
+
+- `scripts/test-admin-vps-smoke-report-validator.ps1` создает synthetic passed admin VPS smoke report, запускает validator happy path и проверяет fail-closed tamper-сценарии.
+- Проверяются `bad-http-status`, `placeholder-evidence`, `failed-status`, `missing-section`, `false-gate`, `secret-marker`.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-smoke-report-validator-regression`, версия `0.189.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-validator.ps1
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- `AdminVpsSmokeReportTests`: `11/11`.
+- Targeted release/docs suite: `27/27`.
+- Admin VPS smoke report validator regression: OK, tested failures `6/6`.
+- Local SQLite admin browser smoke: OK, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: `580/580`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS smoke preflight validator regression
 
 Что проверялось:

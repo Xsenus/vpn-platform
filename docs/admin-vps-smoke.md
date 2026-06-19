@@ -58,6 +58,12 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report
 
 `-RequireAllPassed` должен падать на черновике, потому что все разделы изначально находятся в статусе `blocked`. Перед закрытием `P0-ADMIN-002` нужно заменить статусы на `passed`, выставить `loaded=true`, `httpStatus=200`, заполнить общие флаги и приложить безопасные real evidence. Acceptance mode также отклоняет placeholder evidence вроде `TODO`, `Not checked yet`, `safe screenshot name` и шаблонных browser smoke notes.
 
+Локальная regression-проверка validator для заполненного admin VPS smoke report, включая happy path и tamper-сценарии `bad-http-status`, `placeholder-evidence`, `failed-status`, `missing-section`, `false-gate`, `secret-marker`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-validator.ps1
+```
+
 ## Preflight перед live-smoke
 
 Перед реальным запуском можно проверить готовность параметров без подключения к админке и без вывода секрета:

@@ -4567,5 +4567,28 @@
         "text": "`docs/admin-vps-smoke.md` теперь содержит команду regression-проверки preflight validator перед реальным VPS smoke."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-report-validator-regression",
+    "version": "0.189.0",
+    "releasedAt": "2026-06-18T23:30:00+07:00",
+    "title": "Regression admin VPS smoke report validator",
+    "summary": "Основной validator admin VPS smoke report получил локальный regression harness с tamper-сценариями.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`test-admin-vps-smoke-report-validator.ps1` проверяет happy path и fail-closed tamper-сценарии основного smoke report validator."
+      },
+      {
+        "type": "important",
+        "text": "Harness проверяет `bad-http-status`, `placeholder-evidence`, `failed-status`, `missing-section`, `false-gate` и `secret-marker`."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/admin-vps-smoke.md` теперь содержит команду regression-проверки validator заполненного admin VPS smoke report."
+      }
+    ]
   }
 ]
