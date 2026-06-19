@@ -83,6 +83,33 @@ public class PaymentProviderSmokeReportTests
     }
 
     [Fact]
+    public void Smoke_Report_Validator_Should_Require_All_Provider_Boolean_Gates_For_Acceptance()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-payment-provider-smoke-report.ps1"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "payment-provider-smoke.md"));
+
+        foreach (var requiredField in new[]
+                 {
+                     "accountConfigured",
+                     "checkoutCreated",
+                     "providerConfirmation",
+                     "webhookProcessed",
+                     "subscriptionActivated",
+                     "refundChecked"
+                 })
+        {
+            Assert.Contains(requiredField, script, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(requiredField, guide, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("foreach ($booleanName in $requiredBooleans)", script, StringComparison.Ordinal);
+        Assert.Contains("field $booleanName must be true when -RequireAllPassed is used", script, StringComparison.Ordinal);
+        Assert.Contains("[x] `P0-PAY-014`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Smoke_Report_Generator_Should_Create_Safe_Blocked_Report()
     {
         var root = FindRepositoryRoot();

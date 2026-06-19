@@ -46,6 +46,17 @@ powershell -ExecutionPolicy Bypass -File scripts\new-payment-provider-smoke-repo
 
 В `evidence` можно писать только безопасные идентификаторы: payment/order/webhook/subscription id, URL без query-секретов, краткий результат проверки. Нельзя сохранять токены, пароли, cookies, private headers, webhook secrets, SSH-ключи или raw payload с секретами.
 
+Для приемочного отчета недостаточно поставить `status = passed`. При запуске validator с `-RequireAllPassed` у каждого провайдера должны быть `true` все обязательные gates:
+
+- `accountConfigured`
+- `checkoutCreated`
+- `providerConfirmation`
+- `webhookProcessed`
+- `subscriptionActivated`
+- `refundChecked`
+
+Если refund flow у провайдера недоступен по договору или в sandbox, это не считается `passed`: нужно оставить провайдера `blocked` или зафиксировать отдельное product/release решение, почему refund исключен из текущей приемки.
+
 ## Валидатор
 
 Обычная структурная проверка:
@@ -60,7 +71,7 @@ Production gate для заполненного отчета:
 powershell -ExecutionPolicy Bypass -File scripts\validate-payment-provider-smoke-report.ps1 -ReportPath docs\payment-provider-smoke-report.template.json -RequireAllPassed
 ```
 
-`-RequireAllPassed` должен падать на шаблоне, потому что все провайдеры изначально находятся в статусе `blocked`. Перед production-ready решением нужно создать отдельный заполненный отчет, заменить статусы на `passed` только после реальной проверки и приложить безопасные доказательства.
+`-RequireAllPassed` должен падать на шаблоне, потому что все провайдеры изначально находятся в статусе `blocked`, а обязательные boolean gates выставлены в `false`. Перед production-ready решением нужно создать отдельный заполненный отчет, заменить статусы на `passed` только после реальной проверки, выставить все обязательные gates в `true` и приложить безопасные доказательства.
 
 ## Как использовать в roadmap
 

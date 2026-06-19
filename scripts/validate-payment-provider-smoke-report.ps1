@@ -140,6 +140,14 @@ foreach ($entry in $report.providers) {
     if ($RequireAllPassed -and $status -ne "passed") {
         throw "Payment provider smoke report provider $provider must be passed when -RequireAllPassed is used."
     }
+
+    if ($RequireAllPassed) {
+        foreach ($booleanName in $requiredBooleans) {
+            if (-not $entry.$booleanName) {
+                throw "Payment provider smoke report provider $provider field $booleanName must be true when -RequireAllPassed is used."
+            }
+        }
+    }
 }
 
 $summary = [ordered]@{

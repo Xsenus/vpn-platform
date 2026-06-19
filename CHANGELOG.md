@@ -2,6 +2,22 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.180.0 - 2026-06-19
+
+Release entry: `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
+
+### Changed
+- `scripts/validate-payment-provider-smoke-report.ps1` при `-RequireAllPassed` теперь требует `true` для всех provider gates: account, checkout, provider confirmation, webhook, subscription и refund.
+- `docs/payment-provider-smoke.md` уточняет, что `status = passed` без закрытых boolean gates не является приемочным evidence.
+- Roadmap и release docs синхронизированы с backend suite `569/569` и latest release `0.180.0`.
+
+### Verified
+- `PaymentProviderSmokeReportTests`: 6/6.
+- Payment provider smoke report generator/validator smoke: OK.
+- Expected fail-closed `-RequireAllPassed`: OK.
+- Targeted release/docs suite: 86/86.
+- Backend full suite: 569/569.
+
 ## 0.179.0 - 2026-06-19
 
 Release entry: `2026-06-19-vps-production-smoke-report-contract`.

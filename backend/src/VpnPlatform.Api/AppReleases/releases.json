@@ -4360,5 +4360,28 @@
         "text": "Validator с `-RequireAllPassed` требует все шаги и boolean-подтверждения, а также запрещает секретные маркеры, raw webhook payloads и полные VPN URI в evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-payment-provider-smoke-report-acceptance-gates",
+    "version": "0.180.0",
+    "releasedAt": "2026-06-18T22:00:00+07:00",
+    "title": "Строгая приемка payment provider smoke",
+    "summary": "Payment provider smoke report теперь требует все provider gates при `-RequireAllPassed`, а не только общий статус `passed`.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`validate-payment-provider-smoke-report.ps1` требует `accountConfigured`, `checkoutCreated`, `providerConfirmation`, `webhookProcessed`, `subscriptionActivated` и `refundChecked`."
+      },
+      {
+        "type": "important",
+        "text": "Отчет не пройдет production gate, если провайдер помечен `passed`, но любой обязательный этап остался `false`."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/payment-provider-smoke.md` описывает обязательные gates и правило для недоступного refund flow."
+      }
+    ]
   }
 ]

@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `568/568`.
+- [x] `STATE-001` Backend test suite проходит: `569/569`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `568/568`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-vps-production-smoke-report-contract`, версия `0.179.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `569/569`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-payment-provider-smoke-report-acceptance-gates`, версия `0.180.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `568/568`, frontend tests `66/66`, latest "Что нового" `2026-06-19-vps-production-smoke-report-contract`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `569/569`, frontend tests `66/66`, latest "Что нового" `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
 
 ## P0. Блокеры production-запуска
 
@@ -179,6 +179,11 @@ git diff --check
   - Что сделать: убрать ручное копирование JSON и дать оператору безопасный черновик отчета по всем web-провайдерам.
   - Критерий готовности: скрипт подставляет latest release, environment, operator и mode, выставляет все провайдеры в `blocked`, не перезаписывает файл без `-Force` и сразу запускает валидатор.
   - Доказательство: `scripts/new-payment-provider-smoke-report.ps1`, `PaymentProviderSmokeReportTests` 5/5, generator smoke на `tmp/generated-payment-provider-smoke-report.json`, expected fail-closed `-RequireAllPassed`.
+
+- [x] `P0-PAY-014` Усилить приемку payment provider smoke report. 2026-06-19.
+  - Что сделать: запретить закрывать live/sandbox smoke провайдера одним `status = passed`, если не подтверждены все обязательные этапы настройки, checkout, provider confirmation, webhook, subscription и refund.
+  - Что сделано: `scripts/validate-payment-provider-smoke-report.ps1` при `-RequireAllPassed` теперь требует `true` для `accountConfigured`, `checkoutCreated`, `providerConfirmation`, `webhookProcessed`, `subscriptionActivated` и `refundChecked` у каждого web-провайдера; `docs/payment-provider-smoke.md` объясняет приемочные gates и внешний блокер refund.
+  - Доказательство: `PaymentProviderSmokeReportTests` 6/6, expected fail-closed `-RequireAllPassed`, latest "Что нового" `2026-06-19-payment-provider-smoke-report-acceptance-gates`, версия `0.180.0`.
 
 ## P1. Полные пользовательские сценарии
 

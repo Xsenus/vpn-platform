@@ -2,15 +2,16 @@
 
 Дата проверки: 2026-05-25.
 
-## Проверка 2026-06-19: VPS production smoke report contract
+## Проверка 2026-06-19: payment provider smoke report acceptance gates
 
 Что проверялось:
 
-- Добавлен fail-closed report contract для live/staging VPS production smoke: `docs/vps-production-smoke-report.template.json`.
-- Добавлены generator и validator: `scripts/new-vps-production-smoke-report.ps1`, `scripts/validate-vps-production-smoke-report.ps1`.
-- Validator требует все шаги deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access, boolean-подтверждения, валидные URL/даты и безопасные evidence-строки без секретов.
-- Раздел "Что нового" получил релиз `2026-06-19-vps-production-smoke-report-contract`, версия `0.179.0`.
-- Связанный предыдущий baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
+- `scripts/validate-payment-provider-smoke-report.ps1` при `-RequireAllPassed` теперь требует `true` для всех provider gates.
+- Приемочный payment provider smoke report больше нельзя закрыть одним `status = passed`, если не подтверждены account, checkout, provider confirmation, webhook, subscription и refund.
+- `docs/payment-provider-smoke.md` уточняет gates `accountConfigured`, `checkoutCreated`, `providerConfirmation`, `webhookProcessed`, `subscriptionActivated`, `refundChecked`.
+- Раздел "Что нового" получил релиз `2026-06-19-payment-provider-smoke-report-acceptance-gates`, версия `0.180.0`.
+- Связанный предыдущий VPS smoke report baseline сохранен как `2026-06-19-vps-production-smoke-report-contract`.
+- Связанный предыдущий aggregate baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
 - Связанный предыдущий aggregate baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.
 - Связанный предыдущий CI step regression baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`.
 - Связанный предыдущий CI step guard baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`.
@@ -22,11 +23,14 @@
 powershell -ExecutionPolicy Bypass -File scripts\new-vps-production-smoke-report.ps1 -OutputPath tmp\vps-production-smoke-report.json -ApiBaseUrl http://127.0.0.1:18102 -PublicWebUrl http://127.0.0.1:5183 -CabinetWebUrl http://127.0.0.1:5184 -AdminWebUrl http://127.0.0.1:5185 -Force
 powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-report.ps1 -ReportPath tmp\vps-production-smoke-report.json
 powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-report.ps1 -ReportPath tmp\vps-production-smoke-report.json -RequireAllPassed
+powershell -ExecutionPolicy Bypass -File scripts\new-payment-provider-smoke-report.ps1 -OutputPath tmp\generated-payment-provider-smoke-report.json -EnvironmentName staging -Operator local-test -Mode sandbox -Force
+powershell -ExecutionPolicy Bypass -File scripts\validate-payment-provider-smoke-report.ps1 -ReportPath tmp\generated-payment-provider-smoke-report.json
+powershell -ExecutionPolicy Bypass -File scripts\validate-payment-provider-smoke-report.ps1 -ReportPath tmp\generated-payment-provider-smoke-report.json -RequireAllPassed
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson
-dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "VpsProductionSmokeTests|ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "PaymentProviderSmokeReportTests|VpsProductionSmokeTests|ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
 dotnet test backend\VpnPlatform.sln --configuration Release
 dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-restore
 dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release --no-restore
@@ -46,6 +50,10 @@ git diff --check
 
 Результат:
 
+- Payment provider smoke report generator: OK.
+- Payment provider smoke report validator: OK.
+- Payment provider expected fail-closed `-RequireAllPassed`: OK.
+- `PaymentProviderSmokeReportTests`: `6/6`.
 - VPS production smoke report generator: OK.
 - VPS production smoke report validator: OK.
 - Expected fail-closed `-RequireAllPassed`: OK.
@@ -55,8 +63,8 @@ git diff --check
 - Production CI workflow artifacts guards aggregate: OK, `guardsCount = 6`.
 - Production CI workflow artifacts aggregate guard validator: OK, включая CI-step tamper cases.
 - Production CI workflow artifacts aggregate guard validator CI-step tamper cases: OK.
-- Targeted release/docs suite: `80/80`.
-- Backend full suite: `568/568`.
+- Targeted release/docs suite: `86/86`.
+- Backend full suite: `569/569`.
 - API build: OK.
 - TelegramBot build: OK.
 - Frontend tests: `66/66`.
@@ -66,8 +74,8 @@ git diff --check
 - Playwright console E2E: `9/9`.
 - Secret scan: 0 findings.
 - Кодировка измененных и новых файлов: strict UTF-8 without BOM.
-- Fresh local SQLite smoke: OK, latest `2026-06-19-vps-production-smoke-report-contract`.
-- Local VPS smoke dry-run: OK, latest `2026-06-19-vps-production-smoke-report-contract`.
+- Fresh local SQLite smoke: OK, latest `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
+- Local VPS smoke dry-run: OK, latest `2026-06-19-payment-provider-smoke-report-acceptance-gates`.
 - `git diff --check`: OK.
 
 ## Проверка 2026-06-19: production CI workflow artifacts aggregate guard regression
