@@ -2,6 +2,30 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.193.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-bootstrap-smoke-wrapper`.
+
+### Added
+- Добавлен `scripts/admin-vps-bootstrap-smoke.ps1`, который запускает admin bootstrap/reset и затем admin VPS smoke под тем же аккаунтом.
+- Добавлен `scripts/local-admin-vps-bootstrap-smoke.ps1`, который доказывает flow на временной SQLite-БД: CLI bootstrap создает admin, API стартует с `AdminBootstrap__Enabled=false`, затем проходит admin smoke.
+
+### Changed
+- `docs/admin-bootstrap.md` и `docs/admin-vps-smoke.md` описывают единый bootstrap+smoke проход без вывода пароля.
+
+### Verified
+- `AdminBootstrapCliScriptTests`: 5/5.
+- Local CLI bootstrap admin smoke на SQLite: OK, preflight report valid, Playwright `1/1`, report validator `16 passed`, evidence validator OK.
+- Backend full suite: 585/585.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.192.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-evidence-validator`.

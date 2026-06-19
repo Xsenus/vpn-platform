@@ -2,6 +2,46 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS bootstrap smoke wrapper
+
+Что проверялось:
+
+- `scripts/admin-vps-bootstrap-smoke.ps1` запускает `scripts/admin-bootstrap.ps1`, требует `-ConfirmBootstrapReset` для не-локальной БД и затем выполняет `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked`.
+- Пароль берется из `ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD`, в выводе остается только `Password: [hidden]`, а smoke получает пароль через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`.
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` проверяет flow на временной SQLite-БД: CLI bootstrap создает admin, API стартует с `AdminBootstrap__Enabled=false`, затем admin smoke проходит под созданным аккаунтом.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-bootstrap-smoke-wrapper`, версия `0.193.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Local CLI bootstrap admin smoke на SQLite: OK, preflight report valid, Playwright `1/1`, report validator `16 passed`, evidence validator OK.
+- `AdminBootstrapCliScriptTests`: `5/5`.
+- Targeted release/docs suite: `35/35`.
+- Backend full suite: `585/585`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings, files scanned `550`.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM, files checked `19`.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS smoke evidence validator
 
 Что проверялось:

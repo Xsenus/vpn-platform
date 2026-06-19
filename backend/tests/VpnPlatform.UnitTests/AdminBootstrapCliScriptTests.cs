@@ -59,6 +59,76 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("2026-06-19-admin-bootstrap-wrapper", testResults, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Admin_Vps_Bootstrap_Smoke_Wrapper_Should_Run_Reset_Then_Smoke_Without_Printing_Password()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-bootstrap-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "admin-bootstrap.ps1",
+                     "admin-vps-smoke.ps1",
+                     "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
+                     "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
+                     "ConfirmBootstrapReset",
+                     "Pass -ConfirmBootstrapReset",
+                     "Connection string is required",
+                     "AccountBootstrapChecked",
+                     "Password: [hidden]",
+                     "Dry-run mode: admin VPS smoke was not started",
+                     "Admin VPS bootstrap+smoke flow completed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.True(
+            script.IndexOf("admin-bootstrap.ps1", StringComparison.OrdinalIgnoreCase)
+            < script.IndexOf("admin-vps-smoke.ps1", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("[string]$Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host \"Password: $password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("admin-vps-bootstrap-smoke.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001C`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Local_Admin_Vps_Bootstrap_Smoke_Should_Use_Cli_Bootstrap_Before_Api_Login()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "local-admin-vps-bootstrap-smoke.ps1"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "admin-bootstrap.ps1",
+                     "admin-vps-smoke.ps1",
+                     "fresh-bootstrap-admin@example.test",
+                     "AdminBootstrap__Enabled",
+                     "\"false\"",
+                     "Database__UseEnsureCreatedForLocalSqlite",
+                     "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
+                     "AccountBootstrapChecked",
+                     "Assert-InWorkspace",
+                     "Stop-ProcessTree",
+                     "local admin vps bootstrap smoke ok"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.True(
+            script.IndexOf("admin-bootstrap.ps1", StringComparison.OrdinalIgnoreCase)
+            < script.IndexOf("dotnet", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("Write-Host \"Password: $password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("local-admin-vps-bootstrap-smoke.ps1", smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001C`", roadmap, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

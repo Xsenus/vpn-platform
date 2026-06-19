@@ -135,6 +135,31 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-eviden
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-validator.ps1
 ```
 
+## Bootstrap + live-smoke
+
+Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked`.
+
+```powershell
+$env:ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5432;Database=vpnplatform;Username=vpnplatform;Password=<db-password>"
+$env:ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD="<temporary-admin-password-at-least-16-chars>"
+
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
+  -ApiBaseUrl https://api.example.test `
+  -AdminWebUrl https://example.test/admin/ `
+  -AdminEmail owner@example.com `
+  -EnvironmentName Production `
+  -Operator operator-name `
+  -Provider Postgres `
+  -ApplyMigrations `
+  -ConfirmBootstrapReset
+```
+
+Локальная SQLite-проверка доказывает, что admin-учетка создана CLI bootstrap-ом, а затем API стартует с `AdminBootstrap__Enabled=false` и вход в админку все равно проходит:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1
+```
+
 ## Браузерный live-smoke
 
 Низкоуровневый browser runner можно запускать отдельно для диагностики, если preflight уже пройден и нужно повторить только Playwright smoke без пересоздания preflight report:

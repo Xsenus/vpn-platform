@@ -29,6 +29,7 @@ public class ReleaseDocumentationGuardTests
         new("P9-TST-007D", "2026-06-14-staging-smoke-report-generator"),
         new("P9-TST-007E", "2026-06-19-staging-smoke-report-evidence-placeholders"),
         new("P0-ADMIN-001B", "2026-06-19-admin-bootstrap-wrapper"),
+        new("P0-ADMIN-001C", "2026-06-19-admin-vps-bootstrap-smoke-wrapper"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

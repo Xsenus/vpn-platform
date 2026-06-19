@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `583/583`.
+- [x] `STATE-001` Backend test suite проходит: `585/585`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `583/583`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-admin-vps-smoke-evidence-validator`, версия `0.192.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `585/585`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-admin-vps-bootstrap-smoke-wrapper`, версия `0.193.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 14/14, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, admin VPS smoke evidence validator regression, backend full suite `583/583`, frontend tests `66/66`, latest "Что нового" `2026-06-19-admin-vps-smoke-evidence-validator`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 14/14, `AdminBootstrapCliScriptTests` 5/5, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, local CLI bootstrap admin smoke, admin VPS smoke evidence validator regression, backend full suite `585/585`, frontend tests `66/66`, latest "Что нового" `2026-06-19-admin-vps-bootstrap-smoke-wrapper`.
 
 ## P0. Блокеры production-запуска
 
@@ -70,6 +70,10 @@ git diff --check
   - Что сделать: дать одну безопасную PowerShell-команду для локального SQLite и production/Postgres reset, чтобы оператор не собирал env-переменные вручную и не печатал пароль в лог.
   - Что сделано: добавлен `scripts/admin-bootstrap.ps1` с `-LocalSqlite`, `-ApplyMigrations`, `-DryRun`, скрытием пароля в выводе и запуском `admin-bootstrap` без HTTP-сервера; добавлена инструкция `docs/admin-bootstrap.md`.
   - Доказательство: `AdminBootstrapCliScriptTests`, dry-run без записи в БД, локальный SQLite admin bootstrap/reset, latest "Что нового" `2026-06-19-admin-bootstrap-wrapper`, версия `0.182.0`. Реальный VPS login smoke остается в `P0-ADMIN-001`/`P0-ADMIN-002`.
+
+- [x] `P0-ADMIN-001C` Связать admin bootstrap/reset с admin smoke в безопасный wrapper. 2026-06-19.
+  - Что сделано: добавлен `scripts/admin-vps-bootstrap-smoke.ps1`, который запускает `scripts/admin-bootstrap.ps1`, требует `-ConfirmBootstrapReset` для не-локальной БД, берет пароль только из `ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD`, передает его в smoke через process env и затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked`; добавлен `scripts/local-admin-vps-bootstrap-smoke.ps1`, который доказывает flow на временной SQLite-БД с `AdminBootstrap__Enabled=false` после CLI bootstrap.
+  - Доказательство: `AdminBootstrapCliScriptTests` 5/5, local CLI bootstrap admin smoke через SQLite `1/1`, latest "Что нового" `2026-06-19-admin-vps-bootstrap-smoke-wrapper`, версия `0.193.0`. Реальный VPS bootstrap/login smoke остается в `P0-ADMIN-001`/`P0-ADMIN-002`.
 
 - [ ] `P0-ADMIN-002` Проверить все разделы админки под реальным admin-аккаунтом.
   - Что сделать: открыть dashboard, users, payments, tariffs, subscriptions, vpn, nodes, panels, support, bot, releases, faq, content, scenarios, provisioning.

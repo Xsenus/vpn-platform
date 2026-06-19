@@ -4659,5 +4659,28 @@
         "text": "`scripts/admin-vps-smoke.ps1` запускает evidence validator после успешного browser smoke."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-bootstrap-smoke-wrapper",
+    "version": "0.193.0",
+    "releasedAt": "2026-06-19T00:10:00+07:00",
+    "title": "Bootstrap smoke wrapper админки VPS",
+    "summary": "Admin bootstrap/reset можно запускать в одном безопасном flow с последующим admin VPS smoke, а локальная SQLite-проверка доказывает вход без startup-bootstrap.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` запускает `admin-bootstrap.ps1`, требует `-ConfirmBootstrapReset` для не-локальной БД и затем выполняет `admin-vps-smoke.ps1 -AccountBootstrapChecked`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/local-admin-vps-bootstrap-smoke.ps1` проверяет flow на SQLite: CLI bootstrap создает admin, API стартует с `AdminBootstrap__Enabled=false`, затем проходит admin smoke."
+      },
+      {
+        "type": "important",
+        "text": "Пароль берется только из `ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD`, в логах остается `Password: [hidden]`, а live `P0-ADMIN-001`/`P0-ADMIN-002` не закрываются без VPS evidence."
+      }
+    ]
   }
 ]

@@ -41,6 +41,31 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-bootstrap.ps1 `
   -RolesCsv SuperAdmin
 ```
 
+## Bootstrap + smoke для VPS
+
+Для одного операторского прохода можно сначала выполнить bootstrap/reset, а затем сразу прогнать admin VPS smoke под этим же аккаунтом. Пароль берется только из env, в выводе пишется `Password: [hidden]`, а для не-локальной БД нужен явный `-ConfirmBootstrapReset`.
+
+```powershell
+$env:ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5432;Database=vpnplatform;Username=vpnplatform;Password=<db-password>"
+$env:ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD="<temporary-admin-password-at-least-16-chars>"
+
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
+  -ApiBaseUrl https://api.example.test `
+  -AdminWebUrl https://example.test/admin/ `
+  -AdminEmail owner@example.com `
+  -EnvironmentName Production `
+  -Operator operator-name `
+  -Provider Postgres `
+  -ApplyMigrations `
+  -ConfirmBootstrapReset
+```
+
+Локальное доказательство этого flow без VPS и секретов:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1
+```
+
 ## Dry-run
 
 Dry-run проверяет параметры и показывает только безопасные значения:

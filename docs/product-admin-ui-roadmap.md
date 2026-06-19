@@ -15,7 +15,7 @@
 - [x] Общая UI-система, состояния loading/empty/error, мобильные viewport, доступность и русская локализация покрыты тестами и smoke-проверками.
 - [~] Staging/VPS smoke checklist готов, но реальный заполненный отчет после deploy еще нужен.
 - [x] Payment provider smoke report template, generator и validator готовы для всех web-провайдеров, но реальные кабинеты еще нужно пройти.
-- [x] Admin VPS smoke report template, generator, validator, парный evidence validator и regression harness, явный browser runner, единый preflight+browser smoke wrapper с regression harness, preflight, preflight validator и regression harness, локальная SQLite-проверка runner и strict acceptance evidence gate готовы для проверки всех разделов админки, но реальный VPS admin smoke еще нужно пройти.
+- [x] Admin VPS smoke report template, generator, validator, парный evidence validator и regression harness, явный browser runner, единый preflight+browser smoke wrapper с regression harness, bootstrap+smoke wrapper, preflight, preflight validator и regression harness, локальная SQLite-проверка runner, локальная CLI bootstrap smoke-проверка и strict acceptance evidence gate готовы для проверки всех разделов админки, но реальный VPS admin smoke еще нужно пройти.
 - [x] VPN live smoke report template, generator и validator готовы для 3x-ui/inbound/node проверки, но реальную 3x-ui выдачу еще нужно пройти.
 - [x] Production readiness gate требует полный пакет evidence reports: staging/VPS, платежи, админка VPS и live VPN/3x-ui.
 - [ ] Live-платежи всех провайдеров не подтверждены реальными кабинетами.
@@ -73,14 +73,14 @@
 - [x] Сгенерировать безопасный staging/VPS smoke report draft через `scripts/new-staging-smoke-report.ps1`.
 - [x] Подготовить безопасный payment provider smoke report template и validator через `docs/payment-provider-smoke-report.template.json`.
 - [x] Сгенерировать безопасный payment provider smoke report draft через `scripts/new-payment-provider-smoke-report.ps1`.
-- [x] Подготовить безопасный admin VPS smoke report через `docs/admin-vps-smoke-report.template.json`, `scripts/new-admin-vps-smoke-report.ps1`, `scripts/admin-vps-browser-smoke.ps1` и локальную проверку `scripts/local-admin-vps-browser-smoke.ps1`.
+- [x] Подготовить безопасный admin VPS smoke report через `docs/admin-vps-smoke-report.template.json`, `scripts/new-admin-vps-smoke-report.ps1`, `scripts/admin-vps-browser-smoke.ps1`, `scripts/admin-vps-bootstrap-smoke.ps1`, локальную проверку `scripts/local-admin-vps-browser-smoke.ps1` и локальный CLI bootstrap smoke `scripts/local-admin-vps-bootstrap-smoke.ps1`.
 - [x] Подготовить безопасный VPN live smoke report через `docs/vpn-live-smoke-report.template.json` и `scripts/new-vpn-live-smoke-report.ps1`.
 - [x] Усилить production readiness gate полным evidence bundle через `scripts/assert-production-readiness.ps1`.
 - [ ] Заполнить staging/VPS smoke report без секретов, cookies и приватных headers.
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `583/583`.
+- [x] Backend full suite: `585/585`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-19-admin-vps-smoke-evidence-validator`, версия `0.192.0`.
+- [x] Latest "Что нового": `2026-06-19-admin-vps-bootstrap-smoke-wrapper`, версия `0.193.0`.
 
 ## Как вести дальше
 
