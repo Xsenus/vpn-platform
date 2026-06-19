@@ -4705,5 +4705,28 @@
         "text": "`docs/admin-bootstrap.md` и `docs/admin-vps-smoke.md` содержат команду локальной regression-проверки перед реальным VPS bootstrap+smoke."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-bootstrap-smoke-report",
+    "version": "0.195.0",
+    "releasedAt": "2026-06-19T00:30:00+07:00",
+    "title": "Report bootstrap smoke админки VPS",
+    "summary": "Bootstrap+smoke wrapper админки VPS теперь пишет sanitized report и валидирует связь с preflight/smoke evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-report.ps1` проверяет reset flags, URL, даты, отсутствие secret markers и связь preflight/smoke evidence."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` после успешного smoke пишет `admin-vps-bootstrap-smoke-report.json` без пароля, cookie и auth headers."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/local-admin-vps-bootstrap-smoke.ps1` проверяет этот report на SQLite, но live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS evidence."
+      }
+    ]
   }
 ]

@@ -106,6 +106,7 @@ $connectionString = "Data Source=$databasePath"
 $keyPath = Join-Path $tmp "keys"
 $reportRelativePath = "tmp/local-admin-vps-bootstrap-smoke/admin-vps-smoke-report.json"
 $preflightReportRelativePath = "tmp/local-admin-vps-bootstrap-smoke/admin-vps-smoke-preflight-report.json"
+$bootstrapSmokeReportRelativePath = "tmp/local-admin-vps-bootstrap-smoke/admin-vps-bootstrap-smoke-report.json"
 $password = "LocalBootstrapSmokePassword123!"
 $previousEnv = @{}
 $apiProcess = $null
@@ -165,17 +166,20 @@ try {
 
     Wait-HttpOk $adminUrl
 
-    Set-ScopedEnv -Previous $previousEnv -Name "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" -Value $password
+    Set-ScopedEnv -Previous $previousEnv -Name "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD" -Value $password
 
-    & (Join-Path $PSScriptRoot "admin-vps-smoke.ps1") `
+    & (Join-Path $PSScriptRoot "admin-vps-bootstrap-smoke.ps1") `
         -ApiBaseUrl $apiUrl `
         -AdminWebUrl $adminUrl `
         -AdminEmail "fresh-bootstrap-admin@example.test" `
+        -ConnectionString $connectionString `
+        -DataProtectionKeyPath $keyPath `
         -SmokeReportPath $reportRelativePath `
         -PreflightReportPath $preflightReportRelativePath `
+        -BootstrapSmokeReportPath $bootstrapSmokeReportRelativePath `
         -EnvironmentName "Local" `
         -Operator "local-admin-vps-bootstrap-smoke" `
-        -AccountBootstrapChecked
+        -LocalSqlite
 
     Write-Output "local admin vps bootstrap smoke ok api=$apiUrl admin=$adminUrl report=$reportRelativePath"
 }

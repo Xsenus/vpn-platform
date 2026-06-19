@@ -147,6 +147,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
   -ApiBaseUrl https://api.example.test `
   -AdminWebUrl https://example.test/admin/ `
   -AdminEmail owner@example.com `
+  -BootstrapSmokeReportPath tmp\admin-vps-bootstrap-smoke-report.json `
   -EnvironmentName Production `
   -Operator operator-name `
   -Provider Postgres `
@@ -164,6 +165,12 @@ Regression wrapper-а проверяет fail-closed сценарии до за�
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+```
+
+Успешный bootstrap+smoke проход дополнительно пишет sanitized report и проверяет его через validator:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-report.ps1 -ReportPath tmp\admin-vps-bootstrap-smoke-report.json -RequirePassed
 ```
 
 ## Браузерный live-smoke

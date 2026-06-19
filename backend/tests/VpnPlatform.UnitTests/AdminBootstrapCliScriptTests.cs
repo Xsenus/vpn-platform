@@ -72,6 +72,7 @@ public class AdminBootstrapCliScriptTests
                  {
                      "admin-bootstrap.ps1",
                      "admin-vps-smoke.ps1",
+                     "validate-admin-vps-bootstrap-smoke-report.ps1",
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "AdminBootstrap__Password",
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
@@ -84,6 +85,9 @@ public class AdminBootstrapCliScriptTests
                      "AccountBootstrapChecked",
                      "Password: [hidden]",
                      "Dry-run mode: admin VPS smoke was not started",
+                     "BootstrapSmokeReportPath",
+                     "admin-vps-bootstrap-smoke-report.json",
+                     "Validated bootstrap smoke report",
                      "Admin VPS bootstrap+smoke flow completed"
                  })
         {
@@ -110,13 +114,13 @@ public class AdminBootstrapCliScriptTests
         foreach (var expected in new[]
                  {
                      "admin-bootstrap.ps1",
-                     "admin-vps-smoke.ps1",
+                     "admin-vps-bootstrap-smoke.ps1",
                      "fresh-bootstrap-admin@example.test",
                      "AdminBootstrap__Enabled",
                      "\"false\"",
                      "Database__UseEnsureCreatedForLocalSqlite",
-                     "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
-                     "AccountBootstrapChecked",
+                     "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
+                     "BootstrapSmokeReportPath",
                      "Assert-InWorkspace",
                      "Stop-ProcessTree",
                      "local admin vps bootstrap smoke ok"
@@ -131,6 +135,41 @@ public class AdminBootstrapCliScriptTests
         Assert.DoesNotContain("Write-Host \"Password: $password", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("local-admin-vps-bootstrap-smoke.ps1", smokeGuide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-001C`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Admin_Vps_Bootstrap_Smoke_Report_Should_Link_Reset_And_Smoke_Evidence()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-bootstrap-smoke-report.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-bootstrap-smoke.ps1"));
+        var localSmoke = File.ReadAllText(Path.Combine(root, "scripts", "local-admin-vps-bootstrap-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "RequirePassed",
+                     "validate-admin-vps-smoke-evidence.ps1",
+                     "bootstrapResetConfirmed",
+                     "localSqlite",
+                     "dryRun",
+                     "accountBootstrapChecked",
+                     "passwordEnvName",
+                     "passwordEnvPresent",
+                     "smokeReportPath",
+                     "preflightReportPath",
+                     "contains forbidden secret marker",
+                     "admin vps bootstrap smoke report valid"
+                 })
+        {
+            Assert.Contains(expected, validator + wrapper, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("admin-vps-bootstrap-smoke-report.json", localSmoke + wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-admin-vps-bootstrap-smoke-report.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001E`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -152,6 +191,7 @@ public class AdminBootstrapCliScriptTests
                      "missing-confirm-bootstrap-reset",
                      "missing-connection-string",
                      "dry-run-no-smoke",
+                     "admin-vps-bootstrap-smoke-report.json",
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
                      "Pass -ConfirmBootstrapReset",

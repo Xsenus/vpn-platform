@@ -61,6 +61,7 @@ function Invoke-BootstrapSmokeScenario {
     $stderrPath = Join-Path $scenarioPath "stderr.log"
     $smokeReportPath = Join-Path $scenarioPath "admin-vps-smoke-report.json"
     $preflightReportPath = Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"
+    $bootstrapSmokeReportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-report.json"
     $wrapperPath = Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke.ps1"
     $previous = @{}
 
@@ -78,6 +79,7 @@ function Invoke-BootstrapSmokeScenario {
             "-AdminEmail", "fresh-bootstrap-admin@example.test",
             "-SmokeReportPath", $smokeReportPath,
             "-PreflightReportPath", $preflightReportPath,
+            "-BootstrapSmokeReportPath", $bootstrapSmokeReportPath,
             "-EnvironmentName", "Local",
             "-Operator", "admin-vps-bootstrap-smoke-wrapper-regression",
             "-FrontendPath", "frontend"
@@ -124,7 +126,7 @@ function Invoke-BootstrapSmokeScenario {
             }
         }
 
-        foreach ($forbiddenArtifact in @($smokeReportPath, $preflightReportPath)) {
+        foreach ($forbiddenArtifact in @($smokeReportPath, $preflightReportPath, $bootstrapSmokeReportPath)) {
             if (Test-Path -LiteralPath $forbiddenArtifact -PathType Leaf) {
                 throw "Smoke artifact should not exist after scenario '$Name': $forbiddenArtifact"
             }
