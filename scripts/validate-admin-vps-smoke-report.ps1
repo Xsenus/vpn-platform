@@ -31,6 +31,12 @@ $requiredSections = @(
 )
 
 $allowedStatuses = @("passed", "failed", "blocked", "skipped")
+$placeholderEvidenceMarkers = @(
+    "TODO",
+    "Not checked yet",
+    "safe screenshot name",
+    "browser smoke note"
+)
 $secretMarkers = @(
     "password=",
     "authorization:",
@@ -169,6 +175,19 @@ foreach ($entry in $report.sections) {
 
     if ($RequireAllPassed -and -not $entry.loaded) {
         throw "Admin VPS smoke report section $section must be loaded when -RequireAllPassed is used."
+    }
+
+    if ($RequireAllPassed -and ([int]$entry.httpStatus -lt 200 -or [int]$entry.httpStatus -ge 400)) {
+        throw "Admin VPS smoke report section $section must contain successful httpStatus when -RequireAllPassed is used."
+    }
+
+    if ($RequireAllPassed) {
+        $evidence = [string]$entry.evidence
+        foreach ($marker in $placeholderEvidenceMarkers) {
+            if ($evidence.IndexOf($marker, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                throw "Admin VPS smoke report section $section must contain real evidence without placeholder markers when -RequireAllPassed is used."
+            }
+        }
     }
 }
 

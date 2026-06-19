@@ -181,6 +181,33 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Admin_Vps_Smoke_Validator_Should_Reject_Placeholder_Evidence_And_Bad_Status_In_Acceptance_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "placeholderEvidenceMarkers",
+                     "TODO",
+                     "Not checked yet",
+                     "safe screenshot name",
+                     "browser smoke note",
+                     "must contain successful httpStatus when -RequireAllPassed is used",
+                     "must contain real evidence without placeholder markers when -RequireAllPassed is used"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("real evidence", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("placeholder", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002C`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Docs_Should_Link_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

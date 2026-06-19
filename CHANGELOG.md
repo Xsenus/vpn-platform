@@ -2,6 +2,27 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.185.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-acceptance-evidence`.
+
+### Changed
+- `scripts/validate-admin-vps-smoke-report.ps1 -RequireAllPassed` теперь требует успешный `httpStatus` по каждой секции админки.
+- Acceptance mode отклоняет placeholder evidence вроде `TODO`, `Not checked yet`, `safe screenshot name` и шаблонных browser smoke notes.
+
+### Verified
+- `AdminVpsSmokeReportTests`: 7/7.
+- Local SQLite admin browser smoke: OK, 16/16 admin sections passed.
+- Backend full suite: 576/576.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.184.0 - 2026-06-19
 
 Release entry: `2026-06-19-local-admin-vps-browser-smoke`.

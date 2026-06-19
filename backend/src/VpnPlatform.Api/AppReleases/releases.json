@@ -4475,5 +4475,28 @@
         "text": "Cleanup останавливает дерево процессов, чтобы дочерний Vite `node.exe` не оставался слушать тестовый порт."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-acceptance-evidence",
+    "version": "0.185.0",
+    "releasedAt": "2026-06-18T22:50:00+07:00",
+    "title": "Строгая приемка admin VPS smoke",
+    "summary": "Admin VPS smoke report теперь требует real evidence и successful httpStatus в acceptance mode.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`validate-admin-vps-smoke-report.ps1 -RequireAllPassed` требует успешный `httpStatus` по каждой секции."
+      },
+      {
+        "type": "important",
+        "text": "Acceptance mode отклоняет placeholder evidence вроде `TODO`, `Not checked yet`, `safe screenshot name` и шаблонных browser smoke notes."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/admin-vps-smoke.md` явно требует real evidence перед закрытием `P0-ADMIN-002`."
+      }
+    ]
   }
 ]
