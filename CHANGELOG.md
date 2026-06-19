@@ -2,6 +2,28 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.188.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-preflight-validator-regression`.
+
+### Added
+- Добавлен `scripts/test-admin-vps-smoke-preflight-validator.ps1`, который проверяет happy path preflight validator и fail-closed tamper-сценарии.
+- Regression harness проверяет `bad-ready-flag`, `failed-check`, `missing-check`, `duplicate-check` и `secret-marker`, а также контролирует, что тестовый пароль не попал в JSON.
+
+### Verified
+- `AdminVpsSmokeReportTests`: 10/10.
+- Admin VPS smoke preflight validator regression: OK.
+- Local SQLite admin browser smoke: OK, 16/16 admin sections passed.
+- Backend full suite: 579/579.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.187.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-preflight-validator`.

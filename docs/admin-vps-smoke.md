@@ -83,6 +83,12 @@ Preflight автоматически валидирует JSON через `scrip
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-preflight-report.ps1 -ReportPath tmp\admin-vps-smoke-preflight-report.json -RequireReady
 ```
 
+Локальная regression-проверка validator, включая happy path и tamper-сценарии `bad-ready-flag`, `failed-check`, `missing-check`, `duplicate-check`, `secret-marker`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-preflight-validator.ps1
+```
+
 ## Браузерный live-smoke
 
 Если VPS уже развернут и production/staging admin-аккаунт восстановлен через безопасный bootstrap/reset, можно запустить явный Playwright smoke без сохранения пароля, cookie, bearer-токенов, trace, video и screenshots:
