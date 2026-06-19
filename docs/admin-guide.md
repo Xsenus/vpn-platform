@@ -17,8 +17,10 @@ $env:ASPNETCORE_ENVIRONMENT="Local"
 $env:AdminBootstrap__Enabled="true"
 $env:AdminBootstrap__Email="admin@local.test"
 $env:AdminBootstrap__Password="LocalAdminPassword123!"
-dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj -- admin-bootstrap
+powershell -ExecutionPolicy Bypass -File scripts\admin-bootstrap.ps1 -LocalSqlite -EnvironmentName Local -Email admin@local.test -Password "LocalAdminPassword123!"
 ```
+
+Production/Postgres one-shot reset описан отдельно: [admin-bootstrap.md](admin-bootstrap.md).
 
 Технические id вкладок нужны для deep-link переходов из дашборда и для проверки документации:
 

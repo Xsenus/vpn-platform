@@ -2,6 +2,46 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin bootstrap wrapper
+
+Что проверялось:
+
+- `scripts/admin-bootstrap.ps1` запускает backend-команду `admin-bootstrap` как one-shot maintenance flow без HTTP-сервера.
+- Скрипт поддерживает локальный SQLite-режим и production/Postgres-режим с явной строкой подключения.
+- Dry-run валидирует параметры, не меняет БД и печатает `Password: [hidden]` вместо пароля.
+- `docs/admin-bootstrap.md` описывает локальный и production запуск на русском языке.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-bootstrap-wrapper`, версия `0.182.0`.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\admin-bootstrap.ps1 -LocalSqlite -EnvironmentName Local -Email admin@local.test -Password "LocalAdminPassword123!" -DryRun
+powershell -ExecutionPolicy Bypass -File scripts\admin-bootstrap.ps1 -LocalSqlite -EnvironmentName Local -Email admin@local.test -Password "LocalAdminPassword123!" -ProjectPath backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminBootstrapServiceTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -ApiPort 18101
+git diff --check
+```
+
+Результат:
+
+- Admin bootstrap dry-run: OK, password hidden.
+- Local SQLite admin bootstrap/reset на временной БД: OK.
+- `AdminBootstrapCliScriptTests`: `3/3`.
+- Targeted release/docs suite: `23/23`.
+- Backend full suite: `573/573`.
+- API build: OK.
+- TelegramBot build: OK.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Frontend build: OK.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Fresh local SQLite smoke: OK, latest `2026-06-19-admin-bootstrap-wrapper`.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: staging smoke report evidence placeholders
 
 Что проверялось:

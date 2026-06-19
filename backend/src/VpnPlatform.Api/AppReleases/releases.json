@@ -4406,5 +4406,28 @@
         "text": "`docs/staging-smoke-checklist.md` описывает требование real evidence для acceptance mode."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-bootstrap-wrapper",
+    "version": "0.182.0",
+    "releasedAt": "2026-06-18T22:20:00+07:00",
+    "title": "One-shot сброс администратора",
+    "summary": "Добавлен безопасный PowerShell wrapper для создания или сброса администратора без запуска HTTP-сервера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/admin-bootstrap.ps1` запускает `admin-bootstrap` для Local SQLite и Production/Postgres сценариев."
+      },
+      {
+        "type": "important",
+        "text": "Dry-run и рабочий запуск печатают только `Password: [hidden]`, поэтому временный пароль не попадает в stdout."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/admin-bootstrap.md` описывает восстановление доступа к админке и дальнейший VPS smoke без секретов в evidence."
+      }
+    ]
   }
 ]

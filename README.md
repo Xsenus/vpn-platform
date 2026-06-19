@@ -20,6 +20,7 @@ Staging smoke checklist: [docs/staging-smoke-checklist.md](docs/staging-smoke-ch
 All screens browser smoke: [docs/all-screens-browser-smoke.md](docs/all-screens-browser-smoke.md).
 Инструкция по GitHub Actions и деплою на VPS: [docs/github-deployment.md](docs/github-deployment.md).
 Руководство администратора: [docs/admin-guide.md](docs/admin-guide.md).
+Admin bootstrap/reset: [docs/admin-bootstrap.md](docs/admin-bootstrap.md).
 Индекс документации: [docs/README.md](docs/README.md).
 
 ## Состав проекта
@@ -86,10 +87,10 @@ powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT="Local"
-dotnet run --project backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj -- admin-bootstrap
+powershell -ExecutionPolicy Bypass -File scripts\admin-bootstrap.ps1 -LocalSqlite -EnvironmentName Local -Email admin@local.test -Password "LocalAdminPassword123!"
 ```
 
-Команда использует секцию `AdminBootstrap`, создает администратора при отсутствии или сбрасывает пароль существующего администратора только при явном CLI-запуске. Пароль в вывод команды не печатается.
+Скрипт запускает backend-команду `admin-bootstrap` без HTTP-сервера, создает администратора при отсутствии или сбрасывает пароль существующего администратора только при явном CLI-запуске. Пароль в вывод команды не печатается. Production/Postgres пример описан в [docs/admin-bootstrap.md](docs/admin-bootstrap.md).
 
 ## Ручной запуск без Docker
 
@@ -208,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `570/570` unit tests;
+- backend на .NET 9: `573/573` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `66/66`;
 - frontend typecheck и production build: OK;
@@ -217,6 +218,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-19-staging-smoke-report-evidence-placeholders`, версия `0.181.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-19-admin-bootstrap-wrapper`, версия `0.182.0`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

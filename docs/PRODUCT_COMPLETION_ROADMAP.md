@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `570/570`.
+- [x] `STATE-001` Backend test suite проходит: `573/573`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `570/570`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-staging-smoke-report-evidence-placeholders`, версия `0.181.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `573/573`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-admin-bootstrap-wrapper`, версия `0.182.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `570/570`, frontend tests `66/66`, latest "Что нового" `2026-06-19-staging-smoke-report-evidence-placeholders`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `573/573`, frontend tests `66/66`, latest "Что нового" `2026-06-19-admin-bootstrap-wrapper`.
 
 ## P0. Блокеры production-запуска
 
@@ -65,6 +65,11 @@ git diff --check
 - [x] `P0-ADMIN-001A` Добавить безопасный CLI-механизм admin bootstrap/reset. 2026-06-10.
   - Что сделано: команда `admin-bootstrap` создает администратора или сбрасывает пароль существующего администратора без запуска HTTP-сервера.
   - Доказательство: backend unit tests `AdminBootstrapServiceTests`, локальная SQLite-проверка команды, HTTP-smoke login и admin dashboard.
+
+- [x] `P0-ADMIN-001B` Добавить операторский wrapper для admin bootstrap/reset. 2026-06-19.
+  - Что сделать: дать одну безопасную PowerShell-команду для локального SQLite и production/Postgres reset, чтобы оператор не собирал env-переменные вручную и не печатал пароль в лог.
+  - Что сделано: добавлен `scripts/admin-bootstrap.ps1` с `-LocalSqlite`, `-ApplyMigrations`, `-DryRun`, скрытием пароля в выводе и запуском `admin-bootstrap` без HTTP-сервера; добавлена инструкция `docs/admin-bootstrap.md`.
+  - Доказательство: `AdminBootstrapCliScriptTests`, dry-run без записи в БД, локальный SQLite admin bootstrap/reset, latest "Что нового" `2026-06-19-admin-bootstrap-wrapper`, версия `0.182.0`. Реальный VPS login smoke остается в `P0-ADMIN-001`/`P0-ADMIN-002`.
 
 - [ ] `P0-ADMIN-002` Проверить все разделы админки под реальным admin-аккаунтом.
   - Что сделать: открыть dashboard, users, payments, tariffs, subscriptions, vpn, nodes, panels, support, bot, releases, faq, content, scenarios, provisioning.
@@ -660,7 +665,7 @@ git diff --check
 - [x] `P9-TST-007E` Staging smoke report evidence placeholder guard. 2026-06-19.
   - Что сделать: запретить принимать staging smoke report, где все checks помечены `passed`, но evidence осталось шаблонным `TODO`.
   - Что сделано: `scripts/validate-staging-smoke-report.ps1` в режиме `-RequireAllPassed` теперь отклоняет evidence с `TODO`; `docs/staging-smoke-checklist.md` явно требует real evidence вместо placeholder-строк.
-  - Доказательство: `StagingSmokeChecklistTests` 8/8, expected fail-closed `-RequireAllPassed` для passed checks с TODO evidence, latest "Что нового" `2026-06-19-staging-smoke-report-evidence-placeholders`, версия `0.181.0`.
+  - Доказательство: `StagingSmokeChecklistTests` 8/8, expected fail-closed `-RequireAllPassed` для passed checks с TODO evidence, "Что нового" `2026-06-19-staging-smoke-report-evidence-placeholders`, версия `0.181.0`.
 
 - [x] `P9-TST-008` All screens browser smoke. 2026-06-14.
   - Что сделать: пройти все основные public/cabinet/admin экраны в браузере, проверить отсутствие белых экранов, `console.error` и `pageerror`.

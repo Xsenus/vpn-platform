@@ -2,6 +2,22 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.182.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-bootstrap-wrapper`.
+
+### Added
+- Добавлен `scripts/admin-bootstrap.ps1` для one-shot создания или сброса администратора без запуска HTTP-сервера.
+- Добавлен `docs/admin-bootstrap.md` с локальным SQLite и production/Postgres сценариями запуска.
+- Добавлены `AdminBootstrapCliScriptTests`, которые закрепляют dry-run, скрытие пароля и связь roadmap/test results/"Что нового".
+
+### Verified
+- `AdminBootstrapCliScriptTests`: 3/3.
+- Admin bootstrap dry-run: OK, password hidden.
+- Local SQLite admin bootstrap/reset: OK.
+- Targeted release/docs suite: 23/23.
+- Backend full suite: 573/573.
+
 ## 0.181.0 - 2026-06-19
 
 Release entry: `2026-06-19-staging-smoke-report-evidence-placeholders`.
