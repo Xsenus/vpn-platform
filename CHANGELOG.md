@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.167.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-workflow-artifacts`.
+
+### Added
+
+- `scripts/test-production-readiness-assertion-ci-workflow-artifacts.ps1` проверяет, что CI workflow публикует полный artifact-директорий readiness assertion.
+
+### Changed
+
+- Production readiness gate docs описывают workflow guard для `.github/workflows/ci.yml`.
+- Roadmap и release docs синхронизированы с backend suite `553/553` и latest release `0.167.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 46/46.
+- Production readiness assertion CI workflow artifacts guard smoke: OK.
+- Targeted release/docs suite: 62/62.
+- Backend full suite: 553/553.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Guard проверяет job `production-readiness-assertion`, `needs: backend`, wrapper command, artifact name, `if-no-files-found: error` и пять обязательных published files.
+
 ## 0.166.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-readiness-assertion-ci-summary-artifacts-regression`.

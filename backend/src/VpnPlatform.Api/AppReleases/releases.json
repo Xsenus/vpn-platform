@@ -4061,5 +4061,28 @@
         "text": "`validate-production-readiness-assertion-ci-regression-result.ps1` требует failure-case `bad-ci-artifacts-validator-regression` внутри `ciSummaryValidatorRegression`."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-workflow-artifacts",
+    "version": "0.167.0",
+    "releasedAt": "2026-06-18T19:50:00+07:00",
+    "title": "Guard published artifacts readiness assertion CI",
+    "summary": "Readiness assertion CI workflow теперь имеет локальный guard, который проверяет полный список публикуемых artifact-файлов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-readiness-assertion-ci-workflow-artifacts.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Guard проверяет `.github/workflows/ci.yml`, job `production-readiness-assertion`, `needs: backend`, запуск wrapper, artifact name и `if-no-files-found: error`."
+      },
+      {
+        "type": "important",
+        "text": "Проверяются пять обязательных published files: CI result JSON/Markdown, assertion JSON/Markdown и assertion log."
+      }
+    ]
   }
 ]

@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `552/552`.
+- [x] `STATE-001` Backend test suite проходит: `553/553`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `552/552`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-readiness-assertion-ci-summary-artifacts-regression`, версия `0.166.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `553/553`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-readiness-assertion-ci-workflow-artifacts`, версия `0.167.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 45/45, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `552/552`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-summary-artifacts-regression`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 46/46, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `553/553`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-workflow-artifacts`.
 
 ## P0. Блокеры production-запуска
 
@@ -922,6 +922,11 @@ git diff --check
   - Что сделать: закрыть regression gap, при котором GitHub Step Summary мог потерять строку `CI artifacts validator regression`, а summary validator regression не проверял этот tamper-сценарий отдельно.
   - Что сделано: `scripts/test-production-readiness-assertion-ci-summary-validator.ps1` проверяет `bad-ci-artifacts-validator-regression`; CI wrapper запускает artifacts regression до summary regression, а `validate-production-readiness-assertion-ci-regression-result.ps1` требует этот failure-case внутри `ciSummaryValidatorRegression`.
   - Доказательство: `ProductionReadinessGateTests` 45/45, CI summary artifacts regression smoke, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-summary-artifacts-regression`, версия `0.166.0`.
+
+- [x] `P11-ACC-052` Production readiness assertion CI workflow artifacts guard. 2026-06-19.
+  - Что сделать: закрепить, что GitHub Actions job публикует полный readiness assertion CI artifact-директорий, а не только часть файлов.
+  - Что сделано: добавлен `scripts/test-production-readiness-assertion-ci-workflow-artifacts.ps1`; guard проверяет `.github/workflows/ci.yml`, job `production-readiness-assertion`, `needs: backend`, запуск wrapper, `actions/upload-artifact@v4`, `if-no-files-found: error` и пять обязательных файлов artifact-директория.
+  - Доказательство: `ProductionReadinessGateTests` 46/46, CI workflow artifacts guard smoke, latest "Что нового" `2026-06-19-production-readiness-assertion-ci-workflow-artifacts`, версия `0.167.0`.
 
 ## Журнал проверок
 
