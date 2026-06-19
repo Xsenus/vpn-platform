@@ -2,6 +2,50 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS smoke preflight validator
+
+Что проверялось:
+
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady` fail-closed проверяет preflight evidence JSON: обязательные поля, URL, email, readiness flags, checks, дубли и forbidden secret markers.
+- `scripts/admin-vps-smoke-preflight.ps1` запускает validator preflight-отчета перед разрешением live smoke.
+- `docs/admin-vps-smoke.md` описывает отдельную проверку preflight report.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-smoke-preflight-validator`, версия `0.187.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+$env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD="LocalAdminPassword123!"
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke-preflight.ps1 -ApiBaseUrl http://127.0.0.1:18201 -AdminWebUrl http://127.0.0.1:18205/admin/ -AdminEmail fresh-admin@example.test -SmokeReportPath tmp\admin-vps-smoke-report.json -PreflightReportPath tmp\admin-vps-smoke-preflight-report.json -EnvironmentName Local -Operator local-test -RequirePassword
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-preflight-report.ps1 -ReportPath tmp\admin-vps-smoke-preflight-report.json -RequireReady
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- `AdminVpsSmokeReportTests`: `9/9`.
+- Targeted release/docs suite: `25/25`.
+- Admin VPS smoke preflight validator: OK, `readyForLiveSmoke=true`, password output hidden, JSON без секрета.
+- Local SQLite admin browser smoke: OK, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: `578/578`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS smoke preflight
 
 Что проверялось:

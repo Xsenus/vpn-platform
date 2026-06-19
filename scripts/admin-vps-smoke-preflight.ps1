@@ -55,6 +55,7 @@ $preflightReportFullPath = Resolve-WorkspacePath $PreflightReportPath
 $packageJsonPath = Join-Path $frontendFullPath "package.json"
 $runnerPath = Join-Path $repoRoot "scripts/admin-vps-browser-smoke.ps1"
 $validatorPath = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-report.ps1"
+$preflightValidatorPath = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-preflight-report.ps1"
 $passwordPresent = -not [string]::IsNullOrWhiteSpace($env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD)
 
 Add-Check "api-base-url" (Test-HttpUrl $ApiBaseUrl) "ADMIN_VPS_SMOKE_API_BASE_URL must be an absolute http/https URL."
@@ -65,6 +66,7 @@ Add-Check "frontend-directory" (Test-Path -LiteralPath $frontendFullPath -PathTy
 Add-Check "package-command" ((Test-Path -LiteralPath $packageJsonPath -PathType Leaf) -and ((Get-Content -Raw $packageJsonPath).Contains("e2e:admin-vps-smoke"))) "frontend/package.json must expose e2e:admin-vps-smoke."
 Add-Check "browser-runner" (Test-Path -LiteralPath $runnerPath -PathType Leaf) "scripts/admin-vps-browser-smoke.ps1 must exist."
 Add-Check "report-validator" (Test-Path -LiteralPath $validatorPath -PathType Leaf) "scripts/validate-admin-vps-smoke-report.ps1 must exist."
+Add-Check "preflight-validator" (Test-Path -LiteralPath $preflightValidatorPath -PathType Leaf) "scripts/validate-admin-vps-smoke-preflight-report.ps1 must exist."
 
 $ready = $checks | Where-Object { -not $_.passed } | Select-Object -First 1
 $readyForLiveSmoke = $null -eq $ready
@@ -100,6 +102,8 @@ Write-Host "Password env: $(if ($passwordPresent) { 'present [hidden]' } else { 
 Write-Host "Smoke report path: $smokeReportFullPath"
 Write-Host "Preflight report path: $preflightReportFullPath"
 Write-Host "Ready for live smoke: $readyForLiveSmoke"
+
+& $preflightValidatorPath -ReportPath $preflightReportFullPath -RequireReady
 
 if (-not $readyForLiveSmoke) {
     throw "Admin VPS smoke preflight failed. Fix the failed checks before running live smoke."

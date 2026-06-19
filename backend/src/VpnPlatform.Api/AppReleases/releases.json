@@ -4521,5 +4521,28 @@
         "text": "`docs/admin-vps-smoke.md` теперь описывает preflight report перед реальным browser smoke админки VPS."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-preflight-validator",
+    "version": "0.187.0",
+    "releasedAt": "2026-06-18T23:10:00+07:00",
+    "title": "Validator preflight-отчета admin VPS smoke",
+    "summary": "Preflight evidence для admin VPS smoke теперь проверяется отдельным fail-closed validator перед live-запуском.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`validate-admin-vps-smoke-preflight-report.ps1 -RequireReady` проверяет JSON, readiness flags, обязательные checks, URL, email и forbidden secret markers."
+      },
+      {
+        "type": "important",
+        "text": "`admin-vps-smoke-preflight.ps1` запускает validator перед разрешением live smoke, поэтому испорченный preflight report не принимается."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/admin-vps-smoke.md` описывает отдельную проверку preflight report как часть безопасного VPS admin evidence."
+      }
+    ]
   }
 ]

@@ -225,6 +225,9 @@ public class AdminVpsSmokeReportTests
                      "readyForLiveSmoke",
                      "e2e:admin-vps-smoke",
                      "validate-admin-vps-smoke-report.ps1",
+                     "validate-admin-vps-smoke-preflight-report.ps1",
+                     "preflight-validator",
+                     "-RequireReady",
                      "present [hidden]",
                      "admin-vps-smoke-preflight-report.json"
                  })
@@ -236,6 +239,38 @@ public class AdminVpsSmokeReportTests
         Assert.DoesNotContain("Write-Host \"Password: $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("admin-vps-smoke-preflight.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002D`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Admin_Vps_Smoke_Preflight_Validator_Should_Fail_Closed_On_Readiness_And_Secrets()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-smoke-preflight-report.ps1"));
+        var preflight = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-smoke-preflight.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "RequireReady",
+                     "passwordEnvPresent",
+                     "readyForLiveSmoke",
+                     "api-base-url",
+                     "admin-web-url",
+                     "admin-email",
+                     "preflight-validator",
+                     "contains forbidden secret marker",
+                     "must be true when -RequireReady is used",
+                     "must be passed when -RequireReady is used",
+                     "admin vps smoke preflight report valid"
+                 })
+        {
+            Assert.Contains(expected, script + preflight + guide, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.DoesNotContain("[string]$Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-admin-vps-smoke-preflight-report.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002E`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
