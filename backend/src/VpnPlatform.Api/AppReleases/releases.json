@@ -3969,5 +3969,28 @@
         "text": "Validator сверяет status, assertion status, result validator, regression statuses, artifact paths и optional CI summary/result validator regression строки."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-step-summary-smoke",
+    "version": "0.163.0",
+    "releasedAt": "2026-06-18T19:10:00+07:00",
+    "title": "Smoke для readiness assertion CI step summary",
+    "summary": "Readiness assertion CI wrapper теперь имеет локальный smoke, который проверяет реальный файл GitHub Step Summary.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-readiness-assertion-ci-step-summary.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "Smoke выставляет `GITHUB_STEP_SUMMARY`, запускает CI wrapper, валидирует summary и сверяет его с итоговым result Markdown."
+      },
+      {
+        "type": "important",
+        "text": "Проверка фиксирует наличие строк `ciSummaryValidatorRegression` и `ciResultValidatorRegression`, чтобы GitHub Actions summary не расходился с опубликованными artifacts."
+      }
+    ]
   }
 ]

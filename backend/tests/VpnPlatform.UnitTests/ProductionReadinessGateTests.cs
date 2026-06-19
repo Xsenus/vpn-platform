@@ -332,6 +332,36 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Assertion_Ci_Should_Verify_GitHub_Step_Summary_File()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-step-summary.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-regression.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "GITHUB_STEP_SUMMARY",
+                     "test-production-readiness-assertion-ci-regression.ps1",
+                     "validate-production-readiness-assertion-ci-summary.ps1",
+                     "production-readiness-assertion-ci-step-summary.md",
+                     "CI summary validator regression",
+                     "CI result validator regression",
+                     "Markdown does not match result Markdown",
+                     "production readiness assertion CI step summary passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("Add-GitHubStepSummary", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-production-readiness-assertion-ci-summary.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-production-readiness-assertion-ci-step-summary.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-048`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

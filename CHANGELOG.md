@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.163.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-step-summary-smoke`.
+
+### Added
+
+- `scripts/test-production-readiness-assertion-ci-step-summary.ps1` проверяет реальный файл `GITHUB_STEP_SUMMARY` для readiness assertion CI wrapper.
+
+### Changed
+
+- Roadmap и release docs синхронизированы с backend suite `549/549` и latest release `0.163.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 42/42.
+- Production readiness assertion CI step summary smoke: OK.
+- Targeted release/docs suite: 58/58.
+- Backend full suite: 549/549.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Smoke выставляет `GITHUB_STEP_SUMMARY`, запускает CI wrapper, валидирует summary, сверяет его с result Markdown и проверяет строки summary/result validator regression.
+
 ## 0.162.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-readiness-assertion-ci-summary-validator`.
