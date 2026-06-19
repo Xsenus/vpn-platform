@@ -242,6 +242,16 @@ if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
         -WriteJson | Out-Null
 }
 
+$artifactValidatorArgs = @{
+    ArtifactDirectory = $fullOutputDirectory
+    WriteJson = $true
+}
+if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
+    $artifactValidatorArgs.StepSummaryPath = $githubStepSummaryPath
+}
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-artifacts.ps1") @artifactValidatorArgs | Out-Null
+
 if ($WriteJson) {
     Write-Output $resultJson
 }

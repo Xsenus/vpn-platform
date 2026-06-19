@@ -362,6 +362,39 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Assertion_Ci_Artifacts_Should_Have_Directory_Validator()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-assertion-ci-artifacts.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-ci-regression.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ArtifactDirectory",
+                     "StepSummaryPath",
+                     "RequireBlockedAssertion",
+                     "production-readiness-assertion-ci-regression-result.json",
+                     "production-readiness-assertion-ci-regression-result.md",
+                     "production-readiness-assertion.json",
+                     "production-readiness-assertion.md",
+                     "production-readiness-assertion.log",
+                     "validate-production-readiness-assertion-ci-regression-result.ps1",
+                     "validate-production-readiness-assertion-ci-summary.ps1",
+                     "outputDirectory does not match artifact directory",
+                     "production readiness assertion CI artifacts valid"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-production-readiness-assertion-ci-artifacts.ps1", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-production-readiness-assertion-ci-artifacts.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-049`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Bundle_Generator_Should_Create_All_Report_Drafts()
     {
         var root = FindRepositoryRoot();

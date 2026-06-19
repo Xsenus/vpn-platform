@@ -3992,5 +3992,28 @@
         "text": "Проверка фиксирует наличие строк `ciSummaryValidatorRegression` и `ciResultValidatorRegression`, чтобы GitHub Actions summary не расходился с опубликованными artifacts."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-artifacts-validator",
+    "version": "0.164.0",
+    "releasedAt": "2026-06-18T19:20:00+07:00",
+    "title": "Validator artifact-директория readiness assertion CI",
+    "summary": "Readiness assertion CI artifacts теперь можно проверить одной командой на наличие файлов, валидность result и summary.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/validate-production-readiness-assertion-ci-artifacts.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-readiness-assertion-ci-regression.ps1` запускает artifact-directory validator перед выводом результата."
+      },
+      {
+        "type": "important",
+        "text": "Validator проверяет пять обязательных artifact-файлов, согласованность путей в result JSON, result validator, summary validator и optional `StepSummaryPath`."
+      }
+    ]
   }
 ]

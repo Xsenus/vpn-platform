@@ -111,6 +111,17 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-asser
 
 Smoke выставляет `GITHUB_STEP_SUMMARY`, запускает readiness assertion CI wrapper, валидирует созданный summary через `validate-production-readiness-assertion-ci-summary.ps1`, сверяет summary с result Markdown и проверяет строки `CI summary validator regression` и `CI result validator regression`.
 
+Проверка всего artifact-директория одной командой:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-artifacts.ps1 `
+  -ArtifactDirectory tmp\production-readiness-assertion-ci-regression-test `
+  -RequireBlockedAssertion `
+  -WriteJson
+```
+
+Validator проверяет наличие `production-readiness-assertion-ci-regression-result.json`, `.md`, `production-readiness-assertion.json`, `.md`, `.log`, согласованность путей внутри result JSON, standalone result validator, summary validator и optional `-StepSummaryPath`.
+
 Validator сверяет статус wrapper, assertion exit code, linked assertion JSON/Markdown/log, result validator, validator regression, обязательные failure-сценарии и Markdown-пару.
 
 Если отчеты лежат не в стандартных местах, передайте их явно:

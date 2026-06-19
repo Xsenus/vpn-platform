@@ -2,6 +2,32 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.164.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-artifacts-validator`.
+
+### Added
+
+- `scripts/validate-production-readiness-assertion-ci-artifacts.ps1` проверяет весь artifact-директорий readiness assertion CI одной командой.
+
+### Changed
+
+- `scripts/test-production-readiness-assertion-ci-regression.ps1` запускает artifact-directory validator перед выводом результата.
+- Roadmap и release docs синхронизированы с backend suite `550/550` и latest release `0.164.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 43/43.
+- Production readiness assertion CI artifacts validator smoke: OK.
+- Targeted release/docs suite: 59/59.
+- Backend full suite: 550/550.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Validator проверяет пять обязательных файлов, согласованность путей в result JSON, result validator, summary validator и optional `StepSummaryPath`.
+
 ## 0.163.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-readiness-assertion-ci-step-summary-smoke`.
