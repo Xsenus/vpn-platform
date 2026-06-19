@@ -4843,5 +4843,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-preflight-release-id",
+    "version": "0.201.0",
+    "releasedAt": "2026-06-19T01:30:00+07:00",
+    "title": "Release id admin VPS smoke preflight",
+    "summary": "Admin VPS smoke preflight теперь всегда пишет непустой releaseId и evidence validators fail-closed проверяют связку release id.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` подставляет latest release из раздела \"Что нового\", если оператор не передал `-ReleaseId`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/validate-admin-vps-smoke-preflight-report.ps1` отклоняет preflight report с пустым `releaseId`, а regression harness покрывает `empty-release-id`."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` больше не принимает preflight/smoke пару без release evidence; live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS smoke."
+      }
+    ]
   }
 ]

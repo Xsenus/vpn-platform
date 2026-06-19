@@ -49,6 +49,21 @@ function Resolve-WorkspacePath {
     return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
 }
 
+function Get-LatestReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        return "manual-admin-vps-smoke-preflight"
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property releasedAt -Descending | Select-Object -First 1)
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        return "manual-admin-vps-smoke-preflight"
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 $frontendFullPath = Resolve-WorkspacePath $FrontendPath
 $smokeReportFullPath = Resolve-WorkspacePath $SmokeReportPath
 $preflightReportFullPath = Resolve-WorkspacePath $PreflightReportPath
@@ -71,13 +86,14 @@ Add-Check "preflight-validator" (Test-Path -LiteralPath $preflightValidatorPath 
 $ready = $checks | Where-Object { -not $_.passed } | Select-Object -First 1
 $readyForLiveSmoke = $null -eq $ready
 $generatedAt = (Get-Date).ToUniversalTime()
+$releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 
 $report = [ordered]@{
     reportId = "admin-vps-smoke-preflight-" + $generatedAt.ToString("yyyyMMdd-HHmmss")
     generatedAt = $generatedAt.ToString("O")
     environmentName = $EnvironmentName
     operator = $Operator
-    releaseId = $ReleaseId
+    releaseId = $releaseValue
     apiBaseUrl = $ApiBaseUrl
     adminWebUrl = $AdminWebUrl
     adminEmail = $AdminEmail

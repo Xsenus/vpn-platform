@@ -109,6 +109,16 @@ try {
 
     $testedFailures = @()
 
+    $emptyRelease = $validReportContent | ConvertFrom-Json
+    $emptyRelease.releaseId = ""
+    $emptyReleasePath = Copy-ReportJson -Source $emptyRelease -DestinationPath (Join-Path $outputFullPath "empty-release-id.json")
+    $testedFailures += [ordered]@{
+        name = "empty-release-id"
+        message = Assert-FailsWith -ExpectedMessage "field is empty: releaseId" -Action {
+            Invoke-PreflightValidator -ReportPath $emptyReleasePath
+        }
+    }
+
     $badReady = $validReportContent | ConvertFrom-Json
     $badReady.readyForLiveSmoke = $false
     $badReadyPath = Copy-ReportJson -Source $badReady -DestinationPath (Join-Path $outputFullPath "bad-ready-flag.json")

@@ -90,6 +90,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-
 ```
 
 Regression harness также покрывает `bad-smoke-route`, чтобы bootstrap+smoke evidence не принимал устаревшие admin routes вне `docs/admin-vps-smoke-sections.json`.
+Preflight report внутри этого flow получает latest release автоматически и не проходит validation с пустым `releaseId`.
 
 ## Dry-run
 

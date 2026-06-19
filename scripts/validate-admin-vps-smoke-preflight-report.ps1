@@ -83,10 +83,18 @@ foreach ($propertyName in @("reportId", "generatedAt", "environmentName", "apiBa
     }
 }
 
-foreach ($propertyName in @("operator", "releaseId", "passwordEnvPresent", "readyForLiveSmoke", "checks")) {
+foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke", "checks")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Admin VPS smoke preflight report is missing required field: $propertyName"
     }
+}
+
+if (-not $report.PSObject.Properties.Name.Contains("releaseId")) {
+    throw "Admin VPS smoke preflight report is missing required field: releaseId"
+}
+
+if ([string]::IsNullOrWhiteSpace([string]$report.releaseId)) {
+    throw "Admin VPS smoke preflight report field is empty: releaseId"
 }
 
 Assert-ReportHttpUrl -Value ([string]$report.apiBaseUrl) -Name "apiBaseUrl"

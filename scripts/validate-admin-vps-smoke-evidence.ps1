@@ -77,7 +77,16 @@ if (-not [string]::Equals($preflightSmokeReportPath, $smokeFullPath, [System.Str
 $preflightReleaseId = ([string]$preflight.releaseId).Trim()
 $smokeReleaseId = ([string]$smoke.releaseId).Trim()
 $releaseIdsDiffer = -not [string]::Equals($preflightReleaseId, $smokeReleaseId, [System.StringComparison]::Ordinal)
-if (-not [string]::IsNullOrWhiteSpace($preflightReleaseId) -and $releaseIdsDiffer) {
+
+if ([string]::IsNullOrWhiteSpace($preflightReleaseId)) {
+    throw "Admin VPS smoke evidence preflight releaseId is required."
+}
+
+if ([string]::IsNullOrWhiteSpace($smokeReleaseId)) {
+    throw "Admin VPS smoke evidence smoke releaseId is required."
+}
+
+if ($releaseIdsDiffer) {
     throw "Admin VPS smoke evidence mismatch for releaseId. Preflight='$preflightReleaseId', smoke='$($smoke.releaseId)'."
 }
 

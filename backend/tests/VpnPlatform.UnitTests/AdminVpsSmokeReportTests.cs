@@ -278,6 +278,8 @@ public class AdminVpsSmokeReportTests
                      "validate-admin-vps-smoke-report.ps1",
                      "validate-admin-vps-smoke-preflight-report.ps1",
                      "preflight-validator",
+                     "Get-LatestReleaseId",
+                     "manual-admin-vps-smoke-preflight",
                      "-RequireReady",
                      "present [hidden]",
                      "admin-vps-smoke-preflight-report.json"
@@ -311,6 +313,7 @@ public class AdminVpsSmokeReportTests
                      "admin-email",
                      "preflight-validator",
                      "contains forbidden secret marker",
+                     "field is empty: releaseId",
                      "must be true when -RequireReady is used",
                      "must be passed when -RequireReady is used",
                      "admin vps smoke preflight report valid"
@@ -337,6 +340,7 @@ public class AdminVpsSmokeReportTests
                      "admin-vps-smoke-preflight-validator-regression-test",
                      "validate-admin-vps-smoke-preflight-report.ps1",
                      "Assert-FailsWith",
+                     "empty-release-id",
                      "bad-ready-flag",
                      "failed-check",
                      "missing-check",
@@ -443,6 +447,7 @@ public class AdminVpsSmokeReportTests
                      "operator",
                      "smokeReportPath",
                      "releaseId",
+                     "preflight releaseId is required",
                      "generatedAt must not be after smoke completedAt",
                      "admin vps smoke evidence valid"
                  })
@@ -456,6 +461,7 @@ public class AdminVpsSmokeReportTests
                      "mismatched-api-url",
                      "mismatched-smoke-report-path",
                      "mismatched-release-id",
+                     "missing-preflight-release-id",
                      "preflight-after-smoke",
                      "failed-smoke-report",
                      "admin vps smoke evidence validator regression passed"

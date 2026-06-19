@@ -209,6 +209,17 @@ try {
         }
     }
 
+    $emptyReleasePreflight = Join-Path $outputFullPath "empty-release-preflight.json"
+    $emptyRelease = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $emptyRelease.releaseId = ""
+    Write-Utf8NoBomJson -Path $emptyReleasePreflight -Value $emptyRelease
+    $testedFailures += [ordered]@{
+        name = "missing-preflight-release-id"
+        message = Assert-FailsWith -ExpectedMessage "field is empty: releaseId" -Action {
+            Invoke-EvidenceValidator -PreflightPath $emptyReleasePreflight -SmokePath $smokePath
+        }
+    }
+
     $badTimingPreflight = Join-Path $outputFullPath "bad-timing-preflight.json"
     $badTiming = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badTiming.generatedAt = "2026-06-20T00:00:00+07:00"

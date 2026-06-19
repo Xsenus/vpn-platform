@@ -2,6 +2,25 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.201.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-preflight-release-id`.
+
+### Changed
+- `scripts/admin-vps-smoke-preflight.ps1` теперь подставляет latest release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`, если `-ReleaseId` не передан.
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1` требует непустой `releaseId`.
+- `scripts/validate-admin-vps-smoke-evidence.ps1` fail-closed отклоняет preflight/smoke evidence без release id.
+
+### Added
+- `scripts/test-admin-vps-smoke-preflight-validator.ps1` покрывает `empty-release-id`.
+- `scripts/test-admin-vps-smoke-evidence-validator.ps1` покрывает `missing-preflight-release-id`.
+
+### Verified
+- Admin VPS smoke preflight validator regression: OK, включая `empty-release-id`.
+- Admin VPS smoke evidence validator regression: OK, включая `missing-preflight-release-id`.
+- `AdminVpsSmokeReportTests`: 15/15.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.200.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-bootstrap-smoke-route-regression`.
