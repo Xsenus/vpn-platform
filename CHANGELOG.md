@@ -2,6 +2,28 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.191.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-flow-wrapper-regression`.
+
+### Added
+- Добавлен `scripts/test-admin-vps-smoke-flow-wrapper.ps1`, который проверяет fail-closed поведение `scripts/admin-vps-smoke.ps1` до запуска browser smoke.
+- Regression harness покрывает `missing-password`, `bad-api-url` и `missing-frontend`, проверяет отсутствие smoke report после failed preflight и отсутствие пароля в stdout/stderr.
+
+### Verified
+- `AdminVpsSmokeReportTests`: 13/13.
+- Admin VPS smoke flow wrapper regression: OK, tested failures `3/3`.
+- Local SQLite admin browser smoke через `admin-vps-smoke.ps1`: OK, preflight report valid, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: 582/582.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.190.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-flow-wrapper`.

@@ -369,6 +369,41 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Admin_Vps_Smoke_Flow_Regression_Should_Fail_Closed_Before_Browser_Smoke()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-flow-wrapper.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "admin-vps-smoke-flow-wrapper-regression-test",
+                     "admin-vps-smoke.ps1",
+                     "Invoke-WrapperFailure",
+                     "missing-password",
+                     "bad-api-url",
+                     "missing-frontend",
+                     "password-env-present",
+                     "apiBaseUrl must be an absolute",
+                     "api-base-url",
+                     "frontend-directory",
+                     "readyForLiveSmoke must be true",
+                     "Admin VPS browser smoke is ready to run.",
+                     "e2e:admin-vps-smoke",
+                     "Smoke report should not exist after failed preflight",
+                     "leaked password",
+                     "admin vps smoke flow wrapper regression passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-smoke-flow-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002I`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Docs_Should_Link_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

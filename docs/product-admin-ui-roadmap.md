@@ -15,7 +15,7 @@
 - [x] Общая UI-система, состояния loading/empty/error, мобильные viewport, доступность и русская локализация покрыты тестами и smoke-проверками.
 - [~] Staging/VPS smoke checklist готов, но реальный заполненный отчет после deploy еще нужен.
 - [x] Payment provider smoke report template, generator и validator готовы для всех web-провайдеров, но реальные кабинеты еще нужно пройти.
-- [x] Admin VPS smoke report template, generator, validator и validator regression harness, явный browser runner, единый preflight+browser smoke wrapper, preflight, preflight validator и regression harness, локальная SQLite-проверка runner и strict acceptance evidence gate готовы для проверки всех разделов админки, но реальный VPS admin smoke еще нужно пройти.
+- [x] Admin VPS smoke report template, generator, validator и validator regression harness, явный browser runner, единый preflight+browser smoke wrapper с regression harness, preflight, preflight validator и regression harness, локальная SQLite-проверка runner и strict acceptance evidence gate готовы для проверки всех разделов админки, но реальный VPS admin smoke еще нужно пройти.
 - [x] VPN live smoke report template, generator и validator готовы для 3x-ui/inbound/node проверки, но реальную 3x-ui выдачу еще нужно пройти.
 - [x] Production readiness gate требует полный пакет evidence reports: staging/VPS, платежи, админка VPS и live VPN/3x-ui.
 - [ ] Live-платежи всех провайдеров не подтверждены реальными кабинетами.
@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `581/581`.
+- [x] Backend full suite: `582/582`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-19-admin-vps-smoke-flow-wrapper`, версия `0.190.0`.
+- [x] Latest "Что нового": `2026-06-19-admin-vps-smoke-flow-wrapper-regression`, версия `0.191.0`.
 
 ## Как вести дальше
 

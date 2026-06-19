@@ -115,6 +115,12 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
 
 `scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword`, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed`. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
 
+Локальная regression-проверка wrapper, включая fail-closed сценарии `missing-password`, `bad-api-url` и `missing-frontend`, доказывает, что browser smoke не стартует до valid preflight, smoke report не создается, а пароль не попадает в stdout/stderr:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+```
+
 ## Браузерный live-smoke
 
 Низкоуровневый browser runner можно запускать отдельно для диагностики, если preflight уже пройден и нужно повторить только Playwright smoke без пересоздания preflight report:

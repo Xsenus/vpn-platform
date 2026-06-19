@@ -2,6 +2,47 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS smoke flow wrapper regression
+
+Что проверялось:
+
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` запускает `scripts/admin-vps-smoke.ps1` в fail-closed сценариях до browser smoke.
+- Проверяются `missing-password`, `bad-api-url`, `missing-frontend`, отсутствие запуска Playwright/browser smoke, отсутствие smoke report после failed preflight и отсутствие пароля в stdout/stderr.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-smoke-flow-wrapper-regression`, версия `0.191.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Admin VPS smoke flow wrapper regression: OK, tested failures `3/3`.
+- `AdminVpsSmokeReportTests`: `13/13`.
+- Targeted release/docs suite: `29/29`.
+- Local SQLite admin browser smoke через `admin-vps-smoke.ps1`: OK, preflight report valid, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: `582/582`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS smoke flow wrapper
 
 Что проверялось:

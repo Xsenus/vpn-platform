@@ -4613,5 +4613,28 @@
         "text": "Реальные `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до VPS smoke report без секретов."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-flow-wrapper-regression",
+    "version": "0.191.0",
+    "releasedAt": "2026-06-18T23:50:00+07:00",
+    "title": "Regression wrapper admin VPS smoke",
+    "summary": "Единый wrapper admin VPS smoke получил fail-closed regression harness, который доказывает остановку до browser smoke при плохом preflight.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` проверяет `missing-password`, `bad-api-url` и `missing-frontend` без запуска Playwright."
+      },
+      {
+        "type": "important",
+        "text": "Harness проверяет, что smoke report не создается после failed preflight, а пароль из `ADMIN_VPS_SMOKE_ADMIN_PASSWORD` не попадает в stdout/stderr."
+      },
+      {
+        "type": "improved",
+        "text": "`docs/admin-vps-smoke.md` теперь содержит команду regression-проверки wrapper перед реальным VPS smoke."
+      }
+    ]
   }
 ]
