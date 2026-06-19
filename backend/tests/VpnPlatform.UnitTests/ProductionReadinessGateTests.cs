@@ -1281,6 +1281,53 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Ci_Workflow_Should_Run_Workflow_Artifacts_Guard()
+    {
+        var root = FindRepositoryRoot();
+        var workflowGuard = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "production-evidence:",
+                     "needs: backend",
+                     "Guard production evidence workflow artifacts",
+                     "test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1 -WriteJson",
+                     "test-production-evidence-handoff-package-archive-ci-regression.ps1",
+                     "actions/upload-artifact@v4",
+                     "if-no-files-found: error",
+                     "production-evidence-handoff-package-archive-ci-regression-result.json",
+                     "production-evidence-handoff-package-archive-ci-regression-result.md",
+                     "production evidence CI workflow artifacts passed"
+                 })
+        {
+            Assert.Contains(expected, workflowGuard, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var guardStepIndex = workflow.IndexOf(
+            "Guard production evidence workflow artifacts",
+            StringComparison.OrdinalIgnoreCase);
+        var guardCommandIndex = workflow.IndexOf(
+            "test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1 -WriteJson",
+            StringComparison.OrdinalIgnoreCase);
+        var wrapperIndex = workflow.IndexOf(
+            "Run production evidence handoff archive CI regression",
+            StringComparison.OrdinalIgnoreCase);
+        var uploadIndex = workflow.IndexOf(
+            "Upload production evidence regression artifacts",
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(guardStepIndex >= 0, "Production evidence workflow guard step must be present in CI.");
+        Assert.True(guardCommandIndex > guardStepIndex, "Production evidence workflow guard command must be in the guard step.");
+        Assert.True(guardCommandIndex < wrapperIndex, "Production evidence workflow artifacts guard must run before the CI wrapper.");
+        Assert.True(wrapperIndex < uploadIndex, "Production evidence CI wrapper must still run before artifacts upload.");
+        Assert.Contains("test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-054`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Package_Archive_Ci_Regression_Should_Write_GitHub_Step_Summary()
     {
         var root = FindRepositoryRoot();

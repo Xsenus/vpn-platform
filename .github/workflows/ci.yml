@@ -105,6 +105,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Guard production evidence workflow artifacts
+        shell: pwsh
+        run: ./scripts/test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1 -WriteJson
+
       - name: Run production evidence handoff archive CI regression
         shell: pwsh
         run: |

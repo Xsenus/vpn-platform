@@ -4107,5 +4107,28 @@
         "text": "`ProductionReadinessGateTests` проверяет порядок guard -> wrapper -> upload, чтобы CI fail-closed защищал published artifacts contract."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-evidence-ci-workflow-artifacts-guard",
+    "version": "0.169.0",
+    "releasedAt": "2026-06-18T20:10:00+07:00",
+    "title": "Guard published artifacts production evidence CI",
+    "summary": "GitHub Actions job production-evidence теперь имеет локальный guard и CI step для проверки публикуемых JSON/Markdown result artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `scripts/test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "В job `production-evidence` добавлен step `Guard production evidence workflow artifacts`, который запускается до archive regression wrapper."
+      },
+      {
+        "type": "important",
+        "text": "`ProductionReadinessGateTests` проверяет published artifact name, `if-no-files-found: error`, JSON/Markdown result paths и порядок guard -> wrapper -> upload."
+      }
+    ]
   }
 ]

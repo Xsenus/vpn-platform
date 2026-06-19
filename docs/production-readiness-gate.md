@@ -391,6 +391,14 @@ Wrapper сохраняет `production-evidence-handoff-package-archive-ci-regre
 
 В GitHub Actions этот wrapper запускается отдельным job `production-evidence` в `.github/workflows/ci.yml` после backend-проверок. Job публикует artifact `production-evidence-handoff-package-archive-ci-regression` с итоговыми `production-evidence-handoff-package-archive-ci-regression-result.json` и `.md`, поэтому CI evidence можно скачать без повторного ручного запуска.
 
+Workflow guard для published artifact-директория `production-evidence`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-ci-workflow-artifacts.ps1 -WriteJson
+```
+
+GitHub Actions запускает этот guard отдельным step `Guard production evidence workflow artifacts` до `Run production evidence handoff archive CI regression`, поэтому broken published artifacts contract должен падать до запуска wrapper и upload step.
+
 Если доступна переменная `GITHUB_STEP_SUMMARY`, wrapper дополнительно дописывает тот же Markdown-результат в GitHub Actions job summary: общий статус, release id, статус основного flow, result validator regression и long-path regression. Локально это можно проверить, задав `GITHUB_STEP_SUMMARY` на временный `.md` файл перед запуском wrapper.
 
 Wrapper запускает `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1` для result Markdown и для `GITHUB_STEP_SUMMARY`, если summary-файл доступен. Валидатор fail-closed сверяет JSON result artifact с Markdown: `status = passed`, release id, статусы основного flow, result validator regression, long-path regression и пути к обязательным artifacts.
