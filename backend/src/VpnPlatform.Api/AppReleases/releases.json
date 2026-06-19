@@ -4774,5 +4774,28 @@
         "text": "`scripts/admin-vps-bootstrap-smoke.ps1` запускает парный evidence validator после успешного smoke, но live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-sections-contract",
+    "version": "0.198.0",
+    "releasedAt": "2026-06-19T01:00:00+07:00",
+    "title": "Contract разделов admin VPS smoke",
+    "summary": "Обязательные разделы админки для VPS smoke теперь закреплены единым manifest и fail-closed validator-ом.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`docs/admin-vps-smoke-sections.json` фиксирует id и route всех обязательных разделов для admin VPS smoke evidence."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/validate-admin-vps-smoke-sections-contract.ps1` сверяет manifest с report template, report validator, VPS Playwright smoke и all-screens smoke."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/test-admin-vps-smoke-sections-contract.ps1` проверяет fail-closed tamper-сценарии, но live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS evidence."
+      }
+    ]
   }
 ]

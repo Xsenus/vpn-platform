@@ -89,8 +89,8 @@ public class AdminVpsSmokeReportTests
                      "admin-vps-smoke-report.template.json",
                      "validate-admin-vps-smoke-report.ps1",
                      "ConvertTo-Json -Depth 8",
-                     "Set-Content",
-                     "-Encoding UTF8",
+                     "WriteAllText",
+                     "UTF8Encoding",
                      "blocked",
                      "TODO: open",
                      "Output file already exists. Pass -Force",
@@ -148,6 +148,58 @@ public class AdminVpsSmokeReportTests
         Assert.Contains("e2e:admin-vps-smoke", packageJson, StringComparison.Ordinal);
         Assert.DoesNotContain("console.log(password", spec, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Host \"Password: $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Admin_Vps_Smoke_Sections_Contract_Should_Link_Manifest_Template_And_Browser_Specs()
+    {
+        var root = FindRepositoryRoot();
+        using var contract = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke-sections.json")));
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-smoke-sections-contract.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-sections-contract.ps1"));
+        var spec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "admin-vps-smoke.spec.ts"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Equal("admin-vps-smoke-sections", contract.RootElement.GetProperty("contractId").GetString());
+        var sections = contract.RootElement.GetProperty("sections").EnumerateArray().ToArray();
+        Assert.Equal(RequiredSections.Order(StringComparer.Ordinal), sections.Select(x => x.GetProperty("id").GetString()).Order(StringComparer.Ordinal));
+        Assert.All(sections, section =>
+        {
+            var id = section.GetProperty("id").GetString();
+            Assert.Equal($"/admin/#{id}", section.GetProperty("route").GetString());
+        });
+
+        foreach (var expected in new[]
+                 {
+                     "admin-vps-smoke-sections.json",
+                     "admin-vps-smoke-report.template.json",
+                     "validate-admin-vps-smoke-report.ps1",
+                     "admin-vps-smoke.spec.ts",
+                     "all-screens.spec.ts",
+                     "route: section.route",
+                     "admin vps smoke sections contract valid"
+                 })
+        {
+            Assert.Contains(expected, validator + spec + guide, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "admin-vps-smoke-sections-contract-regression-test",
+                     "duplicate-section",
+                     "bad-route",
+                     "template-missing-section",
+                     "browser-spec-no-manifest",
+                     "all-screens-missing-section",
+                     "admin vps smoke sections contract regression passed"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-smoke-sections-contract.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002K`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

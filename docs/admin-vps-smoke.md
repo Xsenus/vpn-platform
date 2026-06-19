@@ -42,6 +42,18 @@ powershell -ExecutionPolicy Bypass -File scripts\new-admin-vps-smoke-report.ps1 
 - `scenarios`
 - `provisioning`
 
+Список обязательных разделов хранится в `docs/admin-vps-smoke-sections.json`. Перед реальным VPS smoke или изменением админки проверьте, что manifest, template, validator и Playwright specs синхронизированы:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-sections-contract.ps1
+```
+
+Локальная regression-проверка section contract, включая tamper-сценарии `duplicate-section`, `bad-route`, `template-missing-section`, `browser-spec-no-manifest` и `all-screens-missing-section`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-sections-contract.ps1
+```
+
 ## Валидатор
 
 Обычная структурная проверка:

@@ -1,0 +1,70 @@
+{
+  "contractId": "admin-vps-smoke-sections",
+  "description": "Single source of required admin sections for VPS admin smoke evidence. Keep secrets out of this file.",
+  "sections": [
+    {
+      "id": "dashboard",
+      "route": "/admin/#dashboard"
+    },
+    {
+      "id": "users",
+      "route": "/admin/#users"
+    },
+    {
+      "id": "payments",
+      "route": "/admin/#payments"
+    },
+    {
+      "id": "tariffs",
+      "route": "/admin/#tariffs"
+    },
+    {
+      "id": "subscriptions",
+      "route": "/admin/#subscriptions"
+    },
+    {
+      "id": "vpn",
+      "route": "/admin/#vpn"
+    },
+    {
+      "id": "nodes",
+      "route": "/admin/#nodes"
+    },
+    {
+      "id": "panels",
+      "route": "/admin/#panels"
+    },
+    {
+      "id": "support",
+      "route": "/admin/#support"
+    },
+    {
+      "id": "audit",
+      "route": "/admin/#audit"
+    },
+    {
+      "id": "bot",
+      "route": "/admin/#bot"
+    },
+    {
+      "id": "releases",
+      "route": "/admin/#releases"
+    },
+    {
+      "id": "faq",
+      "route": "/admin/#faq"
+    },
+    {
+      "id": "content",
+      "route": "/admin/#content"
+    },
+    {
+      "id": "scenarios",
+      "route": "/admin/#scenarios"
+    },
+    {
+      "id": "provisioning",
+      "route": "/admin/#provisioning"
+    }
+  ]
+}

@@ -2,6 +2,35 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.198.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-sections-contract`.
+
+### Added
+- Добавлен `docs/admin-vps-smoke-sections.json` как единый manifest обязательных admin sections для VPS smoke evidence.
+- Добавлен `scripts/validate-admin-vps-smoke-sections-contract.ps1` для сверки manifest, report template, report validator, VPS Playwright smoke и all-screens smoke.
+- Добавлен `scripts/test-admin-vps-smoke-sections-contract.ps1` с fail-closed tamper-сценариями `duplicate-section`, `bad-route`, `template-missing-section`, `browser-spec-no-manifest` и `all-screens-missing-section`.
+
+### Changed
+- `frontend/e2e/admin-vps-smoke.spec.ts` берет id/route разделов из `docs/admin-vps-smoke-sections.json`, чтобы browser report не расходился с contract.
+- `docs/admin-vps-smoke.md` описывает section contract validator и regression harness.
+
+### Verified
+- Admin VPS smoke sections contract validator: OK.
+- Admin VPS smoke sections contract regression: OK, `6/6` scenarios.
+- `AdminVpsSmokeReportTests`: 15/15.
+- Targeted docs/admin suite: OK.
+- Local CLI bootstrap admin smoke на SQLite: OK, readiness/bootstrap/smoke/preflight reports UTF-8 without BOM, bootstrap smoke report valid, paired evidence validator OK, preflight report valid, Playwright `1/1`, report validator `16 passed`.
+- Backend full suite: 590/590.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.197.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-bootstrap-smoke-evidence`.

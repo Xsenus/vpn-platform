@@ -44,6 +44,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-002H", "2026-06-19-admin-vps-smoke-flow-wrapper"),
         new("P0-ADMIN-002I", "2026-06-19-admin-vps-smoke-flow-wrapper-regression"),
         new("P0-ADMIN-002J", "2026-06-19-admin-vps-smoke-evidence-validator"),
+        new("P0-ADMIN-002K", "2026-06-19-admin-vps-smoke-sections-contract"),
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
         new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-PAY-012", "2026-06-14-payment-provider-smoke-report"),

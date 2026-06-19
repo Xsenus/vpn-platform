@@ -92,7 +92,10 @@ if (-not (Test-Path -LiteralPath $preflightDirectory -PathType Container)) {
     New-Item -ItemType Directory -Path $preflightDirectory -Force | Out-Null
 }
 
-$report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $preflightReportFullPath -Encoding UTF8
+[System.IO.File]::WriteAllText(
+    $preflightReportFullPath,
+    ($report | ConvertTo-Json -Depth 8),
+    [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "Admin VPS smoke preflight completed."
 Write-Host "API base URL: $ApiBaseUrl"

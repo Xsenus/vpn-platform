@@ -2,26 +2,55 @@ import { expect, test, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const sections = [
-  ['dashboard', 'Дашборд'],
-  ['users', 'Пользователи'],
-  ['payments', 'Оплаты'],
-  ['tariffs', 'Тарифы'],
-  ['subscriptions', 'Подписки'],
-  ['vpn', 'VPN-доступы'],
-  ['nodes', 'Серверы'],
-  ['panels', '3x-ui панели'],
-  ['support', 'Поддержка'],
-  ['audit', 'Аудит'],
-  ['bot', 'Telegram-бот'],
-  ['releases', 'Что нового'],
-  ['faq', 'FAQ'],
-  ['content', 'Контент сайта'],
-  ['scenarios', 'Сценарии'],
-  ['provisioning', 'Подготовка VPS']
-] as const
+type AdminSectionId = string
 
-type AdminSectionId = typeof sections[number][0]
+type AdminSmokeSection = {
+  id: AdminSectionId
+  route: string
+}
+
+const sectionLabels: Record<AdminSectionId, string> = {
+  dashboard: 'Дашборд',
+  users: 'Пользователи',
+  payments: 'Оплаты',
+  tariffs: 'Тарифы',
+  subscriptions: 'Подписки',
+  vpn: 'VPN-доступы',
+  nodes: 'Серверы',
+  panels: '3x-ui панели',
+  support: 'Поддержка',
+  audit: 'Аудит',
+  bot: 'Telegram-бот',
+  releases: 'Что нового',
+  faq: 'FAQ',
+  content: 'Контент сайта',
+  scenarios: 'Сценарии',
+  provisioning: 'Подготовка VPS'
+}
+
+function repoRoot() {
+  return path.resolve(process.cwd(), '..')
+}
+
+function loadAdminSmokeSections() {
+  const contractPath = path.join(repoRoot(), 'docs', 'admin-vps-smoke-sections.json')
+  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as { sections?: AdminSmokeSection[] }
+  const loadedSections = contract.sections ?? []
+
+  if (loadedSections.length === 0) {
+    throw new Error('admin-vps-smoke-sections.json must list required admin sections.')
+  }
+
+  for (const section of loadedSections) {
+    if (!sectionLabels[section.id]) {
+      throw new Error(`Missing admin VPS smoke label for section ${section.id}.`)
+    }
+  }
+
+  return loadedSections
+}
+
+const sections = loadAdminSmokeSections()
 
 type SectionReport = {
   id: AdminSectionId
@@ -66,10 +95,6 @@ function assertHttpUrl(value: string, name: string) {
   }
 }
 
-function repoRoot() {
-  return path.resolve(process.cwd(), '..')
-}
-
 function latestReleaseId() {
   const releasesPath = path.join(repoRoot(), 'backend', 'src', 'VpnPlatform.Api', 'AppReleases', 'releases.json')
   const releases = JSON.parse(fs.readFileSync(releasesPath, 'utf8')) as Array<{ releaseId?: string; releasedAt?: string; isActive?: boolean }>
@@ -108,13 +133,13 @@ function createReport(startedAt: Date, apiBaseUrl: string, adminWebUrl: string):
     adminLoginPassed: false,
     noJsErrors: false,
     noUnauthorizedAfterLogin: false,
-    sections: sections.map(([id]) => ({
-      id,
-      route: `/admin/#${id}`,
+    sections: sections.map((section) => ({
+      id: section.id,
+      route: section.route,
       status: 'blocked',
       httpStatus: 0,
       loaded: false,
-      evidence: `Not checked yet: ${id}.`
+      evidence: `Not checked yet: ${section.id}.`
     }))
   }
 }
@@ -170,7 +195,9 @@ test('admin VPS smoke covers login and every admin section without storing secre
     report.adminLoginPassed = true
     collectFailedResponses = true
 
-    for (const [id, label] of sections) {
+    for (const sectionDefinition of sections) {
+      const id = sectionDefinition.id
+      const label = sectionLabels[id]
       const section = report.sections.find((item) => item.id === id)!
       const failedBefore = failedResponses.length
 

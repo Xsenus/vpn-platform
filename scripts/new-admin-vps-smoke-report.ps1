@@ -105,7 +105,10 @@ foreach ($section in $report.sections) {
 }
 
 $json = $report | ConvertTo-Json -Depth 8
-Set-Content -LiteralPath $fullOutputPath -Value $json -Encoding UTF8
+[System.IO.File]::WriteAllText(
+    $fullOutputPath,
+    $json,
+    [System.Text.UTF8Encoding]::new($false))
 
 $validator = Resolve-RepoPath "scripts/validate-admin-vps-smoke-report.ps1"
 & $validator -ReportPath $fullOutputPath | Out-Host
