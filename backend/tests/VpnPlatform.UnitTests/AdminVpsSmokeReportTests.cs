@@ -132,6 +132,8 @@ public class AdminVpsSmokeReportTests
                      "ADMIN_VPS_SMOKE_ADMIN_EMAIL",
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
                      "ADMIN_VPS_SMOKE_REPORT_PATH",
+                     "Get-LatestReleaseId",
+                     "Release id:",
                      "No credentials, cookies, auth headers, tokens or screenshots are stored",
                      "Завершить сессию",
                      "validate-admin-vps-smoke-report.ps1",
@@ -405,9 +407,12 @@ public class AdminVpsSmokeReportTests
                      "validate-admin-vps-smoke-report.ps1",
                      "validate-admin-vps-smoke-preflight-report.ps1",
                      "validate-admin-vps-smoke-evidence.ps1",
+                     "Get-LatestReleaseId",
+                     "releaseValue",
                      "-RequirePassword",
                      "-RequireAllPassed",
                      "Password: [hidden]",
+                     "Release id:",
                      "Admin VPS smoke flow completed",
                      "admin-vps-smoke-preflight-report.json"
                  })
@@ -499,6 +504,7 @@ public class AdminVpsSmokeReportTests
                      "Admin VPS browser smoke is ready to run.",
                      "e2e:admin-vps-smoke",
                      "Smoke report should not exist after failed preflight",
+                     "Preflight report releaseId should be resolved",
                      "leaked password",
                      "admin vps smoke flow wrapper regression passed"
                  })

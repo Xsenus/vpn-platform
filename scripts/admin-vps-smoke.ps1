@@ -20,11 +20,28 @@ $reportValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-r
 $preflightValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-preflight-report.ps1"
 $evidenceValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
 
+function Get-LatestReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        return "manual-admin-vps-smoke-flow"
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property releasedAt -Descending | Select-Object -First 1)
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        return "manual-admin-vps-smoke-flow"
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportValidatorScript, $preflightValidatorScript, $evidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS smoke script was not found: $requiredScript"
     }
 }
+
+$releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 
 Write-Host "Admin VPS smoke flow is ready to run."
 Write-Host "API base URL: $ApiBaseUrl"
@@ -33,6 +50,7 @@ Write-Host "Admin email: $AdminEmail"
 Write-Host "Password: [hidden]"
 Write-Host "Smoke report path: $SmokeReportPath"
 Write-Host "Preflight report path: $PreflightReportPath"
+Write-Host "Release id: $releaseValue"
 Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
 
 & $preflightScript `
@@ -43,7 +61,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -PreflightReportPath $PreflightReportPath `
     -EnvironmentName $EnvironmentName `
     -Operator $Operator `
-    -ReleaseId $ReleaseId `
+    -ReleaseId $releaseValue `
     -FrontendPath $FrontendPath `
     -RequirePassword
 
@@ -54,7 +72,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -OutputPath $SmokeReportPath `
     -EnvironmentName $EnvironmentName `
     -Operator $Operator `
-    -ReleaseId $ReleaseId `
+    -ReleaseId $releaseValue `
     -FrontendPath $FrontendPath `
     -AccountBootstrapChecked:$AccountBootstrapChecked `
     -RequireAllPassed

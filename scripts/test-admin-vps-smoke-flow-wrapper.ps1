@@ -117,6 +117,10 @@ function Invoke-WrapperFailure {
         }
 
         $preflightReport = Get-Content -LiteralPath $preflightReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ([string]::IsNullOrWhiteSpace([string]$preflightReport.releaseId)) {
+            throw "Preflight report releaseId should be resolved before failed browser smoke scenario '$Name'."
+        }
+
         $failedCheck = @($preflightReport.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheck }) | Select-Object -First 1
         if ($null -eq $failedCheck) {
             throw "Expected failed preflight check '$ExpectedFailedCheck' was not found in scenario '$Name'."
@@ -132,6 +136,7 @@ function Invoke-WrapperFailure {
             expectedMessage = $ExpectedMessage
             expectedFailedCheck = $ExpectedFailedCheck
             preflightReportCreated = $true
+            releaseId = [string]$preflightReport.releaseId
         }
     }
     finally {

@@ -5,8 +5,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-06-19-admin-vps-smoke-preflight-release-id";
-    private const string CurrentVersion = "0.201.0";
+    private const string CurrentReleaseId = "2026-06-19-admin-vps-smoke-unified-release-id";
+    private const string CurrentVersion = "0.202.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

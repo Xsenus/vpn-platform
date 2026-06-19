@@ -127,9 +127,9 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
   -AccountBootstrapChecked
 ```
 
-`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword`, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed`. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
+`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, вычисляет release id один раз, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword` с этим же release id, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` с тем же значением. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
 
-Локальная regression-проверка wrapper, включая fail-closed сценарии `missing-password`, `bad-api-url` и `missing-frontend`, доказывает, что browser smoke не стартует до valid preflight, smoke report не создается, а пароль не попадает в stdout/stderr:
+Локальная regression-проверка wrapper, включая fail-closed сценарии `missing-password`, `bad-api-url` и `missing-frontend`, доказывает, что browser smoke не стартует до valid preflight, smoke report не создается, пароль не попадает в stdout/stderr, а preflight report получает непустой release id еще до отказа browser smoke:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1

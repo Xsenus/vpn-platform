@@ -2,6 +2,22 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.202.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-unified-release-id`.
+
+### Changed
+- `scripts/admin-vps-smoke.ps1` вычисляет latest release один раз и передает общий `releaseValue` в preflight и browser smoke.
+- `scripts/admin-vps-browser-smoke.ps1` получил PowerShell fallback на latest release и печатает выбранный release id без секретов.
+
+### Added
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` проверяет, что fail-closed preflight reports получают непустой release id до запуска browser smoke.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `missing-password`, `bad-api-url`, `missing-frontend`, все с непустым release id.
+- `AdminVpsSmokeReportTests`: 15/15.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.201.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-preflight-release-id`.

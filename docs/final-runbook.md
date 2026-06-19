@@ -183,7 +183,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - frontend audit: OK, `0 vulnerabilities`;
-- latest "Что нового": `2026-06-19-admin-vps-smoke-preflight-release-id`, версия `0.201.0`.
+- latest "Что нового": `2026-06-19-admin-vps-smoke-unified-release-id`, версия `0.202.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

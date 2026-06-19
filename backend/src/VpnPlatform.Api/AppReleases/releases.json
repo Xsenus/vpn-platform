@@ -4866,5 +4866,28 @@
         "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` больше не принимает preflight/smoke пару без release evidence; live `P0-ADMIN-001`/`P0-ADMIN-002` остаются открытыми до реального VPS smoke."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-unified-release-id",
+    "version": "0.202.0",
+    "releasedAt": "2026-06-19T01:40:00+07:00",
+    "title": "Unified release id admin VPS smoke",
+    "summary": "Admin VPS smoke flow теперь вычисляет release id один раз и передает одно значение в preflight и browser smoke.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke.ps1` подставляет latest release один раз и передает `releaseValue` в preflight и browser smoke."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-browser-smoke.ps1` тоже имеет PowerShell fallback на latest release и пишет выбранный release id в вывод без секретов."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` проверяет, что fail-closed preflight reports получают непустой release id; live VPS smoke evidence все еще требуется отдельно."
+      }
+    ]
   }
 ]
