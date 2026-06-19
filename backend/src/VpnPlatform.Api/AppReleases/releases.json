@@ -4337,5 +4337,28 @@
         "text": "Общий fail-closed harness теперь покрывает CI-step guard, readiness assertion и production evidence contracts."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-vps-production-smoke-report-contract",
+    "version": "0.179.0",
+    "releasedAt": "2026-06-18T21:50:00+07:00",
+    "title": "Report contract для VPS production smoke",
+    "summary": "Live/staging VPS production smoke теперь фиксируется проверяемым fail-closed JSON-отчетом без секретов и полных VPN-ссылок.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен `docs/vps-production-smoke-report.template.json` для полного deploy -> health -> admin login -> order -> payment -> subscription -> VPN access flow."
+      },
+      {
+        "type": "new",
+        "text": "Добавлены `scripts/new-vps-production-smoke-report.ps1` и `scripts/validate-vps-production-smoke-report.ps1`."
+      },
+      {
+        "type": "important",
+        "text": "Validator с `-RequireAllPassed` требует все шаги и boolean-подтверждения, а также запрещает секретные маркеры, raw webhook payloads и полные VPN URI в evidence."
+      }
+    ]
   }
 ]

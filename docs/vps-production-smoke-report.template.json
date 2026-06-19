@@ -1,0 +1,98 @@
+{
+  "reportId": "vps-production-smoke-YYYYMMDD-HHMM",
+  "environmentName": "staging",
+  "apiBaseUrl": "https://api.example.test",
+  "publicWebUrl": "https://example.test",
+  "cabinetWebUrl": "https://example.test/cabinet",
+  "adminWebUrl": "https://example.test/admin",
+  "startedAt": "2026-06-19T00:00:00+07:00",
+  "completedAt": "2026-06-19T00:00:00+07:00",
+  "releaseId": "2026-06-19-vps-production-smoke-report-contract",
+  "operator": "TODO: operator name",
+  "notes": "Fill this report after real VPS or staging smoke. Do not store credentials, cookies, auth headers, provider secrets, raw webhook payloads or VPN private keys.",
+  "liveHealthPassed": false,
+  "readyHealthPassed": false,
+  "adminLoginPassed": false,
+  "checkoutCreated": false,
+  "paymentInitialized": false,
+  "paymentConfirmed": false,
+  "subscriptionActivated": false,
+  "vpnAccessIssued": false,
+  "latestReleaseMatched": false,
+  "noJsErrors": false,
+  "noSecretsInEvidence": false,
+  "steps": [
+    {
+      "id": "health-live",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: sanitized /health/live result without secrets"
+    },
+    {
+      "id": "health-ready",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: sanitized /health/ready result without secrets"
+    },
+    {
+      "id": "web-public",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: public site opened without console errors"
+    },
+    {
+      "id": "web-cabinet",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: cabinet opened without console errors"
+    },
+    {
+      "id": "web-admin",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: admin opened without console errors"
+    },
+    {
+      "id": "admin-login",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: admin login succeeded, no credentials stored"
+    },
+    {
+      "id": "public-checkout",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: checkout session id or safe order id"
+    },
+    {
+      "id": "payment-init",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: provider/payment id without secrets"
+    },
+    {
+      "id": "payment-confirmation",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: sandbox/live cabinet confirmation without raw webhook payload"
+    },
+    {
+      "id": "subscription-active",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: active subscription id/status without personal data"
+    },
+    {
+      "id": "vpn-access",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: access id and protocol only, do not store full VPN URI"
+    },
+    {
+      "id": "latest-release",
+      "status": "blocked",
+      "httpStatus": 0,
+      "evidence": "TODO: latest release id from /api/app-version/latest"
+    }
+  ]
+}

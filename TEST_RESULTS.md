@@ -2,13 +2,15 @@
 
 Дата проверки: 2026-05-25.
 
-## Проверка 2026-06-19: production CI workflow artifacts aggregate validator covers CI step tamper
+## Проверка 2026-06-19: VPS production smoke report contract
 
 Что проверялось:
 
-- `scripts/test-production-ci-workflow-artifacts-guards-validator.ps1` теперь проверяет CI-step tamper-сценарии `missing-aggregate-ci-step-guard-command` и `missing-aggregate-ci-step-validator`.
-- Aggregate validator продолжает проверять readiness/evidence artifact contracts: `missing-readiness-guard-step`, `missing-readiness-assertion-log-artifact`, `missing-production-evidence-result-artifact` и `missing-if-no-files-found-error`.
-- Раздел "Что нового" получил релиз `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`, версия `0.178.0`.
+- Добавлен fail-closed report contract для live/staging VPS production smoke: `docs/vps-production-smoke-report.template.json`.
+- Добавлены generator и validator: `scripts/new-vps-production-smoke-report.ps1`, `scripts/validate-vps-production-smoke-report.ps1`.
+- Validator требует все шаги deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access, boolean-подтверждения, валидные URL/даты и безопасные evidence-строки без секретов.
+- Раздел "Что нового" получил релиз `2026-06-19-vps-production-smoke-report-contract`, версия `0.179.0`.
+- Связанный предыдущий baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
 - Связанный предыдущий aggregate baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards`.
 - Связанный предыдущий CI step regression baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-regression`.
 - Связанный предыдущий CI step guard baseline сохранен как `2026-06-19-production-ci-workflow-artifacts-guards-ci-step-guard`.
@@ -17,11 +19,14 @@
 Команды:
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-vps-production-smoke-report.ps1 -OutputPath tmp\vps-production-smoke-report.json -ApiBaseUrl http://127.0.0.1:18102 -PublicWebUrl http://127.0.0.1:5183 -CabinetWebUrl http://127.0.0.1:5184 -AdminWebUrl http://127.0.0.1:5185 -Force
+powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-report.ps1 -ReportPath tmp\vps-production-smoke-report.json
+powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-report.ps1 -ReportPath tmp\vps-production-smoke-report.json -RequireAllPassed
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-ci-step-validator.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards.ps1 -WriteJson
 powershell -ExecutionPolicy Bypass -File scripts\test-production-ci-workflow-artifacts-guards-validator.ps1 -WriteJson
-dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "VpsProductionSmokeTests|ProductionReadinessGateTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
 dotnet test backend\VpnPlatform.sln --configuration Release
 dotnet build backend\src\VpnPlatform.Api\VpnPlatform.Api.csproj --configuration Release --no-restore
 dotnet build backend\src\VpnPlatform.TelegramBot\VpnPlatform.TelegramBot.csproj --configuration Release --no-restore
@@ -41,13 +46,17 @@ git diff --check
 
 Результат:
 
+- VPS production smoke report generator: OK.
+- VPS production smoke report validator: OK.
+- Expected fail-closed `-RequireAllPassed`: OK.
+- `VpsProductionSmokeTests`: `7/7`.
 - Production CI workflow artifacts aggregate CI step guard: OK.
 - Production CI workflow artifacts aggregate CI step guard validator: OK.
 - Production CI workflow artifacts guards aggregate: OK, `guardsCount = 6`.
 - Production CI workflow artifacts aggregate guard validator: OK, включая CI-step tamper cases.
 - Production CI workflow artifacts aggregate guard validator CI-step tamper cases: OK.
-- Targeted release/docs suite: `73/73`.
-- Backend full suite: `564/564`.
+- Targeted release/docs suite: `80/80`.
+- Backend full suite: `568/568`.
 - API build: OK.
 - TelegramBot build: OK.
 - Frontend tests: `66/66`.
@@ -57,8 +66,8 @@ git diff --check
 - Playwright console E2E: `9/9`.
 - Secret scan: 0 findings.
 - Кодировка измененных и новых файлов: strict UTF-8 without BOM.
-- Fresh local SQLite smoke: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
-- Local VPS smoke dry-run: OK, latest `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
+- Fresh local SQLite smoke: OK, latest `2026-06-19-vps-production-smoke-report-contract`.
+- Local VPS smoke dry-run: OK, latest `2026-06-19-vps-production-smoke-report-contract`.
 - `git diff --check`: OK.
 
 ## Проверка 2026-06-19: production CI workflow artifacts aggregate guard regression

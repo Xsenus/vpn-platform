@@ -6,6 +6,14 @@
 
 Файл: `scripts/vps-production-smoke.ps1`.
 
+Для фиксации результата live/staging smoke используется проверяемый отчет:
+
+- шаблон: `docs/vps-production-smoke-report.template.json`;
+- генератор безопасной заготовки: `scripts/new-vps-production-smoke-report.ps1`;
+- validator: `scripts/validate-vps-production-smoke-report.ps1`.
+
+Шаблон намеренно создается в состоянии `blocked`. Полный отчет можно считать приемочным доказательством только после ручного или CI-прогона на реальном VPS/staging, заполнения всех шагов безопасными evidence-строками и успешного запуска validator с `-RequireAllPassed`. В отчет нельзя добавлять пароли, cookies, authorization headers, provider secrets, raw webhook payloads и полные VPN-ссылки `vless://`, `vmess://`, `trojan://`.
+
 Проверяемый путь:
 
 1. API `/health/live`;
@@ -87,3 +95,27 @@ powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 `
 - latest "Что нового": `2026-06-14-vps-production-smoke-runner`, версия `0.105.0`.
 
 Live VPS production smoke все равно должен быть выполнен отдельно после deploy и ротации раскрытых секретов.
+
+## Отчет о live/staging прогоне
+
+Создать заготовку:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\new-vps-production-smoke-report.ps1 `
+  -OutputPath tmp\vps-production-smoke-report.json `
+  -ApiBaseUrl https://api.example.test `
+  -PublicWebUrl https://example.test `
+  -CabinetWebUrl https://example.test/cabinet `
+  -AdminWebUrl https://example.test/admin `
+  -EnvironmentName staging
+```
+
+Проверить заполненный отчет:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-report.ps1 `
+  -ReportPath tmp\vps-production-smoke-report.json `
+  -RequireAllPassed
+```
+
+Если хотя бы один шаг остался `blocked`, `failed`, не заполнено boolean-подтверждение или в evidence попал секретный маркер, validator завершится ошибкой.

@@ -1,9 +1,26 @@
+using System.Text.Json;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
 
 public class VpsProductionSmokeTests
 {
+    private static readonly string[] RequiredReportSteps =
+    [
+        "health-live",
+        "health-ready",
+        "web-public",
+        "web-cabinet",
+        "web-admin",
+        "admin-login",
+        "public-checkout",
+        "payment-init",
+        "payment-confirmation",
+        "subscription-active",
+        "vpn-access",
+        "latest-release"
+    ];
+
     [Fact]
     public void Vps_Production_Smoke_Script_Should_Cover_Full_Order_Payment_Subscription_And_Access_Flow()
     {
@@ -84,6 +101,120 @@ public class VpsProductionSmokeTests
         }
 
         Assert.Contains("vps-production-smoke.md", docsIndex, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Vps_Production_Smoke_Report_Template_Should_List_Full_Flow_Fail_Closed()
+    {
+        var root = FindRepositoryRoot();
+        using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "docs", "vps-production-smoke-report.template.json")));
+
+        foreach (var booleanName in new[]
+                 {
+                     "liveHealthPassed",
+                     "readyHealthPassed",
+                     "adminLoginPassed",
+                     "checkoutCreated",
+                     "paymentInitialized",
+                     "paymentConfirmed",
+                     "subscriptionActivated",
+                     "vpnAccessIssued",
+                     "latestReleaseMatched",
+                     "noJsErrors",
+                     "noSecretsInEvidence"
+                 })
+        {
+            Assert.False(json.RootElement.GetProperty(booleanName).GetBoolean());
+        }
+
+        var steps = json.RootElement.GetProperty("steps").EnumerateArray().ToArray();
+        Assert.Equal(RequiredReportSteps.Order(StringComparer.Ordinal), steps.Select(x => x.GetProperty("id").GetString()).Order(StringComparer.Ordinal));
+        Assert.All(steps, step =>
+        {
+            Assert.Equal("blocked", step.GetProperty("status").GetString());
+            Assert.Equal(0, step.GetProperty("httpStatus").GetInt32());
+            Assert.Contains("TODO:", step.GetProperty("evidence").GetString(), StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    [Fact]
+    public void Vps_Production_Smoke_Report_Validator_Should_Require_Full_Flow_And_Forbid_Secrets()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-vps-production-smoke-report.ps1"));
+
+        foreach (var step in RequiredReportSteps)
+        {
+            Assert.Contains(step, script, StringComparison.Ordinal);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-ReportHttpUrl",
+                     "apiBaseUrl",
+                     "publicWebUrl",
+                     "cabinetWebUrl",
+                     "adminWebUrl",
+                     "RequireAllPassed",
+                     "must be true when -RequireAllPassed is used",
+                     "must be passed when -RequireAllPassed is used",
+                     "VPS production smoke report contains forbidden secret marker",
+                     "vless://",
+                     "vmess://",
+                     "trojan://"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Vps_Production_Smoke_Report_Generator_Should_Create_Safe_Blocked_Report()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-vps-production-smoke-report.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "vps-production-smoke.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "vps-production-smoke-report.template.json",
+                     "validate-vps-production-smoke-report.ps1",
+                     "ConvertTo-Json -Depth 8",
+                     "Set-Content",
+                     "-Encoding UTF8",
+                     "blocked",
+                     "TODO: run",
+                     "Output file already exists. Pass -Force",
+                     "Get-LatestReleaseId"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var field in new[] { "OutputPath", "ApiBaseUrl", "PublicWebUrl", "CabinetWebUrl", "AdminWebUrl", "EnvironmentName", "Operator", "ReleaseId" })
+        {
+            Assert.Contains(field, script, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("new-vps-production-smoke-report.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("password=", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bearer ", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Vps_Production_Smoke_Report_Docs_Should_Link_To_Roadmap_And_Docs_Index()
+    {
+        var root = FindRepositoryRoot();
+        var docsIndex = File.ReadAllText(Path.Combine(root, "docs", "README.md"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "vps-production-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Contains("vps-production-smoke-report.template.json", docsIndex, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("vps-production-smoke-report.template.json", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("validate-vps-production-smoke-report.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-064`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("vps-production-smoke-report.template.json", roadmap, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

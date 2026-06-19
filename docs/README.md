@@ -24,6 +24,7 @@
 - [Build validation gate](build-validation-gate.md)
 - [Post-deploy smoke](post-deploy-smoke.md)
 - [VPS production smoke](vps-production-smoke.md)
+- [VPS production smoke report template](vps-production-smoke-report.template.json)
 - [Smoke-проверка админки на VPS](admin-vps-smoke.md)
 - [Staging smoke checklist](staging-smoke-checklist.md)
 - [Production readiness gate](production-readiness-gate.md)

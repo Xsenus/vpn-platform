@@ -33,7 +33,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `564/564`.
+- [x] `STATE-001` Backend test suite проходит: `568/568`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -47,9 +47,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `564/564`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`, версия `0.178.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `568/568`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-19-vps-production-smoke-report-contract`, версия `0.179.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `564/564`, frontend tests `66/66`, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 7/7, `PaymentProviderSmokeReportTests` 5/5, `AdminVpsSmokeReportTests` 4/4, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, backend full suite `568/568`, frontend tests `66/66`, latest "Что нового" `2026-06-19-vps-production-smoke-report-contract`.
 
 ## P0. Блокеры production-запуска
 
@@ -982,6 +982,11 @@ git diff --check
   - Что сделать: расширить aggregate fail-closed validator, чтобы общий tamper harness проверял не только readiness/evidence artifacts, но и новые aggregate CI step guard checks.
   - Что сделано: `scripts/test-production-ci-workflow-artifacts-guards-validator.ps1` теперь ожидает ошибки для `missing-aggregate-ci-step-guard-command` и `missing-aggregate-ci-step-validator`; эти сценарии ломают CI-step guard command и regression step внутри `.github/workflows/ci.yml`.
   - Доказательство: `ProductionReadinessGateTests` 57/57, production CI workflow artifacts aggregate validator CI-step tamper smoke, latest "Что нового" `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`, версия `0.178.0`.
+
+- [x] `P11-ACC-064` VPS production smoke report contract. 2026-06-19.
+  - Что сделать: добавить проверяемый report contract для live/staging VPS production smoke, чтобы `P11-ACC-002` закрывался только безопасным отчетом полного deploy -> health -> admin login -> order -> payment -> subscription -> VPN access flow.
+  - Что сделано: добавлены `docs/vps-production-smoke-report.template.json`, `scripts/new-vps-production-smoke-report.ps1` и `scripts/validate-vps-production-smoke-report.ps1`; validator fail-closed требует все обязательные шаги, boolean-подтверждения, валидные URL/даты, `-RequireAllPassed` для приемки и запрещает секретные маркеры, raw webhook payloads и полные VPN URI в evidence.
+  - Доказательство: `VpsProductionSmokeTests` 7/7, generator/validator smoke, expected fail-closed `-RequireAllPassed`, latest "Что нового" `2026-06-19-vps-production-smoke-report-contract`, версия `0.179.0`.
 
 ## Журнал проверок
 

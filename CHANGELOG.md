@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.179.0 - 2026-06-19
+
+Release entry: `2026-06-19-vps-production-smoke-report-contract`.
+
+### Added
+- Добавлен `docs/vps-production-smoke-report.template.json` для безопасной фиксации live/staging VPS production smoke.
+- Добавлены `scripts/new-vps-production-smoke-report.ps1` и `scripts/validate-vps-production-smoke-report.ps1`.
+
+### Changed
+- VPS production smoke теперь имеет fail-closed report contract: `-RequireAllPassed` требует полный deploy -> health -> admin login -> order -> payment -> subscription -> VPN access flow.
+- Roadmap и release docs синхронизированы с backend suite `568/568` и latest release `0.179.0`.
+
+### Verified
+- `VpsProductionSmokeTests`: 7/7.
+- VPS production smoke report generator/validator smoke: OK.
+- Targeted release/docs suite: 80/80.
+- Backend full suite: 568/568.
+
 ## 0.178.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression`.
