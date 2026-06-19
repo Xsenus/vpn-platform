@@ -169,6 +169,24 @@ if ($null -ne $ciResultValidatorRegression) {
     }
 }
 
+$ciSummaryValidatorRegression = $result.ciSummaryValidatorRegression
+if ($null -ne $ciSummaryValidatorRegression) {
+    if ([string]$ciSummaryValidatorRegression.status -ne "passed") {
+        throw "Production readiness assertion CI regression result CI summary validator regression status must be passed."
+    }
+
+    $ciSummaryTestedFailures = @($ciSummaryValidatorRegression.testedFailures)
+    foreach ($expectedFailure in @(
+            "bad-status",
+            "bad-assertion-status",
+            "missing-artifact-path",
+            "bad-result-validator-regression",
+            "bad-ci-result-validator-regression"
+        )) {
+        Assert-RegressionFailure -TestedFailures $ciSummaryTestedFailures -Name $expectedFailure
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($ResultMarkdownPath)) {
     $ResultMarkdownPath = [string]$result.resultMarkdownPath
 }
@@ -206,9 +224,18 @@ if ($null -ne $ciResultValidatorRegression) {
     Assert-MarkdownContains -Markdown $markdown -Expected "- CI result validator regression: ``passed``"
 }
 
+if ($null -ne $ciSummaryValidatorRegression) {
+    Assert-MarkdownContains -Markdown $markdown -Expected "- CI summary validator regression: ``passed``"
+}
+
 $ciResultValidatorRegressionStatus = ""
 if ($null -ne $ciResultValidatorRegression) {
     $ciResultValidatorRegressionStatus = [string]$ciResultValidatorRegression.status
+}
+
+$ciSummaryValidatorRegressionStatus = ""
+if ($null -ne $ciSummaryValidatorRegression) {
+    $ciSummaryValidatorRegressionStatus = [string]$ciSummaryValidatorRegression.status
 }
 
 $validation = [ordered]@{
@@ -222,6 +249,7 @@ $validation = [ordered]@{
     blockersCount = [int]$assertion.blockersCount
     resultValidatorStatus = [string]$resultValidator.status
     resultValidatorRegressionStatus = [string]$regression.status
+    ciSummaryValidatorRegressionStatus = $ciSummaryValidatorRegressionStatus
     ciResultValidatorRegressionStatus = $ciResultValidatorRegressionStatus
     assertionJsonPath = $assertionJsonPath
     assertionMarkdownPath = $assertionMarkdownPath

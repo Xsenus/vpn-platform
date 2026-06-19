@@ -2,6 +2,33 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.162.0 - 2026-06-19
+
+Release entry: `2026-06-19-production-readiness-assertion-ci-summary-validator`.
+
+### Added
+
+- `scripts/validate-production-readiness-assertion-ci-summary.ps1` проверяет GitHub Step Summary readiness assertion CI wrapper.
+- `scripts/test-production-readiness-assertion-ci-summary-validator.ps1` проверяет fail-closed поведение summary validator.
+
+### Changed
+
+- `scripts/test-production-readiness-assertion-ci-regression.ps1` валидирует result Markdown как summary, запускает summary validator regression, записывает `ciSummaryValidatorRegression` и проверяет реальный `GITHUB_STEP_SUMMARY`, если он доступен.
+- Roadmap и release docs синхронизированы с backend suite `548/548` и latest release `0.162.0`.
+
+### Verified
+
+- `ProductionReadinessGateTests`: 41/41.
+- Production readiness assertion CI summary validator regression smoke: OK.
+- Targeted release/docs suite: 57/57.
+- Backend full suite: 548/548.
+- Frontend tests/typecheck/audit/build/console E2E: OK.
+- Fresh local SQLite smoke and local VPS smoke dry-run: OK.
+
+### Notes
+
+- Summary validator сверяет status, assertion status, result validator, regression statuses и artifact paths, чтобы GitHub Actions summary не расходился с опубликованным CI artifact.
+
 ## 0.161.0 - 2026-06-19
 
 Release entry: `2026-06-19-production-readiness-assertion-ci-result-validator-regression`.

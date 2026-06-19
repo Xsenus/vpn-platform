@@ -81,6 +81,25 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-asser
 
 Wrapper запускает этот harness автоматически и записывает `ciResultValidatorRegression` в итоговые JSON/Markdown artifacts.
 
+GitHub Step Summary readiness assertion CI wrapper проверяется отдельно:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-assertion-ci-summary.ps1 `
+  -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json `
+  -SummaryPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.md
+```
+
+Regression-проверка summary validator:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-ci-summary-validator.ps1 `
+  -ResultJsonPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.json `
+  -SummaryPath tmp\production-readiness-assertion-ci-regression-test\production-readiness-assertion-ci-regression-result.md `
+  -WriteJson
+```
+
+Wrapper запускает summary validator и regression harness автоматически, записывает `ciSummaryValidatorRegression` в итоговый result и дополнительно проверяет реальный `GITHUB_STEP_SUMMARY`, если переменная доступна в GitHub Actions job.
+
 Validator сверяет статус wrapper, assertion exit code, linked assertion JSON/Markdown/log, result validator, validator regression, обязательные failure-сценарии и Markdown-пару.
 
 Если отчеты лежат не в стандартных местах, передайте их явно:

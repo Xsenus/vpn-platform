@@ -3946,5 +3946,28 @@
         "text": "Harness проверяет happy path и fail-closed сценарии: bad status, неверный assertion exit code, пропавший regression failure, сломанный Markdown и неверный evidenceReportsCount."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-production-readiness-assertion-ci-summary-validator",
+    "version": "0.162.0",
+    "releasedAt": "2026-06-18T19:00:00+07:00",
+    "title": "Validator для readiness assertion CI summary",
+    "summary": "GitHub Step Summary production readiness assertion CI wrapper теперь проверяется отдельным fail-closed validator и regression harness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлены `scripts/validate-production-readiness-assertion-ci-summary.ps1` и `scripts/test-production-readiness-assertion-ci-summary-validator.ps1`."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-production-readiness-assertion-ci-regression.ps1` валидирует result Markdown как CI summary, запускает summary validator regression и записывает `ciSummaryValidatorRegression` в итоговые artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Validator сверяет status, assertion status, result validator, regression statuses, artifact paths и optional CI summary/result validator regression строки."
+      }
+    ]
   }
 ]

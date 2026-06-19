@@ -34,6 +34,9 @@ function ConvertTo-CiMarkdown {
     $lines.Add("- Blockers: ``$($Result.assertion.blockersCount)``")
     $lines.Add("- Result validator: ``$($Result.resultValidator.status)``")
     $lines.Add("- Result validator regression: ``$($Result.resultValidatorRegression.status)``")
+    if ($null -ne $Result.ciSummaryValidatorRegression) {
+        $lines.Add("- CI summary validator regression: ``$($Result.ciSummaryValidatorRegression.status)``")
+    }
     if ($null -ne $Result.ciResultValidatorRegression) {
         $lines.Add("- CI result validator regression: ``$($Result.ciResultValidatorRegression.status)``")
     }
@@ -199,7 +202,45 @@ Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
     -ResultMarkdownPath $resultMarkdownPath `
     -WriteJson | Out-Null
 
-Add-GitHubStepSummary -Markdown $resultMarkdown | Out-Null
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-summary.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -SummaryPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
+$ciSummaryValidatorRegressionJson = & (Resolve-RepoPath "scripts/test-production-readiness-assertion-ci-summary-validator.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -SummaryPath $resultMarkdownPath `
+    -WriteJson
+$ciSummaryValidatorRegression = $ciSummaryValidatorRegressionJson | ConvertFrom-Json
+
+if ([string]$ciSummaryValidatorRegression.status -ne "passed") {
+    throw "Production readiness assertion CI summary validator regression did not pass."
+}
+
+$result["ciSummaryValidatorRegression"] = $ciSummaryValidatorRegression
+$resultJson = $result | ConvertTo-Json -Depth 12
+$resultMarkdown = ConvertTo-CiMarkdown -Result ([pscustomobject]$result)
+Write-Utf8NoBomFile -PathValue $resultJsonPath -Content $resultJson
+Write-Utf8NoBomFile -PathValue $resultMarkdownPath -Content $resultMarkdown
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-regression-result.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -ResultMarkdownPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
+& (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-summary.ps1") `
+    -ResultJsonPath $resultJsonPath `
+    -SummaryPath $resultMarkdownPath `
+    -WriteJson | Out-Null
+
+$githubStepSummaryPath = Add-GitHubStepSummary -Markdown $resultMarkdown
+
+if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
+    & (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-summary.ps1") `
+        -ResultJsonPath $resultJsonPath `
+        -SummaryPath $githubStepSummaryPath `
+        -WriteJson | Out-Null
+}
 
 if ($WriteJson) {
     Write-Output $resultJson
