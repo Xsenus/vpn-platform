@@ -2,6 +2,31 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.192.0 - 2026-06-19
+
+Release entry: `2026-06-19-admin-vps-smoke-evidence-validator`.
+
+### Added
+- Добавлен `scripts/validate-admin-vps-smoke-evidence.ps1`, который валидирует preflight report и smoke report вместе и сверяет их связь.
+- Добавлен `scripts/test-admin-vps-smoke-evidence-validator.ps1` с fail-closed сценариями для mismatched URL/path/release/timing и failed smoke report.
+
+### Changed
+- `scripts/admin-vps-smoke.ps1` теперь после browser smoke запускает парный evidence validator.
+
+### Verified
+- `AdminVpsSmokeReportTests`: 14/14.
+- Admin VPS smoke evidence validator regression: OK, tested failures `5/5`.
+- Local SQLite admin browser smoke через `admin-vps-smoke.ps1`: OK, preflight report valid, Playwright `1/1`, report validator `16 passed`, evidence validator OK.
+- Backend full suite: 583/583.
+- Frontend tests: 66/66.
+- Frontend typecheck/build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: 0 findings.
+- Changed files encoding: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.191.0 - 2026-06-19
 
 Release entry: `2026-06-19-admin-vps-smoke-flow-wrapper-regression`.

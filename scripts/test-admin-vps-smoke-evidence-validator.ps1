@@ -1,0 +1,251 @@
+param(
+    [string]$OutputDirectory = "tmp/admin-vps-smoke-evidence-validator-regression-test",
+    [switch]$KeepArtifacts,
+    [switch]$WriteJson
+)
+
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+
+function Resolve-WorkspacePath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return [System.IO.Path]::GetFullPath($Path)
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
+}
+
+function Assert-InWorkspace {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $fullRoot = [System.IO.Path]::GetFullPath($repoRoot)
+    if (-not $fullPath.StartsWith($fullRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Path must stay inside repository workspace: $fullPath"
+    }
+}
+
+function Write-Utf8NoBomJson {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][object]$Value
+    )
+
+    [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 12), [System.Text.UTF8Encoding]::new($false))
+}
+
+function Invoke-EvidenceValidator {
+    param(
+        [Parameter(Mandatory = $true)][string]$PreflightPath,
+        [Parameter(Mandatory = $true)][string]$SmokePath
+    )
+
+    $validator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
+    return & $validator -PreflightReportPath $PreflightPath -SmokeReportPath $SmokePath 2>&1
+}
+
+function Assert-FailsWith {
+    param(
+        [Parameter(Mandatory = $true)][scriptblock]$Action,
+        [Parameter(Mandatory = $true)][string]$ExpectedMessage
+    )
+
+    try {
+        & $Action | Out-Null
+    }
+    catch {
+        $message = $_.Exception.Message
+        if ($message.IndexOf($ExpectedMessage, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Expected failure containing '$ExpectedMessage', actual: $message"
+        }
+
+        return $message
+    }
+
+    throw "Expected command to fail with '$ExpectedMessage'."
+}
+
+function New-Section {
+    param([Parameter(Mandatory = $true)][string]$Id)
+
+    return [ordered]@{
+        id = $Id
+        route = "/admin/#$Id"
+        status = "passed"
+        httpStatus = 200
+        loaded = $true
+        evidence = "Section $Id loaded on VPS admin; no failed API responses observed."
+    }
+}
+
+function New-EvidencePair {
+    param(
+        [Parameter(Mandatory = $true)][string]$PreflightPath,
+        [Parameter(Mandatory = $true)][string]$SmokePath
+    )
+
+    $generatedAt = [DateTimeOffset]::Parse("2026-06-19T00:00:00+07:00")
+    $startedAt = $generatedAt.AddMinutes(1)
+    $completedAt = $generatedAt.AddMinutes(2)
+    $apiBaseUrl = "https://api.example.test"
+    $adminWebUrl = "https://admin.example.test/admin"
+    $releaseId = "2026-06-19-admin-vps-smoke-evidence-validator"
+    $operator = "evidence-validator-regression"
+    $sections = @(
+        "dashboard",
+        "users",
+        "payments",
+        "tariffs",
+        "subscriptions",
+        "vpn",
+        "nodes",
+        "panels",
+        "support",
+        "audit",
+        "bot",
+        "releases",
+        "faq",
+        "content",
+        "scenarios",
+        "provisioning"
+    ) | ForEach-Object { New-Section -Id $_ }
+
+    $preflight = [ordered]@{
+        reportId = "admin-vps-smoke-preflight-regression"
+        generatedAt = $generatedAt.ToString("O")
+        environmentName = "staging"
+        operator = $operator
+        releaseId = $releaseId
+        apiBaseUrl = $apiBaseUrl
+        adminWebUrl = $adminWebUrl
+        adminEmail = "owner@example.test"
+        smokeReportPath = $SmokePath
+        passwordEnvPresent = $true
+        readyForLiveSmoke = $true
+        checks = @(
+            [ordered]@{ name = "api-base-url"; passed = $true; message = "ok" },
+            [ordered]@{ name = "admin-web-url"; passed = $true; message = "ok" },
+            [ordered]@{ name = "admin-email"; passed = $true; message = "ok" },
+            [ordered]@{ name = "password-env-present"; passed = $true; message = "present [hidden]" },
+            [ordered]@{ name = "frontend-directory"; passed = $true; message = "ok" },
+            [ordered]@{ name = "package-command"; passed = $true; message = "ok" },
+            [ordered]@{ name = "browser-runner"; passed = $true; message = "ok" },
+            [ordered]@{ name = "report-validator"; passed = $true; message = "ok" },
+            [ordered]@{ name = "preflight-validator"; passed = $true; message = "ok" }
+        )
+    }
+
+    $smoke = [ordered]@{
+        reportId = "admin-vps-smoke-regression"
+        environmentName = "staging"
+        apiBaseUrl = $apiBaseUrl
+        adminWebUrl = $adminWebUrl
+        startedAt = $startedAt.ToString("O")
+        completedAt = $completedAt.ToString("O")
+        releaseId = $releaseId
+        operator = $operator
+        notes = "Synthetic sanitized evidence validator regression report."
+        accountBootstrapChecked = $true
+        adminLoginPassed = $true
+        noJsErrors = $true
+        noUnauthorizedAfterLogin = $true
+        sections = @($sections)
+    }
+
+    Write-Utf8NoBomJson -Path $PreflightPath -Value $preflight
+    Write-Utf8NoBomJson -Path $SmokePath -Value $smoke
+}
+
+$outputFullPath = Resolve-WorkspacePath $OutputDirectory
+Assert-InWorkspace $outputFullPath
+
+if (Test-Path -LiteralPath $outputFullPath) {
+    Remove-Item -LiteralPath $outputFullPath -Recurse -Force
+}
+
+New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
+
+try {
+    $preflightPath = Join-Path $outputFullPath "admin-vps-smoke-preflight-report.json"
+    $smokePath = Join-Path $outputFullPath "admin-vps-smoke-report.json"
+    New-EvidencePair -PreflightPath $preflightPath -SmokePath $smokePath
+
+    $validOutput = Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath
+    $testedFailures = @()
+
+    $badApiPreflight = Join-Path $outputFullPath "bad-api-preflight.json"
+    $badApi = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badApi.apiBaseUrl = "https://different-api.example.test"
+    Write-Utf8NoBomJson -Path $badApiPreflight -Value $badApi
+    $testedFailures += [ordered]@{
+        name = "mismatched-api-url"
+        message = Assert-FailsWith -ExpectedMessage "mismatch for apiBaseUrl" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badApiPreflight -SmokePath $smokePath
+        }
+    }
+
+    $badPathPreflight = Join-Path $outputFullPath "bad-smoke-path-preflight.json"
+    $badPath = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badPath.smokeReportPath = (Join-Path $outputFullPath "other-smoke-report.json")
+    Write-Utf8NoBomJson -Path $badPathPreflight -Value $badPath
+    $testedFailures += [ordered]@{
+        name = "mismatched-smoke-report-path"
+        message = Assert-FailsWith -ExpectedMessage "mismatch for smokeReportPath" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badPathPreflight -SmokePath $smokePath
+        }
+    }
+
+    $badReleasePreflight = Join-Path $outputFullPath "bad-release-preflight.json"
+    $badRelease = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badRelease.releaseId = "different-release"
+    Write-Utf8NoBomJson -Path $badReleasePreflight -Value $badRelease
+    $testedFailures += [ordered]@{
+        name = "mismatched-release-id"
+        message = Assert-FailsWith -ExpectedMessage "mismatch for releaseId" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badReleasePreflight -SmokePath $smokePath
+        }
+    }
+
+    $badTimingPreflight = Join-Path $outputFullPath "bad-timing-preflight.json"
+    $badTiming = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badTiming.generatedAt = "2026-06-20T00:00:00+07:00"
+    Write-Utf8NoBomJson -Path $badTimingPreflight -Value $badTiming
+    $testedFailures += [ordered]@{
+        name = "preflight-after-smoke"
+        message = Assert-FailsWith -ExpectedMessage "must not be after smoke completedAt" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badTimingPreflight -SmokePath $smokePath
+        }
+    }
+
+    $failedSmokePath = Join-Path $outputFullPath "failed-smoke-report.json"
+    $failedSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $failedSmoke.adminLoginPassed = $false
+    Write-Utf8NoBomJson -Path $failedSmokePath -Value $failedSmoke
+    $testedFailures += [ordered]@{
+        name = "failed-smoke-report"
+        message = Assert-FailsWith -ExpectedMessage "adminLoginPassed must be true" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $failedSmokePath
+        }
+    }
+
+    $result = [ordered]@{
+        status = "passed"
+        validValidatorOutput = ($validOutput -join "`n")
+        testedFailures = @($testedFailures)
+    }
+
+    if ($WriteJson) {
+        Write-Output ($result | ConvertTo-Json -Depth 8)
+    }
+    else {
+        Write-Host "admin vps smoke evidence validator regression passed $($result | ConvertTo-Json -Depth 8 -Compress)"
+    }
+}
+finally {
+    if (-not $KeepArtifacts -and (Test-Path -LiteralPath $outputFullPath)) {
+        Remove-Item -LiteralPath $outputFullPath -Recurse -Force
+    }
+}

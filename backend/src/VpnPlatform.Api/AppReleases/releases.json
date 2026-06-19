@@ -4636,5 +4636,28 @@
         "text": "`docs/admin-vps-smoke.md` теперь содержит команду regression-проверки wrapper перед реальным VPS smoke."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-19-admin-vps-smoke-evidence-validator",
+    "version": "0.192.0",
+    "releasedAt": "2026-06-19T00:00:00+07:00",
+    "title": "Validator evidence admin VPS smoke",
+    "summary": "Admin VPS smoke теперь проверяет preflight report и smoke report как единый evidence bundle перед использованием в production gate.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` валидирует preflight с `-RequireReady`, smoke report с `-RequireAllPassed` и сверяет URL, environment, operator, report path, release id и даты."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` покрывает mismatched URL/path/release/timing и failed smoke report."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke.ps1` запускает evidence validator после успешного browser smoke."
+      }
+    ]
   }
 ]

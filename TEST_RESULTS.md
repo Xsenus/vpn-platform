@@ -2,6 +2,51 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-19: admin VPS smoke evidence validator
+
+Что проверялось:
+
+- `scripts/validate-admin-vps-smoke-evidence.ps1` запускает preflight validator с `-RequireReady`, smoke report validator с `-RequireAllPassed` и сверяет связь отчетов.
+- Проверяются `apiBaseUrl`, `adminWebUrl`, `environmentName`, `operator`, `smokeReportPath`, непустой `releaseId` и порядок дат.
+- `scripts/admin-vps-smoke.ps1` теперь запускает evidence validator после browser smoke.
+- Regression покрывает `mismatched-api-url`, `mismatched-smoke-report-path`, `mismatched-release-id`, `preflight-after-smoke`, `failed-smoke-report`.
+- Раздел "Что нового" получил релиз `2026-06-19-admin-vps-smoke-evidence-validator`, версия `0.192.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-validator.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1 -KeepArtifacts
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-evidence.ps1 -PreflightReportPath tmp\local-admin-vps-browser-smoke\admin-vps-smoke-preflight-report.json -SmokeReportPath tmp\local-admin-vps-browser-smoke\admin-vps-smoke-report.json
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Admin VPS smoke evidence validator regression: OK, tested failures `5/5`.
+- `AdminVpsSmokeReportTests`: `14/14`.
+- Targeted release/docs suite: `30/30`.
+- Local SQLite admin browser smoke через `admin-vps-smoke.ps1`: OK, preflight report valid, Playwright `1/1`, report validator `16 passed`, evidence validator OK.
+- Backend full suite: `583/583`.
+- Frontend tests: `66/66`.
+- Frontend typecheck: OK.
+- Frontend build: OK.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Playwright console E2E: `9/9`.
+- Secret scan: 0 findings.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-19: admin VPS smoke flow wrapper regression
 
 Что проверялось:

@@ -18,8 +18,9 @@ $preflightScript = Join-Path $repoRoot "scripts/admin-vps-smoke-preflight.ps1"
 $browserSmokeScript = Join-Path $repoRoot "scripts/admin-vps-browser-smoke.ps1"
 $reportValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-report.ps1"
 $preflightValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-preflight-report.ps1"
+$evidenceValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
 
-foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportValidatorScript, $preflightValidatorScript)) {
+foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportValidatorScript, $preflightValidatorScript, $evidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS smoke script was not found: $requiredScript"
     }
@@ -57,6 +58,10 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -FrontendPath $FrontendPath `
     -AccountBootstrapChecked:$AccountBootstrapChecked `
     -RequireAllPassed
+
+& $evidenceValidatorScript `
+    -PreflightReportPath $PreflightReportPath `
+    -SmokeReportPath $SmokeReportPath
 
 Write-Host "Admin VPS smoke flow completed."
 Write-Host "Validated preflight report: $PreflightReportPath"

@@ -348,6 +348,7 @@ public class AdminVpsSmokeReportTests
                      "admin-vps-browser-smoke.ps1",
                      "validate-admin-vps-smoke-report.ps1",
                      "validate-admin-vps-smoke-preflight-report.ps1",
+                     "validate-admin-vps-smoke-evidence.ps1",
                      "-RequirePassword",
                      "-RequireAllPassed",
                      "Password: [hidden]",
@@ -366,6 +367,54 @@ public class AdminVpsSmokeReportTests
         Assert.Contains("admin-vps-smoke.ps1", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("admin-vps-smoke.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002H`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Admin_Vps_Smoke_Evidence_Validator_Should_Link_Preflight_And_Smoke_Reports()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-smoke-evidence.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-evidence-validator.ps1"));
+        var flow = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "validate-admin-vps-smoke-preflight-report.ps1",
+                     "validate-admin-vps-smoke-report.ps1",
+                     "RequireReady",
+                     "RequireAllPassed",
+                     "apiBaseUrl",
+                     "adminWebUrl",
+                     "environmentName",
+                     "operator",
+                     "smokeReportPath",
+                     "releaseId",
+                     "generatedAt must not be after smoke completedAt",
+                     "admin vps smoke evidence valid"
+                 })
+        {
+            Assert.Contains(expected, validator + flow, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "admin-vps-smoke-evidence-validator-regression-test",
+                     "mismatched-api-url",
+                     "mismatched-smoke-report-path",
+                     "mismatched-release-id",
+                     "preflight-after-smoke",
+                     "failed-smoke-report",
+                     "admin vps smoke evidence validator regression passed"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-admin-vps-smoke-evidence.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-admin-vps-smoke-evidence-validator.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002J`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

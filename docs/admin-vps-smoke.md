@@ -121,6 +121,20 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
 ```
 
+После успешного preflight+browser smoke парный evidence validator сверяет, что оба отчета относятся к одному запуску: URL, environment, operator, path smoke-отчета, непустой release id и порядок дат не расходятся. `scripts/admin-vps-smoke.ps1` запускает этот validator автоматически, но его можно выполнить отдельно:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-evidence.ps1 `
+  -PreflightReportPath tmp\admin-vps-smoke-preflight-report.json `
+  -SmokeReportPath tmp\admin-vps-smoke-report.json
+```
+
+Локальная regression-проверка evidence validator:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-validator.ps1
+```
+
 ## Браузерный live-smoke
 
 Низкоуровневый browser runner можно запускать отдельно для диагностики, если preflight уже пройден и нужно повторить только Playwright smoke без пересоздания preflight report:
