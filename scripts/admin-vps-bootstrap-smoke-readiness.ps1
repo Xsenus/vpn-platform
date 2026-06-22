@@ -94,12 +94,23 @@ function Get-EnvironmentNameValue {
     return $Value.Trim()
 }
 
+function Get-AdminEmailValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 $password = [Environment]::GetEnvironmentVariable($AdminPasswordEnvName, "Process")
 $passwordPresent = -not [string]::IsNullOrWhiteSpace($password)
 $passwordLengthOk = $passwordPresent -and $password.Length -ge 16
 $connectionStringPresent = -not [string]::IsNullOrWhiteSpace($ConnectionString)
 $providerValue = Get-ProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
 $environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
+$adminEmailValue = Get-AdminEmailValue -Value $AdminEmail
 
 $projectFullPath = Resolve-WorkspacePath $ProjectPath
 $frontendFullPath = Resolve-WorkspacePath $FrontendPath
@@ -112,7 +123,7 @@ $packageJsonPath = Join-Path $frontendFullPath "package.json"
 
 Add-Check "api-base-url" (Test-HttpUrl $ApiBaseUrl) "ADMIN_VPS_SMOKE_API_BASE_URL must be an absolute http/https URL."
 Add-Check "admin-web-url" (Test-HttpUrl $AdminWebUrl) "ADMIN_VPS_SMOKE_ADMIN_WEB_URL must be an absolute http/https URL."
-Add-Check "admin-email" (-not [string]::IsNullOrWhiteSpace($AdminEmail) -and $AdminEmail.Contains("@")) "Admin email must be set and contain @."
+Add-Check "admin-email" (-not [string]::IsNullOrWhiteSpace($adminEmailValue) -and $adminEmailValue.Contains("@")) "Admin email must be set and contain @."
 Add-Check "password-env-name" (-not [string]::IsNullOrWhiteSpace($AdminPasswordEnvName)) "Admin password env name must be set."
 Add-Check "password-env-present" $passwordPresent "Admin password env must be present in the process environment and is never printed."
 Add-Check "password-length" $passwordLengthOk "Admin password env value must contain at least 16 characters."
@@ -159,7 +170,7 @@ $report = [ordered]@{
     releaseId = $releaseValue
     apiBaseUrl = $ApiBaseUrl
     adminWebUrl = $AdminWebUrl
-    adminEmail = $AdminEmail
+    adminEmail = $adminEmailValue
     provider = $providerValue
     localSqlite = [bool]$LocalSqlite
     applyMigrations = [bool]$ApplyMigrations
@@ -191,7 +202,7 @@ Write-Host "Environment: $environmentNameValue"
 Write-Host "Provider: $providerValue"
 Write-Host "API base URL: $ApiBaseUrl"
 Write-Host "Admin web URL: $AdminWebUrl"
-Write-Host "Admin email: $AdminEmail"
+Write-Host "Admin email: $adminEmailValue"
 Write-Host "Password env: $(if ($passwordPresent) { 'present [hidden]' } else { 'missing' })"
 Write-Host "Connection string: $(if ($connectionStringPresent) { 'present [hidden]' } else { 'missing' })"
 Write-Host "Confirm bootstrap reset: $ConfirmBootstrapReset"

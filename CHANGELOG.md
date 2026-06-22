@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.276.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-readiness-admin-email-normalization`.
+
+### Fixed
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` now trims `AdminEmail` before validation output and sanitized readiness evidence.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `admin-email-normalized`, so evidence identity cannot keep accidental surrounding whitespace.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `admin-email-normalized` writes a trimmed admin email and existing fail-closed scenarios remain covered.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-readiness-admin-email-normalization`, readiness checks `16/16`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.275.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-readiness-environment-default`.

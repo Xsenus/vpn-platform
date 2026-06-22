@@ -53,6 +53,8 @@ function Invoke-ReadinessScenario {
         [bool]$SetConnectionString = $true,
         [string]$Provider,
         [string]$ExpectedProvider,
+        [string]$AdminEmail = "admin@example.test",
+        [string]$ExpectedAdminEmail,
         [string]$EnvironmentName = "Regression",
         [string]$ExpectedEnvironmentName,
         [bool]$UseEnvironmentNameEnv = $false
@@ -85,7 +87,7 @@ function Invoke-ReadinessScenario {
             "-File", (Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke-readiness.ps1"),
             "-ApiBaseUrl", "https://api.example.test",
             "-AdminWebUrl", "https://admin.example.test",
-            "-AdminEmail", "admin@example.test",
+            "-AdminEmail", $AdminEmail,
             "-AdminPasswordEnvName", $envName,
             "-ReadinessReportPath", $reportPath,
             "-SmokeReportPath", (Join-Path $scenarioPath "admin-vps-smoke-report.json"),
@@ -161,6 +163,13 @@ function Invoke-ReadinessScenario {
             $report = $reportRaw | ConvertFrom-Json
             if ([string]$report.provider -ne $ExpectedProvider) {
                 throw "Scenario $Name provider '$($report.provider)', expected '$ExpectedProvider'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedAdminEmail)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.adminEmail -ne $ExpectedAdminEmail) {
+                throw "Scenario $Name adminEmail '$($report.adminEmail)', expected '$ExpectedAdminEmail'."
             }
         }
 
@@ -292,6 +301,14 @@ $results += Invoke-ReadinessScenario `
     -EnvironmentName " " `
     -ExpectedEnvironmentName "Production" `
     -UseEnvironmentNameEnv $true
+
+$results += Invoke-ReadinessScenario `
+    -Name "admin-email-normalized" `
+    -ExpectedExitCode 0 `
+    -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
+    -LocalSqlite $true `
+    -AdminEmail " admin@example.test " `
+    -ExpectedAdminEmail "admin@example.test"
 
 $results += Invoke-ReadinessValidatorScenario `
     -Name "mismatched-readiness-report-self-link" `

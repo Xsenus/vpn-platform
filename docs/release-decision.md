@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-vps-readiness-environment-default`, версия `0.275.0`; standalone admin VPS bootstrap readiness now records `Production` when `EnvironmentName` is empty or whitespace. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-vps-readiness-admin-email-normalization`, версия `0.276.0`; standalone admin VPS bootstrap readiness now trims `AdminEmail` before writing sanitized evidence. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
