@@ -300,6 +300,7 @@ public class AdminBootstrapCliScriptTests
                      "Assert-Same",
                      "mismatch for $Name",
                      "bootstrap report must be generated after readiness report",
+                     "generatedAt must not be before linked smoke completedAt",
                      "admin vps bootstrap smoke evidence valid"
                  })
         {
@@ -324,6 +325,7 @@ public class AdminBootstrapCliScriptTests
                      "mismatched-bootstrap-environment",
                      "mismatched-smoke-release-id",
                      "bad-timing",
+                     "bootstrap-generated-before-smoke-completed",
                      "bad-smoke-route",
                      "route must match sections contract",
                      "admin vps bootstrap smoke evidence validator regression passed"

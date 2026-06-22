@@ -178,6 +178,16 @@ if ($RequirePassed) {
     $readinessReport = Get-Content -LiteralPath $readinessReportFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $preflightReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.preflightReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
     $smokeReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.smokeReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+
+    $smokeCompletedAt = [DateTimeOffset]::MinValue
+    if (-not [DateTimeOffset]::TryParse([string]$smokeReport.completedAt, [ref]$smokeCompletedAt)) {
+        throw "Admin VPS bootstrap smoke report linked smoke completedAt is not a valid DateTimeOffset."
+    }
+
+    if ($generatedAt -lt $smokeCompletedAt) {
+        throw "Admin VPS bootstrap smoke report generatedAt must not be before linked smoke completedAt."
+    }
+
     Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$readinessReport.apiBaseUrl)) "readiness apiBaseUrl"
     Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$preflightReport.apiBaseUrl)) "preflight apiBaseUrl"
     Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$smokeReport.apiBaseUrl)) "smoke apiBaseUrl"

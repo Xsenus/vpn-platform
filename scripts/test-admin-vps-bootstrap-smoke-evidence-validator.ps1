@@ -387,11 +387,18 @@ $results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -Expect
     Write-JsonFile -Path $preflightPath -Value $preflight
     Write-JsonFile -Path $smokePath -Value $smoke
 }
-$results += Invoke-ValidatorScenario -Name "bad-timing" -ExpectedExitCode 1 -ExpectedMessage "generated after readiness report" -Mutate {
+$results += Invoke-ValidatorScenario -Name "bad-timing" -ExpectedExitCode 1 -ExpectedMessage "generatedAt must not be before linked smoke completedAt" -Mutate {
     param($readinessPath, $bootstrapPath)
     $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.generatedAt = ([DateTimeOffset]::Parse([string]$readiness.generatedAt).AddMinutes(-1)).ToString("o")
+    Write-JsonFile -Path $bootstrapPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "bootstrap-generated-before-smoke-completed" -ExpectedExitCode 1 -ExpectedMessage "generatedAt must not be before linked smoke completedAt" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    $smoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.generatedAt = ([DateTimeOffset]::Parse([string]$smoke.completedAt).AddSeconds(-1)).ToString("o")
     Write-JsonFile -Path $bootstrapPath -Value $report
 }
 $results += Invoke-ValidatorScenario -Name "bad-smoke-route" -ExpectedExitCode 1 -ExpectedMessage "route must match sections contract" -Mutate {

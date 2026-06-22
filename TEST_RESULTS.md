@@ -2,6 +2,50 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-22: admin VPS bootstrap smoke timing link
+
+Что проверялось:
+
+- `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` запрещает итоговый bootstrap smoke report, если его `generatedAt` раньше linked smoke `completedAt`.
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `bootstrap-generated-before-smoke-completed`.
+- Раздел "Что нового" получил релиз `2026-06-22-admin-vps-bootstrap-smoke-timing-link`, версия `0.218.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -ReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-readiness-report.json -RequireReady
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-report.ps1 -ReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-report.json -RequirePassed
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-evidence.ps1 -ReadinessReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-readiness-report.json -BootstrapSmokeReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-report.json
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+changed/new files strict UTF-8 without BOM check
+```
+
+Результат:
+
+- Admin VPS bootstrap smoke evidence validator regression: OK, включая `bootstrap-generated-before-smoke-completed`.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK; bootstrap report validator подтвердил timing link.
+- Backend full suite: 590/590.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK.
+- Playwright console E2E: 9/9.
+- Secret scan: OK.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-22: admin VPS smoke evidence timing link
 
 Что проверялось:

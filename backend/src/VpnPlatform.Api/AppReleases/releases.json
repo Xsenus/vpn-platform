@@ -5235,5 +5235,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-bootstrap-smoke-timing-link",
+    "version": "0.218.0",
+    "releasedAt": "2026-06-22T20:00:00+07:00",
+    "title": "Timing link для bootstrap smoke админки VPS",
+    "summary": "Bootstrap smoke report validator теперь fail-closed запрещает итоговый bootstrap report, созданный раньше завершения linked browser smoke.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` требует, чтобы `generatedAt` итогового bootstrap report не был раньше linked smoke `completedAt`."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `bootstrap-generated-before-smoke-completed`."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.218.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-bootstrap-smoke-timing-link`.
+
+### Fixed
+- `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` теперь fail-closed требует, чтобы `generatedAt` итогового bootstrap smoke report не был раньше linked smoke `completedAt`.
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `bootstrap-generated-before-smoke-completed` и фиксирует новый timing gate в bootstrap evidence chain.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, включая `bootstrap-generated-before-smoke-completed`.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK; bootstrap report validator подтвердил timing link.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, tests 66/66, console E2E 9/9, audit 0 vulnerabilities.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.217.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-smoke-evidence-timing-link`.

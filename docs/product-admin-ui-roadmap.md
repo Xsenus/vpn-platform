@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-22-admin-vps-smoke-evidence-timing-link`, версия `0.217.0`.
+- [x] Latest "Что нового": `2026-06-22-admin-vps-bootstrap-smoke-timing-link`, версия `0.218.0`.
 
 ## Как вести дальше
 
