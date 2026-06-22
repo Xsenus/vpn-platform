@@ -55,7 +55,10 @@ function Invoke-WrapperFailure {
         [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
         [string[]]$AdditionalArguments = @(),
         [bool]$ExpectPreflightReport = $true,
-        [switch]$UseSameReportPath
+        [switch]$UseSameReportPath,
+        [string]$Operator = "admin-vps-smoke-flow-wrapper-regression",
+        [switch]$OmitOperator,
+        [string]$ExpectedPreflightOperator = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -85,10 +88,13 @@ function Invoke-WrapperFailure {
                 "-SmokeReportPath", $smokeReportPath,
                 "-PreflightReportPath", $preflightReportPath,
                 "-EnvironmentName", "Local",
-                "-Operator", "admin-vps-smoke-flow-wrapper-regression",
                 "-FrontendPath", $FrontendPath,
                 "-AccountBootstrapChecked"
             )
+
+        if (-not $OmitOperator) {
+            $arguments += @("-Operator", $Operator)
+        }
 
         $arguments += $AdditionalArguments
 
@@ -151,6 +157,10 @@ function Invoke-WrapperFailure {
         $preflightReport = Get-Content -LiteralPath $preflightReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
         if ([string]::IsNullOrWhiteSpace([string]$preflightReport.releaseId)) {
             throw "Preflight report releaseId should be resolved before failed browser smoke scenario '$Name'."
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightOperator) -and [string]$preflightReport.operator -ne $ExpectedPreflightOperator) {
+            throw "Preflight report operator should be '$ExpectedPreflightOperator' for scenario '$Name', got '$($preflightReport.operator)'."
         }
 
         $failedCheck = @($preflightReport.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheck }) | Select-Object -First 1
@@ -264,6 +274,18 @@ try {
         -Password $null `
         -ExpectedMessage "passwordEnvPresent must be true" `
         -ExpectedFailedCheck "password-env-present"
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "default-operator-missing-password" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password $null `
+        -ExpectedMessage "passwordEnvPresent must be true" `
+        -ExpectedFailedCheck "password-env-present" `
+        -OmitOperator `
+        -ExpectedPreflightOperator "manual-operator"
 
     $testedFailures += Invoke-WrapperFailure `
         -Name "bad-api-url" `

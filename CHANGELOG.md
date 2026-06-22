@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.268.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-operator-default`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1` now resolves missing `Operator` to `manual-operator` before preflight/browser smoke and passes the same value to both reports.
+- `scripts/admin-vps-bootstrap-smoke.ps1` now resolves one operator value before readiness/bootstrap/smoke and reuses it in the final bootstrap smoke report.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `default-operator-missing-password` writes `manual-operator` to preflight evidence.
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-default-operator` writes `manual-operator` to readiness evidence.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.267.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-report-path-guard`.

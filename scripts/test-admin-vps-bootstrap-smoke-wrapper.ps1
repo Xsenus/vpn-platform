@@ -57,7 +57,10 @@ function Invoke-BootstrapSmokeScenario {
         [string]$ApiBaseUrl = "http://127.0.0.1:18211",
         [string]$AdminWebUrl = "http://127.0.0.1:18215/admin/",
         [string]$AdminEmail = "fresh-bootstrap-admin@example.test",
-        [switch]$UseSameReportPath
+        [switch]$UseSameReportPath,
+        [string]$Operator = "admin-vps-bootstrap-smoke-wrapper-regression",
+        [switch]$OmitOperator,
+        [string]$ExpectedReadinessOperator = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -93,9 +96,12 @@ function Invoke-BootstrapSmokeScenario {
             "-BootstrapSmokeReportPath", $bootstrapSmokeReportPath,
             "-ReadinessReportPath", $readinessReportPath,
             "-EnvironmentName", "Local",
-            "-Operator", "admin-vps-bootstrap-smoke-wrapper-regression",
             "-FrontendPath", "frontend"
         )
+
+        if (-not $OmitOperator) {
+            $arguments += @("-Operator", $Operator)
+        }
 
         if ($ConfirmBootstrapReset) {
             $arguments += "-ConfirmBootstrapReset"
@@ -166,6 +172,10 @@ function Invoke-BootstrapSmokeScenario {
             $readinessReleaseId = [string]$readinessReport.releaseId
             if ([string]::IsNullOrWhiteSpace($readinessReleaseId)) {
                 throw "Readiness report releaseId should be resolved before dry-run smoke stop in scenario '$Name'."
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessOperator) -and [string]$readinessReport.operator -ne $ExpectedReadinessOperator) {
+                throw "Readiness report operator should be '$ExpectedReadinessOperator' for scenario '$Name', got '$($readinessReport.operator)'."
             }
         }
 
@@ -316,6 +326,17 @@ try {
         -DryRun `
         -ExpectedExitCode 0 `
         -ExpectedMessage "Dry-run mode: admin VPS smoke was not started"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-default-operator" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-default-operator/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -OmitOperator `
+        -ExpectedReadinessOperator "manual-operator"
 
     $result = [ordered]@{
         status = "passed"

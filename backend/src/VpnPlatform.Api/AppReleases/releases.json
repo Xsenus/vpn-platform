@@ -6389,5 +6389,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-operator-default",
+    "version": "0.268.0",
+    "releasedAt": "2026-06-23T01:00:00+07:00",
+    "title": "Operator default for admin VPS smoke wrappers",
+    "summary": "Admin VPS smoke/bootstrap wrappers now resolve one deterministic operator value and pass it through preflight, readiness, smoke and bootstrap reports.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` resolves missing Operator to `manual-operator` before creating preflight or browser smoke evidence."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` passes the same operator value to readiness, admin smoke and final bootstrap smoke evidence."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

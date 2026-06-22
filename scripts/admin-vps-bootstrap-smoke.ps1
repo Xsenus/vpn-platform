@@ -142,6 +142,16 @@ function Assert-DistinctReportPaths {
     }
 }
 
+function Get-OperatorValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return "manual-operator"
+    }
+
+    return $Value.Trim()
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
@@ -185,6 +195,7 @@ if (-not $LocalSqlite -and [string]::IsNullOrWhiteSpace($ConnectionString)) {
 }
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
+$operatorValue = Get-OperatorValue -Value $Operator
 
 $previousBootstrapPassword = [Environment]::GetEnvironmentVariable("AdminBootstrap__Password", "Process")
 $previousSmokePassword = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", "Process")
@@ -196,6 +207,7 @@ try {
     Write-Host "API base URL: $ApiBaseUrl"
     Write-Host "Admin web URL: $AdminWebUrl"
     Write-Host "Admin email: $AdminEmail"
+    Write-Host "Operator: $operatorValue"
     Write-Host "Password: [hidden]"
     Write-Host "Smoke report path: $SmokeReportPath"
     Write-Host "Preflight report path: $PreflightReportPath"
@@ -217,7 +229,7 @@ try {
         BootstrapSmokeReportPath = $BootstrapSmokeReportPath
         ReadinessReportPath = $ReadinessReportPath
         EnvironmentName = $EnvironmentName
-        Operator = $Operator
+        Operator = $operatorValue
         ReleaseId = $releaseValue
         FrontendPath = $FrontendPath
         RequireReady = $true
@@ -287,22 +299,13 @@ try {
         -SmokeReportPath $SmokeReportPath `
         -PreflightReportPath $PreflightReportPath `
         -EnvironmentName $EnvironmentName `
-        -Operator $Operator `
+        -Operator $operatorValue `
         -ReleaseId $releaseValue `
         -FrontendPath $FrontendPath `
         -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue `
         -AccountBootstrapChecked
 
     $now = [DateTimeOffset]::UtcNow
-    $operatorValue = if ([string]::IsNullOrWhiteSpace($Operator)) {
-        if ([string]::IsNullOrWhiteSpace($env:GITHUB_RUN_ID)) { $env:USERNAME } else { "github-run-$($env:GITHUB_RUN_ID)" }
-    } else {
-        $Operator.Trim()
-    }
-
-    if ([string]::IsNullOrWhiteSpace($operatorValue)) {
-        $operatorValue = "manual-operator"
-    }
 
     $bootstrapSmokeReportFullPath = if ([System.IO.Path]::IsPathRooted($BootstrapSmokeReportPath)) {
         [System.IO.Path]::GetFullPath($BootstrapSmokeReportPath)
