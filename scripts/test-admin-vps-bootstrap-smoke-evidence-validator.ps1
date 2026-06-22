@@ -296,7 +296,7 @@ if (Test-Path -LiteralPath $outputPath -PathType Container) {
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 
 $results = @()
-$results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid" -AdditionalExpectedMessages @("apiBaseUrl", "adminWebUrl", "adminEmail", "operator", "readyForBootstrapSmoke", "bootstrapStatus", "preflightReportPath", "sectionsContractPath")
+$results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid" -AdditionalExpectedMessages @("apiBaseUrl", "adminWebUrl", "adminEmail", "operator", "passwordEnvPresent", "confirmBootstrapReset", "bootstrapResetConfirmed", "readyForBootstrapSmoke", "bootstrapStatus", "preflightReportPath", "sectionsContractPath")
 $results += Invoke-ValidatorScenario -Name "mismatched-admin-url" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness adminWebUrl" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
