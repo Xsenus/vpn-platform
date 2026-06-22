@@ -278,6 +278,17 @@ try {
         -ExpectPreflightReport $false
 
     $testedFailures += Invoke-WrapperFailure `
+        -Name "unknown-release-id" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json" `
+        -AdditionalArguments @("-ReleaseId", "missing-release-id-for-regression") `
+        -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
         -Name "missing-password" `
         -ApiBaseUrl "http://127.0.0.1:18201" `
         -AdminWebUrl "http://127.0.0.1:18205/admin/" `

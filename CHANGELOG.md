@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.270.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-release-id-known-guard`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1` now fail-fast rejects a manual `ReleaseId` that is absent from `backend/src/VpnPlatform.Api/AppReleases/releases.json` before preflight/browser smoke artifacts.
+- `scripts/admin-vps-bootstrap-smoke.ps1` applies the same known release guard before readiness, bootstrap reset and smoke artifacts.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `unknown-release-id` stops before preflight evidence.
+- Admin VPS bootstrap smoke wrapper regression: OK, `unknown-release-id` stops before readiness evidence.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.269.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-environment-default`.

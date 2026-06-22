@@ -6435,5 +6435,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-release-id-known-guard",
+    "version": "0.270.0",
+    "releasedAt": "2026-06-23T01:20:00+07:00",
+    "title": "Known release guard for admin VPS smoke wrappers",
+    "summary": "Admin VPS smoke/bootstrap wrappers now fail fast when a manual ReleaseId is not present in the seeded What's New releases.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` rejects an unknown manual ReleaseId before preflight or browser smoke artifacts are created."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` applies the same ReleaseId guard before readiness, bootstrap reset and smoke artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

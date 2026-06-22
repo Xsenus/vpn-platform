@@ -272,6 +272,15 @@ try {
         -EnvMaxEvidenceChainMinutes "1441"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "unknown-release-id" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/unknown-release-id/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json" `
+        -AdditionalArguments @("-ReleaseId", "missing-release-id-for-regression")
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "bad-api-url" `
         -Password "LocalBootstrapSmokePassword12345" `
         -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-api-url/local.db" `

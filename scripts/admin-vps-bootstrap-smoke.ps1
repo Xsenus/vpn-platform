@@ -63,6 +63,21 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        return
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 function Convert-MaxEvidenceChainMinutes {
     param([AllowEmptyString()][string]$Value)
 
@@ -205,6 +220,7 @@ if (-not $LocalSqlite -and [string]::IsNullOrWhiteSpace($ConnectionString)) {
 }
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
+Assert-KnownReleaseId -Value $releaseValue
 $operatorValue = Get-OperatorValue -Value $Operator
 $environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
 
