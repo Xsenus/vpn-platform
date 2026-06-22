@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-readiness-self-validate`, версия `0.214.0`; `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -RequireReady` сверяет `readinessReportPath` с фактическим `-ReportPath`, а `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` сверяет `bootstrapSmokeReportPath` итогового bootstrap smoke report с фактическим `-ReportPath`; затем bootstrap validator сверяет `apiBaseUrl`, `adminWebUrl`, `environmentName`, `operator`, `adminEmail` и `releaseId` с preflight и browser smoke reports; regression harness покрывает `mismatched-readiness-report-self-link`, `mismatched-bootstrap-smoke-report-path`, `mismatched-bootstrap-environment` и `mismatched-bootstrap-admin-email`; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-readiness-chain-validate`, версия `0.215.0`; `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` валидирует связанный readiness report, сверяет readiness/preflight/browser smoke evidence с итоговым bootstrap smoke report и fail-closed ловит отсутствующий readiness link; regression harness покрывает `missing-bootstrap-readiness-report-link`, `mismatched-readiness-bootstrap-report-path`, `mismatched-readiness-report-self-link`, `mismatched-bootstrap-smoke-report-path`, `mismatched-bootstrap-environment` и `mismatched-bootstrap-admin-email`; production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

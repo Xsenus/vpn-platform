@@ -289,7 +289,7 @@ New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 
 $results = @()
 $results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid"
-$results += Invoke-ValidatorScenario -Name "mismatched-admin-url" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight adminWebUrl" -Mutate {
+$results += Invoke-ValidatorScenario -Name "mismatched-admin-url" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness adminWebUrl" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.adminWebUrl = "http://127.0.0.1:19000"
@@ -301,7 +301,7 @@ $results += Invoke-ValidatorScenario -Name "readiness-not-ready" -ExpectedExitCo
     $report.readyForBootstrapSmoke = $false
     Write-JsonFile -Path $readinessPath -Value $report
 }
-$results += Invoke-ValidatorScenario -Name "mismatched-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for releaseId" -Mutate {
+$results += Invoke-ValidatorScenario -Name "mismatched-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness releaseId" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.releaseId = "bootstrap-smoke-evidence-validator-other-release"
@@ -313,11 +313,17 @@ $results += Invoke-ValidatorScenario -Name "mismatched-readiness-report-path" -E
     $report.readinessReportPath = Join-Path (Split-Path -Parent $readinessPath) "other-readiness-report.json"
     Write-JsonFile -Path $readinessPath -Value $report
 }
-$results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-readiness-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for bootstrap readinessReportPath" -Mutate {
+$results += Invoke-ValidatorScenario -Name "missing-bootstrap-readiness-report-link" -ExpectedExitCode 1 -ExpectedMessage "linked readiness report was not found" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.readinessReportPath = Join-Path (Split-Path -Parent $readinessPath) "other-bootstrap-readiness-report.json"
     Write-JsonFile -Path $bootstrapPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-bootstrap-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness bootstrapSmokeReportPath" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.bootstrapSmokeReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-readiness-bootstrap-report.json"
+    Write-JsonFile -Path $readinessPath -Value $report
 }
 $results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-smoke-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for bootstrapSmokeReportPath" -Mutate {
     param($readinessPath, $bootstrapPath)

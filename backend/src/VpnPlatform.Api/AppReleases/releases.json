@@ -5166,5 +5166,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-bootstrap-readiness-chain-validate",
+    "version": "0.215.0",
+    "releasedAt": "2026-06-22T17:00:00+07:00",
+    "title": "Readiness chain validation для bootstrap smoke админки VPS",
+    "summary": "Standalone admin VPS bootstrap smoke report validator теперь валидирует связанный readiness report и сверяет readiness evidence с итоговым bootstrap smoke report.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` валидирует связанный readiness report перед paired evidence validation."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `missing-bootstrap-readiness-report-link` и `mismatched-readiness-bootstrap-report-path`."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

@@ -8,6 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$readinessValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1"
 
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -162,25 +163,40 @@ if ($RequirePassed) {
 
     Assert-Same (Resolve-WorkspacePath ([string]$report.bootstrapSmokeReportPath)) $fullReportPath "bootstrapSmokeReportPath"
 
+    $readinessReportFullPath = Resolve-WorkspacePath ([string]$report.readinessReportPath)
+    if (-not (Test-Path -LiteralPath $readinessReportFullPath -PathType Leaf)) {
+        throw "Admin VPS bootstrap smoke report linked readiness report was not found: $readinessReportFullPath"
+    }
+
+    & $readinessValidatorScript -ReportPath $readinessReportFullPath -RequireReady | Out-Host
+
     $evidenceValidator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
     & $evidenceValidator `
         -PreflightReportPath ([string]$report.preflightReportPath) `
         -SmokeReportPath ([string]$report.smokeReportPath) | Out-Host
 
+    $readinessReport = Get-Content -LiteralPath $readinessReportFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $preflightReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.preflightReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
     $smokeReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.smokeReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$readinessReport.apiBaseUrl)) "readiness apiBaseUrl"
     Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$preflightReport.apiBaseUrl)) "preflight apiBaseUrl"
     Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$smokeReport.apiBaseUrl)) "smoke apiBaseUrl"
+    Assert-Same (Normalize-Url ([string]$report.adminWebUrl)) (Normalize-Url ([string]$readinessReport.adminWebUrl)) "readiness adminWebUrl"
     Assert-Same (Normalize-Url ([string]$report.adminWebUrl)) (Normalize-Url ([string]$preflightReport.adminWebUrl)) "preflight adminWebUrl"
     Assert-Same (Normalize-Url ([string]$report.adminWebUrl)) (Normalize-Url ([string]$smokeReport.adminWebUrl)) "smoke adminWebUrl"
+    Assert-Same ([string]$report.environmentName) ([string]$readinessReport.environmentName) "readiness environmentName"
     Assert-Same ([string]$report.environmentName) ([string]$preflightReport.environmentName) "preflight environmentName"
     Assert-Same ([string]$report.environmentName) ([string]$smokeReport.environmentName) "smoke environmentName"
+    Assert-Same ([string]$report.operator) ([string]$readinessReport.operator) "readiness operator"
     Assert-Same ([string]$report.operator) ([string]$preflightReport.operator) "preflight operator"
     Assert-Same ([string]$report.operator) ([string]$smokeReport.operator) "smoke operator"
+    Assert-Same ([string]$report.adminEmail) ([string]$readinessReport.adminEmail) "readiness adminEmail"
     Assert-Same ([string]$report.adminEmail) ([string]$preflightReport.adminEmail) "preflight adminEmail"
     Assert-Same ([string]$report.adminEmail) ([string]$smokeReport.adminEmail) "smoke adminEmail"
+    Assert-Same ([string]$report.releaseId) ([string]$readinessReport.releaseId) "readiness releaseId"
     Assert-Same ([string]$report.releaseId) ([string]$preflightReport.releaseId) "preflight releaseId"
     Assert-Same ([string]$report.releaseId) ([string]$smokeReport.releaseId) "smoke releaseId"
+    Assert-Same (Resolve-WorkspacePath ([string]$readinessReport.bootstrapSmokeReportPath)) $fullReportPath "readiness bootstrapSmokeReportPath"
 }
 
 $summary = [ordered]@{
