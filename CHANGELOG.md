@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.249.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-bootstrap-evidence-chronology-summary`.
+
+### Fixed
+- `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` добавляет в sanitized summary полный порядок evidence chain `readiness|preflight|smoke|bootstrap`.
+- Bootstrap evidence summary теперь показывает `readinessToPreflightSeconds`, `smokeToBootstrapSeconds` и `evidenceChainDurationSeconds`, чтобы оператор видел порядок и длительность всей цепочки без секретов.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, valid summary содержит chronology fields и новые duration metrics.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-bootstrap-evidence-chronology-summary`, smoke sections `16/16`, bootstrap evidence validator with expected SHA256 and chronology summary OK.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, tests 66/66, console E2E 9/9, audit 0 vulnerabilities.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.248.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-evidence-report-id-timestamp-link`.
