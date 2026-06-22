@@ -6412,5 +6412,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-environment-default",
+    "version": "0.269.0",
+    "releasedAt": "2026-06-23T01:10:00+07:00",
+    "title": "Environment default for admin VPS smoke wrappers",
+    "summary": "Admin VPS smoke/bootstrap wrappers now resolve deterministic environment names before preflight, readiness, smoke and bootstrap reports.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` resolves a blank environment name to `staging` before creating preflight or browser smoke evidence."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` resolves a blank environment name to `Production` before readiness, admin smoke and final bootstrap smoke evidence."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

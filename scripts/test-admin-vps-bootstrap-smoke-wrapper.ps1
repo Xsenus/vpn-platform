@@ -60,7 +60,11 @@ function Invoke-BootstrapSmokeScenario {
         [switch]$UseSameReportPath,
         [string]$Operator = "admin-vps-bootstrap-smoke-wrapper-regression",
         [switch]$OmitOperator,
-        [string]$ExpectedReadinessOperator = ""
+        [string]$ExpectedReadinessOperator = "",
+        [string]$EnvironmentName = "Local",
+        [switch]$OmitEnvironmentName,
+        [AllowNull()][string]$EnvEnvironmentName,
+        [string]$ExpectedReadinessEnvironmentName = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -82,6 +86,7 @@ function Invoke-BootstrapSmokeScenario {
         Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD" -Value $Password
         Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" -Value $null
         Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES" -Value $EnvMaxEvidenceChainMinutes
+        Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_ENVIRONMENT" -Value $EnvEnvironmentName
         Set-ScopedEnv -Previous $previous -Name "ConnectionStrings__DefaultConnection" -Value $ConnectionString
 
         $arguments = @(
@@ -95,9 +100,12 @@ function Invoke-BootstrapSmokeScenario {
             "-PreflightReportPath", $preflightReportPath,
             "-BootstrapSmokeReportPath", $bootstrapSmokeReportPath,
             "-ReadinessReportPath", $readinessReportPath,
-            "-EnvironmentName", "Local",
             "-FrontendPath", "frontend"
         )
+
+        if (-not $OmitEnvironmentName) {
+            $arguments += @("-EnvironmentName", $EnvironmentName)
+        }
 
         if (-not $OmitOperator) {
             $arguments += @("-Operator", $Operator)
@@ -176,6 +184,10 @@ function Invoke-BootstrapSmokeScenario {
 
             if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessOperator) -and [string]$readinessReport.operator -ne $ExpectedReadinessOperator) {
                 throw "Readiness report operator should be '$ExpectedReadinessOperator' for scenario '$Name', got '$($readinessReport.operator)'."
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessEnvironmentName) -and [string]$readinessReport.environmentName -ne $ExpectedReadinessEnvironmentName) {
+                throw "Readiness report environmentName should be '$ExpectedReadinessEnvironmentName' for scenario '$Name', got '$($readinessReport.environmentName)'."
             }
         }
 
@@ -337,6 +349,18 @@ try {
         -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
         -OmitOperator `
         -ExpectedReadinessOperator "manual-operator"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-default-environment" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-default-environment/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -OmitEnvironmentName `
+        -EnvEnvironmentName "   " `
+        -ExpectedReadinessEnvironmentName "Production"
 
     $result = [ordered]@{
         status = "passed"

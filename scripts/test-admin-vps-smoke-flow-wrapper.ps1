@@ -58,7 +58,11 @@ function Invoke-WrapperFailure {
         [switch]$UseSameReportPath,
         [string]$Operator = "admin-vps-smoke-flow-wrapper-regression",
         [switch]$OmitOperator,
-        [string]$ExpectedPreflightOperator = ""
+        [string]$ExpectedPreflightOperator = "",
+        [string]$EnvironmentName = "Local",
+        [switch]$OmitEnvironmentName,
+        [AllowNull()][string]$EnvEnvironmentName,
+        [string]$ExpectedPreflightEnvironmentName = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -77,6 +81,7 @@ function Invoke-WrapperFailure {
     try {
         Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" -Value $Password
         Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES" -Value $EnvMaxEvidenceChainMinutes
+        Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_ENVIRONMENT" -Value $EnvEnvironmentName
 
         $arguments = @(
                 "-NoProfile",
@@ -87,10 +92,13 @@ function Invoke-WrapperFailure {
                 "-AdminEmail", $AdminEmail,
                 "-SmokeReportPath", $smokeReportPath,
                 "-PreflightReportPath", $preflightReportPath,
-                "-EnvironmentName", "Local",
                 "-FrontendPath", $FrontendPath,
                 "-AccountBootstrapChecked"
             )
+
+        if (-not $OmitEnvironmentName) {
+            $arguments += @("-EnvironmentName", $EnvironmentName)
+        }
 
         if (-not $OmitOperator) {
             $arguments += @("-Operator", $Operator)
@@ -161,6 +169,10 @@ function Invoke-WrapperFailure {
 
         if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightOperator) -and [string]$preflightReport.operator -ne $ExpectedPreflightOperator) {
             throw "Preflight report operator should be '$ExpectedPreflightOperator' for scenario '$Name', got '$($preflightReport.operator)'."
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightEnvironmentName) -and [string]$preflightReport.environmentName -ne $ExpectedPreflightEnvironmentName) {
+            throw "Preflight report environmentName should be '$ExpectedPreflightEnvironmentName' for scenario '$Name', got '$($preflightReport.environmentName)'."
         }
 
         $failedCheck = @($preflightReport.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheck }) | Select-Object -First 1
@@ -286,6 +298,19 @@ try {
         -ExpectedFailedCheck "password-env-present" `
         -OmitOperator `
         -ExpectedPreflightOperator "manual-operator"
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "default-environment-missing-password" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password $null `
+        -ExpectedMessage "passwordEnvPresent must be true" `
+        -ExpectedFailedCheck "password-env-present" `
+        -OmitEnvironmentName `
+        -EnvEnvironmentName "   " `
+        -ExpectedPreflightEnvironmentName "staging"
 
     $testedFailures += Invoke-WrapperFailure `
         -Name "bad-api-url" `

@@ -152,6 +152,16 @@ function Get-OperatorValue {
     return $Value.Trim()
 }
 
+function Get-EnvironmentNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return "Production"
+    }
+
+    return $Value.Trim()
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
@@ -196,13 +206,14 @@ if (-not $LocalSqlite -and [string]::IsNullOrWhiteSpace($ConnectionString)) {
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 $operatorValue = Get-OperatorValue -Value $Operator
+$environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
 
 $previousBootstrapPassword = [Environment]::GetEnvironmentVariable("AdminBootstrap__Password", "Process")
 $previousSmokePassword = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", "Process")
 
 try {
     Write-Host "Admin VPS bootstrap+smoke flow is ready to run."
-    Write-Host "Environment: $EnvironmentName"
+    Write-Host "Environment: $environmentNameValue"
     Write-Host "Provider: $Provider"
     Write-Host "API base URL: $ApiBaseUrl"
     Write-Host "Admin web URL: $AdminWebUrl"
@@ -228,7 +239,7 @@ try {
         PreflightReportPath = $PreflightReportPath
         BootstrapSmokeReportPath = $BootstrapSmokeReportPath
         ReadinessReportPath = $ReadinessReportPath
-        EnvironmentName = $EnvironmentName
+        EnvironmentName = $environmentNameValue
         Operator = $operatorValue
         ReleaseId = $releaseValue
         FrontendPath = $FrontendPath
@@ -254,7 +265,7 @@ try {
     & $readinessScript @readinessArgs | Out-Host
 
     $bootstrapArgs = @{
-        EnvironmentName = $EnvironmentName
+        EnvironmentName = $environmentNameValue
         Email = $AdminEmail
         DisplayName = $DisplayName
         RolesCsv = $RolesCsv
@@ -298,7 +309,7 @@ try {
         -AdminEmail $AdminEmail `
         -SmokeReportPath $SmokeReportPath `
         -PreflightReportPath $PreflightReportPath `
-        -EnvironmentName $EnvironmentName `
+        -EnvironmentName $environmentNameValue `
         -Operator $operatorValue `
         -ReleaseId $releaseValue `
         -FrontendPath $FrontendPath `
@@ -323,7 +334,7 @@ try {
 
     $bootstrapSmokeReport = [ordered]@{
         reportId = "admin-vps-bootstrap-smoke-" + $now.ToString("yyyyMMdd-HHmmss")
-        environmentName = $EnvironmentName.Trim()
+        environmentName = $environmentNameValue
         apiBaseUrl = $ApiBaseUrl.TrimEnd("/")
         adminWebUrl = $AdminWebUrl.TrimEnd("/")
         adminEmail = $AdminEmail.Trim()

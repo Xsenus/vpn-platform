@@ -2,6 +2,48 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-23: admin VPS environment default
+
+Что проверялось:
+
+- `scripts/admin-vps-smoke.ps1` вычисляет единый `environmentNameValue`, нормализует пустой `EnvironmentName` в `staging` и передает его в preflight/browser smoke reports.
+- `scripts/admin-vps-bootstrap-smoke.ps1` вычисляет единый `environmentNameValue`, нормализует пустой `EnvironmentName` в `Production` и передает его в readiness, smoke и итоговый bootstrap smoke report.
+- Раздел "Что нового" получил релиз `2026-06-23-admin-vps-environment-default`, версия `0.269.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|AdminBootstrapCliScriptTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Admin VPS smoke flow wrapper regression: OK, `default-environment-missing-password` пишет `staging` в preflight evidence.
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-default-environment` пишет `Production` в readiness evidence.
+- `AdminVpsSmokeReportTests|AdminBootstrapCliScriptTests`: 25/25.
+- Targeted docs/release unit suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-23-admin-vps-environment-default`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 561, findings 0.
+- `git diff --check`: OK.
+- Кодировка измененных файлов: strict UTF-8 without BOM, 22 files checked.
+
 ## Проверка 2026-06-23: admin VPS operator default
 
 Что проверялось:

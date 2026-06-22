@@ -125,6 +125,16 @@ function Get-OperatorValue {
     return $Value.Trim()
 }
 
+function Get-EnvironmentNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return "staging"
+    }
+
+    return $Value.Trim()
+}
+
 foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportValidatorScript, $preflightValidatorScript, $evidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS smoke script was not found: $requiredScript"
@@ -142,8 +152,10 @@ Assert-DistinctReportPaths -Reports @(
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 $operatorValue = Get-OperatorValue -Value $Operator
+$environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
 
 Write-Host "Admin VPS smoke flow is ready to run."
+Write-Host "Environment: $environmentNameValue"
 Write-Host "API base URL: $ApiBaseUrl"
 Write-Host "Admin web URL: $AdminWebUrl"
 Write-Host "Admin email: $AdminEmail"
@@ -161,7 +173,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -AdminEmail $AdminEmail `
     -SmokeReportPath $SmokeReportPath `
     -PreflightReportPath $PreflightReportPath `
-    -EnvironmentName $EnvironmentName `
+    -EnvironmentName $environmentNameValue `
     -Operator $operatorValue `
     -ReleaseId $releaseValue `
     -FrontendPath $FrontendPath `
@@ -172,7 +184,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -AdminWebUrl $AdminWebUrl `
     -AdminEmail $AdminEmail `
     -OutputPath $SmokeReportPath `
-    -EnvironmentName $EnvironmentName `
+    -EnvironmentName $environmentNameValue `
     -Operator $operatorValue `
     -ReleaseId $releaseValue `
     -FrontendPath $FrontendPath `

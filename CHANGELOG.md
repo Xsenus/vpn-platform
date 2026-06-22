@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.269.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-environment-default`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1` now resolves blank `EnvironmentName` to `staging` before preflight/browser smoke and passes the same value to both reports.
+- `scripts/admin-vps-bootstrap-smoke.ps1` now resolves blank `EnvironmentName` to `Production` before readiness/bootstrap/smoke and reuses it in the final bootstrap smoke report.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `default-environment-missing-password` writes `staging` to preflight evidence.
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-default-environment` writes `Production` to readiness evidence.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.268.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-operator-default`.
