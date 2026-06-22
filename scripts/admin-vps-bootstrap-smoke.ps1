@@ -241,6 +241,7 @@ try {
         smokeReportPath = $SmokeReportPath
         preflightReportPath = $PreflightReportPath
         readinessReportPath = $ReadinessReportPath
+        bootstrapSmokeReportPath = $BootstrapSmokeReportPath
         generatedAt = $now.ToString("o")
         completedAt = ([DateTimeOffset]::UtcNow).ToString("o")
         releaseId = $releaseValue

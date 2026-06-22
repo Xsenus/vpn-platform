@@ -172,6 +172,7 @@ public class AdminBootstrapCliScriptTests
                      "smokeReportPath",
                      "preflightReportPath",
                      "readinessReportPath",
+                     "bootstrapSmokeReportPath",
                      "contains forbidden secret marker",
                      "admin vps bootstrap smoke report valid"
                  })
@@ -263,6 +264,7 @@ public class AdminBootstrapCliScriptTests
                      "releaseId",
                      "readinessReportPath",
                      "bootstrap readinessReportPath",
+                     "bootstrap bootstrapSmokeReportPath",
                      "Assert-Same",
                      "mismatch for $Name",
                      "bootstrap report must be generated after readiness report",
@@ -280,6 +282,7 @@ public class AdminBootstrapCliScriptTests
                      "mismatched-release-id",
                      "mismatched-readiness-report-path",
                      "mismatched-bootstrap-readiness-report-path",
+                     "mismatched-bootstrap-smoke-report-path",
                      "mismatched-smoke-release-id",
                      "bad-timing",
                      "bad-smoke-route",

@@ -62,6 +62,7 @@ Assert-Same ([string]$readiness.releaseId) ([string]$bootstrap.releaseId) "relea
 Assert-Same ([string]$readiness.provider) ([string]$bootstrap.provider) "provider"
 Assert-Same (Resolve-WorkspacePath ([string]$readiness.readinessReportPath)) $readinessFullPath "readinessReportPath"
 Assert-Same (Resolve-WorkspacePath ([string]$bootstrap.readinessReportPath)) $readinessFullPath "bootstrap readinessReportPath"
+Assert-Same (Resolve-WorkspacePath ([string]$bootstrap.bootstrapSmokeReportPath)) $bootstrapFullPath "bootstrap bootstrapSmokeReportPath"
 Assert-Same (Resolve-WorkspacePath ([string]$readiness.smokeReportPath)) (Resolve-WorkspacePath ([string]$bootstrap.smokeReportPath)) "smokeReportPath"
 Assert-Same (Resolve-WorkspacePath ([string]$readiness.preflightReportPath)) (Resolve-WorkspacePath ([string]$bootstrap.preflightReportPath)) "preflightReportPath"
 Assert-Same (Resolve-WorkspacePath ([string]$readiness.bootstrapSmokeReportPath)) $bootstrapFullPath "bootstrapSmokeReportPath"
