@@ -2,6 +2,44 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-23: admin VPS bootstrap readiness URL normalization
+
+Scope:
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` trims `ApiBaseUrl` and `AdminWebUrl` before validation output and sanitized readiness evidence.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `url-values-normalized`, so evidence identity cannot keep accidental surrounding whitespace around API/admin URLs.
+- What's New received release `2026-06-23-admin-vps-readiness-url-normalization`, version `0.277.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` were not closed: real VPS bootstrap/login smoke was not run.
+
+Commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Result:
+
+- Admin VPS bootstrap smoke readiness regression: OK, `url-values-normalized` writes trimmed API/admin URLs; fail-closed scenarios still cover self-link, ready flag, local provider mode, missing password, missing reset confirmation and missing connection string.
+- Targeted docs/release unit suite: 40/40.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-readiness-url-normalization`, readiness checks `16/16`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 561, findings 0.
+- `git diff --check`: OK, exit code 0; Git reported CRLF normalization warnings for markdown only.
+- Changed files encoding: strict UTF-8 without BOM, 18 files checked.
+
 ## Check 2026-06-23: admin VPS bootstrap readiness admin email normalization
 
 Scope:

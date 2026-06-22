@@ -48,6 +48,16 @@ function Test-HttpUrl {
         -and ($parsed.Scheme -eq "http" -or $parsed.Scheme -eq "https")
 }
 
+function Get-HttpUrlValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -110,6 +120,8 @@ $passwordLengthOk = $passwordPresent -and $password.Length -ge 16
 $connectionStringPresent = -not [string]::IsNullOrWhiteSpace($ConnectionString)
 $providerValue = Get-ProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
 $environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
+$apiBaseUrlValue = Get-HttpUrlValue -Value $ApiBaseUrl
+$adminWebUrlValue = Get-HttpUrlValue -Value $AdminWebUrl
 $adminEmailValue = Get-AdminEmailValue -Value $AdminEmail
 
 $projectFullPath = Resolve-WorkspacePath $ProjectPath
@@ -121,8 +133,8 @@ $readinessValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-boot
 $bootstrapReportValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-report.ps1"
 $packageJsonPath = Join-Path $frontendFullPath "package.json"
 
-Add-Check "api-base-url" (Test-HttpUrl $ApiBaseUrl) "ADMIN_VPS_SMOKE_API_BASE_URL must be an absolute http/https URL."
-Add-Check "admin-web-url" (Test-HttpUrl $AdminWebUrl) "ADMIN_VPS_SMOKE_ADMIN_WEB_URL must be an absolute http/https URL."
+Add-Check "api-base-url" (Test-HttpUrl $apiBaseUrlValue) "ADMIN_VPS_SMOKE_API_BASE_URL must be an absolute http/https URL."
+Add-Check "admin-web-url" (Test-HttpUrl $adminWebUrlValue) "ADMIN_VPS_SMOKE_ADMIN_WEB_URL must be an absolute http/https URL."
 Add-Check "admin-email" (-not [string]::IsNullOrWhiteSpace($adminEmailValue) -and $adminEmailValue.Contains("@")) "Admin email must be set and contain @."
 Add-Check "password-env-name" (-not [string]::IsNullOrWhiteSpace($AdminPasswordEnvName)) "Admin password env name must be set."
 Add-Check "password-env-present" $passwordPresent "Admin password env must be present in the process environment and is never printed."
@@ -168,8 +180,8 @@ $report = [ordered]@{
     environmentName = $environmentNameValue
     operator = $operatorValue
     releaseId = $releaseValue
-    apiBaseUrl = $ApiBaseUrl
-    adminWebUrl = $AdminWebUrl
+    apiBaseUrl = $apiBaseUrlValue
+    adminWebUrl = $adminWebUrlValue
     adminEmail = $adminEmailValue
     provider = $providerValue
     localSqlite = [bool]$LocalSqlite
@@ -200,8 +212,8 @@ if (-not [string]::IsNullOrWhiteSpace($readinessReportParent) -and -not (Test-Pa
 Write-Host "Admin VPS bootstrap smoke readiness completed."
 Write-Host "Environment: $environmentNameValue"
 Write-Host "Provider: $providerValue"
-Write-Host "API base URL: $ApiBaseUrl"
-Write-Host "Admin web URL: $AdminWebUrl"
+Write-Host "API base URL: $apiBaseUrlValue"
+Write-Host "Admin web URL: $adminWebUrlValue"
 Write-Host "Admin email: $adminEmailValue"
 Write-Host "Password env: $(if ($passwordPresent) { 'present [hidden]' } else { 'missing' })"
 Write-Host "Connection string: $(if ($connectionStringPresent) { 'present [hidden]' } else { 'missing' })"

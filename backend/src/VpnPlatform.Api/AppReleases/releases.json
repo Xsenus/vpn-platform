@@ -6596,5 +6596,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-readiness-url-normalization",
+    "version": "0.277.0",
+    "releasedAt": "2026-06-23T02:30:00+07:00",
+    "title": "URL normalization for admin VPS bootstrap readiness",
+    "summary": "Standalone admin VPS bootstrap readiness now trims API and admin web URLs before writing sanitized evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke-readiness.ps1` now trims `ApiBaseUrl` and `AdminWebUrl` before validation output and sanitized readiness evidence."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `url-values-normalized`, so evidence identity cannot keep accidental surrounding whitespace around API/admin URLs."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

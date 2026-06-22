@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.277.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-readiness-url-normalization`.
+
+### Fixed
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` now trims `ApiBaseUrl` and `AdminWebUrl` before validation output and sanitized readiness evidence.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `url-values-normalized`, so evidence identity cannot keep accidental surrounding whitespace around API/admin URLs.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `url-values-normalized` writes trimmed API/admin URLs and existing fail-closed scenarios remain covered.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-readiness-url-normalization`, readiness checks `16/16`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.276.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-readiness-admin-email-normalization`.

@@ -53,6 +53,10 @@ function Invoke-ReadinessScenario {
         [bool]$SetConnectionString = $true,
         [string]$Provider,
         [string]$ExpectedProvider,
+        [string]$ApiBaseUrl = "https://api.example.test",
+        [string]$ExpectedApiBaseUrl,
+        [string]$AdminWebUrl = "https://admin.example.test",
+        [string]$ExpectedAdminWebUrl,
         [string]$AdminEmail = "admin@example.test",
         [string]$ExpectedAdminEmail,
         [string]$EnvironmentName = "Regression",
@@ -85,8 +89,8 @@ function Invoke-ReadinessScenario {
         $args = @(
             "-ExecutionPolicy", "Bypass",
             "-File", (Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke-readiness.ps1"),
-            "-ApiBaseUrl", "https://api.example.test",
-            "-AdminWebUrl", "https://admin.example.test",
+            "-ApiBaseUrl", $ApiBaseUrl,
+            "-AdminWebUrl", $AdminWebUrl,
             "-AdminEmail", $AdminEmail,
             "-AdminPasswordEnvName", $envName,
             "-ReadinessReportPath", $reportPath,
@@ -163,6 +167,20 @@ function Invoke-ReadinessScenario {
             $report = $reportRaw | ConvertFrom-Json
             if ([string]$report.provider -ne $ExpectedProvider) {
                 throw "Scenario $Name provider '$($report.provider)', expected '$ExpectedProvider'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedApiBaseUrl)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.apiBaseUrl -ne $ExpectedApiBaseUrl) {
+                throw "Scenario $Name apiBaseUrl '$($report.apiBaseUrl)', expected '$ExpectedApiBaseUrl'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedAdminWebUrl)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.adminWebUrl -ne $ExpectedAdminWebUrl) {
+                throw "Scenario $Name adminWebUrl '$($report.adminWebUrl)', expected '$ExpectedAdminWebUrl'."
             }
         }
 
@@ -292,6 +310,16 @@ $results += Invoke-ReadinessScenario `
     -SetConnectionString $true `
     -Provider "postgres" `
     -ExpectedProvider "Postgres"
+
+$results += Invoke-ReadinessScenario `
+    -Name "url-values-normalized" `
+    -ExpectedExitCode 0 `
+    -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
+    -LocalSqlite $true `
+    -ApiBaseUrl " https://api.example.test " `
+    -ExpectedApiBaseUrl "https://api.example.test" `
+    -AdminWebUrl " https://admin.example.test " `
+    -ExpectedAdminWebUrl "https://admin.example.test"
 
 $results += Invoke-ReadinessScenario `
     -Name "environment-default-normalized" `
