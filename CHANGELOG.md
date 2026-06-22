@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.275.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-readiness-environment-default`.
+
+### Fixed
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` now normalizes empty or whitespace `EnvironmentName` to `Production` before writing sanitized readiness evidence.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `environment-default-normalized`, so standalone readiness reports keep a non-empty environment identity.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `environment-default-normalized` writes `Production` and existing fail-closed scenarios remain covered.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-readiness-environment-default`, readiness checks `16/16`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.274.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-readiness-provider-normalization`.

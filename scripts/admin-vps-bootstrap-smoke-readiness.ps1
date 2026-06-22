@@ -84,11 +84,22 @@ function Get-ProviderValue {
     return $trimmed
 }
 
+function Get-EnvironmentNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return "Production"
+    }
+
+    return $Value.Trim()
+}
+
 $password = [Environment]::GetEnvironmentVariable($AdminPasswordEnvName, "Process")
 $passwordPresent = -not [string]::IsNullOrWhiteSpace($password)
 $passwordLengthOk = $passwordPresent -and $password.Length -ge 16
 $connectionStringPresent = -not [string]::IsNullOrWhiteSpace($ConnectionString)
 $providerValue = Get-ProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
+$environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
 
 $projectFullPath = Resolve-WorkspacePath $ProjectPath
 $frontendFullPath = Resolve-WorkspacePath $FrontendPath
@@ -143,7 +154,7 @@ else {
 $report = [ordered]@{
     reportId = "admin-vps-bootstrap-smoke-readiness-" + $generatedAt.ToString("yyyyMMdd-HHmmss")
     generatedAt = $generatedAt.ToString("o")
-    environmentName = $EnvironmentName
+    environmentName = $environmentNameValue
     operator = $operatorValue
     releaseId = $releaseValue
     apiBaseUrl = $ApiBaseUrl
@@ -176,7 +187,7 @@ if (-not [string]::IsNullOrWhiteSpace($readinessReportParent) -and -not (Test-Pa
     [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "Admin VPS bootstrap smoke readiness completed."
-Write-Host "Environment: $EnvironmentName"
+Write-Host "Environment: $environmentNameValue"
 Write-Host "Provider: $providerValue"
 Write-Host "API base URL: $ApiBaseUrl"
 Write-Host "Admin web URL: $AdminWebUrl"

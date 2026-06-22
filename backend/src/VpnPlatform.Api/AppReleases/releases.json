@@ -6550,5 +6550,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-readiness-environment-default",
+    "version": "0.275.0",
+    "releasedAt": "2026-06-23T02:10:00+07:00",
+    "title": "Environment default for admin VPS bootstrap readiness",
+    "summary": "Standalone admin VPS bootstrap readiness now records Production when EnvironmentName is empty or whitespace.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke-readiness.ps1` now normalizes empty or whitespace `EnvironmentName` to `Production` before writing sanitized readiness evidence."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `environment-default-normalized`, so standalone readiness reports always keep a non-empty environment identity."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

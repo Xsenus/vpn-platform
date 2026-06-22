@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-23-admin-vps-readiness-provider-normalization`, версия `0.274.0`.
+- [x] Latest "Что нового": `2026-06-23-admin-vps-readiness-environment-default`, версия `0.275.0`.
 
 ## Как вести дальше
 

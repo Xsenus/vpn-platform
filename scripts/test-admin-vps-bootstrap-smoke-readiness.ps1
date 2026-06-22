@@ -52,7 +52,10 @@ function Invoke-ReadinessScenario {
         [bool]$ConfirmBootstrapReset = $false,
         [bool]$SetConnectionString = $true,
         [string]$Provider,
-        [string]$ExpectedProvider
+        [string]$ExpectedProvider,
+        [string]$EnvironmentName = "Regression",
+        [string]$ExpectedEnvironmentName,
+        [bool]$UseEnvironmentNameEnv = $false
     )
 
     $scenarioPath = Join-Path $outputPath $Name
@@ -73,6 +76,10 @@ function Invoke-ReadinessScenario {
             Set-ScopedEnv -Previous $previousEnv -Name $envName -Value $null
         }
 
+        if ($UseEnvironmentNameEnv) {
+            Set-ScopedEnv -Previous $previousEnv -Name "ADMIN_VPS_SMOKE_ENVIRONMENT" -Value $EnvironmentName
+        }
+
         $args = @(
             "-ExecutionPolicy", "Bypass",
             "-File", (Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke-readiness.ps1"),
@@ -84,11 +91,14 @@ function Invoke-ReadinessScenario {
             "-SmokeReportPath", (Join-Path $scenarioPath "admin-vps-smoke-report.json"),
             "-PreflightReportPath", (Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"),
             "-BootstrapSmokeReportPath", (Join-Path $scenarioPath "admin-vps-bootstrap-smoke-report.json"),
-            "-EnvironmentName", "Regression",
             "-Operator", "admin-vps-bootstrap-smoke-readiness-regression",
             "-ReleaseId", "readiness-regression",
             "-RequireReady"
         )
+
+        if (-not $UseEnvironmentNameEnv) {
+            $args += @("-EnvironmentName", $EnvironmentName)
+        }
 
         if ($LocalSqlite) {
             $args += "-LocalSqlite"
@@ -151,6 +161,13 @@ function Invoke-ReadinessScenario {
             $report = $reportRaw | ConvertFrom-Json
             if ([string]$report.provider -ne $ExpectedProvider) {
                 throw "Scenario $Name provider '$($report.provider)', expected '$ExpectedProvider'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedEnvironmentName)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.environmentName -ne $ExpectedEnvironmentName) {
+                throw "Scenario $Name environmentName '$($report.environmentName)', expected '$ExpectedEnvironmentName'."
             }
         }
 
@@ -266,6 +283,15 @@ $results += Invoke-ReadinessScenario `
     -SetConnectionString $true `
     -Provider "postgres" `
     -ExpectedProvider "Postgres"
+
+$results += Invoke-ReadinessScenario `
+    -Name "environment-default-normalized" `
+    -ExpectedExitCode 0 `
+    -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
+    -LocalSqlite $true `
+    -EnvironmentName " " `
+    -ExpectedEnvironmentName "Production" `
+    -UseEnvironmentNameEnv $true
 
 $results += Invoke-ReadinessValidatorScenario `
     -Name "mismatched-readiness-report-self-link" `
