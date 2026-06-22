@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-local-admin-bootstrap-smoke-wrapper-regression`, версия `0.254.0`; `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` проверяет fail-fast сценарий `bad-max-evidence-chain-minutes` для локального SQLite bootstrap smoke wrapper, а `scripts/local-admin-vps-bootstrap-smoke.ps1` принимает `MaxEvidenceChainMinutes` и передает его в `scripts/admin-vps-bootstrap-smoke.ps1`. `scripts/admin-vps-smoke.ps1`/`scripts/admin-vps-bootstrap-smoke.ps1` прокидывают этот лимит в smoke/bootstrap evidence validators; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-local-admin-bootstrap-smoke-env-max-duration`, версия `0.255.0`; `scripts/local-admin-vps-bootstrap-smoke.ps1` использует `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES` как default для `MaxEvidenceChainMinutes`, а `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` проверяет fail-fast сценарии `bad-max-evidence-chain-minutes` и `bad-env-max-evidence-chain-minutes` до запуска local smoke artifacts. `scripts/admin-vps-smoke.ps1`/`scripts/admin-vps-bootstrap-smoke.ps1` прокидывают этот лимит в smoke/bootstrap evidence validators; production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

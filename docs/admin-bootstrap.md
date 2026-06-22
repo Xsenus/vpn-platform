@@ -68,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
 powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -MaxEvidenceChainMinutes 120
 ```
 
-Локальный fail-fast regression wrapper-а:
+Локальный fail-fast regression wrapper-а покрывает неверный CLI-лимит и неверный `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1

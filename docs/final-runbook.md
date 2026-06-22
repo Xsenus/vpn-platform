@@ -183,7 +183,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - frontend audit: OK, `0 vulnerabilities`;
-- latest "Что нового": `2026-06-22-local-admin-bootstrap-smoke-wrapper-regression`, версия `0.254.0`.
+- latest "Что нового": `2026-06-22-local-admin-bootstrap-smoke-env-max-duration`, версия `0.255.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

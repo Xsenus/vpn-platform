@@ -1,7 +1,7 @@
 param(
     [int]$ApiPort = 18211,
     [int]$AdminPort = 18215,
-    [int]$MaxEvidenceChainMinutes = 120,
+    [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
     [switch]$KeepArtifacts
 )
 
