@@ -10,7 +10,7 @@
 powershell -ExecutionPolicy Bypass -File scripts\new-admin-vps-smoke-report.ps1 -OutputPath tmp\admin-vps-smoke-report.json -ApiBaseUrl https://api.example.test -AdminWebUrl https://example.test/admin/ -AdminEmail owner@example.com -EnvironmentName staging -Operator local-test
 ```
 
-Скрипт берет `docs/admin-vps-smoke-report.template.json`, подставляет latest release из раздела "Что нового", URL окружения и оператора, выставляет все разделы в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
+Скрипт берет `docs/admin-vps-smoke-report.template.json`, подставляет latest release из раздела "Что нового", URL окружения, оператора и `smokeReportPath`, выставляет все разделы в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
 
 ## Что проверять
 
@@ -72,7 +72,9 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report
 
 `scripts/validate-admin-vps-smoke-report.ps1` читает `docs/admin-vps-smoke-sections.json` и сверяет не только наличие обязательных разделов, но и route каждого раздела с manifest.
 
-Локальная regression-проверка validator для заполненного admin VPS smoke report, включая happy path и tamper-сценарии `bad-http-status`, `bad-route`, `placeholder-evidence`, `failed-status`, `missing-section`, `false-gate`, `secret-marker`:
+Smoke report содержит `smokeReportPath`; validator сверяет это поле с фактически проверяемым `-ReportPath`, чтобы standalone evidence archive не мог подменить browser smoke JSON.
+
+Локальная regression-проверка validator для заполненного admin VPS smoke report, включая happy path и tamper-сценарии `mismatched-smoke-report-path`, `bad-http-status`, `bad-route`, `placeholder-evidence`, `failed-status`, `missing-section`, `false-gate`, `secret-marker`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-validator.ps1

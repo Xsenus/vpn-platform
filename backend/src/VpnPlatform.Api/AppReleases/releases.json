@@ -5051,5 +5051,28 @@
         "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` покрывает `mismatched-preflight-report-path`; live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-report-self-link",
+    "version": "0.210.0",
+    "releasedAt": "2026-06-22T12:00:00+07:00",
+    "title": "Self-link smoke report админки VPS",
+    "summary": "Admin VPS browser smoke report теперь содержит smokeReportPath, а report validator fail-closed сверяет его с фактическим smoke JSON.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`frontend/e2e/admin-vps-smoke.spec.ts`, `docs/admin-vps-smoke-report.template.json` и `scripts/new-admin-vps-smoke-report.ps1` пишут `smokeReportPath` в browser smoke report."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-report.ps1` требует `smokeReportPath` и сверяет smoke report с фактическим smoke report path."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/test-admin-vps-smoke-report-validator.ps1` покрывает `mismatched-smoke-report-path`; live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS smoke evidence."
+      }
+    ]
   }
 ]

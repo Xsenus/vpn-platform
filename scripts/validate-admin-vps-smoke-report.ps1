@@ -111,6 +111,7 @@ function Get-SectionsContract {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$reportFullPath = [System.IO.Path]::GetFullPath($ReportPath)
 $sectionsContractFullPath = Resolve-RepoPath $SectionsContractPath
 $requiredSectionRoutes = Get-SectionsContract -PathValue $sectionsContractFullPath
 $requiredSections = @($requiredSectionRoutes.Keys)
@@ -130,7 +131,7 @@ catch {
     throw "Admin VPS smoke report is not valid JSON: $($_.Exception.Message)"
 }
 
-foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "adminWebUrl", "adminEmail", "startedAt", "completedAt", "releaseId", "operator", "notes")) {
+foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "adminWebUrl", "adminEmail", "smokeReportPath", "startedAt", "completedAt", "releaseId", "operator", "notes")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Admin VPS smoke report is missing required field: $propertyName"
     }
@@ -145,6 +146,11 @@ Assert-ReportHttpUrl -Value ([string]$report.adminWebUrl) -Name "adminWebUrl"
 
 if (-not ([string]$report.adminEmail).Contains("@")) {
     throw "Admin VPS smoke report field adminEmail must contain an email address."
+}
+
+$smokeReportPath = Resolve-RepoPath ([string]$report.smokeReportPath)
+if (-not [string]::Equals($smokeReportPath, $reportFullPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Admin VPS smoke report mismatch for smokeReportPath. Report='$smokeReportPath', actual='$reportFullPath'."
 }
 
 $startedAt = [DateTimeOffset]::MinValue
@@ -249,6 +255,7 @@ $summary = [ordered]@{
     reportId = $report.reportId
     environmentName = $report.environmentName
     releaseId = $report.releaseId
+    smokeReportPath = $report.smokeReportPath
     sectionsContractPath = $sectionsContractFullPath
     sections = $sectionIds.Count
     passed = @($report.sections | Where-Object { $_.status -eq "passed" }).Count

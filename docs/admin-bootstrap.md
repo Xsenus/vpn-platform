@@ -90,7 +90,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-
 ```
 
 Regression harness также покрывает `mismatched-readiness-report-path` и `bad-smoke-route`, чтобы bootstrap+smoke evidence не принимал чужой readiness report path и устаревшие admin routes вне `docs/admin-vps-smoke-sections.json`.
-Внутри этого flow `scripts/admin-vps-bootstrap-smoke.ps1` вычисляет latest release один раз и передает один `releaseId` в readiness gate, `scripts/admin-vps-smoke.ps1` и итоговый bootstrap smoke report. Итоговый bootstrap smoke report пишет `readinessReportPath` и `bootstrapSmokeReportPath`, а evidence validator сверяет их с фактическими readiness/bootstrap JSON. Evidence validator отклоняет readiness/bootstrap пару с разным `releaseId`, а preflight report не проходит validation с пустым `releaseId`.
+Внутри этого flow `scripts/admin-vps-bootstrap-smoke.ps1` вычисляет latest release один раз и передает один `releaseId` в readiness gate, `scripts/admin-vps-smoke.ps1` и итоговый bootstrap smoke report. Browser smoke report пишет `smokeReportPath`, итоговый bootstrap smoke report пишет `readinessReportPath` и `bootstrapSmokeReportPath`, а evidence validators сверяют эти self-link поля с фактическими readiness/smoke/bootstrap JSON. Evidence validator отклоняет readiness/bootstrap пару с разным `releaseId`, а preflight report не проходит validation с пустым `releaseId`.
 
 ## Dry-run
 

@@ -2,6 +2,26 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.210.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-smoke-report-self-link`.
+
+### Fixed
+- `frontend/e2e/admin-vps-smoke.spec.ts`, `docs/admin-vps-smoke-report.template.json` и `scripts/new-admin-vps-smoke-report.ps1` теперь пишут `smokeReportPath` в browser smoke report.
+- `scripts/validate-admin-vps-smoke-report.ps1` требует `smokeReportPath` и сверяет его с фактически проверяемым smoke JSON.
+- `frontend/e2e/admin.spec.ts` больше не использует внешний `pay.example.test` в sandbox payment fixture, чтобы console E2E не зависел от DNS.
+
+### Added
+- `scripts/test-admin-vps-smoke-report-validator.ps1` покрывает fail-closed `mismatched-smoke-report-path`.
+
+### Verified
+- Admin VPS smoke report validator regression: OK, включая `mismatched-smoke-report-path`.
+- `AdminVpsSmokeReportTests`: 15/15.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, `smokeReportPath` связан с фактическим smoke JSON.
+- Backend full suite: 590/590; frontend tests: 66/66; console E2E: 9/9.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.209.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-smoke-preflight-self-link`.

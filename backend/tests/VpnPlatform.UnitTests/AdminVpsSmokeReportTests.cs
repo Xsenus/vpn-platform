@@ -36,6 +36,7 @@ public class AdminVpsSmokeReportTests
         Assert.False(json.RootElement.GetProperty("noJsErrors").GetBoolean());
         Assert.False(json.RootElement.GetProperty("noUnauthorizedAfterLogin").GetBoolean());
         Assert.Contains("@", json.RootElement.GetProperty("adminEmail").GetString(), StringComparison.Ordinal);
+        Assert.Contains("admin-vps-smoke-report.json", json.RootElement.GetProperty("smokeReportPath").GetString(), StringComparison.OrdinalIgnoreCase);
 
         var sections = json.RootElement.GetProperty("sections").EnumerateArray().ToArray();
         Assert.Equal(RequiredSections.Order(StringComparer.Ordinal), sections.Select(x => x.GetProperty("id").GetString()).Order(StringComparer.Ordinal));
@@ -63,11 +64,13 @@ public class AdminVpsSmokeReportTests
                      "apiBaseUrl",
                      "adminWebUrl",
                      "adminEmail",
+                     "smokeReportPath",
                      "accountBootstrapChecked",
                      "adminLoginPassed",
                      "noJsErrors",
                      "noUnauthorizedAfterLogin",
                      "RequireAllPassed",
+                     "mismatch for smokeReportPath",
                      "must be passed when -RequireAllPassed is used",
                      "route must match sections contract"
                  })
@@ -92,6 +95,7 @@ public class AdminVpsSmokeReportTests
                      "ConvertTo-Json -Depth 8",
                      "WriteAllText",
                      "UTF8Encoding",
+                     "smokeReportPath",
                      "blocked",
                      "TODO: open",
                      "Output file already exists. Pass -Force",
@@ -376,6 +380,8 @@ public class AdminVpsSmokeReportTests
                      "admin-vps-smoke-report-validator-regression-test",
                      "validate-admin-vps-smoke-report.ps1",
                      "Assert-FailsWith",
+                     "smokeReportPath",
+                     "mismatched-smoke-report-path",
                      "bad-http-status",
                      "bad-route",
                      "placeholder-evidence",

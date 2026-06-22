@@ -71,6 +71,10 @@ function Copy-ReportJson {
         [Parameter(Mandatory = $true)][string]$DestinationPath
     )
 
+    if ($Source.PSObject.Properties.Name -contains "smokeReportPath") {
+        $Source.smokeReportPath = $DestinationPath
+    }
+
     Write-Utf8NoBomFile -PathValue $DestinationPath -Content ($Source | ConvertTo-Json -Depth 12)
     return $DestinationPath
 }
@@ -126,6 +130,7 @@ try {
         apiBaseUrl = "http://127.0.0.1:18201"
         adminWebUrl = "http://127.0.0.1:18205/admin/"
         adminEmail = "fresh-admin@example.test"
+        smokeReportPath = $validReportPath
         startedAt = $now.AddMinutes(-1).ToString("O")
         completedAt = $now.ToString("O")
         releaseId = "manual-admin-vps-smoke-validator-regression"
@@ -142,6 +147,17 @@ try {
     $validOutput = Invoke-SmokeReportValidator -ReportPath $validReportPath
 
     $testedFailures = @()
+
+    $badSmokeReportPath = Get-Content -LiteralPath $validReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeReportPath.smokeReportPath = (Join-Path $outputFullPath "other-smoke-report.json")
+    $badSmokeReportPathPath = Join-Path $outputFullPath "bad-smoke-report-path.json"
+    Write-Utf8NoBomFile -PathValue $badSmokeReportPathPath -Content ($badSmokeReportPath | ConvertTo-Json -Depth 12)
+    $testedFailures += [ordered]@{
+        name = "mismatched-smoke-report-path"
+        message = Assert-FailsWith -ExpectedMessage "mismatch for smokeReportPath" -Action {
+            Invoke-SmokeReportValidator -ReportPath $badSmokeReportPathPath
+        }
+    }
 
     $badHttpStatus = Get-Content -LiteralPath $validReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badHttpStatus.sections[0].httpStatus = 500

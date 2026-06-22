@@ -93,6 +93,7 @@ $report.environmentName = $EnvironmentName.Trim()
 $report.apiBaseUrl = $ApiBaseUrl.TrimEnd("/")
 $report.adminWebUrl = $AdminWebUrl.TrimEnd("/")
 $report.adminEmail = $AdminEmail.Trim()
+$report.smokeReportPath = $fullOutputPath
 $report.startedAt = $now.ToString("o")
 $report.completedAt = $now.ToString("o")
 $report.releaseId = $releaseValue
