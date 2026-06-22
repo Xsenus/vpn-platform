@@ -182,6 +182,10 @@ try {
         throw "Valid smoke evidence output must include preflightReportPath. Output: $validOutputText"
     }
 
+    if ($validOutputText.IndexOf("sectionsContractPath", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "Valid smoke evidence output must include sectionsContractPath. Output: $validOutputText"
+    }
+
     $testedFailures = @()
 
     $badApiPreflight = Join-Path $outputFullPath "bad-api-preflight.json"

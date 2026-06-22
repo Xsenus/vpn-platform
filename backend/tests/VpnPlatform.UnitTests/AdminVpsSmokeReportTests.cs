@@ -460,6 +460,8 @@ public class AdminVpsSmokeReportTests
                      "adminEmail",
                      "environmentName",
                      "operator",
+                     "sectionsContractPath",
+                     "sectionsContractPath = $sectionsContractPath",
                      "smokeReportPath",
                      "preflightReportPath",
                      "preflightReportPath = $preflightFullPath",
@@ -486,6 +488,7 @@ public class AdminVpsSmokeReportTests
                      "smoke-started-before-preflight",
                      "failed-smoke-report",
                      "Valid smoke evidence output must include preflightReportPath",
+                     "Valid smoke evidence output must include sectionsContractPath",
                      "admin vps smoke evidence validator regression passed"
                  })
         {

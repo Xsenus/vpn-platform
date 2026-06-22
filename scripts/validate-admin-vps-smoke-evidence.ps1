@@ -119,12 +119,15 @@ if ($startedAt -lt $generatedAt) {
     throw "Admin VPS smoke evidence smoke startedAt must not be before preflight generatedAt."
 }
 
+$sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
+
 $summary = [ordered]@{
     environmentName = $smoke.environmentName
     releaseId = $smoke.releaseId
     apiBaseUrl = (Normalize-Url $smoke.apiBaseUrl)
     adminWebUrl = (Normalize-Url $smoke.adminWebUrl)
     sections = @($smoke.sections).Count
+    sectionsContractPath = $sectionsContractPath
     preflightReady = $preflight.readyForLiveSmoke
     preflightReportPath = $preflightFullPath
     smokeReportPath = $smokeFullPath
