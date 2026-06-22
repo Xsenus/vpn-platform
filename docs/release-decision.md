@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-evidence-report-id-prefix`, версия `0.244.0`; `scripts/validate-admin-vps-smoke-evidence.ps1` включает fail-closed проверку уникальности report ids и префиксов `admin-vps-smoke-preflight-`/`admin-vps-smoke-`, expected SHA256 guard и duration/status summary для linked smoke evidence, а `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` теперь дополнительно требует уникальные readiness/bootstrap/preflight/smoke report ids и ожидаемые префиксы `admin-vps-bootstrap-smoke-readiness-`, `admin-vps-bootstrap-smoke-`, `admin-vps-smoke-preflight-` и `admin-vps-smoke-` для readiness/bootstrap/preflight/smoke bundle; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-evidence-report-id-timestamp`, версия `0.245.0`; `scripts/validate-admin-vps-smoke-evidence.ps1` включает fail-closed проверку уникальности report ids и префиксов `admin-vps-smoke-preflight-`/`admin-vps-smoke-`, expected SHA256 guard и duration/status summary для linked smoke evidence, а `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` теперь дополнительно требует уникальные readiness/bootstrap/preflight/smoke report ids, ожидаемые префиксы `admin-vps-bootstrap-smoke-readiness-`, `admin-vps-bootstrap-smoke-`, `admin-vps-smoke-preflight-` и `admin-vps-smoke-`, а также timestamp-формат `yyyyMMdd-HHmmss` для readiness/bootstrap/preflight/smoke report ids; production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

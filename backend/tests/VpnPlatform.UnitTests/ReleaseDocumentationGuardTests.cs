@@ -62,6 +62,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001AG", "2026-06-22-admin-vps-bootstrap-evidence-fingerprint-summary"),
         new("P0-ADMIN-001AH", "2026-06-22-admin-vps-bootstrap-evidence-expected-fingerprint"),
         new("P0-ADMIN-001AI", "2026-06-22-admin-vps-bootstrap-evidence-report-id-prefix"),
+        new("P0-ADMIN-001AJ", "2026-06-22-admin-vps-bootstrap-evidence-report-id-timestamp"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

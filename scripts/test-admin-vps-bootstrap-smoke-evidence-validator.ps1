@@ -53,6 +53,12 @@ function Get-FileSha256 {
     }
 }
 
+function Format-ReportTimestamp {
+    param([DateTimeOffset]$Value)
+
+    $Value.ToUniversalTime().ToString("yyyyMMdd-HHmmss")
+}
+
 function New-ReadinessReport {
     param(
         [string]$Path,
@@ -89,7 +95,7 @@ function New-ReadinessReport {
     }
 
     [ordered]@{
-        reportId = "admin-vps-bootstrap-smoke-readiness-test"
+        reportId = "admin-vps-bootstrap-smoke-readiness-" + (Format-ReportTimestamp $GeneratedAt)
         generatedAt = $GeneratedAt.ToString("o")
         environmentName = "Local"
         operator = "bootstrap-smoke-evidence-validator-test"
@@ -142,7 +148,7 @@ function New-PreflightReport {
     }
 
     Write-JsonFile -Path $Path -Value ([ordered]@{
-        reportId = "admin-vps-smoke-preflight-test"
+        reportId = "admin-vps-smoke-preflight-" + (Format-ReportTimestamp $GeneratedAt)
         generatedAt = $GeneratedAt.ToString("o")
         environmentName = "Local"
         operator = "bootstrap-smoke-evidence-validator-test"
@@ -180,7 +186,7 @@ function New-SmokeReport {
     }
 
     Write-JsonFile -Path $Path -Value ([ordered]@{
-        reportId = "admin-vps-smoke-test"
+        reportId = "admin-vps-smoke-" + (Format-ReportTimestamp $GeneratedAt)
         startedAt = $GeneratedAt.ToString("o")
         completedAt = $GeneratedAt.AddMinutes(1).ToString("o")
         environmentName = "Local"
@@ -212,7 +218,7 @@ function New-BootstrapReport {
     )
 
     Write-JsonFile -Path $Path -Value ([ordered]@{
-        reportId = "admin-vps-bootstrap-smoke-test"
+        reportId = "admin-vps-bootstrap-smoke-" + (Format-ReportTimestamp $GeneratedAt)
         environmentName = "Local"
         apiBaseUrl = "http://127.0.0.1:18211"
         adminWebUrl = $AdminWebUrl
@@ -469,6 +475,30 @@ $results += Invoke-ValidatorScenario -Name "bad-smoke-report-id-prefix" -Expecte
     param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
     $smoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $smoke.reportId = "admin-vps-smoke-preflight-browser-test"
+    Write-JsonFile -Path $smokePath -Value $smoke
+}
+$results += Invoke-ValidatorScenario -Name "bad-readiness-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "readiness reportId must match admin-vps-bootstrap-smoke-readiness-yyyyMMdd-HHmmss" -Mutate {
+    param($readinessPath)
+    $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $readiness.reportId = "admin-vps-bootstrap-smoke-readiness-manual"
+    Write-JsonFile -Path $readinessPath -Value $readiness
+}
+$results += Invoke-ValidatorScenario -Name "bad-bootstrap-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "bootstrap smoke reportId must match admin-vps-bootstrap-smoke-yyyyMMdd-HHmmss" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $bootstrap.reportId = "admin-vps-bootstrap-smoke-manual"
+    Write-JsonFile -Path $bootstrapPath -Value $bootstrap
+}
+$results += Invoke-ValidatorScenario -Name "bad-preflight-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "preflight reportId must match admin-vps-smoke-preflight-yyyyMMdd-HHmmss" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath)
+    $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $preflight.reportId = "admin-vps-smoke-preflight-manual"
+    Write-JsonFile -Path $preflightPath -Value $preflight
+}
+$results += Invoke-ValidatorScenario -Name "bad-smoke-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "smoke reportId must match admin-vps-smoke-yyyyMMdd-HHmmss" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    $smoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $smoke.reportId = "admin-vps-smoke-manual"
     Write-JsonFile -Path $smokePath -Value $smoke
 }
 $results += Invoke-ValidatorScenario -Name "preflight-generated-before-readiness" -ExpectedExitCode 1 -ExpectedMessage "linked preflight generatedAt must not be before readiness generatedAt" -Mutate {

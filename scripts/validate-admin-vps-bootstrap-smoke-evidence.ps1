@@ -107,6 +107,11 @@ function Assert-ReportIdPrefix {
         -and $Value.StartsWith($ForbiddenPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Admin VPS bootstrap smoke evidence $Name reportId must not use the $ForbiddenPrefix prefix."
     }
+
+    $timestampPattern = "^" + [regex]::Escape($Prefix) + "\d{8}-\d{6}$"
+    if ($Value -notmatch $timestampPattern) {
+        throw "Admin VPS bootstrap smoke evidence $Name reportId must match $($Prefix)yyyyMMdd-HHmmss."
+    }
 }
 
 $readinessFullPath = Resolve-WorkspacePath $ReadinessReportPath
