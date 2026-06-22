@@ -282,6 +282,16 @@ try {
         -ExpectPreflightReport $false
 
     $testedFailures += Invoke-WrapperFailure `
+        -Name "bad-admin-email" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "not-an-email" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "AdminEmail must contain an email address" `
+        -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
         -Name "missing-frontend" `
         -ApiBaseUrl "http://127.0.0.1:18201" `
         -AdminWebUrl "http://127.0.0.1:18205/admin/" `

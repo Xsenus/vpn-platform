@@ -55,7 +55,8 @@ function Invoke-BootstrapSmokeScenario {
         [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
         [string[]]$AdditionalArguments = @(),
         [string]$ApiBaseUrl = "http://127.0.0.1:18211",
-        [string]$AdminWebUrl = "http://127.0.0.1:18215/admin/"
+        [string]$AdminWebUrl = "http://127.0.0.1:18215/admin/",
+        [string]$AdminEmail = "fresh-bootstrap-admin@example.test"
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -82,7 +83,7 @@ function Invoke-BootstrapSmokeScenario {
             "-File", $wrapperPath,
             "-ApiBaseUrl", $ApiBaseUrl,
             "-AdminWebUrl", $AdminWebUrl,
-            "-AdminEmail", "fresh-bootstrap-admin@example.test",
+            "-AdminEmail", $AdminEmail,
             "-SmokeReportPath", $smokeReportPath,
             "-PreflightReportPath", $preflightReportPath,
             "-BootstrapSmokeReportPath", $bootstrapSmokeReportPath,
@@ -261,6 +262,15 @@ try {
         -ExpectedExitCode 1 `
         -ExpectedMessage "AdminWebUrl must be an absolute http or https URL" `
         -AdminWebUrl "not-a-url"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "bad-admin-email" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-admin-email/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "AdminEmail must contain an email address" `
+        -AdminEmail "not-an-email"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "missing-password" `

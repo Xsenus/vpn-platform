@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.266.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-email-guard`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1` теперь fail-fast валидирует `AdminEmail` до preflight/browser smoke и не создает preflight report для невалидного email.
+- `scripts/admin-vps-bootstrap-smoke.ps1` применяет тот же email guard до readiness, bootstrap reset, передачи пароля и smoke artifacts.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `bad-admin-email` не создает preflight/smoke artifacts.
+- Admin VPS bootstrap smoke wrapper regression: OK, `bad-admin-email` не создает readiness/bootstrap/smoke artifacts.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.265.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-url-guard`.

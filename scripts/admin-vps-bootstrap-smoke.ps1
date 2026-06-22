@@ -99,6 +99,14 @@ function Assert-HttpUrl {
     }
 }
 
+function Assert-AdminEmail {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or -not $Value.Trim().Contains("@")) {
+        throw "AdminEmail must contain an email address."
+    }
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
@@ -108,6 +116,7 @@ foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, 
 $maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
 Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
+Assert-AdminEmail -Value $AdminEmail
 
 if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
     throw "Admin email is required."

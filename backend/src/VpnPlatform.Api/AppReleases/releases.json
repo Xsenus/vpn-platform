@@ -6343,5 +6343,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-email-guard",
+    "version": "0.266.0",
+    "releasedAt": "2026-06-23T00:40:00+07:00",
+    "title": "Email guard для admin VPS smoke wrappers",
+    "summary": "Admin VPS smoke/bootstrap wrappers теперь fail-fast отклоняют невалидный AdminEmail до preflight, readiness, bootstrap reset и smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` валидирует `AdminEmail` до preflight/browser smoke и не создает preflight report для невалидного email."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` использует тот же email guard до readiness, bootstrap reset и передачи пароля в smoke."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

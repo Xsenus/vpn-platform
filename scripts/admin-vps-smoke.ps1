@@ -72,6 +72,14 @@ function Assert-HttpUrl {
     }
 }
 
+function Assert-AdminEmail {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value) -or -not $Value.Trim().Contains("@")) {
+        throw "AdminEmail must contain an email address."
+    }
+}
+
 foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportValidatorScript, $preflightValidatorScript, $evidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS smoke script was not found: $requiredScript"
@@ -81,6 +89,7 @@ foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportVali
 $maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
 Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
+Assert-AdminEmail -Value $AdminEmail
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 
