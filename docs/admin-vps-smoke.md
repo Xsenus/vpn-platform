@@ -131,7 +131,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
   -AccountBootstrapChecked
 ```
 
-`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, вычисляет release id один раз, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword` с этим же release id, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` с тем же значением. Browser smoke report пишет sanitized `adminEmail`, а парный evidence validator сверяет его с preflight report, чтобы нельзя было смешать preflight и smoke от разных admin-аккаунтов. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
+`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, вычисляет release id один раз, показывает `MaxEvidenceChainMinutes` без секретов, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword` с этим же release id, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` с тем же значением и передает лимит в `scripts/validate-admin-vps-smoke-evidence.ps1`. Browser smoke report пишет sanitized `adminEmail`, а парный evidence validator сверяет его с preflight report, чтобы нельзя было смешать preflight и smoke от разных admin-аккаунтов. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
 
 Локальная regression-проверка wrapper, включая fail-closed сценарии `missing-password`, `bad-api-url` и `missing-frontend`, доказывает, что browser smoke не стартует до valid preflight, smoke report не создается, пароль не попадает в stdout/stderr, а preflight report получает непустой release id еще до отказа browser smoke:
 
@@ -159,7 +159,7 @@ Regression harness также покрывает `mismatched-preflight-report-pa
 
 ## Bootstrap + live-smoke
 
-Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он вычисляет release id один раз для readiness/smoke/bootstrap evidence, запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked`.
+Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он вычисляет release id один раз для readiness/smoke/bootstrap evidence, запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked` и прокидывает `MaxEvidenceChainMinutes` в smoke/bootstrap evidence validators.
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5432;Database=vpnplatform;Username=vpnplatform;Password=<db-password>"

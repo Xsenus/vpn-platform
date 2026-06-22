@@ -51,7 +51,8 @@ function Invoke-BootstrapSmokeScenario {
         [switch]$LocalSqlite,
         [switch]$DryRun,
         [Parameter(Mandatory = $true)][int]$ExpectedExitCode,
-        [Parameter(Mandatory = $true)][string]$ExpectedMessage
+        [Parameter(Mandatory = $true)][string]$ExpectedMessage,
+        [string[]]$AdditionalArguments = @()
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -98,6 +99,8 @@ function Invoke-BootstrapSmokeScenario {
         if ($DryRun) {
             $arguments += "-DryRun"
         }
+
+        $arguments += $AdditionalArguments
 
         $process = Start-Process -FilePath "powershell" `
             -ArgumentList $arguments `
@@ -173,6 +176,15 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 
 try {
     $testedScenarios = @()
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "bad-max-evidence-chain-minutes" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-max-evidence-chain-minutes/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "MaxEvidenceChainMinutes" `
+        -AdditionalArguments @("-MaxEvidenceChainMinutes", "0")
+
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "missing-password" `
         -Password $null `

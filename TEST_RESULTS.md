@@ -2,6 +2,44 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-22: admin VPS smoke wrapper max duration propagation
+
+Что проверялось:
+
+- `scripts/admin-vps-smoke.ps1` принимает `MaxEvidenceChainMinutes`, показывает примененный лимит и передает его в `scripts/validate-admin-vps-smoke-evidence.ps1`.
+- `scripts/admin-vps-bootstrap-smoke.ps1` принимает `MaxEvidenceChainMinutes`, передает его в smoke wrapper и в `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1`.
+- Wrapper regression harness покрывает `bad-max-evidence-chain-minutes`, чтобы неверный лимит fail-fast останавливал операторский запуск до создания smoke artifacts.
+- Раздел "Что нового" получил релиз `2026-06-22-admin-vps-smoke-wrapper-max-duration`, версия `0.252.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|AdminBootstrapCliScriptTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-evidence.ps1 -PreflightReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-smoke-preflight-report.json -SmokeReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-smoke-report.json -MaxEvidenceChainMinutes 120
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-evidence.ps1 -ReadinessReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-readiness-report.json -BootstrapSmokeReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-report.json -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+```
+
+Результат:
+
+- Admin VPS smoke flow wrapper regression: OK, `bad-max-evidence-chain-minutes` покрыт.
+- Admin VPS bootstrap smoke wrapper regression: OK, `bad-max-evidence-chain-minutes` покрыт.
+- `AdminVpsSmokeReportTests|AdminBootstrapCliScriptTests`: 24/24.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-smoke-wrapper-max-duration`, smoke sections `16/16`, smoke/bootstrap evidence validators with expected SHA256 and `MaxEvidenceChainMinutes=120` OK.
+- Backend full suite: 590/590.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+
 ## Проверка 2026-06-22: admin VPS smoke evidence max duration guard
 
 Что проверялось:

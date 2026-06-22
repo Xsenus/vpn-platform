@@ -599,6 +599,7 @@ public class AdminVpsSmokeReportTests
     {
         var root = FindRepositoryRoot();
         var script = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-flow-wrapper.ps1"));
+        var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-smoke.ps1"));
         var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
@@ -607,6 +608,8 @@ public class AdminVpsSmokeReportTests
                      "admin-vps-smoke-flow-wrapper-regression-test",
                      "admin-vps-smoke.ps1",
                      "Invoke-WrapperFailure",
+                     "bad-max-evidence-chain-minutes",
+                     "MaxEvidenceChainMinutes",
                      "missing-password",
                      "bad-api-url",
                      "missing-frontend",
@@ -619,6 +622,7 @@ public class AdminVpsSmokeReportTests
                      "e2e:admin-vps-smoke",
                      "Smoke report should not exist after failed preflight",
                      "Preflight report releaseId should be resolved",
+                     "Preflight report should not exist after parameter binding scenario",
                      "leaked password",
                      "admin vps smoke flow wrapper regression passed"
                  })
@@ -626,6 +630,8 @@ public class AdminVpsSmokeReportTests
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
         }
 
+        Assert.Contains("Max evidence chain minutes: $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("-MaxEvidenceChainMinutes $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-smoke-flow-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002I`", roadmap, StringComparison.Ordinal);
     }

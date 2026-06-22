@@ -8,6 +8,8 @@ param(
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
     [string]$FrontendPath = "frontend",
+    [ValidateRange(1, 1440)]
+    [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
     [switch]$AccountBootstrapChecked
 )
 
@@ -51,6 +53,7 @@ Write-Host "Password: [hidden]"
 Write-Host "Smoke report path: $SmokeReportPath"
 Write-Host "Preflight report path: $PreflightReportPath"
 Write-Host "Release id: $releaseValue"
+Write-Host "Max evidence chain minutes: $MaxEvidenceChainMinutes"
 Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
 
 & $preflightScript `
@@ -79,7 +82,8 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
 
 & $evidenceValidatorScript `
     -PreflightReportPath $PreflightReportPath `
-    -SmokeReportPath $SmokeReportPath
+    -SmokeReportPath $SmokeReportPath `
+    -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes
 
 Write-Host "Admin VPS smoke flow completed."
 Write-Host "Validated preflight report: $PreflightReportPath"

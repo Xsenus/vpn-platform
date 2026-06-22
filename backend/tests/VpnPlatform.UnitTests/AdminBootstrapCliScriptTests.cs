@@ -478,6 +478,8 @@ public class AdminBootstrapCliScriptTests
                      "admin-vps-bootstrap-smoke-wrapper-regression-test",
                      "admin-vps-bootstrap-smoke.ps1",
                      "Invoke-BootstrapSmokeScenario",
+                     "bad-max-evidence-chain-minutes",
+                     "MaxEvidenceChainMinutes",
                      "missing-password",
                      "missing-confirm-bootstrap-reset",
                      "missing-connection-string",
@@ -501,6 +503,8 @@ public class AdminBootstrapCliScriptTests
         }
 
         Assert.DoesNotContain("[string]$Password", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Max evidence chain minutes: $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("-MaxEvidenceChainMinutes $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-001D`", roadmap, StringComparison.Ordinal);
     }

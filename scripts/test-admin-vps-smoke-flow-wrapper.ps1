@@ -50,7 +50,9 @@ function Invoke-WrapperFailure {
         [Parameter(Mandatory = $true)][string]$FrontendPath,
         [AllowNull()][string]$Password,
         [Parameter(Mandatory = $true)][string]$ExpectedMessage,
-        [Parameter(Mandatory = $true)][string]$ExpectedFailedCheck
+        [string]$ExpectedFailedCheck = "",
+        [string[]]$AdditionalArguments = @(),
+        [bool]$ExpectPreflightReport = $true
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -66,8 +68,7 @@ function Invoke-WrapperFailure {
     try {
         Set-ScopedPassword -Previous $previous -Password $Password
 
-        $process = Start-Process -FilePath "powershell" `
-            -ArgumentList @(
+        $arguments = @(
                 "-NoProfile",
                 "-ExecutionPolicy", "Bypass",
                 "-File", $wrapperPath,
@@ -80,7 +81,12 @@ function Invoke-WrapperFailure {
                 "-Operator", "admin-vps-smoke-flow-wrapper-regression",
                 "-FrontendPath", $FrontendPath,
                 "-AccountBootstrapChecked"
-            ) `
+            )
+
+        $arguments += $AdditionalArguments
+
+        $process = Start-Process -FilePath "powershell" `
+            -ArgumentList $arguments `
             -WorkingDirectory $repoRoot `
             -RedirectStandardOutput $stdoutPath `
             -RedirectStandardError $stderrPath `
@@ -110,6 +116,21 @@ function Invoke-WrapperFailure {
 
         if (Test-Path -LiteralPath $smokeReportPath -PathType Leaf) {
             throw "Smoke report should not exist after failed preflight scenario '$Name'."
+        }
+
+        if (-not $ExpectPreflightReport) {
+            if (Test-Path -LiteralPath $preflightReportPath -PathType Leaf) {
+                throw "Preflight report should not exist after parameter binding scenario '$Name'."
+            }
+
+            return [ordered]@{
+                name = $Name
+                exitCode = $process.ExitCode
+                expectedMessage = $ExpectedMessage
+                expectedFailedCheck = ""
+                preflightReportCreated = $false
+                releaseId = ""
+            }
         }
 
         if (-not (Test-Path -LiteralPath $preflightReportPath -PathType Leaf)) {
@@ -157,6 +178,17 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 
 try {
     $testedFailures = @()
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "bad-max-evidence-chain-minutes" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "ParameterArgumentValidationError" `
+        -AdditionalArguments @("-MaxEvidenceChainMinutes", "0") `
+        -ExpectPreflightReport $false
+
     $testedFailures += Invoke-WrapperFailure `
         -Name "missing-password" `
         -ApiBaseUrl "http://127.0.0.1:18201" `

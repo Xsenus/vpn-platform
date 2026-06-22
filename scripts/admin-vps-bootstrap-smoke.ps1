@@ -17,6 +17,8 @@ param(
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
     [string]$FrontendPath = "frontend",
+    [ValidateRange(1, 1440)]
+    [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
     [switch]$LocalSqlite,
     [switch]$ApplyMigrations,
     [switch]$ConfirmBootstrapReset,
@@ -111,6 +113,7 @@ try {
     Write-Host "Bootstrap smoke report path: $BootstrapSmokeReportPath"
     Write-Host "Readiness report path: $ReadinessReportPath"
     Write-Host "Release id: $releaseValue"
+    Write-Host "Max evidence chain minutes: $MaxEvidenceChainMinutes"
     Write-Host "Bootstrap reset confirmed: $ConfirmBootstrapReset"
 
     $readinessArgs = @{
@@ -198,6 +201,7 @@ try {
         -Operator $Operator `
         -ReleaseId $releaseValue `
         -FrontendPath $FrontendPath `
+        -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes `
         -AccountBootstrapChecked
 
     $now = [DateTimeOffset]::UtcNow
@@ -255,7 +259,7 @@ try {
         ($bootstrapSmokeReport | ConvertTo-Json -Depth 6),
         [System.Text.UTF8Encoding]::new($false))
     & $bootstrapSmokeReportValidatorScript -ReportPath $bootstrapSmokeReportFullPath -RequirePassed | Out-Host
-    & $bootstrapSmokeEvidenceValidatorScript -ReadinessReportPath $ReadinessReportPath -BootstrapSmokeReportPath $bootstrapSmokeReportFullPath | Out-Host
+    & $bootstrapSmokeEvidenceValidatorScript -ReadinessReportPath $ReadinessReportPath -BootstrapSmokeReportPath $bootstrapSmokeReportFullPath -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes | Out-Host
 
     Write-Host "Admin VPS bootstrap+smoke flow completed."
     Write-Host "Validated bootstrap smoke report: $BootstrapSmokeReportPath"
