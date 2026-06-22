@@ -2,6 +2,18 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.257.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-smoke-env-max-duration`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1` теперь явно fail-fast отклоняет `MaxEvidenceChainMinutes <= 0` до вывода "flow is ready", preflight report и browser smoke, включая default из `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`.
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` покрывает `bad-env-max-evidence-chain-minutes` и проверяет, что env-лимит не создает preflight/smoke artifacts.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `bad-max-evidence-chain-minutes` и `bad-env-max-evidence-chain-minutes` покрыты.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS admin smoke report.
+
 ## 0.256.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-smoke-env-max-duration`.

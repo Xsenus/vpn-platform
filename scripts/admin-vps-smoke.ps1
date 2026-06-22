@@ -43,6 +43,10 @@ foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportVali
     }
 }
 
+if ($MaxEvidenceChainMinutes -le 0) {
+    throw "MaxEvidenceChainMinutes must be greater than 0."
+}
+
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 
 Write-Host "Admin VPS smoke flow is ready to run."

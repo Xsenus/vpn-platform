@@ -28,17 +28,18 @@ function Assert-InWorkspace {
     }
 }
 
-function Set-ScopedPassword {
+function Set-ScopedEnv {
     param(
         [hashtable]$Previous,
-        [AllowNull()][string]$Password
+        [string]$Name,
+        [AllowNull()][string]$Value
     )
 
-    if (-not $Previous.ContainsKey("ADMIN_VPS_SMOKE_ADMIN_PASSWORD")) {
-        $Previous["ADMIN_VPS_SMOKE_ADMIN_PASSWORD"] = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", "Process")
+    if (-not $Previous.ContainsKey($Name)) {
+        $Previous[$Name] = [Environment]::GetEnvironmentVariable($Name, "Process")
     }
 
-    [Environment]::SetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", $Password, "Process")
+    [Environment]::SetEnvironmentVariable($Name, $Value, "Process")
 }
 
 function Invoke-WrapperFailure {
@@ -51,6 +52,7 @@ function Invoke-WrapperFailure {
         [AllowNull()][string]$Password,
         [Parameter(Mandatory = $true)][string]$ExpectedMessage,
         [string]$ExpectedFailedCheck = "",
+        [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
         [string[]]$AdditionalArguments = @(),
         [bool]$ExpectPreflightReport = $true
     )
@@ -66,7 +68,8 @@ function Invoke-WrapperFailure {
     $previous = @{}
 
     try {
-        Set-ScopedPassword -Previous $previous -Password $Password
+        Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" -Value $Password
+        Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES" -Value $EnvMaxEvidenceChainMinutes
 
         $arguments = @(
                 "-NoProfile",
@@ -119,6 +122,10 @@ function Invoke-WrapperFailure {
         }
 
         if (-not $ExpectPreflightReport) {
+            if ($output.IndexOf("Admin VPS smoke flow is ready to run.", [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                throw "Admin VPS smoke flow should not be ready after parameter binding scenario '$Name'."
+            }
+
             if (Test-Path -LiteralPath $preflightReportPath -PathType Leaf) {
                 throw "Preflight report should not exist after parameter binding scenario '$Name'."
             }
@@ -187,6 +194,17 @@ try {
         -Password "LocalAdminPassword123!" `
         -ExpectedMessage "ParameterArgumentValidationError" `
         -AdditionalArguments @("-MaxEvidenceChainMinutes", "0") `
+        -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "bad-env-max-evidence-chain-minutes" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be greater than 0" `
+        -EnvMaxEvidenceChainMinutes "0" `
         -ExpectPreflightReport $false
 
     $testedFailures += Invoke-WrapperFailure `

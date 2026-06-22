@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-22: admin VPS smoke env max duration
+
+Что проверялось:
+
+- `scripts/admin-vps-smoke.ps1` fail-fast отклоняет `MaxEvidenceChainMinutes <= 0` до вывода "flow is ready", preflight report и browser smoke, включая default из `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`.
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` покрывает `bad-env-max-evidence-chain-minutes` и доказывает, что неверный env-лимит не создает preflight/smoke artifacts.
+- Раздел "Что нового" получил релиз `2026-06-22-admin-vps-smoke-env-max-duration`, версия `0.257.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS admin smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+```
+
+Результат:
+
+- Admin VPS smoke flow wrapper regression: OK, `bad-env-max-evidence-chain-minutes` не создает preflight/smoke artifacts.
+- Targeted docs/release unit suite: 30/30.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-smoke-env-max-duration`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- Smoke/bootstrap evidence validators: OK с expected SHA256 и `MaxEvidenceChainMinutes=120`.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+
 ## Проверка 2026-06-22: admin VPS bootstrap smoke env max duration
 
 Что проверялось:
