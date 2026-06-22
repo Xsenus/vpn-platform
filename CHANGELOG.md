@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.264.0 - 2026-06-23
+
+Release entry: `2026-06-23-local-admin-bootstrap-port-guard`.
+
+### Fixed
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` теперь явно валидирует `ApiPort` и `AdminPort` как TCP-порты 1..65535 и требует разные значения.
+- Локальный wrapper fail-fast останавливается до создания `tmp/local-admin-vps-bootstrap-smoke`, локальной SQLite DB, API/admin web и smoke artifacts при нечисловых, вне диапазона или совпадающих портах.
+
+### Verified
+- Local admin VPS bootstrap smoke wrapper regression: OK, `format-api-port`, `too-low-api-port`, `too-high-admin-port` и `same-api-admin-port` покрыты.
+- `AdminBootstrapCliScriptTests`: 10/10.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.263.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-max-duration-format-guard`.

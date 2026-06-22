@@ -6297,5 +6297,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-local-admin-bootstrap-port-guard",
+    "version": "0.264.0",
+    "releasedAt": "2026-06-23T00:20:00+07:00",
+    "title": "Port guard для local admin bootstrap smoke",
+    "summary": "Локальный admin VPS bootstrap smoke wrapper теперь явно отклоняет нечисловые, вне диапазона и совпадающие API/Admin порты до локальной SQLite DB и smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/local-admin-vps-bootstrap-smoke.ps1` валидирует `ApiPort` и `AdminPort` как TCP-порты 1..65535 и требует разные значения."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` покрывает `format-api-port`, `too-low-api-port`, `too-high-admin-port` и `same-api-admin-port` без создания local smoke artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

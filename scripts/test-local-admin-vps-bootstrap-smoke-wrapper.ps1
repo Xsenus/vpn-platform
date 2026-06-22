@@ -46,7 +46,9 @@ function Invoke-LocalWrapperFailure {
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$AdditionalArguments,
         [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
-        [Parameter(Mandatory = $true)][string]$ExpectedMessage
+        [Parameter(Mandatory = $true)][string]$ExpectedMessage,
+        [string]$ApiPort = "18231",
+        [string]$AdminPort = "18235"
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -68,8 +70,8 @@ function Invoke-LocalWrapperFailure {
             "-NoProfile",
             "-ExecutionPolicy", "Bypass",
             "-File", $wrapperPath,
-            "-ApiPort", "18231",
-            "-AdminPort", "18235",
+            "-ApiPort", $ApiPort,
+            "-AdminPort", $AdminPort,
             "-KeepArtifacts"
         ) + $AdditionalArguments
 
@@ -89,7 +91,7 @@ function Invoke-LocalWrapperFailure {
         }
 
         if ($output.IndexOf($ExpectedMessage, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
-            throw "Expected bad MaxEvidenceChainMinutes output for scenario '$Name'. Actual output: $output"
+            throw "Expected failure output for scenario '$Name'. Actual output: $output"
         }
 
         foreach ($forbiddenOutput in @("Admin bootstrap/reset is ready to run.", "Admin VPS bootstrap+smoke flow is ready to run.", "Admin VPS browser smoke is ready to run.", "e2e:admin-vps-smoke", "local admin vps bootstrap smoke ok")) {
@@ -118,6 +120,35 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 
 try {
     $testedFailures = @()
+    $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "format-api-port" `
+        -AdditionalArguments @() `
+        -EnvMaxEvidenceChainMinutes $null `
+        -ExpectedMessage "ApiPort must be an integer" `
+        -ApiPort "not-a-port"
+
+    $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "too-low-api-port" `
+        -AdditionalArguments @() `
+        -EnvMaxEvidenceChainMinutes $null `
+        -ExpectedMessage "ApiPort must be between 1 and 65535" `
+        -ApiPort "0"
+
+    $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "too-high-admin-port" `
+        -AdditionalArguments @() `
+        -EnvMaxEvidenceChainMinutes $null `
+        -ExpectedMessage "AdminPort must be between 1 and 65535" `
+        -AdminPort "65536"
+
+    $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "same-api-admin-port" `
+        -AdditionalArguments @() `
+        -EnvMaxEvidenceChainMinutes $null `
+        -ExpectedMessage "ApiPort and AdminPort must be different" `
+        -ApiPort "18231" `
+        -AdminPort "18231"
+
     $testedFailures += Invoke-LocalWrapperFailure `
         -Name "format-max-evidence-chain-minutes" `
         -AdditionalArguments @("-MaxEvidenceChainMinutes", "not-a-number") `

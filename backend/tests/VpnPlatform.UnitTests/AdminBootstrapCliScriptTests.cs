@@ -131,6 +131,10 @@ public class AdminBootstrapCliScriptTests
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "BootstrapSmokeReportPath",
                      "ReadinessReportPath",
+                     "Convert-TcpPort",
+                     "$Name must be an integer",
+                     "$Name must be between 1 and 65535",
+                     "ApiPort and AdminPort must be different",
                      "MaxEvidenceChainMinutes",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
                      "MaxEvidenceChainMinutes must be an integer",
@@ -166,6 +170,10 @@ public class AdminBootstrapCliScriptTests
                  {
                      "local-admin-vps-bootstrap-smoke-wrapper-regression-test",
                      "local-admin-vps-bootstrap-smoke.ps1",
+                     "format-api-port",
+                     "too-low-api-port",
+                     "too-high-admin-port",
+                     "same-api-admin-port",
                      "format-max-evidence-chain-minutes",
                      "format-env-max-evidence-chain-minutes",
                      "bad-max-evidence-chain-minutes",
@@ -173,6 +181,10 @@ public class AdminBootstrapCliScriptTests
                      "too-high-max-evidence-chain-minutes",
                      "too-high-env-max-evidence-chain-minutes",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
+                     "ApiPort must be an integer",
+                     "ApiPort must be between 1 and 65535",
+                     "AdminPort must be between 1 and 65535",
+                     "ApiPort and AdminPort must be different",
                      "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
@@ -189,6 +201,9 @@ public class AdminBootstrapCliScriptTests
 
         Assert.Contains("MaxEvidenceChainMinutes must be an integer", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("MaxEvidenceChainMinutes must be greater than 0", localSmoke, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Convert-TcpPort", localSmoke, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$Name must be an integer", localSmoke, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ApiPort and AdminPort must be different", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-local-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-001AO`", roadmap, StringComparison.Ordinal);
     }

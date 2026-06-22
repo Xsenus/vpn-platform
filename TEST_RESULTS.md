@@ -2,6 +2,47 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-23: local admin bootstrap smoke port guard
+
+Что проверялось:
+
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` fail-fast отклоняет нечисловые `ApiPort`/`AdminPort`, порты вне диапазона 1..65535 и одинаковые API/Admin порты.
+- `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` проверяет, что port guard не создает `tmp/local-admin-vps-bootstrap-smoke`, локальную SQLite DB, API/admin web и smoke artifacts.
+- Раздел "Что нового" получил релиз `2026-06-23-local-admin-bootstrap-port-guard`, версия `0.264.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Local admin VPS bootstrap smoke wrapper regression: OK, port guard scenarios не создают artifacts.
+- `AdminBootstrapCliScriptTests`: 10/10.
+- Targeted docs/release unit suite: 25/25.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-23-local-admin-bootstrap-port-guard`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- Smoke/bootstrap evidence validators: OK с expected SHA256 (`02588ed8...`, `f55804f7...`, `7ddf12b3...`, `d68199b9...`) и `MaxEvidenceChainMinutes=120`.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 561, findings 0.
+- `git diff --check`: OK.
+- Кодировка измененных файлов: strict UTF-8 without BOM, 19 files checked.
+
 ## Проверка 2026-06-23: admin VPS max duration format guard
 
 Что проверялось:

@@ -1,6 +1,6 @@
 param(
-    [int]$ApiPort = 18211,
-    [int]$AdminPort = 18215,
+    [string]$ApiPort = "18211",
+    [string]$AdminPort = "18215",
     [string]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { $env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { "120" }),
     [switch]$KeepArtifacts
 )
@@ -111,11 +111,39 @@ function Convert-MaxEvidenceChainMinutes {
     return $parsed
 }
 
+function Convert-TcpPort {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "$Name must be an integer."
+    }
+
+    $parsed = 0
+    if (-not [int]::TryParse($Value.Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+        throw "$Name must be an integer."
+    }
+
+    if ($parsed -lt 1 -or $parsed -gt 65535) {
+        throw "$Name must be between 1 and 65535."
+    }
+
+    return $parsed
+}
+
 Assert-InWorkspace $tmp
+$apiPortValue = Convert-TcpPort -Value $ApiPort -Name "ApiPort"
+$adminPortValue = Convert-TcpPort -Value $AdminPort -Name "AdminPort"
+if ($apiPortValue -eq $adminPortValue) {
+    throw "ApiPort and AdminPort must be different."
+}
+
 $maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 
-Assert-PortFree -Port $ApiPort -Name "API"
-Assert-PortFree -Port $AdminPort -Name "Admin web"
+Assert-PortFree -Port $apiPortValue -Name "API"
+Assert-PortFree -Port $adminPortValue -Name "Admin web"
 
 if (Test-Path $tmp) {
     Remove-Item -LiteralPath $tmp -Recurse -Force
@@ -125,8 +153,8 @@ New-Item -ItemType Directory -Path $tmp | Out-Null
 $logDir = Join-Path $tmp "logs"
 New-Item -ItemType Directory -Path $logDir | Out-Null
 
-$apiUrl = "http://127.0.0.1:$ApiPort"
-$adminUrl = "http://127.0.0.1:$AdminPort"
+$apiUrl = "http://127.0.0.1:$apiPortValue"
+$adminUrl = "http://127.0.0.1:$adminPortValue"
 $databasePath = Join-Path $tmp "vpnplatform-local-admin-bootstrap-smoke.db"
 $connectionString = "Data Source=$databasePath"
 $keyPath = Join-Path $tmp "keys"

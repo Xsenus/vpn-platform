@@ -75,6 +75,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001AT", "2026-06-22-admin-vps-bootstrap-smoke-env-upper-bound-guard"),
         new("P0-ADMIN-001AU", "2026-06-22-admin-vps-evidence-explicit-max-duration-guard"),
         new("P0-ADMIN-001AV", "2026-06-23-admin-vps-max-duration-format-guard"),
+        new("P0-ADMIN-001AW", "2026-06-23-local-admin-bootstrap-port-guard"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

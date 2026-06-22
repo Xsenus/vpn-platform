@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-vps-max-duration-format-guard`, версия `0.263.0`; admin VPS smoke/bootstrap wrappers и standalone evidence validators now fail-fast non-numeric `MaxEvidenceChainMinutes` with a unified integer-format message before preflight/readiness/local DB/smoke artifacts. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-local-admin-bootstrap-port-guard`, версия `0.264.0`; local admin VPS bootstrap smoke wrapper now fail-fast validates API/Admin TCP ports before local SQLite DB and smoke artifacts. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

@@ -68,13 +68,13 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
 powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -MaxEvidenceChainMinutes 120
 ```
 
-Локальный fail-fast regression wrapper-а покрывает нечисловой CLI/env лимит, неверный CLI-лимит, неверный `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES` и лимит выше 1440 минут:
+Локальный fail-fast regression wrapper-а покрывает нечисловой CLI/env лимит, неверный CLI-лимит, неверный `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`, лимит выше 1440 минут, нечисловые/вне диапазона `ApiPort`/`AdminPort` и совпадающие API/Admin порты:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Fail-closed regression wrapper-а проверяет `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes` останавливается до readiness report, bootstrap reset и smoke artifacts:
+Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low-api-port`, `too-high-admin-port`, `same-api-admin-port`, `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes` и неверные локальные порты останавливаются до readiness report, bootstrap reset и smoke artifacts:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
