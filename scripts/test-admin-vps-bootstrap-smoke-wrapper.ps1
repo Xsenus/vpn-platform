@@ -127,13 +127,23 @@ function Invoke-BootstrapSmokeScenario {
             throw "Admin VPS bootstrap smoke wrapper leaked password in scenario '$Name'."
         }
 
-        foreach ($forbiddenOutput in @("Admin VPS smoke flow is ready to run.", "Admin VPS browser smoke is ready to run.", "e2e:admin-vps-smoke", "Admin VPS bootstrap+smoke flow completed.")) {
+        $forbiddenOutputs = @("Admin VPS smoke flow is ready to run.", "Admin VPS browser smoke is ready to run.", "e2e:admin-vps-smoke", "Admin VPS bootstrap+smoke flow completed.")
+        if (-not $DryRun) {
+            $forbiddenOutputs += "Admin VPS bootstrap+smoke flow is ready to run."
+        }
+
+        foreach ($forbiddenOutput in $forbiddenOutputs) {
             if ($output.IndexOf($forbiddenOutput, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
                 throw "Admin smoke appears to have started in scenario '$Name'."
             }
         }
 
-        foreach ($forbiddenArtifact in @($smokeReportPath, $preflightReportPath, $bootstrapSmokeReportPath)) {
+        $forbiddenArtifacts = @($smokeReportPath, $preflightReportPath, $bootstrapSmokeReportPath)
+        if (-not $DryRun) {
+            $forbiddenArtifacts += $readinessReportPath
+        }
+
+        foreach ($forbiddenArtifact in $forbiddenArtifacts) {
             if (Test-Path -LiteralPath $forbiddenArtifact -PathType Leaf) {
                 throw "Smoke artifact should not exist after scenario '$Name': $forbiddenArtifact"
             }
@@ -184,7 +194,7 @@ try {
         -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-max-evidence-chain-minutes/local.db" `
         -LocalSqlite `
         -ExpectedExitCode 1 `
-        -ExpectedMessage "MaxEvidenceChainMinutes" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be greater than 0" `
         -AdditionalArguments @("-MaxEvidenceChainMinutes", "0")
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
@@ -193,8 +203,17 @@ try {
         -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-env-max-evidence-chain-minutes/local.db" `
         -LocalSqlite `
         -ExpectedExitCode 1 `
-        -ExpectedMessage "MaxEvidenceChainMinutes" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be greater than 0" `
         -EnvMaxEvidenceChainMinutes "0"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "too-high-max-evidence-chain-minutes" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/too-high-max-evidence-chain-minutes/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440" `
+        -AdditionalArguments @("-MaxEvidenceChainMinutes", "1441")
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "missing-password" `

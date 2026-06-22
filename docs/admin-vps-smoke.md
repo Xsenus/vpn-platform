@@ -159,7 +159,7 @@ Regression harness также покрывает `mismatched-preflight-report-pa
 
 ## Bootstrap + live-smoke
 
-Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он вычисляет release id один раз для readiness/smoke/bootstrap evidence, запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked` и прокидывает `MaxEvidenceChainMinutes` в smoke/bootstrap evidence validators.
+Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он вычисляет release id один раз для readiness/smoke/bootstrap evidence, явно fail-fast отклоняет неположительный CLI/env `MaxEvidenceChainMinutes` до readiness/bootstrap/smoke artifacts, запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked` и прокидывает `MaxEvidenceChainMinutes` в smoke/bootstrap evidence validators.
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5432;Database=vpnplatform;Username=vpnplatform;Password=<db-password>"
@@ -191,7 +191,7 @@ Fail-fast regression для локального wrapper-а проверяет, 
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression wrapper-а проверяет fail-closed сценарии до запуска smoke: неверный CLI/env `MaxEvidenceChainMinutes`, нет пароля, нет `-ConfirmBootstrapReset`, нет connection string для не-локальной БД и `-DryRun`, при котором smoke не стартует:
+Regression wrapper-а проверяет fail-closed сценарии до запуска smoke: неверный CLI/env `MaxEvidenceChainMinutes`, нет пароля, нет `-ConfirmBootstrapReset`, нет connection string для не-локальной БД и `-DryRun`, при котором smoke не стартует. Для неверного CLI/env лимита wrapper не создает readiness report, bootstrap report, preflight report и smoke report:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1

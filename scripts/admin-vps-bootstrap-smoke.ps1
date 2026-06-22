@@ -17,7 +17,6 @@ param(
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
     [string]$FrontendPath = "frontend",
-    [ValidateRange(1, 1440)]
     [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
     [switch]$LocalSqlite,
     [switch]$ApplyMigrations,
@@ -68,6 +67,14 @@ foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, 
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
     }
+}
+
+if ($MaxEvidenceChainMinutes -le 0) {
+    throw "MaxEvidenceChainMinutes must be greater than 0."
+}
+
+if ($MaxEvidenceChainMinutes -gt 1440) {
+    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
 }
 
 if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
