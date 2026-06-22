@@ -115,6 +115,10 @@ if ($generatedAt -gt $completedAt) {
     throw "Admin VPS smoke evidence preflight generatedAt must not be after smoke completedAt."
 }
 
+if ($startedAt -lt $generatedAt) {
+    throw "Admin VPS smoke evidence smoke startedAt must not be before preflight generatedAt."
+}
+
 $summary = [ordered]@{
     environmentName = $smoke.environmentName
     releaseId = $smoke.releaseId

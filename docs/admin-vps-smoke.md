@@ -139,7 +139,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
 ```
 
-После успешного preflight+browser smoke парный evidence validator сверяет, что оба отчета относятся к одному запуску: URL, environment, operator, path smoke-отчета, непустой release id и порядок дат не расходятся. `scripts/admin-vps-smoke.ps1` запускает этот validator автоматически, но его можно выполнить отдельно:
+После успешного preflight+browser smoke парный evidence validator сверяет, что оба отчета относятся к одному запуску: URL, environment, operator, path smoke-отчета, непустой release id и порядок дат не расходятся. Порядок времени должен быть preflight `generatedAt` -> smoke `startedAt` -> smoke `completedAt`; smoke не может стартовать раньше preflight. `scripts/admin-vps-smoke.ps1` запускает этот validator автоматически, но его можно выполнить отдельно:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-evidence.ps1 `
@@ -153,7 +153,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-eviden
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-validator.ps1
 ```
 
-Regression harness покрывает `missing-preflight-release-id`: preflight/smoke evidence не должно проходить без release id в preflight report.
+Regression harness покрывает `missing-preflight-release-id` и `smoke-started-before-preflight`: preflight/smoke evidence не должно проходить без release id в preflight report или с smoke, стартовавшим раньше preflight.
 
 Regression harness также покрывает `mismatched-preflight-report-path`: preflight/smoke evidence не должно принимать preflight report, если поле `preflightReportPath` указывает не на фактически проверяемый preflight JSON.
 

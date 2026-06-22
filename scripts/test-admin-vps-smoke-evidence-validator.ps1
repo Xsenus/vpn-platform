@@ -145,6 +145,7 @@ function New-EvidencePair {
         apiBaseUrl = $apiBaseUrl
         adminWebUrl = $adminWebUrl
         adminEmail = "owner@example.test"
+        smokeReportPath = $SmokePath
         startedAt = $startedAt.ToString("O")
         completedAt = $completedAt.ToString("O")
         releaseId = $releaseId
@@ -193,6 +194,7 @@ try {
     $badEmailSmokePath = Join-Path $outputFullPath "bad-admin-email-smoke.json"
     $badEmailSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badEmailSmoke.adminEmail = "other-owner@example.test"
+    $badEmailSmoke.smokeReportPath = $badEmailSmokePath
     Write-Utf8NoBomJson -Path $badEmailSmokePath -Value $badEmailSmoke
     $testedFailures += [ordered]@{
         name = "mismatched-admin-email"
@@ -260,8 +262,26 @@ try {
         }
     }
 
+    $badSmokeStartPreflightPath = Join-Path $outputFullPath "bad-smoke-start-preflight.json"
+    $badSmokeStartPreflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeStartPath = Join-Path $outputFullPath "bad-smoke-start-report.json"
+    $badSmokeStartPreflight.preflightReportPath = $badSmokeStartPreflightPath
+    $badSmokeStartPreflight.smokeReportPath = $badSmokeStartPath
+    Write-Utf8NoBomJson -Path $badSmokeStartPreflightPath -Value $badSmokeStartPreflight
+    $badSmokeStart = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeStart.smokeReportPath = $badSmokeStartPath
+    $badSmokeStart.startedAt = "2026-06-18T23:59:00+07:00"
+    Write-Utf8NoBomJson -Path $badSmokeStartPath -Value $badSmokeStart
+    $testedFailures += [ordered]@{
+        name = "smoke-started-before-preflight"
+        message = Assert-FailsWith -ExpectedMessage "smoke startedAt must not be before preflight generatedAt" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badSmokeStartPreflightPath -SmokePath $badSmokeStartPath
+        }
+    }
+
     $failedSmokePath = Join-Path $outputFullPath "failed-smoke-report.json"
     $failedSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $failedSmoke.smokeReportPath = $failedSmokePath
     $failedSmoke.adminLoginPassed = $false
     Write-Utf8NoBomJson -Path $failedSmokePath -Value $failedSmoke
     $testedFailures += [ordered]@{
