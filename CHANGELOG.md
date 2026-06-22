@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.263.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-max-duration-format-guard`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1`, `scripts/admin-vps-bootstrap-smoke.ps1` и `scripts/local-admin-vps-bootstrap-smoke.ps1` теперь явно парсят `MaxEvidenceChainMinutes` и возвращают единое сообщение `MaxEvidenceChainMinutes must be an integer.` для нечисловых CLI/env значений.
+- `scripts/validate-admin-vps-smoke-evidence.ps1` и `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` получили такой же standalone format guard без PowerShell binding error.
+
+### Verified
+- Admin VPS smoke/bootstrap/local wrapper regressions: OK, `format-max-evidence-chain-minutes` и `format-env-max-evidence-chain-minutes` не создают preflight/readiness/local smoke artifacts.
+- Admin VPS smoke/bootstrap evidence validator regressions: OK, `format-max-evidence-chain-minutes` покрыт.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-23-admin-vps-max-duration-format-guard`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
 ## 0.262.0 - 2026-06-22

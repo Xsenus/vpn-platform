@@ -189,6 +189,24 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 try {
     $testedScenarios = @()
     $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "format-max-evidence-chain-minutes" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/format-max-evidence-chain-minutes/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be an integer" `
+        -AdditionalArguments @("-MaxEvidenceChainMinutes", "not-a-number")
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "format-env-max-evidence-chain-minutes" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/format-env-max-evidence-chain-minutes/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be an integer" `
+        -EnvMaxEvidenceChainMinutes "not-a-number"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "bad-max-evidence-chain-minutes" `
         -Password "LocalBootstrapSmokePassword12345" `
         -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-max-evidence-chain-minutes/local.db" `

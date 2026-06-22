@@ -13,7 +13,7 @@ param(
 
     [string]$ExpectedSmokeReportSha256 = "",
 
-    [int]$MaxEvidenceChainMinutes = 120
+    [string]$MaxEvidenceChainMinutes = "120"
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,13 +22,30 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $readinessValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1"
 $bootstrapValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-report.ps1"
 
-if ($MaxEvidenceChainMinutes -le 0) {
-    throw "MaxEvidenceChainMinutes must be greater than 0."
+function Convert-MaxEvidenceChainMinutes {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    $parsed = 0
+    if (-not [int]::TryParse($Value.Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    if ($parsed -le 0) {
+        throw "MaxEvidenceChainMinutes must be greater than 0."
+    }
+
+    if ($parsed -gt 1440) {
+        throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
+    }
+
+    return $parsed
 }
 
-if ($MaxEvidenceChainMinutes -gt 1440) {
-    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
-}
+$maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -244,8 +261,8 @@ Assert-ExpectedSha256 -Actual $bootstrapSmokeReportSha256 -Expected $ExpectedBoo
 Assert-ExpectedSha256 -Actual $preflightReportSha256 -Expected $ExpectedPreflightReportSha256 -Name "preflightReportSha256"
 Assert-ExpectedSha256 -Actual $smokeReportSha256 -Expected $ExpectedSmokeReportSha256 -Name "smokeReportSha256"
 
-if (($bootstrapCompletedAt - $readinessGeneratedAt) -gt [TimeSpan]::FromMinutes($MaxEvidenceChainMinutes)) {
-    throw "Admin VPS bootstrap smoke evidence chain duration exceeds MaxEvidenceChainMinutes ($MaxEvidenceChainMinutes)."
+if (($bootstrapCompletedAt - $readinessGeneratedAt) -gt [TimeSpan]::FromMinutes($maxEvidenceChainMinutesValue)) {
+    throw "Admin VPS bootstrap smoke evidence chain duration exceeds MaxEvidenceChainMinutes ($maxEvidenceChainMinutesValue)."
 }
 
 $summary = [ordered]@{
@@ -288,7 +305,7 @@ $summary = [ordered]@{
     smokeToBootstrapSeconds = [int][Math]::Round(($bootstrapGeneratedAt - $smokeCompletedAt).TotalSeconds)
     evidenceChainDurationSeconds = [int][Math]::Round(($bootstrapCompletedAt - $readinessGeneratedAt).TotalSeconds)
     evidenceChronology = "readiness|preflight|smoke|bootstrap"
-    maxEvidenceChainMinutes = $MaxEvidenceChainMinutes
+    maxEvidenceChainMinutes = $maxEvidenceChainMinutesValue
     sectionsContractPath = $sectionsContractPath
     sections = @($smoke.sections).Count
     passed = @($smoke.sections | Where-Object { $_.status -eq "passed" }).Count

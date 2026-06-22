@@ -9,20 +9,37 @@ param(
 
     [string]$ExpectedSmokeReportSha256 = "",
 
-    [int]$MaxEvidenceChainMinutes = 120
+    [string]$MaxEvidenceChainMinutes = "120"
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-if ($MaxEvidenceChainMinutes -le 0) {
-    throw "MaxEvidenceChainMinutes must be greater than 0."
+function Convert-MaxEvidenceChainMinutes {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    $parsed = 0
+    if (-not [int]::TryParse($Value.Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    if ($parsed -le 0) {
+        throw "MaxEvidenceChainMinutes must be greater than 0."
+    }
+
+    if ($parsed -gt 1440) {
+        throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
+    }
+
+    return $parsed
 }
 
-if ($MaxEvidenceChainMinutes -gt 1440) {
-    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
-}
+$maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -230,8 +247,8 @@ if ($completedAt -lt $startedAt) {
     throw "Admin VPS smoke evidence smoke completedAt must not be before smoke startedAt."
 }
 
-if (($completedAt - $generatedAt) -gt [TimeSpan]::FromMinutes($MaxEvidenceChainMinutes)) {
-    throw "Admin VPS smoke evidence chain duration exceeds MaxEvidenceChainMinutes ($MaxEvidenceChainMinutes)."
+if (($completedAt - $generatedAt) -gt [TimeSpan]::FromMinutes($maxEvidenceChainMinutesValue)) {
+    throw "Admin VPS smoke evidence chain duration exceeds MaxEvidenceChainMinutes ($maxEvidenceChainMinutesValue)."
 }
 
 $sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
@@ -268,7 +285,7 @@ $summary = [ordered]@{
     smokeDurationSeconds = [int][Math]::Round(($completedAt - $startedAt).TotalSeconds)
     evidenceChainDurationSeconds = [int][Math]::Round(($completedAt - $generatedAt).TotalSeconds)
     evidenceChronology = "preflight|smoke"
-    maxEvidenceChainMinutes = $MaxEvidenceChainMinutes
+    maxEvidenceChainMinutes = $maxEvidenceChainMinutesValue
     sections = @($smoke.sections).Count
     passed = $passedSections
     failed = $failedSections

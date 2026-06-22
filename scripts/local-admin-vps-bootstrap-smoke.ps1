@@ -1,7 +1,7 @@
 param(
     [int]$ApiPort = 18211,
     [int]$AdminPort = 18215,
-    [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
+    [string]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { $env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { "120" }),
     [switch]$KeepArtifacts
 )
 
@@ -88,14 +88,31 @@ function Stop-ProcessTree {
     }
 }
 
-Assert-InWorkspace $tmp
-if ($MaxEvidenceChainMinutes -le 0) {
-    throw "MaxEvidenceChainMinutes must be greater than 0."
+function Convert-MaxEvidenceChainMinutes {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    $parsed = 0
+    if (-not [int]::TryParse($Value.Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    if ($parsed -le 0) {
+        throw "MaxEvidenceChainMinutes must be greater than 0."
+    }
+
+    if ($parsed -gt 1440) {
+        throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
+    }
+
+    return $parsed
 }
 
-if ($MaxEvidenceChainMinutes -gt 1440) {
-    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
-}
+Assert-InWorkspace $tmp
+$maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 
 Assert-PortFree -Port $ApiPort -Name "API"
 Assert-PortFree -Port $AdminPort -Name "Admin web"
@@ -190,7 +207,7 @@ try {
         -ReadinessReportPath $readinessReportRelativePath `
         -EnvironmentName "Local" `
         -Operator "local-admin-vps-bootstrap-smoke" `
-        -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes `
+        -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue `
         -LocalSqlite
 
     Write-Output "local admin vps bootstrap smoke ok api=$apiUrl admin=$adminUrl report=$reportRelativePath"

@@ -186,6 +186,28 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 try {
     $testedFailures = @()
     $testedFailures += Invoke-WrapperFailure `
+        -Name "format-max-evidence-chain-minutes" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be an integer" `
+        -AdditionalArguments @("-MaxEvidenceChainMinutes", "not-a-number") `
+        -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "format-env-max-evidence-chain-minutes" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be an integer" `
+        -EnvMaxEvidenceChainMinutes "not-a-number" `
+        -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
         -Name "bad-max-evidence-chain-minutes" `
         -ApiBaseUrl "http://127.0.0.1:18201" `
         -AdminWebUrl "http://127.0.0.1:18205/admin/" `

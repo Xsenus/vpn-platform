@@ -63,7 +63,7 @@ function Invoke-EvidenceValidator {
         [Parameter(Mandatory = $true)][string]$SmokePath,
         [string]$ExpectedPreflightReportSha256 = "",
         [string]$ExpectedSmokeReportSha256 = "",
-        [AllowNull()][System.Nullable[int]]$MaxEvidenceChainMinutes = $null
+        [AllowNull()][string]$MaxEvidenceChainMinutes = $null
     )
 
     $validator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
@@ -80,7 +80,7 @@ function Invoke-EvidenceValidator {
         $validatorArgs.ExpectedSmokeReportSha256 = $ExpectedSmokeReportSha256
     }
 
-    if ($null -ne $MaxEvidenceChainMinutes) {
+    if (-not [string]::IsNullOrWhiteSpace($MaxEvidenceChainMinutes)) {
         $validatorArgs.MaxEvidenceChainMinutes = $MaxEvidenceChainMinutes
     }
 
@@ -274,6 +274,13 @@ try {
         name = "mismatched-expected-preflight-sha256"
         message = Assert-FailsWith -ExpectedMessage "preflightReportSha256 does not match expected SHA256" -Action {
             Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -ExpectedPreflightReportSha256 ("0" * 64)
+        }
+    }
+
+    $testedFailures += [ordered]@{
+        name = "format-max-evidence-chain-minutes"
+        message = Assert-FailsWith -ExpectedMessage "MaxEvidenceChainMinutes must be an integer" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -MaxEvidenceChainMinutes "not-a-number"
         }
     }
 

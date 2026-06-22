@@ -8,7 +8,7 @@ param(
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
     [string]$FrontendPath = "frontend",
-    [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
+    [string]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { $env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { "120" }),
     [switch]$AccountBootstrapChecked
 )
 
@@ -36,19 +36,36 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
+function Convert-MaxEvidenceChainMinutes {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    $parsed = 0
+    if (-not [int]::TryParse($Value.Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    if ($parsed -le 0) {
+        throw "MaxEvidenceChainMinutes must be greater than 0."
+    }
+
+    if ($parsed -gt 1440) {
+        throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
+    }
+
+    return $parsed
+}
+
 foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportValidatorScript, $preflightValidatorScript, $evidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS smoke script was not found: $requiredScript"
     }
 }
 
-if ($MaxEvidenceChainMinutes -le 0) {
-    throw "MaxEvidenceChainMinutes must be greater than 0."
-}
-
-if ($MaxEvidenceChainMinutes -gt 1440) {
-    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
-}
+$maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 
@@ -60,7 +77,7 @@ Write-Host "Password: [hidden]"
 Write-Host "Smoke report path: $SmokeReportPath"
 Write-Host "Preflight report path: $PreflightReportPath"
 Write-Host "Release id: $releaseValue"
-Write-Host "Max evidence chain minutes: $MaxEvidenceChainMinutes"
+Write-Host "Max evidence chain minutes: $maxEvidenceChainMinutesValue"
 Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
 
 & $preflightScript `
@@ -90,7 +107,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
 & $evidenceValidatorScript `
     -PreflightReportPath $PreflightReportPath `
     -SmokeReportPath $SmokeReportPath `
-    -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes
+    -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue
 
 Write-Host "Admin VPS smoke flow completed."
 Write-Host "Validated preflight report: $PreflightReportPath"

@@ -119,6 +119,18 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 try {
     $testedFailures = @()
     $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "format-max-evidence-chain-minutes" `
+        -AdditionalArguments @("-MaxEvidenceChainMinutes", "not-a-number") `
+        -EnvMaxEvidenceChainMinutes $null `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be an integer"
+
+    $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "format-env-max-evidence-chain-minutes" `
+        -AdditionalArguments @() `
+        -EnvMaxEvidenceChainMinutes "not-a-number" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be an integer"
+
+    $testedFailures += Invoke-LocalWrapperFailure `
         -Name "bad-max-evidence-chain-minutes" `
         -AdditionalArguments @("-MaxEvidenceChainMinutes", "0") `
         -EnvMaxEvidenceChainMinutes $null `

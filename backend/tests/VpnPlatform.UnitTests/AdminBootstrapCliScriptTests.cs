@@ -133,8 +133,9 @@ public class AdminBootstrapCliScriptTests
                      "ReadinessReportPath",
                      "MaxEvidenceChainMinutes",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
-                     "-MaxEvidenceChainMinutes $MaxEvidenceChainMinutes",
+                     "-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue",
                      "Assert-InWorkspace",
                      "Stop-ProcessTree",
                      "local admin vps bootstrap smoke ok"
@@ -165,11 +166,14 @@ public class AdminBootstrapCliScriptTests
                  {
                      "local-admin-vps-bootstrap-smoke-wrapper-regression-test",
                      "local-admin-vps-bootstrap-smoke.ps1",
+                     "format-max-evidence-chain-minutes",
+                     "format-env-max-evidence-chain-minutes",
                      "bad-max-evidence-chain-minutes",
                      "bad-env-max-evidence-chain-minutes",
                      "too-high-max-evidence-chain-minutes",
                      "too-high-env-max-evidence-chain-minutes",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
                      "Admin bootstrap/reset is ready to run.",
@@ -183,6 +187,7 @@ public class AdminBootstrapCliScriptTests
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
         }
 
+        Assert.Contains("MaxEvidenceChainMinutes must be an integer", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("MaxEvidenceChainMinutes must be greater than 0", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-local-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-001AO`", roadmap, StringComparison.Ordinal);
@@ -398,10 +403,11 @@ public class AdminBootstrapCliScriptTests
                      "evidenceChainDurationSeconds = [int][Math]::Round(($bootstrapCompletedAt - $readinessGeneratedAt).TotalSeconds)",
                      "evidenceChronology = \"readiness|preflight|smoke|bootstrap\"",
                      "MaxEvidenceChainMinutes",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
                      "chain duration exceeds MaxEvidenceChainMinutes",
-                     "maxEvidenceChainMinutes = $MaxEvidenceChainMinutes",
+                     "maxEvidenceChainMinutes = $maxEvidenceChainMinutesValue",
                      "sections = @($smoke.sections).Count",
                      "passed = @($smoke.sections | Where-Object { $_.status -eq \"passed\" }).Count",
                      "failed = @($smoke.sections | Where-Object { $_.status -eq \"failed\" }).Count",
@@ -424,10 +430,12 @@ public class AdminBootstrapCliScriptTests
                      "valid",
                      "valid-expected-sha256",
                      "mismatched-expected-readiness-sha256",
+                     "format-max-evidence-chain-minutes",
                      "bad-max-evidence-chain-minutes",
                      "too-high-max-evidence-chain-minutes",
                      "evidence-chain-duration-exceeds-max",
                      "MaxEvidenceChainMinutes",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
                      "chain duration exceeds MaxEvidenceChainMinutes",
@@ -525,12 +533,15 @@ public class AdminBootstrapCliScriptTests
                      "admin-vps-bootstrap-smoke-wrapper-regression-test",
                      "admin-vps-bootstrap-smoke.ps1",
                      "Invoke-BootstrapSmokeScenario",
+                     "format-max-evidence-chain-minutes",
+                     "format-env-max-evidence-chain-minutes",
                      "bad-max-evidence-chain-minutes",
                      "bad-env-max-evidence-chain-minutes",
                      "too-high-max-evidence-chain-minutes",
                      "too-high-env-max-evidence-chain-minutes",
                      "MaxEvidenceChainMinutes",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
                      "missing-password",
@@ -557,8 +568,8 @@ public class AdminBootstrapCliScriptTests
         }
 
         Assert.DoesNotContain("[string]$Password", wrapper, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Max evidence chain minutes: $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("-MaxEvidenceChainMinutes $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-001D`", roadmap, StringComparison.Ordinal);
     }

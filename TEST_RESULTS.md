@@ -2,6 +2,50 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-23: admin VPS max duration format guard
+
+Что проверялось:
+
+- `scripts/admin-vps-smoke.ps1`, `scripts/admin-vps-bootstrap-smoke.ps1` и `scripts/local-admin-vps-bootstrap-smoke.ps1` fail-fast отклоняют нечисловой `MaxEvidenceChainMinutes` из CLI/env до preflight, readiness, локальной SQLite DB и smoke artifacts.
+- `scripts/validate-admin-vps-smoke-evidence.ps1` и `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` возвращают единое сообщение `MaxEvidenceChainMinutes must be an integer.` для standalone format ошибок.
+- Раздел "Что нового" получил релиз `2026-06-23-admin-vps-max-duration-format-guard`, версия `0.263.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-validator.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Admin VPS smoke/bootstrap/local wrapper regressions: OK, format guard сценарии не создают artifacts.
+- Admin VPS smoke/bootstrap evidence validator regressions: OK, `format-max-evidence-chain-minutes` покрыт.
+- Targeted docs/release unit suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-23-admin-vps-max-duration-format-guard`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- Smoke/bootstrap evidence validators: OK с expected SHA256 (`686db403...`, `27b7ac9f...`, `17b2f105...`, `f838501c...`) и `MaxEvidenceChainMinutes=120`.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 561, findings 0.
+- `git diff --check`: OK.
+- UTF-8 no BOM: OK, 28 changed files.
+
 ## Проверка 2026-06-22: admin VPS evidence explicit max duration guard
 
 Что проверялось:

@@ -17,7 +17,7 @@ param(
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
     [string]$FrontendPath = "frontend",
-    [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
+    [string]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { $env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { "120" }),
     [switch]$LocalSqlite,
     [switch]$ApplyMigrations,
     [switch]$ConfirmBootstrapReset,
@@ -63,19 +63,36 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
+function Convert-MaxEvidenceChainMinutes {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    $parsed = 0
+    if (-not [int]::TryParse($Value.Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+        throw "MaxEvidenceChainMinutes must be an integer."
+    }
+
+    if ($parsed -le 0) {
+        throw "MaxEvidenceChainMinutes must be greater than 0."
+    }
+
+    if ($parsed -gt 1440) {
+        throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
+    }
+
+    return $parsed
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
     }
 }
 
-if ($MaxEvidenceChainMinutes -le 0) {
-    throw "MaxEvidenceChainMinutes must be greater than 0."
-}
-
-if ($MaxEvidenceChainMinutes -gt 1440) {
-    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
-}
+$maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
 
 if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
     throw "Admin email is required."
@@ -120,7 +137,7 @@ try {
     Write-Host "Bootstrap smoke report path: $BootstrapSmokeReportPath"
     Write-Host "Readiness report path: $ReadinessReportPath"
     Write-Host "Release id: $releaseValue"
-    Write-Host "Max evidence chain minutes: $MaxEvidenceChainMinutes"
+    Write-Host "Max evidence chain minutes: $maxEvidenceChainMinutesValue"
     Write-Host "Bootstrap reset confirmed: $ConfirmBootstrapReset"
 
     $readinessArgs = @{
@@ -208,7 +225,7 @@ try {
         -Operator $Operator `
         -ReleaseId $releaseValue `
         -FrontendPath $FrontendPath `
-        -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes `
+        -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue `
         -AccountBootstrapChecked
 
     $now = [DateTimeOffset]::UtcNow
@@ -266,7 +283,7 @@ try {
         ($bootstrapSmokeReport | ConvertTo-Json -Depth 6),
         [System.Text.UTF8Encoding]::new($false))
     & $bootstrapSmokeReportValidatorScript -ReportPath $bootstrapSmokeReportFullPath -RequirePassed | Out-Host
-    & $bootstrapSmokeEvidenceValidatorScript -ReadinessReportPath $ReadinessReportPath -BootstrapSmokeReportPath $bootstrapSmokeReportFullPath -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes | Out-Host
+    & $bootstrapSmokeEvidenceValidatorScript -ReadinessReportPath $ReadinessReportPath -BootstrapSmokeReportPath $bootstrapSmokeReportFullPath -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue | Out-Host
 
     Write-Host "Admin VPS bootstrap+smoke flow completed."
     Write-Host "Validated bootstrap smoke report: $BootstrapSmokeReportPath"

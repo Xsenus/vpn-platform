@@ -484,10 +484,11 @@ public class AdminVpsSmokeReportTests
                      "evidenceChainDurationSeconds = [int][Math]::Round(($completedAt - $generatedAt).TotalSeconds)",
                      "evidenceChronology = \"preflight|smoke\"",
                      "MaxEvidenceChainMinutes",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
                      "chain duration exceeds MaxEvidenceChainMinutes",
-                     "maxEvidenceChainMinutes = $MaxEvidenceChainMinutes",
+                     "maxEvidenceChainMinutes = $maxEvidenceChainMinutesValue",
                      "passed = $passedSections",
                      "failed = $failedSections",
                      "blocked = $blockedSections",
@@ -529,10 +530,12 @@ public class AdminVpsSmokeReportTests
                      "admin-vps-smoke-evidence-validator-regression-test",
                      "mismatched-api-url",
                      "mismatched-expected-preflight-sha256",
+                     "format-max-evidence-chain-minutes",
                      "bad-max-evidence-chain-minutes",
                      "too-high-max-evidence-chain-minutes",
                      "evidence-chain-duration-exceeds-max",
                      "MaxEvidenceChainMinutes",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
                      "chain duration exceeds MaxEvidenceChainMinutes",
@@ -614,11 +617,14 @@ public class AdminVpsSmokeReportTests
                      "admin-vps-smoke-flow-wrapper-regression-test",
                      "admin-vps-smoke.ps1",
                      "Invoke-WrapperFailure",
+                     "format-max-evidence-chain-minutes",
+                     "format-env-max-evidence-chain-minutes",
                      "bad-max-evidence-chain-minutes",
                      "bad-env-max-evidence-chain-minutes",
                      "too-high-max-evidence-chain-minutes",
                      "too-high-env-max-evidence-chain-minutes",
                      "MaxEvidenceChainMinutes",
+                     "MaxEvidenceChainMinutes must be an integer",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
@@ -643,8 +649,8 @@ public class AdminVpsSmokeReportTests
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
         }
 
-        Assert.Contains("Max evidence chain minutes: $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("-MaxEvidenceChainMinutes $MaxEvidenceChainMinutes", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-smoke-flow-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002I`", roadmap, StringComparison.Ordinal);
     }

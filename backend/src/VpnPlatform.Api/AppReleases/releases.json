@@ -6274,5 +6274,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-max-duration-format-guard",
+    "version": "0.263.0",
+    "releasedAt": "2026-06-23T00:10:00+07:00",
+    "title": "Format guard для admin VPS max duration",
+    "summary": "Admin VPS smoke/bootstrap wrappers и evidence validators теперь явно отклоняют нечисловой MaxEvidenceChainMinutes до preflight, readiness, локальной DB и smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1`, `scripts/admin-vps-bootstrap-smoke.ps1` и `scripts/local-admin-vps-bootstrap-smoke.ps1` парсят `MaxEvidenceChainMinutes` как строку и возвращают единое сообщение `MaxEvidenceChainMinutes must be an integer.` для CLI/env format ошибок."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` и `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` получили такой же standalone format guard без PowerShell binding error."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

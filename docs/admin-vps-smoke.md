@@ -131,9 +131,9 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 `
   -AccountBootstrapChecked
 ```
 
-`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, вычисляет release id один раз, показывает `MaxEvidenceChainMinutes` без секретов, fail-fast отклоняет CLI/env лимит `<= 0` или `> 1440` до preflight/browser smoke, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword` с этим же release id, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` с тем же значением и передает лимит в `scripts/validate-admin-vps-smoke-evidence.ps1`. Browser smoke report пишет sanitized `adminEmail`, а парный evidence validator сверяет его с preflight report, чтобы нельзя было смешать preflight и smoke от разных admin-аккаунтов. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
+`scripts/admin-vps-smoke.ps1` не принимает пароль параметром, печатает только `Password: [hidden]`, вычисляет release id один раз, показывает `MaxEvidenceChainMinutes` без секретов, fail-fast отклоняет нечисловой CLI/env лимит, `<= 0` или `> 1440` до preflight/browser smoke, запускает `scripts/admin-vps-smoke-preflight.ps1 -RequirePassword` с этим же release id, затем `scripts/admin-vps-browser-smoke.ps1 -RequireAllPassed` с тем же значением и передает лимит в `scripts/validate-admin-vps-smoke-evidence.ps1`. Browser smoke report пишет sanitized `adminEmail`, а парный evidence validator сверяет его с preflight report, чтобы нельзя было смешать preflight и smoke от разных admin-аккаунтов. Если preflight report не проходит `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`, browser smoke не стартует. Для закрытия `P0-ADMIN-001`/`P0-ADMIN-002` нужен именно реальный VPS report без секретов, cookies, bearer-токенов и screenshots с приватными данными.
 
-Локальная regression-проверка wrapper, включая fail-closed сценарии `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `too-high-max-evidence-chain-minutes`, `missing-password`, `bad-api-url` и `missing-frontend`, доказывает, что browser smoke не стартует до valid preflight, smoke report не создается, пароль не попадает в stdout/stderr, а preflight report получает непустой release id еще до отказа browser smoke. Неверный CLI/env `MaxEvidenceChainMinutes` останавливается до создания preflight report:
+Локальная regression-проверка wrapper, включая fail-closed сценарии `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `too-high-max-evidence-chain-minutes`, `missing-password`, `bad-api-url` и `missing-frontend`, доказывает, что browser smoke не стартует до valid preflight, smoke report не создается, пароль не попадает в stdout/stderr, а preflight report получает непустой release id еще до отказа browser smoke. Неверный CLI/env `MaxEvidenceChainMinutes` останавливается до создания preflight report:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
@@ -147,7 +147,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-eviden
   -SmokeReportPath tmp\admin-vps-smoke-report.json
 ```
 
-Standalone validator fail-fast отклоняет `MaxEvidenceChainMinutes <= 0` и `> 1440` едиными сообщениями до чтения evidence reports; regression покрывает `bad-max-evidence-chain-minutes` и `too-high-max-evidence-chain-minutes`.
+Standalone validator fail-fast отклоняет нечисловой `MaxEvidenceChainMinutes`, `<= 0` и `> 1440` едиными сообщениями до чтения evidence reports; regression покрывает `format-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes` и `too-high-max-evidence-chain-minutes`.
 
 Локальная regression-проверка evidence validator:
 
@@ -161,7 +161,7 @@ Regression harness также покрывает `mismatched-preflight-report-pa
 
 ## Bootstrap + live-smoke
 
-Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он вычисляет release id один раз для readiness/smoke/bootstrap evidence, явно fail-fast отклоняет неположительный CLI/env `MaxEvidenceChainMinutes` до readiness/bootstrap/smoke artifacts, запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked` и прокидывает `MaxEvidenceChainMinutes` в smoke/bootstrap evidence validators.
+Если нужно в одном проходе восстановить production admin-аккаунт и сразу доказать вход в `/admin/`, используйте wrapper `scripts/admin-vps-bootstrap-smoke.ps1`. Он вычисляет release id один раз для readiness/smoke/bootstrap evidence, явно fail-fast отклоняет нечисловой или неположительный CLI/env `MaxEvidenceChainMinutes` до readiness/bootstrap/smoke artifacts, запускает `scripts/admin-bootstrap.ps1`, передает пароль в smoke только через process env `ADMIN_VPS_SMOKE_ADMIN_PASSWORD`, затем запускает `scripts/admin-vps-smoke.ps1 -AccountBootstrapChecked` и прокидывает `MaxEvidenceChainMinutes` в smoke/bootstrap evidence validators.
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5432;Database=vpnplatform;Username=vpnplatform;Password=<db-password>"
@@ -187,13 +187,13 @@ powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke
 ```
 
 Fail-fast regression для локального wrapper-а проверяет, что неверный `MaxEvidenceChainMinutes` останавливает запуск до API/admin web, browser smoke и создания `tmp/local-admin-vps-bootstrap-smoke` artifacts:
-Если CLI-параметр не передан, локальный wrapper берет default из `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`; regression покрывает неверный env-лимит и CLI-лимит выше 1440 минут.
+Если CLI-параметр не передан, локальный wrapper берет default из `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`; regression покрывает нечисловой CLI/env лимит, неверный env-лимит и CLI-лимит выше 1440 минут.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression wrapper-а проверяет fail-closed сценарии до запуска smoke: неверный CLI/env `MaxEvidenceChainMinutes`, нет пароля, нет `-ConfirmBootstrapReset`, нет connection string для не-локальной БД и `-DryRun`, при котором smoke не стартует. Для неверного CLI/env лимита wrapper не создает readiness report, bootstrap report, preflight report и smoke report:
+Regression wrapper-а проверяет fail-closed сценарии до запуска smoke: нечисловой или неверный CLI/env `MaxEvidenceChainMinutes`, нет пароля, нет `-ConfirmBootstrapReset`, нет connection string для не-локальной БД и `-DryRun`, при котором smoke не стартует. Для неверного CLI/env лимита wrapper не создает readiness report, bootstrap report, preflight report и smoke report:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
