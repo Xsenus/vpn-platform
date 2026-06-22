@@ -39,6 +39,20 @@ function Write-JsonFile {
         [System.Text.UTF8Encoding]::new($false))
 }
 
+function Get-FileSha256 {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+        $hash = $sha256.ComputeHash($bytes)
+        return [System.BitConverter]::ToString($hash).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
 function New-ReadinessReport {
     param(
         [string]$Path,
@@ -229,6 +243,7 @@ function Invoke-ValidatorScenario {
         [Parameter(Mandatory = $true)][int]$ExpectedExitCode,
         [Parameter(Mandatory = $true)][string]$ExpectedMessage,
         [string[]]$AdditionalExpectedMessages = @(),
+        [scriptblock]$AdditionalArguments,
         [scriptblock]$Mutate
     )
 
@@ -251,14 +266,20 @@ function Invoke-ValidatorScenario {
         & $Mutate $readinessPath $bootstrapPath $preflightPath $smokePath
     }
 
+    $argumentList = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", (Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1"),
+        "-ReadinessReportPath", $readinessPath,
+        "-BootstrapSmokeReportPath", $bootstrapPath
+    )
+
+    if ($null -ne $AdditionalArguments) {
+        $argumentList += @(& $AdditionalArguments $readinessPath $bootstrapPath $preflightPath $smokePath)
+    }
+
     $process = Start-Process -FilePath "powershell" `
-        -ArgumentList @(
-            "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
-            "-File", (Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1"),
-            "-ReadinessReportPath", $readinessPath,
-            "-BootstrapSmokeReportPath", $bootstrapPath
-        ) `
+        -ArgumentList $argumentList `
         -WorkingDirectory $repoRoot `
         -RedirectStandardOutput $stdoutPath `
         -RedirectStandardError $stderrPath `
@@ -297,6 +318,18 @@ New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 
 $results = @()
 $results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid" -AdditionalExpectedMessages @("readinessReportId", "bootstrapSmokeReportId", "preflightReportId", "smokeReportId", "readinessReportSha256", "bootstrapSmokeReportSha256", "preflightReportSha256", "smokeReportSha256", "apiBaseUrl", "adminWebUrl", "adminEmail", "operator", "passwordEnvName", "passwordEnvPresent", "passwordLengthOk", "connectionStringPresent", "applyMigrations", "confirmBootstrapReset", "bootstrapResetConfirmed", "readyForBootstrapSmoke", "bootstrapStatus", "readinessGeneratedAt", "preflightGeneratedAt", "smokeStartedAt", "smokeCompletedAt", "bootstrapGeneratedAt", "bootstrapCompletedAt", "preflightToSmokeSeconds", "smokeDurationSeconds", "bootstrapDurationSeconds", "readinessToBootstrapSeconds", "preflightReportPath", "sectionsContractPath", '"sections":16', '"passed":16', '"failed":0', '"blocked":0', '"skipped":0', '"preflightToSmokeSeconds":60', '"smokeDurationSeconds":60', '"bootstrapDurationSeconds":120', '"readinessToBootstrapSeconds":300')
+$results += Invoke-ValidatorScenario -Name "valid-expected-sha256" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid" -AdditionalExpectedMessages @("readinessReportSha256", "bootstrapSmokeReportSha256", "preflightReportSha256", "smokeReportSha256") -AdditionalArguments {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    @(
+        "-ExpectedReadinessReportSha256", (Get-FileSha256 $readinessPath),
+        "-ExpectedBootstrapSmokeReportSha256", (Get-FileSha256 $bootstrapPath),
+        "-ExpectedPreflightReportSha256", (Get-FileSha256 $preflightPath),
+        "-ExpectedSmokeReportSha256", (Get-FileSha256 $smokePath)
+    )
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-expected-readiness-sha256" -ExpectedExitCode 1 -ExpectedMessage "readinessReportSha256 does not match expected SHA256" -AdditionalArguments {
+    @("-ExpectedReadinessReportSha256", ("0" * 64))
+}
 $results += Invoke-ValidatorScenario -Name "mismatched-admin-url" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness adminWebUrl" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json

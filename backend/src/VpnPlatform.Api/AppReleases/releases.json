@@ -5607,5 +5607,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-bootstrap-evidence-expected-fingerprint",
+    "version": "0.234.0",
+    "releasedAt": "2026-06-22T23:59:59.937+07:00",
+    "title": "Expected SHA256 guard для bootstrap smoke evidence VPS",
+    "summary": "Bootstrap smoke evidence validator теперь принимает ожидаемые SHA256 fingerprints readiness/bootstrap/preflight/smoke JSON и fail-closed отклоняет bundle при несовпадении, чтобы оператор мог повторно подтвердить неизменность evidence без секретов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` добавляет параметры `ExpectedReadinessReportSha256`, `ExpectedBootstrapSmokeReportSha256`, `ExpectedPreflightReportSha256` и `ExpectedSmokeReportSha256`."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` проверяет success-сценарий с корректными expected SHA256 и fail-сценарий при несовпадении readiness fingerprint."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

@@ -3,7 +3,15 @@ param(
     [string]$ReadinessReportPath,
 
     [Parameter(Mandatory = $true)]
-    [string]$BootstrapSmokeReportPath
+    [string]$BootstrapSmokeReportPath,
+
+    [string]$ExpectedReadinessReportSha256 = "",
+
+    [string]$ExpectedBootstrapSmokeReportSha256 = "",
+
+    [string]$ExpectedPreflightReportSha256 = "",
+
+    [string]$ExpectedSmokeReportSha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +51,27 @@ function Get-FileSha256 {
     }
     finally {
         $sha256.Dispose()
+    }
+}
+
+function Assert-ExpectedSha256 {
+    param(
+        [Parameter(Mandatory = $true)][string]$Actual,
+        [AllowEmptyString()][string]$Expected,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Expected)) {
+        return
+    }
+
+    $normalizedExpected = $Expected.Trim().ToLowerInvariant()
+    if (-not ($normalizedExpected -match "^[0-9a-f]{64}$")) {
+        throw "Admin VPS bootstrap smoke evidence expected $Name must be a 64-character SHA256 hex string."
+    }
+
+    if (-not [string]::Equals($Actual, $normalizedExpected, [System.StringComparison]::Ordinal)) {
+        throw "Admin VPS bootstrap smoke evidence $Name does not match expected SHA256."
     }
 }
 
@@ -126,15 +155,25 @@ $preflightGeneratedAt = [DateTimeOffset]::Parse([string]$preflight.generatedAt)
 $smokeStartedAt = [DateTimeOffset]::Parse([string]$smoke.startedAt)
 $smokeCompletedAt = [DateTimeOffset]::Parse([string]$smoke.completedAt)
 
+$readinessReportSha256 = Get-FileSha256 $readinessFullPath
+$bootstrapSmokeReportSha256 = Get-FileSha256 $bootstrapFullPath
+$preflightReportSha256 = Get-FileSha256 $preflightFullPath
+$smokeReportSha256 = Get-FileSha256 $smokeFullPath
+
+Assert-ExpectedSha256 -Actual $readinessReportSha256 -Expected $ExpectedReadinessReportSha256 -Name "readinessReportSha256"
+Assert-ExpectedSha256 -Actual $bootstrapSmokeReportSha256 -Expected $ExpectedBootstrapSmokeReportSha256 -Name "bootstrapSmokeReportSha256"
+Assert-ExpectedSha256 -Actual $preflightReportSha256 -Expected $ExpectedPreflightReportSha256 -Name "preflightReportSha256"
+Assert-ExpectedSha256 -Actual $smokeReportSha256 -Expected $ExpectedSmokeReportSha256 -Name "smokeReportSha256"
+
 $summary = [ordered]@{
     readinessReportId = $readiness.reportId
     bootstrapSmokeReportId = $bootstrap.reportId
     preflightReportId = $preflight.reportId
     smokeReportId = $smoke.reportId
-    readinessReportSha256 = Get-FileSha256 $readinessFullPath
-    bootstrapSmokeReportSha256 = Get-FileSha256 $bootstrapFullPath
-    preflightReportSha256 = Get-FileSha256 $preflightFullPath
-    smokeReportSha256 = Get-FileSha256 $smokeFullPath
+    readinessReportSha256 = $readinessReportSha256
+    bootstrapSmokeReportSha256 = $bootstrapSmokeReportSha256
+    preflightReportSha256 = $preflightReportSha256
+    smokeReportSha256 = $smokeReportSha256
     environmentName = $bootstrap.environmentName
     releaseId = $bootstrap.releaseId
     apiBaseUrl = $bootstrap.apiBaseUrl
