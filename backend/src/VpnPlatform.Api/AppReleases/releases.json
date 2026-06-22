@@ -6113,5 +6113,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-bootstrap-smoke-env-max-duration",
+    "version": "0.256.0",
+    "releasedAt": "2026-06-22T23:59:59.9999+07:00",
+    "title": "Env max duration guard для admin VPS bootstrap smoke",
+    "summary": "Production bootstrap smoke regression harness теперь проверяет неверный ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES и доказывает fail-fast остановку до readiness/smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` покрывает `bad-env-max-evidence-chain-minutes` для `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`."
+      },
+      {
+        "type": "fixed",
+        "text": "Regression harness очищает env-лимит для остальных сценариев, чтобы CLI/env max duration проверки не влияли друг на друга."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

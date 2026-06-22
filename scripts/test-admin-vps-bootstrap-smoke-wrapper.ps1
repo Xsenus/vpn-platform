@@ -52,6 +52,7 @@ function Invoke-BootstrapSmokeScenario {
         [switch]$DryRun,
         [Parameter(Mandatory = $true)][int]$ExpectedExitCode,
         [Parameter(Mandatory = $true)][string]$ExpectedMessage,
+        [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
         [string[]]$AdditionalArguments = @()
     )
 
@@ -70,6 +71,7 @@ function Invoke-BootstrapSmokeScenario {
     try {
         Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD" -Value $Password
         Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_ADMIN_PASSWORD" -Value $null
+        Set-ScopedEnv -Previous $previous -Name "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES" -Value $EnvMaxEvidenceChainMinutes
         Set-ScopedEnv -Previous $previous -Name "ConnectionStrings__DefaultConnection" -Value $ConnectionString
 
         $arguments = @(
@@ -184,6 +186,15 @@ try {
         -ExpectedExitCode 1 `
         -ExpectedMessage "MaxEvidenceChainMinutes" `
         -AdditionalArguments @("-MaxEvidenceChainMinutes", "0")
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "bad-env-max-evidence-chain-minutes" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-env-max-evidence-chain-minutes/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "MaxEvidenceChainMinutes" `
+        -EnvMaxEvidenceChainMinutes "0"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "missing-password" `

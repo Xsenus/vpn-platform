@@ -2,6 +2,18 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.256.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-bootstrap-smoke-env-max-duration`.
+
+### Fixed
+- `scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` покрывает `bad-env-max-evidence-chain-minutes`, чтобы неверный `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES` fail-fast останавливал production bootstrap smoke wrapper до readiness/smoke artifacts.
+- Regression harness очищает env-лимит для остальных сценариев, чтобы CLI/env проверки `MaxEvidenceChainMinutes` не влияли друг на друга.
+
+### Verified
+- Admin VPS bootstrap smoke wrapper regression: OK, `bad-max-evidence-chain-minutes` и `bad-env-max-evidence-chain-minutes` покрыты без запуска smoke artifacts.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.255.0 - 2026-06-22
 
 Release entry: `2026-06-22-local-admin-bootstrap-smoke-env-max-duration`.
