@@ -93,6 +93,10 @@ if ($MaxEvidenceChainMinutes -le 0) {
     throw "MaxEvidenceChainMinutes must be greater than 0."
 }
 
+if ($MaxEvidenceChainMinutes -gt 1440) {
+    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
+}
+
 Assert-PortFree -Port $ApiPort -Name "API"
 Assert-PortFree -Port $AdminPort -Name "Admin web"
 

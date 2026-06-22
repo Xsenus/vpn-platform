@@ -45,7 +45,8 @@ function Invoke-LocalWrapperFailure {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$AdditionalArguments,
-        [AllowNull()][string]$EnvMaxEvidenceChainMinutes
+        [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
+        [Parameter(Mandatory = $true)][string]$ExpectedMessage
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -87,7 +88,7 @@ function Invoke-LocalWrapperFailure {
             throw "Expected local admin VPS bootstrap smoke wrapper to fail for scenario '$Name'."
         }
 
-        if ($output.IndexOf("MaxEvidenceChainMinutes must be greater than 0", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        if ($output.IndexOf($ExpectedMessage, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "Expected bad MaxEvidenceChainMinutes output for scenario '$Name'. Actual output: $output"
         }
 
@@ -104,7 +105,7 @@ function Invoke-LocalWrapperFailure {
         return [ordered]@{
             name = $Name
             exitCode = $process.ExitCode
-            expectedMessage = "MaxEvidenceChainMinutes must be greater than 0"
+            expectedMessage = $ExpectedMessage
             localSmokeArtifactsCreated = $false
         }
     }
@@ -120,12 +121,20 @@ try {
     $testedFailures += Invoke-LocalWrapperFailure `
         -Name "bad-max-evidence-chain-minutes" `
         -AdditionalArguments @("-MaxEvidenceChainMinutes", "0") `
-        -EnvMaxEvidenceChainMinutes $null
+        -EnvMaxEvidenceChainMinutes $null `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be greater than 0"
 
     $testedFailures += Invoke-LocalWrapperFailure `
         -Name "bad-env-max-evidence-chain-minutes" `
         -AdditionalArguments @() `
-        -EnvMaxEvidenceChainMinutes "0"
+        -EnvMaxEvidenceChainMinutes "0" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be greater than 0"
+
+    $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "too-high-max-evidence-chain-minutes" `
+        -AdditionalArguments @("-MaxEvidenceChainMinutes", "1441") `
+        -EnvMaxEvidenceChainMinutes $null `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440"
 
     $result = [ordered]@{
         status = "passed"

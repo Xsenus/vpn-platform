@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-admin-vps-smoke-explicit-max-duration-guard`, версия `0.259.0`; `scripts/admin-vps-smoke.ps1` явно fail-fast отклоняет CLI/env `MaxEvidenceChainMinutes <= 0` и `> 1440` до preflight/browser smoke artifacts, а `scripts/test-admin-vps-smoke-flow-wrapper.ps1` проверяет `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes` и `too-high-max-evidence-chain-minutes`. `scripts/admin-vps-smoke.ps1`/`scripts/admin-vps-bootstrap-smoke.ps1` прокидывают этот лимит в smoke/bootstrap evidence validators; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-local-admin-bootstrap-smoke-explicit-max-duration-guard`, версия `0.260.0`; `scripts/local-admin-vps-bootstrap-smoke.ps1` fail-fast отклоняет `MaxEvidenceChainMinutes <= 0` и `> 1440` до проверки портов, локальной SQLite DB и smoke artifacts, а `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` проверяет CLI/env/upper-bound scenarios. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

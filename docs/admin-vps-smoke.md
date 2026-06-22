@@ -185,7 +185,7 @@ powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke
 ```
 
 Fail-fast regression для локального wrapper-а проверяет, что неверный `MaxEvidenceChainMinutes` останавливает запуск до API/admin web, browser smoke и создания `tmp/local-admin-vps-bootstrap-smoke` artifacts:
-Если CLI-параметр не передан, локальный wrapper берет default из `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`; regression покрывает и неверный env-лимит.
+Если CLI-параметр не передан, локальный wrapper берет default из `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES`; regression покрывает неверный env-лимит и CLI-лимит выше 1440 минут.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1

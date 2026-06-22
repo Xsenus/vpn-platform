@@ -6205,5 +6205,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS admin smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-local-admin-bootstrap-smoke-explicit-max-duration-guard",
+    "version": "0.260.0",
+    "releasedAt": "2026-06-22T23:59:59.9999999+06:59",
+    "title": "Явный max duration guard для local bootstrap smoke",
+    "summary": "Локальный admin VPS bootstrap smoke wrapper теперь останавливает неверный MaxEvidenceChainMinutes до портов, локальной SQLite DB и smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/local-admin-vps-bootstrap-smoke.ps1` явно отклоняет `MaxEvidenceChainMinutes <= 0` и `> 1440` до запуска локальной smoke-цепочки."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` покрывает `too-high-max-evidence-chain-minutes` без создания local smoke artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]
