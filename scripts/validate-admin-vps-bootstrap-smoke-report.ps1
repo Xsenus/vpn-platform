@@ -208,6 +208,8 @@ if ($RequirePassed) {
     Assert-Same ([string]$report.releaseId) ([string]$smokeReport.releaseId) "smoke releaseId"
     Assert-Same ([string]$report.provider) ([string]$readinessReport.provider) "readiness provider"
     Assert-Same ([string]$report.passwordEnvName) ([string]$readinessReport.passwordEnvName) "readiness passwordEnvName"
+    Assert-Same (Resolve-WorkspacePath ([string]$report.smokeReportPath)) (Resolve-WorkspacePath ([string]$readinessReport.smokeReportPath)) "readiness smokeReportPath"
+    Assert-Same (Resolve-WorkspacePath ([string]$report.preflightReportPath)) (Resolve-WorkspacePath ([string]$readinessReport.preflightReportPath)) "readiness preflightReportPath"
     Assert-Same (Resolve-WorkspacePath ([string]$readinessReport.bootstrapSmokeReportPath)) $fullReportPath "readiness bootstrapSmokeReportPath"
 
     if ($report.localSqlite -ne $readinessReport.localSqlite) {

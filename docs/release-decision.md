@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-smoke-timing-link`, версия `0.218.0`; `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` теперь требует, чтобы итоговый bootstrap report не был сгенерирован раньше linked smoke `completedAt`, а regression harness покрывает `bootstrap-generated-before-smoke-completed`; smoke timing checks из `0.217.0` остаются в силе; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-readiness-smoke-path-link`, версия `0.219.0`; `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` теперь сверяет readiness `smokeReportPath` и `preflightReportPath` с итоговым bootstrap report, а regression harness покрывает `mismatched-readiness-smoke-report-path` и `mismatched-readiness-preflight-report-path`; bootstrap timing checks из `0.218.0` остаются в силе; production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

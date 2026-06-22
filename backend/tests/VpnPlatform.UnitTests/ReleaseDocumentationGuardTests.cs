@@ -47,6 +47,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001R", "2026-06-22-admin-vps-bootstrap-readiness-chain-validate"),
         new("P0-ADMIN-001S", "2026-06-22-admin-vps-bootstrap-readiness-metadata-link"),
         new("P0-ADMIN-001T", "2026-06-22-admin-vps-bootstrap-smoke-timing-link"),
+        new("P0-ADMIN-001U", "2026-06-22-admin-vps-bootstrap-readiness-smoke-path-link"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

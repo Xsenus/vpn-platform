@@ -325,6 +325,18 @@ $results += Invoke-ValidatorScenario -Name "mismatched-readiness-bootstrap-repor
     $report.bootstrapSmokeReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-readiness-bootstrap-report.json"
     Write-JsonFile -Path $readinessPath -Value $report
 }
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-smoke-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness smokeReportPath" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.smokeReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-readiness-smoke-report.json"
+    Write-JsonFile -Path $readinessPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-preflight-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness preflightReportPath" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.preflightReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-readiness-preflight-report.json"
+    Write-JsonFile -Path $readinessPath -Value $report
+}
 $results += Invoke-ValidatorScenario -Name "mismatched-readiness-provider" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness provider" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
