@@ -6481,5 +6481,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-readiness-ready-flag",
+    "version": "0.272.0",
+    "releasedAt": "2026-06-23T01:40:00+07:00",
+    "title": "Ready flag guard for admin VPS bootstrap readiness",
+    "summary": "Admin VPS bootstrap readiness validator now rejects reports where readyForBootstrapSmoke does not match the recorded checks.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` now requires `readyForBootstrapSmoke` to match the actual checks array."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers a tampered readiness flag without `-RequireReady`, so standalone evidence cannot claim readiness with failed checks."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

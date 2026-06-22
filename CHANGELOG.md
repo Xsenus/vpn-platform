@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.272.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-readiness-ready-flag`.
+
+### Fixed
+
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` now rejects readiness reports where `readyForBootstrapSmoke` does not match the actual `checks` array.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `mismatched-readiness-ready-flag` without `-RequireReady`, so standalone sanitized readiness evidence cannot claim bootstrap readiness with failed checks.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `mismatched-readiness-ready-flag` fails with `readyForBootstrapSmoke must match checks`.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-readiness-ready-flag`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.271.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-bootstrap-provider-guard`.

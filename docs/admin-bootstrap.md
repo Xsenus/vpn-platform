@@ -82,7 +82,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-
 
 Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-default-operator` and `dry-run-default-environment`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts.
 
-Readiness gate перед reset-ом пишет sanitized `admin-vps-bootstrap-smoke-readiness-report.json` без пароля и connection string. Он должен пройти до `admin-bootstrap.ps1`:
+Readiness gate перед reset-ом пишет sanitized `admin-vps-bootstrap-smoke-readiness-report.json` без пароля и connection string. Валидатор fail-closed требует, чтобы `readyForBootstrapSmoke` совпадал с фактическим массивом `checks`, даже если standalone-проверка запущена без `-RequireReady`. Он должен пройти до `admin-bootstrap.ps1`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -ReportPath tmp\admin-vps-bootstrap-smoke-readiness-report.json -RequireReady

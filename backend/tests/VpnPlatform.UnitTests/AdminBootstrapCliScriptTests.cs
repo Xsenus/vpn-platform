@@ -299,6 +299,7 @@ public class AdminBootstrapCliScriptTests
                      "fullReportPath",
                      "Assert-Same",
                      "mismatch for $Name",
+                     "readyForBootstrapSmoke must match checks",
                      "admin-vps-bootstrap-smoke-readiness-report.json",
                      "admin vps bootstrap smoke readiness report valid",
                      "contains forbidden secret marker",
@@ -313,6 +314,7 @@ public class AdminBootstrapCliScriptTests
                  {
                      "local-ready",
                      "mismatched-readiness-report-self-link",
+                     "mismatched-readiness-ready-flag",
                      "missing-password",
                      "missing-confirm-bootstrap-reset",
                      "missing-connection-string",

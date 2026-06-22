@@ -178,6 +178,7 @@ function Invoke-ReadinessValidatorScenario {
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][string]$SourceReportPath,
         [Parameter(Mandatory = $true)][string]$ExpectedMessage,
+        [bool]$RequireReady = $true,
         [scriptblock]$Mutate
     )
 
@@ -194,14 +195,18 @@ function Invoke-ReadinessValidatorScenario {
         & $Mutate $reportPath
     }
 
-    $process = Start-Process -FilePath "powershell" `
-        -ArgumentList @(
+    $args = @(
             "-NoProfile",
             "-ExecutionPolicy", "Bypass",
             "-File", (Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1"),
-            "-ReportPath", $reportPath,
-            "-RequireReady"
-        ) `
+            "-ReportPath", $reportPath
+        )
+    if ($RequireReady) {
+        $args += "-RequireReady"
+    }
+
+    $process = Start-Process -FilePath "powershell" `
+        -ArgumentList $args `
         -WorkingDirectory $repoRoot `
         -RedirectStandardOutput $stdoutPath `
         -RedirectStandardError $stderrPath `
@@ -248,6 +253,18 @@ $results += Invoke-ReadinessValidatorScenario `
         param($reportPath)
         $report = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $report.readinessReportPath = Join-Path (Split-Path -Parent $reportPath) "other-readiness-report.json"
+        Write-JsonFile -Path $reportPath -Value $report
+    }
+
+$results += Invoke-ReadinessValidatorScenario `
+    -Name "mismatched-readiness-ready-flag" `
+    -SourceReportPath $localReadyReportPath `
+    -ExpectedMessage "readyForBootstrapSmoke must match checks" `
+    -RequireReady $false `
+    -Mutate {
+        param($reportPath)
+        $report = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $report.checks[0].passed = $false
         Write-JsonFile -Path $reportPath -Value $report
     }
 

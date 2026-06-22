@@ -212,6 +212,12 @@ foreach ($entry in $report.checks) {
     }
 }
 
+$failedChecks = @($report.checks | Where-Object { -not $_.passed })
+$expectedReadyForBootstrapSmoke = $failedChecks.Count -eq 0
+if ($report.readyForBootstrapSmoke -ne $expectedReadyForBootstrapSmoke) {
+    throw "Admin VPS bootstrap smoke readiness report field readyForBootstrapSmoke must match checks."
+}
+
 $summary = [ordered]@{
     reportId = $report.reportId
     environmentName = $report.environmentName

@@ -5,8 +5,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-06-23-admin-vps-bootstrap-provider-guard";
-    private const string CurrentVersion = "0.271.0";
+    private const string CurrentReleaseId = "2026-06-23-admin-vps-readiness-ready-flag";
+    private const string CurrentVersion = "0.272.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
