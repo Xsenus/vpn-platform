@@ -1,6 +1,7 @@
 param(
     [int]$ApiPort = 18211,
     [int]$AdminPort = 18215,
+    [int]$MaxEvidenceChainMinutes = 120,
     [switch]$KeepArtifacts
 )
 
@@ -88,6 +89,10 @@ function Stop-ProcessTree {
 }
 
 Assert-InWorkspace $tmp
+if ($MaxEvidenceChainMinutes -le 0) {
+    throw "MaxEvidenceChainMinutes must be greater than 0."
+}
+
 Assert-PortFree -Port $ApiPort -Name "API"
 Assert-PortFree -Port $AdminPort -Name "Admin web"
 
@@ -181,6 +186,7 @@ try {
         -ReadinessReportPath $readinessReportRelativePath `
         -EnvironmentName "Local" `
         -Operator "local-admin-vps-bootstrap-smoke" `
+        -MaxEvidenceChainMinutes $MaxEvidenceChainMinutes `
         -LocalSqlite
 
     Write-Output "local admin vps bootstrap smoke ok api=$apiUrl admin=$adminUrl report=$reportRelativePath"

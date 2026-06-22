@@ -66,6 +66,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001AK", "2026-06-22-admin-vps-bootstrap-evidence-report-id-timestamp-link"),
         new("P0-ADMIN-001AL", "2026-06-22-admin-vps-bootstrap-evidence-chronology-summary"),
         new("P0-ADMIN-001AM", "2026-06-22-admin-vps-smoke-wrapper-max-duration"),
+        new("P0-ADMIN-001AN", "2026-06-22-local-admin-bootstrap-smoke-max-duration"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

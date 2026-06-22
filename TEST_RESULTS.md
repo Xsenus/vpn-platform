@@ -2,6 +2,40 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-22: local admin bootstrap smoke max duration propagation
+
+Что проверялось:
+
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` принимает `MaxEvidenceChainMinutes`, fail-fast отклоняет неположительный лимит и передает его в `scripts/admin-vps-bootstrap-smoke.ps1`.
+- Локальная SQLite-проверка bootstrap/login smoke использует тот же `MaxEvidenceChainMinutes=120`, что operator wrappers и evidence validators.
+- Раздел "Что нового" получил релиз `2026-06-22-local-admin-bootstrap-smoke-max-duration`, версия `0.253.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-evidence.ps1 -PreflightReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-smoke-preflight-report.json -SmokeReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-smoke-report.json -MaxEvidenceChainMinutes 120
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-evidence.ps1 -ReadinessReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-readiness-report.json -BootstrapSmokeReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-bootstrap-smoke-report.json -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+```
+
+Результат:
+
+- `AdminBootstrapCliScriptTests`: OK.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-local-admin-bootstrap-smoke-max-duration`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- Smoke/bootstrap evidence validators: OK с `MaxEvidenceChainMinutes=120`.
+- Backend full suite: 590/590.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+
 ## Проверка 2026-06-22: admin VPS smoke wrapper max duration propagation
 
 Что проверялось:

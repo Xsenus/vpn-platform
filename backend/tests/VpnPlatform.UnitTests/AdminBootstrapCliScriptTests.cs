@@ -131,6 +131,9 @@ public class AdminBootstrapCliScriptTests
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "BootstrapSmokeReportPath",
                      "ReadinessReportPath",
+                     "MaxEvidenceChainMinutes",
+                     "MaxEvidenceChainMinutes must be greater than 0",
+                     "-MaxEvidenceChainMinutes $MaxEvidenceChainMinutes",
                      "Assert-InWorkspace",
                      "Stop-ProcessTree",
                      "local admin vps bootstrap smoke ok"
