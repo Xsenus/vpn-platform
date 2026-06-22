@@ -37,14 +37,43 @@ function Write-Utf8NoBomJson {
     [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 12), [System.Text.UTF8Encoding]::new($false))
 }
 
+function Get-FileSha256 {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+        $hash = $sha256.ComputeHash($bytes)
+        return [System.BitConverter]::ToString($hash).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
 function Invoke-EvidenceValidator {
     param(
         [Parameter(Mandatory = $true)][string]$PreflightPath,
-        [Parameter(Mandatory = $true)][string]$SmokePath
+        [Parameter(Mandatory = $true)][string]$SmokePath,
+        [string]$ExpectedPreflightReportSha256 = "",
+        [string]$ExpectedSmokeReportSha256 = ""
     )
 
     $validator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
-    return & $validator -PreflightReportPath $PreflightPath -SmokeReportPath $SmokePath 6>&1 2>&1
+    $validatorArgs = @{
+        PreflightReportPath = $PreflightPath
+        SmokeReportPath = $SmokePath
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightReportSha256)) {
+        $validatorArgs.ExpectedPreflightReportSha256 = $ExpectedPreflightReportSha256
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedSmokeReportSha256)) {
+        $validatorArgs.ExpectedSmokeReportSha256 = $ExpectedSmokeReportSha256
+    }
+
+    return & $validator @validatorArgs 6>&1 2>&1
 }
 
 function Assert-FailsWith {
@@ -186,7 +215,32 @@ try {
         throw "Valid smoke evidence output must include sectionsContractPath. Output: $validOutputText"
     }
 
+    if ($validOutputText.IndexOf("preflightReportSha256", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "Valid smoke evidence output must include preflightReportSha256. Output: $validOutputText"
+    }
+
+    if ($validOutputText.IndexOf("smokeReportSha256", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "Valid smoke evidence output must include smokeReportSha256. Output: $validOutputText"
+    }
+
+    $validExpectedSha256Output = Invoke-EvidenceValidator `
+        -PreflightPath $preflightPath `
+        -SmokePath $smokePath `
+        -ExpectedPreflightReportSha256 (Get-FileSha256 $preflightPath) `
+        -ExpectedSmokeReportSha256 (Get-FileSha256 $smokePath)
+    $validExpectedSha256OutputText = ($validExpectedSha256Output -join "`n")
+    if ($validExpectedSha256OutputText.IndexOf("admin vps smoke evidence valid", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "Valid smoke evidence output with expected SHA256 must pass. Output: $validExpectedSha256OutputText"
+    }
+
     $testedFailures = @()
+
+    $testedFailures += [ordered]@{
+        name = "mismatched-expected-preflight-sha256"
+        message = Assert-FailsWith -ExpectedMessage "preflightReportSha256 does not match expected SHA256" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -ExpectedPreflightReportSha256 ("0" * 64)
+        }
+    }
 
     $badApiPreflight = Join-Path $outputFullPath "bad-api-preflight.json"
     $badApi = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -303,6 +357,7 @@ try {
     $result = [ordered]@{
         status = "passed"
         validValidatorOutput = $validOutputText
+        validExpectedSha256Output = $validExpectedSha256OutputText
         testedFailures = @($testedFailures)
     }
 

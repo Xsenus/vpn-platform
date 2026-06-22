@@ -2,6 +2,25 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.235.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-smoke-evidence-expected-fingerprint`.
+
+### Fixed
+- `scripts/validate-admin-vps-smoke-evidence.ps1` теперь добавляет `preflightReportSha256` и `smokeReportSha256` в sanitized success summary.
+- `scripts/validate-admin-vps-smoke-evidence.ps1` принимает expected SHA256 fingerprints `ExpectedPreflightReportSha256` и `ExpectedSmokeReportSha256` и fail-closed отклоняет bundle при несовпадении.
+- `scripts/test-admin-vps-smoke-evidence-validator.ps1` проверяет success-сценарий с корректными expected SHA256 и fail-сценарий при несовпадении preflight fingerprint.
+
+### Verified
+- Admin VPS smoke evidence validator regression: OK, valid expected SHA256 accepted, mismatched expected preflight SHA256 rejected.
+- `AdminVpsSmokeReportTests`: 15/15.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-smoke-evidence-expected-fingerprint`, smoke sections `16/16`, smoke evidence validator with expected SHA256 OK.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, tests 66/66, console E2E 9/9, audit 0 vulnerabilities.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.234.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-evidence-expected-fingerprint`.

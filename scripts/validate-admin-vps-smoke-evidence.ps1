@@ -3,7 +3,11 @@ param(
     [string]$PreflightReportPath,
 
     [Parameter(Mandatory = $true)]
-    [string]$SmokeReportPath
+    [string]$SmokeReportPath,
+
+    [string]$ExpectedPreflightReportSha256 = "",
+
+    [string]$ExpectedSmokeReportSha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,6 +42,41 @@ function Read-JsonFile {
 function Normalize-Url {
     param([AllowEmptyString()][string]$Value)
     return ([string]$Value).Trim().TrimEnd("/")
+}
+
+function Get-FileSha256 {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+        $hash = $sha256.ComputeHash($bytes)
+        return [System.BitConverter]::ToString($hash).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
+function Assert-ExpectedSha256 {
+    param(
+        [Parameter(Mandatory = $true)][string]$Actual,
+        [AllowEmptyString()][string]$Expected,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Expected)) {
+        return
+    }
+
+    $normalizedExpected = $Expected.Trim().ToLowerInvariant()
+    if (-not ($normalizedExpected -match "^[0-9a-f]{64}$")) {
+        throw "Admin VPS smoke evidence expected $Name must be a 64-character SHA256 hex string."
+    }
+
+    if (-not [string]::Equals($Actual, $normalizedExpected, [System.StringComparison]::Ordinal)) {
+        throw "Admin VPS smoke evidence $Name does not match expected SHA256."
+    }
 }
 
 function Assert-Equal {
@@ -120,12 +159,19 @@ if ($startedAt -lt $generatedAt) {
 }
 
 $sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
+$preflightReportSha256 = Get-FileSha256 $preflightFullPath
+$smokeReportSha256 = Get-FileSha256 $smokeFullPath
+
+Assert-ExpectedSha256 -Actual $preflightReportSha256 -Expected $ExpectedPreflightReportSha256 -Name "preflightReportSha256"
+Assert-ExpectedSha256 -Actual $smokeReportSha256 -Expected $ExpectedSmokeReportSha256 -Name "smokeReportSha256"
 
 $summary = [ordered]@{
     environmentName = $smoke.environmentName
     releaseId = $smoke.releaseId
     apiBaseUrl = (Normalize-Url $smoke.apiBaseUrl)
     adminWebUrl = (Normalize-Url $smoke.adminWebUrl)
+    preflightReportSha256 = $preflightReportSha256
+    smokeReportSha256 = $smokeReportSha256
     sections = @($smoke.sections).Count
     sectionsContractPath = $sectionsContractPath
     preflightReady = $preflight.readyForLiveSmoke

@@ -470,6 +470,12 @@ public class AdminVpsSmokeReportTests
                      "operator",
                      "sectionsContractPath",
                      "sectionsContractPath = $sectionsContractPath",
+                     "preflightReportSha256",
+                     "smokeReportSha256",
+                     "ExpectedPreflightReportSha256",
+                     "ExpectedSmokeReportSha256",
+                     "Assert-ExpectedSha256",
+                     "does not match expected SHA256",
                      "smokeReportPath",
                      "preflightReportPath",
                      "preflightReportPath = $preflightFullPath",
@@ -487,6 +493,7 @@ public class AdminVpsSmokeReportTests
                  {
                      "admin-vps-smoke-evidence-validator-regression-test",
                      "mismatched-api-url",
+                     "mismatched-expected-preflight-sha256",
                      "mismatched-admin-email",
                      "mismatched-smoke-report-path",
                      "mismatched-preflight-report-path",
@@ -497,6 +504,9 @@ public class AdminVpsSmokeReportTests
                      "failed-smoke-report",
                      "Valid smoke evidence output must include preflightReportPath",
                      "Valid smoke evidence output must include sectionsContractPath",
+                     "Valid smoke evidence output must include preflightReportSha256",
+                     "Valid smoke evidence output must include smokeReportSha256",
+                     "Valid smoke evidence output with expected SHA256 must pass",
                      "admin vps smoke evidence validator regression passed"
                  })
         {
