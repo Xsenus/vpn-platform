@@ -106,6 +106,8 @@ if ($bootstrapCompletedAt -lt $bootstrapGeneratedAt) {
 $sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
 
 $summary = [ordered]@{
+    readinessReportId = $readiness.reportId
+    bootstrapSmokeReportId = $bootstrap.reportId
     environmentName = $bootstrap.environmentName
     releaseId = $bootstrap.releaseId
     apiBaseUrl = $bootstrap.apiBaseUrl
@@ -123,6 +125,9 @@ $summary = [ordered]@{
     bootstrapResetConfirmed = $bootstrap.bootstrapResetConfirmed
     readyForBootstrapSmoke = $readiness.readyForBootstrapSmoke
     bootstrapStatus = $bootstrap.status
+    readinessGeneratedAt = $readiness.generatedAt
+    bootstrapGeneratedAt = $bootstrap.generatedAt
+    bootstrapCompletedAt = $bootstrap.completedAt
     sectionsContractPath = $sectionsContractPath
     readinessReportPath = $ReadinessReportPath
     bootstrapSmokeReportPath = $BootstrapSmokeReportPath
