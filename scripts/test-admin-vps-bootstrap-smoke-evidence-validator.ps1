@@ -325,6 +325,31 @@ $results += Invoke-ValidatorScenario -Name "mismatched-readiness-bootstrap-repor
     $report.bootstrapSmokeReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-readiness-bootstrap-report.json"
     Write-JsonFile -Path $readinessPath -Value $report
 }
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-provider" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness provider" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.provider = "Postgres"
+    Write-JsonFile -Path $readinessPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-password-env-name" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness passwordEnvName" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.passwordEnvName = "OTHER_ADMIN_PASSWORD_ENV"
+    Write-JsonFile -Path $readinessPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-local-sqlite" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness localSqlite" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.localSqlite = $false
+    $report.confirmBootstrapReset = $true
+    Write-JsonFile -Path $readinessPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-confirm-bootstrap-reset" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness confirmBootstrapReset" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report.confirmBootstrapReset = $true
+    Write-JsonFile -Path $readinessPath -Value $report
+}
 $results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-smoke-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for bootstrapSmokeReportPath" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json

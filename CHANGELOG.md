@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.216.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-bootstrap-readiness-metadata-link`.
+
+### Fixed
+- `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` теперь сверяет `provider`, `passwordEnvName`, `localSqlite` и `confirmBootstrapReset` итогового bootstrap smoke report с readiness evidence.
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает fail-closed `mismatched-readiness-provider`, `mismatched-readiness-password-env-name`, `mismatched-readiness-local-sqlite` и `mismatched-readiness-confirm-bootstrap-reset`.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, включая новые readiness metadata mismatch сценарии.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK; bootstrap report validator подтвердил readiness metadata link.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, console E2E 9/9.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.215.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-readiness-chain-validate`.

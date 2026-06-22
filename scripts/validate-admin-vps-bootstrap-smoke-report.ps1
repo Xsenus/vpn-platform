@@ -196,7 +196,17 @@ if ($RequirePassed) {
     Assert-Same ([string]$report.releaseId) ([string]$readinessReport.releaseId) "readiness releaseId"
     Assert-Same ([string]$report.releaseId) ([string]$preflightReport.releaseId) "preflight releaseId"
     Assert-Same ([string]$report.releaseId) ([string]$smokeReport.releaseId) "smoke releaseId"
+    Assert-Same ([string]$report.provider) ([string]$readinessReport.provider) "readiness provider"
+    Assert-Same ([string]$report.passwordEnvName) ([string]$readinessReport.passwordEnvName) "readiness passwordEnvName"
     Assert-Same (Resolve-WorkspacePath ([string]$readinessReport.bootstrapSmokeReportPath)) $fullReportPath "readiness bootstrapSmokeReportPath"
+
+    if ($report.localSqlite -ne $readinessReport.localSqlite) {
+        throw "Admin VPS bootstrap smoke report mismatch for readiness localSqlite."
+    }
+
+    if ($report.bootstrapResetConfirmed -ne $readinessReport.confirmBootstrapReset) {
+        throw "Admin VPS bootstrap smoke report mismatch for readiness confirmBootstrapReset."
+    }
 }
 
 $summary = [ordered]@{

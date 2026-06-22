@@ -197,7 +197,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
 ```
 
-Успешный bootstrap+smoke проход дополнительно пишет sanitized report и проверяет его через validator. Readiness report содержит `readinessReportPath`, а итоговый bootstrap report содержит `readinessReportPath` и `bootstrapSmokeReportPath`, чтобы архив evidence можно было проверить standalone. Readiness validator сверяет `readinessReportPath` с фактическим `-ReportPath`; bootstrap report validator сверяет `bootstrapSmokeReportPath` с фактическим `-ReportPath`, валидирует связанный readiness report и сверяет `apiBaseUrl`, `adminWebUrl`, `environmentName`, `operator`, `adminEmail` и `releaseId` итогового bootstrap report с readiness, preflight и smoke reports:
+Успешный bootstrap+smoke проход дополнительно пишет sanitized report и проверяет его через validator. Readiness report содержит `readinessReportPath`, а итоговый bootstrap report содержит `readinessReportPath` и `bootstrapSmokeReportPath`, чтобы архив evidence можно было проверить standalone. Readiness validator сверяет `readinessReportPath` с фактическим `-ReportPath`; bootstrap report validator сверяет `bootstrapSmokeReportPath` с фактическим `-ReportPath`, валидирует связанный readiness report и сверяет `apiBaseUrl`, `adminWebUrl`, `environmentName`, `operator`, `adminEmail`, `releaseId`, `provider`, `passwordEnvName`, `localSqlite` и `confirmBootstrapReset` итогового bootstrap report с readiness, preflight и smoke reports:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-report.ps1 -ReportPath tmp\admin-vps-bootstrap-smoke-report.json -RequirePassed
@@ -205,7 +205,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
 ```
 
-Regression harness также проверяет `mismatched-readiness-report-self-link`, `bad-smoke-route`, `mismatched-release-id`, `mismatched-readiness-report-path`, `missing-bootstrap-readiness-report-link`, `mismatched-readiness-bootstrap-report-path`, `mismatched-bootstrap-smoke-report-path`, `mismatched-bootstrap-admin-email` и `mismatched-smoke-release-id`: bootstrap evidence chain должен отклонять smoke report, если route раздела расходится с `docs/admin-vps-smoke-sections.json`, не должен принимать отсутствующий или чужой readiness/bootstrap report path и не должен смешивать readiness/bootstrap/preflight/smoke reports от разных admin/release evidence.
+Regression harness также проверяет `mismatched-readiness-report-self-link`, `bad-smoke-route`, `mismatched-release-id`, `mismatched-readiness-report-path`, `missing-bootstrap-readiness-report-link`, `mismatched-readiness-bootstrap-report-path`, `mismatched-readiness-provider`, `mismatched-readiness-password-env-name`, `mismatched-readiness-local-sqlite`, `mismatched-readiness-confirm-bootstrap-reset`, `mismatched-bootstrap-smoke-report-path`, `mismatched-bootstrap-admin-email` и `mismatched-smoke-release-id`: bootstrap evidence chain должен отклонять smoke report, если route раздела расходится с `docs/admin-vps-smoke-sections.json`, не должен принимать отсутствующий или чужой readiness/bootstrap report path и не должен смешивать readiness/bootstrap/preflight/smoke reports от разных admin/release/DB-mode evidence.
 
 ## Браузерный live-smoke
 
