@@ -501,11 +501,41 @@ $results += Invoke-ValidatorScenario -Name "bad-smoke-report-id-timestamp" -Expe
     $smoke.reportId = "admin-vps-smoke-manual"
     Write-JsonFile -Path $smokePath -Value $smoke
 }
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "readiness reportId timestamp must match generatedAt" -Mutate {
+    param($readinessPath)
+    $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $generatedAt = [DateTimeOffset]::Parse([string]$readiness.generatedAt)
+    $readiness.reportId = "admin-vps-bootstrap-smoke-readiness-" + (Format-ReportTimestamp $generatedAt.AddSeconds(1))
+    Write-JsonFile -Path $readinessPath -Value $readiness
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "bootstrap smoke reportId timestamp must match generatedAt" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $generatedAt = [DateTimeOffset]::Parse([string]$bootstrap.generatedAt)
+    $bootstrap.reportId = "admin-vps-bootstrap-smoke-" + (Format-ReportTimestamp $generatedAt.AddSeconds(1))
+    Write-JsonFile -Path $bootstrapPath -Value $bootstrap
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-preflight-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "preflight reportId timestamp must match generatedAt" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath)
+    $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $generatedAt = [DateTimeOffset]::Parse([string]$preflight.generatedAt)
+    $preflight.reportId = "admin-vps-smoke-preflight-" + (Format-ReportTimestamp $generatedAt.AddSeconds(1))
+    Write-JsonFile -Path $preflightPath -Value $preflight
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-smoke-report-id-timestamp" -ExpectedExitCode 1 -ExpectedMessage "smoke reportId timestamp must match startedAt" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    $smoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $startedAt = [DateTimeOffset]::Parse([string]$smoke.startedAt)
+    $smoke.reportId = "admin-vps-smoke-" + (Format-ReportTimestamp $startedAt.AddSeconds(1))
+    Write-JsonFile -Path $smokePath -Value $smoke
+}
 $results += Invoke-ValidatorScenario -Name "preflight-generated-before-readiness" -ExpectedExitCode 1 -ExpectedMessage "linked preflight generatedAt must not be before readiness generatedAt" -Mutate {
     param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
     $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $preflight.generatedAt = ([DateTimeOffset]::Parse([string]$readiness.generatedAt).AddSeconds(-1)).ToString("o")
+    $generatedAt = [DateTimeOffset]::Parse([string]$readiness.generatedAt).AddSeconds(-1)
+    $preflight.generatedAt = $generatedAt.ToString("o")
+    $preflight.reportId = "admin-vps-smoke-preflight-" + (Format-ReportTimestamp $generatedAt)
     Write-JsonFile -Path $preflightPath -Value $preflight
 }
 $results += Invoke-ValidatorScenario -Name "bad-timing" -ExpectedExitCode 1 -ExpectedMessage "generatedAt must not be before linked smoke completedAt" -Mutate {

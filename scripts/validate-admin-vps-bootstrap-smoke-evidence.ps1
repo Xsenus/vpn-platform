@@ -114,6 +114,22 @@ function Assert-ReportIdPrefix {
     }
 }
 
+function Assert-ReportIdTimestampMatches {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Prefix,
+        [Parameter(Mandatory = $true)][DateTimeOffset]$ExpectedAt,
+        [Parameter(Mandatory = $true)][string]$TimestampField
+    )
+
+    $actualTimestamp = $Value.Substring($Prefix.Length)
+    $expectedTimestamp = $ExpectedAt.ToUniversalTime().ToString("yyyyMMdd-HHmmss")
+    if (-not [string]::Equals($actualTimestamp, $expectedTimestamp, [System.StringComparison]::Ordinal)) {
+        throw "Admin VPS bootstrap smoke evidence $Name reportId timestamp must match $TimestampField."
+    }
+}
+
 $readinessFullPath = Resolve-WorkspacePath $ReadinessReportPath
 $bootstrapFullPath = Resolve-WorkspacePath $BootstrapSmokeReportPath
 
@@ -202,6 +218,11 @@ Assert-ReportIdPrefix -Value $readinessReportId -Name "readiness" -Prefix "admin
 Assert-ReportIdPrefix -Value $bootstrapSmokeReportId -Name "bootstrap smoke" -Prefix "admin-vps-bootstrap-smoke-" -ForbiddenPrefix "admin-vps-bootstrap-smoke-readiness-"
 Assert-ReportIdPrefix -Value $preflightReportId -Name "preflight" -Prefix "admin-vps-smoke-preflight-"
 Assert-ReportIdPrefix -Value $smokeReportId -Name "smoke" -Prefix "admin-vps-smoke-" -ForbiddenPrefix "admin-vps-smoke-preflight-"
+
+Assert-ReportIdTimestampMatches -Value $readinessReportId -Name "readiness" -Prefix "admin-vps-bootstrap-smoke-readiness-" -ExpectedAt $readinessGeneratedAt -TimestampField "generatedAt"
+Assert-ReportIdTimestampMatches -Value $bootstrapSmokeReportId -Name "bootstrap smoke" -Prefix "admin-vps-bootstrap-smoke-" -ExpectedAt $bootstrapGeneratedAt -TimestampField "generatedAt"
+Assert-ReportIdTimestampMatches -Value $preflightReportId -Name "preflight" -Prefix "admin-vps-smoke-preflight-" -ExpectedAt $preflightGeneratedAt -TimestampField "generatedAt"
+Assert-ReportIdTimestampMatches -Value $smokeReportId -Name "smoke" -Prefix "admin-vps-smoke-" -ExpectedAt $smokeStartedAt -TimestampField "startedAt"
 
 $readinessReportSha256 = Get-FileSha256 $readinessFullPath
 $bootstrapSmokeReportSha256 = Get-FileSha256 $bootstrapFullPath
