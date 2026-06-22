@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-evidence-identity-summary`, версия `0.225.0`; `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` теперь включает `apiBaseUrl`, `adminWebUrl`, `adminEmail` и `sectionsContractPath` в sanitized success summary, а regression harness проверяет это в valid-сценарии; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-evidence-operator-summary`, версия `0.226.0`; `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` теперь включает `apiBaseUrl`, `adminWebUrl`, `adminEmail`, `operator` и `sectionsContractPath` в sanitized success summary, а regression harness проверяет это в valid-сценарии; production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

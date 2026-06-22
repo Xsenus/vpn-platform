@@ -304,6 +304,7 @@ public class AdminBootstrapCliScriptTests
                      "apiBaseUrl = $bootstrap.apiBaseUrl",
                      "adminWebUrl = $bootstrap.adminWebUrl",
                      "adminEmail = $bootstrap.adminEmail",
+                     "operator = $bootstrap.operator",
                      "preflightReportPath = $bootstrap.preflightReportPath",
                      "Assert-Same",
                      "mismatch for $Name",

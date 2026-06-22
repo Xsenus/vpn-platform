@@ -111,6 +111,7 @@ $summary = [ordered]@{
     apiBaseUrl = $bootstrap.apiBaseUrl
     adminWebUrl = $bootstrap.adminWebUrl
     adminEmail = $bootstrap.adminEmail
+    operator = $bootstrap.operator
     provider = $bootstrap.provider
     localSqlite = $bootstrap.localSqlite
     sectionsContractPath = $sectionsContractPath
