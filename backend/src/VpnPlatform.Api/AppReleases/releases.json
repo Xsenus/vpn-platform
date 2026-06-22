@@ -5074,5 +5074,28 @@
         "text": "`scripts/test-admin-vps-smoke-report-validator.ps1` покрывает `mismatched-smoke-report-path`; live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-bootstrap-smoke-admin-email-link",
+    "version": "0.211.0",
+    "releasedAt": "2026-06-22T13:00:00+07:00",
+    "title": "Admin email link bootstrap smoke админки VPS",
+    "summary": "Итоговый admin VPS bootstrap smoke report теперь fail-closed связывает adminEmail с preflight и browser smoke evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-report.ps1` сверяет `adminEmail` итогового bootstrap smoke report с preflight и browser smoke reports."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` пишет `smokeReportPath` в synthetic smoke report, чтобы regression harness соответствовал текущему smoke report contract."
+      },
+      {
+        "type": "important",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает `mismatched-bootstrap-admin-email`; live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS smoke evidence."
+      }
+    ]
   }
 ]

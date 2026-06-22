@@ -175,6 +175,7 @@ function New-SmokeReport {
         apiBaseUrl = "http://127.0.0.1:18211"
         adminWebUrl = "http://127.0.0.1:18215"
         adminEmail = "admin@example.test"
+        smokeReportPath = [System.IO.Path]::GetFullPath($Path)
         notes = "Synthetic real evidence for bootstrap smoke evidence validator."
         adminLoginPassed = $true
         accountBootstrapChecked = $true
@@ -323,6 +324,15 @@ $results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-smoke-report-pa
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.bootstrapSmokeReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-bootstrap-smoke-report.json"
     Write-JsonFile -Path $bootstrapPath -Value $report
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-admin-email" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight adminEmail" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $readiness.adminEmail = "other-admin@example.test"
+    $bootstrap.adminEmail = "other-admin@example.test"
+    Write-JsonFile -Path $readinessPath -Value $readiness
+    Write-JsonFile -Path $bootstrapPath -Value $bootstrap
 }
 $results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight releaseId" -Mutate {
     param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)

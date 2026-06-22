@@ -246,6 +246,7 @@ public class AdminBootstrapCliScriptTests
     {
         var root = FindRepositoryRoot();
         var evidenceValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-bootstrap-smoke-evidence.ps1"));
+        var bootstrapReportValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-bootstrap-smoke-report.ps1"));
         var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-bootstrap-smoke-evidence-validator.ps1"));
         var wrapper = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-bootstrap-smoke.ps1"));
         var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
@@ -261,6 +262,9 @@ public class AdminBootstrapCliScriptTests
                      "readyForBootstrapSmoke",
                      "bootstrapResetConfirmed",
                      "passwordEnvPresent",
+                     "adminEmail",
+                     "preflight adminEmail",
+                     "smoke adminEmail",
                      "releaseId",
                      "readinessReportPath",
                      "bootstrap readinessReportPath",
@@ -271,7 +275,7 @@ public class AdminBootstrapCliScriptTests
                      "admin vps bootstrap smoke evidence valid"
                  })
         {
-            Assert.Contains(expected, evidenceValidator + wrapper, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(expected, evidenceValidator + bootstrapReportValidator + wrapper, StringComparison.OrdinalIgnoreCase);
         }
 
         foreach (var expected in new[]
@@ -283,6 +287,7 @@ public class AdminBootstrapCliScriptTests
                      "mismatched-readiness-report-path",
                      "mismatched-bootstrap-readiness-report-path",
                      "mismatched-bootstrap-smoke-report-path",
+                     "mismatched-bootstrap-admin-email",
                      "mismatched-smoke-release-id",
                      "bad-timing",
                      "bad-smoke-route",

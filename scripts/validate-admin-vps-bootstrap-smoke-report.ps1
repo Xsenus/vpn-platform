@@ -157,6 +157,8 @@ if ($RequirePassed) {
 
     $preflightReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.preflightReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
     $smokeReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.smokeReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-Same ([string]$report.adminEmail) ([string]$preflightReport.adminEmail) "preflight adminEmail"
+    Assert-Same ([string]$report.adminEmail) ([string]$smokeReport.adminEmail) "smoke adminEmail"
     Assert-Same ([string]$report.releaseId) ([string]$preflightReport.releaseId) "preflight releaseId"
     Assert-Same ([string]$report.releaseId) ([string]$smokeReport.releaseId) "smoke releaseId"
 }
