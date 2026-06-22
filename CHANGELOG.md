@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.244.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-bootstrap-evidence-report-id-prefix`.
+
+### Fixed
+- `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` fail-closed отклоняет bootstrap evidence chain, если readiness/bootstrap/preflight/smoke report ids совпадают или не соответствуют ожидаемым префиксам.
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` покрывает tamper-сценарии `duplicate-report-id`, `bad-readiness-report-id-prefix`, `bad-bootstrap-report-id-prefix`, `bad-preflight-report-id-prefix` и `bad-smoke-report-id-prefix`.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, duplicate/bad report id prefixes отклоняются fail-closed.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-bootstrap-evidence-report-id-prefix`, smoke sections `16/16`, bootstrap evidence validator with expected SHA256 and report id prefix checks OK.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, tests 66/66, console E2E 9/9, audit 0 vulnerabilities.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.243.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-smoke-evidence-report-id-prefix`.

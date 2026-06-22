@@ -440,6 +440,37 @@ $results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -Expect
     Write-JsonFile -Path $preflightPath -Value $preflight
     Write-JsonFile -Path $smokePath -Value $smoke
 }
+$results += Invoke-ValidatorScenario -Name "duplicate-report-id" -ExpectedExitCode 1 -ExpectedMessage "report ids must be unique" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $bootstrap.reportId = $readiness.reportId
+    Write-JsonFile -Path $bootstrapPath -Value $bootstrap
+}
+$results += Invoke-ValidatorScenario -Name "bad-readiness-report-id-prefix" -ExpectedExitCode 1 -ExpectedMessage "readiness reportId must start with admin-vps-bootstrap-smoke-readiness-" -Mutate {
+    param($readinessPath)
+    $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $readiness.reportId = "manual-readiness-test"
+    Write-JsonFile -Path $readinessPath -Value $readiness
+}
+$results += Invoke-ValidatorScenario -Name "bad-bootstrap-report-id-prefix" -ExpectedExitCode 1 -ExpectedMessage "bootstrap smoke reportId must not use the admin-vps-bootstrap-smoke-readiness-" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $bootstrap.reportId = "admin-vps-bootstrap-smoke-readiness-final-test"
+    Write-JsonFile -Path $bootstrapPath -Value $bootstrap
+}
+$results += Invoke-ValidatorScenario -Name "bad-preflight-report-id-prefix" -ExpectedExitCode 1 -ExpectedMessage "preflight reportId must start with admin-vps-smoke-preflight-" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath)
+    $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $preflight.reportId = "manual-preflight-test"
+    Write-JsonFile -Path $preflightPath -Value $preflight
+}
+$results += Invoke-ValidatorScenario -Name "bad-smoke-report-id-prefix" -ExpectedExitCode 1 -ExpectedMessage "must not use the preflight prefix" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    $smoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $smoke.reportId = "admin-vps-smoke-preflight-browser-test"
+    Write-JsonFile -Path $smokePath -Value $smoke
+}
 $results += Invoke-ValidatorScenario -Name "preflight-generated-before-readiness" -ExpectedExitCode 1 -ExpectedMessage "linked preflight generatedAt must not be before readiness generatedAt" -Mutate {
     param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
     $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json

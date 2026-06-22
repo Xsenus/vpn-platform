@@ -87,6 +87,28 @@ function Assert-Same {
     }
 }
 
+function Assert-ReportIdPrefix {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Prefix,
+        [string]$ForbiddenPrefix = ""
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "Admin VPS bootstrap smoke evidence $Name reportId is required."
+    }
+
+    if (-not $Value.StartsWith($Prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Admin VPS bootstrap smoke evidence $Name reportId must start with $Prefix."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ForbiddenPrefix) `
+        -and $Value.StartsWith($ForbiddenPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Admin VPS bootstrap smoke evidence $Name reportId must not use the $ForbiddenPrefix prefix."
+    }
+}
+
 $readinessFullPath = Resolve-WorkspacePath $ReadinessReportPath
 $bootstrapFullPath = Resolve-WorkspacePath $BootstrapSmokeReportPath
 
@@ -155,6 +177,27 @@ $preflightGeneratedAt = [DateTimeOffset]::Parse([string]$preflight.generatedAt)
 $smokeStartedAt = [DateTimeOffset]::Parse([string]$smoke.startedAt)
 $smokeCompletedAt = [DateTimeOffset]::Parse([string]$smoke.completedAt)
 
+$readinessReportId = ([string]$readiness.reportId).Trim()
+$bootstrapSmokeReportId = ([string]$bootstrap.reportId).Trim()
+$preflightReportId = ([string]$preflight.reportId).Trim()
+$smokeReportId = ([string]$smoke.reportId).Trim()
+
+$reportIds = @(
+    $readinessReportId.ToLowerInvariant(),
+    $bootstrapSmokeReportId.ToLowerInvariant(),
+    $preflightReportId.ToLowerInvariant(),
+    $smokeReportId.ToLowerInvariant()
+)
+$duplicatedReportId = $reportIds | Group-Object | Where-Object { $_.Count -gt 1 } | Select-Object -First 1
+if ($null -ne $duplicatedReportId) {
+    throw "Admin VPS bootstrap smoke evidence report ids must be unique."
+}
+
+Assert-ReportIdPrefix -Value $readinessReportId -Name "readiness" -Prefix "admin-vps-bootstrap-smoke-readiness-"
+Assert-ReportIdPrefix -Value $bootstrapSmokeReportId -Name "bootstrap smoke" -Prefix "admin-vps-bootstrap-smoke-" -ForbiddenPrefix "admin-vps-bootstrap-smoke-readiness-"
+Assert-ReportIdPrefix -Value $preflightReportId -Name "preflight" -Prefix "admin-vps-smoke-preflight-"
+Assert-ReportIdPrefix -Value $smokeReportId -Name "smoke" -Prefix "admin-vps-smoke-" -ForbiddenPrefix "admin-vps-smoke-preflight-"
+
 $readinessReportSha256 = Get-FileSha256 $readinessFullPath
 $bootstrapSmokeReportSha256 = Get-FileSha256 $bootstrapFullPath
 $preflightReportSha256 = Get-FileSha256 $preflightFullPath
@@ -166,10 +209,10 @@ Assert-ExpectedSha256 -Actual $preflightReportSha256 -Expected $ExpectedPrefligh
 Assert-ExpectedSha256 -Actual $smokeReportSha256 -Expected $ExpectedSmokeReportSha256 -Name "smokeReportSha256"
 
 $summary = [ordered]@{
-    readinessReportId = $readiness.reportId
-    bootstrapSmokeReportId = $bootstrap.reportId
-    preflightReportId = $preflight.reportId
-    smokeReportId = $smoke.reportId
+    readinessReportId = $readinessReportId
+    bootstrapSmokeReportId = $bootstrapSmokeReportId
+    preflightReportId = $preflightReportId
+    smokeReportId = $smokeReportId
     readinessReportSha256 = $readinessReportSha256
     bootstrapSmokeReportSha256 = $bootstrapSmokeReportSha256
     preflightReportSha256 = $preflightReportSha256
