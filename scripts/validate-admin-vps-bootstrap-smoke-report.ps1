@@ -59,6 +59,16 @@ function Assert-Same {
     }
 }
 
+function Normalize-Url {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim().TrimEnd("/")
+}
+
 $fullReportPath = Resolve-WorkspacePath $ReportPath
 if (-not (Test-Path -LiteralPath $fullReportPath -PathType Leaf)) {
     throw "Admin VPS bootstrap smoke report was not found: $fullReportPath"
@@ -157,6 +167,14 @@ if ($RequirePassed) {
 
     $preflightReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.preflightReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
     $smokeReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.smokeReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$preflightReport.apiBaseUrl)) "preflight apiBaseUrl"
+    Assert-Same (Normalize-Url ([string]$report.apiBaseUrl)) (Normalize-Url ([string]$smokeReport.apiBaseUrl)) "smoke apiBaseUrl"
+    Assert-Same (Normalize-Url ([string]$report.adminWebUrl)) (Normalize-Url ([string]$preflightReport.adminWebUrl)) "preflight adminWebUrl"
+    Assert-Same (Normalize-Url ([string]$report.adminWebUrl)) (Normalize-Url ([string]$smokeReport.adminWebUrl)) "smoke adminWebUrl"
+    Assert-Same ([string]$report.environmentName) ([string]$preflightReport.environmentName) "preflight environmentName"
+    Assert-Same ([string]$report.environmentName) ([string]$smokeReport.environmentName) "smoke environmentName"
+    Assert-Same ([string]$report.operator) ([string]$preflightReport.operator) "preflight operator"
+    Assert-Same ([string]$report.operator) ([string]$smokeReport.operator) "smoke operator"
     Assert-Same ([string]$report.adminEmail) ([string]$preflightReport.adminEmail) "preflight adminEmail"
     Assert-Same ([string]$report.adminEmail) ([string]$smokeReport.adminEmail) "smoke adminEmail"
     Assert-Same ([string]$report.releaseId) ([string]$preflightReport.releaseId) "preflight releaseId"

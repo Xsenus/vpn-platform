@@ -289,7 +289,7 @@ New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 
 $results = @()
 $results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid"
-$results += Invoke-ValidatorScenario -Name "mismatched-admin-url" -ExpectedExitCode 1 -ExpectedMessage "mismatch for adminWebUrl" -Mutate {
+$results += Invoke-ValidatorScenario -Name "mismatched-admin-url" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight adminWebUrl" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.adminWebUrl = "http://127.0.0.1:19000"
@@ -331,6 +331,19 @@ $results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-admin-email" -E
     $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $readiness.adminEmail = "other-admin@example.test"
     $bootstrap.adminEmail = "other-admin@example.test"
+    Write-JsonFile -Path $readinessPath -Value $readiness
+    Write-JsonFile -Path $bootstrapPath -Value $bootstrap
+}
+$results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-environment" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight apiBaseUrl" -Mutate {
+    param($readinessPath, $bootstrapPath)
+    $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $readiness.environmentName = "Other"
+    $bootstrap.environmentName = "Other"
+    $readiness.operator = "other-bootstrap-operator"
+    $bootstrap.operator = "other-bootstrap-operator"
+    $readiness.apiBaseUrl = "http://127.0.0.1:19011"
+    $bootstrap.apiBaseUrl = "http://127.0.0.1:19011"
     Write-JsonFile -Path $readinessPath -Value $readiness
     Write-JsonFile -Path $bootstrapPath -Value $bootstrap
 }
