@@ -62,7 +62,8 @@ function Invoke-EvidenceValidator {
         [Parameter(Mandatory = $true)][string]$PreflightPath,
         [Parameter(Mandatory = $true)][string]$SmokePath,
         [string]$ExpectedPreflightReportSha256 = "",
-        [string]$ExpectedSmokeReportSha256 = ""
+        [string]$ExpectedSmokeReportSha256 = "",
+        [int]$MaxEvidenceChainMinutes = 0
     )
 
     $validator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
@@ -77,6 +78,10 @@ function Invoke-EvidenceValidator {
 
     if (-not [string]::IsNullOrWhiteSpace($ExpectedSmokeReportSha256)) {
         $validatorArgs.ExpectedSmokeReportSha256 = $ExpectedSmokeReportSha256
+    }
+
+    if ($MaxEvidenceChainMinutes -gt 0) {
+        $validatorArgs.MaxEvidenceChainMinutes = $MaxEvidenceChainMinutes
     }
 
     return & $validator @validatorArgs 6>&1 2>&1
@@ -247,7 +252,7 @@ try {
         throw "Valid smoke evidence output must include smokeReportSha256. Output: $validOutputText"
     }
 
-    foreach ($expectedSummaryField in @("preflightGeneratedAt", "smokeStartedAt", "smokeCompletedAt", "preflightToSmokeSeconds", "smokeDurationSeconds", "evidenceChainDurationSeconds", "evidenceChronology", '"preflightToSmokeSeconds":60', '"smokeDurationSeconds":60', '"evidenceChainDurationSeconds":120', '"evidenceChronology":"preflight|smoke"', '"sections":16', '"passed":16', '"failed":0', '"blocked":0', '"skipped":0')) {
+    foreach ($expectedSummaryField in @("preflightGeneratedAt", "smokeStartedAt", "smokeCompletedAt", "preflightToSmokeSeconds", "smokeDurationSeconds", "evidenceChainDurationSeconds", "evidenceChronology", "maxEvidenceChainMinutes", '"preflightToSmokeSeconds":60', '"smokeDurationSeconds":60', '"evidenceChainDurationSeconds":120', '"evidenceChronology":"preflight|smoke"', '"maxEvidenceChainMinutes":120', '"sections":16', '"passed":16', '"failed":0', '"blocked":0', '"skipped":0')) {
         if ($validOutputText.IndexOf($expectedSummaryField, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "Valid smoke evidence output must include $expectedSummaryField. Output: $validOutputText"
         }
@@ -269,6 +274,13 @@ try {
         name = "mismatched-expected-preflight-sha256"
         message = Assert-FailsWith -ExpectedMessage "preflightReportSha256 does not match expected SHA256" -Action {
             Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -ExpectedPreflightReportSha256 ("0" * 64)
+        }
+    }
+
+    $testedFailures += [ordered]@{
+        name = "evidence-chain-duration-exceeds-max"
+        message = Assert-FailsWith -ExpectedMessage "evidence chain duration exceeds MaxEvidenceChainMinutes" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -MaxEvidenceChainMinutes 1
         }
     }
 

@@ -2,6 +2,21 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.251.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-smoke-evidence-chain-max-duration`.
+
+### Fixed
+- `scripts/validate-admin-vps-smoke-evidence.ps1` и `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` получили fail-closed лимит `MaxEvidenceChainMinutes`, чтобы standalone evidence не принимал слишком растянутую или устаревшую цепочку preflight/smoke/bootstrap.
+- Success summary теперь показывает `maxEvidenceChainMinutes`, чтобы оператор видел примененный срок годности evidence bundle без секретов.
+
+### Verified
+- Admin VPS smoke evidence validator regression: OK, сценарий `evidence-chain-duration-exceeds-max` отклоняет цепочку длиннее лимита.
+- Admin VPS bootstrap smoke evidence validator regression: OK, сценарий `evidence-chain-duration-exceeds-max` отклоняет readiness/preflight/smoke/bootstrap bundle длиннее лимита.
+- `AdminVpsSmokeReportTests|AdminBootstrapCliScriptTests`: 24/24.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-smoke-evidence-chain-max-duration`, smoke sections `16/16`, smoke/bootstrap evidence validators with expected SHA256 and max duration guard OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.250.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-smoke-evidence-chronology-summary`.

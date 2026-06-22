@@ -11,7 +11,10 @@ param(
 
     [string]$ExpectedPreflightReportSha256 = "",
 
-    [string]$ExpectedSmokeReportSha256 = ""
+    [string]$ExpectedSmokeReportSha256 = "",
+
+    [ValidateRange(1, 1440)]
+    [int]$MaxEvidenceChainMinutes = 120
 )
 
 $ErrorActionPreference = "Stop"
@@ -234,6 +237,10 @@ Assert-ExpectedSha256 -Actual $bootstrapSmokeReportSha256 -Expected $ExpectedBoo
 Assert-ExpectedSha256 -Actual $preflightReportSha256 -Expected $ExpectedPreflightReportSha256 -Name "preflightReportSha256"
 Assert-ExpectedSha256 -Actual $smokeReportSha256 -Expected $ExpectedSmokeReportSha256 -Name "smokeReportSha256"
 
+if (($bootstrapCompletedAt - $readinessGeneratedAt) -gt [TimeSpan]::FromMinutes($MaxEvidenceChainMinutes)) {
+    throw "Admin VPS bootstrap smoke evidence chain duration exceeds MaxEvidenceChainMinutes ($MaxEvidenceChainMinutes)."
+}
+
 $summary = [ordered]@{
     readinessReportId = $readinessReportId
     bootstrapSmokeReportId = $bootstrapSmokeReportId
@@ -274,6 +281,7 @@ $summary = [ordered]@{
     smokeToBootstrapSeconds = [int][Math]::Round(($bootstrapGeneratedAt - $smokeCompletedAt).TotalSeconds)
     evidenceChainDurationSeconds = [int][Math]::Round(($bootstrapCompletedAt - $readinessGeneratedAt).TotalSeconds)
     evidenceChronology = "readiness|preflight|smoke|bootstrap"
+    maxEvidenceChainMinutes = $MaxEvidenceChainMinutes
     sectionsContractPath = $sectionsContractPath
     sections = @($smoke.sections).Count
     passed = @($smoke.sections | Where-Object { $_.status -eq "passed" }).Count

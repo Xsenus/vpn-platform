@@ -7,7 +7,10 @@ param(
 
     [string]$ExpectedPreflightReportSha256 = "",
 
-    [string]$ExpectedSmokeReportSha256 = ""
+    [string]$ExpectedSmokeReportSha256 = "",
+
+    [ValidateRange(1, 1440)]
+    [int]$MaxEvidenceChainMinutes = 120
 )
 
 $ErrorActionPreference = "Stop"
@@ -220,6 +223,10 @@ if ($completedAt -lt $startedAt) {
     throw "Admin VPS smoke evidence smoke completedAt must not be before smoke startedAt."
 }
 
+if (($completedAt - $generatedAt) -gt [TimeSpan]::FromMinutes($MaxEvidenceChainMinutes)) {
+    throw "Admin VPS smoke evidence chain duration exceeds MaxEvidenceChainMinutes ($MaxEvidenceChainMinutes)."
+}
+
 $sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
 $preflightReportSha256 = Get-FileSha256 $preflightFullPath
 $smokeReportSha256 = Get-FileSha256 $smokeFullPath
@@ -254,6 +261,7 @@ $summary = [ordered]@{
     smokeDurationSeconds = [int][Math]::Round(($completedAt - $startedAt).TotalSeconds)
     evidenceChainDurationSeconds = [int][Math]::Round(($completedAt - $generatedAt).TotalSeconds)
     evidenceChronology = "preflight|smoke"
+    maxEvidenceChainMinutes = $MaxEvidenceChainMinutes
     sections = @($smoke.sections).Count
     passed = $passedSections
     failed = $failedSections
