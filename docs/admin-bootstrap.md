@@ -68,6 +68,12 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
 powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -MaxEvidenceChainMinutes 120
 ```
 
+Локальный fail-fast regression wrapper-а:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
+```
+
 Fail-closed regression wrapper-а проверяет `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля:
 
 ```powershell

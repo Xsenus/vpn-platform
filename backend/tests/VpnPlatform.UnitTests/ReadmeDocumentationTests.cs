@@ -38,13 +38,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("590/590", readme, StringComparison.Ordinal);
+        Assert.Contains("591/591", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-22-local-admin-bootstrap-smoke-max-duration", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-22-local-admin-bootstrap-smoke-wrapper-regression", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

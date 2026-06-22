@@ -6067,5 +6067,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-local-admin-bootstrap-smoke-wrapper-regression",
+    "version": "0.254.0",
+    "releasedAt": "2026-06-22T23:59:59.9997+07:00",
+    "title": "Regression harness для локального admin bootstrap smoke",
+    "summary": "Локальный admin bootstrap smoke получил отдельный regression harness, который доказывает fail-fast остановку при неверном MaxEvidenceChainMinutes до запуска API/admin web и smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Добавлен `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` со сценарием `bad-max-evidence-chain-minutes`."
+      },
+      {
+        "type": "fixed",
+        "text": "Regression harness проверяет, что локальный wrapper не стартует API/admin web, browser smoke и не создает `tmp/local-admin-vps-bootstrap-smoke` artifacts при неверном лимите."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

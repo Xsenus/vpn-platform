@@ -151,6 +151,38 @@ public class AdminBootstrapCliScriptTests
     }
 
     [Fact]
+    public void Local_Admin_Vps_Bootstrap_Smoke_Wrapper_Regression_Should_Fail_Fast_Before_Local_Smoke()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-local-admin-vps-bootstrap-smoke-wrapper.ps1"));
+        var localSmoke = File.ReadAllText(Path.Combine(root, "scripts", "local-admin-vps-bootstrap-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "local-admin-vps-bootstrap-smoke-wrapper-regression-test",
+                     "local-admin-vps-bootstrap-smoke.ps1",
+                     "bad-max-evidence-chain-minutes",
+                     "MaxEvidenceChainMinutes must be greater than 0",
+                     "Admin bootstrap/reset is ready to run.",
+                     "Admin VPS bootstrap+smoke flow is ready to run.",
+                     "Admin VPS browser smoke is ready to run.",
+                     "local admin vps bootstrap smoke ok",
+                     "Local admin smoke artifacts should not exist",
+                     "local admin vps bootstrap smoke wrapper regression passed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("MaxEvidenceChainMinutes must be greater than 0", localSmoke, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-local-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001AO`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Bootstrap_Smoke_Report_Should_Link_Reset_And_Smoke_Evidence()
     {
         var root = FindRepositoryRoot();

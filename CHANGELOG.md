@@ -2,6 +2,21 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.254.0 - 2026-06-22
+
+Release entry: `2026-06-22-local-admin-bootstrap-smoke-wrapper-regression`.
+
+### Fixed
+- Добавлен `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1`, который проверяет fail-fast сценарий `bad-max-evidence-chain-minutes` для локального SQLite bootstrap smoke wrapper.
+- Regression harness доказывает, что неверный `MaxEvidenceChainMinutes` останавливает локальный wrapper до запуска API/admin web, browser smoke и создания `tmp/local-admin-vps-bootstrap-smoke` artifacts.
+
+### Verified
+- Local admin VPS bootstrap smoke wrapper regression: OK, `bad-max-evidence-chain-minutes` покрыт.
+- `AdminBootstrapCliScriptTests`: покрывает новый regression harness.
+- Backend full suite: 591/591.
+- Frontend tests/typecheck/build/audit/console E2E: OK, tests 66/66, console E2E 9/9, audit 0 vulnerabilities.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.253.0 - 2026-06-22
 
 Release entry: `2026-06-22-local-admin-bootstrap-smoke-max-duration`.
