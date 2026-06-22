@@ -5373,5 +5373,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-bootstrap-evidence-sections-summary",
+    "version": "0.224.0",
+    "releasedAt": "2026-06-22T23:55:00+07:00",
+    "title": "Sections contract path в bootstrap smoke evidence summary админки VPS",
+    "summary": "Bootstrap smoke evidence validator теперь печатает `sectionsContractPath` в success summary, чтобы итоговый bootstrap+smoke вывод явно называл contract обязательных разделов админки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` добавляет `sectionsContractPath` в sanitized success summary."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` проверяет `sectionsContractPath` в valid-сценарии."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

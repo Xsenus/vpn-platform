@@ -299,6 +299,8 @@ public class AdminBootstrapCliScriptTests
                      "readiness preflightReportPath",
                      "bootstrapSmokeReportPath",
                      "bootstrap bootstrapSmokeReportPath",
+                     "sectionsContractPath",
+                     "sectionsContractPath = $sectionsContractPath",
                      "preflightReportPath = $bootstrap.preflightReportPath",
                      "Assert-Same",
                      "mismatch for $Name",

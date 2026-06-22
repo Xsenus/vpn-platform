@@ -103,11 +103,14 @@ if ($bootstrapCompletedAt -lt $bootstrapGeneratedAt) {
     throw "Admin VPS bootstrap smoke evidence bootstrap completedAt must not be earlier than generatedAt."
 }
 
+$sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
+
 $summary = [ordered]@{
     environmentName = $bootstrap.environmentName
     releaseId = $bootstrap.releaseId
     provider = $bootstrap.provider
     localSqlite = $bootstrap.localSqlite
+    sectionsContractPath = $sectionsContractPath
     readinessReportPath = $ReadinessReportPath
     bootstrapSmokeReportPath = $BootstrapSmokeReportPath
     preflightReportPath = $bootstrap.preflightReportPath
