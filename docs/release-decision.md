@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-admin-vps-smoke-evidence-expected-fingerprint`, версия `0.235.0`; `scripts/validate-admin-vps-smoke-evidence.ps1` теперь включает `preflightReportSha256`/`smokeReportSha256` и опциональные expected SHA256 параметры `ExpectedPreflightReportSha256`/`ExpectedSmokeReportSha256` в sanitized success summary, а `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` сохраняет bootstrap-chain SHA256/expected SHA256 guard для readiness/bootstrap/preflight/smoke bundle; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-admin-vps-smoke-evidence-duration-summary`, версия `0.236.0`; `scripts/validate-admin-vps-smoke-evidence.ps1` теперь включает `preflightReportSha256`/`smokeReportSha256`, expected SHA256 параметры `ExpectedPreflightReportSha256`/`ExpectedSmokeReportSha256`, `preflightGeneratedAt`, `smokeStartedAt`, `smokeCompletedAt`, `preflightToSmokeSeconds` и `smokeDurationSeconds` в sanitized success summary, а `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` сохраняет bootstrap-chain SHA256/expected SHA256 guard для readiness/bootstrap/preflight/smoke bundle; production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

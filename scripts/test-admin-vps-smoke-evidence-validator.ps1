@@ -223,6 +223,12 @@ try {
         throw "Valid smoke evidence output must include smokeReportSha256. Output: $validOutputText"
     }
 
+    foreach ($expectedSummaryField in @("preflightGeneratedAt", "smokeStartedAt", "smokeCompletedAt", "preflightToSmokeSeconds", "smokeDurationSeconds", '"preflightToSmokeSeconds":60', '"smokeDurationSeconds":60')) {
+        if ($validOutputText.IndexOf($expectedSummaryField, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Valid smoke evidence output must include $expectedSummaryField. Output: $validOutputText"
+        }
+    }
+
     $validExpectedSha256Output = Invoke-EvidenceValidator `
         -PreflightPath $preflightPath `
         -SmokePath $smokePath `

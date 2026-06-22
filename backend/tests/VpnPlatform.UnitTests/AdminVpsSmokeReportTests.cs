@@ -476,6 +476,11 @@ public class AdminVpsSmokeReportTests
                      "ExpectedSmokeReportSha256",
                      "Assert-ExpectedSha256",
                      "does not match expected SHA256",
+                     "preflightGeneratedAt",
+                     "smokeStartedAt",
+                     "smokeCompletedAt",
+                     "preflightToSmokeSeconds = [int][Math]::Round(($startedAt - $generatedAt).TotalSeconds)",
+                     "smokeDurationSeconds = [int][Math]::Round(($completedAt - $startedAt).TotalSeconds)",
                      "smokeReportPath",
                      "preflightReportPath",
                      "preflightReportPath = $preflightFullPath",
@@ -506,6 +511,10 @@ public class AdminVpsSmokeReportTests
                      "Valid smoke evidence output must include sectionsContractPath",
                      "Valid smoke evidence output must include preflightReportSha256",
                      "Valid smoke evidence output must include smokeReportSha256",
+                     "preflightToSmokeSeconds",
+                     "smokeDurationSeconds",
+                     "\"preflightToSmokeSeconds\":60",
+                     "\"smokeDurationSeconds\":60",
                      "Valid smoke evidence output with expected SHA256 must pass",
                      "admin vps smoke evidence validator regression passed"
                  })
