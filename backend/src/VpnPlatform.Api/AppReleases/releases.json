@@ -6182,5 +6182,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-explicit-max-duration-guard",
+    "version": "0.259.0",
+    "releasedAt": "2026-06-22T23:59:59.9999999+07:00",
+    "title": "Явный max duration guard для admin VPS smoke",
+    "summary": "Admin VPS smoke wrapper теперь возвращает единые fail-fast сообщения для неверного CLI/env MaxEvidenceChainMinutes до preflight и browser smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` явно отклоняет `MaxEvidenceChainMinutes <= 0` и `> 1440` без PowerShell binding error."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` покрывает `too-high-max-evidence-chain-minutes` и точное CLI fail-fast сообщение."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS admin smoke evidence."
+      }
+    ]
   }
 ]

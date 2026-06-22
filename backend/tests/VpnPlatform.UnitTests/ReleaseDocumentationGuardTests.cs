@@ -106,6 +106,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-002AG", "2026-06-22-admin-vps-smoke-evidence-chain-max-duration"),
         new("P0-ADMIN-002AH", "2026-06-22-admin-vps-smoke-wrapper-max-duration"),
         new("P0-ADMIN-002AI", "2026-06-22-admin-vps-smoke-env-max-duration"),
+        new("P0-ADMIN-002AJ", "2026-06-22-admin-vps-smoke-explicit-max-duration-guard"),
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
         new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-PAY-012", "2026-06-14-payment-provider-smoke-report"),

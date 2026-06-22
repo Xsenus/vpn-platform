@@ -8,7 +8,6 @@ param(
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
     [string]$FrontendPath = "frontend",
-    [ValidateRange(1, 1440)]
     [int]$MaxEvidenceChainMinutes = $(if ($env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES) { [int]$env:ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES } else { 120 }),
     [switch]$AccountBootstrapChecked
 )
@@ -45,6 +44,10 @@ foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportVali
 
 if ($MaxEvidenceChainMinutes -le 0) {
     throw "MaxEvidenceChainMinutes must be greater than 0."
+}
+
+if ($MaxEvidenceChainMinutes -gt 1440) {
+    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
 }
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
