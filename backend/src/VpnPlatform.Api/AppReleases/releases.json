@@ -5975,5 +5975,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-evidence-chronology-summary",
+    "version": "0.250.0",
+    "releasedAt": "2026-06-22T23:59:59.998+07:00",
+    "title": "Chronology summary для admin VPS smoke evidence",
+    "summary": "Admin VPS smoke evidence summary теперь явно показывает порядок preflight|smoke и полную длительность standalone smoke evidence chain без секретов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` добавляет `evidenceChronology` и `evidenceChainDurationSeconds` в sanitized success summary."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` проверяет новые chronology summary fields и expected full-chain duration synthetic valid-сценария."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]
