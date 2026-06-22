@@ -6458,5 +6458,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-bootstrap-provider-guard",
+    "version": "0.271.0",
+    "releasedAt": "2026-06-23T01:30:00+07:00",
+    "title": "Provider guard for admin VPS bootstrap smoke wrapper",
+    "summary": "Admin VPS bootstrap smoke wrapper now normalizes LocalSqlite to Sqlite and rejects unsupported non-local providers before readiness, reset and smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` rejects unsupported non-local Provider values before readiness, bootstrap reset and smoke artifacts."
+      },
+      {
+        "type": "improved",
+        "text": "`-LocalSqlite` now passes a canonical `Sqlite` provider value through readiness, bootstrap and final bootstrap smoke evidence."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

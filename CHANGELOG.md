@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.271.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-bootstrap-provider-guard`.
+
+### Fixed
+- `scripts/admin-vps-bootstrap-smoke.ps1` now fail-fast rejects unsupported non-local `Provider` values before readiness, bootstrap reset and smoke artifacts.
+- `-LocalSqlite` now uses a canonical `Sqlite` provider value across readiness, bootstrap and final bootstrap smoke evidence.
+
+### Verified
+- Admin VPS bootstrap smoke wrapper regression: OK, `bad-provider` stops before readiness evidence.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-bootstrap-provider-guard`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.270.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-release-id-known-guard`.

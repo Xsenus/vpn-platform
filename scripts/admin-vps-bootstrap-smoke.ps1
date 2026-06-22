@@ -177,6 +177,32 @@ function Get-EnvironmentNameValue {
     return $Value.Trim()
 }
 
+function Get-ProviderValue {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][bool]$UseLocalSqlite
+    )
+
+    if ($UseLocalSqlite) {
+        return "Sqlite"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "Provider must be Postgres or Sqlite."
+    }
+
+    $trimmed = $Value.Trim()
+    if ([string]::Equals($trimmed, "Postgres", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "Postgres"
+    }
+
+    if ([string]::Equals($trimmed, "Sqlite", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "Sqlite"
+    }
+
+    throw "Provider must be Postgres or Sqlite."
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
@@ -193,6 +219,7 @@ Assert-DistinctReportPaths -Reports @(
     @{ Name = "BootstrapSmokeReportPath"; Path = $BootstrapSmokeReportPath },
     @{ Name = "ReadinessReportPath"; Path = $ReadinessReportPath }
 )
+$providerValue = Get-ProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
 
 if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
     throw "Admin email is required."
@@ -230,7 +257,7 @@ $previousSmokePassword = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_
 try {
     Write-Host "Admin VPS bootstrap+smoke flow is ready to run."
     Write-Host "Environment: $environmentNameValue"
-    Write-Host "Provider: $Provider"
+    Write-Host "Provider: $providerValue"
     Write-Host "API base URL: $ApiBaseUrl"
     Write-Host "Admin web URL: $AdminWebUrl"
     Write-Host "Admin email: $AdminEmail"
@@ -249,7 +276,7 @@ try {
         AdminWebUrl = $AdminWebUrl
         AdminEmail = $AdminEmail
         AdminPasswordEnvName = $AdminPasswordEnvName
-        Provider = $Provider
+        Provider = $providerValue
         ProjectPath = $ProjectPath
         SmokeReportPath = $SmokeReportPath
         PreflightReportPath = $PreflightReportPath
@@ -285,7 +312,7 @@ try {
         Email = $AdminEmail
         DisplayName = $DisplayName
         RolesCsv = $RolesCsv
-        Provider = $Provider
+        Provider = $providerValue
         ProjectPath = $ProjectPath
     }
 
@@ -345,8 +372,6 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($bootstrapSmokeReportParent) -and -not (Test-Path -LiteralPath $bootstrapSmokeReportParent -PathType Container)) {
         New-Item -ItemType Directory -Path $bootstrapSmokeReportParent | Out-Null
     }
-
-    $providerValue = if ($LocalSqlite) { "Sqlite" } else { $Provider }
 
     $bootstrapSmokeReport = [ordered]@{
         reportId = "admin-vps-bootstrap-smoke-" + $now.ToString("yyyyMMdd-HHmmss")

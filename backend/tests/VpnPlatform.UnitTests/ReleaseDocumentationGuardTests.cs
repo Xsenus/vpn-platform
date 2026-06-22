@@ -82,6 +82,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001BA", "2026-06-23-admin-vps-operator-default"),
         new("P0-ADMIN-001BB", "2026-06-23-admin-vps-environment-default"),
         new("P0-ADMIN-001BC", "2026-06-23-admin-vps-release-id-known-guard"),
+        new("P0-ADMIN-001BD", "2026-06-23-admin-vps-bootstrap-provider-guard"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

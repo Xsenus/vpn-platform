@@ -566,6 +566,7 @@ public class AdminBootstrapCliScriptTests
                      "too-high-max-evidence-chain-minutes",
                      "too-high-env-max-evidence-chain-minutes",
                      "unknown-release-id",
+                     "bad-provider",
                       "bad-api-url",
                       "bad-admin-web-url",
                       "bad-admin-email",
@@ -575,6 +576,7 @@ public class AdminBootstrapCliScriptTests
                       "AdminEmail must contain an email address",
                       "PreflightReportPath must be different from SmokeReportPath",
                       "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                      "Provider must be Postgres or Sqlite",
                       "MaxEvidenceChainMinutes",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
                      "MaxEvidenceChainMinutes must be an integer",
@@ -609,6 +611,7 @@ public class AdminBootstrapCliScriptTests
 
         Assert.DoesNotContain("[string]$Password", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Assert-KnownReleaseId", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-ProviderValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);

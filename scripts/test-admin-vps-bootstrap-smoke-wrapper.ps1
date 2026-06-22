@@ -281,6 +281,15 @@ try {
         -AdditionalArguments @("-ReleaseId", "missing-release-id-for-regression")
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "bad-provider" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=local-only" `
+        -ConfirmBootstrapReset `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "Provider must be Postgres or Sqlite" `
+        -AdditionalArguments @("-Provider", "Mongo")
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "bad-api-url" `
         -Password "LocalBootstrapSmokePassword12345" `
         -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-api-url/local.db" `

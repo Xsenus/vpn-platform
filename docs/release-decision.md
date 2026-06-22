@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-vps-release-id-known-guard`, версия `0.270.0`; admin VPS smoke/bootstrap wrappers now reject unknown manual release ids before preflight, readiness, bootstrap reset and smoke artifacts. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-vps-bootstrap-provider-guard`, версия `0.271.0`; admin VPS bootstrap smoke wrapper now rejects unsupported non-local providers before readiness, bootstrap reset and smoke artifacts. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
