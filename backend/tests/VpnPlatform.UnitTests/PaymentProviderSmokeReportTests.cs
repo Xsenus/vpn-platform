@@ -126,7 +126,9 @@ public class PaymentProviderSmokeReportTests
                      "blocked",
                      "TODO: run $Mode smoke",
                      "Output file already exists. Pass -Force",
-                     "Get-LatestReleaseId"
+                     "Get-LatestReleaseId",
+                     "DateTimeOffset]::Parse",
+                     "CultureInfo]::InvariantCulture"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);

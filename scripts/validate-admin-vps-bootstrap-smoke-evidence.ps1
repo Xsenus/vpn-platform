@@ -104,10 +104,16 @@ if ($bootstrapCompletedAt -lt $bootstrapGeneratedAt) {
 }
 
 $sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
+$preflightFullPath = Resolve-WorkspacePath ([string]$bootstrap.preflightReportPath)
+$smokeFullPath = Resolve-WorkspacePath ([string]$bootstrap.smokeReportPath)
+$preflight = Get-Content -LiteralPath $preflightFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$smoke = Get-Content -LiteralPath $smokeFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
 $summary = [ordered]@{
     readinessReportId = $readiness.reportId
     bootstrapSmokeReportId = $bootstrap.reportId
+    preflightReportId = $preflight.reportId
+    smokeReportId = $smoke.reportId
     environmentName = $bootstrap.environmentName
     releaseId = $bootstrap.releaseId
     apiBaseUrl = $bootstrap.apiBaseUrl
@@ -126,9 +132,17 @@ $summary = [ordered]@{
     readyForBootstrapSmoke = $readiness.readyForBootstrapSmoke
     bootstrapStatus = $bootstrap.status
     readinessGeneratedAt = $readiness.generatedAt
+    preflightGeneratedAt = $preflight.generatedAt
+    smokeStartedAt = $smoke.startedAt
+    smokeCompletedAt = $smoke.completedAt
     bootstrapGeneratedAt = $bootstrap.generatedAt
     bootstrapCompletedAt = $bootstrap.completedAt
     sectionsContractPath = $sectionsContractPath
+    sections = @($smoke.sections).Count
+    passed = @($smoke.sections | Where-Object { $_.status -eq "passed" }).Count
+    failed = @($smoke.sections | Where-Object { $_.status -eq "failed" }).Count
+    blocked = @($smoke.sections | Where-Object { $_.status -eq "blocked" }).Count
+    skipped = @($smoke.sections | Where-Object { $_.status -eq "skipped" }).Count
     readinessReportPath = $ReadinessReportPath
     bootstrapSmokeReportPath = $BootstrapSmokeReportPath
     preflightReportPath = $bootstrap.preflightReportPath

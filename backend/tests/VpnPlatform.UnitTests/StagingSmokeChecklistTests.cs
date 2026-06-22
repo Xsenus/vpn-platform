@@ -56,7 +56,9 @@ public class StagingSmokeChecklistTests
                      "blocked",
                      "TODO: run staging/VPS smoke",
                      "Output file already exists. Pass -Force",
-                     "Get-LatestReleaseId"
+                     "Get-LatestReleaseId",
+                     "DateTimeOffset]::Parse",
+                     "CultureInfo]::InvariantCulture"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);

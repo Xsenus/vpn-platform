@@ -99,7 +99,9 @@ public class AdminVpsSmokeReportTests
                      "blocked",
                      "TODO: open",
                      "Output file already exists. Pass -Force",
-                     "Get-LatestReleaseId"
+                     "Get-LatestReleaseId",
+                     "DateTimeOffset]::Parse",
+                     "CultureInfo]::InvariantCulture"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
@@ -139,6 +141,8 @@ public class AdminVpsSmokeReportTests
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
                      "ADMIN_VPS_SMOKE_REPORT_PATH",
                      "Get-LatestReleaseId",
+                     "DateTimeOffset]::Parse",
+                     "CultureInfo]::InvariantCulture",
                      "Release id:",
                      "No credentials, cookies, auth headers, tokens or screenshots are stored",
                      "adminEmail",
@@ -288,6 +292,8 @@ public class AdminVpsSmokeReportTests
                      "validate-admin-vps-smoke-preflight-report.ps1",
                      "preflight-validator",
                      "Get-LatestReleaseId",
+                     "DateTimeOffset]::Parse",
+                     "CultureInfo]::InvariantCulture",
                      "manual-admin-vps-smoke-preflight",
                      "-RequireReady",
                      "present [hidden]",
@@ -417,6 +423,8 @@ public class AdminVpsSmokeReportTests
                      "validate-admin-vps-smoke-preflight-report.ps1",
                      "validate-admin-vps-smoke-evidence.ps1",
                      "Get-LatestReleaseId",
+                     "DateTimeOffset]::Parse",
+                     "CultureInfo]::InvariantCulture",
                      "releaseValue",
                      "-RequirePassword",
                      "-RequireAllPassed",

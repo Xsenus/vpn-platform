@@ -93,7 +93,9 @@ public class VpnLiveSmokeReportTests
                      "blocked",
                      "TODO: run live VPN smoke step",
                      "Output file already exists. Pass -Force",
-                     "Get-LatestReleaseId"
+                     "Get-LatestReleaseId",
+                     "DateTimeOffset]::Parse",
+                     "CultureInfo]::InvariantCulture"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
