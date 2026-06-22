@@ -91,6 +91,19 @@ function Assert-Equal {
     }
 }
 
+function Assert-ReportIdFormat {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Prefix
+    )
+
+    $timestampPattern = "^" + [regex]::Escape($Prefix) + "\d{8}-\d{6}$"
+    if ($Value -notmatch $timestampPattern) {
+        throw "Admin VPS smoke evidence $Name reportId must match $($Prefix)yyyyMMdd-HHmmss."
+    }
+}
+
 $preflightFullPath = Resolve-WorkspacePath $PreflightReportPath
 $smokeFullPath = Resolve-WorkspacePath $SmokeReportPath
 
@@ -157,6 +170,9 @@ if (-not $smokeReportId.StartsWith("admin-vps-smoke-", [System.StringComparison]
     -or $smokeReportId.StartsWith("admin-vps-smoke-preflight-", [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Admin VPS smoke evidence smoke reportId must start with admin-vps-smoke- and must not use the preflight prefix."
 }
+
+Assert-ReportIdFormat -Value $preflightReportId -Name "preflight" -Prefix "admin-vps-smoke-preflight-"
+Assert-ReportIdFormat -Value $smokeReportId -Name "smoke" -Prefix "admin-vps-smoke-"
 
 $generatedAt = [DateTimeOffset]::MinValue
 $startedAt = [DateTimeOffset]::MinValue

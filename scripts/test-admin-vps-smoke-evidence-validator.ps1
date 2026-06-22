@@ -51,6 +51,12 @@ function Get-FileSha256 {
     }
 }
 
+function Format-ReportTimestamp {
+    param([DateTimeOffset]$Value)
+
+    $Value.ToUniversalTime().ToString("yyyyMMdd-HHmmss")
+}
+
 function Invoke-EvidenceValidator {
     param(
         [Parameter(Mandatory = $true)][string]$PreflightPath,
@@ -143,7 +149,7 @@ function New-EvidencePair {
     ) | ForEach-Object { New-Section -Id $_ }
 
     $preflight = [ordered]@{
-        reportId = "admin-vps-smoke-preflight-regression"
+        reportId = "admin-vps-smoke-preflight-" + (Format-ReportTimestamp $generatedAt)
         generatedAt = $generatedAt.ToString("O")
         environmentName = "staging"
         operator = $operator
@@ -169,7 +175,7 @@ function New-EvidencePair {
     }
 
     $smoke = [ordered]@{
-        reportId = "admin-vps-smoke-regression"
+        reportId = "admin-vps-smoke-" + (Format-ReportTimestamp $startedAt)
         environmentName = "staging"
         apiBaseUrl = $apiBaseUrl
         adminWebUrl = $adminWebUrl
@@ -221,7 +227,7 @@ try {
         }
     }
 
-    foreach ($expectedReportIdField in @("preflightReportId", "admin-vps-smoke-preflight-regression", "smokeReportId", "admin-vps-smoke-regression")) {
+    foreach ($expectedReportIdField in @("preflightReportId", "admin-vps-smoke-preflight-20260618-170000", "smokeReportId", "admin-vps-smoke-20260618-170100")) {
         if ($validOutputText.IndexOf($expectedReportIdField, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "Valid smoke evidence output must include $expectedReportIdField. Output: $validOutputText"
         }
@@ -333,7 +339,7 @@ try {
     Write-Utf8NoBomJson -Path $duplicateReportIdPreflightPath -Value $duplicateReportIdPreflight
     $duplicateReportIdSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $duplicateReportIdSmoke.smokeReportPath = $duplicateReportIdSmokePath
-    $duplicateReportIdSmoke.reportId = "admin-vps-smoke-preflight-regression"
+    $duplicateReportIdSmoke.reportId = $duplicateReportIdPreflight.reportId
     Write-Utf8NoBomJson -Path $duplicateReportIdSmokePath -Value $duplicateReportIdSmoke
     $testedFailures += [ordered]@{
         name = "duplicate-report-id"
@@ -368,6 +374,35 @@ try {
         name = "bad-smoke-report-id-prefix"
         message = Assert-FailsWith -ExpectedMessage "smoke reportId must start with admin-vps-smoke-" -Action {
             Invoke-EvidenceValidator -PreflightPath $badSmokeReportIdPreflightPath -SmokePath $badSmokeReportIdSmokePath
+        }
+    }
+
+    $badPreflightReportIdTimestampPath = Join-Path $outputFullPath "bad-preflight-report-id-timestamp.json"
+    $badPreflightReportIdTimestamp = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badPreflightReportIdTimestamp.preflightReportPath = $badPreflightReportIdTimestampPath
+    $badPreflightReportIdTimestamp.reportId = "admin-vps-smoke-preflight-manual"
+    Write-Utf8NoBomJson -Path $badPreflightReportIdTimestampPath -Value $badPreflightReportIdTimestamp
+    $testedFailures += [ordered]@{
+        name = "bad-preflight-report-id-timestamp"
+        message = Assert-FailsWith -ExpectedMessage "preflight reportId must match admin-vps-smoke-preflight-yyyyMMdd-HHmmss" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badPreflightReportIdTimestampPath -SmokePath $smokePath
+        }
+    }
+
+    $badSmokeReportIdTimestampPreflightPath = Join-Path $outputFullPath "bad-smoke-report-id-timestamp-preflight.json"
+    $badSmokeReportIdTimestampSmokePath = Join-Path $outputFullPath "bad-smoke-report-id-timestamp-smoke.json"
+    $badSmokeReportIdTimestampPreflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeReportIdTimestampPreflight.preflightReportPath = $badSmokeReportIdTimestampPreflightPath
+    $badSmokeReportIdTimestampPreflight.smokeReportPath = $badSmokeReportIdTimestampSmokePath
+    Write-Utf8NoBomJson -Path $badSmokeReportIdTimestampPreflightPath -Value $badSmokeReportIdTimestampPreflight
+    $badSmokeReportIdTimestampSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeReportIdTimestampSmoke.smokeReportPath = $badSmokeReportIdTimestampSmokePath
+    $badSmokeReportIdTimestampSmoke.reportId = "admin-vps-smoke-manual"
+    Write-Utf8NoBomJson -Path $badSmokeReportIdTimestampSmokePath -Value $badSmokeReportIdTimestampSmoke
+    $testedFailures += [ordered]@{
+        name = "bad-smoke-report-id-timestamp"
+        message = Assert-FailsWith -ExpectedMessage "smoke reportId must match admin-vps-smoke-yyyyMMdd-HHmmss" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badSmokeReportIdTimestampPreflightPath -SmokePath $badSmokeReportIdTimestampSmokePath
         }
     }
 

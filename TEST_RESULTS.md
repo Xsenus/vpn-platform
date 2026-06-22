@@ -2,6 +2,49 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-22: admin VPS smoke evidence report id timestamp
+
+Что проверялось:
+
+- `scripts/validate-admin-vps-smoke-evidence.ps1` требует timestamp-суффикс `yyyyMMdd-HHmmss` после ожидаемых префиксов `preflight.reportId`/`smoke.reportId`.
+- `scripts/test-admin-vps-smoke-evidence-validator.ps1` использует timestamp ids в valid fixtures.
+- Regression harness покрывает tamper-сценарии `bad-preflight-report-id-timestamp` и `bad-smoke-report-id-timestamp`.
+- Раздел "Что нового" получил релиз `2026-06-22-admin-vps-smoke-evidence-report-id-timestamp`, версия `0.246.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-validator.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests"
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ReadmeDocumentationTests|FinalDocsChangelogTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests|ProductAdminUiRoadmapSyncTests|DocumentationEncodingTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts
+powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-evidence.ps1 -PreflightReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-smoke-preflight-report.json -SmokeReportPath tmp\local-admin-vps-bootstrap-smoke\admin-vps-smoke-report.json
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+changed/new files strict UTF-8 without BOM check
+```
+
+Результат:
+
+- Admin VPS smoke evidence validator regression: OK, `bad-preflight-report-id-timestamp` и `bad-smoke-report-id-timestamp` отклоняются fail-closed.
+- `AdminVpsSmokeReportTests`: 15/15.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-smoke-evidence-report-id-timestamp`, smoke sections `16/16`, smoke evidence validator with expected SHA256 and report id timestamp checks OK.
+- Backend full suite: 590/590.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK.
+- Кодировка измененных и новых файлов: strict UTF-8 without BOM OK.
+- `git diff --check`: OK.
+
 ## Проверка 2026-06-22: admin VPS bootstrap evidence report id timestamp
 
 Что проверялось:
