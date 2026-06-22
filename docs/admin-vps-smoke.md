@@ -95,6 +95,8 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke-preflight.ps1 `
   -Operator operator-name
 ```
 
+Preflight report сохраняет `preflightReportPath` вместе с `smokeReportPath`, чтобы evidence validator мог standalone проверить, что архив содержит именно тот preflight JSON, который был связан с browser smoke.
+
 `scripts/admin-vps-smoke-preflight.ps1` проверяет `ADMIN_VPS_SMOKE_API_BASE_URL`, `ADMIN_VPS_SMOKE_ADMIN_WEB_URL`, `ADMIN_VPS_SMOKE_ADMIN_EMAIL`, наличие `ADMIN_VPS_SMOKE_ADMIN_PASSWORD` в process env, каталог `frontend`, команду `e2e:admin-vps-smoke`, browser runner, validator smoke-отчета и validator preflight-отчета. Если `-ReleaseId` не передан, preflight report получает latest release из раздела "Что нового". Пароль не принимается параметром и не записывается в отчет: в JSON сохраняется только `passwordEnvPresent`, а в консоль выводится `present [hidden]`. Если `readyForLiveSmoke=false`, реальный smoke запускать нельзя.
 
 Preflight автоматически валидирует JSON через `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady`. Отдельная проверка уже созданного отчета:
@@ -150,6 +152,8 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-v
 ```
 
 Regression harness покрывает `missing-preflight-release-id`: preflight/smoke evidence не должно проходить без release id в preflight report.
+
+Regression harness также покрывает `mismatched-preflight-report-path`: preflight/smoke evidence не должно принимать preflight report, если поле `preflightReportPath` указывает не на фактически проверяемый preflight JSON.
 
 ## Bootstrap + live-smoke
 

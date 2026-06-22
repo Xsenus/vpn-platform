@@ -75,6 +75,11 @@ if (-not [string]::Equals($preflightSmokeReportPath, $smokeFullPath, [System.Str
     throw "Admin VPS smoke evidence mismatch for smokeReportPath. Preflight='$preflightSmokeReportPath', smoke='$smokeFullPath'."
 }
 
+$preflightReportPath = Resolve-WorkspacePath ([string]$preflight.preflightReportPath)
+if (-not [string]::Equals($preflightReportPath, $preflightFullPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Admin VPS smoke evidence mismatch for preflightReportPath. Preflight='$preflightReportPath', actual='$preflightFullPath'."
+}
+
 $preflightReleaseId = ([string]$preflight.releaseId).Trim()
 $smokeReleaseId = ([string]$smoke.releaseId).Trim()
 $releaseIdsDiffer = -not [string]::Equals($preflightReleaseId, $smokeReleaseId, [System.StringComparison]::Ordinal)

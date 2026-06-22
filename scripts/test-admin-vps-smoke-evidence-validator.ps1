@@ -123,6 +123,7 @@ function New-EvidencePair {
         adminWebUrl = $adminWebUrl
         adminEmail = "owner@example.test"
         smokeReportPath = $SmokePath
+        preflightReportPath = $PreflightPath
         passwordEnvPresent = $true
         readyForLiveSmoke = $true
         checks = @(
@@ -179,6 +180,7 @@ try {
 
     $badApiPreflight = Join-Path $outputFullPath "bad-api-preflight.json"
     $badApi = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badApi.preflightReportPath = $badApiPreflight
     $badApi.apiBaseUrl = "https://different-api.example.test"
     Write-Utf8NoBomJson -Path $badApiPreflight -Value $badApi
     $testedFailures += [ordered]@{
@@ -201,6 +203,7 @@ try {
 
     $badPathPreflight = Join-Path $outputFullPath "bad-smoke-path-preflight.json"
     $badPath = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badPath.preflightReportPath = $badPathPreflight
     $badPath.smokeReportPath = (Join-Path $outputFullPath "other-smoke-report.json")
     Write-Utf8NoBomJson -Path $badPathPreflight -Value $badPath
     $testedFailures += [ordered]@{
@@ -210,8 +213,20 @@ try {
         }
     }
 
+    $badPreflightPathReport = Join-Path $outputFullPath "bad-preflight-path-preflight.json"
+    $badPreflightPath = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badPreflightPath.preflightReportPath = (Join-Path $outputFullPath "other-preflight-report.json")
+    Write-Utf8NoBomJson -Path $badPreflightPathReport -Value $badPreflightPath
+    $testedFailures += [ordered]@{
+        name = "mismatched-preflight-report-path"
+        message = Assert-FailsWith -ExpectedMessage "mismatch for preflightReportPath" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badPreflightPathReport -SmokePath $smokePath
+        }
+    }
+
     $badReleasePreflight = Join-Path $outputFullPath "bad-release-preflight.json"
     $badRelease = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badRelease.preflightReportPath = $badReleasePreflight
     $badRelease.releaseId = "different-release"
     Write-Utf8NoBomJson -Path $badReleasePreflight -Value $badRelease
     $testedFailures += [ordered]@{
@@ -223,6 +238,7 @@ try {
 
     $emptyReleasePreflight = Join-Path $outputFullPath "empty-release-preflight.json"
     $emptyRelease = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $emptyRelease.preflightReportPath = $emptyReleasePreflight
     $emptyRelease.releaseId = ""
     Write-Utf8NoBomJson -Path $emptyReleasePreflight -Value $emptyRelease
     $testedFailures += [ordered]@{
@@ -234,6 +250,7 @@ try {
 
     $badTimingPreflight = Join-Path $outputFullPath "bad-timing-preflight.json"
     $badTiming = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badTiming.preflightReportPath = $badTimingPreflight
     $badTiming.generatedAt = "2026-06-20T00:00:00+07:00"
     Write-Utf8NoBomJson -Path $badTimingPreflight -Value $badTiming
     $testedFailures += [ordered]@{

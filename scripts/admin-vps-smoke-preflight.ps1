@@ -98,6 +98,7 @@ $report = [ordered]@{
     adminWebUrl = $AdminWebUrl
     adminEmail = $AdminEmail
     smokeReportPath = $smokeReportFullPath
+    preflightReportPath = $preflightReportFullPath
     passwordEnvPresent = $passwordPresent
     readyForLiveSmoke = $readyForLiveSmoke
     checks = @($checks)

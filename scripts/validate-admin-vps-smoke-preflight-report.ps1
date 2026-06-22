@@ -73,7 +73,7 @@ catch {
     throw "Admin VPS smoke preflight report is not valid JSON: $($_.Exception.Message)"
 }
 
-foreach ($propertyName in @("reportId", "generatedAt", "environmentName", "apiBaseUrl", "adminWebUrl", "adminEmail", "smokeReportPath")) {
+foreach ($propertyName in @("reportId", "generatedAt", "environmentName", "apiBaseUrl", "adminWebUrl", "adminEmail", "smokeReportPath", "preflightReportPath")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Admin VPS smoke preflight report is missing required field: $propertyName"
     }
@@ -161,6 +161,7 @@ $summary = [ordered]@{
     checks = $checkNames.Count
     readyForLiveSmoke = $report.readyForLiveSmoke
     passwordEnvPresent = $report.passwordEnvPresent
+    preflightReportPath = $report.preflightReportPath
 }
 
 Write-Host "admin vps smoke preflight report valid $($summary | ConvertTo-Json -Compress)"

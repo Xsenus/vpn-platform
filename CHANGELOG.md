@@ -2,6 +2,22 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.209.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-smoke-preflight-self-link`.
+
+### Fixed
+- `scripts/admin-vps-smoke-preflight.ps1` теперь пишет `preflightReportPath` в preflight report.
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1` требует `preflightReportPath`, а `scripts/validate-admin-vps-smoke-evidence.ps1` сверяет его с фактически проверяемым preflight JSON.
+
+### Added
+- `scripts/test-admin-vps-smoke-evidence-validator.ps1` покрывает fail-closed `mismatched-preflight-report-path`.
+
+### Verified
+- Admin VPS smoke evidence validator regression: OK, включая `mismatched-preflight-report-path`.
+- `AdminVpsSmokeReportTests`: 15/15.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.208.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-smoke-report-self-link`.
