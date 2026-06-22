@@ -32,6 +32,20 @@ function Normalize-Url {
     return $Value.Trim().TrimEnd("/")
 }
 
+function Get-FileSha256 {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+        $hash = $sha256.ComputeHash($bytes)
+        return [System.BitConverter]::ToString($hash).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
 function Assert-Same {
     param(
         [AllowEmptyString()][string]$Left,
@@ -117,6 +131,10 @@ $summary = [ordered]@{
     bootstrapSmokeReportId = $bootstrap.reportId
     preflightReportId = $preflight.reportId
     smokeReportId = $smoke.reportId
+    readinessReportSha256 = Get-FileSha256 $readinessFullPath
+    bootstrapSmokeReportSha256 = Get-FileSha256 $bootstrapFullPath
+    preflightReportSha256 = Get-FileSha256 $preflightFullPath
+    smokeReportSha256 = Get-FileSha256 $smokeFullPath
     environmentName = $bootstrap.environmentName
     releaseId = $bootstrap.releaseId
     apiBaseUrl = $bootstrap.apiBaseUrl

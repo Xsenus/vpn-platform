@@ -307,6 +307,10 @@ public class AdminBootstrapCliScriptTests
                      "bootstrapSmokeReportId = $bootstrap.reportId",
                      "preflightReportId = $preflight.reportId",
                      "smokeReportId = $smoke.reportId",
+                     "readinessReportSha256 = Get-FileSha256 $readinessFullPath",
+                     "bootstrapSmokeReportSha256 = Get-FileSha256 $bootstrapFullPath",
+                     "preflightReportSha256 = Get-FileSha256 $preflightFullPath",
+                     "smokeReportSha256 = Get-FileSha256 $smokeFullPath",
                      "apiBaseUrl = $bootstrap.apiBaseUrl",
                      "adminWebUrl = $bootstrap.adminWebUrl",
                      "adminEmail = $bootstrap.adminEmail",
@@ -350,6 +354,10 @@ public class AdminBootstrapCliScriptTests
         foreach (var expected in new[]
                  {
                      "valid",
+                     "readinessReportSha256",
+                     "bootstrapSmokeReportSha256",
+                     "preflightReportSha256",
+                     "smokeReportSha256",
                      "mismatched-admin-url",
                      "readiness-not-ready",
                      "mismatched-release-id",
