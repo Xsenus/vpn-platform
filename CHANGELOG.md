@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.273.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-readiness-provider-mode`.
+
+### Fixed
+
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` now rejects readiness reports where `localSqlite=true` but `provider` is not `Sqlite`.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `mismatched-readiness-local-provider`, so tampered local SQLite readiness evidence cannot be accepted.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `mismatched-readiness-local-provider` fails with `provider must be Sqlite when localSqlite is true`.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-readiness-provider-mode`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.272.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-readiness-ready-flag`.

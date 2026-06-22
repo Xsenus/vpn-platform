@@ -268,6 +268,17 @@ $results += Invoke-ReadinessValidatorScenario `
         Write-JsonFile -Path $reportPath -Value $report
     }
 
+$results += Invoke-ReadinessValidatorScenario `
+    -Name "mismatched-readiness-local-provider" `
+    -SourceReportPath $localReadyReportPath `
+    -ExpectedMessage "provider must be Sqlite when localSqlite is true" `
+    -Mutate {
+        param($reportPath)
+        $report = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $report.provider = "Postgres"
+        Write-JsonFile -Path $reportPath -Value $report
+    }
+
 $results += Invoke-ReadinessScenario `
     -Name "missing-password" `
     -ExpectedExitCode 1 `

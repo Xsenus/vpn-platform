@@ -2,6 +2,44 @@
 
 Дата проверки: 2026-05-25.
 
+## Проверка 2026-06-23: admin VPS bootstrap readiness provider mode
+
+Что проверялось:
+
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` fail-closed отклоняет readiness report, где `localSqlite=true`, но `provider` не равен `Sqlite`.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` покрывает tamper-сценарий `mismatched-readiness-local-provider`, чтобы standalone local SQLite evidence нельзя было принять с чужим provider mode.
+- Раздел "Что нового" получил релиз `2026-06-23-admin-vps-readiness-provider-mode`, версия `0.273.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` не закрывались: реальный VPS bootstrap/login smoke не выполнялся.
+
+Команды:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Результат:
+
+- Admin VPS bootstrap smoke readiness regression: OK, `mismatched-readiness-local-provider` падает с `provider must be Sqlite when localSqlite is true`.
+- Targeted docs/release unit suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-23-admin-vps-readiness-provider-mode`, readiness checks `16/16`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 561, findings 0.
+- `git diff --check`: OK.
+- Кодировка измененных файлов: strict UTF-8 without BOM, 18 files checked.
+
 ## Проверка 2026-06-23: admin VPS bootstrap readiness ready flag
 
 Что проверялось:

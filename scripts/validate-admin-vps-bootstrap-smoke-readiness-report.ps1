@@ -146,6 +146,10 @@ if (@("Postgres", "Sqlite") -notcontains [string]$report.provider) {
     throw "Admin VPS bootstrap smoke readiness report provider must be Postgres or Sqlite."
 }
 
+if ($report.localSqlite -and -not [string]::Equals([string]$report.provider, "Sqlite", [System.StringComparison]::Ordinal)) {
+    throw "Admin VPS bootstrap smoke readiness report provider must be Sqlite when localSqlite is true."
+}
+
 $generatedAt = [DateTimeOffset]::MinValue
 if (-not [DateTimeOffset]::TryParse([string]$report.generatedAt, [ref]$generatedAt)) {
     throw "Admin VPS bootstrap smoke readiness report generatedAt is not a valid DateTimeOffset."
