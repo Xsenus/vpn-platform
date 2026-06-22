@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.274.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-readiness-provider-normalization`.
+
+### Fixed
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` now canonicalizes case-insensitive `Postgres`/`Sqlite` provider values before writing sanitized readiness evidence.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `provider-case-normalized`, so standalone readiness accepts `postgres` while unsupported providers remain fail-closed.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `provider-case-normalized` writes canonical `Postgres` and fail-closed scenarios remain covered.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-readiness-provider-normalization`, readiness checks `16/16`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.273.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-readiness-provider-mode`.

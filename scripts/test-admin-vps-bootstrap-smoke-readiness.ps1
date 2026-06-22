@@ -50,7 +50,9 @@ function Invoke-ReadinessScenario {
         [bool]$SetPassword = $true,
         [bool]$LocalSqlite = $false,
         [bool]$ConfirmBootstrapReset = $false,
-        [bool]$SetConnectionString = $true
+        [bool]$SetConnectionString = $true,
+        [string]$Provider,
+        [string]$ExpectedProvider
     )
 
     $scenarioPath = Join-Path $outputPath $Name
@@ -93,6 +95,10 @@ function Invoke-ReadinessScenario {
         }
         elseif ($SetConnectionString) {
             $args += @("-ConnectionString", "Host=127.0.0.1;Database=vpnplatform;Username=admin;")
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($Provider)) {
+            $args += @("-Provider", $Provider)
         }
 
         if ($ConfirmBootstrapReset) {
@@ -139,6 +145,13 @@ function Invoke-ReadinessScenario {
         $bytes = [System.IO.File]::ReadAllBytes($reportPath)
         if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
             throw "Scenario $Name readiness report has UTF-8 BOM."
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedProvider)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.provider -ne $ExpectedProvider) {
+                throw "Scenario $Name provider '$($report.provider)', expected '$ExpectedProvider'."
+            }
         }
 
         return [ordered]@{
@@ -244,6 +257,15 @@ $results += Invoke-ReadinessScenario `
     -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
     -LocalSqlite $true
 $localReadyReportPath = Join-Path (Join-Path $outputPath "local-ready") "admin-vps-bootstrap-smoke-readiness-report.json"
+
+$results += Invoke-ReadinessScenario `
+    -Name "provider-case-normalized" `
+    -ExpectedExitCode 0 `
+    -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
+    -ConfirmBootstrapReset $true `
+    -SetConnectionString $true `
+    -Provider "postgres" `
+    -ExpectedProvider "Postgres"
 
 $results += Invoke-ReadinessValidatorScenario `
     -Name "mismatched-readiness-report-self-link" `

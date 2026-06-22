@@ -294,6 +294,7 @@ public class AdminBootstrapCliScriptTests
                      "confirmBootstrapReset",
                      "local-or-confirm-reset",
                      "connection-string",
+                     "Get-ProviderValue",
                      "ReadinessReportPath",
                      "readinessReportPath",
                      "fullReportPath",
@@ -314,6 +315,8 @@ public class AdminBootstrapCliScriptTests
         foreach (var expected in new[]
                  {
                      "local-ready",
+                     "provider-case-normalized",
+                     "ExpectedProvider",
                      "mismatched-readiness-report-self-link",
                      "mismatched-readiness-ready-flag",
                      "mismatched-readiness-local-provider",

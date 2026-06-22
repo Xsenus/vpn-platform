@@ -58,11 +58,37 @@ function Resolve-WorkspacePath {
     return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
 }
 
+function Get-ProviderValue {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [bool]$UseLocalSqlite
+    )
+
+    if ($UseLocalSqlite) {
+        return "Sqlite"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    $trimmed = $Value.Trim()
+    if ($trimmed.Equals("Postgres", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "Postgres"
+    }
+
+    if ($trimmed.Equals("Sqlite", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "Sqlite"
+    }
+
+    return $trimmed
+}
+
 $password = [Environment]::GetEnvironmentVariable($AdminPasswordEnvName, "Process")
 $passwordPresent = -not [string]::IsNullOrWhiteSpace($password)
 $passwordLengthOk = $passwordPresent -and $password.Length -ge 16
 $connectionStringPresent = -not [string]::IsNullOrWhiteSpace($ConnectionString)
-$providerValue = if ($LocalSqlite) { "Sqlite" } else { $Provider }
+$providerValue = Get-ProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
 
 $projectFullPath = Resolve-WorkspacePath $ProjectPath
 $frontendFullPath = Resolve-WorkspacePath $FrontendPath
