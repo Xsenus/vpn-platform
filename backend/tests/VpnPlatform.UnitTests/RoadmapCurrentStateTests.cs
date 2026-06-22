@@ -5,8 +5,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-06-22-admin-vps-smoke-evidence-gate-flags-summary";
-    private const string CurrentVersion = "0.241.0";
+    private const string CurrentReleaseId = "2026-06-22-admin-vps-smoke-evidence-report-id-uniqueness";
+    private const string CurrentVersion = "0.242.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

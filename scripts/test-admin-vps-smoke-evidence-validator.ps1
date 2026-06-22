@@ -325,6 +325,23 @@ try {
         }
     }
 
+    $duplicateReportIdPreflightPath = Join-Path $outputFullPath "duplicate-report-id-preflight.json"
+    $duplicateReportIdSmokePath = Join-Path $outputFullPath "duplicate-report-id-smoke.json"
+    $duplicateReportIdPreflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $duplicateReportIdPreflight.preflightReportPath = $duplicateReportIdPreflightPath
+    $duplicateReportIdPreflight.smokeReportPath = $duplicateReportIdSmokePath
+    Write-Utf8NoBomJson -Path $duplicateReportIdPreflightPath -Value $duplicateReportIdPreflight
+    $duplicateReportIdSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $duplicateReportIdSmoke.smokeReportPath = $duplicateReportIdSmokePath
+    $duplicateReportIdSmoke.reportId = "admin-vps-smoke-preflight-regression"
+    Write-Utf8NoBomJson -Path $duplicateReportIdSmokePath -Value $duplicateReportIdSmoke
+    $testedFailures += [ordered]@{
+        name = "duplicate-report-id"
+        message = Assert-FailsWith -ExpectedMessage "report ids must be unique" -Action {
+            Invoke-EvidenceValidator -PreflightPath $duplicateReportIdPreflightPath -SmokePath $duplicateReportIdSmokePath
+        }
+    }
+
     $emptyReleasePreflight = Join-Path $outputFullPath "empty-release-preflight.json"
     $emptyRelease = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $emptyRelease.preflightReportPath = $emptyReleasePreflight

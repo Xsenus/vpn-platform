@@ -135,6 +135,20 @@ if ($releaseIdsDiffer) {
     throw "Admin VPS smoke evidence mismatch for releaseId. Preflight='$preflightReleaseId', smoke='$($smoke.releaseId)'."
 }
 
+$preflightReportId = ([string]$preflight.reportId).Trim()
+$smokeReportId = ([string]$smoke.reportId).Trim()
+if ([string]::IsNullOrWhiteSpace($preflightReportId)) {
+    throw "Admin VPS smoke evidence preflight reportId is required."
+}
+
+if ([string]::IsNullOrWhiteSpace($smokeReportId)) {
+    throw "Admin VPS smoke evidence smoke reportId is required."
+}
+
+if ([string]::Equals($preflightReportId, $smokeReportId, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Admin VPS smoke evidence report ids must be unique. Preflight='$preflightReportId', smoke='$smokeReportId'."
+}
+
 $generatedAt = [DateTimeOffset]::MinValue
 $startedAt = [DateTimeOffset]::MinValue
 $completedAt = [DateTimeOffset]::MinValue
@@ -185,8 +199,8 @@ $summary = [ordered]@{
     adminLoginPassed = $smoke.adminLoginPassed
     noJsErrors = $smoke.noJsErrors
     noUnauthorizedAfterLogin = $smoke.noUnauthorizedAfterLogin
-    preflightReportId = $preflight.reportId
-    smokeReportId = $smoke.reportId
+    preflightReportId = $preflightReportId
+    smokeReportId = $smokeReportId
     preflightReportSha256 = $preflightReportSha256
     smokeReportSha256 = $smokeReportSha256
     preflightGeneratedAt = $preflight.generatedAt
