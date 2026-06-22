@@ -611,6 +611,7 @@ public class AdminVpsSmokeReportTests
                      "bad-max-evidence-chain-minutes",
                      "bad-env-max-evidence-chain-minutes",
                      "too-high-max-evidence-chain-minutes",
+                     "too-high-env-max-evidence-chain-minutes",
                      "MaxEvidenceChainMinutes",
                      "MaxEvidenceChainMinutes must be greater than 0",
                      "MaxEvidenceChainMinutes must be less than or equal to 1440",

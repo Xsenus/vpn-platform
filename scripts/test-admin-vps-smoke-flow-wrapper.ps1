@@ -219,6 +219,17 @@ try {
         -ExpectPreflightReport $false
 
     $testedFailures += Invoke-WrapperFailure `
+        -Name "too-high-env-max-evidence-chain-minutes" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440" `
+        -EnvMaxEvidenceChainMinutes "1441" `
+        -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
         -Name "missing-password" `
         -ApiBaseUrl "http://127.0.0.1:18201" `
         -AdminWebUrl "http://127.0.0.1:18205/admin/" `

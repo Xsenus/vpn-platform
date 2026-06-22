@@ -216,6 +216,15 @@ try {
         -AdditionalArguments @("-MaxEvidenceChainMinutes", "1441")
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "too-high-env-max-evidence-chain-minutes" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/too-high-env-max-evidence-chain-minutes/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440" `
+        -EnvMaxEvidenceChainMinutes "1441"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "missing-password" `
         -Password $null `
         -ConnectionString "Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=local-only" `

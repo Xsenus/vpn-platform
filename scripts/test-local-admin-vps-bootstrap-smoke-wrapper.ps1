@@ -136,6 +136,12 @@ try {
         -EnvMaxEvidenceChainMinutes $null `
         -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440"
 
+    $testedFailures += Invoke-LocalWrapperFailure `
+        -Name "too-high-env-max-evidence-chain-minutes" `
+        -AdditionalArguments @() `
+        -EnvMaxEvidenceChainMinutes "1441" `
+        -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440"
+
     $result = [ordered]@{
         status = "passed"
         testedFailures = @($testedFailures)

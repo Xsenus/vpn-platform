@@ -6228,5 +6228,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-bootstrap-smoke-env-upper-bound-guard",
+    "version": "0.261.0",
+    "releasedAt": "2026-06-22T23:59:59.9999999+06:58",
+    "title": "Env upper-bound guard для admin VPS bootstrap smoke",
+    "summary": "Admin VPS bootstrap smoke regression теперь доказывает, что env default MaxEvidenceChainMinutes выше 1440 останавливает wrapper до readiness, bootstrap reset и smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` покрывает `too-high-env-max-evidence-chain-minutes` для `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES=1441`."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` и `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` также проверяют env upper-bound guard без preflight/local smoke artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

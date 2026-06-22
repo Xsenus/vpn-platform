@@ -197,6 +197,8 @@ Regression wrapper-а проверяет fail-closed сценарии до за�
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
+Regression includes `too-high-env-max-evidence-chain-minutes`: `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES=1441` must fail before readiness, bootstrap reset, preflight and smoke artifacts.
+
 Перед reset-ом wrapper запускает readiness gate и пишет sanitized report без пароля и connection string:
 
 ```powershell

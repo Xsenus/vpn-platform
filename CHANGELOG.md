@@ -2,6 +2,19 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.261.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-bootstrap-smoke-env-upper-bound-guard`.
+
+### Fixed
+- `scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` покрывает env upper-bound сценарий `too-high-env-max-evidence-chain-minutes` для `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES=1441`.
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` и `scripts/test-local-admin-vps-bootstrap-smoke-wrapper.ps1` зеркально проверяют, что env upper-bound guard не создает preflight/local smoke artifacts.
+
+### Verified
+- Admin VPS bootstrap/smoke/local wrapper regressions: OK, CLI/env/upper-bound max duration guard scenarios покрыты.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-bootstrap-smoke-env-upper-bound-guard`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.260.0 - 2026-06-22
 
 Release entry: `2026-06-22-local-admin-bootstrap-smoke-explicit-max-duration-guard`.
