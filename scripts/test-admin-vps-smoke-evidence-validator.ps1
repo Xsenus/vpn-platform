@@ -348,6 +348,18 @@ try {
         }
     }
 
+    $badSmokeCompletedPath = Join-Path $outputFullPath "bad-smoke-completed-report.json"
+    $badSmokeCompleted = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeCompleted.smokeReportPath = $badSmokeCompletedPath
+    $badSmokeCompleted.completedAt = "2026-06-19T00:00:30+07:00"
+    Write-Utf8NoBomJson -Path $badSmokeCompletedPath -Value $badSmokeCompleted
+    $testedFailures += [ordered]@{
+        name = "smoke-completed-before-started"
+        message = Assert-FailsWith -ExpectedMessage "completedAt must be greater than or equal to startedAt" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $badSmokeCompletedPath
+        }
+    }
+
     $failedSmokePath = Join-Path $outputFullPath "failed-smoke-report.json"
     $failedSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $failedSmoke.smokeReportPath = $failedSmokePath

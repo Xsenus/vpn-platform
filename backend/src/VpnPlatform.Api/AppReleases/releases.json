@@ -5676,5 +5676,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-evidence-duration-order",
+    "version": "0.237.0",
+    "releasedAt": "2026-06-22T23:59:59.985+07:00",
+    "title": "Fail-closed smoke duration order для admin VPS evidence",
+    "summary": "Admin VPS smoke evidence validator теперь дополнительно отклоняет linked smoke report, если `completedAt` раньше `startedAt`, чтобы duration summary не принимал отрицательную длительность без реального корректного smoke evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` проверяет порядок `smoke.startedAt` -> `smoke.completedAt` перед расчетом `smokeDurationSeconds`."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` покрывает tamper-сценарий `smoke-completed-before-started`."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

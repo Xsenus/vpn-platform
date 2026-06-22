@@ -158,6 +158,10 @@ if ($startedAt -lt $generatedAt) {
     throw "Admin VPS smoke evidence smoke startedAt must not be before preflight generatedAt."
 }
 
+if ($completedAt -lt $startedAt) {
+    throw "Admin VPS smoke evidence smoke completedAt must not be before smoke startedAt."
+}
+
 $sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
 $preflightReportSha256 = Get-FileSha256 $preflightFullPath
 $smokeReportSha256 = Get-FileSha256 $smokeFullPath

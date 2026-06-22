@@ -488,6 +488,7 @@ public class AdminVpsSmokeReportTests
                      "preflight releaseId is required",
                      "generatedAt must not be after smoke completedAt",
                      "smoke startedAt must not be before preflight generatedAt",
+                     "smoke completedAt must not be before smoke startedAt",
                      "admin vps smoke evidence valid"
                  })
         {
@@ -506,6 +507,7 @@ public class AdminVpsSmokeReportTests
                      "missing-preflight-release-id",
                      "preflight-after-smoke",
                      "smoke-started-before-preflight",
+                     "smoke-completed-before-started",
                      "failed-smoke-report",
                      "Valid smoke evidence output must include preflightReportPath",
                      "Valid smoke evidence output must include sectionsContractPath",
