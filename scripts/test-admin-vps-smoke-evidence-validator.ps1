@@ -342,6 +342,35 @@ try {
         }
     }
 
+    $badPreflightReportIdPath = Join-Path $outputFullPath "bad-preflight-report-id-prefix.json"
+    $badPreflightReportId = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badPreflightReportId.preflightReportPath = $badPreflightReportIdPath
+    $badPreflightReportId.reportId = "manual-preflight-regression"
+    Write-Utf8NoBomJson -Path $badPreflightReportIdPath -Value $badPreflightReportId
+    $testedFailures += [ordered]@{
+        name = "bad-preflight-report-id-prefix"
+        message = Assert-FailsWith -ExpectedMessage "preflight reportId must start with admin-vps-smoke-preflight-" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badPreflightReportIdPath -SmokePath $smokePath
+        }
+    }
+
+    $badSmokeReportIdPreflightPath = Join-Path $outputFullPath "bad-smoke-report-id-prefix-preflight.json"
+    $badSmokeReportIdSmokePath = Join-Path $outputFullPath "bad-smoke-report-id-prefix-smoke.json"
+    $badSmokeReportIdPreflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeReportIdPreflight.preflightReportPath = $badSmokeReportIdPreflightPath
+    $badSmokeReportIdPreflight.smokeReportPath = $badSmokeReportIdSmokePath
+    Write-Utf8NoBomJson -Path $badSmokeReportIdPreflightPath -Value $badSmokeReportIdPreflight
+    $badSmokeReportIdSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badSmokeReportIdSmoke.smokeReportPath = $badSmokeReportIdSmokePath
+    $badSmokeReportIdSmoke.reportId = "admin-vps-smoke-preflight-browser-regression"
+    Write-Utf8NoBomJson -Path $badSmokeReportIdSmokePath -Value $badSmokeReportIdSmoke
+    $testedFailures += [ordered]@{
+        name = "bad-smoke-report-id-prefix"
+        message = Assert-FailsWith -ExpectedMessage "smoke reportId must start with admin-vps-smoke-" -Action {
+            Invoke-EvidenceValidator -PreflightPath $badSmokeReportIdPreflightPath -SmokePath $badSmokeReportIdSmokePath
+        }
+    }
+
     $emptyReleasePreflight = Join-Path $outputFullPath "empty-release-preflight.json"
     $emptyRelease = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $emptyRelease.preflightReportPath = $emptyReleasePreflight

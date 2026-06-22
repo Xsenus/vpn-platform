@@ -149,6 +149,15 @@ if ([string]::Equals($preflightReportId, $smokeReportId, [System.StringCompariso
     throw "Admin VPS smoke evidence report ids must be unique. Preflight='$preflightReportId', smoke='$smokeReportId'."
 }
 
+if (-not $preflightReportId.StartsWith("admin-vps-smoke-preflight-", [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Admin VPS smoke evidence preflight reportId must start with admin-vps-smoke-preflight-."
+}
+
+if (-not $smokeReportId.StartsWith("admin-vps-smoke-", [System.StringComparison]::OrdinalIgnoreCase) `
+    -or $smokeReportId.StartsWith("admin-vps-smoke-preflight-", [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Admin VPS smoke evidence smoke reportId must start with admin-vps-smoke- and must not use the preflight prefix."
+}
+
 $generatedAt = [DateTimeOffset]::MinValue
 $startedAt = [DateTimeOffset]::MinValue
 $completedAt = [DateTimeOffset]::MinValue

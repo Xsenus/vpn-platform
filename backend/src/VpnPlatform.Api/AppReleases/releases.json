@@ -5814,5 +5814,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-evidence-report-id-prefix",
+    "version": "0.243.0",
+    "releasedAt": "2026-06-22T23:59:59.991+07:00",
+    "title": "Префиксы report ids в admin VPS smoke evidence",
+    "summary": "Admin VPS smoke evidence validator теперь fail-closed отклоняет linked preflight/smoke bundle, если report ids не соответствуют ожидаемым префиксам preflight и smoke отчетов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` требует `preflight.reportId` с префиксом `admin-vps-smoke-preflight-` и `smoke.reportId` с префиксом `admin-vps-smoke-` без preflight-префикса."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` покрывает `bad-preflight-report-id-prefix` и `bad-smoke-report-id-prefix`, чтобы linked evidence не принимал перепутанные report ids."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]
