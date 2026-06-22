@@ -80,6 +80,41 @@ function Assert-AdminEmail {
     }
 }
 
+function Get-ReportPathFullName {
+    param(
+        [AllowEmptyString()][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "$Name must not be empty."
+    }
+
+    $candidate = if ([System.IO.Path]::IsPathRooted($Path)) {
+        $Path
+    }
+    else {
+        Join-Path $repoRoot $Path
+    }
+
+    return [System.IO.Path]::GetFullPath($candidate)
+}
+
+function Assert-DistinctReportPaths {
+    param([Parameter(Mandatory = $true)][object[]]$Reports)
+
+    $seen = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($report in $Reports) {
+        $name = [string]$report.Name
+        $fullPath = Get-ReportPathFullName -Path ([string]$report.Path) -Name $name
+        if ($seen.ContainsKey($fullPath)) {
+            throw "$name must be different from $($seen[$fullPath])."
+        }
+
+        $seen.Add($fullPath, $name)
+    }
+}
+
 foreach ($requiredScript in @($preflightScript, $browserSmokeScript, $reportValidatorScript, $preflightValidatorScript, $evidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS smoke script was not found: $requiredScript"
@@ -90,6 +125,10 @@ $maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvide
 Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
 Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
 Assert-AdminEmail -Value $AdminEmail
+Assert-DistinctReportPaths -Reports @(
+    @{ Name = "SmokeReportPath"; Path = $SmokeReportPath },
+    @{ Name = "PreflightReportPath"; Path = $PreflightReportPath }
+)
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 

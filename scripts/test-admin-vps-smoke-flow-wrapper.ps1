@@ -54,7 +54,8 @@ function Invoke-WrapperFailure {
         [string]$ExpectedFailedCheck = "",
         [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
         [string[]]$AdditionalArguments = @(),
-        [bool]$ExpectPreflightReport = $true
+        [bool]$ExpectPreflightReport = $true,
+        [switch]$UseSameReportPath
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -64,6 +65,9 @@ function Invoke-WrapperFailure {
     $stderrPath = Join-Path $scenarioPath "stderr.log"
     $smokeReportPath = Join-Path $scenarioPath "admin-vps-smoke-report.json"
     $preflightReportPath = Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"
+    if ($UseSameReportPath) {
+        $preflightReportPath = $smokeReportPath
+    }
     $wrapperPath = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"
     $previous = @{}
 
@@ -290,6 +294,17 @@ try {
         -Password "LocalAdminPassword123!" `
         -ExpectedMessage "AdminEmail must contain an email address" `
         -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "same-report-paths" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "PreflightReportPath must be different from SmokeReportPath" `
+        -ExpectPreflightReport $false `
+        -UseSameReportPath
 
     $testedFailures += Invoke-WrapperFailure `
         -Name "missing-frontend" `

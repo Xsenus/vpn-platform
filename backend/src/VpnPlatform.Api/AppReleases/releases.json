@@ -6366,5 +6366,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-report-path-guard",
+    "version": "0.267.0",
+    "releasedAt": "2026-06-23T00:50:00+07:00",
+    "title": "Report path guard for admin VPS smoke wrappers",
+    "summary": "Admin VPS smoke/bootstrap wrappers now fail fast when report paths overlap before preflight, readiness, bootstrap reset and smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` requires distinct smoke and preflight report paths before starting preflight or browser smoke."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` requires distinct smoke, preflight, readiness and bootstrap smoke report paths before readiness or reset."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

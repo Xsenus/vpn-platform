@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.267.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-report-path-guard`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1` now fail-fast rejects duplicate `SmokeReportPath`/`PreflightReportPath` before preflight/browser smoke and smoke artifacts.
+- `scripts/admin-vps-bootstrap-smoke.ps1` applies the same distinct report path guard to smoke, preflight, readiness and bootstrap smoke report paths before readiness, bootstrap reset and smoke artifacts.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `same-report-paths` does not create preflight/smoke artifacts.
+- Admin VPS bootstrap smoke wrapper regression: OK, `same-report-paths` does not create readiness/bootstrap/smoke artifacts.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.266.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-email-guard`.

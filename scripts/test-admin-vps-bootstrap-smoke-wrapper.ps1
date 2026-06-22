@@ -56,7 +56,8 @@ function Invoke-BootstrapSmokeScenario {
         [string[]]$AdditionalArguments = @(),
         [string]$ApiBaseUrl = "http://127.0.0.1:18211",
         [string]$AdminWebUrl = "http://127.0.0.1:18215/admin/",
-        [string]$AdminEmail = "fresh-bootstrap-admin@example.test"
+        [string]$AdminEmail = "fresh-bootstrap-admin@example.test",
+        [switch]$UseSameReportPath
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -68,6 +69,9 @@ function Invoke-BootstrapSmokeScenario {
     $preflightReportPath = Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"
     $bootstrapSmokeReportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-report.json"
     $readinessReportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-readiness-report.json"
+    if ($UseSameReportPath) {
+        $preflightReportPath = $smokeReportPath
+    }
     $wrapperPath = Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke.ps1"
     $previous = @{}
 
@@ -271,6 +275,15 @@ try {
         -ExpectedExitCode 1 `
         -ExpectedMessage "AdminEmail must contain an email address" `
         -AdminEmail "not-an-email"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "same-report-paths" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/same-report-paths/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "PreflightReportPath must be different from SmokeReportPath" `
+        -UseSameReportPath
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "missing-password" `
