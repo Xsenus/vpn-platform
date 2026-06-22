@@ -110,6 +110,7 @@ $summary = [ordered]@{
     localSqlite = $bootstrap.localSqlite
     readinessReportPath = $ReadinessReportPath
     bootstrapSmokeReportPath = $BootstrapSmokeReportPath
+    preflightReportPath = $bootstrap.preflightReportPath
     smokeReportPath = $bootstrap.smokeReportPath
 }
 

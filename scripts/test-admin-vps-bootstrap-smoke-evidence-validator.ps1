@@ -228,6 +228,7 @@ function Invoke-ValidatorScenario {
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][int]$ExpectedExitCode,
         [Parameter(Mandatory = $true)][string]$ExpectedMessage,
+        [string[]]$AdditionalExpectedMessages = @(),
         [scriptblock]$Mutate
     )
 
@@ -274,10 +275,17 @@ function Invoke-ValidatorScenario {
         throw "Scenario $Name did not include expected message '$ExpectedMessage'. Output: $output"
     }
 
+    foreach ($additionalExpectedMessage in $AdditionalExpectedMessages) {
+        if ($output.IndexOf($additionalExpectedMessage, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Scenario $Name did not include expected message '$additionalExpectedMessage'. Output: $output"
+        }
+    }
+
     [ordered]@{
         name = $Name
         exitCode = $process.ExitCode
         expectedMessage = $ExpectedMessage
+        additionalExpectedMessages = $AdditionalExpectedMessages
     }
 }
 
@@ -288,7 +296,7 @@ if (Test-Path -LiteralPath $outputPath -PathType Container) {
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 
 $results = @()
-$results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid"
+$results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid" -AdditionalExpectedMessages @("preflightReportPath")
 $results += Invoke-ValidatorScenario -Name "mismatched-admin-url" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness adminWebUrl" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json

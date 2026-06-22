@@ -299,6 +299,7 @@ public class AdminBootstrapCliScriptTests
                      "readiness preflightReportPath",
                      "bootstrapSmokeReportPath",
                      "bootstrap bootstrapSmokeReportPath",
+                     "preflightReportPath = $bootstrap.preflightReportPath",
                      "Assert-Same",
                      "mismatch for $Name",
                      "bootstrap report must be generated after readiness report",
