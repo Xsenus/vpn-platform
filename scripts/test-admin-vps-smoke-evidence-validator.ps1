@@ -406,6 +406,35 @@ try {
         }
     }
 
+    $mismatchedPreflightReportIdTimestampPath = Join-Path $outputFullPath "mismatched-preflight-report-id-timestamp.json"
+    $mismatchedPreflightReportIdTimestamp = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $mismatchedPreflightReportIdTimestamp.preflightReportPath = $mismatchedPreflightReportIdTimestampPath
+    $mismatchedPreflightReportIdTimestamp.reportId = "admin-vps-smoke-preflight-20260618-170001"
+    Write-Utf8NoBomJson -Path $mismatchedPreflightReportIdTimestampPath -Value $mismatchedPreflightReportIdTimestamp
+    $testedFailures += [ordered]@{
+        name = "mismatched-preflight-report-id-timestamp"
+        message = Assert-FailsWith -ExpectedMessage "preflight reportId timestamp must match generatedAt" -Action {
+            Invoke-EvidenceValidator -PreflightPath $mismatchedPreflightReportIdTimestampPath -SmokePath $smokePath
+        }
+    }
+
+    $mismatchedSmokeReportIdTimestampPreflightPath = Join-Path $outputFullPath "mismatched-smoke-report-id-timestamp-preflight.json"
+    $mismatchedSmokeReportIdTimestampSmokePath = Join-Path $outputFullPath "mismatched-smoke-report-id-timestamp-smoke.json"
+    $mismatchedSmokeReportIdTimestampPreflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $mismatchedSmokeReportIdTimestampPreflight.preflightReportPath = $mismatchedSmokeReportIdTimestampPreflightPath
+    $mismatchedSmokeReportIdTimestampPreflight.smokeReportPath = $mismatchedSmokeReportIdTimestampSmokePath
+    Write-Utf8NoBomJson -Path $mismatchedSmokeReportIdTimestampPreflightPath -Value $mismatchedSmokeReportIdTimestampPreflight
+    $mismatchedSmokeReportIdTimestampSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $mismatchedSmokeReportIdTimestampSmoke.smokeReportPath = $mismatchedSmokeReportIdTimestampSmokePath
+    $mismatchedSmokeReportIdTimestampSmoke.reportId = "admin-vps-smoke-20260618-170101"
+    Write-Utf8NoBomJson -Path $mismatchedSmokeReportIdTimestampSmokePath -Value $mismatchedSmokeReportIdTimestampSmoke
+    $testedFailures += [ordered]@{
+        name = "mismatched-smoke-report-id-timestamp"
+        message = Assert-FailsWith -ExpectedMessage "smoke reportId timestamp must match startedAt" -Action {
+            Invoke-EvidenceValidator -PreflightPath $mismatchedSmokeReportIdTimestampPreflightPath -SmokePath $mismatchedSmokeReportIdTimestampSmokePath
+        }
+    }
+
     $emptyReleasePreflight = Join-Path $outputFullPath "empty-release-preflight.json"
     $emptyRelease = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $emptyRelease.preflightReportPath = $emptyReleasePreflight
@@ -422,6 +451,7 @@ try {
     $badTiming = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badTiming.preflightReportPath = $badTimingPreflight
     $badTiming.generatedAt = "2026-06-20T00:00:00+07:00"
+    $badTiming.reportId = "admin-vps-smoke-preflight-20260619-170000"
     Write-Utf8NoBomJson -Path $badTimingPreflight -Value $badTiming
     $testedFailures += [ordered]@{
         name = "preflight-after-smoke"
@@ -439,6 +469,7 @@ try {
     $badSmokeStart = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badSmokeStart.smokeReportPath = $badSmokeStartPath
     $badSmokeStart.startedAt = "2026-06-18T23:59:00+07:00"
+    $badSmokeStart.reportId = "admin-vps-smoke-20260618-165900"
     Write-Utf8NoBomJson -Path $badSmokeStartPath -Value $badSmokeStart
     $testedFailures += [ordered]@{
         name = "smoke-started-before-preflight"

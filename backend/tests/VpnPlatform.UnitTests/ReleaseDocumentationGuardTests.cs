@@ -93,6 +93,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-002AB", "2026-06-22-admin-vps-smoke-evidence-report-id-uniqueness"),
         new("P0-ADMIN-002AC", "2026-06-22-admin-vps-smoke-evidence-report-id-prefix"),
         new("P0-ADMIN-002AD", "2026-06-22-admin-vps-smoke-evidence-report-id-timestamp"),
+        new("P0-ADMIN-002AE", "2026-06-22-admin-vps-smoke-evidence-report-id-timestamp-link"),
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
         new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-PAY-012", "2026-06-14-payment-provider-smoke-report"),

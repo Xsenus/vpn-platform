@@ -104,6 +104,22 @@ function Assert-ReportIdFormat {
     }
 }
 
+function Assert-ReportIdTimestampMatches {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Prefix,
+        [Parameter(Mandatory = $true)][DateTimeOffset]$ExpectedAt,
+        [Parameter(Mandatory = $true)][string]$TimestampField
+    )
+
+    $actualTimestamp = $Value.Substring($Prefix.Length)
+    $expectedTimestamp = $ExpectedAt.ToUniversalTime().ToString("yyyyMMdd-HHmmss")
+    if (-not [string]::Equals($actualTimestamp, $expectedTimestamp, [System.StringComparison]::Ordinal)) {
+        throw "Admin VPS smoke evidence $Name reportId timestamp must match $TimestampField."
+    }
+}
+
 $preflightFullPath = Resolve-WorkspacePath $PreflightReportPath
 $smokeFullPath = Resolve-WorkspacePath $SmokeReportPath
 
@@ -188,6 +204,9 @@ if (-not [DateTimeOffset]::TryParse([string]$smoke.startedAt, [ref]$startedAt)) 
 if (-not [DateTimeOffset]::TryParse([string]$smoke.completedAt, [ref]$completedAt)) {
     throw "Admin VPS smoke evidence smoke completedAt is not a valid DateTimeOffset."
 }
+
+Assert-ReportIdTimestampMatches -Value $preflightReportId -Name "preflight" -Prefix "admin-vps-smoke-preflight-" -ExpectedAt $generatedAt -TimestampField "generatedAt"
+Assert-ReportIdTimestampMatches -Value $smokeReportId -Name "smoke" -Prefix "admin-vps-smoke-" -ExpectedAt $startedAt -TimestampField "startedAt"
 
 if ($generatedAt -gt $completedAt) {
     throw "Admin VPS smoke evidence preflight generatedAt must not be after smoke completedAt."
