@@ -227,6 +227,12 @@ try {
         }
     }
 
+    foreach ($expectedGateField in @("accountBootstrapChecked", "adminLoginPassed", "noJsErrors", "noUnauthorizedAfterLogin", '"accountBootstrapChecked":true', '"adminLoginPassed":true', '"noJsErrors":true', '"noUnauthorizedAfterLogin":true')) {
+        if ($validOutputText.IndexOf($expectedGateField, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Valid smoke evidence output must include $expectedGateField. Output: $validOutputText"
+        }
+    }
+
     if ($validOutputText.IndexOf("preflightReportSha256", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
         throw "Valid smoke evidence output must include preflightReportSha256. Output: $validOutputText"
     }

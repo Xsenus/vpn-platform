@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.241.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-smoke-evidence-gate-flags-summary`.
+
+### Fixed
+- `scripts/validate-admin-vps-smoke-evidence.ps1` добавляет `accountBootstrapChecked`, `adminLoginPassed`, `noJsErrors` и `noUnauthorizedAfterLogin` в sanitized success summary.
+- `scripts/test-admin-vps-smoke-evidence-validator.ps1` проверяет gate flags synthetic valid-сценария и их `true` значения.
+
+### Verified
+- Admin VPS smoke evidence validator regression: OK, valid summary включает `accountBootstrapChecked`, `adminLoginPassed`, `noJsErrors` и `noUnauthorizedAfterLogin`.
+- `AdminVpsSmokeReportTests`: 15/15.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-smoke-evidence-gate-flags-summary`, smoke sections `16/16`, smoke evidence validator with expected SHA256 and gate flags summary OK.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, tests 66/66, console E2E 9/9, audit 0 vulnerabilities.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.240.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-smoke-evidence-status-counts-summary`.
