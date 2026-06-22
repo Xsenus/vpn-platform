@@ -336,6 +336,12 @@ $results += Invoke-ValidatorScenario -Name "valid-expected-sha256" -ExpectedExit
 $results += Invoke-ValidatorScenario -Name "mismatched-expected-readiness-sha256" -ExpectedExitCode 1 -ExpectedMessage "readinessReportSha256 does not match expected SHA256" -AdditionalArguments {
     @("-ExpectedReadinessReportSha256", ("0" * 64))
 }
+$results += Invoke-ValidatorScenario -Name "bad-max-evidence-chain-minutes" -ExpectedExitCode 1 -ExpectedMessage "MaxEvidenceChainMinutes must be greater than 0" -AdditionalArguments {
+    @("-MaxEvidenceChainMinutes", "0")
+}
+$results += Invoke-ValidatorScenario -Name "too-high-max-evidence-chain-minutes" -ExpectedExitCode 1 -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440" -AdditionalArguments {
+    @("-MaxEvidenceChainMinutes", "1441")
+}
 $results += Invoke-ValidatorScenario -Name "evidence-chain-duration-exceeds-max" -ExpectedExitCode 1 -ExpectedMessage "evidence chain duration exceeds MaxEvidenceChainMinutes" -AdditionalArguments {
     @("-MaxEvidenceChainMinutes", "1")
 }

@@ -63,7 +63,7 @@ function Invoke-EvidenceValidator {
         [Parameter(Mandatory = $true)][string]$SmokePath,
         [string]$ExpectedPreflightReportSha256 = "",
         [string]$ExpectedSmokeReportSha256 = "",
-        [int]$MaxEvidenceChainMinutes = 0
+        [AllowNull()][System.Nullable[int]]$MaxEvidenceChainMinutes = $null
     )
 
     $validator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
@@ -80,7 +80,7 @@ function Invoke-EvidenceValidator {
         $validatorArgs.ExpectedSmokeReportSha256 = $ExpectedSmokeReportSha256
     }
 
-    if ($MaxEvidenceChainMinutes -gt 0) {
+    if ($null -ne $MaxEvidenceChainMinutes) {
         $validatorArgs.MaxEvidenceChainMinutes = $MaxEvidenceChainMinutes
     }
 
@@ -274,6 +274,20 @@ try {
         name = "mismatched-expected-preflight-sha256"
         message = Assert-FailsWith -ExpectedMessage "preflightReportSha256 does not match expected SHA256" -Action {
             Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -ExpectedPreflightReportSha256 ("0" * 64)
+        }
+    }
+
+    $testedFailures += [ordered]@{
+        name = "bad-max-evidence-chain-minutes"
+        message = Assert-FailsWith -ExpectedMessage "MaxEvidenceChainMinutes must be greater than 0" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -MaxEvidenceChainMinutes 0
+        }
+    }
+
+    $testedFailures += [ordered]@{
+        name = "too-high-max-evidence-chain-minutes"
+        message = Assert-FailsWith -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440" -Action {
+            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath -MaxEvidenceChainMinutes 1441
         }
     }
 

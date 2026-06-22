@@ -147,6 +147,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-eviden
   -SmokeReportPath tmp\admin-vps-smoke-report.json
 ```
 
+Standalone validator fail-fast отклоняет `MaxEvidenceChainMinutes <= 0` и `> 1440` едиными сообщениями до чтения evidence reports; regression покрывает `bad-max-evidence-chain-minutes` и `too-high-max-evidence-chain-minutes`.
+
 Локальная regression-проверка evidence validator:
 
 ```powershell

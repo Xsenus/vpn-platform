@@ -2,6 +2,19 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.262.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-evidence-explicit-max-duration-guard`.
+
+### Fixed
+- `scripts/validate-admin-vps-smoke-evidence.ps1` и `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` больше не зависят от PowerShell `ValidateRange` для `MaxEvidenceChainMinutes`.
+- Standalone evidence validators теперь явно отклоняют `MaxEvidenceChainMinutes <= 0` и `> 1440` с едиными fail-fast сообщениями до чтения evidence reports.
+
+### Verified
+- Admin VPS smoke/bootstrap evidence validator regressions: OK, `bad-max-evidence-chain-minutes` и `too-high-max-evidence-chain-minutes` покрыты.
+- Local CLI bootstrap admin smoke на SQLite: OK, latest release `2026-06-22-admin-vps-evidence-explicit-max-duration-guard`, smoke sections `16/16`, `MaxEvidenceChainMinutes=120`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.261.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-smoke-env-upper-bound-guard`.

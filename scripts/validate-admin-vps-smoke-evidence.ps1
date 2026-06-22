@@ -9,13 +9,20 @@ param(
 
     [string]$ExpectedSmokeReportSha256 = "",
 
-    [ValidateRange(1, 1440)]
     [int]$MaxEvidenceChainMinutes = 120
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+
+if ($MaxEvidenceChainMinutes -le 0) {
+    throw "MaxEvidenceChainMinutes must be greater than 0."
+}
+
+if ($MaxEvidenceChainMinutes -gt 1440) {
+    throw "MaxEvidenceChainMinutes must be less than or equal to 1440."
+}
 
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
