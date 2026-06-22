@@ -161,6 +161,71 @@ function Invoke-ReadinessScenario {
     }
 }
 
+function Write-JsonFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)]$Value
+    )
+
+    [System.IO.File]::WriteAllText(
+        $Path,
+        ($Value | ConvertTo-Json -Depth 12),
+        [System.Text.UTF8Encoding]::new($false))
+}
+
+function Invoke-ReadinessValidatorScenario {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$SourceReportPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedMessage,
+        [scriptblock]$Mutate
+    )
+
+    $scenarioPath = Join-Path $outputPath $Name
+    New-Item -ItemType Directory -Path $scenarioPath -Force | Out-Null
+    $reportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-readiness-report.json"
+    $stdoutPath = Join-Path $scenarioPath "stdout.txt"
+    $stderrPath = Join-Path $scenarioPath "stderr.txt"
+
+    $report = Get-Content -LiteralPath $SourceReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    Write-JsonFile -Path $reportPath -Value $report
+
+    if ($null -ne $Mutate) {
+        & $Mutate $reportPath
+    }
+
+    $process = Start-Process -FilePath "powershell" `
+        -ArgumentList @(
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", (Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1"),
+            "-ReportPath", $reportPath,
+            "-RequireReady"
+        ) `
+        -WorkingDirectory $repoRoot `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath `
+        -PassThru `
+        -Wait `
+        -WindowStyle Hidden
+
+    $output = ((Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue))
+    if ($process.ExitCode -ne 1) {
+        throw "Scenario $Name exit code $($process.ExitCode), expected 1. Output: $output"
+    }
+
+    if ($output.IndexOf($ExpectedMessage, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "Scenario $Name did not include expected message '$ExpectedMessage'. Output: $output"
+    }
+
+    [ordered]@{
+        name = $Name
+        exitCode = $process.ExitCode
+        expectedMessage = $ExpectedMessage
+        reportCreated = $true
+    }
+}
+
 Assert-InWorkspace $outputPath
 if (Test-Path -LiteralPath $outputPath -PathType Container) {
     Remove-Item -LiteralPath $outputPath -Recurse -Force
@@ -173,6 +238,18 @@ $results += Invoke-ReadinessScenario `
     -ExpectedExitCode 0 `
     -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
     -LocalSqlite $true
+$localReadyReportPath = Join-Path (Join-Path $outputPath "local-ready") "admin-vps-bootstrap-smoke-readiness-report.json"
+
+$results += Invoke-ReadinessValidatorScenario `
+    -Name "mismatched-readiness-report-self-link" `
+    -SourceReportPath $localReadyReportPath `
+    -ExpectedMessage "mismatch for readinessReportPath" `
+    -Mutate {
+        param($reportPath)
+        $report = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $report.readinessReportPath = Join-Path (Split-Path -Parent $reportPath) "other-readiness-report.json"
+        Write-JsonFile -Path $reportPath -Value $report
+    }
 
 $results += Invoke-ReadinessScenario `
     -Name "missing-password" `

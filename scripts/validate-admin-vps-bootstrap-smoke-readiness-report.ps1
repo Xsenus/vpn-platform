@@ -50,6 +50,18 @@ function Assert-BooleanField {
     }
 }
 
+function Assert-Same {
+    param(
+        [AllowEmptyString()][string]$Left,
+        [AllowEmptyString()][string]$Right,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if (-not [string]::Equals($Left, $Right, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Admin VPS bootstrap smoke readiness report mismatch for $Name."
+    }
+}
+
 $requiredChecks = @(
     "api-base-url",
     "admin-web-url",
@@ -144,6 +156,8 @@ foreach ($booleanName in @("localSqlite", "applyMigrations", "confirmBootstrapRe
 }
 
 if ($RequireReady) {
+    Assert-Same (Resolve-WorkspacePath ([string]$report.readinessReportPath)) $fullReportPath "readinessReportPath"
+
     foreach ($booleanName in @("passwordEnvPresent", "passwordLengthOk")) {
         if (-not $report.$booleanName) {
             throw "Admin VPS bootstrap smoke readiness report field $booleanName must be true when -RequireReady is used."

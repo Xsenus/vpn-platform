@@ -208,6 +208,10 @@ public class AdminBootstrapCliScriptTests
                      "local-or-confirm-reset",
                      "connection-string",
                      "ReadinessReportPath",
+                     "readinessReportPath",
+                     "fullReportPath",
+                     "Assert-Same",
+                     "mismatch for $Name",
                      "admin-vps-bootstrap-smoke-readiness-report.json",
                      "admin vps bootstrap smoke readiness report valid",
                      "contains forbidden secret marker",
@@ -221,6 +225,7 @@ public class AdminBootstrapCliScriptTests
         foreach (var expected in new[]
                  {
                      "local-ready",
+                     "mismatched-readiness-report-self-link",
                      "missing-password",
                      "missing-confirm-bootstrap-reset",
                      "missing-connection-string",
