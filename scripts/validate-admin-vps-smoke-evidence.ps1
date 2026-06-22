@@ -165,6 +165,11 @@ if ($completedAt -lt $startedAt) {
 $sectionsContractPath = Resolve-WorkspacePath "docs/admin-vps-smoke-sections.json"
 $preflightReportSha256 = Get-FileSha256 $preflightFullPath
 $smokeReportSha256 = Get-FileSha256 $smokeFullPath
+$sectionStatuses = @($smoke.sections | ForEach-Object { ([string]$_.status).Trim().ToLowerInvariant() })
+$passedSections = @($sectionStatuses | Where-Object { $_ -eq "passed" }).Count
+$failedSections = @($sectionStatuses | Where-Object { $_ -eq "failed" }).Count
+$blockedSections = @($sectionStatuses | Where-Object { $_ -eq "blocked" }).Count
+$skippedSections = @($sectionStatuses | Where-Object { $_ -eq "skipped" }).Count
 
 Assert-ExpectedSha256 -Actual $preflightReportSha256 -Expected $ExpectedPreflightReportSha256 -Name "preflightReportSha256"
 Assert-ExpectedSha256 -Actual $smokeReportSha256 -Expected $ExpectedSmokeReportSha256 -Name "smokeReportSha256"
@@ -186,6 +191,10 @@ $summary = [ordered]@{
     preflightToSmokeSeconds = [int][Math]::Round(($startedAt - $generatedAt).TotalSeconds)
     smokeDurationSeconds = [int][Math]::Round(($completedAt - $startedAt).TotalSeconds)
     sections = @($smoke.sections).Count
+    passed = $passedSections
+    failed = $failedSections
+    blocked = $blockedSections
+    skipped = $skippedSections
     sectionsContractPath = $sectionsContractPath
     preflightReady = $preflight.readyForLiveSmoke
     preflightReportPath = $preflightFullPath

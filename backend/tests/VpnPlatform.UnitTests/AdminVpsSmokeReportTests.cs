@@ -481,6 +481,10 @@ public class AdminVpsSmokeReportTests
                      "smokeCompletedAt",
                      "preflightToSmokeSeconds = [int][Math]::Round(($startedAt - $generatedAt).TotalSeconds)",
                      "smokeDurationSeconds = [int][Math]::Round(($completedAt - $startedAt).TotalSeconds)",
+                     "passed = $passedSections",
+                     "failed = $failedSections",
+                     "blocked = $blockedSections",
+                     "skipped = $skippedSections",
                      "smokeReportPath",
                      "preflightReportPath",
                      "preflightReportPath = $preflightFullPath",
@@ -527,6 +531,11 @@ public class AdminVpsSmokeReportTests
                      "smokeDurationSeconds",
                      "\"preflightToSmokeSeconds\":60",
                      "\"smokeDurationSeconds\":60",
+                     "\"sections\":16",
+                     "\"passed\":16",
+                     "\"failed\":0",
+                     "\"blocked\":0",
+                     "\"skipped\":0",
                      "Valid smoke evidence output with expected SHA256 must pass",
                      "admin vps smoke evidence validator regression passed"
                  })

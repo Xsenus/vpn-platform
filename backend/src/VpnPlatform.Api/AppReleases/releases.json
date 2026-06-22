@@ -5745,5 +5745,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-evidence-status-counts-summary",
+    "version": "0.240.0",
+    "releasedAt": "2026-06-22T23:59:59.988+07:00",
+    "title": "Status counters в admin VPS smoke evidence summary",
+    "summary": "Admin VPS smoke evidence validator теперь добавляет `passed`, `failed`, `blocked` и `skipped` в sanitized success summary, чтобы оператор видел итоговый статус разделов linked smoke report без открытия полного JSON.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` выводит счетчики `passed`, `failed`, `blocked` и `skipped` рядом с `sections` в success summary."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` проверяет status counters synthetic valid-сценария: `sections=16`, `passed=16`, `failed=0`, `blocked=0`, `skipped=0`."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

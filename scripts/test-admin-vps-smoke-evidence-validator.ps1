@@ -235,7 +235,7 @@ try {
         throw "Valid smoke evidence output must include smokeReportSha256. Output: $validOutputText"
     }
 
-    foreach ($expectedSummaryField in @("preflightGeneratedAt", "smokeStartedAt", "smokeCompletedAt", "preflightToSmokeSeconds", "smokeDurationSeconds", '"preflightToSmokeSeconds":60', '"smokeDurationSeconds":60')) {
+    foreach ($expectedSummaryField in @("preflightGeneratedAt", "smokeStartedAt", "smokeCompletedAt", "preflightToSmokeSeconds", "smokeDurationSeconds", '"preflightToSmokeSeconds":60', '"smokeDurationSeconds":60', '"sections":16', '"passed":16', '"failed":0', '"blocked":0', '"skipped":0')) {
         if ($validOutputText.IndexOf($expectedSummaryField, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "Valid smoke evidence output must include $expectedSummaryField. Output: $validOutputText"
         }
