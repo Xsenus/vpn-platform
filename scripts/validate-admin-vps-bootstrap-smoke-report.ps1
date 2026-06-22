@@ -98,7 +98,7 @@ catch {
     throw "Admin VPS bootstrap smoke report is not valid JSON: $($_.Exception.Message)"
 }
 
-foreach ($field in @("reportId", "environmentName", "apiBaseUrl", "adminWebUrl", "adminEmail", "provider", "passwordEnvName", "smokeReportPath", "preflightReportPath", "generatedAt", "completedAt", "releaseId", "operator", "status")) {
+foreach ($field in @("reportId", "environmentName", "apiBaseUrl", "adminWebUrl", "adminEmail", "provider", "passwordEnvName", "smokeReportPath", "preflightReportPath", "readinessReportPath", "generatedAt", "completedAt", "releaseId", "operator", "status")) {
     if (-not $report.PSObject.Properties.Name.Contains($field)) {
         throw "Admin VPS bootstrap smoke report is missing required field: $field"
     }
@@ -169,6 +169,7 @@ $summary = [ordered]@{
     status = $report.status
     localSqlite = $report.localSqlite
     smokeReportPath = $report.smokeReportPath
+    readinessReportPath = $report.readinessReportPath
 }
 
 Write-Host "admin vps bootstrap smoke report valid $($summary | ConvertTo-Json -Compress)"

@@ -240,6 +240,7 @@ try {
         passwordEnvPresent = $true
         smokeReportPath = $SmokeReportPath
         preflightReportPath = $PreflightReportPath
+        readinessReportPath = $ReadinessReportPath
         generatedAt = $now.ToString("o")
         completedAt = ([DateTimeOffset]::UtcNow).ToString("o")
         releaseId = $releaseValue
