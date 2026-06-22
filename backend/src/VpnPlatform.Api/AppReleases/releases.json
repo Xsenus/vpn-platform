@@ -6320,5 +6320,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-url-guard",
+    "version": "0.265.0",
+    "releasedAt": "2026-06-23T00:30:00+07:00",
+    "title": "URL guard для admin VPS smoke wrappers",
+    "summary": "Admin VPS smoke/bootstrap wrappers теперь fail-fast отклоняют невалидные ApiBaseUrl/AdminWebUrl до preflight, readiness, bootstrap reset и smoke artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` валидирует `ApiBaseUrl` и `AdminWebUrl` как абсолютные http/https URL до preflight/browser smoke."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` использует тот же URL guard до readiness, bootstrap reset и передачи пароля в smoke."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

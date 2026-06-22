@@ -86,6 +86,19 @@ function Convert-MaxEvidenceChainMinutes {
     return $parsed
 }
 
+function Assert-HttpUrl {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    $parsed = $null
+    $isInvalid = [string]::IsNullOrWhiteSpace($Value) -or -not [Uri]::TryCreate($Value.Trim(), [UriKind]::Absolute, [ref]$parsed) -or ($parsed.Scheme -ne "http" -and $parsed.Scheme -ne "https")
+    if ($isInvalid) {
+        throw "$Name must be an absolute http or https URL."
+    }
+}
+
 foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, $bootstrapSmokeReportValidatorScript, $bootstrapSmokeEvidenceValidatorScript)) {
     if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
         throw "Required admin VPS bootstrap smoke script was not found: $requiredScript"
@@ -93,6 +106,8 @@ foreach ($requiredScript in @($bootstrapScript, $smokeScript, $readinessScript, 
 }
 
 $maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvidenceChainMinutes
+Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
+Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
 
 if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
     throw "Admin email is required."

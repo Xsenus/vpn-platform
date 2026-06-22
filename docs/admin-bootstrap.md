@@ -74,13 +74,13 @@ powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low-api-port`, `too-high-admin-port`, `same-api-admin-port`, `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes` и неверные локальные порты останавливаются до readiness report, bootstrap reset и smoke artifacts:
+Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low-api-port`, `too-high-admin-port`, `same-api-admin-port`, `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes`, неверные локальные порты и невалидные `ApiBaseUrl`/`AdminWebUrl` останавливаются до readiness report, bootstrap reset и smoke artifacts:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression includes `too-high-env-max-evidence-chain-minutes`: `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES=1441` must fail before readiness, bootstrap reset, preflight and smoke artifacts.
+Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url` and `bad-admin-web-url`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts.
 
 Readiness gate перед reset-ом пишет sanitized `admin-vps-bootstrap-smoke-readiness-report.json` без пароля и connection string. Он должен пройти до `admin-bootstrap.ps1`:
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.265.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-url-guard`.
+
+### Fixed
+- `scripts/admin-vps-smoke.ps1` теперь fail-fast валидирует `ApiBaseUrl` и `AdminWebUrl` как absolute http/https URL до preflight/browser smoke.
+- `scripts/admin-vps-bootstrap-smoke.ps1` применяет тот же URL guard до readiness, bootstrap reset, передачи пароля и smoke artifacts.
+
+### Verified
+- Admin VPS smoke flow wrapper regression: OK, `bad-api-url` и `bad-admin-web-url` не создают preflight/smoke artifacts.
+- Admin VPS bootstrap smoke wrapper regression: OK, `bad-api-url` и `bad-admin-web-url` не создают readiness/bootstrap/smoke artifacts.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.264.0 - 2026-06-23
 
 Release entry: `2026-06-23-local-admin-bootstrap-port-guard`.

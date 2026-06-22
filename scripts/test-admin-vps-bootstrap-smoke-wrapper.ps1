@@ -53,7 +53,9 @@ function Invoke-BootstrapSmokeScenario {
         [Parameter(Mandatory = $true)][int]$ExpectedExitCode,
         [Parameter(Mandatory = $true)][string]$ExpectedMessage,
         [AllowNull()][string]$EnvMaxEvidenceChainMinutes,
-        [string[]]$AdditionalArguments = @()
+        [string[]]$AdditionalArguments = @(),
+        [string]$ApiBaseUrl = "http://127.0.0.1:18211",
+        [string]$AdminWebUrl = "http://127.0.0.1:18215/admin/"
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -78,8 +80,8 @@ function Invoke-BootstrapSmokeScenario {
             "-NoProfile",
             "-ExecutionPolicy", "Bypass",
             "-File", $wrapperPath,
-            "-ApiBaseUrl", "http://127.0.0.1:18211",
-            "-AdminWebUrl", "http://127.0.0.1:18215/admin/",
+            "-ApiBaseUrl", $ApiBaseUrl,
+            "-AdminWebUrl", $AdminWebUrl,
             "-AdminEmail", "fresh-bootstrap-admin@example.test",
             "-SmokeReportPath", $smokeReportPath,
             "-PreflightReportPath", $preflightReportPath,
@@ -241,6 +243,24 @@ try {
         -ExpectedExitCode 1 `
         -ExpectedMessage "MaxEvidenceChainMinutes must be less than or equal to 1440" `
         -EnvMaxEvidenceChainMinutes "1441"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "bad-api-url" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-api-url/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "ApiBaseUrl must be an absolute http or https URL" `
+        -ApiBaseUrl "not-a-url"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "bad-admin-web-url" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-admin-web-url/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "AdminWebUrl must be an absolute http or https URL" `
+        -AdminWebUrl "not-a-url"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "missing-password" `

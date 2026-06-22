@@ -268,8 +268,18 @@ try {
         -AdminEmail "fresh-admin@example.test" `
         -FrontendPath "frontend" `
         -Password "LocalAdminPassword123!" `
-        -ExpectedMessage "apiBaseUrl must be an absolute" `
-        -ExpectedFailedCheck "api-base-url"
+        -ExpectedMessage "ApiBaseUrl must be an absolute http or https URL" `
+        -ExpectPreflightReport $false
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "bad-admin-web-url" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "not-a-url" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "AdminWebUrl must be an absolute http or https URL" `
+        -ExpectPreflightReport $false
 
     $testedFailures += Invoke-WrapperFailure `
         -Name "missing-frontend" `
