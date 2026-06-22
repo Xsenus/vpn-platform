@@ -221,6 +221,12 @@ try {
         }
     }
 
+    foreach ($expectedReportIdField in @("preflightReportId", "admin-vps-smoke-preflight-regression", "smokeReportId", "admin-vps-smoke-regression")) {
+        if ($validOutputText.IndexOf($expectedReportIdField, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Valid smoke evidence output must include $expectedReportIdField. Output: $validOutputText"
+        }
+    }
+
     if ($validOutputText.IndexOf("preflightReportSha256", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
         throw "Valid smoke evidence output must include preflightReportSha256. Output: $validOutputText"
     }
