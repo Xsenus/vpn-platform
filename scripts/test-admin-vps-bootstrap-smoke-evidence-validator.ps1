@@ -399,6 +399,13 @@ $results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -Expect
     Write-JsonFile -Path $preflightPath -Value $preflight
     Write-JsonFile -Path $smokePath -Value $smoke
 }
+$results += Invoke-ValidatorScenario -Name "preflight-generated-before-readiness" -ExpectedExitCode 1 -ExpectedMessage "linked preflight generatedAt must not be before readiness generatedAt" -Mutate {
+    param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
+    $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $preflight.generatedAt = ([DateTimeOffset]::Parse([string]$readiness.generatedAt).AddSeconds(-1)).ToString("o")
+    Write-JsonFile -Path $preflightPath -Value $preflight
+}
 $results += Invoke-ValidatorScenario -Name "bad-timing" -ExpectedExitCode 1 -ExpectedMessage "generatedAt must not be before linked smoke completedAt" -Mutate {
     param($readinessPath, $bootstrapPath)
     $readiness = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json

@@ -179,6 +179,20 @@ if ($RequirePassed) {
     $preflightReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.preflightReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
     $smokeReport = Get-Content -LiteralPath (Resolve-WorkspacePath ([string]$report.smokeReportPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
 
+    $readinessGeneratedAt = [DateTimeOffset]::MinValue
+    if (-not [DateTimeOffset]::TryParse([string]$readinessReport.generatedAt, [ref]$readinessGeneratedAt)) {
+        throw "Admin VPS bootstrap smoke report linked readiness generatedAt is not a valid DateTimeOffset."
+    }
+
+    $preflightGeneratedAt = [DateTimeOffset]::MinValue
+    if (-not [DateTimeOffset]::TryParse([string]$preflightReport.generatedAt, [ref]$preflightGeneratedAt)) {
+        throw "Admin VPS bootstrap smoke report linked preflight generatedAt is not a valid DateTimeOffset."
+    }
+
+    if ($preflightGeneratedAt -lt $readinessGeneratedAt) {
+        throw "Admin VPS bootstrap smoke report linked preflight generatedAt must not be before readiness generatedAt."
+    }
+
     $smokeCompletedAt = [DateTimeOffset]::MinValue
     if (-not [DateTimeOffset]::TryParse([string]$smokeReport.completedAt, [ref]$smokeCompletedAt)) {
         throw "Admin VPS bootstrap smoke report linked smoke completedAt is not a valid DateTimeOffset."
