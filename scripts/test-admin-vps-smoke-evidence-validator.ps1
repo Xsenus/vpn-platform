@@ -215,6 +215,12 @@ try {
         throw "Valid smoke evidence output must include sectionsContractPath. Output: $validOutputText"
     }
 
+    foreach ($expectedIdentityField in @("adminEmail", "owner@example.test", "operator", "evidence-validator-regression")) {
+        if ($validOutputText.IndexOf($expectedIdentityField, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Valid smoke evidence output must include $expectedIdentityField. Output: $validOutputText"
+        }
+    }
+
     if ($validOutputText.IndexOf("preflightReportSha256", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
         throw "Valid smoke evidence output must include preflightReportSha256. Output: $validOutputText"
     }

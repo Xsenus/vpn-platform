@@ -84,6 +84,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-002U", "2026-06-22-admin-vps-smoke-evidence-expected-fingerprint"),
         new("P0-ADMIN-002V", "2026-06-22-admin-vps-smoke-evidence-duration-summary"),
         new("P0-ADMIN-002W", "2026-06-22-admin-vps-smoke-evidence-duration-order"),
+        new("P0-ADMIN-002X", "2026-06-22-admin-vps-smoke-evidence-identity-summary"),
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
         new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-PAY-012", "2026-06-14-payment-provider-smoke-report"),

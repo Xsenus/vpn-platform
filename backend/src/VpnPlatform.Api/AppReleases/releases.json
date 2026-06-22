@@ -5699,5 +5699,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-evidence-identity-summary",
+    "version": "0.238.0",
+    "releasedAt": "2026-06-22T23:59:59.986+07:00",
+    "title": "Admin identity в admin VPS smoke evidence summary",
+    "summary": "Admin VPS smoke evidence validator теперь добавляет `adminEmail` и `operator` в sanitized success summary после сверки preflight/smoke identity, чтобы оператор видел, какой admin smoke bundle был проверен без раскрытия секретов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` выводит `adminEmail` и `operator` в success summary после fail-closed сверки linked reports."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` проверяет identity fields и значения synthetic valid-сценария."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]
