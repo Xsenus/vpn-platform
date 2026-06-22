@@ -462,6 +462,7 @@ public class AdminVpsSmokeReportTests
                      "operator",
                      "smokeReportPath",
                      "preflightReportPath",
+                     "preflightReportPath = $preflightFullPath",
                      "releaseId",
                      "preflight releaseId is required",
                      "generatedAt must not be after smoke completedAt",
@@ -484,6 +485,7 @@ public class AdminVpsSmokeReportTests
                      "preflight-after-smoke",
                      "smoke-started-before-preflight",
                      "failed-smoke-report",
+                     "Valid smoke evidence output must include preflightReportPath",
                      "admin vps smoke evidence validator regression passed"
                  })
         {

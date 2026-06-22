@@ -5327,5 +5327,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-22-admin-vps-smoke-evidence-preflight-summary",
+    "version": "0.222.0",
+    "releasedAt": "2026-06-22T23:30:00+07:00",
+    "title": "Preflight path в admin VPS smoke evidence summary",
+    "summary": "Admin VPS smoke evidence validator теперь печатает `preflightReportPath` в success summary, чтобы операторский вывод называл оба связанных smoke/preflight evidence-файла.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` добавляет `preflightReportPath` в sanitized success summary."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-evidence-validator.ps1` теперь захватывает PowerShell information stream и проверяет `preflightReportPath` в valid output."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke evidence."
+      }
+    ]
   }
 ]

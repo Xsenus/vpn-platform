@@ -126,6 +126,7 @@ $summary = [ordered]@{
     adminWebUrl = (Normalize-Url $smoke.adminWebUrl)
     sections = @($smoke.sections).Count
     preflightReady = $preflight.readyForLiveSmoke
+    preflightReportPath = $preflightFullPath
     smokeReportPath = $smokeFullPath
 }
 

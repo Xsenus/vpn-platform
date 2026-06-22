@@ -155,7 +155,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-v
 
 Regression harness покрывает `missing-preflight-release-id` и `smoke-started-before-preflight`: preflight/smoke evidence не должно проходить без release id в preflight report или с smoke, стартовавшим раньше preflight.
 
-Regression harness также покрывает `mismatched-preflight-report-path`: preflight/smoke evidence не должно принимать preflight report, если поле `preflightReportPath` указывает не на фактически проверяемый preflight JSON.
+Regression harness также покрывает `mismatched-preflight-report-path`: preflight/smoke evidence не должно принимать preflight report, если поле `preflightReportPath` указывает не на фактически проверяемый preflight JSON. Valid-сценарий проверяет, что success summary содержит `preflightReportPath`.
 
 ## Bootstrap + live-smoke
 

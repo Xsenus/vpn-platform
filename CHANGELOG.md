@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.222.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-smoke-evidence-preflight-summary`.
+
+### Fixed
+- `scripts/validate-admin-vps-smoke-evidence.ps1` теперь добавляет `preflightReportPath` в sanitized success summary.
+- `scripts/test-admin-vps-smoke-evidence-validator.ps1` захватывает PowerShell information stream и проверяет `preflightReportPath` в valid output.
+
+### Verified
+- Admin VPS smoke evidence validator regression: OK, valid summary включает `preflightReportPath`.
+- `AdminVpsSmokeReportTests`: 15/15.
+- Targeted release/docs suite: 40/40.
+- Local admin VPS smoke на SQLite: OK; paired evidence validator подтвердил `preflightReportPath` в success summary.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, tests 66/66, console E2E 9/9 after rerun, audit 0 vulnerabilities.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.221.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-evidence-preflight-summary`.

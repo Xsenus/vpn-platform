@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-22-admin-vps-bootstrap-evidence-preflight-summary`, версия `0.221.0`; `scripts/validate-admin-vps-bootstrap-smoke-evidence.ps1` теперь включает `preflightReportPath` в sanitized success summary, а regression harness проверяет это в valid-сценарии; readiness/preflight timing checks из `0.220.0` остаются в силе; production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-22-admin-vps-smoke-evidence-preflight-summary`, версия `0.222.0`; `scripts/validate-admin-vps-smoke-evidence.ps1` теперь включает `preflightReportPath` в sanitized success summary, а regression harness проверяет это в captured valid output; bootstrap evidence summary checks из `0.221.0` остаются в силе; production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

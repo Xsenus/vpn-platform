@@ -44,7 +44,7 @@ function Invoke-EvidenceValidator {
     )
 
     $validator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
-    return & $validator -PreflightReportPath $PreflightPath -SmokeReportPath $SmokePath 2>&1
+    return & $validator -PreflightReportPath $PreflightPath -SmokeReportPath $SmokePath 6>&1 2>&1
 }
 
 function Assert-FailsWith {
@@ -177,6 +177,11 @@ try {
     New-EvidencePair -PreflightPath $preflightPath -SmokePath $smokePath
 
     $validOutput = Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath
+    $validOutputText = ($validOutput -join "`n")
+    if ($validOutputText.IndexOf("preflightReportPath", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "Valid smoke evidence output must include preflightReportPath. Output: $validOutputText"
+    }
+
     $testedFailures = @()
 
     $badApiPreflight = Join-Path $outputFullPath "bad-api-preflight.json"
@@ -293,7 +298,7 @@ try {
 
     $result = [ordered]@{
         status = "passed"
-        validValidatorOutput = ($validOutput -join "`n")
+        validValidatorOutput = $validOutputText
         testedFailures = @($testedFailures)
     }
 
