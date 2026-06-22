@@ -160,6 +160,8 @@ if ($RequirePassed) {
         throw "Admin VPS bootstrap smoke report bootstrapResetConfirmed must be true for non-local database when -RequirePassed is used."
     }
 
+    Assert-Same (Resolve-WorkspacePath ([string]$report.bootstrapSmokeReportPath)) $fullReportPath "bootstrapSmokeReportPath"
+
     $evidenceValidator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-evidence.ps1"
     & $evidenceValidator `
         -PreflightReportPath ([string]$report.preflightReportPath) `

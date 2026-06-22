@@ -173,6 +173,7 @@ public class AdminBootstrapCliScriptTests
                      "preflightReportPath",
                      "readinessReportPath",
                      "bootstrapSmokeReportPath",
+                     "fullReportPath",
                      "contains forbidden secret marker",
                      "admin vps bootstrap smoke report valid"
                  })
@@ -276,6 +277,7 @@ public class AdminBootstrapCliScriptTests
                      "releaseId",
                      "readinessReportPath",
                      "bootstrap readinessReportPath",
+                     "bootstrapSmokeReportPath",
                      "bootstrap bootstrapSmokeReportPath",
                      "Assert-Same",
                      "mismatch for $Name",

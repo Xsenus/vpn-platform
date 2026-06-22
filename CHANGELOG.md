@@ -2,6 +2,24 @@
 
 Все заметные изменения проекта фиксируются в этом файле и в разделе "Что нового" внутри приложения. Подробный рабочий roadmap находится в `docs/PRODUCT_COMPLETION_ROADMAP.md`.
 
+## 0.213.0 - 2026-06-22
+
+Release entry: `2026-06-22-admin-vps-bootstrap-smoke-report-self-validate`.
+
+### Fixed
+- `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` теперь сверяет `bootstrapSmokeReportPath` с фактическим `-ReportPath` до paired evidence validation.
+- `scripts/test-admin-vps-bootstrap-smoke-evidence-validator.ps1` фиксирует, что `mismatched-bootstrap-smoke-report-path` падает на standalone bootstrap report self-link.
+
+### Verified
+- Admin VPS bootstrap smoke evidence validator regression: OK, включая `mismatched-bootstrap-smoke-report-path`.
+- `AdminBootstrapCliScriptTests`: 9/9.
+- Targeted release/docs suite: 40/40.
+- Local CLI bootstrap admin smoke на SQLite: OK; standalone bootstrap report validator подтвердил `bootstrapSmokeReportPath`.
+- Backend full suite: 590/590.
+- Frontend tests/typecheck/build/audit/console E2E: OK, console E2E 9/9.
+- Secret scan, strict UTF-8 without BOM для измененных/новых файлов и `git diff --check`: OK.
+- `P0-ADMIN-001`, `P0-ADMIN-002` и `STATE-013` остаются открытыми до реального VPS bootstrap/login smoke report.
+
 ## 0.212.0 - 2026-06-22
 
 Release entry: `2026-06-22-admin-vps-bootstrap-smoke-environment-link`.

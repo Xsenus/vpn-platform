@@ -319,7 +319,7 @@ $results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-readiness-repor
     $report.readinessReportPath = Join-Path (Split-Path -Parent $readinessPath) "other-bootstrap-readiness-report.json"
     Write-JsonFile -Path $bootstrapPath -Value $report
 }
-$results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-smoke-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for bootstrap bootstrapSmokeReportPath" -Mutate {
+$results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-smoke-report-path" -ExpectedExitCode 1 -ExpectedMessage "mismatch for bootstrapSmokeReportPath" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $bootstrapPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.bootstrapSmokeReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-bootstrap-smoke-report.json"
