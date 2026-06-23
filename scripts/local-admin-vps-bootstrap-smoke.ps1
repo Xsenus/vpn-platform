@@ -26,9 +26,18 @@ function Assert-PortFree {
         [string]$Name
     )
 
-    $listeners = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
-    if ($listeners.Count -gt 0) {
+    $listener = $null
+    try {
+        $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $Port)
+        $listener.Start()
+    }
+    catch [System.Net.Sockets.SocketException] {
         throw "$Name port $Port is already occupied."
+    }
+    finally {
+        if ($null -ne $listener) {
+            $listener.Stop()
+        }
     }
 }
 
@@ -44,6 +53,29 @@ function Set-ScopedEnv {
     }
 
     [Environment]::SetEnvironmentVariable($Name, $Value, "Process")
+}
+
+function Stop-ProcessTree {
+    param([System.Diagnostics.Process]$Process)
+
+    if ($null -eq $Process) {
+        return
+    }
+
+    $processId = [int]$Process.Id
+    if (-not (Get-Process -Id $processId -ErrorAction SilentlyContinue)) {
+        return
+    }
+
+    try {
+        & "$env:SystemRoot\System32\taskkill.exe" /PID $processId /T /F 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0 -and (Get-Process -Id $processId -ErrorAction SilentlyContinue)) {
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Wait-HttpOk {
@@ -63,29 +95,6 @@ function Wait-HttpOk {
     }
 
     throw "URL did not become ready: $Url"
-}
-
-function Get-ChildProcessIds {
-    param([int]$ParentId)
-
-    $children = Get-CimInstance Win32_Process -Filter "ParentProcessId=$ParentId" -ErrorAction SilentlyContinue
-    foreach ($child in $children) {
-        [int]$child.ProcessId
-        Get-ChildProcessIds -ParentId ([int]$child.ProcessId)
-    }
-}
-
-function Stop-ProcessTree {
-    param([System.Diagnostics.Process]$Process)
-
-    if ($null -eq $Process) {
-        return
-    }
-
-    $ids = @(Get-ChildProcessIds -ParentId ([int]$Process.Id)) + @([int]$Process.Id)
-    foreach ($id in ($ids | Select-Object -Unique)) {
-        Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
-    }
 }
 
 function Convert-MaxEvidenceChainMinutes {

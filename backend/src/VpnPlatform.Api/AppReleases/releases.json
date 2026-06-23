@@ -6688,5 +6688,36 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-bootstrap-password-env-normalization",
+    "version": "0.281.0",
+    "releasedAt": "2026-06-23T03:30:00+07:00",
+    "title": "Password env name normalization for admin VPS bootstrap smoke",
+    "summary": "Admin VPS bootstrap readiness and bootstrap+smoke wrapper now trim AdminPasswordEnvName before reading the password env and writing sanitized evidence; local SQLite bootstrap smoke cleanup avoids hanging OS process/port cmdlets.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke-readiness.ps1` now trims `AdminPasswordEnvName` before checking the password environment variable and writing `passwordEnvName` to readiness evidence."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` now uses the same trimmed `AdminPasswordEnvName` for password lookup, readiness args and sanitized bootstrap smoke evidence."
+      },
+      {
+        "type": "improved",
+        "text": "Regression coverage now includes `password-env-name-normalized` and `dry-run-password-env-name-normalized`."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/local-admin-vps-bootstrap-smoke.ps1` now checks local ports with a loopback `TcpListener` and stops only the process trees it started through `taskkill.exe`, avoiding WMI/CIM hangs during local SQLite smoke cleanup."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

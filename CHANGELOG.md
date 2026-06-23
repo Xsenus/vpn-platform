@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.281.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-bootstrap-password-env-normalization`.
+
+### Fixed
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` now trims `AdminPasswordEnvName` before checking the password environment variable and writing `passwordEnvName` to readiness evidence.
+- `scripts/admin-vps-bootstrap-smoke.ps1` now uses the same trimmed `AdminPasswordEnvName` for password lookup, readiness args and sanitized bootstrap smoke evidence.
+- Regression coverage now includes `password-env-name-normalized` and `dry-run-password-env-name-normalized`.
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` now checks local ports through a loopback `TcpListener` and stops only its own launched process trees through `taskkill.exe`, avoiding local smoke cleanup hangs on WMI/CIM cmdlets.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `password-env-name-normalized` writes a trimmed password env name into readiness evidence.
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-password-env-name-normalized` passes the trimmed password env name through the wrapper into readiness evidence.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-bootstrap-password-env-normalization`, readiness checks `16/16`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.280.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-smoke-wrapper-identity-normalization`.

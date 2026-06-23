@@ -59,6 +59,8 @@ function Invoke-ReadinessScenario {
         [string]$ExpectedAdminWebUrl,
         [string]$AdminEmail = "admin@example.test",
         [string]$ExpectedAdminEmail,
+        [string]$AdminPasswordEnvName = "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
+        [string]$ExpectedPasswordEnvName,
         [string]$EnvironmentName = "Regression",
         [string]$ExpectedEnvironmentName,
         [bool]$UseEnvironmentNameEnv = $false
@@ -71,7 +73,7 @@ function Invoke-ReadinessScenario {
     $stdoutPath = Join-Path $scenarioPath "stdout.txt"
     $stderrPath = Join-Path $scenarioPath "stderr.txt"
     $password = "ReadinessPassword123!"
-    $envName = "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD"
+    $envName = $AdminPasswordEnvName.Trim()
 
     $previousEnv = @{}
     try {
@@ -92,7 +94,7 @@ function Invoke-ReadinessScenario {
             "-ApiBaseUrl", $ApiBaseUrl,
             "-AdminWebUrl", $AdminWebUrl,
             "-AdminEmail", $AdminEmail,
-            "-AdminPasswordEnvName", $envName,
+            "-AdminPasswordEnvName", $AdminPasswordEnvName,
             "-ReadinessReportPath", $reportPath,
             "-SmokeReportPath", (Join-Path $scenarioPath "admin-vps-smoke-report.json"),
             "-PreflightReportPath", (Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"),
@@ -195,6 +197,13 @@ function Invoke-ReadinessScenario {
             $report = $reportRaw | ConvertFrom-Json
             if ([string]$report.environmentName -ne $ExpectedEnvironmentName) {
                 throw "Scenario $Name environmentName '$($report.environmentName)', expected '$ExpectedEnvironmentName'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedPasswordEnvName)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.passwordEnvName -ne $ExpectedPasswordEnvName) {
+                throw "Scenario $Name passwordEnvName '$($report.passwordEnvName)', expected '$ExpectedPasswordEnvName'."
             }
         }
 
@@ -337,6 +346,14 @@ $results += Invoke-ReadinessScenario `
     -LocalSqlite $true `
     -AdminEmail " admin@example.test " `
     -ExpectedAdminEmail "admin@example.test"
+
+$results += Invoke-ReadinessScenario `
+    -Name "password-env-name-normalized" `
+    -ExpectedExitCode 0 `
+    -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
+    -LocalSqlite $true `
+    -AdminPasswordEnvName " ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD " `
+    -ExpectedPasswordEnvName "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD"
 
 $results += Invoke-ReadinessValidatorScenario `
     -Name "mismatched-readiness-report-self-link" `

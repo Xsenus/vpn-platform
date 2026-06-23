@@ -2,6 +2,50 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-23: admin VPS bootstrap password env normalization
+
+Scope:
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` trims `AdminPasswordEnvName` before checking the password environment variable and writing `passwordEnvName` to readiness evidence.
+- `scripts/admin-vps-bootstrap-smoke.ps1` uses the same trimmed `AdminPasswordEnvName` for password lookup, readiness args and sanitized bootstrap smoke evidence.
+- Regression coverage includes `password-env-name-normalized` and `dry-run-password-env-name-normalized`.
+- `scripts/local-admin-vps-bootstrap-smoke.ps1` checks local ports with a loopback `TcpListener` and stops only its own launched process trees through `taskkill.exe`, avoiding local smoke cleanup hangs on WMI/CIM cmdlets.
+- What's New received release `2026-06-23-admin-vps-bootstrap-password-env-normalization`, version `0.281.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` were not closed: real VPS bootstrap/login smoke was not run.
+
+Commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Result:
+
+- Admin VPS bootstrap smoke readiness regression: OK, `password-env-name-normalized` writes a trimmed password env name into readiness evidence.
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-password-env-name-normalized` passes the trimmed password env name through the wrapper into readiness evidence.
+- Local admin VPS bootstrap smoke wrapper regression: OK, invalid ports and invalid CLI/env max evidence chain values fail before local smoke artifacts, and cleanup no longer uses WMI/CIM process-tree discovery.
+- Targeted docs/release unit suite: 40/40.
+- Local CLI bootstrap admin smoke on SQLite: OK, completed with exit code 0; latest release `2026-06-23-admin-vps-bootstrap-password-env-normalization`, readiness checks `16/16`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 561, findings 0.
+- `git diff --check`: OK, exit code 0; Git reported CRLF normalization warnings for markdown only.
+- Changed files encoding: strict UTF-8 without BOM, 22 files checked.
+
 ## Check 2026-06-23: admin VPS smoke wrapper identity normalization
 
 Scope:

@@ -146,6 +146,7 @@ public class AdminBootstrapCliScriptTests
                      "$Name must be an integer",
                      "$Name must be between 1 and 65535",
                      "ApiPort and AdminPort must be different",
+                     "TcpListener",
                      "MaxEvidenceChainMinutes",
                      "ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES",
                      "MaxEvidenceChainMinutes must be an integer",
@@ -153,6 +154,7 @@ public class AdminBootstrapCliScriptTests
                      "-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue",
                      "Assert-InWorkspace",
                      "Stop-ProcessTree",
+                     "taskkill.exe",
                      "local admin vps bootstrap smoke ok"
                  })
         {
@@ -213,6 +215,8 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("MaxEvidenceChainMinutes must be an integer", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("MaxEvidenceChainMinutes must be greater than 0", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Convert-TcpPort", localSmoke, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("TcpListener", localSmoke, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("taskkill.exe", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("$Name must be an integer", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ApiPort and AdminPort must be different", localSmoke, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-local-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
@@ -298,6 +302,7 @@ public class AdminBootstrapCliScriptTests
                      "Get-EnvironmentNameValue",
                      "Get-HttpUrlValue",
                      "Get-AdminEmailValue",
+                     "Get-AdminPasswordEnvNameValue",
                      "ReadinessReportPath",
                      "readinessReportPath",
                      "fullReportPath",
@@ -325,6 +330,8 @@ public class AdminBootstrapCliScriptTests
                      "ExpectedAdminWebUrl",
                      "admin-email-normalized",
                      "ExpectedAdminEmail",
+                     "password-env-name-normalized",
+                     "ExpectedPasswordEnvName",
                      "environment-default-normalized",
                      "ExpectedEnvironmentName",
                      "UseEnvironmentNameEnv",
@@ -606,6 +613,7 @@ public class AdminBootstrapCliScriptTests
                       "dry-run-no-smoke",
                       "dry-run-url-values-normalized",
                       "dry-run-admin-email-normalized",
+                      "dry-run-password-env-name-normalized",
                       "dry-run-default-operator",
                       "dry-run-default-environment",
                       "admin-vps-bootstrap-smoke-report.json",
@@ -624,6 +632,7 @@ public class AdminBootstrapCliScriptTests
                       "Readiness report apiBaseUrl should be",
                       "Readiness report adminWebUrl should be",
                       "Readiness report adminEmail should be",
+                      "Readiness report passwordEnvName should be",
                       "readinessReleaseId",
                      "leaked password",
                      "admin vps bootstrap smoke wrapper regression passed"
@@ -637,6 +646,7 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Get-ProviderValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-HttpUrlValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminEmailValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-AdminPasswordEnvNameValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);

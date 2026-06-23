@@ -183,6 +183,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-bootstrap-smoke.ps1 `
 ```
 
 Локальная SQLite-проверка доказывает, что admin-учетка создана CLI bootstrap-ом, а затем API стартует с `AdminBootstrap__Enabled=false` и вход в админку все равно проходит:
+Wrapper проверяет свободные локальные порты через loopback `TcpListener` и при cleanup останавливает только собственные process tree через `taskkill.exe`, чтобы локальный smoke не зависел от WMI/CIM cmdlets.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -MaxEvidenceChainMinutes 120
@@ -201,7 +202,7 @@ Regression wrapper-а проверяет fail-closed сценарии до за�
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-default-operator` and `dry-run-default-environment`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts.
+Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-password-env-name-normalized`, `dry-run-default-operator` and `dry-run-default-environment`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts, and the dry-run password env scenario must write trimmed `passwordEnvName` into readiness evidence.
 
 Перед reset-ом wrapper запускает readiness gate и пишет sanitized report без пароля и connection string:
 

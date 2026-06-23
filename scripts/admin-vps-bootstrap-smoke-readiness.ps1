@@ -114,7 +114,18 @@ function Get-AdminEmailValue {
     return $Value.Trim()
 }
 
-$password = [Environment]::GetEnvironmentVariable($AdminPasswordEnvName, "Process")
+function Get-AdminPasswordEnvNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
+$adminPasswordEnvNameValue = Get-AdminPasswordEnvNameValue -Value $AdminPasswordEnvName
+$password = [Environment]::GetEnvironmentVariable($adminPasswordEnvNameValue, "Process")
 $passwordPresent = -not [string]::IsNullOrWhiteSpace($password)
 $passwordLengthOk = $passwordPresent -and $password.Length -ge 16
 $connectionStringPresent = -not [string]::IsNullOrWhiteSpace($ConnectionString)
@@ -136,7 +147,7 @@ $packageJsonPath = Join-Path $frontendFullPath "package.json"
 Add-Check "api-base-url" (Test-HttpUrl $apiBaseUrlValue) "ADMIN_VPS_SMOKE_API_BASE_URL must be an absolute http/https URL."
 Add-Check "admin-web-url" (Test-HttpUrl $adminWebUrlValue) "ADMIN_VPS_SMOKE_ADMIN_WEB_URL must be an absolute http/https URL."
 Add-Check "admin-email" (-not [string]::IsNullOrWhiteSpace($adminEmailValue) -and $adminEmailValue.Contains("@")) "Admin email must be set and contain @."
-Add-Check "password-env-name" (-not [string]::IsNullOrWhiteSpace($AdminPasswordEnvName)) "Admin password env name must be set."
+Add-Check "password-env-name" (-not [string]::IsNullOrWhiteSpace($adminPasswordEnvNameValue)) "Admin password env name must be set."
 Add-Check "password-env-present" $passwordPresent "Admin password env must be present in the process environment and is never printed."
 Add-Check "password-length" $passwordLengthOk "Admin password env value must contain at least 16 characters."
 Add-Check "provider-supported" (@("Postgres", "Sqlite") -contains $providerValue) "Provider must be Postgres or Sqlite."
@@ -188,7 +199,7 @@ $report = [ordered]@{
     applyMigrations = [bool]$ApplyMigrations
     confirmBootstrapReset = [bool]$ConfirmBootstrapReset
     connectionStringPresent = $connectionStringPresent
-    passwordEnvName = $AdminPasswordEnvName
+    passwordEnvName = $adminPasswordEnvNameValue
     passwordEnvPresent = $passwordPresent
     passwordLengthOk = $passwordLengthOk
     smokeReportPath = $SmokeReportPath

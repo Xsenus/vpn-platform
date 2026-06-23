@@ -142,6 +142,16 @@ function Get-AdminEmailValue {
     return $Value.Trim()
 }
 
+function Get-AdminPasswordEnvNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ReportPathFullName {
     param(
         [AllowEmptyString()][string]$Path,
@@ -240,22 +250,23 @@ Assert-DistinctReportPaths -Reports @(
     @{ Name = "ReadinessReportPath"; Path = $ReadinessReportPath }
 )
 $providerValue = Get-ProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
+$adminPasswordEnvNameValue = Get-AdminPasswordEnvNameValue -Value $AdminPasswordEnvName
 
 if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
     throw "Admin email is required."
 }
 
-if ([string]::IsNullOrWhiteSpace($AdminPasswordEnvName)) {
+if ([string]::IsNullOrWhiteSpace($adminPasswordEnvNameValue)) {
     throw "Admin password env name is required."
 }
 
-$password = [Environment]::GetEnvironmentVariable($AdminPasswordEnvName, "Process")
+$password = [Environment]::GetEnvironmentVariable($adminPasswordEnvNameValue, "Process")
 if ([string]::IsNullOrWhiteSpace($password)) {
-    throw "Admin password env '$AdminPasswordEnvName' is required."
+    throw "Admin password env '$adminPasswordEnvNameValue' is required."
 }
 
 if ($password.Length -lt 16) {
-    throw "Admin password env '$AdminPasswordEnvName' must contain at least 16 characters."
+    throw "Admin password env '$adminPasswordEnvNameValue' must contain at least 16 characters."
 }
 
 if (-not $LocalSqlite -and -not $ConfirmBootstrapReset) {
@@ -298,7 +309,7 @@ try {
         ApiBaseUrl = $apiBaseUrlValue
         AdminWebUrl = $adminWebUrlValue
         AdminEmail = $adminEmailValue
-        AdminPasswordEnvName = $AdminPasswordEnvName
+        AdminPasswordEnvName = $adminPasswordEnvNameValue
         Provider = $providerValue
         ProjectPath = $ProjectPath
         SmokeReportPath = $SmokeReportPath
@@ -407,7 +418,7 @@ try {
         localSqlite = [bool]$LocalSqlite
         dryRun = $false
         accountBootstrapChecked = $true
-        passwordEnvName = $AdminPasswordEnvName
+        passwordEnvName = $adminPasswordEnvNameValue
         passwordEnvPresent = $true
         smokeReportPath = $SmokeReportPath
         preflightReportPath = $PreflightReportPath

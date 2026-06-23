@@ -67,7 +67,8 @@ function Invoke-BootstrapSmokeScenario {
         [string]$ExpectedReadinessEnvironmentName = "",
         [string]$ExpectedReadinessApiBaseUrl = "",
         [string]$ExpectedReadinessAdminWebUrl = "",
-        [string]$ExpectedReadinessAdminEmail = ""
+        [string]$ExpectedReadinessAdminEmail = "",
+        [string]$ExpectedReadinessPasswordEnvName = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -203,6 +204,10 @@ function Invoke-BootstrapSmokeScenario {
 
             if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessAdminEmail) -and [string]$readinessReport.adminEmail -ne $ExpectedReadinessAdminEmail) {
                 throw "Readiness report adminEmail should be '$ExpectedReadinessAdminEmail' for scenario '$Name', got '$($readinessReport.adminEmail)'."
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessPasswordEnvName) -and [string]$readinessReport.passwordEnvName -ne $ExpectedReadinessPasswordEnvName) {
+                throw "Readiness report passwordEnvName should be '$ExpectedReadinessPasswordEnvName' for scenario '$Name', got '$($readinessReport.passwordEnvName)'."
             }
         }
 
@@ -395,6 +400,17 @@ try {
         -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
         -AdminEmail " fresh-bootstrap-admin@example.test " `
         -ExpectedReadinessAdminEmail "fresh-bootstrap-admin@example.test"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-password-env-name-normalized" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-password-env-name-normalized/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -AdditionalArguments @("-AdminPasswordEnvName", " ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD ") `
+        -ExpectedReadinessPasswordEnvName "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "dry-run-default-operator" `
