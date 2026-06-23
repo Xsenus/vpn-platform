@@ -202,7 +202,7 @@ Regression wrapper-а проверяет fail-closed сценарии до за�
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-password-env-name-normalized`, `dry-run-default-operator` and `dry-run-default-environment`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts, and the dry-run password env scenario must write trimmed `passwordEnvName` into readiness evidence.
+Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `same-report-paths-normalized`, `dry-run-password-env-name-normalized`, `dry-run-report-paths-normalized`, `dry-run-default-operator` and `dry-run-default-environment`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts when inputs are invalid; dry-run normalization scenarios must write trimmed `passwordEnvName` and report paths into readiness evidence.
 
 Перед reset-ом wrapper запускает readiness gate и пишет sanitized report без пароля и connection string:
 

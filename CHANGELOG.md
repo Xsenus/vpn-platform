@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.282.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-report-path-normalization`.
+
+### Fixed
+
+- `scripts/admin-vps-smoke.ps1` now trims `SmokeReportPath` and `PreflightReportPath` before distinct-path checks, preflight/browser args and evidence validation.
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` and `scripts/admin-vps-bootstrap-smoke.ps1` now trim readiness, smoke, preflight and bootstrap smoke report paths before writing sanitized evidence links.
+- Regression coverage now includes `report-paths-normalized`, `dry-run-report-paths-normalized` and `same-report-paths-normalized`.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `report-paths-normalized` writes trimmed report paths into readiness evidence.
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-report-paths-normalized` passes trimmed report paths through the wrapper into readiness evidence.
+- Admin VPS smoke flow wrapper regression: OK, `same-report-paths-normalized` rejects report paths that differ only by surrounding whitespace.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-report-path-normalization`, readiness checks `16/16`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.281.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-bootstrap-password-env-normalization`.

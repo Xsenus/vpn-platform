@@ -6719,5 +6719,32 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-report-path-normalization",
+    "version": "0.282.0",
+    "releasedAt": "2026-06-23T03:50:00+07:00",
+    "title": "Report path normalization for admin VPS smoke wrappers",
+    "summary": "Admin VPS smoke, bootstrap readiness and bootstrap+smoke wrappers now trim report path parameters before writing sanitized evidence and invoking validators.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` now trims `SmokeReportPath` and `PreflightReportPath` before distinct-path checks, preflight/browser args and evidence validation."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke-readiness.ps1` and `scripts/admin-vps-bootstrap-smoke.ps1` now trim readiness, smoke, preflight and bootstrap smoke report paths before writing sanitized evidence links."
+      },
+      {
+        "type": "improved",
+        "text": "Regression coverage now includes `report-paths-normalized`, `dry-run-report-paths-normalized` and `same-report-paths-normalized`."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

@@ -303,6 +303,7 @@ public class AdminBootstrapCliScriptTests
                      "Get-HttpUrlValue",
                      "Get-AdminEmailValue",
                      "Get-AdminPasswordEnvNameValue",
+                     "Get-ReportPathValue",
                      "ReadinessReportPath",
                      "readinessReportPath",
                      "fullReportPath",
@@ -332,6 +333,12 @@ public class AdminBootstrapCliScriptTests
                      "ExpectedAdminEmail",
                      "password-env-name-normalized",
                      "ExpectedPasswordEnvName",
+                     "report-paths-normalized",
+                     "PadReportPaths",
+                     "ExpectedReadinessReportPath",
+                     "ExpectedSmokeReportPath",
+                     "ExpectedPreflightReportPath",
+                     "ExpectedBootstrapSmokeReportPath",
                      "environment-default-normalized",
                      "ExpectedEnvironmentName",
                      "UseEnvironmentNameEnv",
@@ -614,6 +621,8 @@ public class AdminBootstrapCliScriptTests
                       "dry-run-url-values-normalized",
                       "dry-run-admin-email-normalized",
                       "dry-run-password-env-name-normalized",
+                      "dry-run-report-paths-normalized",
+                      "ExpectReadinessReportPathsNormalized",
                       "dry-run-default-operator",
                       "dry-run-default-environment",
                       "admin-vps-bootstrap-smoke-report.json",
@@ -633,6 +642,10 @@ public class AdminBootstrapCliScriptTests
                       "Readiness report adminWebUrl should be",
                       "Readiness report adminEmail should be",
                       "Readiness report passwordEnvName should be",
+                      "Readiness report smokeReportPath should be",
+                      "Readiness report preflightReportPath should be",
+                      "Readiness report bootstrapSmokeReportPath should be",
+                      "Readiness report readinessReportPath should be",
                       "readinessReleaseId",
                      "leaked password",
                      "admin vps bootstrap smoke wrapper regression passed"
@@ -647,6 +660,7 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Get-HttpUrlValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminEmailValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminPasswordEnvNameValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-ReportPathValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);

@@ -68,6 +68,16 @@ function Resolve-WorkspacePath {
     return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
 }
 
+function Get-ReportPathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ProviderValue {
     param(
         [AllowEmptyString()][string]$Value,
@@ -134,10 +144,14 @@ $environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
 $apiBaseUrlValue = Get-HttpUrlValue -Value $ApiBaseUrl
 $adminWebUrlValue = Get-HttpUrlValue -Value $AdminWebUrl
 $adminEmailValue = Get-AdminEmailValue -Value $AdminEmail
+$smokeReportPathValue = Get-ReportPathValue -Value $SmokeReportPath
+$preflightReportPathValue = Get-ReportPathValue -Value $PreflightReportPath
+$bootstrapSmokeReportPathValue = Get-ReportPathValue -Value $BootstrapSmokeReportPath
+$readinessReportPathValue = Get-ReportPathValue -Value $ReadinessReportPath
 
 $projectFullPath = Resolve-WorkspacePath $ProjectPath
 $frontendFullPath = Resolve-WorkspacePath $FrontendPath
-$readinessReportFullPath = Resolve-WorkspacePath $ReadinessReportPath
+$readinessReportFullPath = Resolve-WorkspacePath $readinessReportPathValue
 $bootstrapScript = Join-Path $repoRoot "scripts/admin-bootstrap.ps1"
 $smokeScript = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"
 $readinessValidatorScript = Join-Path $repoRoot "scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1"
@@ -202,10 +216,10 @@ $report = [ordered]@{
     passwordEnvName = $adminPasswordEnvNameValue
     passwordEnvPresent = $passwordPresent
     passwordLengthOk = $passwordLengthOk
-    smokeReportPath = $SmokeReportPath
-    preflightReportPath = $PreflightReportPath
-    bootstrapSmokeReportPath = $BootstrapSmokeReportPath
-    readinessReportPath = $ReadinessReportPath
+    smokeReportPath = $smokeReportPathValue
+    preflightReportPath = $preflightReportPathValue
+    bootstrapSmokeReportPath = $bootstrapSmokeReportPathValue
+    readinessReportPath = $readinessReportPathValue
     readyForBootstrapSmoke = $readyForBootstrapSmoke
     checks = @($checks)
 }

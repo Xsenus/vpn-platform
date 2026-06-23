@@ -65,7 +65,9 @@ function Invoke-WrapperFailure {
         [string]$ExpectedPreflightEnvironmentName = "",
         [string]$ExpectedPreflightApiBaseUrl = "",
         [string]$ExpectedPreflightAdminWebUrl = "",
-        [string]$ExpectedPreflightAdminEmail = ""
+        [string]$ExpectedPreflightAdminEmail = "",
+        [switch]$PadReportPaths,
+        [switch]$UsePaddedSameReportPath
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -78,6 +80,8 @@ function Invoke-WrapperFailure {
     if ($UseSameReportPath) {
         $preflightReportPath = $smokeReportPath
     }
+    $smokeReportPathArg = if ($PadReportPaths -or $UsePaddedSameReportPath) { " $smokeReportPath " } else { $smokeReportPath }
+    $preflightReportPathArg = if ($UsePaddedSameReportPath) { " $smokeReportPath " } elseif ($PadReportPaths) { " $preflightReportPath " } else { $preflightReportPath }
     $wrapperPath = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"
     $previous = @{}
 
@@ -93,8 +97,8 @@ function Invoke-WrapperFailure {
                 "-ApiBaseUrl", $ApiBaseUrl,
                 "-AdminWebUrl", $AdminWebUrl,
                 "-AdminEmail", $AdminEmail,
-                "-SmokeReportPath", $smokeReportPath,
-                "-PreflightReportPath", $preflightReportPath,
+                "-SmokeReportPath", $smokeReportPathArg,
+                "-PreflightReportPath", $preflightReportPathArg,
                 "-FrontendPath", $FrontendPath,
                 "-AccountBootstrapChecked"
             )
@@ -391,6 +395,17 @@ try {
         -ExpectedMessage "PreflightReportPath must be different from SmokeReportPath" `
         -ExpectPreflightReport $false `
         -UseSameReportPath
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "same-report-paths-normalized" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "PreflightReportPath must be different from SmokeReportPath" `
+        -ExpectPreflightReport $false `
+        -UsePaddedSameReportPath
 
     $testedFailures += Invoke-WrapperFailure `
         -Name "missing-frontend" `

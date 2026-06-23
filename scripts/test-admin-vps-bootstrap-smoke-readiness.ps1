@@ -61,6 +61,11 @@ function Invoke-ReadinessScenario {
         [string]$ExpectedAdminEmail,
         [string]$AdminPasswordEnvName = "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
         [string]$ExpectedPasswordEnvName,
+        [switch]$PadReportPaths,
+        [string]$ExpectedReadinessReportPath,
+        [string]$ExpectedSmokeReportPath,
+        [string]$ExpectedPreflightReportPath,
+        [string]$ExpectedBootstrapSmokeReportPath,
         [string]$EnvironmentName = "Regression",
         [string]$ExpectedEnvironmentName,
         [bool]$UseEnvironmentNameEnv = $false
@@ -70,6 +75,13 @@ function Invoke-ReadinessScenario {
     New-Item -ItemType Directory -Path $scenarioPath -Force | Out-Null
 
     $reportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-readiness-report.json"
+    $smokeReportPath = Join-Path $scenarioPath "admin-vps-smoke-report.json"
+    $preflightReportPath = Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"
+    $bootstrapSmokeReportPath = Join-Path $scenarioPath "admin-vps-bootstrap-smoke-report.json"
+    $readinessReportPathArg = if ($PadReportPaths) { " $reportPath " } else { $reportPath }
+    $smokeReportPathArg = if ($PadReportPaths) { " $smokeReportPath " } else { $smokeReportPath }
+    $preflightReportPathArg = if ($PadReportPaths) { " $preflightReportPath " } else { $preflightReportPath }
+    $bootstrapSmokeReportPathArg = if ($PadReportPaths) { " $bootstrapSmokeReportPath " } else { $bootstrapSmokeReportPath }
     $stdoutPath = Join-Path $scenarioPath "stdout.txt"
     $stderrPath = Join-Path $scenarioPath "stderr.txt"
     $password = "ReadinessPassword123!"
@@ -95,10 +107,10 @@ function Invoke-ReadinessScenario {
             "-AdminWebUrl", $AdminWebUrl,
             "-AdminEmail", $AdminEmail,
             "-AdminPasswordEnvName", $AdminPasswordEnvName,
-            "-ReadinessReportPath", $reportPath,
-            "-SmokeReportPath", (Join-Path $scenarioPath "admin-vps-smoke-report.json"),
-            "-PreflightReportPath", (Join-Path $scenarioPath "admin-vps-smoke-preflight-report.json"),
-            "-BootstrapSmokeReportPath", (Join-Path $scenarioPath "admin-vps-bootstrap-smoke-report.json"),
+            "-ReadinessReportPath", $readinessReportPathArg,
+            "-SmokeReportPath", $smokeReportPathArg,
+            "-PreflightReportPath", $preflightReportPathArg,
+            "-BootstrapSmokeReportPath", $bootstrapSmokeReportPathArg,
             "-Operator", "admin-vps-bootstrap-smoke-readiness-regression",
             "-ReleaseId", "readiness-regression",
             "-RequireReady"
@@ -204,6 +216,34 @@ function Invoke-ReadinessScenario {
             $report = $reportRaw | ConvertFrom-Json
             if ([string]$report.passwordEnvName -ne $ExpectedPasswordEnvName) {
                 throw "Scenario $Name passwordEnvName '$($report.passwordEnvName)', expected '$ExpectedPasswordEnvName'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessReportPath)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.readinessReportPath -ne $ExpectedReadinessReportPath) {
+                throw "Scenario $Name readinessReportPath '$($report.readinessReportPath)', expected '$ExpectedReadinessReportPath'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedSmokeReportPath)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.smokeReportPath -ne $ExpectedSmokeReportPath) {
+                throw "Scenario $Name smokeReportPath '$($report.smokeReportPath)', expected '$ExpectedSmokeReportPath'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightReportPath)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.preflightReportPath -ne $ExpectedPreflightReportPath) {
+                throw "Scenario $Name preflightReportPath '$($report.preflightReportPath)', expected '$ExpectedPreflightReportPath'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedBootstrapSmokeReportPath)) {
+            $report = $reportRaw | ConvertFrom-Json
+            if ([string]$report.bootstrapSmokeReportPath -ne $ExpectedBootstrapSmokeReportPath) {
+                throw "Scenario $Name bootstrapSmokeReportPath '$($report.bootstrapSmokeReportPath)', expected '$ExpectedBootstrapSmokeReportPath'."
             }
         }
 
@@ -354,6 +394,18 @@ $results += Invoke-ReadinessScenario `
     -LocalSqlite $true `
     -AdminPasswordEnvName " ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD " `
     -ExpectedPasswordEnvName "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD"
+
+$reportPathsScenarioPath = Join-Path $outputPath "report-paths-normalized"
+$results += Invoke-ReadinessScenario `
+    -Name "report-paths-normalized" `
+    -ExpectedExitCode 0 `
+    -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
+    -LocalSqlite $true `
+    -PadReportPaths `
+    -ExpectedReadinessReportPath (Join-Path $reportPathsScenarioPath "admin-vps-bootstrap-smoke-readiness-report.json") `
+    -ExpectedSmokeReportPath (Join-Path $reportPathsScenarioPath "admin-vps-smoke-report.json") `
+    -ExpectedPreflightReportPath (Join-Path $reportPathsScenarioPath "admin-vps-smoke-preflight-report.json") `
+    -ExpectedBootstrapSmokeReportPath (Join-Path $reportPathsScenarioPath "admin-vps-bootstrap-smoke-report.json")
 
 $results += Invoke-ReadinessValidatorScenario `
     -Name "mismatched-readiness-report-self-link" `

@@ -58,6 +58,7 @@ function Invoke-BootstrapSmokeScenario {
         [string]$AdminWebUrl = "http://127.0.0.1:18215/admin/",
         [string]$AdminEmail = "fresh-bootstrap-admin@example.test",
         [switch]$UseSameReportPath,
+        [switch]$PadReportPaths,
         [string]$Operator = "admin-vps-bootstrap-smoke-wrapper-regression",
         [switch]$OmitOperator,
         [string]$ExpectedReadinessOperator = "",
@@ -68,7 +69,8 @@ function Invoke-BootstrapSmokeScenario {
         [string]$ExpectedReadinessApiBaseUrl = "",
         [string]$ExpectedReadinessAdminWebUrl = "",
         [string]$ExpectedReadinessAdminEmail = "",
-        [string]$ExpectedReadinessPasswordEnvName = ""
+        [string]$ExpectedReadinessPasswordEnvName = "",
+        [switch]$ExpectReadinessReportPathsNormalized
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -83,6 +85,10 @@ function Invoke-BootstrapSmokeScenario {
     if ($UseSameReportPath) {
         $preflightReportPath = $smokeReportPath
     }
+    $smokeReportPathArg = if ($PadReportPaths) { " $smokeReportPath " } else { $smokeReportPath }
+    $preflightReportPathArg = if ($PadReportPaths) { " $preflightReportPath " } else { $preflightReportPath }
+    $bootstrapSmokeReportPathArg = if ($PadReportPaths) { " $bootstrapSmokeReportPath " } else { $bootstrapSmokeReportPath }
+    $readinessReportPathArg = if ($PadReportPaths) { " $readinessReportPath " } else { $readinessReportPath }
     $wrapperPath = Join-Path $repoRoot "scripts/admin-vps-bootstrap-smoke.ps1"
     $previous = @{}
 
@@ -100,10 +106,10 @@ function Invoke-BootstrapSmokeScenario {
             "-ApiBaseUrl", $ApiBaseUrl,
             "-AdminWebUrl", $AdminWebUrl,
             "-AdminEmail", $AdminEmail,
-            "-SmokeReportPath", $smokeReportPath,
-            "-PreflightReportPath", $preflightReportPath,
-            "-BootstrapSmokeReportPath", $bootstrapSmokeReportPath,
-            "-ReadinessReportPath", $readinessReportPath,
+            "-SmokeReportPath", $smokeReportPathArg,
+            "-PreflightReportPath", $preflightReportPathArg,
+            "-BootstrapSmokeReportPath", $bootstrapSmokeReportPathArg,
+            "-ReadinessReportPath", $readinessReportPathArg,
             "-FrontendPath", "frontend"
         )
 
@@ -208,6 +214,24 @@ function Invoke-BootstrapSmokeScenario {
 
             if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessPasswordEnvName) -and [string]$readinessReport.passwordEnvName -ne $ExpectedReadinessPasswordEnvName) {
                 throw "Readiness report passwordEnvName should be '$ExpectedReadinessPasswordEnvName' for scenario '$Name', got '$($readinessReport.passwordEnvName)'."
+            }
+
+            if ($ExpectReadinessReportPathsNormalized) {
+                if ([string]$readinessReport.smokeReportPath -ne $smokeReportPath) {
+                    throw "Readiness report smokeReportPath should be '$smokeReportPath' for scenario '$Name', got '$($readinessReport.smokeReportPath)'."
+                }
+
+                if ([string]$readinessReport.preflightReportPath -ne $preflightReportPath) {
+                    throw "Readiness report preflightReportPath should be '$preflightReportPath' for scenario '$Name', got '$($readinessReport.preflightReportPath)'."
+                }
+
+                if ([string]$readinessReport.bootstrapSmokeReportPath -ne $bootstrapSmokeReportPath) {
+                    throw "Readiness report bootstrapSmokeReportPath should be '$bootstrapSmokeReportPath' for scenario '$Name', got '$($readinessReport.bootstrapSmokeReportPath)'."
+                }
+
+                if ([string]$readinessReport.readinessReportPath -ne $readinessReportPath) {
+                    throw "Readiness report readinessReportPath should be '$readinessReportPath' for scenario '$Name', got '$($readinessReport.readinessReportPath)'."
+                }
             }
         }
 
@@ -411,6 +435,17 @@ try {
         -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
         -AdditionalArguments @("-AdminPasswordEnvName", " ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD ") `
         -ExpectedReadinessPasswordEnvName "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-report-paths-normalized" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-report-paths-normalized/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -PadReportPaths `
+        -ExpectReadinessReportPathsNormalized
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "dry-run-default-operator" `

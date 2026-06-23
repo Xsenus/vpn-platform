@@ -152,21 +152,32 @@ function Get-AdminPasswordEnvNameValue {
     return $Value.Trim()
 }
 
+function Get-ReportPathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ReportPathFullName {
     param(
         [AllowEmptyString()][string]$Path,
         [Parameter(Mandatory = $true)][string]$Name
     )
 
-    if ([string]::IsNullOrWhiteSpace($Path)) {
+    $pathValue = Get-ReportPathValue -Value $Path
+    if ([string]::IsNullOrWhiteSpace($pathValue)) {
         throw "$Name must not be empty."
     }
 
-    $candidate = if ([System.IO.Path]::IsPathRooted($Path)) {
-        $Path
+    $candidate = if ([System.IO.Path]::IsPathRooted($pathValue)) {
+        $pathValue
     }
     else {
-        Join-Path $repoRoot $Path
+        Join-Path $repoRoot $pathValue
     }
 
     return [System.IO.Path]::GetFullPath($candidate)
@@ -243,11 +254,15 @@ $maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvide
 Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
 Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
 Assert-AdminEmail -Value $AdminEmail
+$smokeReportPathValue = Get-ReportPathValue -Value $SmokeReportPath
+$preflightReportPathValue = Get-ReportPathValue -Value $PreflightReportPath
+$bootstrapSmokeReportPathValue = Get-ReportPathValue -Value $BootstrapSmokeReportPath
+$readinessReportPathValue = Get-ReportPathValue -Value $ReadinessReportPath
 Assert-DistinctReportPaths -Reports @(
-    @{ Name = "SmokeReportPath"; Path = $SmokeReportPath },
-    @{ Name = "PreflightReportPath"; Path = $PreflightReportPath },
-    @{ Name = "BootstrapSmokeReportPath"; Path = $BootstrapSmokeReportPath },
-    @{ Name = "ReadinessReportPath"; Path = $ReadinessReportPath }
+    @{ Name = "SmokeReportPath"; Path = $smokeReportPathValue },
+    @{ Name = "PreflightReportPath"; Path = $preflightReportPathValue },
+    @{ Name = "BootstrapSmokeReportPath"; Path = $bootstrapSmokeReportPathValue },
+    @{ Name = "ReadinessReportPath"; Path = $readinessReportPathValue }
 )
 $providerValue = Get-ProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
 $adminPasswordEnvNameValue = Get-AdminPasswordEnvNameValue -Value $AdminPasswordEnvName
@@ -297,10 +312,10 @@ try {
     Write-Host "Admin email: $adminEmailValue"
     Write-Host "Operator: $operatorValue"
     Write-Host "Password: [hidden]"
-    Write-Host "Smoke report path: $SmokeReportPath"
-    Write-Host "Preflight report path: $PreflightReportPath"
-    Write-Host "Bootstrap smoke report path: $BootstrapSmokeReportPath"
-    Write-Host "Readiness report path: $ReadinessReportPath"
+    Write-Host "Smoke report path: $smokeReportPathValue"
+    Write-Host "Preflight report path: $preflightReportPathValue"
+    Write-Host "Bootstrap smoke report path: $bootstrapSmokeReportPathValue"
+    Write-Host "Readiness report path: $readinessReportPathValue"
     Write-Host "Release id: $releaseValue"
     Write-Host "Max evidence chain minutes: $maxEvidenceChainMinutesValue"
     Write-Host "Bootstrap reset confirmed: $ConfirmBootstrapReset"
@@ -312,10 +327,10 @@ try {
         AdminPasswordEnvName = $adminPasswordEnvNameValue
         Provider = $providerValue
         ProjectPath = $ProjectPath
-        SmokeReportPath = $SmokeReportPath
-        PreflightReportPath = $PreflightReportPath
-        BootstrapSmokeReportPath = $BootstrapSmokeReportPath
-        ReadinessReportPath = $ReadinessReportPath
+        SmokeReportPath = $smokeReportPathValue
+        PreflightReportPath = $preflightReportPathValue
+        BootstrapSmokeReportPath = $bootstrapSmokeReportPathValue
+        ReadinessReportPath = $readinessReportPathValue
         EnvironmentName = $environmentNameValue
         Operator = $operatorValue
         ReleaseId = $releaseValue
@@ -384,8 +399,8 @@ try {
         -ApiBaseUrl $apiBaseUrlValue `
         -AdminWebUrl $adminWebUrlValue `
         -AdminEmail $adminEmailValue `
-        -SmokeReportPath $SmokeReportPath `
-        -PreflightReportPath $PreflightReportPath `
+        -SmokeReportPath $smokeReportPathValue `
+        -PreflightReportPath $preflightReportPathValue `
         -EnvironmentName $environmentNameValue `
         -Operator $operatorValue `
         -ReleaseId $releaseValue `
@@ -395,11 +410,11 @@ try {
 
     $now = [DateTimeOffset]::UtcNow
 
-    $bootstrapSmokeReportFullPath = if ([System.IO.Path]::IsPathRooted($BootstrapSmokeReportPath)) {
-        [System.IO.Path]::GetFullPath($BootstrapSmokeReportPath)
+    $bootstrapSmokeReportFullPath = if ([System.IO.Path]::IsPathRooted($bootstrapSmokeReportPathValue)) {
+        [System.IO.Path]::GetFullPath($bootstrapSmokeReportPathValue)
     }
     else {
-        [System.IO.Path]::GetFullPath((Join-Path $repoRoot $BootstrapSmokeReportPath))
+        [System.IO.Path]::GetFullPath((Join-Path $repoRoot $bootstrapSmokeReportPathValue))
     }
 
     $bootstrapSmokeReportParent = Split-Path -Parent $bootstrapSmokeReportFullPath
@@ -420,10 +435,10 @@ try {
         accountBootstrapChecked = $true
         passwordEnvName = $adminPasswordEnvNameValue
         passwordEnvPresent = $true
-        smokeReportPath = $SmokeReportPath
-        preflightReportPath = $PreflightReportPath
-        readinessReportPath = $ReadinessReportPath
-        bootstrapSmokeReportPath = $BootstrapSmokeReportPath
+        smokeReportPath = $smokeReportPathValue
+        preflightReportPath = $preflightReportPathValue
+        readinessReportPath = $readinessReportPathValue
+        bootstrapSmokeReportPath = $bootstrapSmokeReportPathValue
         generatedAt = $now.ToString("o")
         completedAt = ([DateTimeOffset]::UtcNow).ToString("o")
         releaseId = $releaseValue
@@ -437,10 +452,10 @@ try {
         ($bootstrapSmokeReport | ConvertTo-Json -Depth 6),
         [System.Text.UTF8Encoding]::new($false))
     & $bootstrapSmokeReportValidatorScript -ReportPath $bootstrapSmokeReportFullPath -RequirePassed | Out-Host
-    & $bootstrapSmokeEvidenceValidatorScript -ReadinessReportPath $ReadinessReportPath -BootstrapSmokeReportPath $bootstrapSmokeReportFullPath -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue | Out-Host
+    & $bootstrapSmokeEvidenceValidatorScript -ReadinessReportPath $readinessReportPathValue -BootstrapSmokeReportPath $bootstrapSmokeReportFullPath -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue | Out-Host
 
     Write-Host "Admin VPS bootstrap+smoke flow completed."
-    Write-Host "Validated bootstrap smoke report: $BootstrapSmokeReportPath"
+    Write-Host "Validated bootstrap smoke report: $bootstrapSmokeReportPathValue"
 }
 finally {
     Set-ProcessEnv "AdminBootstrap__Password" $previousBootstrapPassword

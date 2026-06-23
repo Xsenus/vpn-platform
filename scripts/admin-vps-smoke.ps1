@@ -115,21 +115,32 @@ function Get-AdminEmailValue {
     return $Value.Trim()
 }
 
+function Get-ReportPathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ReportPathFullName {
     param(
         [AllowEmptyString()][string]$Path,
         [Parameter(Mandatory = $true)][string]$Name
     )
 
-    if ([string]::IsNullOrWhiteSpace($Path)) {
+    $pathValue = Get-ReportPathValue -Value $Path
+    if ([string]::IsNullOrWhiteSpace($pathValue)) {
         throw "$Name must not be empty."
     }
 
-    $candidate = if ([System.IO.Path]::IsPathRooted($Path)) {
-        $Path
+    $candidate = if ([System.IO.Path]::IsPathRooted($pathValue)) {
+        $pathValue
     }
     else {
-        Join-Path $repoRoot $Path
+        Join-Path $repoRoot $pathValue
     }
 
     return [System.IO.Path]::GetFullPath($candidate)
@@ -180,9 +191,11 @@ $maxEvidenceChainMinutesValue = Convert-MaxEvidenceChainMinutes -Value $MaxEvide
 Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
 Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
 Assert-AdminEmail -Value $AdminEmail
+$smokeReportPathValue = Get-ReportPathValue -Value $SmokeReportPath
+$preflightReportPathValue = Get-ReportPathValue -Value $PreflightReportPath
 Assert-DistinctReportPaths -Reports @(
-    @{ Name = "SmokeReportPath"; Path = $SmokeReportPath },
-    @{ Name = "PreflightReportPath"; Path = $PreflightReportPath }
+    @{ Name = "SmokeReportPath"; Path = $smokeReportPathValue },
+    @{ Name = "PreflightReportPath"; Path = $preflightReportPathValue }
 )
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
@@ -200,8 +213,8 @@ Write-Host "Admin web URL: $adminWebUrlValue"
 Write-Host "Admin email: $adminEmailValue"
 Write-Host "Operator: $operatorValue"
 Write-Host "Password: [hidden]"
-Write-Host "Smoke report path: $SmokeReportPath"
-Write-Host "Preflight report path: $PreflightReportPath"
+Write-Host "Smoke report path: $smokeReportPathValue"
+Write-Host "Preflight report path: $preflightReportPathValue"
 Write-Host "Release id: $releaseValue"
 Write-Host "Max evidence chain minutes: $maxEvidenceChainMinutesValue"
 Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
@@ -210,8 +223,8 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -ApiBaseUrl $apiBaseUrlValue `
     -AdminWebUrl $adminWebUrlValue `
     -AdminEmail $adminEmailValue `
-    -SmokeReportPath $SmokeReportPath `
-    -PreflightReportPath $PreflightReportPath `
+    -SmokeReportPath $smokeReportPathValue `
+    -PreflightReportPath $preflightReportPathValue `
     -EnvironmentName $environmentNameValue `
     -Operator $operatorValue `
     -ReleaseId $releaseValue `
@@ -222,7 +235,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -ApiBaseUrl $apiBaseUrlValue `
     -AdminWebUrl $adminWebUrlValue `
     -AdminEmail $adminEmailValue `
-    -OutputPath $SmokeReportPath `
+    -OutputPath $smokeReportPathValue `
     -EnvironmentName $environmentNameValue `
     -Operator $operatorValue `
     -ReleaseId $releaseValue `
@@ -231,10 +244,10 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -RequireAllPassed
 
 & $evidenceValidatorScript `
-    -PreflightReportPath $PreflightReportPath `
-    -SmokeReportPath $SmokeReportPath `
+    -PreflightReportPath $preflightReportPathValue `
+    -SmokeReportPath $smokeReportPathValue `
     -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue
 
 Write-Host "Admin VPS smoke flow completed."
-Write-Host "Validated preflight report: $PreflightReportPath"
-Write-Host "Validated smoke report: $SmokeReportPath"
+Write-Host "Validated preflight report: $preflightReportPathValue"
+Write-Host "Validated smoke report: $smokeReportPathValue"

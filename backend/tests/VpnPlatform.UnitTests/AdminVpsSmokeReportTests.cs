@@ -656,6 +656,8 @@ public class AdminVpsSmokeReportTests
                       "bad-admin-web-url",
                       "bad-admin-email",
                       "same-report-paths",
+                      "same-report-paths-normalized",
+                      "UsePaddedSameReportPath",
                       "missing-frontend",
                       "password-env-present",
                       "ApiBaseUrl must be an absolute http or https URL",
@@ -686,6 +688,7 @@ public class AdminVpsSmokeReportTests
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-HttpUrlValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminEmailValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-ReportPathValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-smoke-flow-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002I`", roadmap, StringComparison.Ordinal);
     }

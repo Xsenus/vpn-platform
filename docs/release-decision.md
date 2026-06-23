@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-vps-bootstrap-password-env-normalization`, версия `0.281.0`; admin VPS bootstrap readiness and bootstrap+smoke wrapper now trim `AdminPasswordEnvName` before password lookup and sanitized evidence, and local SQLite bootstrap smoke cleanup avoids WMI/CIM hangs. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-vps-report-path-normalization`, версия `0.282.0`; admin VPS smoke, bootstrap readiness and bootstrap+smoke wrappers now trim report path parameters before writing sanitized evidence and invoking validators. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
