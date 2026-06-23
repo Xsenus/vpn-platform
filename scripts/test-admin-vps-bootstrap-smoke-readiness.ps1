@@ -61,6 +61,7 @@ function Invoke-ReadinessScenario {
         [string]$ExpectedAdminEmail,
         [string]$AdminPasswordEnvName = "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
         [string]$ExpectedPasswordEnvName,
+        [string]$ExpectedFailedCheckName,
         [switch]$PadReportPaths,
         [string]$ExpectedReadinessReportPath,
         [string]$ExpectedSmokeReportPath,
@@ -220,6 +221,14 @@ function Invoke-ReadinessScenario {
             $report = $reportRaw | ConvertFrom-Json
             if ([string]$report.passwordEnvName -ne $ExpectedPasswordEnvName) {
                 throw "Scenario $Name passwordEnvName '$($report.passwordEnvName)', expected '$ExpectedPasswordEnvName'."
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedFailedCheckName)) {
+            $report = $reportRaw | ConvertFrom-Json
+            $failedCheck = @($report.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheckName -and -not $_.passed })
+            if ($failedCheck.Count -ne 1) {
+                throw "Scenario $Name did not include failed check '$ExpectedFailedCheckName'."
             }
         }
 
@@ -398,6 +407,14 @@ $results += Invoke-ReadinessScenario `
     -LocalSqlite $true `
     -AdminPasswordEnvName " ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD " `
     -ExpectedPasswordEnvName "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD"
+
+$results += Invoke-ReadinessScenario `
+    -Name "bad-password-env-name" `
+    -ExpectedExitCode 1 `
+    -ExpectedMessage "passwordEnvPresent must be true" `
+    -LocalSqlite $true `
+    -AdminPasswordEnvName "ADMIN-VPS-PASSWORD" `
+    -ExpectedFailedCheckName "password-env-name-safe"
 
 $reportPathsScenarioPath = Join-Path $outputPath "report-paths-normalized"
 $results += Invoke-ReadinessScenario `

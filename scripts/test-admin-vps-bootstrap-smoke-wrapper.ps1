@@ -460,6 +460,15 @@ try {
         -ExpectedReadinessPasswordEnvName "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "bad-password-env-name" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/bad-password-env-name/local.db" `
+        -LocalSqlite `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "Admin password env name must be a safe environment variable name containing PASSWORD." `
+        -AdditionalArguments @("-AdminPasswordEnvName", "Path")
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "dry-run-report-paths-normalized" `
         -Password "LocalBootstrapSmokePassword12345" `
         -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-report-paths-normalized/local.db" `

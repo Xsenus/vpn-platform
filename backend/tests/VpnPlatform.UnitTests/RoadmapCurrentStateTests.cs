@@ -5,8 +5,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-06-23-admin-bootstrap-nonlocal-reset-guard";
-    private const string CurrentVersion = "0.286.0";
+    private const string CurrentReleaseId = "2026-06-23-admin-bootstrap-password-env-name-guard";
+    private const string CurrentVersion = "0.287.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

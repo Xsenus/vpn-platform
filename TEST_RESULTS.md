@@ -2,6 +2,47 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-23: admin bootstrap password env name guard
+
+Scope:
+
+- `scripts/admin-vps-bootstrap-smoke.ps1` rejects unsafe `AdminPasswordEnvName` values before reading process env secrets or starting smoke.
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` records `password-env-name-safe` and does not read unsafe env names.
+- Wrapper/readiness regressions cover unsafe password env names without leaking the password or creating smoke artifacts.
+- What's New received release `2026-06-23-admin-bootstrap-password-env-name-guard`, version `0.287.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` were not closed: real VPS bootstrap/login smoke was not run.
+
+Commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Result:
+
+- Admin VPS bootstrap smoke wrapper regression: OK; `25` scenarios passed, including `bad-password-env-name` fail-fast before smoke artifacts.
+- Admin VPS bootstrap smoke readiness regression: OK; `15` scenarios passed, including `bad-password-env-name` with failed `password-env-name-safe` readiness check.
+- Targeted docs/release .NET suite: OK, `41/41`.
+- Local SQLite admin bootstrap smoke: OK; latest release `2026-06-23-admin-bootstrap-password-env-name-guard`, readiness checks `17/17`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `592/592`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Playwright console E2E: OK, `9/9`.
+- Secret scan: OK, files scanned `562`, findings `0`.
+- `git diff --check`: OK.
+- Strict UTF-8 without BOM: OK, checked `22` changed/new files.
+
 ## Check 2026-06-23: admin bootstrap non-local reset guard
 
 Scope:

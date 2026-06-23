@@ -6854,5 +6854,32 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-bootstrap-password-env-name-guard",
+    "version": "0.287.0",
+    "releasedAt": "2026-06-23T14:35:00+07:00",
+    "title": "Admin bootstrap password env name guard",
+    "summary": "Admin VPS bootstrap smoke wrappers now reject unsafe password environment variable names before reading process secrets or starting smoke.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` now rejects password env names that are not safe environment variable identifiers or do not contain `PASSWORD`."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke-readiness.ps1` now records a failed `password-env-name-safe` check and does not read unsafe env names."
+      },
+      {
+        "type": "improved",
+        "text": "Wrapper/readiness regressions cover unsafe password env names without leaking the password or creating smoke artifacts."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

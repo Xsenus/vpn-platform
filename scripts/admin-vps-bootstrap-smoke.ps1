@@ -152,6 +152,28 @@ function Get-AdminPasswordEnvNameValue {
     return $Value.Trim()
 }
 
+function Test-AdminPasswordEnvNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $false
+    }
+
+    if (-not [System.Text.RegularExpressions.Regex]::IsMatch($Value, "^[A-Za-z_][A-Za-z0-9_]*$")) {
+        return $false
+    }
+
+    return $Value.IndexOf("PASSWORD", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
+function Assert-AdminPasswordEnvNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if (-not (Test-AdminPasswordEnvNameValue -Value $Value)) {
+        throw "Admin password env name must be a safe environment variable name containing PASSWORD."
+    }
+}
+
 function Get-ReportPathValue {
     param([AllowEmptyString()][string]$Value)
 
@@ -300,6 +322,8 @@ if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
 if ([string]::IsNullOrWhiteSpace($adminPasswordEnvNameValue)) {
     throw "Admin password env name is required."
 }
+
+Assert-AdminPasswordEnvNameValue -Value $adminPasswordEnvNameValue
 
 $password = [Environment]::GetEnvironmentVariable($adminPasswordEnvNameValue, "Process")
 if ([string]::IsNullOrWhiteSpace($password)) {

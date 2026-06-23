@@ -127,6 +127,8 @@ public class AdminBootstrapCliScriptTests
                      "ADMIN_VPS_BOOTSTRAP_SMOKE_ADMIN_PASSWORD",
                      "AdminBootstrap__Password",
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
+                     "Assert-AdminPasswordEnvNameValue",
+                     "safe environment variable name containing PASSWORD",
                      "previousBootstrapPassword",
                      "Set-ProcessEnv",
                      "Env:\\$Name",
@@ -355,6 +357,8 @@ public class AdminBootstrapCliScriptTests
                      "Get-HttpUrlValue",
                      "Get-AdminEmailValue",
                      "Get-AdminPasswordEnvNameValue",
+                     "Test-AdminPasswordEnvNameValue",
+                     "password-env-name-safe",
                      "Get-ReportPathValue",
                      "Get-WorkspacePathValue",
                      "ReadinessReportPath",
@@ -385,6 +389,8 @@ public class AdminBootstrapCliScriptTests
                      "admin-email-normalized",
                      "ExpectedAdminEmail",
                      "password-env-name-normalized",
+                     "bad-password-env-name",
+                     "password-env-name-safe",
                      "ExpectedPasswordEnvName",
                      "report-paths-normalized",
                      "PadReportPaths",
@@ -675,7 +681,9 @@ public class AdminBootstrapCliScriptTests
                       "dry-run-url-values-normalized",
                       "dry-run-admin-email-normalized",
                       "dry-run-admin-bootstrap-profile-normalized",
-                      "dry-run-password-env-name-normalized",
+                     "dry-run-password-env-name-normalized",
+                      "bad-password-env-name",
+                      "safe environment variable name containing PASSWORD",
                       "dry-run-report-paths-normalized",
                       "dry-run-workspace-paths-normalized",
                       "ExpectReadinessReportPathsNormalized",
@@ -718,6 +726,7 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Get-HttpUrlValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminEmailValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminPasswordEnvNameValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Assert-AdminPasswordEnvNameValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-ReportPathValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-WorkspacePathValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminBootstrapTextValue", wrapper, StringComparison.OrdinalIgnoreCase);

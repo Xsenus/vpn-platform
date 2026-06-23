@@ -144,8 +144,23 @@ function Get-AdminPasswordEnvNameValue {
     return $Value.Trim()
 }
 
+function Test-AdminPasswordEnvNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $false
+    }
+
+    if (-not [System.Text.RegularExpressions.Regex]::IsMatch($Value, "^[A-Za-z_][A-Za-z0-9_]*$")) {
+        return $false
+    }
+
+    return $Value.IndexOf("PASSWORD", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
 $adminPasswordEnvNameValue = Get-AdminPasswordEnvNameValue -Value $AdminPasswordEnvName
-$password = [Environment]::GetEnvironmentVariable($adminPasswordEnvNameValue, "Process")
+$passwordEnvNameSafe = Test-AdminPasswordEnvNameValue -Value $adminPasswordEnvNameValue
+$password = if ($passwordEnvNameSafe) { [Environment]::GetEnvironmentVariable($adminPasswordEnvNameValue, "Process") } else { "" }
 $passwordPresent = -not [string]::IsNullOrWhiteSpace($password)
 $passwordLengthOk = $passwordPresent -and $password.Length -ge 16
 $connectionStringPresent = -not [string]::IsNullOrWhiteSpace($ConnectionString)
@@ -174,6 +189,7 @@ Add-Check "api-base-url" (Test-HttpUrl $apiBaseUrlValue) "ADMIN_VPS_SMOKE_API_BA
 Add-Check "admin-web-url" (Test-HttpUrl $adminWebUrlValue) "ADMIN_VPS_SMOKE_ADMIN_WEB_URL must be an absolute http/https URL."
 Add-Check "admin-email" (-not [string]::IsNullOrWhiteSpace($adminEmailValue) -and $adminEmailValue.Contains("@")) "Admin email must be set and contain @."
 Add-Check "password-env-name" (-not [string]::IsNullOrWhiteSpace($adminPasswordEnvNameValue)) "Admin password env name must be set."
+Add-Check "password-env-name-safe" $passwordEnvNameSafe "Admin password env name must be a safe environment variable name containing PASSWORD."
 Add-Check "password-env-present" $passwordPresent "Admin password env must be present in the process environment and is never printed."
 Add-Check "password-length" $passwordLengthOk "Admin password env value must contain at least 16 characters."
 Add-Check "provider-supported" (@("Postgres", "Sqlite") -contains $providerValue) "Provider must be Postgres or Sqlite."

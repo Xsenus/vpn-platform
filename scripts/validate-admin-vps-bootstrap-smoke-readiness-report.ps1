@@ -67,6 +67,7 @@ $requiredChecks = @(
     "admin-web-url",
     "admin-email",
     "password-env-name",
+    "password-env-name-safe",
     "password-env-present",
     "password-length",
     "provider-supported",

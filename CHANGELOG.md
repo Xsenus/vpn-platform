@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.287.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-bootstrap-password-env-name-guard`.
+
+### Fixed
+
+- `scripts/admin-vps-bootstrap-smoke.ps1` now rejects password env names that are not safe environment variable identifiers or do not contain `PASSWORD`.
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1` now records a failed `password-env-name-safe` check and does not read unsafe env names.
+- Wrapper/readiness regressions now cover unsafe password env names without leaking the password or creating smoke artifacts.
+
+### Verification
+
+- Admin VPS bootstrap smoke wrapper regression: OK; `25` scenarios passed, including `bad-password-env-name` fail-fast before smoke artifacts.
+- Admin VPS bootstrap smoke readiness regression: OK; `15` scenarios passed, including `bad-password-env-name` with failed `password-env-name-safe` readiness check.
+- Targeted docs/release .NET suite: OK, `41/41`.
+- Local SQLite admin bootstrap smoke: OK; latest release `2026-06-23-admin-bootstrap-password-env-name-guard`, readiness checks `17/17`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `592/592`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `562`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `22` changed/new files.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.286.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-bootstrap-nonlocal-reset-guard`.
