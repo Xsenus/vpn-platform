@@ -87,12 +87,32 @@ function Assert-HttpUrl {
     }
 }
 
+function Get-HttpUrlValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Assert-AdminEmail {
     param([AllowEmptyString()][string]$Value)
 
     if ([string]::IsNullOrWhiteSpace($Value) -or -not $Value.Trim().Contains("@")) {
         throw "AdminEmail must contain an email address."
     }
+}
+
+function Get-AdminEmailValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
 }
 
 function Get-ReportPathFullName {
@@ -169,12 +189,15 @@ $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleas
 Assert-KnownReleaseId -Value $releaseValue
 $operatorValue = Get-OperatorValue -Value $Operator
 $environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
+$apiBaseUrlValue = Get-HttpUrlValue -Value $ApiBaseUrl
+$adminWebUrlValue = Get-HttpUrlValue -Value $AdminWebUrl
+$adminEmailValue = Get-AdminEmailValue -Value $AdminEmail
 
 Write-Host "Admin VPS smoke flow is ready to run."
 Write-Host "Environment: $environmentNameValue"
-Write-Host "API base URL: $ApiBaseUrl"
-Write-Host "Admin web URL: $AdminWebUrl"
-Write-Host "Admin email: $AdminEmail"
+Write-Host "API base URL: $apiBaseUrlValue"
+Write-Host "Admin web URL: $adminWebUrlValue"
+Write-Host "Admin email: $adminEmailValue"
 Write-Host "Operator: $operatorValue"
 Write-Host "Password: [hidden]"
 Write-Host "Smoke report path: $SmokeReportPath"
@@ -184,9 +207,9 @@ Write-Host "Max evidence chain minutes: $maxEvidenceChainMinutesValue"
 Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
 
 & $preflightScript `
-    -ApiBaseUrl $ApiBaseUrl `
-    -AdminWebUrl $AdminWebUrl `
-    -AdminEmail $AdminEmail `
+    -ApiBaseUrl $apiBaseUrlValue `
+    -AdminWebUrl $adminWebUrlValue `
+    -AdminEmail $adminEmailValue `
     -SmokeReportPath $SmokeReportPath `
     -PreflightReportPath $PreflightReportPath `
     -EnvironmentName $environmentNameValue `
@@ -196,9 +219,9 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -RequirePassword
 
 & $browserSmokeScript `
-    -ApiBaseUrl $ApiBaseUrl `
-    -AdminWebUrl $AdminWebUrl `
-    -AdminEmail $AdminEmail `
+    -ApiBaseUrl $apiBaseUrlValue `
+    -AdminWebUrl $adminWebUrlValue `
+    -AdminEmail $adminEmailValue `
     -OutputPath $SmokeReportPath `
     -EnvironmentName $environmentNameValue `
     -Operator $operatorValue `

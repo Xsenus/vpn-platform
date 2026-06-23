@@ -6665,5 +6665,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-smoke-wrapper-identity-normalization",
+    "version": "0.280.0",
+    "releasedAt": "2026-06-23T03:10:00+07:00",
+    "title": "Identity normalization for admin VPS smoke wrapper",
+    "summary": "Admin VPS smoke wrapper now trims API/admin URLs and AdminEmail before preflight, browser smoke and evidence validation.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` now uses trimmed `ApiBaseUrl`, `AdminWebUrl` and `AdminEmail` in console output, preflight args and browser smoke args."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` covers `preflight-identity-values-normalized`, so preflight evidence cannot keep accidental surrounding whitespace in admin identity fields."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

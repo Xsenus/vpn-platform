@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.280.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-smoke-wrapper-identity-normalization`.
+
+### Fixed
+
+- `scripts/admin-vps-smoke.ps1` now uses trimmed `ApiBaseUrl`, `AdminWebUrl` and `AdminEmail` in console output, preflight args and browser smoke args.
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` covers `preflight-identity-values-normalized`, so preflight evidence cannot keep accidental surrounding whitespace in admin identity fields.
+
+### Verification
+
+- Admin VPS smoke flow wrapper regression: OK, `preflight-identity-values-normalized` writes trimmed API/admin URLs and admin email into preflight evidence; fail-fast scenarios still cover max duration, unknown release id, URL/email, report path, operator/environment defaults, password and frontend guards.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-smoke-wrapper-identity-normalization`, readiness checks `16/16`, smoke sections `16/16`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.279.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-bootstrap-wrapper-admin-email-normalization`.

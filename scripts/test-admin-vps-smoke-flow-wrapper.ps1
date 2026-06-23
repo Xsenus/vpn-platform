@@ -62,7 +62,10 @@ function Invoke-WrapperFailure {
         [string]$EnvironmentName = "Local",
         [switch]$OmitEnvironmentName,
         [AllowNull()][string]$EnvEnvironmentName,
-        [string]$ExpectedPreflightEnvironmentName = ""
+        [string]$ExpectedPreflightEnvironmentName = "",
+        [string]$ExpectedPreflightApiBaseUrl = "",
+        [string]$ExpectedPreflightAdminWebUrl = "",
+        [string]$ExpectedPreflightAdminEmail = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -173,6 +176,18 @@ function Invoke-WrapperFailure {
 
         if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightEnvironmentName) -and [string]$preflightReport.environmentName -ne $ExpectedPreflightEnvironmentName) {
             throw "Preflight report environmentName should be '$ExpectedPreflightEnvironmentName' for scenario '$Name', got '$($preflightReport.environmentName)'."
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightApiBaseUrl) -and [string]$preflightReport.apiBaseUrl -ne $ExpectedPreflightApiBaseUrl) {
+            throw "Preflight report apiBaseUrl should be '$ExpectedPreflightApiBaseUrl' for scenario '$Name', got '$($preflightReport.apiBaseUrl)'."
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightAdminWebUrl) -and [string]$preflightReport.adminWebUrl -ne $ExpectedPreflightAdminWebUrl) {
+            throw "Preflight report adminWebUrl should be '$ExpectedPreflightAdminWebUrl' for scenario '$Name', got '$($preflightReport.adminWebUrl)'."
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightAdminEmail) -and [string]$preflightReport.adminEmail -ne $ExpectedPreflightAdminEmail) {
+            throw "Preflight report adminEmail should be '$ExpectedPreflightAdminEmail' for scenario '$Name', got '$($preflightReport.adminEmail)'."
         }
 
         $failedCheck = @($preflightReport.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheck }) | Select-Object -First 1
@@ -322,6 +337,19 @@ try {
         -OmitEnvironmentName `
         -EnvEnvironmentName "   " `
         -ExpectedPreflightEnvironmentName "staging"
+
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "preflight-identity-values-normalized" `
+        -ApiBaseUrl " http://127.0.0.1:18201 " `
+        -AdminWebUrl " http://127.0.0.1:18205/admin/ " `
+        -AdminEmail " fresh-admin@example.test " `
+        -FrontendPath "frontend" `
+        -Password $null `
+        -ExpectedMessage "passwordEnvPresent must be true" `
+        -ExpectedFailedCheck "password-env-present" `
+        -ExpectedPreflightApiBaseUrl "http://127.0.0.1:18201" `
+        -ExpectedPreflightAdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -ExpectedPreflightAdminEmail "fresh-admin@example.test"
 
     $testedFailures += Invoke-WrapperFailure `
         -Name "bad-api-url" `

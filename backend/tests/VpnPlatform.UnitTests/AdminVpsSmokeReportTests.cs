@@ -434,6 +434,11 @@ public class AdminVpsSmokeReportTests
                       "AdminEmail must contain an email address",
                       "Assert-DistinctReportPaths",
                       "must be different from",
+                      "Get-HttpUrlValue",
+                      "Get-AdminEmailValue",
+                      "apiBaseUrlValue",
+                      "adminWebUrlValue",
+                      "adminEmailValue",
                       "Get-OperatorValue",
                       "Operator: $operatorValue",
                       "manual-operator",
@@ -646,6 +651,7 @@ public class AdminVpsSmokeReportTests
                       "missing-password",
                       "default-operator-missing-password",
                       "default-environment-missing-password",
+                      "preflight-identity-values-normalized",
                       "bad-api-url",
                       "bad-admin-web-url",
                       "bad-admin-email",
@@ -665,6 +671,9 @@ public class AdminVpsSmokeReportTests
                       "Preflight report releaseId should be resolved",
                       "Preflight report operator should be",
                       "Preflight report environmentName should be",
+                      "Preflight report apiBaseUrl should be",
+                      "Preflight report adminWebUrl should be",
+                      "Preflight report adminEmail should be",
                       "Preflight report should not exist after parameter binding scenario",
                      "leaked password",
                      "admin vps smoke flow wrapper regression passed"
@@ -675,6 +684,8 @@ public class AdminVpsSmokeReportTests
 
         Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-HttpUrlValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-AdminEmailValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-smoke-flow-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002I`", roadmap, StringComparison.Ordinal);
     }
