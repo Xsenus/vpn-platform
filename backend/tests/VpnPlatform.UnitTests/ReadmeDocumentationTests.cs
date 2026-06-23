@@ -44,7 +44,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-23-admin-bootstrap-provider-normalization", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-23-admin-bootstrap-nonlocal-reset-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

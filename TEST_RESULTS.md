@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-23: admin bootstrap non-local reset guard
+
+Scope:
+
+- `scripts/admin-bootstrap.ps1` requires `-ConfirmBootstrapReset` before direct bootstrap/reset against any non-local database.
+- The direct wrapper fails fast when a non-local run has no `ConnectionString`, before process env setup or bootstrap execution.
+- `scripts/test-admin-bootstrap-wrapper.ps1` covers `missing-confirm-bootstrap-reset` and `missing-connection-string` without leaking the password.
+- What's New received release `2026-06-23-admin-bootstrap-nonlocal-reset-guard`, version `0.286.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` were not closed: real VPS bootstrap/login smoke was not run.
+
+Commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-bootstrap-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Result:
+
+- Direct admin bootstrap wrapper regression: OK; scenarios `provider-case-normalized`, `local-sqlite-overrides-provider`, `bad-provider`, `missing-confirm-bootstrap-reset` and `missing-connection-string` passed.
+- Targeted docs/release .NET suite: OK, `41/41`.
+- Local SQLite admin bootstrap smoke: OK; latest release `2026-06-23-admin-bootstrap-nonlocal-reset-guard`, readiness checks `16/16`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `592/592`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Playwright console E2E: OK, `9/9`.
+- Secret scan: OK, files scanned `562`, findings `0`.
+- `git diff --check`: OK.
+- Strict UTF-8 without BOM: OK, checked `18` changed/new files.
+
 ## Check 2026-06-23: admin bootstrap provider normalization
 
 Scope:

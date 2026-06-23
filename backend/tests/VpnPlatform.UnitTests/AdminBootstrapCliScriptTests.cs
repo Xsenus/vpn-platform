@@ -21,6 +21,10 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Get-AdminBootstrapTextValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminBootstrapProviderValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Provider must be Postgres or Sqlite", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ConfirmBootstrapReset", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Pass -ConfirmBootstrapReset", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Connection string is required for non-local admin bootstrap/reset", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Bootstrap reset confirmed: $ConfirmBootstrapReset", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("$displayNameValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("$rolesCsvValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Roles: $rolesCsvValue", script, StringComparison.OrdinalIgnoreCase);
@@ -83,9 +87,13 @@ public class AdminBootstrapCliScriptTests
                      "provider-case-normalized",
                      "local-sqlite-overrides-provider",
                      "bad-provider",
+                     "missing-confirm-bootstrap-reset",
+                     "missing-connection-string",
                      "Provider: Postgres",
                      "Provider: Sqlite",
                      "Provider must be Postgres or Sqlite",
+                     "Pass -ConfirmBootstrapReset",
+                     "Connection string is required for non-local admin bootstrap/reset",
                      "Admin bootstrap/reset is ready to run.",
                      "Dry-run mode: database was not changed",
                      "leaked password",
@@ -97,7 +105,7 @@ public class AdminBootstrapCliScriptTests
 
         Assert.Contains("Get-AdminBootstrapProviderValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-bootstrap-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("[x] `P0-ADMIN-001BQ`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P0-ADMIN-001BR`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

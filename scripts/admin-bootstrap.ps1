@@ -10,6 +10,7 @@ param(
     [string]$DataProtectionKeyPath = $env:DataProtection__KeyPath,
     [switch]$LocalSqlite,
     [switch]$ApplyMigrations,
+    [switch]$ConfirmBootstrapReset,
     [switch]$DryRun
 )
 
@@ -105,6 +106,14 @@ if ($LocalSqlite) {
     }
 }
 
+if (-not $LocalSqlite -and -not $ConfirmBootstrapReset) {
+    throw "Pass -ConfirmBootstrapReset to run admin bootstrap/reset against a non-local database."
+}
+
+if (-not $LocalSqlite -and [string]::IsNullOrWhiteSpace($ConnectionString)) {
+    throw "Connection string is required for non-local admin bootstrap/reset."
+}
+
 $normalizedProjectPath = Get-WorkspacePathValue -Value $ProjectPath
 if (-not [System.IO.Path]::IsPathRooted($normalizedProjectPath)) {
     $normalizedProjectPath = Join-Path (Get-Location) $normalizedProjectPath
@@ -132,6 +141,7 @@ Write-Host "Provider: $providerValue"
 Write-Host "Email: $emailValue"
 Write-Host "Roles: $rolesCsvValue"
 Write-Host "Apply migrations: $($ApplyMigrations -or $LocalSqlite)"
+Write-Host "Bootstrap reset confirmed: $ConfirmBootstrapReset"
 Write-Host "Password: [hidden]"
 
 if ($DryRun) {

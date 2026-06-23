@@ -6827,5 +6827,32 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-bootstrap-nonlocal-reset-guard",
+    "version": "0.286.0",
+    "releasedAt": "2026-06-23T05:10:00+07:00",
+    "title": "Direct admin bootstrap non-local reset guard",
+    "summary": "The direct admin bootstrap wrapper now requires explicit confirmation and a connection string before any non-local database reset/bootstrap can run.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-bootstrap.ps1` now requires `-ConfirmBootstrapReset` before running against a non-local database."
+      },
+      {
+        "type": "fixed",
+        "text": "The same wrapper now fails fast when non-local bootstrap/reset has no `ConnectionString`, before process env setup or bootstrap execution."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-bootstrap-wrapper.ps1` now covers `missing-confirm-bootstrap-reset` and `missing-connection-string` in addition to provider normalization."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

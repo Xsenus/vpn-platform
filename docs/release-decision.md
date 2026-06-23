@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-bootstrap-provider-normalization`, версия `0.285.0`; direct admin bootstrap wrapper now canonicalizes supported database providers and fails fast on unsupported values. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-bootstrap-nonlocal-reset-guard`, версия `0.286.0`; direct admin bootstrap wrapper now requires explicit confirmation and a connection string before non-local reset/bootstrap. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

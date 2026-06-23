@@ -109,7 +109,7 @@ try {
     $testedScenarios = @()
     $testedScenarios += Invoke-AdminBootstrapScenario `
         -Name "provider-case-normalized" `
-        -AdditionalArguments @("-Provider", "postgres") `
+        -AdditionalArguments @("-Provider", "postgres", "-ConfirmBootstrapReset", "-ConnectionString", "Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=local-only") `
         -ExpectedExitCode 0 `
         -ExpectedMessage "Dry-run mode: database was not changed" `
         -ExpectedOutputContains "Provider: Postgres"
@@ -126,6 +126,20 @@ try {
         -AdditionalArguments @("-Provider", "Mongo") `
         -ExpectedExitCode 1 `
         -ExpectedMessage "Provider must be Postgres or Sqlite" `
+        -ExpectedOutputNotContains "Admin bootstrap/reset is ready to run."
+
+    $testedScenarios += Invoke-AdminBootstrapScenario `
+        -Name "missing-confirm-bootstrap-reset" `
+        -AdditionalArguments @("-Provider", "Postgres", "-ConnectionString", "Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=local-only") `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "Pass -ConfirmBootstrapReset" `
+        -ExpectedOutputNotContains "Admin bootstrap/reset is ready to run."
+
+    $testedScenarios += Invoke-AdminBootstrapScenario `
+        -Name "missing-connection-string" `
+        -AdditionalArguments @("-Provider", "Postgres", "-ConfirmBootstrapReset") `
+        -ExpectedExitCode 1 `
+        -ExpectedMessage "Connection string is required for non-local admin bootstrap/reset" `
         -ExpectedOutputNotContains "Admin bootstrap/reset is ready to run."
 
     $result = [ordered]@{

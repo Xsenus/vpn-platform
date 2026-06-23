@@ -18,6 +18,8 @@ Wrapper сам выставляет `AdminBootstrap__Enabled=true`, `Database__P
 
 `Provider` accepts case-insensitive `Postgres` and `Sqlite`, then writes the canonical value to `Database__Provider`. Unsupported providers fail before process env setup or bootstrap. `-LocalSqlite` always forces `Sqlite`.
 
+Non-local direct bootstrap/reset requires both `-ConfirmBootstrapReset` and a non-empty connection string. This guard runs before process env setup or bootstrap execution.
+
 ## Локальная SQLite-БД
 
 ```powershell
@@ -41,6 +43,7 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-bootstrap.ps1 `
   -EnvironmentName Production `
   -Provider Postgres `
   -ApplyMigrations `
+  -ConfirmBootstrapReset `
   -Email owner@example.com `
   -Password "<temporary-password-at-least-16-chars>" `
   -DisplayName "Owner" `
