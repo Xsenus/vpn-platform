@@ -98,6 +98,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001BQ", "2026-06-23-admin-bootstrap-provider-normalization"),
         new("P0-ADMIN-001BR", "2026-06-23-admin-bootstrap-nonlocal-reset-guard"),
         new("P0-ADMIN-001BS", "2026-06-23-admin-bootstrap-password-env-name-guard"),
+        new("P0-ADMIN-001BT", "2026-06-23-admin-bootstrap-readiness-password-env-validator"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

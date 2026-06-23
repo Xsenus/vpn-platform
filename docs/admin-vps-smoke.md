@@ -196,13 +196,13 @@ Fail-fast regression для локального wrapper-а проверяет, 
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression wrapper-а проверяет fail-closed сценарии до запуска smoke: нечисловой или неверный CLI/env `MaxEvidenceChainMinutes`, нет пароля, unsafe `AdminPasswordEnvName`, нет `-ConfirmBootstrapReset`, нет connection string для не-локальной БД и `-DryRun`, при котором smoke не стартует. `AdminPasswordEnvName` должен быть безопасным env identifier и содержать `PASSWORD`; standalone readiness пишет failed check `password-env-name-safe` и не читает unsafe env names. Для неверного CLI/env лимита wrapper не создает readiness report, bootstrap report, preflight report и smoke report:
+Regression wrapper-а проверяет fail-closed сценарии до запуска smoke: нечисловой или неверный CLI/env `MaxEvidenceChainMinutes`, нет пароля, unsafe `AdminPasswordEnvName`, нет `-ConfirmBootstrapReset`, нет connection string для не-локальной БД и `-DryRun`, при котором smoke не стартует. `AdminPasswordEnvName` должен быть безопасным env identifier и содержать `PASSWORD`; standalone readiness пишет failed check `password-env-name-safe` и не читает unsafe env names, а readiness validator отклоняет вручную подмененный `passwordEnvName` даже при passed checks. Для неверного CLI/env лимита wrapper не создает readiness report, bootstrap report, preflight report и smoke report:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `same-report-paths-normalized`, `bad-password-env-name`, `dry-run-password-env-name-normalized`, `dry-run-report-paths-normalized`, `dry-run-default-operator` and `dry-run-default-environment`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts when inputs are invalid; dry-run normalization scenarios must write trimmed `passwordEnvName` and report paths into readiness evidence.
+Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `same-report-paths-normalized`, `bad-password-env-name`, `mismatched-readiness-password-env-name-safe`, `dry-run-password-env-name-normalized`, `dry-run-report-paths-normalized`, `dry-run-default-operator` and `dry-run-default-environment`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts when inputs are invalid; dry-run normalization scenarios must write trimmed `passwordEnvName` and report paths into readiness evidence.
 
 Перед reset-ом wrapper запускает readiness gate и пишет sanitized report без пароля и connection string:
 

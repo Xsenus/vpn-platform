@@ -44,7 +44,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-23-admin-bootstrap-password-env-name-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-23-admin-bootstrap-readiness-password-env-validator", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

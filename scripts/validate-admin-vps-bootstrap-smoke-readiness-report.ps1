@@ -62,6 +62,20 @@ function Assert-Same {
     }
 }
 
+function Test-AdminPasswordEnvNameValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $false
+    }
+
+    if (-not [System.Text.RegularExpressions.Regex]::IsMatch($Value, "^[A-Za-z_][A-Za-z0-9_]*$")) {
+        return $false
+    }
+
+    return $Value.IndexOf("PASSWORD", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
 $requiredChecks = @(
     "api-base-url",
     "admin-web-url",
@@ -141,6 +155,10 @@ Assert-HttpUrl -Value ([string]$report.adminWebUrl) -Name "adminWebUrl"
 
 if (-not ([string]$report.adminEmail).Contains("@")) {
     throw "Admin VPS bootstrap smoke readiness report field adminEmail must contain an email address."
+}
+
+if (-not (Test-AdminPasswordEnvNameValue -Value ([string]$report.passwordEnvName))) {
+    throw "Admin VPS bootstrap smoke readiness report field passwordEnvName must be a safe environment variable name containing PASSWORD."
 }
 
 if (@("Postgres", "Sqlite") -notcontains [string]$report.provider) {

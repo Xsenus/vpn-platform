@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.288.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-bootstrap-readiness-password-env-validator`.
+
+### Fixed
+
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` now validates the `passwordEnvName` field itself, not only the generated readiness check.
+- Tampered readiness reports with values like `Path` now fail validation even if `password-env-name-safe` is manually left passed.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` now covers `mismatched-readiness-password-env-name-safe`.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK; `16` scenarios passed, including `mismatched-readiness-password-env-name-safe`.
+- Targeted docs/release .NET suite: OK, `41/41`.
+- Local SQLite admin bootstrap smoke: OK; latest release `2026-06-23-admin-bootstrap-readiness-password-env-validator`, readiness checks `17/17`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `592/592`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `562`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `19` changed/new files.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.287.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-bootstrap-password-env-name-guard`.

@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-bootstrap-password-env-name-guard`, версия `0.287.0`; admin VPS bootstrap smoke wrappers now reject unsafe password env names before reading process secrets or starting smoke. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-bootstrap-readiness-password-env-validator`, версия `0.288.0`; admin VPS bootstrap readiness validation now rejects tampered reports with unsafe password env names. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

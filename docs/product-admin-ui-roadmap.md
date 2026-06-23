@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-23-admin-bootstrap-password-env-name-guard`, версия `0.287.0`.
+- [x] Latest "Что нового": `2026-06-23-admin-bootstrap-readiness-password-env-validator`, версия `0.288.0`.
 
 ## Как вести дальше
 

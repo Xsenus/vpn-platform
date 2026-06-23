@@ -411,7 +411,7 @@ $results += Invoke-ReadinessScenario `
 $results += Invoke-ReadinessScenario `
     -Name "bad-password-env-name" `
     -ExpectedExitCode 1 `
-    -ExpectedMessage "passwordEnvPresent must be true" `
+    -ExpectedMessage "passwordEnvName must be a safe environment variable name containing" `
     -LocalSqlite $true `
     -AdminPasswordEnvName "ADMIN-VPS-PASSWORD" `
     -ExpectedFailedCheckName "password-env-name-safe"
@@ -467,6 +467,17 @@ $results += Invoke-ReadinessValidatorScenario `
         param($reportPath)
         $report = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $report.provider = "Postgres"
+        Write-JsonFile -Path $reportPath -Value $report
+    }
+
+$results += Invoke-ReadinessValidatorScenario `
+    -Name "mismatched-readiness-password-env-name-safe" `
+    -SourceReportPath $localReadyReportPath `
+    -ExpectedMessage "passwordEnvName must be a safe environment variable name containing" `
+    -Mutate {
+        param($reportPath)
+        $report = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $report.passwordEnvName = "Path"
         Write-JsonFile -Path $reportPath -Value $report
     }
 

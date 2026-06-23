@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-23: admin bootstrap readiness password env validator
+
+Scope:
+
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1` validates `passwordEnvName` itself, not only the generated `password-env-name-safe` check.
+- Tampered readiness reports with unsafe values like `Path` fail validation even if checks are manually left passed.
+- `scripts/test-admin-vps-bootstrap-smoke-readiness.ps1` covers `mismatched-readiness-password-env-name-safe`.
+- What's New received release `2026-06-23-admin-bootstrap-readiness-password-env-validator`, version `0.288.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` were not closed: real VPS bootstrap/login smoke was not run.
+
+Commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Result:
+
+- Admin VPS bootstrap smoke readiness regression: OK; `16` scenarios passed, including `mismatched-readiness-password-env-name-safe`.
+- Targeted docs/release .NET suite: OK, `41/41`.
+- Local SQLite admin bootstrap smoke: OK; latest release `2026-06-23-admin-bootstrap-readiness-password-env-validator`, readiness checks `17/17`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `592/592`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Playwright console E2E: OK, `9/9`.
+- Secret scan: OK, files scanned `562`, findings `0`.
+- `git diff --check`: OK.
+- Strict UTF-8 without BOM: OK, checked `19` changed/new files.
+
 ## Check 2026-06-23: admin bootstrap password env name guard
 
 Scope:
