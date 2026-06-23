@@ -64,7 +64,9 @@ function Invoke-BootstrapSmokeScenario {
         [string]$EnvironmentName = "Local",
         [switch]$OmitEnvironmentName,
         [AllowNull()][string]$EnvEnvironmentName,
-        [string]$ExpectedReadinessEnvironmentName = ""
+        [string]$ExpectedReadinessEnvironmentName = "",
+        [string]$ExpectedReadinessApiBaseUrl = "",
+        [string]$ExpectedReadinessAdminWebUrl = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -188,6 +190,14 @@ function Invoke-BootstrapSmokeScenario {
 
             if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessEnvironmentName) -and [string]$readinessReport.environmentName -ne $ExpectedReadinessEnvironmentName) {
                 throw "Readiness report environmentName should be '$ExpectedReadinessEnvironmentName' for scenario '$Name', got '$($readinessReport.environmentName)'."
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessApiBaseUrl) -and [string]$readinessReport.apiBaseUrl -ne $ExpectedReadinessApiBaseUrl) {
+                throw "Readiness report apiBaseUrl should be '$ExpectedReadinessApiBaseUrl' for scenario '$Name', got '$($readinessReport.apiBaseUrl)'."
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessAdminWebUrl) -and [string]$readinessReport.adminWebUrl -ne $ExpectedReadinessAdminWebUrl) {
+                throw "Readiness report adminWebUrl should be '$ExpectedReadinessAdminWebUrl' for scenario '$Name', got '$($readinessReport.adminWebUrl)'."
             }
         }
 
@@ -356,6 +366,19 @@ try {
         -DryRun `
         -ExpectedExitCode 0 `
         -ExpectedMessage "Dry-run mode: admin VPS smoke was not started"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-url-values-normalized" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-url-values-normalized/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -ApiBaseUrl " http://127.0.0.1:18211 " `
+        -AdminWebUrl " http://127.0.0.1:18215/admin/ " `
+        -ExpectedReadinessApiBaseUrl "http://127.0.0.1:18211" `
+        -ExpectedReadinessAdminWebUrl "http://127.0.0.1:18215/admin/"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "dry-run-default-operator" `

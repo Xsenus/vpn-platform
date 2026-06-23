@@ -604,6 +604,7 @@ public class AdminBootstrapCliScriptTests
                      "missing-confirm-bootstrap-reset",
                      "missing-connection-string",
                       "dry-run-no-smoke",
+                      "dry-run-url-values-normalized",
                       "dry-run-default-operator",
                       "dry-run-default-environment",
                       "admin-vps-bootstrap-smoke-report.json",
@@ -619,6 +620,8 @@ public class AdminBootstrapCliScriptTests
                       "Readiness report releaseId should be resolved",
                       "Readiness report operator should be",
                       "Readiness report environmentName should be",
+                      "Readiness report apiBaseUrl should be",
+                      "Readiness report adminWebUrl should be",
                       "readinessReleaseId",
                      "leaked password",
                      "admin vps bootstrap smoke wrapper regression passed"
@@ -630,6 +633,7 @@ public class AdminBootstrapCliScriptTests
         Assert.DoesNotContain("[string]$Password", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Assert-KnownReleaseId", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-ProviderValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-HttpUrlValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);

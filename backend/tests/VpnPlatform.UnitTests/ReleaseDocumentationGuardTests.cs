@@ -89,6 +89,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001BH", "2026-06-23-admin-vps-readiness-environment-default"),
         new("P0-ADMIN-001BI", "2026-06-23-admin-vps-readiness-admin-email-normalization"),
         new("P0-ADMIN-001BJ", "2026-06-23-admin-vps-readiness-url-normalization"),
+        new("P0-ADMIN-001BK", "2026-06-23-admin-vps-bootstrap-wrapper-url-normalization"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),
