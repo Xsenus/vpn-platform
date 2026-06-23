@@ -66,7 +66,8 @@ function Invoke-BootstrapSmokeScenario {
         [AllowNull()][string]$EnvEnvironmentName,
         [string]$ExpectedReadinessEnvironmentName = "",
         [string]$ExpectedReadinessApiBaseUrl = "",
-        [string]$ExpectedReadinessAdminWebUrl = ""
+        [string]$ExpectedReadinessAdminWebUrl = "",
+        [string]$ExpectedReadinessAdminEmail = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -198,6 +199,10 @@ function Invoke-BootstrapSmokeScenario {
 
             if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessAdminWebUrl) -and [string]$readinessReport.adminWebUrl -ne $ExpectedReadinessAdminWebUrl) {
                 throw "Readiness report adminWebUrl should be '$ExpectedReadinessAdminWebUrl' for scenario '$Name', got '$($readinessReport.adminWebUrl)'."
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($ExpectedReadinessAdminEmail) -and [string]$readinessReport.adminEmail -ne $ExpectedReadinessAdminEmail) {
+                throw "Readiness report adminEmail should be '$ExpectedReadinessAdminEmail' for scenario '$Name', got '$($readinessReport.adminEmail)'."
             }
         }
 
@@ -379,6 +384,17 @@ try {
         -AdminWebUrl " http://127.0.0.1:18215/admin/ " `
         -ExpectedReadinessApiBaseUrl "http://127.0.0.1:18211" `
         -ExpectedReadinessAdminWebUrl "http://127.0.0.1:18215/admin/"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-admin-email-normalized" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-admin-email-normalized/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -AdminEmail " fresh-bootstrap-admin@example.test " `
+        -ExpectedReadinessAdminEmail "fresh-bootstrap-admin@example.test"
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "dry-run-default-operator" `

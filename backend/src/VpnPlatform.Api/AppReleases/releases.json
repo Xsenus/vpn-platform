@@ -6642,5 +6642,28 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-bootstrap-wrapper-admin-email-normalization",
+    "version": "0.279.0",
+    "releasedAt": "2026-06-23T02:50:00+07:00",
+    "title": "Admin email normalization for admin VPS bootstrap wrapper",
+    "summary": "Admin VPS bootstrap+smoke wrapper now trims AdminEmail before passing it through readiness, bootstrap, smoke and bootstrap evidence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` now uses a trimmed `AdminEmail` in console output, readiness args, admin bootstrap args, smoke args and sanitized bootstrap smoke evidence."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` covers `dry-run-admin-email-normalized`, so the wrapper cannot pass accidental surrounding whitespace into readiness evidence."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

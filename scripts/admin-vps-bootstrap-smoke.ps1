@@ -132,6 +132,16 @@ function Assert-AdminEmail {
     }
 }
 
+function Get-AdminEmailValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ReportPathFullName {
     param(
         [AllowEmptyString()][string]$Path,
@@ -262,6 +272,7 @@ $operatorValue = Get-OperatorValue -Value $Operator
 $environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
 $apiBaseUrlValue = Get-HttpUrlValue -Value $ApiBaseUrl
 $adminWebUrlValue = Get-HttpUrlValue -Value $AdminWebUrl
+$adminEmailValue = Get-AdminEmailValue -Value $AdminEmail
 
 $previousBootstrapPassword = [Environment]::GetEnvironmentVariable("AdminBootstrap__Password", "Process")
 $previousSmokePassword = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", "Process")
@@ -272,7 +283,7 @@ try {
     Write-Host "Provider: $providerValue"
     Write-Host "API base URL: $apiBaseUrlValue"
     Write-Host "Admin web URL: $adminWebUrlValue"
-    Write-Host "Admin email: $AdminEmail"
+    Write-Host "Admin email: $adminEmailValue"
     Write-Host "Operator: $operatorValue"
     Write-Host "Password: [hidden]"
     Write-Host "Smoke report path: $SmokeReportPath"
@@ -286,7 +297,7 @@ try {
     $readinessArgs = @{
         ApiBaseUrl = $apiBaseUrlValue
         AdminWebUrl = $adminWebUrlValue
-        AdminEmail = $AdminEmail
+        AdminEmail = $adminEmailValue
         AdminPasswordEnvName = $AdminPasswordEnvName
         Provider = $providerValue
         ProjectPath = $ProjectPath
@@ -321,7 +332,7 @@ try {
 
     $bootstrapArgs = @{
         EnvironmentName = $environmentNameValue
-        Email = $AdminEmail
+        Email = $adminEmailValue
         DisplayName = $DisplayName
         RolesCsv = $RolesCsv
         Provider = $providerValue
@@ -361,7 +372,7 @@ try {
     & $smokeScript `
         -ApiBaseUrl $apiBaseUrlValue `
         -AdminWebUrl $adminWebUrlValue `
-        -AdminEmail $AdminEmail `
+        -AdminEmail $adminEmailValue `
         -SmokeReportPath $SmokeReportPath `
         -PreflightReportPath $PreflightReportPath `
         -EnvironmentName $environmentNameValue `
@@ -390,7 +401,7 @@ try {
         environmentName = $environmentNameValue
         apiBaseUrl = $apiBaseUrlValue.TrimEnd("/")
         adminWebUrl = $adminWebUrlValue.TrimEnd("/")
-        adminEmail = $AdminEmail.Trim()
+        adminEmail = $adminEmailValue
         provider = $providerValue
         bootstrapResetConfirmed = [bool]$ConfirmBootstrapReset
         localSqlite = [bool]$LocalSqlite

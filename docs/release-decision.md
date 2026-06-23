@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-vps-bootstrap-wrapper-url-normalization`, версия `0.278.0`; admin VPS bootstrap+smoke wrapper now trims `ApiBaseUrl`/`AdminWebUrl` before readiness, smoke and bootstrap evidence. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-vps-bootstrap-wrapper-admin-email-normalization`, версия `0.279.0`; admin VPS bootstrap+smoke wrapper now trims `AdminEmail` before readiness, bootstrap, smoke and bootstrap evidence. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
