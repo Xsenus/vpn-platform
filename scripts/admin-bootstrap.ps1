@@ -60,11 +60,37 @@ function Get-AdminBootstrapTextValue {
     return $Value.Trim()
 }
 
+function Get-AdminBootstrapProviderValue {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][bool]$UseLocalSqlite
+    )
+
+    if ($UseLocalSqlite) {
+        return "Sqlite"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return "Postgres"
+    }
+
+    $trimmed = $Value.Trim()
+    if ([string]::Equals($trimmed, "Postgres", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "Postgres"
+    }
+
+    if ([string]::Equals($trimmed, "Sqlite", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "Sqlite"
+    }
+
+    throw "Provider must be Postgres or Sqlite."
+}
+
 $environmentNameValue = Get-AdminBootstrapTextValue -Value $EnvironmentName -DefaultValue "Production"
 $emailValue = if ([string]::IsNullOrWhiteSpace($Email)) { "" } else { $Email.Trim() }
 $displayNameValue = Get-AdminBootstrapTextValue -Value $DisplayName -DefaultValue "Platform Admin"
 $rolesCsvValue = Get-AdminBootstrapTextValue -Value $RolesCsv -DefaultValue "SuperAdmin"
-$providerValue = Get-AdminBootstrapTextValue -Value $Provider -DefaultValue "Postgres"
+$providerValue = Get-AdminBootstrapProviderValue -Value $Provider -UseLocalSqlite ([bool]$LocalSqlite)
 
 Require-Value "Admin email" $emailValue
 Require-Value "Admin password" $Password
@@ -74,7 +100,6 @@ if ($Password.Length -lt 16) {
 }
 
 if ($LocalSqlite) {
-    $providerValue = "Sqlite"
     if ([string]::IsNullOrWhiteSpace($ConnectionString)) {
         $ConnectionString = "Data Source=data/vpnplatform-local.db"
     }

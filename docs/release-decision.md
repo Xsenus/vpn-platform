@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `591/591`.
+- Backend full suite: `592/592`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-bootstrap-profile-normalization`, версия `0.284.0`; admin bootstrap wrappers now trim profile text parameters before env setup, safe output and downstream script invocation. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-bootstrap-provider-normalization`, версия `0.285.0`; direct admin bootstrap wrapper now canonicalizes supported database providers and fails fast on unsupported values. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

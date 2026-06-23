@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-23: admin bootstrap provider normalization
+
+Scope:
+
+- `scripts/admin-bootstrap.ps1` canonicalizes `Postgres`/`Sqlite` provider values before process env setup and rejects unsupported providers before bootstrap.
+- `-LocalSqlite` forces provider `Sqlite`, even when CLI/env provider input is invalid.
+- `scripts/test-admin-bootstrap-wrapper.ps1` covers `provider-case-normalized`, `local-sqlite-overrides-provider` and `bad-provider` without leaking the password.
+- What's New received release `2026-06-23-admin-bootstrap-provider-normalization`, version `0.285.0`.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` were not closed: real VPS bootstrap/login smoke was not run.
+
+Commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-bootstrap-wrapper.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminBootstrapCliScriptTests|AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+```
+
+Result:
+
+- Direct admin bootstrap wrapper regression: OK, `provider-case-normalized`, `local-sqlite-overrides-provider` and `bad-provider` passed without password leakage.
+- Targeted docs/release unit suite: 41/41.
+- Local CLI bootstrap admin smoke on SQLite: OK, completed with exit code 0; latest release `2026-06-23-admin-bootstrap-provider-normalization`, readiness checks `16/16`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: 592/592.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 562, findings 0.
+- `git diff --check`: OK, exit code 0; Git reported CRLF normalization warnings for markdown only.
+- Changed files encoding: strict UTF-8 without BOM, 17 files checked.
+
 ## Check 2026-06-23: admin bootstrap profile normalization
 
 Scope:

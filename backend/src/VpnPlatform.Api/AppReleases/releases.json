@@ -6800,5 +6800,32 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-bootstrap-provider-normalization",
+    "version": "0.285.0",
+    "releasedAt": "2026-06-23T04:50:00+07:00",
+    "title": "Admin bootstrap provider normalization",
+    "summary": "The direct admin bootstrap wrapper now canonicalizes supported database providers and fails fast on unsupported values before starting bootstrap.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-bootstrap.ps1` now accepts case-insensitive `Postgres`/`Sqlite`, emits canonical provider names and rejects unsupported providers before setting process env values."
+      },
+      {
+        "type": "improved",
+        "text": "`-LocalSqlite` continues to force provider `Sqlite`, so local dry-runs cannot inherit an invalid provider value from CLI or env."
+      },
+      {
+        "type": "improved",
+        "text": "New `scripts/test-admin-bootstrap-wrapper.ps1` covers provider case normalization, local SQLite override and unsupported provider fail-fast behavior without leaking the password."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

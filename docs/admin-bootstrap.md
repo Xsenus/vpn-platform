@@ -16,6 +16,8 @@ Wrapper сам выставляет `AdminBootstrap__Enabled=true`, `Database__P
 
 `EnvironmentName`, `Email`, `DisplayName`, `RolesCsv` and `Provider` are trimmed before process env setup, safe console output and downstream bootstrap invocation. Password and connection string values are intentionally not trimmed or printed.
 
+`Provider` accepts case-insensitive `Postgres` and `Sqlite`, then writes the canonical value to `Database__Provider`. Unsupported providers fail before process env setup or bootstrap. `-LocalSqlite` always forces `Sqlite`.
+
 ## Локальная SQLite-БД
 
 ```powershell
@@ -76,6 +78,12 @@ powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
+```
+
+Direct bootstrap wrapper regression covers provider normalization and bad-provider fail-fast without starting bootstrap or leaking the password:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-bootstrap-wrapper.ps1
 ```
 
 Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low-api-port`, `too-high-admin-port`, `same-api-admin-port`, `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-admin-bootstrap-profile-normalized`, `dry-run-default-operator`, `dry-run-default-environment`, `dry-run-workspace-paths-normalized`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes`, неверные локальные порты, невалидные `ApiBaseUrl`/`AdminWebUrl`, невалидный `AdminEmail` и совпадающие report paths останавливаются до readiness report, bootstrap reset и smoke artifacts; пустой `Operator` нормализуется в `manual-operator`, пустой `EnvironmentName` - в `Production`:

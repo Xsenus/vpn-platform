@@ -19,11 +19,14 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Dry-run mode: database was not changed", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-WorkspacePathValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminBootstrapTextValue", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-AdminBootstrapProviderValue", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Provider must be Postgres or Sqlite", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("$displayNameValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("$rolesCsvValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Roles: $rolesCsvValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Host \"Password: $Password", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scripts\\admin-bootstrap.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("scripts\\test-admin-bootstrap-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Password: [hidden]", guide, StringComparison.Ordinal);
     }
 
@@ -62,6 +65,39 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("[x] `P0-ADMIN-001B`", roadmap, StringComparison.Ordinal);
         Assert.Contains("2026-06-19-admin-bootstrap-wrapper", releases, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("2026-06-19-admin-bootstrap-wrapper", testResults, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Admin_Bootstrap_Wrapper_Regression_Should_Fail_Fast_Before_Bootstrap()
+    {
+        var root = FindRepositoryRoot();
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-bootstrap-wrapper.ps1"));
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "admin-bootstrap.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "admin-bootstrap-wrapper-regression-test",
+                     "admin-bootstrap.ps1",
+                     "provider-case-normalized",
+                     "local-sqlite-overrides-provider",
+                     "bad-provider",
+                     "Provider: Postgres",
+                     "Provider: Sqlite",
+                     "Provider must be Postgres or Sqlite",
+                     "Admin bootstrap/reset is ready to run.",
+                     "Dry-run mode: database was not changed",
+                     "leaked password",
+                     "admin bootstrap wrapper regression passed"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("Get-AdminBootstrapProviderValue", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-admin-bootstrap-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001BQ`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
