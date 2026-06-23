@@ -52,6 +52,16 @@ function Set-ProcessEnv {
     [System.Environment]::SetEnvironmentVariable($Name, $Value, "Process")
 }
 
+function Get-WorkspacePathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-LatestReleaseId {
     $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
     if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
@@ -73,7 +83,8 @@ Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
 Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$frontendFullPath = if ([System.IO.Path]::IsPathRooted($FrontendPath)) { $FrontendPath } else { Join-Path $repoRoot $FrontendPath }
+$frontendPathValue = Get-WorkspacePathValue -Value $FrontendPath
+$frontendFullPath = if ([System.IO.Path]::IsPathRooted($frontendPathValue)) { $frontendPathValue } else { Join-Path $repoRoot $frontendPathValue }
 if (-not (Test-Path -LiteralPath $frontendFullPath -PathType Container)) {
     throw "Frontend directory was not found: $frontendFullPath"
 }

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.283.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-vps-workspace-path-normalization`.
+
+### Fixed
+
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1`, `scripts/admin-vps-smoke-preflight.ps1` and `scripts/admin-vps-browser-smoke.ps1` now trim `ProjectPath`/`FrontendPath` workspace path inputs before local file/directory checks.
+- `scripts/admin-vps-bootstrap-smoke.ps1`, `scripts/admin-vps-smoke.ps1` and `scripts/admin-bootstrap.ps1` now pass trimmed workspace paths to downstream scripts while keeping internal path spaces intact.
+- `DataProtectionKeyPath` is trimmed before being forwarded to the admin bootstrap process environment.
+- Regression coverage now includes `workspace-paths-normalized`, `dry-run-workspace-paths-normalized` and `preflight-workspace-path-normalized`.
+
+### Verification
+
+- Admin VPS bootstrap smoke readiness regression: OK, `workspace-paths-normalized` accepts padded `ProjectPath` and `FrontendPath`.
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-workspace-paths-normalized` passes padded workspace paths through readiness without starting browser smoke.
+- Admin VPS smoke flow wrapper regression: OK, `preflight-workspace-path-normalized` reaches the expected password guard instead of failing `frontend-directory`.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-vps-workspace-path-normalization`, readiness checks `16/16`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.282.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-report-path-normalization`.

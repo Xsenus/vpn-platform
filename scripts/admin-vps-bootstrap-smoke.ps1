@@ -162,6 +162,16 @@ function Get-ReportPathValue {
     return $Value.Trim()
 }
 
+function Get-WorkspacePathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ReportPathFullName {
     param(
         [AllowEmptyString()][string]$Path,
@@ -258,6 +268,9 @@ $smokeReportPathValue = Get-ReportPathValue -Value $SmokeReportPath
 $preflightReportPathValue = Get-ReportPathValue -Value $PreflightReportPath
 $bootstrapSmokeReportPathValue = Get-ReportPathValue -Value $BootstrapSmokeReportPath
 $readinessReportPathValue = Get-ReportPathValue -Value $ReadinessReportPath
+$projectPathValue = Get-WorkspacePathValue -Value $ProjectPath
+$frontendPathValue = Get-WorkspacePathValue -Value $FrontendPath
+$dataProtectionKeyPathValue = Get-WorkspacePathValue -Value $DataProtectionKeyPath
 Assert-DistinctReportPaths -Reports @(
     @{ Name = "SmokeReportPath"; Path = $smokeReportPathValue },
     @{ Name = "PreflightReportPath"; Path = $preflightReportPathValue },
@@ -326,7 +339,7 @@ try {
         AdminEmail = $adminEmailValue
         AdminPasswordEnvName = $adminPasswordEnvNameValue
         Provider = $providerValue
-        ProjectPath = $ProjectPath
+        ProjectPath = $projectPathValue
         SmokeReportPath = $smokeReportPathValue
         PreflightReportPath = $preflightReportPathValue
         BootstrapSmokeReportPath = $bootstrapSmokeReportPathValue
@@ -334,7 +347,7 @@ try {
         EnvironmentName = $environmentNameValue
         Operator = $operatorValue
         ReleaseId = $releaseValue
-        FrontendPath = $FrontendPath
+        FrontendPath = $frontendPathValue
         RequireReady = $true
     }
 
@@ -362,15 +375,15 @@ try {
         DisplayName = $DisplayName
         RolesCsv = $RolesCsv
         Provider = $providerValue
-        ProjectPath = $ProjectPath
+        ProjectPath = $projectPathValue
     }
 
     if (-not [string]::IsNullOrWhiteSpace($ConnectionString)) {
         $bootstrapArgs["ConnectionString"] = $ConnectionString
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($DataProtectionKeyPath)) {
-        $bootstrapArgs["DataProtectionKeyPath"] = $DataProtectionKeyPath
+    if (-not [string]::IsNullOrWhiteSpace($dataProtectionKeyPathValue)) {
+        $bootstrapArgs["DataProtectionKeyPath"] = $dataProtectionKeyPathValue
     }
 
     if ($LocalSqlite) {
@@ -404,7 +417,7 @@ try {
         -EnvironmentName $environmentNameValue `
         -Operator $operatorValue `
         -ReleaseId $releaseValue `
-        -FrontendPath $FrontendPath `
+        -FrontendPath $frontendPathValue `
         -MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue `
         -AccountBootstrapChecked
 

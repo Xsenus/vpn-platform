@@ -68,7 +68,9 @@ function Invoke-ReadinessScenario {
         [string]$ExpectedBootstrapSmokeReportPath,
         [string]$EnvironmentName = "Regression",
         [string]$ExpectedEnvironmentName,
-        [bool]$UseEnvironmentNameEnv = $false
+        [bool]$UseEnvironmentNameEnv = $false,
+        [string]$ProjectPath = "backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj",
+        [string]$FrontendPath = "frontend"
     )
 
     $scenarioPath = Join-Path $outputPath $Name
@@ -111,6 +113,8 @@ function Invoke-ReadinessScenario {
             "-SmokeReportPath", $smokeReportPathArg,
             "-PreflightReportPath", $preflightReportPathArg,
             "-BootstrapSmokeReportPath", $bootstrapSmokeReportPathArg,
+            "-ProjectPath", $ProjectPath,
+            "-FrontendPath", $FrontendPath,
             "-Operator", "admin-vps-bootstrap-smoke-readiness-regression",
             "-ReleaseId", "readiness-regression",
             "-RequireReady"
@@ -406,6 +410,14 @@ $results += Invoke-ReadinessScenario `
     -ExpectedSmokeReportPath (Join-Path $reportPathsScenarioPath "admin-vps-smoke-report.json") `
     -ExpectedPreflightReportPath (Join-Path $reportPathsScenarioPath "admin-vps-smoke-preflight-report.json") `
     -ExpectedBootstrapSmokeReportPath (Join-Path $reportPathsScenarioPath "admin-vps-bootstrap-smoke-report.json")
+
+$results += Invoke-ReadinessScenario `
+    -Name "workspace-paths-normalized" `
+    -ExpectedExitCode 0 `
+    -ExpectedMessage "admin vps bootstrap smoke readiness report valid" `
+    -LocalSqlite $true `
+    -ProjectPath " backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj " `
+    -FrontendPath " frontend "
 
 $results += Invoke-ReadinessValidatorScenario `
     -Name "mismatched-readiness-report-self-link" `

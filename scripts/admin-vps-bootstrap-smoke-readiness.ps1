@@ -78,6 +78,16 @@ function Get-ReportPathValue {
     return $Value.Trim()
 }
 
+function Get-WorkspacePathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ProviderValue {
     param(
         [AllowEmptyString()][string]$Value,
@@ -148,9 +158,11 @@ $smokeReportPathValue = Get-ReportPathValue -Value $SmokeReportPath
 $preflightReportPathValue = Get-ReportPathValue -Value $PreflightReportPath
 $bootstrapSmokeReportPathValue = Get-ReportPathValue -Value $BootstrapSmokeReportPath
 $readinessReportPathValue = Get-ReportPathValue -Value $ReadinessReportPath
+$projectPathValue = Get-WorkspacePathValue -Value $ProjectPath
+$frontendPathValue = Get-WorkspacePathValue -Value $FrontendPath
 
-$projectFullPath = Resolve-WorkspacePath $ProjectPath
-$frontendFullPath = Resolve-WorkspacePath $FrontendPath
+$projectFullPath = Resolve-WorkspacePath $projectPathValue
+$frontendFullPath = Resolve-WorkspacePath $frontendPathValue
 $readinessReportFullPath = Resolve-WorkspacePath $readinessReportPathValue
 $bootstrapScript = Join-Path $repoRoot "scripts/admin-bootstrap.ps1"
 $smokeScript = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"

@@ -70,7 +70,8 @@ function Invoke-BootstrapSmokeScenario {
         [string]$ExpectedReadinessAdminWebUrl = "",
         [string]$ExpectedReadinessAdminEmail = "",
         [string]$ExpectedReadinessPasswordEnvName = "",
-        [switch]$ExpectReadinessReportPathsNormalized
+        [switch]$ExpectReadinessReportPathsNormalized,
+        [string]$FrontendPath = "frontend"
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -110,7 +111,7 @@ function Invoke-BootstrapSmokeScenario {
             "-PreflightReportPath", $preflightReportPathArg,
             "-BootstrapSmokeReportPath", $bootstrapSmokeReportPathArg,
             "-ReadinessReportPath", $readinessReportPathArg,
-            "-FrontendPath", "frontend"
+            "-FrontendPath", $FrontendPath
         )
 
         if (-not $OmitEnvironmentName) {
@@ -446,6 +447,17 @@ try {
         -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
         -PadReportPaths `
         -ExpectReadinessReportPathsNormalized
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-workspace-paths-normalized" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-workspace-paths-normalized/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -FrontendPath " frontend " `
+        -AdditionalArguments @("-ProjectPath", " backend/src/VpnPlatform.Api/VpnPlatform.Api.csproj ")
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "dry-run-default-operator" `

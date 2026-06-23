@@ -37,6 +37,16 @@ function Require-Value {
     }
 }
 
+function Get-WorkspacePathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 Require-Value "Admin email" $Email
 Require-Value "Admin password" $Password
 
@@ -51,7 +61,7 @@ if ($LocalSqlite) {
     }
 }
 
-$normalizedProjectPath = $ProjectPath
+$normalizedProjectPath = Get-WorkspacePathValue -Value $ProjectPath
 if (-not [System.IO.Path]::IsPathRooted($normalizedProjectPath)) {
     $normalizedProjectPath = Join-Path (Get-Location) $normalizedProjectPath
 }
@@ -70,7 +80,7 @@ Set-ProcessEnv "Database__Provider" $Provider
 Set-ProcessEnv "Database__ApplyMigrationsOnStartup" $(if ($ApplyMigrations -or $LocalSqlite) { "true" } else { "false" })
 Set-ProcessEnv "Database__UseEnsureCreatedForLocalSqlite" $(if ($LocalSqlite) { "true" } else { "false" })
 Set-ProcessEnv "ConnectionStrings__DefaultConnection" $ConnectionString
-Set-ProcessEnv "DataProtection__KeyPath" $DataProtectionKeyPath
+Set-ProcessEnv "DataProtection__KeyPath" (Get-WorkspacePathValue -Value $DataProtectionKeyPath)
 
 Write-Host "Admin bootstrap/reset is ready to run."
 Write-Host "Environment: $EnvironmentName"

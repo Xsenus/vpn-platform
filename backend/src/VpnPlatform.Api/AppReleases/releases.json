@@ -6746,5 +6746,32 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-vps-workspace-path-normalization",
+    "version": "0.283.0",
+    "releasedAt": "2026-06-23T04:10:00+07:00",
+    "title": "Workspace path normalization for admin VPS smoke wrappers",
+    "summary": "Admin VPS readiness, bootstrap and smoke wrappers now trim workspace path parameters before checking local project/frontend paths or invoking downstream scripts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`ProjectPath` and `FrontendPath` are now trimmed before readiness/preflight checks so existing local workspace paths are not rejected because of accidental surrounding whitespace."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-bootstrap.ps1` and `scripts/admin-vps-bootstrap-smoke.ps1` also trim `DataProtectionKeyPath` before setting the process environment for local key storage."
+      },
+      {
+        "type": "improved",
+        "text": "Regression coverage now includes `workspace-paths-normalized`, `dry-run-workspace-paths-normalized` and `preflight-workspace-path-normalized`."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

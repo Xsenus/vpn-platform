@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-23-admin-vps-report-path-normalization`, версия `0.282.0`.
+- [x] Latest "Что нового": `2026-06-23-admin-vps-workspace-path-normalization`, версия `0.283.0`.
 
 ## Как вести дальше
 

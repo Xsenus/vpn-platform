@@ -49,6 +49,16 @@ function Resolve-WorkspacePath {
     return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
 }
 
+function Get-WorkspacePathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-LatestReleaseId {
     $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
     if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
@@ -64,7 +74,8 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
-$frontendFullPath = Resolve-WorkspacePath $FrontendPath
+$frontendPathValue = Get-WorkspacePathValue -Value $FrontendPath
+$frontendFullPath = Resolve-WorkspacePath $frontendPathValue
 $smokeReportFullPath = Resolve-WorkspacePath $SmokeReportPath
 $preflightReportFullPath = Resolve-WorkspacePath $PreflightReportPath
 $packageJsonPath = Join-Path $frontendFullPath "package.json"

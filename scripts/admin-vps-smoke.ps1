@@ -125,6 +125,16 @@ function Get-ReportPathValue {
     return $Value.Trim()
 }
 
+function Get-WorkspacePathValue {
+    param([AllowEmptyString()][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ReportPathFullName {
     param(
         [AllowEmptyString()][string]$Path,
@@ -193,6 +203,7 @@ Assert-HttpUrl -Value $AdminWebUrl -Name "AdminWebUrl"
 Assert-AdminEmail -Value $AdminEmail
 $smokeReportPathValue = Get-ReportPathValue -Value $SmokeReportPath
 $preflightReportPathValue = Get-ReportPathValue -Value $PreflightReportPath
+$frontendPathValue = Get-WorkspacePathValue -Value $FrontendPath
 Assert-DistinctReportPaths -Reports @(
     @{ Name = "SmokeReportPath"; Path = $smokeReportPathValue },
     @{ Name = "PreflightReportPath"; Path = $preflightReportPathValue }
@@ -228,7 +239,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -EnvironmentName $environmentNameValue `
     -Operator $operatorValue `
     -ReleaseId $releaseValue `
-    -FrontendPath $FrontendPath `
+    -FrontendPath $frontendPathValue `
     -RequirePassword
 
 & $browserSmokeScript `
@@ -239,7 +250,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -EnvironmentName $environmentNameValue `
     -Operator $operatorValue `
     -ReleaseId $releaseValue `
-    -FrontendPath $FrontendPath `
+    -FrontendPath $frontendPathValue `
     -AccountBootstrapChecked:$AccountBootstrapChecked `
     -RequireAllPassed
 

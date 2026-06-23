@@ -652,6 +652,7 @@ public class AdminVpsSmokeReportTests
                       "default-operator-missing-password",
                       "default-environment-missing-password",
                       "preflight-identity-values-normalized",
+                      "preflight-workspace-path-normalized",
                       "bad-api-url",
                       "bad-admin-web-url",
                       "bad-admin-email",
@@ -689,6 +690,7 @@ public class AdminVpsSmokeReportTests
         Assert.Contains("Get-HttpUrlValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminEmailValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-ReportPathValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-WorkspacePathValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-smoke-flow-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-ADMIN-002I`", roadmap, StringComparison.Ordinal);
     }

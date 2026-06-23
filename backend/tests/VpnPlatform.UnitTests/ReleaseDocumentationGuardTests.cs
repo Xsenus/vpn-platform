@@ -93,6 +93,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-001BL", "2026-06-23-admin-vps-bootstrap-wrapper-admin-email-normalization"),
         new("P0-ADMIN-001BM", "2026-06-23-admin-vps-bootstrap-password-env-normalization"),
         new("P0-ADMIN-001BN", "2026-06-23-admin-vps-report-path-normalization"),
+        new("P0-ADMIN-001BO", "2026-06-23-admin-vps-workspace-path-normalization"),
         new("P0-ADMIN-002A", "2026-06-19-admin-vps-browser-smoke"),
         new("P0-ADMIN-002B", "2026-06-19-local-admin-vps-browser-smoke"),
         new("P0-ADMIN-002C", "2026-06-19-admin-vps-smoke-acceptance-evidence"),

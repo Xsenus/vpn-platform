@@ -356,6 +356,16 @@ try {
         -ExpectedPreflightAdminEmail "fresh-admin@example.test"
 
     $testedFailures += Invoke-WrapperFailure `
+        -Name "preflight-workspace-path-normalized" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath " frontend " `
+        -Password $null `
+        -ExpectedMessage "passwordEnvPresent must be true" `
+        -ExpectedFailedCheck "password-env-present"
+
+    $testedFailures += Invoke-WrapperFailure `
         -Name "bad-api-url" `
         -ApiBaseUrl "not-a-url" `
         -AdminWebUrl "http://127.0.0.1:18205/admin/" `

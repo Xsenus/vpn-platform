@@ -17,6 +17,7 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("AdminBootstrap__Password", script, StringComparison.Ordinal);
         Assert.Contains("Password: [hidden]", script, StringComparison.Ordinal);
         Assert.Contains("Dry-run mode: database was not changed", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-WorkspacePathValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Host \"Password: $Password", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scripts\\admin-bootstrap.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Password: [hidden]", guide, StringComparison.Ordinal);
@@ -304,6 +305,7 @@ public class AdminBootstrapCliScriptTests
                      "Get-AdminEmailValue",
                      "Get-AdminPasswordEnvNameValue",
                      "Get-ReportPathValue",
+                     "Get-WorkspacePathValue",
                      "ReadinessReportPath",
                      "readinessReportPath",
                      "fullReportPath",
@@ -339,6 +341,7 @@ public class AdminBootstrapCliScriptTests
                      "ExpectedSmokeReportPath",
                      "ExpectedPreflightReportPath",
                      "ExpectedBootstrapSmokeReportPath",
+                     "workspace-paths-normalized",
                      "environment-default-normalized",
                      "ExpectedEnvironmentName",
                      "UseEnvironmentNameEnv",
@@ -622,6 +625,7 @@ public class AdminBootstrapCliScriptTests
                       "dry-run-admin-email-normalized",
                       "dry-run-password-env-name-normalized",
                       "dry-run-report-paths-normalized",
+                      "dry-run-workspace-paths-normalized",
                       "ExpectReadinessReportPathsNormalized",
                       "dry-run-default-operator",
                       "dry-run-default-environment",
@@ -661,6 +665,7 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Get-AdminEmailValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-AdminPasswordEnvNameValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-ReportPathValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-WorkspacePathValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
