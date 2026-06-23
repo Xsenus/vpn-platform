@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-23-admin-vps-workspace-path-normalization`, версия `0.283.0`; admin VPS readiness, bootstrap and smoke wrappers now trim workspace path parameters before local path checks and downstream script invocation. Production readiness gate и live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-23-admin-bootstrap-profile-normalization`, версия `0.284.0`; admin bootstrap wrappers now trim profile text parameters before env setup, safe output and downstream script invocation. Production readiness gate и live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

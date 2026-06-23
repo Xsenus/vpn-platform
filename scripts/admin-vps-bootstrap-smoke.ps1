@@ -172,6 +172,19 @@ function Get-WorkspacePathValue {
     return $Value.Trim()
 }
 
+function Get-AdminBootstrapTextValue {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][string]$DefaultValue
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $DefaultValue
+    }
+
+    return $Value.Trim()
+}
+
 function Get-ReportPathFullName {
     param(
         [AllowEmptyString()][string]$Path,
@@ -312,6 +325,8 @@ $environmentNameValue = Get-EnvironmentNameValue -Value $EnvironmentName
 $apiBaseUrlValue = Get-HttpUrlValue -Value $ApiBaseUrl
 $adminWebUrlValue = Get-HttpUrlValue -Value $AdminWebUrl
 $adminEmailValue = Get-AdminEmailValue -Value $AdminEmail
+$displayNameValue = Get-AdminBootstrapTextValue -Value $DisplayName -DefaultValue "Platform Admin"
+$rolesCsvValue = Get-AdminBootstrapTextValue -Value $RolesCsv -DefaultValue "SuperAdmin"
 
 $previousBootstrapPassword = [Environment]::GetEnvironmentVariable("AdminBootstrap__Password", "Process")
 $previousSmokePassword = [Environment]::GetEnvironmentVariable("ADMIN_VPS_SMOKE_ADMIN_PASSWORD", "Process")
@@ -372,8 +387,8 @@ try {
     $bootstrapArgs = @{
         EnvironmentName = $environmentNameValue
         Email = $adminEmailValue
-        DisplayName = $DisplayName
-        RolesCsv = $RolesCsv
+        DisplayName = $displayNameValue
+        RolesCsv = $rolesCsvValue
         Provider = $providerValue
         ProjectPath = $projectPathValue
     }

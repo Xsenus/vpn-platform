@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.284.0 - 2026-06-23
+
+Release entry: `2026-06-23-admin-bootstrap-profile-normalization`.
+
+### Fixed
+
+- `scripts/admin-bootstrap.ps1` now trims `EnvironmentName`, `Email`, `DisplayName`, `RolesCsv` and `Provider` before process env setup and safe console output.
+- `scripts/admin-vps-bootstrap-smoke.ps1` now forwards trimmed `DisplayName` and `RolesCsv` into the bootstrap step while leaving the password and connection string untouched.
+- Regression coverage now includes `dry-run-admin-bootstrap-profile-normalized` and static guards for normalized bootstrap profile arguments.
+
+### Verification
+
+- Admin VPS bootstrap smoke wrapper regression: OK, `dry-run-admin-bootstrap-profile-normalized` prints `Roles: SuperAdmin` without surrounding whitespace and does not start browser smoke.
+- Targeted docs/release unit suite: 40/40.
+- Local CLI bootstrap admin smoke on SQLite: OK, latest release `2026-06-23-admin-bootstrap-profile-normalization`, readiness checks `16/16`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: 591/591.
+- Frontend tests: 66/66.
+- Frontend typecheck/build/audit: OK, audit 0 vulnerabilities.
+- Playwright console E2E: 9/9.
+- Secret scan: OK, files scanned 561, findings 0.
+- Changed files encoding: strict UTF-8 without BOM, 19 files checked.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a real VPS bootstrap/login smoke report is captured.
+
 ## 0.283.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-vps-workspace-path-normalization`.

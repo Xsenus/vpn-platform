@@ -18,6 +18,10 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Password: [hidden]", script, StringComparison.Ordinal);
         Assert.Contains("Dry-run mode: database was not changed", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-WorkspacePathValue", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-AdminBootstrapTextValue", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$displayNameValue", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$rolesCsvValue", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Roles: $rolesCsvValue", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Host \"Password: $Password", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scripts\\admin-bootstrap.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Password: [hidden]", guide, StringComparison.Ordinal);
@@ -97,7 +101,10 @@ public class AdminBootstrapCliScriptTests
                       "manual-operator",
                       "Get-EnvironmentNameValue",
                       "Environment: $environmentNameValue",
-                      "Release id:",
+                     "Release id:",
+                     "Get-AdminBootstrapTextValue",
+                     "DisplayName = $displayNameValue",
+                     "RolesCsv = $rolesCsvValue",
                      "ConfirmBootstrapReset",
                      "Pass -ConfirmBootstrapReset",
                      "Connection string is required",
@@ -623,10 +630,13 @@ public class AdminBootstrapCliScriptTests
                       "dry-run-no-smoke",
                       "dry-run-url-values-normalized",
                       "dry-run-admin-email-normalized",
+                      "dry-run-admin-bootstrap-profile-normalized",
                       "dry-run-password-env-name-normalized",
                       "dry-run-report-paths-normalized",
                       "dry-run-workspace-paths-normalized",
                       "ExpectReadinessReportPathsNormalized",
+                      "ExpectedOutputContains",
+                      "ExpectedOutputNotContains",
                       "dry-run-default-operator",
                       "dry-run-default-environment",
                       "admin-vps-bootstrap-smoke-report.json",
@@ -666,6 +676,7 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("Get-AdminPasswordEnvNameValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-ReportPathValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-WorkspacePathValue", wrapper, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-AdminBootstrapTextValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Max evidence chain minutes: $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-MaxEvidenceChainMinutes $maxEvidenceChainMinutesValue", wrapper, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("test-admin-vps-bootstrap-smoke-wrapper.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);

@@ -6773,5 +6773,32 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-23-admin-bootstrap-profile-normalization",
+    "version": "0.284.0",
+    "releasedAt": "2026-06-23T04:30:00+07:00",
+    "title": "Admin bootstrap profile normalization",
+    "summary": "Admin bootstrap wrappers now trim profile and operator-facing text fields before env setup, console output and downstream bootstrap invocation.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-bootstrap.ps1` now normalizes `EnvironmentName`, `Email`, `DisplayName`, `RolesCsv` and `Provider` before setting process env values and printing safe dry-run output."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke.ps1` now passes trimmed `DisplayName` and `RolesCsv` to the bootstrap wrapper while leaving the password and connection string unchanged."
+      },
+      {
+        "type": "improved",
+        "text": "Regression coverage now includes `dry-run-admin-bootstrap-profile-normalized` and static guards for normalized bootstrap profile arguments."
+      },
+      {
+        "type": "important",
+        "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
+      }
+    ]
   }
 ]

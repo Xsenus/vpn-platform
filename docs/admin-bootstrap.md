@@ -12,6 +12,10 @@
 
 Wrapper сам выставляет `AdminBootstrap__Enabled=true`, `Database__Provider`, `Database__ApplyMigrationsOnStartup`, `Database__UseEnsureCreatedForLocalSqlite` и `ConnectionStrings__DefaultConnection`. В режиме `-LocalSqlite` используется `Data Source=data/vpnplatform-local.db`, если строка подключения не передана явно.
 
+## Normalized profile inputs
+
+`EnvironmentName`, `Email`, `DisplayName`, `RolesCsv` and `Provider` are trimmed before process env setup, safe console output and downstream bootstrap invocation. Password and connection string values are intentionally not trimmed or printed.
+
 ## Локальная SQLite-БД
 
 ```powershell
@@ -74,13 +78,13 @@ powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low-api-port`, `too-high-admin-port`, `same-api-admin-port`, `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-default-operator`, `dry-run-default-environment`, `dry-run-workspace-paths-normalized`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes`, неверные локальные порты, невалидные `ApiBaseUrl`/`AdminWebUrl`, невалидный `AdminEmail` и совпадающие report paths останавливаются до readiness report, bootstrap reset и smoke artifacts; пустой `Operator` нормализуется в `manual-operator`, пустой `EnvironmentName` - в `Production`:
+Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low-api-port`, `too-high-admin-port`, `same-api-admin-port`, `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-admin-bootstrap-profile-normalized`, `dry-run-default-operator`, `dry-run-default-environment`, `dry-run-workspace-paths-normalized`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes`, неверные локальные порты, невалидные `ApiBaseUrl`/`AdminWebUrl`, невалидный `AdminEmail` и совпадающие report paths останавливаются до readiness report, bootstrap reset и smoke artifacts; пустой `Operator` нормализуется в `manual-operator`, пустой `EnvironmentName` - в `Production`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
-Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-default-operator`, `dry-run-default-environment` and `dry-run-workspace-paths-normalized`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts or prove that padded local workspace paths are normalized before readiness.
+Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-admin-bootstrap-profile-normalized`, `dry-run-default-operator`, `dry-run-default-environment` and `dry-run-workspace-paths-normalized`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts or prove that padded profile/workspace values are normalized before readiness/bootstrap.
 
 Readiness gate перед reset-ом пишет sanitized `admin-vps-bootstrap-smoke-readiness-report.json` без пароля и connection string. Валидатор fail-closed требует, чтобы `readyForBootstrapSmoke` совпадал с фактическим массивом `checks`, а `localSqlite=true` всегда сопровождался `provider=Sqlite`, даже если standalone-проверка запущена без `-RequireReady`. Он должен пройти до `admin-bootstrap.ps1`:
 

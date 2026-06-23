@@ -47,7 +47,26 @@ function Get-WorkspacePathValue {
     return $Value.Trim()
 }
 
-Require-Value "Admin email" $Email
+function Get-AdminBootstrapTextValue {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][string]$DefaultValue
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $DefaultValue
+    }
+
+    return $Value.Trim()
+}
+
+$environmentNameValue = Get-AdminBootstrapTextValue -Value $EnvironmentName -DefaultValue "Production"
+$emailValue = if ([string]::IsNullOrWhiteSpace($Email)) { "" } else { $Email.Trim() }
+$displayNameValue = Get-AdminBootstrapTextValue -Value $DisplayName -DefaultValue "Platform Admin"
+$rolesCsvValue = Get-AdminBootstrapTextValue -Value $RolesCsv -DefaultValue "SuperAdmin"
+$providerValue = Get-AdminBootstrapTextValue -Value $Provider -DefaultValue "Postgres"
+
+Require-Value "Admin email" $emailValue
 Require-Value "Admin password" $Password
 
 if ($Password.Length -lt 16) {
@@ -55,7 +74,7 @@ if ($Password.Length -lt 16) {
 }
 
 if ($LocalSqlite) {
-    $Provider = "Sqlite"
+    $providerValue = "Sqlite"
     if ([string]::IsNullOrWhiteSpace($ConnectionString)) {
         $ConnectionString = "Data Source=data/vpnplatform-local.db"
     }
@@ -70,23 +89,23 @@ if (-not (Test-Path -LiteralPath $normalizedProjectPath -PathType Leaf)) {
     throw "API project was not found: $normalizedProjectPath"
 }
 
-Set-ProcessEnv "ASPNETCORE_ENVIRONMENT" $EnvironmentName
+Set-ProcessEnv "ASPNETCORE_ENVIRONMENT" $environmentNameValue
 Set-ProcessEnv "AdminBootstrap__Enabled" "true"
-Set-ProcessEnv "AdminBootstrap__Email" $Email
+Set-ProcessEnv "AdminBootstrap__Email" $emailValue
 Set-ProcessEnv "AdminBootstrap__Password" $Password
-Set-ProcessEnv "AdminBootstrap__DisplayName" $DisplayName
-Set-ProcessEnv "AdminBootstrap__RolesCsv" $RolesCsv
-Set-ProcessEnv "Database__Provider" $Provider
+Set-ProcessEnv "AdminBootstrap__DisplayName" $displayNameValue
+Set-ProcessEnv "AdminBootstrap__RolesCsv" $rolesCsvValue
+Set-ProcessEnv "Database__Provider" $providerValue
 Set-ProcessEnv "Database__ApplyMigrationsOnStartup" $(if ($ApplyMigrations -or $LocalSqlite) { "true" } else { "false" })
 Set-ProcessEnv "Database__UseEnsureCreatedForLocalSqlite" $(if ($LocalSqlite) { "true" } else { "false" })
 Set-ProcessEnv "ConnectionStrings__DefaultConnection" $ConnectionString
 Set-ProcessEnv "DataProtection__KeyPath" (Get-WorkspacePathValue -Value $DataProtectionKeyPath)
 
 Write-Host "Admin bootstrap/reset is ready to run."
-Write-Host "Environment: $EnvironmentName"
-Write-Host "Provider: $Provider"
-Write-Host "Email: $Email"
-Write-Host "Roles: $RolesCsv"
+Write-Host "Environment: $environmentNameValue"
+Write-Host "Provider: $providerValue"
+Write-Host "Email: $emailValue"
+Write-Host "Roles: $rolesCsvValue"
 Write-Host "Apply migrations: $($ApplyMigrations -or $LocalSqlite)"
 Write-Host "Password: [hidden]"
 

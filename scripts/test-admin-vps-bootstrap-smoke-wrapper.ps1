@@ -71,7 +71,9 @@ function Invoke-BootstrapSmokeScenario {
         [string]$ExpectedReadinessAdminEmail = "",
         [string]$ExpectedReadinessPasswordEnvName = "",
         [switch]$ExpectReadinessReportPathsNormalized,
-        [string]$FrontendPath = "frontend"
+        [string]$FrontendPath = "frontend",
+        [string]$ExpectedOutputContains = "",
+        [string]$ExpectedOutputNotContains = ""
     )
 
     $scenarioPath = Join-Path $outputFullPath $Name
@@ -153,6 +155,14 @@ function Invoke-BootstrapSmokeScenario {
 
         if ($output.IndexOf($ExpectedMessage, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "Expected scenario '$Name' output to contain '$ExpectedMessage'. Actual output: $output"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedOutputContains) -and $output.IndexOf($ExpectedOutputContains, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Expected scenario '$Name' output to contain '$ExpectedOutputContains'. Actual output: $output"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedOutputNotContains) -and $output.IndexOf($ExpectedOutputNotContains, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            throw "Expected scenario '$Name' output not to contain '$ExpectedOutputNotContains'. Actual output: $output"
         }
 
         if (-not [string]::IsNullOrEmpty($Password) -and $output.Contains($Password)) {
@@ -425,6 +435,18 @@ try {
         -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
         -AdminEmail " fresh-bootstrap-admin@example.test " `
         -ExpectedReadinessAdminEmail "fresh-bootstrap-admin@example.test"
+
+    $testedScenarios += Invoke-BootstrapSmokeScenario `
+        -Name "dry-run-admin-bootstrap-profile-normalized" `
+        -Password "LocalBootstrapSmokePassword12345" `
+        -ConnectionString "Data Source=tmp/admin-vps-bootstrap-smoke-wrapper-regression-test/dry-run-admin-bootstrap-profile-normalized/local.db" `
+        -LocalSqlite `
+        -DryRun `
+        -ExpectedExitCode 0 `
+        -ExpectedMessage "Dry-run mode: admin VPS smoke was not started" `
+        -AdditionalArguments @("-DisplayName", " BootstrapAdmin ", "-RolesCsv", " SuperAdmin ") `
+        -ExpectedOutputContains "Roles: SuperAdmin" `
+        -ExpectedOutputNotContains "Roles:  SuperAdmin "
 
     $testedScenarios += Invoke-BootstrapSmokeScenario `
         -Name "dry-run-password-env-name-normalized" `
