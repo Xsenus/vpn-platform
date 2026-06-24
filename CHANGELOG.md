@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.294.0 - 2026-06-24
+
+Release entry: `2026-06-24-admin-vps-smoke-preflight-failed-checks`.
+
+### Improved
+
+- `scripts/admin-vps-smoke-preflight.ps1` now writes sanitized `failedChecks` and prints `Failed checks` in stdout before browser smoke.
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1` validates that `failedChecks` exactly matches failed `checks` entries and keeps `readyForLiveSmoke` consistent.
+- `scripts/test-admin-vps-smoke-preflight-validator.ps1` covers `mismatched-failed-checks`; wrapper regression asserts the expected failed check in both report and console output.
+
+### Verification
+
+- Admin VPS preflight validator regression: OK; valid reports keep `failedChecks=[]`, stale release evidence keeps `failedChecks=["remote-latest-release"]`, and `mismatched-failed-checks` is rejected.
+- Admin VPS smoke flow wrapper regression: OK; failed preflight scenarios print `Failed checks` and store the expected failed check in the preflight report.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-preflight-failed-checks`, preflight `failedChecks=[]`, remote release status `matched`, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `20` changed/new files.
+- `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured.
+
 ## 0.293.0 - 2026-06-24
 
 Release entry: `2026-06-24-admin-vps-smoke-remote-release-console-summary`.

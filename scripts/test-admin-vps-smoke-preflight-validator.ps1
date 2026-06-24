@@ -123,6 +123,10 @@ try {
         throw "Expected standalone preflight report remoteReleaseMatched to be true."
     }
 
+    if (@($validReport.failedChecks).Count -ne 0) {
+        throw "Expected standalone preflight report failedChecks to be empty."
+    }
+
     $testedFailures = @()
 
     $emptyRelease = $validReportContent | ConvertFrom-Json
@@ -147,6 +151,7 @@ try {
 
     $failedCheck = $validReportContent | ConvertFrom-Json
     $failedCheck.checks[0].passed = $false
+    $failedCheck.failedChecks = @([string]$failedCheck.checks[0].name)
     $failedCheckPath = Copy-ReportJson -Source $failedCheck -DestinationPath (Join-Path $outputFullPath "failed-check.json")
     $testedFailures += [ordered]@{
         name = "failed-check"
@@ -192,6 +197,7 @@ try {
     $validMismatch.remoteReleaseStatus = "mismatch"
     $validMismatch.remoteReleaseMessage = "Remote latest release differs from the local smoke release."
     $validMismatch.readyForLiveSmoke = $false
+    $validMismatch.failedChecks = @("remote-latest-release")
     foreach ($check in $validMismatch.checks) {
         if ([string]$check.name -eq "remote-latest-release") {
             $check.passed = $false
@@ -200,6 +206,16 @@ try {
 
     $validMismatchPath = Copy-ReportJson -Source $validMismatch -DestinationPath (Join-Path $outputFullPath "valid-remote-release-mismatch.json")
     $validMismatchOutput = Invoke-PreflightValidator -ReportPath $validMismatchPath -AllowNotReady
+
+    $mismatchedFailedChecks = $validReportContent | ConvertFrom-Json
+    $mismatchedFailedChecks.failedChecks = @("remote-latest-release")
+    $mismatchedFailedChecksPath = Copy-ReportJson -Source $mismatchedFailedChecks -DestinationPath (Join-Path $outputFullPath "mismatched-failed-checks.json")
+    $testedFailures += [ordered]@{
+        name = "mismatched-failed-checks"
+        message = Assert-FailsWith -ExpectedMessage "failedChecks must match failed checks" -Action {
+            Invoke-PreflightValidator -ReportPath $mismatchedFailedChecksPath
+        }
+    }
 
     $badRemoteStatus = $validReportContent | ConvertFrom-Json
     $badRemoteStatus.remoteReleaseCheckRequired = $true

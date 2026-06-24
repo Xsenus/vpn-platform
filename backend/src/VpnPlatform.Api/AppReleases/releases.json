@@ -7035,5 +7035,32 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-admin-vps-smoke-preflight-failed-checks",
+    "version": "0.294.0",
+    "releasedAt": "2026-06-24T12:27:00+07:00",
+    "title": "Admin VPS smoke preflight failed checks",
+    "summary": "Admin VPS smoke preflight now records and prints sanitized failed check names before live browser smoke.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` now writes `failedChecks` and prints `Failed checks` in stdout using only controlled check names."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-preflight-report.ps1` validates that `failedChecks` exactly matches failed `checks` entries and keeps `readyForLiveSmoke` consistent."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-vps-smoke-preflight-validator.ps1` covers `mismatched-failed-checks`, and wrapper regression asserts the failed check appears in both the report and console output."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
+      }
+    ]
   }
 ]

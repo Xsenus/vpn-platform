@@ -212,6 +212,14 @@ function Invoke-WrapperFailure {
             throw "Expected preflight check '$ExpectedFailedCheck' to fail in scenario '$Name'."
         }
 
+        if (@($preflightReport.failedChecks) -notcontains $ExpectedFailedCheck) {
+            throw "Preflight report failedChecks should include '$ExpectedFailedCheck' for scenario '$Name'."
+        }
+
+        if ($output.IndexOf("Failed checks: $ExpectedFailedCheck", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Preflight stdout should include failed check '$ExpectedFailedCheck' for scenario '$Name'."
+        }
+
         return [ordered]@{
             name = $Name
             exitCode = $process.ExitCode

@@ -84,7 +84,7 @@ foreach ($propertyName in @("reportId", "generatedAt", "environmentName", "apiBa
     }
 }
 
-foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke", "checks")) {
+foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke", "failedChecks", "checks")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Admin VPS smoke preflight report is missing required field: $propertyName"
     }
@@ -213,11 +213,35 @@ foreach ($entry in $report.checks) {
     }
 }
 
+$expectedFailedChecks = @($report.checks | Where-Object { -not $_.passed } | ForEach-Object { [string]$_.name })
+$actualFailedChecks = @($report.failedChecks | ForEach-Object { [string]$_ })
+foreach ($name in $actualFailedChecks) {
+    if ($requiredChecks -notcontains $name) {
+        throw "Admin VPS smoke preflight report contains unsupported failedChecks entry: $name"
+    }
+}
+
+if ($actualFailedChecks.Count -ne $expectedFailedChecks.Count) {
+    throw "Admin VPS smoke preflight report failedChecks must match failed checks."
+}
+
+foreach ($name in $expectedFailedChecks) {
+    if ($actualFailedChecks -notcontains $name) {
+        throw "Admin VPS smoke preflight report failedChecks must match failed checks."
+    }
+}
+
+$expectedReadyForLiveSmoke = $expectedFailedChecks.Count -eq 0
+if ($report.readyForLiveSmoke -ne $expectedReadyForLiveSmoke) {
+    throw "Admin VPS smoke preflight report field readyForLiveSmoke must match failed checks."
+}
+
 $summary = [ordered]@{
     reportId = $report.reportId
     environmentName = $report.environmentName
     releaseId = $report.releaseId
     checks = $checkNames.Count
+    failedChecks = @($actualFailedChecks)
     readyForLiveSmoke = $report.readyForLiveSmoke
     passwordEnvPresent = $report.passwordEnvPresent
     remoteReleaseStatus = $report.remoteReleaseStatus
