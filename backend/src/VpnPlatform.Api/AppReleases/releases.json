@@ -6935,5 +6935,28 @@
         "text": "The current VPS admin login was repaired manually, but `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` still require a full real VPS bootstrap/login smoke report before closure."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-admin-vps-smoke-navigation-fallback",
+    "version": "0.290.0",
+    "releasedAt": "2026-06-24T12:05:00+07:00",
+    "title": "Admin VPS smoke navigation fallback",
+    "summary": "The admin VPS browser smoke now supports legacy link navigation and direct hash fallback for required admin sections.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`frontend/e2e/admin-vps-smoke.spec.ts` now opens required sections through `role=tab`, `role=link` or direct hash fallback from the smoke sections contract."
+      },
+      {
+        "type": "improved",
+        "text": "The live VPS admin smoke no longer masks legacy navigation gaps as a 120-second timeout; missing sections are reported as explicit failed section evidence."
+      },
+      {
+        "type": "important",
+        "text": "A real VPS admin smoke attempt authenticated successfully and passed sections through `support`, but the currently deployed VPS UI did not load required section `audit`; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until a full passed smoke report is captured after deploy."
+      }
+    ]
   }
 ]

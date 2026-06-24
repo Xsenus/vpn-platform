@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.290.0 - 2026-06-24
+
+Release entry: `2026-06-24-admin-vps-smoke-navigation-fallback`.
+
+### Fixed
+
+- `frontend/e2e/admin-vps-smoke.spec.ts` now opens admin sections through `role=tab`, `role=link` or direct hash fallback from `docs/admin-vps-smoke-sections.json`.
+- Legacy deployed admin UIs no longer turn missing navigation items into a generic 120-second Playwright timeout.
+
+### Verification
+
+- Admin VPS smoke tooling guard: OK, `AdminVpsSmokeReportTests` `15/15`.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-navigation-fallback`, preflight checks `9/9`, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `17` changed/new files.
+- Real VPS admin smoke attempt: preflight OK and admin login passed; sections through `support` passed, then required section `audit` failed to load on the currently deployed VPS UI. `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until a full passed VPS smoke report is captured after deploy.
+
 ## 0.289.0 - 2026-06-24
 
 Release entry: `2026-06-24-deploy-production-env-normalizer`.

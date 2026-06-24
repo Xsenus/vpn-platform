@@ -44,6 +44,8 @@ powershell -ExecutionPolicy Bypass -File scripts\new-admin-vps-smoke-report.ps1 
 
 Список обязательных разделов хранится в `docs/admin-vps-smoke-sections.json`. Перед реальным VPS smoke или изменением админки проверьте, что manifest, template, validator и Playwright specs синхронизированы:
 
+Browser smoke открывает разделы через `role=tab`, затем через `role=link`, а если в старом deployed UI нет элемента навигации, переключает hash напрямую из manifest route. Если сам section после этого не появился, отчет остается failed для конкретного section; это не закрывает `P0-ADMIN-002`.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-sections-contract.ps1
 ```

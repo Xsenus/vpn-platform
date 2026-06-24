@@ -146,6 +146,10 @@ public class AdminVpsSmokeReportTests
                      "Release id:",
                      "No credentials, cookies, auth headers, tokens or screenshots are stored",
                      "adminEmail",
+                     "getByRole('tab'",
+                     "getByRole('link'",
+                     "window.location.hash",
+                     "sectionDefinition.route",
                      "Завершить сессию",
                      "validate-admin-vps-smoke-report.ps1",
                      "Password: [hidden]"

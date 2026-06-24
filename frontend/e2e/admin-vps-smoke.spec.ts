@@ -162,8 +162,21 @@ async function login(page: Page, adminWebUrl: string, email: string, password: s
   await expect(page.getByRole('heading', { name: 'Дашборд' })).toBeVisible()
 }
 
-async function openSection(page: Page, label: string, id: AdminSectionId) {
-  await page.getByRole('tab', { name: label }).click()
+async function openSection(page: Page, label: string, id: AdminSectionId, route: string) {
+  const tab = page.getByRole('tab', { name: label }).first()
+  const sectionLink = page.getByRole('link', { name: label }).first()
+  if (await tab.count() > 0) {
+    await tab.click()
+  } else if (await sectionLink.count() > 0) {
+    await sectionLink.click()
+  } else {
+    const hash = new URL(route, 'http://admin-smoke.local').hash || `#${id}`
+    await page.evaluate((value) => {
+      window.location.hash = value
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+    }, hash)
+  }
+
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
 
@@ -206,7 +219,7 @@ test('admin VPS smoke covers login and every admin section without storing secre
       const failedBefore = failedResponses.length
 
       try {
-        await openSection(page, label, id)
+        await openSection(page, label, id, sectionDefinition.route)
         const sectionFailures = failedResponses.slice(failedBefore)
         section.httpStatus = sectionFailures.length === 0 ? 200 : Number(sectionFailures[0].split(' ', 1)[0])
         section.loaded = true

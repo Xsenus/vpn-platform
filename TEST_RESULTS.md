@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-24: admin VPS smoke navigation fallback
+
+Scope:
+
+- `frontend/e2e/admin-vps-smoke.spec.ts` supports `role=tab`, `role=link` and direct hash fallback from `docs/admin-vps-smoke-sections.json`.
+- Legacy deployed admin navigation no longer causes a generic 120-second timeout before reporting a missing required section.
+- What's New received release `2026-06-24-admin-vps-smoke-navigation-fallback`, version `0.290.0`.
+- Real VPS smoke evidence was attempted without storing secrets; it authenticated successfully but failed on missing required `audit` section, so `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open.
+
+Commands:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests"
+powershell -ExecutionPolicy Bypass -File scripts\admin-vps-smoke.ps1 -ApiBaseUrl http://83.147.222.145:8080 -AdminWebUrl http://83.147.222.145:5175/ -AdminEmail admin@local.test -SmokeReportPath tmp\vps-admin-smoke-hash-fallback\admin-vps-smoke-report.json -PreflightReportPath tmp\vps-admin-smoke-hash-fallback\admin-vps-smoke-preflight-report.json -EnvironmentName Production -Operator codex-2026-06-24 -AccountBootstrapChecked
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+strict UTF-8 without BOM check over changed/new files
+```
+
+Result:
+
+- Admin VPS smoke tooling guard: OK, `15/15`.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-navigation-fallback`, preflight checks `9/9`, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Playwright console E2E: OK, `9/9`.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `17` changed/new files.
+- Real VPS admin smoke attempt: preflight OK and admin login passed; sections through `support` passed, then required section `audit` failed to load on the currently deployed VPS UI. This is negative live evidence, not a passed smoke report.
+
 ## Check 2026-06-24: deploy production env normalizer
 
 Scope:
