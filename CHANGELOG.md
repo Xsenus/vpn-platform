@@ -1,5 +1,15 @@
 # Changelog
 
+## Roadmap checkpoint - 2026-06-24
+
+### Documentation
+
+- `docs/PRODUCT_COMPLETION_ROADMAP.md` now records the temporary pause state, last verification date and remaining live/VPS blockers after release `2026-06-24-admin-vps-smoke-preflight-report-id-console`.
+
+### Verification
+
+- Roadmap/docs guard suite: OK, `15/15`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `3` changed/new files.
+
 ## 0.298.0 - 2026-06-24
 
 Release entry: `2026-06-24-admin-vps-smoke-preflight-report-id-console`.

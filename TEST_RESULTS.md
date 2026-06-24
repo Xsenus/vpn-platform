@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-24: roadmap temporary pause checkpoint
+
+Scope:
+
+- `docs/PRODUCT_COMPLETION_ROADMAP.md` records the last verification date, temporary pause state and remaining live/VPS blockers.
+- Production/live roadmap items remain open until real VPS/staging/live evidence exists.
+
+Commands:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+git diff --check
+strict UTF-8 without BOM check over changed/new files
+```
+
+Result:
+
+- Roadmap/docs guard suite: OK, `15/15`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `3` changed/new files.
+
 ## Check 2026-06-24: admin VPS smoke preflight report id console
 
 Scope:
