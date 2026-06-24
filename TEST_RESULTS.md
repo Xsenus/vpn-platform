@@ -2,6 +2,44 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-24: deploy production env normalizer
+
+Scope:
+
+- `scripts/normalize-production-env.ps1` forces deploy-safe production flags before `.github/workflows/deploy-vps.yml` uploads shared `.env`.
+- Stale `PRODUCTION_ENV_FILE` values cannot re-enable Local environment, auto migrations, demo seed, Swagger or persistent admin bootstrap on VPS deploy.
+- GitHub Actions deploy now uploads one normalized `production.env` for both Docker and systemd modes.
+- What's New received release `2026-06-24-deploy-production-env-normalizer`, version `0.289.0`.
+- VPS admin login was repaired manually without storing secrets in docs, but `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` were not closed because a full admin VPS smoke report was not captured.
+
+Commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-normalize-production-env.ps1
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "DeployWorkflowGuardTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+strict UTF-8 without BOM check over changed/new files
+```
+
+Result:
+
+- Deploy production env normalizer regression: OK.
+- Targeted deploy/docs/release .NET suite: OK, `18/18`.
+- Local SQLite admin bootstrap smoke: OK; latest release `2026-06-24-deploy-production-env-normalizer`, readiness checks `17/17`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Playwright console E2E: OK, `9/9`.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `19` changed/new files.
+
 ## Check 2026-06-23: admin bootstrap readiness password env validator
 
 Scope:

@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `592/592`.
+- [x] Backend full suite: `593/593`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-23-admin-bootstrap-readiness-password-env-validator`, версия `0.288.0`.
+- [x] Latest "Что нового": `2026-06-24-deploy-production-env-normalizer`, версия `0.289.0`.
 
 ## Как вести дальше
 

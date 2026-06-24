@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.289.0 - 2026-06-24
+
+Release entry: `2026-06-24-deploy-production-env-normalizer`.
+
+### Fixed
+
+- `deploy-vps` now normalizes `PRODUCTION_ENV_FILE` before uploading shared `.env` to the VPS.
+- Stale production secrets can no longer re-enable `ASPNETCORE_ENVIRONMENT=Local`, auto migrations, demo seed, Swagger or persistent admin bootstrap during Docker/systemd deploy.
+- `AdminBootstrap__Password` is cleared from the uploaded shared env file, so one-shot admin reset stays outside the long-lived service configuration.
+
+### Verification
+
+- Deploy production env normalizer regression: OK.
+- Targeted deploy/docs/release .NET suite: OK, `18/18`.
+- Local SQLite admin bootstrap smoke: OK; latest release `2026-06-24-deploy-production-env-normalizer`, readiness checks `17/17`, preflight checks `9/9`, smoke sections `16/16`, provider `Sqlite`, admin login passed, JS/unauthorized errors absent.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `19` changed/new files.
+- `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` remain open until a full real VPS admin bootstrap/login smoke report is captured.
+
 ## 0.288.0 - 2026-06-23
 
 Release entry: `2026-06-23-admin-bootstrap-readiness-password-env-validator`.

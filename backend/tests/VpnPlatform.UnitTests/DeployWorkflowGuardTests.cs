@@ -42,6 +42,45 @@ public class DeployWorkflowGuardTests
         Assert.Contains("VPS_DEPLOY_MODE", documentation, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Deploy_Workflow_Should_Normalize_Production_Env_Before_Upload()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-vps.yml"));
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "normalize-production-env.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-normalize-production-env.ps1"));
+
+        Assert.Contains("name: Normalize production environment file", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("scripts/normalize-production-env.ps1 -Path production.env -OutputPath production.env", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("scp -P \"$VPS_PORT\" production.env", workflow, StringComparison.OrdinalIgnoreCase);
+
+        var normalizeIndex = workflow.IndexOf("name: Normalize production environment file", StringComparison.OrdinalIgnoreCase);
+        var dockerUploadIndex = workflow.IndexOf("name: Upload Docker release and environment file", StringComparison.OrdinalIgnoreCase);
+        var systemdUploadIndex = workflow.IndexOf("name: Upload systemd release and environment file", StringComparison.OrdinalIgnoreCase);
+        Assert.True(normalizeIndex > 0);
+        Assert.True(normalizeIndex < dockerUploadIndex);
+        Assert.True(normalizeIndex < systemdUploadIndex);
+
+        foreach (var expected in new[]
+                 {
+                     "ASPNETCORE_ENVIRONMENT",
+                     "AdminBootstrap__Enabled",
+                     "AdminBootstrap__Password",
+                     "AdminBootstrap__ResetExistingPassword",
+                     "Database__ApplyMigrationsOnStartup",
+                     "Database__SeedDemoData",
+                     "Swagger__Enabled"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.Ordinal);
+            Assert.Contains(expected, regression, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("\"Production\"", script, StringComparison.Ordinal);
+        Assert.Contains("\"false\"", script, StringComparison.Ordinal);
+        Assert.Contains("temporary-secret-that-must-not-stay", regression, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -250,12 +250,16 @@ jobs:
 
           tar -czf systemd-release.tar.gz -C artifacts/systemd .
 
+      - name: Normalize production environment file
+        run: |
+          printf '%s\n' "$PRODUCTION_ENV_FILE" > production.env
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/normalize-production-env.ps1 -Path production.env -OutputPath production.env
+
       - name: Upload Docker release and environment file
         if: steps.deploy_mode.outputs.mode == 'docker'
         run: |
           ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$VPS_APP_DIR/shared' '$VPS_APP_DIR/releases/$GITHUB_SHA'"
           scp -P "$VPS_PORT" release.tar.gz "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/releases/$GITHUB_SHA/release.tar.gz"
-          printf '%s\n' "$PRODUCTION_ENV_FILE" > production.env
           scp -P "$VPS_PORT" production.env "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/shared/.env"
 
       - name: Start Docker production stack
@@ -302,7 +306,6 @@ jobs:
         run: |
           ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$VPS_APP_DIR/shared' '$VPS_APP_DIR/releases/$GITHUB_SHA'"
           scp -P "$VPS_PORT" systemd-release.tar.gz "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/releases/$GITHUB_SHA/systemd-release.tar.gz"
-          printf '%s\n' "$PRODUCTION_ENV_FILE" > production.env
           scp -P "$VPS_PORT" production.env "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/shared/.env"
 
       - name: Start systemd production release

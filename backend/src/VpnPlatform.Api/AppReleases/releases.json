@@ -6908,5 +6908,32 @@
         "text": "Live `P0-ADMIN-001`/`P0-ADMIN-002` and `STATE-013` remain open until real VPS bootstrap/login smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-deploy-production-env-normalizer",
+    "version": "0.289.0",
+    "releasedAt": "2026-06-24T10:15:00+07:00",
+    "title": "Deploy production env normalizer",
+    "summary": "The VPS deploy workflow now normalizes unsafe production env flags before uploading shared .env to the server.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`.github/workflows/deploy-vps.yml` now runs `scripts/normalize-production-env.ps1` before Docker or systemd upload, so stale `PRODUCTION_ENV_FILE` values cannot re-enable Local environment, auto migrations, demo seed or Swagger in production."
+      },
+      {
+        "type": "fixed",
+        "text": "The normalizer disables persistent admin bootstrap and clears `AdminBootstrap__Password` from the uploaded shared env file."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-normalize-production-env.ps1` covers the unsafe env regression that caused the VPS deploy to fail before health checks."
+      },
+      {
+        "type": "important",
+        "text": "The current VPS admin login was repaired manually, but `P0-ADMIN-001`, `P0-ADMIN-002` and `STATE-013` still require a full real VPS bootstrap/login smoke report before closure."
+      }
+    ]
   }
 ]
