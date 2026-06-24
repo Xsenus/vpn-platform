@@ -220,6 +220,7 @@ if (-not (Test-Path -LiteralPath $preflightDirectory -PathType Container)) {
     [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "Admin VPS smoke preflight completed."
+Write-Host "Preflight report id: $($report.reportId)"
 Write-Host "API base URL: $ApiBaseUrl"
 Write-Host "Admin web URL: $AdminWebUrl"
 Write-Host "Admin email: $AdminEmail"

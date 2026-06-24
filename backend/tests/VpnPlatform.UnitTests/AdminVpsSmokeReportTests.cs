@@ -327,6 +327,7 @@ public class AdminVpsSmokeReportTests
                      "CultureInfo]::InvariantCulture",
                      "manual-admin-vps-smoke-preflight",
                      "-RequireReady",
+                     "Preflight report id:",
                      "present [hidden]",
                      "admin-vps-smoke-preflight-report.json"
                  })

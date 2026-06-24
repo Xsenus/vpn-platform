@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.298.0 - 2026-06-24
+
+Release entry: `2026-06-24-admin-vps-smoke-preflight-report-id-console`.
+
+### Improved
+
+- `scripts/admin-vps-smoke-preflight.ps1` now prints sanitized `Preflight report id` next to the preflight summary.
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` asserts that stdout report id matches the JSON `reportId` before browser smoke starts.
+
+### Verification
+
+- Admin VPS smoke tooling guard: OK, `AdminVpsSmokeReportTests` `15/15`.
+- Admin VPS smoke flow wrapper regression: OK; failed preflight scenarios print `Preflight report id` and match it with JSON `reportId`.
+- Admin VPS preflight validator regression: OK; standalone preflight prints `Preflight report id`.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-preflight-report-id-console`, console output includes `Preflight report id`, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `18` changed/new files.
+- `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured.
+
 ## 0.297.0 - 2026-06-24
 
 Release entry: `2026-06-24-admin-vps-smoke-remote-message-console`.
@@ -171,7 +193,7 @@ Release entry: `2026-06-24-admin-vps-smoke-navigation-fallback`.
 - Backend full suite: OK, `593/593`.
 - Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
 - Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
-- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `17` changed/new files.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `18` changed/new files.
 - Real VPS admin smoke attempt: preflight OK and admin login passed; sections through `support` passed, then required section `audit` failed to load on the currently deployed VPS UI. `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until a full passed VPS smoke report is captured after deploy.
 
 ## 0.289.0 - 2026-06-24

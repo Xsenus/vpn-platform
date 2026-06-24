@@ -218,6 +218,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-24-admin-vps-smoke-remote-message-console`, версия `0.297.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-06-24-admin-vps-smoke-preflight-report-id-console`, версия `0.298.0`;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap еще содержит live/staging задачи, которые нельзя считать production-ready без реальных секретов, платежных кабинетов, VPS smoke и 3x-ui проверки.

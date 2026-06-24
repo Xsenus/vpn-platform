@@ -7139,5 +7139,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-admin-vps-smoke-preflight-report-id-console",
+    "version": "0.298.0",
+    "releasedAt": "2026-06-24T13:06:00+07:00",
+    "title": "Admin VPS smoke preflight report id console",
+    "summary": "Admin VPS smoke preflight now prints the sanitized preflight report id in console output.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` now prints `Preflight report id` next to the sanitized preflight summary."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` asserts that preflight stdout report id matches the JSON `reportId` before browser smoke starts."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
+      }
+    ]
   }
 ]

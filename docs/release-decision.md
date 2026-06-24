@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-24-admin-vps-smoke-remote-message-console`, версия `0.297.0`; admin VPS smoke preflight now prints sanitized remote release guidance in console output before browser smoke. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-24-admin-vps-smoke-preflight-report-id-console`, версия `0.298.0`; admin VPS smoke preflight now prints sanitized `Preflight report id` in console output before browser smoke. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

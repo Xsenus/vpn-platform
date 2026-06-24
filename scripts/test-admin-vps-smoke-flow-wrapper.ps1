@@ -176,6 +176,14 @@ function Invoke-WrapperFailure {
             throw "Preflight report releaseId should be resolved before failed browser smoke scenario '$Name'."
         }
 
+        if ([string]::IsNullOrWhiteSpace([string]$preflightReport.reportId)) {
+            throw "Preflight report reportId should be resolved before failed browser smoke scenario '$Name'."
+        }
+
+        if ($output.IndexOf("Preflight report id: $($preflightReport.reportId)", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Preflight stdout should include report id '$($preflightReport.reportId)' for scenario '$Name'."
+        }
+
         if (-not [string]::IsNullOrWhiteSpace($ExpectedPreflightOperator) -and [string]$preflightReport.operator -ne $ExpectedPreflightOperator) {
             throw "Preflight report operator should be '$ExpectedPreflightOperator' for scenario '$Name', got '$($preflightReport.operator)'."
         }
