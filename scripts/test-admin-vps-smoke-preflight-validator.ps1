@@ -131,6 +131,14 @@ try {
         throw "Expected standalone preflight report failedCheckCount to be 0."
     }
 
+    if ([long]$validReport.checkCount -ne @($validReport.checks).Count) {
+        throw "Expected standalone preflight report checkCount to match checks count."
+    }
+
+    if ([long]$validReport.passedCheckCount -ne @($validReport.checks).Count) {
+        throw "Expected standalone preflight report passedCheckCount to match checks count."
+    }
+
     $testedFailures = @()
 
     $emptyRelease = $validReportContent | ConvertFrom-Json
@@ -155,6 +163,7 @@ try {
 
     $failedCheck = $validReportContent | ConvertFrom-Json
     $failedCheck.checks[0].passed = $false
+    $failedCheck.passedCheckCount = @($failedCheck.checks).Count - 1
     $failedCheck.failedCheckCount = 1
     $failedCheck.failedChecks = @([string]$failedCheck.checks[0].name)
     $failedCheckPath = Copy-ReportJson -Source $failedCheck -DestinationPath (Join-Path $outputFullPath "failed-check.json")
@@ -167,6 +176,8 @@ try {
 
     $missingCheck = $validReportContent | ConvertFrom-Json
     $missingCheck.checks = @($missingCheck.checks | Where-Object { [string]$_.name -ne "preflight-validator" })
+    $missingCheck.checkCount = @($missingCheck.checks).Count
+    $missingCheck.passedCheckCount = @($missingCheck.checks).Count
     $missingCheckPath = Copy-ReportJson -Source $missingCheck -DestinationPath (Join-Path $outputFullPath "missing-check.json")
     $testedFailures += [ordered]@{
         name = "missing-check"
@@ -177,6 +188,8 @@ try {
 
     $duplicateCheck = $validReportContent | ConvertFrom-Json
     $duplicateCheck.checks = @($duplicateCheck.checks) + $duplicateCheck.checks[0]
+    $duplicateCheck.checkCount = @($duplicateCheck.checks).Count
+    $duplicateCheck.passedCheckCount = @($duplicateCheck.checks).Count
     $duplicateCheckPath = Copy-ReportJson -Source $duplicateCheck -DestinationPath (Join-Path $outputFullPath "duplicate-check.json")
     $testedFailures += [ordered]@{
         name = "duplicate-check"
@@ -202,6 +215,7 @@ try {
     $validMismatch.remoteReleaseStatus = "mismatch"
     $validMismatch.remoteReleaseMessage = "Remote latest release differs from the local smoke release."
     $validMismatch.readyForLiveSmoke = $false
+    $validMismatch.passedCheckCount = @($validMismatch.checks).Count - 1
     $validMismatch.failedCheckCount = 1
     $validMismatch.failedChecks = @("remote-latest-release")
     foreach ($check in $validMismatch.checks) {
@@ -230,6 +244,26 @@ try {
         name = "mismatched-failed-check-count"
         message = Assert-FailsWith -ExpectedMessage "failedCheckCount must match failed checks" -Action {
             Invoke-PreflightValidator -ReportPath $mismatchedFailedCheckCountPath
+        }
+    }
+
+    $mismatchedCheckCount = $validReportContent | ConvertFrom-Json
+    $mismatchedCheckCount.checkCount = @($mismatchedCheckCount.checks).Count + 1
+    $mismatchedCheckCountPath = Copy-ReportJson -Source $mismatchedCheckCount -DestinationPath (Join-Path $outputFullPath "mismatched-check-count.json")
+    $testedFailures += [ordered]@{
+        name = "mismatched-check-count"
+        message = Assert-FailsWith -ExpectedMessage "checkCount must match checks" -Action {
+            Invoke-PreflightValidator -ReportPath $mismatchedCheckCountPath
+        }
+    }
+
+    $mismatchedPassedCheckCount = $validReportContent | ConvertFrom-Json
+    $mismatchedPassedCheckCount.passedCheckCount = @($mismatchedPassedCheckCount.checks).Count - 1
+    $mismatchedPassedCheckCountPath = Copy-ReportJson -Source $mismatchedPassedCheckCount -DestinationPath (Join-Path $outputFullPath "mismatched-passed-check-count.json")
+    $testedFailures += [ordered]@{
+        name = "mismatched-passed-check-count"
+        message = Assert-FailsWith -ExpectedMessage "passedCheckCount must match passed checks" -Action {
+            Invoke-PreflightValidator -ReportPath $mismatchedPassedCheckCountPath
         }
     }
 

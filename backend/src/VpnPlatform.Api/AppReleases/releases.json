@@ -7089,5 +7089,32 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-admin-vps-smoke-preflight-check-counts",
+    "version": "0.296.0",
+    "releasedAt": "2026-06-24T13:04:00+07:00",
+    "title": "Admin VPS smoke preflight check counts",
+    "summary": "Admin VPS smoke preflight now records and prints total, passed and failed check counts before browser smoke.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` now writes `checkCount`, `passedCheckCount` and `failedCheckCount` and prints total/passed/failed counts in stdout."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-preflight-report.ps1` validates count consistency against the `checks` array before accepting preflight evidence."
+      },
+      {
+        "type": "improved",
+        "text": "Regression coverage now rejects mismatched total, passed and failed preflight check counts without storing credentials, cookies or bearer tokens."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
+      }
+    ]
   }
 ]

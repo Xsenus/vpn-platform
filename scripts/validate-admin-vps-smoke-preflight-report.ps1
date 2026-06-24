@@ -84,7 +84,7 @@ foreach ($propertyName in @("reportId", "generatedAt", "environmentName", "apiBa
     }
 }
 
-foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke", "failedCheckCount", "failedChecks", "checks")) {
+foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke", "checkCount", "passedCheckCount", "failedCheckCount", "failedChecks", "checks")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Admin VPS smoke preflight report is missing required field: $propertyName"
     }
@@ -136,8 +136,14 @@ foreach ($booleanName in @("remoteReleaseCheckRequired", "remoteReleaseMatched")
     }
 }
 
-if ($report.failedCheckCount -isnot [int] -and $report.failedCheckCount -isnot [long]) {
-    throw "Admin VPS smoke preflight report field failedCheckCount must be integer."
+foreach ($integerName in @("checkCount", "passedCheckCount", "failedCheckCount")) {
+    if ($report.$integerName -isnot [int] -and $report.$integerName -isnot [long]) {
+        throw "Admin VPS smoke preflight report field $integerName must be integer."
+    }
+
+    if ([long]$report.$integerName -lt 0) {
+        throw "Admin VPS smoke preflight report field $integerName must not be negative."
+    }
 }
 
 $allowedRemoteReleaseStatuses = @("not-required", "matched", "mismatch", "unavailable")
@@ -187,6 +193,10 @@ if ($null -eq $report.checks -or $report.checks.Count -eq 0) {
 }
 
 $checkNames = @($report.checks | ForEach-Object { [string]$_.name })
+if ([long]$report.checkCount -ne [long]$checkNames.Count) {
+    throw "Admin VPS smoke preflight report field checkCount must match checks."
+}
+
 foreach ($check in $requiredChecks) {
     if ($checkNames -notcontains $check) {
         throw "Admin VPS smoke preflight report is missing check: $check"
@@ -218,6 +228,7 @@ foreach ($entry in $report.checks) {
 }
 
 $expectedFailedChecks = @($report.checks | Where-Object { -not $_.passed } | ForEach-Object { [string]$_.name })
+$expectedPassedCheckCount = @($report.checks | Where-Object { $_.passed }).Count
 $actualFailedChecks = @($report.failedChecks | ForEach-Object { [string]$_ })
 foreach ($name in $actualFailedChecks) {
     if ($requiredChecks -notcontains $name) {
@@ -231,6 +242,10 @@ if ($actualFailedChecks.Count -ne $expectedFailedChecks.Count) {
 
 if ([long]$report.failedCheckCount -ne [long]$expectedFailedChecks.Count) {
     throw "Admin VPS smoke preflight report field failedCheckCount must match failed checks."
+}
+
+if ([long]$report.passedCheckCount -ne [long]$expectedPassedCheckCount) {
+    throw "Admin VPS smoke preflight report field passedCheckCount must match passed checks."
 }
 
 foreach ($name in $expectedFailedChecks) {
@@ -248,7 +263,8 @@ $summary = [ordered]@{
     reportId = $report.reportId
     environmentName = $report.environmentName
     releaseId = $report.releaseId
-    checks = $checkNames.Count
+    checkCount = $report.checkCount
+    passedCheckCount = $report.passedCheckCount
     failedCheckCount = $report.failedCheckCount
     failedChecks = @($actualFailedChecks)
     readyForLiveSmoke = $report.readyForLiveSmoke

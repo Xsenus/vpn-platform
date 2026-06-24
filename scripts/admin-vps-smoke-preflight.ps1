@@ -179,7 +179,9 @@ if ($RequireRemoteReleaseMatch) {
 Add-Check "remote-latest-release" $remoteReleaseMatches "Remote /api/app-version/latest releaseId must match the smoke ReleaseId before live browser smoke."
 
 $failedChecks = @($checks | Where-Object { -not $_.passed } | ForEach-Object { [string]$_.name })
+$checkCount = $checks.Count
 $failedCheckCount = $failedChecks.Count
+$passedCheckCount = $checkCount - $failedCheckCount
 $readyForLiveSmoke = $failedCheckCount -eq 0
 
 $report = [ordered]@{
@@ -200,6 +202,8 @@ $report = [ordered]@{
     preflightReportPath = $preflightReportFullPath
     passwordEnvPresent = $passwordPresent
     readyForLiveSmoke = $readyForLiveSmoke
+    checkCount = $checkCount
+    passedCheckCount = $passedCheckCount
     failedCheckCount = $failedCheckCount
     failedChecks = @($failedChecks)
     checks = @($checks)
@@ -223,6 +227,8 @@ Write-Host "Password env: $(if ($passwordPresent) { 'present [hidden]' } else { 
 Write-Host "Remote release status: $remoteReleaseStatus"
 Write-Host "Remote release expected: $releaseValue"
 Write-Host "Remote release actual: $(if ([string]::IsNullOrWhiteSpace($remoteReleaseId)) { '[none]' } else { $remoteReleaseId })"
+Write-Host "Check count: $checkCount"
+Write-Host "Passed checks: $passedCheckCount/$checkCount"
 Write-Host "Failed check count: $failedCheckCount"
 Write-Host "Failed checks: $(if ($failedChecks.Count -eq 0) { '[none]' } else { $failedChecks -join ', ' })"
 Write-Host "Smoke report path: $smokeReportFullPath"
