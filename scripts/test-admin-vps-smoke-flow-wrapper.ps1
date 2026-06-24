@@ -199,6 +199,10 @@ function Invoke-WrapperFailure {
             throw "Preflight report remoteReleaseStatus should be '$ExpectedRemoteReleaseStatus' for scenario '$Name', got '$($preflightReport.remoteReleaseStatus)'."
         }
 
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedRemoteReleaseStatus) -and $output.IndexOf("Remote release status: $ExpectedRemoteReleaseStatus", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Preflight stdout should include remote release status '$ExpectedRemoteReleaseStatus' for scenario '$Name'."
+        }
+
         $failedCheck = @($preflightReport.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheck }) | Select-Object -First 1
         if ($null -eq $failedCheck) {
             throw "Expected failed preflight check '$ExpectedFailedCheck' was not found in scenario '$Name'."

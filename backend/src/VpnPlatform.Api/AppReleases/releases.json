@@ -7012,5 +7012,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-admin-vps-smoke-remote-release-console-summary",
+    "version": "0.293.0",
+    "releasedAt": "2026-06-24T12:26:00+07:00",
+    "title": "Admin VPS smoke remote release console summary",
+    "summary": "Admin VPS smoke preflight now prints safe remote release diagnostics in console output.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` now prints `Remote release status`, expected release and actual remote release in stdout without credentials, cookies or bearer tokens."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` asserts the console diagnostic for fail-closed remote release scenarios before browser smoke starts."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
+      }
+    ]
   }
 ]

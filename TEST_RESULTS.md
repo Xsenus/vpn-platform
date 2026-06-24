@@ -2,6 +2,45 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-24: admin VPS smoke remote release console summary
+
+Scope:
+
+- `scripts/admin-vps-smoke-preflight.ps1` prints `Remote release status`, `Remote release expected` and `Remote release actual` in stdout without credentials, cookies or bearer tokens.
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` asserts the console diagnostic for `remote-release-mismatch` before browser smoke starts.
+- What's New received release `2026-06-24-admin-vps-smoke-remote-release-console-summary`, version `0.293.0`.
+- `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open: the latest commits are not deployed to VPS and no full passed VPS admin smoke report was captured.
+
+Commands:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests"
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+strict UTF-8 without BOM check over changed/new files
+```
+
+Result:
+
+- Admin VPS smoke tooling guard: OK, `15/15`.
+- Admin VPS smoke flow wrapper regression: OK; `remote-release-mismatch` console output includes `Remote release status: unavailable`.
+- Local SQLite admin VPS browser smoke: OK; console summary showed `Remote release status: matched`, latest release `2026-06-24-admin-vps-smoke-remote-release-console-summary`, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Playwright console E2E: OK, `9/9`.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `18` changed/new files.
+
 ## Check 2026-06-24: admin VPS smoke remote release diagnostics
 
 Scope:
