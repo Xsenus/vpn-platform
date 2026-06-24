@@ -216,6 +216,14 @@ function Invoke-WrapperFailure {
             throw "Preflight report failedChecks should include '$ExpectedFailedCheck' for scenario '$Name'."
         }
 
+        if ([long]$preflightReport.failedCheckCount -ne @($preflightReport.failedChecks).Count) {
+            throw "Preflight report failedCheckCount should match failedChecks count for scenario '$Name'."
+        }
+
+        if ($output.IndexOf("Failed check count: $($preflightReport.failedCheckCount)", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Preflight stdout should include failed check count '$($preflightReport.failedCheckCount)' for scenario '$Name'."
+        }
+
         if ($output.IndexOf("Failed checks: $ExpectedFailedCheck", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "Preflight stdout should include failed check '$ExpectedFailedCheck' for scenario '$Name'."
         }

@@ -84,7 +84,7 @@ foreach ($propertyName in @("reportId", "generatedAt", "environmentName", "apiBa
     }
 }
 
-foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke", "failedChecks", "checks")) {
+foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke", "failedCheckCount", "failedChecks", "checks")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Admin VPS smoke preflight report is missing required field: $propertyName"
     }
@@ -134,6 +134,10 @@ foreach ($booleanName in @("remoteReleaseCheckRequired", "remoteReleaseMatched")
     if ($report.$booleanName -isnot [bool]) {
         throw "Admin VPS smoke preflight report field $booleanName must be boolean."
     }
+}
+
+if ($report.failedCheckCount -isnot [int] -and $report.failedCheckCount -isnot [long]) {
+    throw "Admin VPS smoke preflight report field failedCheckCount must be integer."
 }
 
 $allowedRemoteReleaseStatuses = @("not-required", "matched", "mismatch", "unavailable")
@@ -225,6 +229,10 @@ if ($actualFailedChecks.Count -ne $expectedFailedChecks.Count) {
     throw "Admin VPS smoke preflight report failedChecks must match failed checks."
 }
 
+if ([long]$report.failedCheckCount -ne [long]$expectedFailedChecks.Count) {
+    throw "Admin VPS smoke preflight report field failedCheckCount must match failed checks."
+}
+
 foreach ($name in $expectedFailedChecks) {
     if ($actualFailedChecks -notcontains $name) {
         throw "Admin VPS smoke preflight report failedChecks must match failed checks."
@@ -241,6 +249,7 @@ $summary = [ordered]@{
     environmentName = $report.environmentName
     releaseId = $report.releaseId
     checks = $checkNames.Count
+    failedCheckCount = $report.failedCheckCount
     failedChecks = @($actualFailedChecks)
     readyForLiveSmoke = $report.readyForLiveSmoke
     passwordEnvPresent = $report.passwordEnvPresent

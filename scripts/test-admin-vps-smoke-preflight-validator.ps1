@@ -127,6 +127,10 @@ try {
         throw "Expected standalone preflight report failedChecks to be empty."
     }
 
+    if ([long]$validReport.failedCheckCount -ne 0) {
+        throw "Expected standalone preflight report failedCheckCount to be 0."
+    }
+
     $testedFailures = @()
 
     $emptyRelease = $validReportContent | ConvertFrom-Json
@@ -151,6 +155,7 @@ try {
 
     $failedCheck = $validReportContent | ConvertFrom-Json
     $failedCheck.checks[0].passed = $false
+    $failedCheck.failedCheckCount = 1
     $failedCheck.failedChecks = @([string]$failedCheck.checks[0].name)
     $failedCheckPath = Copy-ReportJson -Source $failedCheck -DestinationPath (Join-Path $outputFullPath "failed-check.json")
     $testedFailures += [ordered]@{
@@ -197,6 +202,7 @@ try {
     $validMismatch.remoteReleaseStatus = "mismatch"
     $validMismatch.remoteReleaseMessage = "Remote latest release differs from the local smoke release."
     $validMismatch.readyForLiveSmoke = $false
+    $validMismatch.failedCheckCount = 1
     $validMismatch.failedChecks = @("remote-latest-release")
     foreach ($check in $validMismatch.checks) {
         if ([string]$check.name -eq "remote-latest-release") {
@@ -214,6 +220,16 @@ try {
         name = "mismatched-failed-checks"
         message = Assert-FailsWith -ExpectedMessage "failedChecks must match failed checks" -Action {
             Invoke-PreflightValidator -ReportPath $mismatchedFailedChecksPath
+        }
+    }
+
+    $mismatchedFailedCheckCount = $validReportContent | ConvertFrom-Json
+    $mismatchedFailedCheckCount.failedCheckCount = 1
+    $mismatchedFailedCheckCountPath = Copy-ReportJson -Source $mismatchedFailedCheckCount -DestinationPath (Join-Path $outputFullPath "mismatched-failed-check-count.json")
+    $testedFailures += [ordered]@{
+        name = "mismatched-failed-check-count"
+        message = Assert-FailsWith -ExpectedMessage "failedCheckCount must match failed checks" -Action {
+            Invoke-PreflightValidator -ReportPath $mismatchedFailedCheckCountPath
         }
     }
 

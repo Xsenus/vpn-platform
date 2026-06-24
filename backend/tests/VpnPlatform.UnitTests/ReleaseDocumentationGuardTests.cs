@@ -150,6 +150,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-002AV", "2026-06-24-admin-vps-smoke-remote-release-diagnostics"),
         new("P0-ADMIN-002AW", "2026-06-24-admin-vps-smoke-remote-release-console-summary"),
         new("P0-ADMIN-002AX", "2026-06-24-admin-vps-smoke-preflight-failed-checks"),
+        new("P0-ADMIN-002AY", "2026-06-24-admin-vps-smoke-preflight-failed-count"),
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
         new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-PAY-012", "2026-06-14-payment-provider-smoke-report"),
