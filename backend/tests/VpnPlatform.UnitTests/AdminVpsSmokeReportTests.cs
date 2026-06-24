@@ -312,6 +312,7 @@ public class AdminVpsSmokeReportTests
                      "failedCheckCount",
                      "failedChecks",
                      "Remote release status:",
+                     "Remote release message:",
                      "Remote release expected:",
                      "Remote release actual:",
                      "Check count:",

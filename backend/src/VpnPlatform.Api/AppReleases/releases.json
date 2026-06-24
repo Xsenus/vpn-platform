@@ -7116,5 +7116,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-admin-vps-smoke-remote-message-console",
+    "version": "0.297.0",
+    "releasedAt": "2026-06-24T13:05:00+07:00",
+    "title": "Admin VPS smoke remote message console",
+    "summary": "Admin VPS smoke preflight now prints the sanitized remote release message in console output.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` now prints `Remote release message` next to remote release status, expected release and actual release."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` asserts the unavailable remote release guidance before browser smoke starts."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
+      }
+    ]
   }
 ]

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.297.0 - 2026-06-24
+
+Release entry: `2026-06-24-admin-vps-smoke-remote-message-console`.
+
+### Improved
+
+- `scripts/admin-vps-smoke-preflight.ps1` now prints sanitized `Remote release message` next to remote release status, expected release and actual release.
+- `scripts/test-admin-vps-smoke-flow-wrapper.ps1` asserts the unavailable remote release guidance before browser smoke starts.
+
+### Verification
+
+- Admin VPS smoke flow wrapper regression: OK; `remote-release-mismatch` console output includes the unavailable remote release guidance.
+- Admin VPS preflight validator regression: OK; standalone preflight prints `Remote release message`.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-remote-message-console`, console output includes `Remote release message`, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `18` changed/new files.
+- `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured.
+
 ## 0.296.0 - 2026-06-24
 
 Release entry: `2026-06-24-admin-vps-smoke-preflight-check-counts`.

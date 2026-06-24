@@ -67,6 +67,7 @@ function Invoke-WrapperFailure {
         [string]$ExpectedPreflightAdminWebUrl = "",
         [string]$ExpectedPreflightAdminEmail = "",
         [string]$ExpectedRemoteReleaseStatus = "",
+        [string]$ExpectedRemoteReleaseMessage = "",
         [switch]$PadReportPaths,
         [switch]$UsePaddedSameReportPath
     )
@@ -201,6 +202,10 @@ function Invoke-WrapperFailure {
 
         if (-not [string]::IsNullOrWhiteSpace($ExpectedRemoteReleaseStatus) -and $output.IndexOf("Remote release status: $ExpectedRemoteReleaseStatus", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "Preflight stdout should include remote release status '$ExpectedRemoteReleaseStatus' for scenario '$Name'."
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedRemoteReleaseMessage) -and $output.IndexOf("Remote release message: $ExpectedRemoteReleaseMessage", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "Preflight stdout should include remote release message '$ExpectedRemoteReleaseMessage' for scenario '$Name'."
         }
 
         $failedCheck = @($preflightReport.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheck }) | Select-Object -First 1
@@ -478,7 +483,8 @@ try {
         -Password "LocalAdminPassword123!" `
         -ExpectedMessage "readyForLiveSmoke must be true" `
         -ExpectedFailedCheck "remote-latest-release" `
-        -ExpectedRemoteReleaseStatus "unavailable"
+        -ExpectedRemoteReleaseStatus "unavailable" `
+        -ExpectedRemoteReleaseMessage "Remote latest release could not be read with the admin account. Check admin credentials, API reachability and deployment health before browser smoke."
 
     $result = [ordered]@{
         status = "passed"
