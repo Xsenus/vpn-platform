@@ -20,7 +20,8 @@ $requiredChecks = @(
     "package-command",
     "browser-runner",
     "report-validator",
-    "preflight-validator"
+    "preflight-validator",
+    "remote-latest-release"
 )
 
 $secretMarkers = @(

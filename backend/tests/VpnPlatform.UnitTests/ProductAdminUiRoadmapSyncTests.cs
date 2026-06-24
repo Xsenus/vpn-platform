@@ -25,8 +25,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-06-24-admin-vps-smoke-navigation-fallback",
-                     "0.290.0"
+                     "2026-06-24-admin-vps-smoke-remote-release-preflight",
+                     "0.291.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-06-24-admin-vps-smoke-navigation-fallback", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-06-24-admin-vps-smoke-navigation-fallback", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-24-admin-vps-smoke-remote-release-preflight", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-06-24-admin-vps-smoke-remote-release-preflight", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

@@ -240,6 +240,7 @@ Write-Host "Account bootstrap checked: $AccountBootstrapChecked"
     -Operator $operatorValue `
     -ReleaseId $releaseValue `
     -FrontendPath $frontendPathValue `
+    -RequireRemoteReleaseMatch `
     -RequirePassword
 
 & $browserSmokeScript `

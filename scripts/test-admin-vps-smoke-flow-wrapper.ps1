@@ -427,6 +427,16 @@ try {
         -ExpectedMessage "readyForLiveSmoke must be true" `
         -ExpectedFailedCheck "frontend-directory"
 
+    $testedFailures += Invoke-WrapperFailure `
+        -Name "remote-release-mismatch" `
+        -ApiBaseUrl "http://127.0.0.1:18201" `
+        -AdminWebUrl "http://127.0.0.1:18205/admin/" `
+        -AdminEmail "fresh-admin@example.test" `
+        -FrontendPath "frontend" `
+        -Password "LocalAdminPassword123!" `
+        -ExpectedMessage "readyForLiveSmoke must be true" `
+        -ExpectedFailedCheck "remote-latest-release"
+
     $result = [ordered]@{
         status = "passed"
         testedFailures = @($testedFailures)

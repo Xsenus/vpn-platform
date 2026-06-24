@@ -2,6 +2,50 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-06-24: admin VPS smoke remote release preflight
+
+Scope:
+
+- `scripts/admin-vps-smoke.ps1` requires the VPS API latest release to match the local smoke release before browser smoke starts.
+- `scripts/admin-vps-smoke-preflight.ps1` authenticates through `/api/auth/login`, keeps the bearer token in memory and writes only sanitized `remoteReleaseId`, `remoteReleaseCheckRequired` and `remoteReleaseMatched` fields.
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1` requires `remote-latest-release` and rejects secret markers such as `authorization:` and `bearer ` in preflight evidence.
+- What's New received release `2026-06-24-admin-vps-smoke-remote-release-preflight`, version `0.291.0`.
+- `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open: VPS read-only inventory shows the deployed release seed is stale and no full passed VPS admin smoke report was captured.
+
+Commands:
+
+```powershell
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests"
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-preflight-validator.ps1
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
+powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1 -KeepArtifacts -MaxEvidenceChainMinutes 120
+read-only SSH inventory of 83.147.222.145 without reading env secrets
+dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --configuration Release --filter "AdminVpsSmokeReportTests|RoadmapCurrentStateTests|ProductAdminUiRoadmapSyncTests|FinalDocsChangelogTests|ReadmeDocumentationTests|ReleaseDecisionTests|ReleaseDocumentationGuardTests"
+dotnet test backend\VpnPlatform.sln --configuration Release
+npm test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+npm audit --audit-level=high --prefix frontend
+npm run e2e:console --prefix frontend
+powershell -ExecutionPolicy Bypass -File scripts\scan-secrets.ps1
+git diff --check
+strict UTF-8 without BOM check over changed/new files
+```
+
+Result:
+
+- Admin VPS smoke tooling guard: OK, `15/15`.
+- Admin VPS preflight validator regression: OK, `remote-latest-release` included in `10` checks.
+- Admin VPS smoke flow wrapper regression: OK, including `remote-release-mismatch` fail-closed before browser smoke.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-remote-release-preflight`, preflight checks `10/10`, remote release matched, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Playwright console E2E: OK, `9/9`.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `20` changed/new files.
+- Real VPS read-only inventory: systemd/nginx deploy is live at `83.147.222.145`, API health OK on port `8080`, but installed `/opt/vpn-platform/api/AppReleases/releases.json` does not contain release `2026-06-24-admin-vps-smoke-remote-release-preflight`. This is stale-deploy evidence, not a passed smoke report.
+
 ## Check 2026-06-24: admin VPS smoke navigation fallback
 
 Scope:

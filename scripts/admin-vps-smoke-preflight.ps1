@@ -8,7 +8,8 @@ param(
     [string]$Operator = $env:ADMIN_VPS_SMOKE_OPERATOR,
     [string]$ReleaseId = $env:ADMIN_VPS_SMOKE_RELEASE_ID,
     [string]$FrontendPath = "frontend",
-    [switch]$RequirePassword
+    [switch]$RequirePassword,
+    [switch]$RequireRemoteReleaseMatch
 )
 
 $ErrorActionPreference = "Stop"
@@ -74,6 +75,61 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
+function Get-RemoteAdminAccessToken {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][string]$Email
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Email) -or [string]::IsNullOrWhiteSpace($env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD)) {
+        return ""
+    }
+
+    try {
+        $loginUri = "$($BaseUrl.TrimEnd('/'))/api/auth/login"
+        $loginBody = @{
+            email = $Email.Trim()
+            password = $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD
+        } | ConvertTo-Json -Depth 3
+        $response = Invoke-RestMethod -Method Post -Uri $loginUri -Body $loginBody -ContentType "application/json" -TimeoutSec 15
+        $accessToken = [string]$response.accessToken
+        if ([string]::IsNullOrWhiteSpace($accessToken)) {
+            return ""
+        }
+
+        return $accessToken
+    }
+    catch {
+        return ""
+    }
+}
+
+function Get-RemoteLatestReleaseId {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][string]$Email
+    )
+
+    try {
+        $accessToken = Get-RemoteAdminAccessToken -BaseUrl $BaseUrl -Email $Email
+        if ([string]::IsNullOrWhiteSpace($accessToken)) {
+            return ""
+        }
+
+        $latestUri = "$($BaseUrl.TrimEnd('/'))/api/app-version/latest"
+        $response = Invoke-RestMethod -Method Get -Uri $latestUri -Headers @{ Authorization = "Bearer $accessToken" } -TimeoutSec 15
+        $remoteReleaseId = [string]$response.latestRelease.releaseId
+        if ([string]::IsNullOrWhiteSpace($remoteReleaseId)) {
+            return ""
+        }
+
+        return $remoteReleaseId
+    }
+    catch {
+        return ""
+    }
+}
+
 $frontendPathValue = Get-WorkspacePathValue -Value $FrontendPath
 $frontendFullPath = Resolve-WorkspacePath $frontendPathValue
 $smokeReportFullPath = Resolve-WorkspacePath $SmokeReportPath
@@ -95,9 +151,18 @@ Add-Check "report-validator" (Test-Path -LiteralPath $validatorPath -PathType Le
 Add-Check "preflight-validator" (Test-Path -LiteralPath $preflightValidatorPath -PathType Leaf) "scripts/validate-admin-vps-smoke-preflight-report.ps1 must exist."
 
 $ready = $checks | Where-Object { -not $_.passed } | Select-Object -First 1
-$readyForLiveSmoke = $null -eq $ready
 $generatedAt = (Get-Date).ToUniversalTime()
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
+$remoteReleaseId = ""
+if ($RequireRemoteReleaseMatch -and (Test-HttpUrl $ApiBaseUrl)) {
+    $remoteReleaseId = Get-RemoteLatestReleaseId -BaseUrl $ApiBaseUrl -Email $AdminEmail
+}
+
+$remoteReleaseMatches = -not $RequireRemoteReleaseMatch -or ((-not [string]::IsNullOrWhiteSpace($remoteReleaseId)) -and $remoteReleaseId -eq $releaseValue)
+Add-Check "remote-latest-release" $remoteReleaseMatches "Remote /api/app-version/latest releaseId must match the smoke ReleaseId before live browser smoke."
+
+$ready = $checks | Where-Object { -not $_.passed } | Select-Object -First 1
+$readyForLiveSmoke = $null -eq $ready
 
 $report = [ordered]@{
     reportId = "admin-vps-smoke-preflight-" + $generatedAt.ToString("yyyyMMdd-HHmmss")
@@ -105,6 +170,9 @@ $report = [ordered]@{
     environmentName = $EnvironmentName
     operator = $Operator
     releaseId = $releaseValue
+    remoteReleaseId = $remoteReleaseId
+    remoteReleaseCheckRequired = [bool]$RequireRemoteReleaseMatch
+    remoteReleaseMatched = [bool]$remoteReleaseMatches
     apiBaseUrl = $ApiBaseUrl
     adminWebUrl = $AdminWebUrl
     adminEmail = $AdminEmail

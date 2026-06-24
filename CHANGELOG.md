@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.291.0 - 2026-06-24
+
+Release entry: `2026-06-24-admin-vps-smoke-remote-release-preflight`.
+
+### Fixed
+
+- `scripts/admin-vps-smoke.ps1` now requires a remote release match before browser smoke.
+- `scripts/admin-vps-smoke-preflight.ps1` authenticates through `/api/auth/login`, keeps the bearer token in memory and records only sanitized `remoteReleaseId`/`remoteReleaseMatched` evidence.
+- Future-dated local release seeds no longer block the local SQLite admin VPS smoke; the `0.291.0` release timestamp is in the past relative to the 2026-06-24 verification run.
+
+### Verification
+
+- Admin VPS smoke tooling guard: OK, `AdminVpsSmokeReportTests` `15/15`.
+- Admin VPS preflight validator regression: OK; `remote-latest-release` is required and secret markers such as `bearer ` are rejected.
+- Admin VPS smoke flow wrapper regression: OK; `remote-release-mismatch` stops before browser smoke.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-remote-release-preflight`, preflight checks `10/10`, remote release matched, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `20` changed/new files.
+- Real VPS read-only inventory: systemd/nginx deploy is live at `83.147.222.145`, API health OK on port `8080`, but installed `/opt/vpn-platform/api/AppReleases/releases.json` does not contain the `0.291.0` release; this is stale-deploy evidence, not a passed smoke report.
+- `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured.
+
 ## 0.290.0 - 2026-06-24
 
 Release entry: `2026-06-24-admin-vps-smoke-navigation-fallback`.

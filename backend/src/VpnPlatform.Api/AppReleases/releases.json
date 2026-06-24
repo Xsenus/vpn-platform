@@ -6958,5 +6958,32 @@
         "text": "A real VPS admin smoke attempt authenticated successfully and passed sections through `support`, but the currently deployed VPS UI did not load required section `audit`; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until a full passed smoke report is captured after deploy."
       }
     ]
+  },
+  {
+    "releaseId": "2026-06-24-admin-vps-smoke-remote-release-preflight",
+    "version": "0.291.0",
+    "releasedAt": "2026-06-24T12:06:00+07:00",
+    "title": "Admin VPS smoke remote release preflight",
+    "summary": "The admin VPS smoke wrapper now verifies the remote API latest release before starting browser smoke.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke.ps1` now runs preflight with `-RequireRemoteReleaseMatch` so stale VPS deploys are stopped before login and section clicks."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1` logs in through `/api/auth/login`, keeps the bearer token in memory and records `remoteReleaseId`, `remoteReleaseMatched` and the `remote-latest-release` check without storing credentials or headers."
+      },
+      {
+        "type": "improved",
+        "text": "`scripts/test-admin-vps-smoke-flow-wrapper.ps1` covers `remote-release-mismatch` and proves browser smoke does not start when the VPS API release differs from the local smoke release."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
+      }
+    ]
   }
 ]

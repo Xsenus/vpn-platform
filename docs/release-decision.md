@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-24-admin-vps-smoke-navigation-fallback`, версия `0.290.0`; admin VPS smoke now supports legacy link/hash navigation and the latest VPS attempt authenticated successfully but failed on missing required `audit` section. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-06-24-admin-vps-smoke-remote-release-preflight`, версия `0.291.0`; admin VPS smoke now stops stale VPS deploys before browser smoke when `/api/app-version/latest` does not match the local smoke release. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
