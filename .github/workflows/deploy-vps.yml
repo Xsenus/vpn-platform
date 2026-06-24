@@ -430,4 +430,4 @@ jobs:
           CABINET_WEB_URL="$cabinet_web_url" \
           ADMIN_WEB_URL="$admin_web_url" \
           REQUIRE_PUBLIC_PAYMENT_PROVIDERS=true \
-          scripts/post-deploy-smoke.sh
+          bash scripts/post-deploy-smoke.sh
