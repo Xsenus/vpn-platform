@@ -66,6 +66,7 @@ function Invoke-WrapperFailure {
         [string]$ExpectedPreflightApiBaseUrl = "",
         [string]$ExpectedPreflightAdminWebUrl = "",
         [string]$ExpectedPreflightAdminEmail = "",
+        [string]$ExpectedRemoteReleaseStatus = "",
         [switch]$PadReportPaths,
         [switch]$UsePaddedSameReportPath
     )
@@ -194,6 +195,10 @@ function Invoke-WrapperFailure {
             throw "Preflight report adminEmail should be '$ExpectedPreflightAdminEmail' for scenario '$Name', got '$($preflightReport.adminEmail)'."
         }
 
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedRemoteReleaseStatus) -and [string]$preflightReport.remoteReleaseStatus -ne $ExpectedRemoteReleaseStatus) {
+            throw "Preflight report remoteReleaseStatus should be '$ExpectedRemoteReleaseStatus' for scenario '$Name', got '$($preflightReport.remoteReleaseStatus)'."
+        }
+
         $failedCheck = @($preflightReport.checks | Where-Object { [string]$_.name -eq $ExpectedFailedCheck }) | Select-Object -First 1
         if ($null -eq $failedCheck) {
             throw "Expected failed preflight check '$ExpectedFailedCheck' was not found in scenario '$Name'."
@@ -210,6 +215,7 @@ function Invoke-WrapperFailure {
             expectedFailedCheck = $ExpectedFailedCheck
             preflightReportCreated = $true
             releaseId = [string]$preflightReport.releaseId
+            remoteReleaseStatus = [string]$preflightReport.remoteReleaseStatus
         }
     }
     finally {
@@ -435,7 +441,8 @@ try {
         -FrontendPath "frontend" `
         -Password "LocalAdminPassword123!" `
         -ExpectedMessage "readyForLiveSmoke must be true" `
-        -ExpectedFailedCheck "remote-latest-release"
+        -ExpectedFailedCheck "remote-latest-release" `
+        -ExpectedRemoteReleaseStatus "unavailable"
 
     $result = [ordered]@{
         status = "passed"

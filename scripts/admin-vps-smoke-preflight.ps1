@@ -154,11 +154,28 @@ $ready = $checks | Where-Object { -not $_.passed } | Select-Object -First 1
 $generatedAt = (Get-Date).ToUniversalTime()
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
 $remoteReleaseId = ""
+$remoteReleaseStatus = "not-required"
+$remoteReleaseMessage = "Remote release check was not required for this preflight run."
 if ($RequireRemoteReleaseMatch -and (Test-HttpUrl $ApiBaseUrl)) {
     $remoteReleaseId = Get-RemoteLatestReleaseId -BaseUrl $ApiBaseUrl -Email $AdminEmail
 }
 
 $remoteReleaseMatches = -not $RequireRemoteReleaseMatch -or ((-not [string]::IsNullOrWhiteSpace($remoteReleaseId)) -and $remoteReleaseId -eq $releaseValue)
+if ($RequireRemoteReleaseMatch) {
+    if ([string]::IsNullOrWhiteSpace($remoteReleaseId)) {
+        $remoteReleaseStatus = "unavailable"
+        $remoteReleaseMessage = "Remote latest release could not be read with the admin account. Check admin credentials, API reachability and deployment health before browser smoke."
+    }
+    elseif ($remoteReleaseMatches) {
+        $remoteReleaseStatus = "matched"
+        $remoteReleaseMessage = "Remote latest release matches the local smoke release."
+    }
+    else {
+        $remoteReleaseStatus = "mismatch"
+        $remoteReleaseMessage = "Remote latest release differs from the local smoke release. Deploy the latest local release before running browser smoke."
+    }
+}
+
 Add-Check "remote-latest-release" $remoteReleaseMatches "Remote /api/app-version/latest releaseId must match the smoke ReleaseId before live browser smoke."
 
 $ready = $checks | Where-Object { -not $_.passed } | Select-Object -First 1
@@ -173,6 +190,8 @@ $report = [ordered]@{
     remoteReleaseId = $remoteReleaseId
     remoteReleaseCheckRequired = [bool]$RequireRemoteReleaseMatch
     remoteReleaseMatched = [bool]$remoteReleaseMatches
+    remoteReleaseStatus = $remoteReleaseStatus
+    remoteReleaseMessage = $remoteReleaseMessage
     apiBaseUrl = $ApiBaseUrl
     adminWebUrl = $AdminWebUrl
     adminEmail = $AdminEmail

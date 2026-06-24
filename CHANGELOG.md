@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.292.0 - 2026-06-24
+
+Release entry: `2026-06-24-admin-vps-smoke-remote-release-diagnostics`.
+
+### Improved
+
+- `scripts/admin-vps-smoke-preflight.ps1` now records sanitized `remoteReleaseStatus` and `remoteReleaseMessage` fields for `not-required`, `matched`, `mismatch` and `unavailable` outcomes.
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1` validates the remote release diagnostic fields and rejects tampered matched reports when `remoteReleaseId` differs from the local smoke `releaseId`.
+- Admin VPS wrapper regression now asserts remote release diagnostics before browser smoke starts.
+
+### Verification
+
+- Admin VPS smoke tooling guard: OK, `AdminVpsSmokeReportTests` `15/15`.
+- Admin VPS preflight validator regression: OK; valid stale release evidence and `bad-remote-release-status` passed.
+- Admin VPS smoke flow wrapper regression: OK; `remote-release-mismatch` stops before browser smoke and records `remoteReleaseStatus=unavailable`.
+- Local SQLite admin VPS browser smoke: OK; latest release `2026-06-24-admin-vps-smoke-remote-release-diagnostics`, preflight checks `10/10`, remote release status `matched`, smoke sections `16/16`, admin login passed, JS/unauthorized errors absent.
+- Targeted admin/docs/release .NET suite: OK, `30/30`.
+- Backend full suite: OK, `593/593`.
+- Frontend tests: OK, `66/66`; Playwright console E2E: OK, `9/9`.
+- Frontend typecheck/build/audit: OK; audit high threshold found `0` vulnerabilities.
+- Secret scan: OK, files scanned `564`, findings `0`; `git diff --check`: OK; strict UTF-8 without BOM: OK, checked `20` changed/new files.
+- `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured.
+
 ## 0.291.0 - 2026-06-24
 
 Release entry: `2026-06-24-admin-vps-smoke-remote-release-preflight`.

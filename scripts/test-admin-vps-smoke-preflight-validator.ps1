@@ -38,9 +38,16 @@ function Write-Utf8NoBomFile {
 }
 
 function Invoke-PreflightValidator {
-    param([Parameter(Mandatory = $true)][string]$ReportPath)
+    param(
+        [Parameter(Mandatory = $true)][string]$ReportPath,
+        [switch]$AllowNotReady
+    )
 
     $validatorPath = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-preflight-report.ps1"
+    if ($AllowNotReady) {
+        return & $validatorPath -ReportPath $ReportPath 2>&1
+    }
+
     return & $validatorPath -ReportPath $ReportPath -RequireReady 2>&1
 }
 
@@ -107,6 +114,15 @@ try {
         throw "Admin VPS smoke preflight regression report leaked password."
     }
 
+    $validReport = $validReportContent | ConvertFrom-Json
+    if ([string]$validReport.remoteReleaseStatus -ne "not-required") {
+        throw "Expected standalone preflight report remoteReleaseStatus to be not-required."
+    }
+
+    if (-not $validReport.remoteReleaseMatched) {
+        throw "Expected standalone preflight report remoteReleaseMatched to be true."
+    }
+
     $testedFailures = @()
 
     $emptyRelease = $validReportContent | ConvertFrom-Json
@@ -169,10 +185,40 @@ try {
         }
     }
 
+    $validMismatch = $validReportContent | ConvertFrom-Json
+    $validMismatch.remoteReleaseCheckRequired = $true
+    $validMismatch.remoteReleaseMatched = $false
+    $validMismatch.remoteReleaseId = "2026-06-24-older-deploy"
+    $validMismatch.remoteReleaseStatus = "mismatch"
+    $validMismatch.remoteReleaseMessage = "Remote latest release differs from the local smoke release."
+    $validMismatch.readyForLiveSmoke = $false
+    foreach ($check in $validMismatch.checks) {
+        if ([string]$check.name -eq "remote-latest-release") {
+            $check.passed = $false
+        }
+    }
+
+    $validMismatchPath = Copy-ReportJson -Source $validMismatch -DestinationPath (Join-Path $outputFullPath "valid-remote-release-mismatch.json")
+    $validMismatchOutput = Invoke-PreflightValidator -ReportPath $validMismatchPath -AllowNotReady
+
+    $badRemoteStatus = $validReportContent | ConvertFrom-Json
+    $badRemoteStatus.remoteReleaseCheckRequired = $true
+    $badRemoteStatus.remoteReleaseMatched = $true
+    $badRemoteStatus.remoteReleaseId = "2026-06-24-older-deploy"
+    $badRemoteStatus.remoteReleaseStatus = "matched"
+    $badRemoteStatusPath = Copy-ReportJson -Source $badRemoteStatus -DestinationPath (Join-Path $outputFullPath "bad-remote-release-status.json")
+    $testedFailures += [ordered]@{
+        name = "bad-remote-release-status"
+        message = Assert-FailsWith -ExpectedMessage "remoteReleaseId must equal releaseId" -Action {
+            Invoke-PreflightValidator -ReportPath $badRemoteStatusPath
+        }
+    }
+
     $result = [ordered]@{
         status = "passed"
         validReportPath = $validReportPath
         validValidatorOutput = ($validOutput -join "`n")
+        validMismatchValidatorOutput = ($validMismatchOutput -join "`n")
         testedFailures = @($testedFailures)
     }
 

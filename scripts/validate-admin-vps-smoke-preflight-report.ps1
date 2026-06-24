@@ -90,12 +90,22 @@ foreach ($propertyName in @("operator", "passwordEnvPresent", "readyForLiveSmoke
     }
 }
 
-if (-not $report.PSObject.Properties.Name.Contains("releaseId")) {
-    throw "Admin VPS smoke preflight report is missing required field: releaseId"
+foreach ($propertyName in @("releaseId", "remoteReleaseId", "remoteReleaseCheckRequired", "remoteReleaseMatched", "remoteReleaseStatus", "remoteReleaseMessage")) {
+    if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
+        throw "Admin VPS smoke preflight report is missing required field: $propertyName"
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace([string]$report.releaseId)) {
     throw "Admin VPS smoke preflight report field is empty: releaseId"
+}
+
+if ([string]::IsNullOrWhiteSpace([string]$report.remoteReleaseStatus)) {
+    throw "Admin VPS smoke preflight report field is empty: remoteReleaseStatus"
+}
+
+if ([string]::IsNullOrWhiteSpace([string]$report.remoteReleaseMessage)) {
+    throw "Admin VPS smoke preflight report field is empty: remoteReleaseMessage"
 }
 
 Assert-ReportHttpUrl -Value ([string]$report.apiBaseUrl) -Name "apiBaseUrl"
@@ -117,6 +127,54 @@ foreach ($booleanName in @("passwordEnvPresent", "readyForLiveSmoke")) {
 
     if ($RequireReady -and -not $report.$booleanName) {
         throw "Admin VPS smoke preflight report field $booleanName must be true when -RequireReady is used."
+    }
+}
+
+foreach ($booleanName in @("remoteReleaseCheckRequired", "remoteReleaseMatched")) {
+    if ($report.$booleanName -isnot [bool]) {
+        throw "Admin VPS smoke preflight report field $booleanName must be boolean."
+    }
+}
+
+$allowedRemoteReleaseStatuses = @("not-required", "matched", "mismatch", "unavailable")
+$remoteReleaseStatus = [string]$report.remoteReleaseStatus
+if ($allowedRemoteReleaseStatuses -notcontains $remoteReleaseStatus) {
+    throw "Admin VPS smoke preflight report field remoteReleaseStatus is invalid: $remoteReleaseStatus"
+}
+
+if (-not $report.remoteReleaseCheckRequired) {
+    if ($remoteReleaseStatus -ne "not-required") {
+        throw "Admin VPS smoke preflight report field remoteReleaseStatus must be not-required when remote release check is disabled."
+    }
+
+    if (-not $report.remoteReleaseMatched) {
+        throw "Admin VPS smoke preflight report field remoteReleaseMatched must be true when remote release check is disabled."
+    }
+}
+elseif ($report.remoteReleaseMatched) {
+    if ($remoteReleaseStatus -ne "matched") {
+        throw "Admin VPS smoke preflight report field remoteReleaseStatus must be matched when remoteReleaseMatched is true."
+    }
+
+    if ([string]::IsNullOrWhiteSpace([string]$report.remoteReleaseId) -or [string]$report.remoteReleaseId -ne [string]$report.releaseId) {
+        throw "Admin VPS smoke preflight report field remoteReleaseId must equal releaseId when remote release is matched."
+    }
+}
+else {
+    if ($RequireReady) {
+        throw "Admin VPS smoke preflight report field remoteReleaseMatched must be true when -RequireReady is used."
+    }
+
+    if ($remoteReleaseStatus -eq "matched" -or $remoteReleaseStatus -eq "not-required") {
+        throw "Admin VPS smoke preflight report field remoteReleaseStatus must explain the failed remote release check."
+    }
+
+    if ($remoteReleaseStatus -eq "mismatch" -and ([string]::IsNullOrWhiteSpace([string]$report.remoteReleaseId) -or [string]$report.remoteReleaseId -eq [string]$report.releaseId)) {
+        throw "Admin VPS smoke preflight report field remoteReleaseId must contain the mismatched remote release."
+    }
+
+    if ($remoteReleaseStatus -eq "unavailable" -and -not [string]::IsNullOrWhiteSpace([string]$report.remoteReleaseId)) {
+        throw "Admin VPS smoke preflight report field remoteReleaseId must be empty when remote release is unavailable."
     }
 }
 
@@ -162,6 +220,7 @@ $summary = [ordered]@{
     checks = $checkNames.Count
     readyForLiveSmoke = $report.readyForLiveSmoke
     passwordEnvPresent = $report.passwordEnvPresent
+    remoteReleaseStatus = $report.remoteReleaseStatus
     preflightReportPath = $report.preflightReportPath
 }
 
