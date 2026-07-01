@@ -2041,6 +2041,27 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Backslash_Entry_Guard_Should_Cleanup_Artifacts()
+    {
+        var root = FindRepositoryRoot();
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-backslash-entry-guard.ps1"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Remove-EmptyDirectory",
+                     "Get-ChildItem -LiteralPath $DirectoryPath -Force",
+                     "Remove-Item -LiteralPath $archivePath -Force",
+                     "Remove-EmptyDirectory -DirectoryPath $tmpDirectory"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("[x] `P11-ACC-098`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Package_Archive_Flow_Should_Have_Executable_End_To_End_Harness()
     {
         var root = FindRepositoryRoot();
