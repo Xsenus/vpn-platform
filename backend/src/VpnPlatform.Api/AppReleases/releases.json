@@ -7810,5 +7810,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-evidence-archive-release-guard",
+    "version": "0.327.0",
+    "releasedAt": "2026-07-01T19:20:00+07:00",
+    "title": "Production evidence archive release guard",
+    "summary": "Production evidence archive generation now rejects unknown manifest release ids before writing ZIP handoff artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/new-production-evidence-archive.ps1` now requires the validated manifest release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json` before writing a production evidence ZIP."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-archive-release-guard.ps1` covers a tampered manifest and proves no ZIP archive is created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

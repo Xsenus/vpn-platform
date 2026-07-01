@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.327.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-evidence-archive-release-guard`.
+
+### Fixed
+- `scripts/new-production-evidence-archive.ps1` now rejects unknown manifest release ids before writing a production evidence ZIP.
+
+### Added
+- `scripts/test-production-evidence-archive-release-guard.ps1` proves that a tampered manifest with an unknown `releaseId` cannot produce an archive.
+- `P11-ACC-078` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `332/352` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence archive release guard regression OK; targeted production/docs/release suite `85/85`; backend full suite `622/622`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `535` files, `0` findings; markdown encoding check OK.
+
 ## 0.326.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-evidence-manifest-release-guard`.

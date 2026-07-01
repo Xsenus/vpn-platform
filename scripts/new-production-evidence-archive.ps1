@@ -66,6 +66,21 @@ function Get-SafeArchiveEntryName {
     return ($parts -join "/")
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 function Add-ZipEntry {
     param(
         [System.IO.Compression.ZipArchive]$Archive,
@@ -103,6 +118,7 @@ if ($RequireAllFiles) {
 
 $validationJson = & (Resolve-RepoPath "scripts/validate-production-evidence-manifest.ps1") @validatorParameters
 $validation = $validationJson | ConvertFrom-Json
+Assert-KnownReleaseId -Value ([string]$validation.releaseId)
 
 $manifest = Get-Content -LiteralPath $manifestFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $bundleDirectory = (Resolve-Path -LiteralPath ([string]$manifest.bundleDirectory)).Path

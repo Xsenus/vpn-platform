@@ -306,6 +306,12 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-archive
 
 Архиватор сначала запускает manifest validator, затем добавляет в ZIP сам manifest и только файлы, перечисленные в manifest. В результате выводятся путь к архиву, SHA256 архива, SHA256 manifest и список entries.
 
+Regression guard для release id в archive доказывает, что archive-generator не пишет production evidence ZIP, если manifest содержит неизвестный `releaseId`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-archive-release-guard.ps1
+```
+
 Перед публикацией или передачей ZIP можно проверить отдельной командой:
 
 ```powershell
