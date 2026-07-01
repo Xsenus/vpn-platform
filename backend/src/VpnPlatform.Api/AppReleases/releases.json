@@ -7695,5 +7695,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-admin-vps-browser-smoke-direct-release-guard",
+    "version": "0.322.0",
+    "releasedAt": "2026-07-01T18:44:00+07:00",
+    "title": "Admin VPS browser smoke direct release guard",
+    "summary": "Admin VPS browser smoke direct runs now reject unknown manual release ids before writing acceptance artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-browser-smoke.ps1 -ReleaseId` now requires the supplied release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-browser-smoke-direct-release-guard.ps1` covers the fail-fast path and proves no browser smoke report artifact is created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
+      }
+    ]
   }
 ]

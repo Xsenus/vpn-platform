@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: admin VPS browser smoke direct release guard
+
+Scope:
+- `scripts/admin-vps-browser-smoke.ps1 -ReleaseId` now rejects unknown manual release ids before setting smoke environment variables, running Playwright or writing report artifacts.
+- Added `scripts/test-admin-vps-browser-smoke-direct-release-guard.ps1` regression coverage for an unknown release id, no generated JSON artifact and no smoke password leak.
+- `P0-ADMIN-002BG` is closed; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+Result:
+- Roadmap progress: `327/347` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-admin-vps-browser-smoke-direct-release-guard`, version `0.322.0`.
+- Real VPS admin smoke report is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Admin VPS browser smoke direct release guard regression: OK.
+- Targeted admin/docs/release suite: OK, `35/35`.
+- Backend full suite: OK, `617/617`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-admin-vps-browser-smoke-direct-release-guard`.
+- Secret scan: OK, files scanned `530`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: VPS production smoke generator release guard
 
 Scope:

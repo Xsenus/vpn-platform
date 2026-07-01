@@ -277,6 +277,12 @@ powershell -ExecutionPolicy Bypass -File scripts\admin-vps-browser-smoke.ps1 `
 
 Browser runner печатает `Password: [hidden]`, запускает `npm run e2e:admin-vps-smoke` из `frontend`, обходит все обязательные вкладки админки, проверяет отсутствие `console.error`, `pageerror` и 401/403 после логина, затем валидирует JSON через `scripts/validate-admin-vps-smoke-report.ps1`. Без `-AccountBootstrapChecked` отчет останется неприемочным для `-RequireAllPassed`, даже если логин и вкладки прошли.
 
+Regression guard для ручного release id доказывает, что прямой browser runner не стартует и не создает report artifact, если `-ReleaseId` не найден в `backend/src/VpnPlatform.Api/AppReleases/releases.json`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-browser-smoke-direct-release-guard.ps1
+```
+
 ## Локальная проверка runner на SQLite
 
 Перед VPS-прогоном можно проверить сам browser runner на временной локальной SQLite-БД:

@@ -177,6 +177,9 @@ public class AdminVpsSmokeReportTests
                      "ADMIN_VPS_SMOKE_ADMIN_PASSWORD",
                      "ADMIN_VPS_SMOKE_REPORT_PATH",
                      "Get-LatestReleaseId",
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "test-admin-vps-browser-smoke-direct-release-guard.ps1",
                      "DateTimeOffset]::Parse",
                      "CultureInfo]::InvariantCulture",
                      "Release id:",
@@ -200,6 +203,40 @@ public class AdminVpsSmokeReportTests
         Assert.Contains("e2e:admin-vps-smoke", packageJson, StringComparison.Ordinal);
         Assert.DoesNotContain("console.log(password", spec, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Host \"Password: $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Admin_Vps_Browser_Smoke_Should_Reject_Unknown_Manual_Release()
+    {
+        var root = FindRepositoryRoot();
+        var browserSmoke = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-browser-smoke.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-browser-smoke-direct-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "missing-release-id-for-regression"
+                 })
+        {
+            Assert.Contains(expected, browserSmoke + regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Browser smoke accepted unknown ReleaseId",
+                     "Browser smoke created report artifact after unknown ReleaseId failure",
+                     "admin vps browser smoke direct release guard valid",
+                     "release-guard-regression-password"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-browser-smoke-direct-release-guard.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002BG`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

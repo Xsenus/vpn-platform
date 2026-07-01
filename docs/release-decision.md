@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `616/616`.
+- Backend full suite: `617/617`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-vps-production-smoke-generator-release-guard`, версия `0.321.0`; VPS production smoke draft generation now rejects unknown manual release ids before writing acceptance artifacts. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-admin-vps-browser-smoke-direct-release-guard`, версия `0.322.0`; direct admin VPS browser smoke now rejects unknown manual release ids before running Playwright or writing report artifacts. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

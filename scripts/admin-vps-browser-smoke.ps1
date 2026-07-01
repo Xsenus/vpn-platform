@@ -77,6 +77,21 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 Require-Value "Admin email" $AdminEmail
 Require-Value "ADMIN_VPS_SMOKE_ADMIN_PASSWORD environment variable" $env:ADMIN_VPS_SMOKE_ADMIN_PASSWORD
 Assert-HttpUrl -Value $ApiBaseUrl -Name "ApiBaseUrl"
@@ -91,6 +106,9 @@ if (-not (Test-Path -LiteralPath $frontendFullPath -PathType Container)) {
 
 $reportFullPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputPath))
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
+if (-not [string]::IsNullOrWhiteSpace($ReleaseId)) {
+    Assert-KnownReleaseId -Value $releaseValue
+}
 
 Set-ProcessEnv "ADMIN_VPS_SMOKE_API_BASE_URL" $ApiBaseUrl
 Set-ProcessEnv "ADMIN_VPS_SMOKE_ADMIN_WEB_URL" $AdminWebUrl
