@@ -133,6 +133,37 @@ public class AdminBootstrapCliScriptTests
     }
 
     [Fact]
+    public void Admin_Vps_Bootstrap_Smoke_Evidence_Validator_Regression_Should_Use_Latest_Release_And_Cleanup_Default_Tmp()
+    {
+        var root = FindRepositoryRoot();
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-bootstrap-smoke-evidence-validator.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestReleaseId",
+                     "backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "$script:latestReleaseId",
+                     "password-env-name-safe",
+                     "remote-latest-release",
+                     "remoteReleaseCheckRequired = $false",
+                     "checkCount = 10",
+                     "$usingDefaultOutputDirectory",
+                     "$defaultOutputDirectory",
+                     "-not $KeepArtifacts -and $usingDefaultOutputDirectory",
+                     "Get-ChildItem -LiteralPath $tmpDirectory -Force",
+                     "Remove-Item -LiteralPath $tmpDirectory -Force"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-bootstrap-smoke-evidence-validator.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001CB`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Bootstrap_Smoke_Wrapper_Should_Run_Reset_Then_Smoke_Without_Printing_Password()
     {
         var root = FindRepositoryRoot();

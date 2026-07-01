@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `684/684`.
+- Backend full suite: `685/685`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-admin-vps-smoke-evidence-validator-cleanup`, версия `0.389.0`; admin VPS smoke evidence validator regression now tracks the latest active release and removes default local artifacts after ordinary runs. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-admin-vps-bootstrap-smoke-evidence-validator-cleanup`, версия `0.390.0`; admin VPS bootstrap smoke evidence validator regression now tracks the latest active release and removes default local artifacts after ordinary runs. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

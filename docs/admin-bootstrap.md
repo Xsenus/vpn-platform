@@ -116,6 +116,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
 ```
 
+Обычный запуск admin VPS bootstrap smoke evidence validator regression берет latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json` и удаляет default output directory вместе с пустым `tmp`; `-KeepArtifacts` сохраняет regression evidence для локального расследования.
+
 `scripts/test-admin-vps-bootstrap-smoke-latest-release-guard.ps1` proves that both a ready bootstrap readiness report and a passed final bootstrap smoke report with stale `releaseId` are rejected before the reports can be used as acceptance evidence:
 
 ```powershell

@@ -1,10 +1,13 @@
 param(
+    [switch]$KeepArtifacts,
     [string]$OutputDirectory = "tmp/admin-vps-bootstrap-smoke-evidence-validator-test"
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$defaultOutputDirectory = "tmp/admin-vps-bootstrap-smoke-evidence-validator-test"
+$usingDefaultOutputDirectory = -not $PSBoundParameters.ContainsKey("OutputDirectory") -or [string]::Equals($OutputDirectory, $defaultOutputDirectory, [System.StringComparison]::OrdinalIgnoreCase)
 $outputPath = if ([System.IO.Path]::IsPathRooted($OutputDirectory)) {
     [System.IO.Path]::GetFullPath($OutputDirectory)
 }
@@ -53,6 +56,17 @@ function Get-FileSha256 {
     }
 }
 
+function Get-LatestReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $activeReleases = @($releases | Where-Object { $_.isActive -eq $true })
+    if ($activeReleases.Count -eq 0) {
+        throw "No active release entries found in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    return [string]$activeReleases[-1].releaseId
+}
+
 function Format-ReportTimestamp {
     param([DateTimeOffset]$Value)
 
@@ -74,6 +88,7 @@ function New-ReadinessReport {
         "admin-web-url",
         "admin-email",
         "password-env-name",
+        "password-env-name-safe",
         "password-env-present",
         "password-length",
         "provider-supported",
@@ -99,7 +114,7 @@ function New-ReadinessReport {
         generatedAt = $GeneratedAt.ToString("o")
         environmentName = "Local"
         operator = "bootstrap-smoke-evidence-validator-test"
-        releaseId = "bootstrap-smoke-evidence-validator-test"
+        releaseId = $script:latestReleaseId
         apiBaseUrl = "http://127.0.0.1:18211"
         adminWebUrl = "http://127.0.0.1:18215"
         adminEmail = "admin@example.test"
@@ -138,7 +153,8 @@ function New-PreflightReport {
         "package-command",
         "browser-runner",
         "report-validator",
-        "preflight-validator"
+        "preflight-validator",
+        "remote-latest-release"
     ) | ForEach-Object {
         [ordered]@{
             name = $_
@@ -152,7 +168,12 @@ function New-PreflightReport {
         generatedAt = $GeneratedAt.ToString("o")
         environmentName = "Local"
         operator = "bootstrap-smoke-evidence-validator-test"
-        releaseId = "bootstrap-smoke-evidence-validator-test"
+        releaseId = $script:latestReleaseId
+        remoteReleaseId = ""
+        remoteReleaseCheckRequired = $false
+        remoteReleaseMatched = $true
+        remoteReleaseStatus = "not-required"
+        remoteReleaseMessage = "Remote release check was not required for this synthetic regression."
         apiBaseUrl = "http://127.0.0.1:18211"
         adminWebUrl = "http://127.0.0.1:18215"
         adminEmail = "admin@example.test"
@@ -160,6 +181,10 @@ function New-PreflightReport {
         preflightReportPath = [System.IO.Path]::GetFullPath($Path)
         passwordEnvPresent = $true
         readyForLiveSmoke = $true
+        checkCount = 10
+        passedCheckCount = 10
+        failedCheckCount = 0
+        failedChecks = @()
         checks = @($checks)
     })
 }
@@ -191,7 +216,7 @@ function New-SmokeReport {
         completedAt = $GeneratedAt.AddMinutes(1).ToString("o")
         environmentName = "Local"
         operator = "bootstrap-smoke-evidence-validator-test"
-        releaseId = "bootstrap-smoke-evidence-validator-test"
+        releaseId = $script:latestReleaseId
         apiBaseUrl = "http://127.0.0.1:18211"
         adminWebUrl = "http://127.0.0.1:18215"
         adminEmail = "admin@example.test"
@@ -236,7 +261,7 @@ function New-BootstrapReport {
         bootstrapSmokeReportPath = $BootstrapReportPath
         generatedAt = $GeneratedAt.ToString("o")
         completedAt = $GeneratedAt.AddMinutes(2).ToString("o")
-        releaseId = "bootstrap-smoke-evidence-validator-test"
+        releaseId = $script:latestReleaseId
         operator = "bootstrap-smoke-evidence-validator-test"
         status = "passed"
         notes = "Synthetic sanitized bootstrap+smoke evidence without credentials."
@@ -321,7 +346,9 @@ if (Test-Path -LiteralPath $outputPath -PathType Container) {
     Remove-Item -LiteralPath $outputPath -Recurse -Force
 }
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
+$script:latestReleaseId = Get-LatestReleaseId
 
+try {
 $results = @()
 $results += Invoke-ValidatorScenario -Name "valid" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid" -AdditionalExpectedMessages @("readinessReportId", "bootstrapSmokeReportId", "preflightReportId", "smokeReportId", "readinessReportSha256", "bootstrapSmokeReportSha256", "preflightReportSha256", "smokeReportSha256", "apiBaseUrl", "adminWebUrl", "adminEmail", "operator", "passwordEnvName", "passwordEnvPresent", "passwordLengthOk", "connectionStringPresent", "applyMigrations", "confirmBootstrapReset", "bootstrapResetConfirmed", "readyForBootstrapSmoke", "bootstrapStatus", "readinessGeneratedAt", "preflightGeneratedAt", "smokeStartedAt", "smokeCompletedAt", "bootstrapGeneratedAt", "bootstrapCompletedAt", "preflightToSmokeSeconds", "smokeDurationSeconds", "bootstrapDurationSeconds", "readinessToBootstrapSeconds", "readinessToPreflightSeconds", "smokeToBootstrapSeconds", "evidenceChainDurationSeconds", "evidenceChronology", "maxEvidenceChainMinutes", "preflightReportPath", "sectionsContractPath", '"sections":16', '"passed":16', '"failed":0', '"blocked":0', '"skipped":0', '"preflightToSmokeSeconds":60', '"smokeDurationSeconds":60', '"bootstrapDurationSeconds":120', '"readinessToBootstrapSeconds":300', '"readinessToPreflightSeconds":60', '"smokeToBootstrapSeconds":0', '"evidenceChainDurationSeconds":300', '"evidenceChronology":"readiness|preflight|smoke|bootstrap"', '"maxEvidenceChainMinutes":120')
 $results += Invoke-ValidatorScenario -Name "valid-expected-sha256" -ExpectedExitCode 0 -ExpectedMessage "admin vps bootstrap smoke evidence valid" -AdditionalExpectedMessages @("readinessReportSha256", "bootstrapSmokeReportSha256", "preflightReportSha256", "smokeReportSha256") -AdditionalArguments {
@@ -360,7 +387,7 @@ $results += Invoke-ValidatorScenario -Name "readiness-not-ready" -ExpectedExitCo
     $report.readyForBootstrapSmoke = $false
     Write-JsonFile -Path $readinessPath -Value $report
 }
-$results += Invoke-ValidatorScenario -Name "mismatched-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness releaseId" -Mutate {
+$results += Invoke-ValidatorScenario -Name "mismatched-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for releaseId" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.releaseId = "bootstrap-smoke-evidence-validator-other-release"
@@ -396,7 +423,7 @@ $results += Invoke-ValidatorScenario -Name "mismatched-readiness-preflight-repor
     $report.preflightReportPath = Join-Path (Split-Path -Parent $bootstrapPath) "other-readiness-preflight-report.json"
     Write-JsonFile -Path $readinessPath -Value $report
 }
-$results += Invoke-ValidatorScenario -Name "mismatched-readiness-provider" -ExpectedExitCode 1 -ExpectedMessage "mismatch for readiness provider" -Mutate {
+$results += Invoke-ValidatorScenario -Name "mismatched-readiness-provider" -ExpectedExitCode 1 -ExpectedMessage "provider must be Sqlite when localSqlite is true" -Mutate {
     param($readinessPath, $bootstrapPath)
     $report = Get-Content -LiteralPath $readinessPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $report.provider = "Postgres"
@@ -449,7 +476,7 @@ $results += Invoke-ValidatorScenario -Name "mismatched-bootstrap-environment" -E
     Write-JsonFile -Path $readinessPath -Value $readiness
     Write-JsonFile -Path $bootstrapPath -Value $bootstrap
 }
-$results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -ExpectedExitCode 1 -ExpectedMessage "mismatch for preflight releaseId" -Mutate {
+$results += Invoke-ValidatorScenario -Name "mismatched-smoke-release-id" -ExpectedExitCode 1 -ExpectedMessage "must match latest active release" -Mutate {
     param($readinessPath, $bootstrapPath, $preflightPath, $smokePath)
     $preflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $smoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -571,4 +598,17 @@ $results += Invoke-ValidatorScenario -Name "bad-smoke-route" -ExpectedExitCode 1
     Write-JsonFile -Path $smokePath -Value $report
 }
 
-Write-Host "admin vps bootstrap smoke evidence validator regression passed $($results | ConvertTo-Json -Compress)"
+    Write-Host "admin vps bootstrap smoke evidence validator regression passed $($results | ConvertTo-Json -Compress)"
+}
+finally {
+    if (-not $KeepArtifacts -and (Test-Path -LiteralPath $outputPath)) {
+        Remove-Item -LiteralPath $outputPath -Recurse -Force
+    }
+
+    if (-not $KeepArtifacts -and $usingDefaultOutputDirectory) {
+        $tmpDirectory = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "tmp"))
+        if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+            Remove-Item -LiteralPath $tmpDirectory -Force
+        }
+    }
+}
