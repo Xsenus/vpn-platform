@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.388.0 - 2026-07-02
+
+Release entry: `2026-07-02-admin-vps-smoke-preflight-validator-cleanup`.
+
+### Fixed
+- `test-admin-vps-smoke-preflight-validator.ps1` now removes its default output directory and empty `tmp` after ordinary local runs.
+- `AdminVpsSmokeReportTests` pins the preflight validator regression cleanup contract while preserving `-KeepArtifacts` debug evidence.
+- `P0-ADMIN-002BP` documents the local cleanup behavior while real VPS admin smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `400/420` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke preflight validator cleanup OK; targeted admin/docs/release suite `39/39`; backend full suite `683/683`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.387.0 - 2026-07-02
 
 Release entry: `2026-07-02-admin-vps-smoke-report-validator-cleanup`.

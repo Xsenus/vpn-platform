@@ -147,6 +147,8 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-l
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-preflight-validator.ps1
 ```
 
+Обычный запуск preflight validator regression удаляет default output directory вместе с пустым `tmp`; `-KeepArtifacts` сохраняет regression evidence для локального расследования.
+
 ## Единая команда live-smoke
 
 Для реального VPS-прогона используйте fail-closed wrapper, который сначала запускает preflight и валидирует sanitized preflight report, а затем выполняет browser smoke только при готовых параметрах:
