@@ -177,6 +177,8 @@ The wrapper normalizes identity and workspace path inputs before handing them to
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
 ```
 
+Обычный запуск admin VPS smoke flow wrapper regression удаляет default output directory вместе с пустым `tmp`; `-KeepArtifacts` сохраняет regression evidence для локального расследования.
+
 Direct preflight release guard доказывает, что `scripts/admin-vps-smoke-preflight.ps1 -ReleaseId` не создает preflight/smoke artifacts и не печатает пароль, если release id отсутствует в `backend/src/VpnPlatform.Api/AppReleases/releases.json`:
 
 ```powershell
