@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.389.0 - 2026-07-02
+
+Release entry: `2026-07-02-admin-vps-smoke-evidence-validator-cleanup`.
+
+### Fixed
+- `test-admin-vps-smoke-evidence-validator.ps1` now uses the latest active release from `releases.json`, so synthetic preflight/smoke evidence keeps matching release rotation.
+- The evidence validator regression now includes required preflight counters and remote release fields, and removes its default output plus empty `tmp` after ordinary local runs.
+- `P0-ADMIN-002BQ` documents the local cleanup behavior while real VPS admin smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `401/421` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke evidence validator cleanup OK; targeted admin/docs/release suite `40/40`; backend full suite `684/684`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.388.0 - 2026-07-02
 
 Release entry: `2026-07-02-admin-vps-smoke-preflight-validator-cleanup`.

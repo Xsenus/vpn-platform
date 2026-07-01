@@ -7,6 +7,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$defaultOutputDirectory = "tmp/admin-vps-smoke-evidence-validator-regression-test"
+$usingDefaultOutputDirectory = -not $PSBoundParameters.ContainsKey("OutputDirectory") -or [string]::Equals($OutputDirectory, $defaultOutputDirectory, [System.StringComparison]::OrdinalIgnoreCase)
 
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -49,6 +51,17 @@ function Get-FileSha256 {
     finally {
         $sha256.Dispose()
     }
+}
+
+function Get-LatestReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $activeReleases = @($releases | Where-Object { $_.isActive -eq $true })
+    if ($activeReleases.Count -eq 0) {
+        throw "No active release entries found in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    return [string]$activeReleases[-1].releaseId
 }
 
 function Format-ReportTimestamp {
@@ -124,7 +137,8 @@ function New-Section {
 function New-EvidencePair {
     param(
         [Parameter(Mandatory = $true)][string]$PreflightPath,
-        [Parameter(Mandatory = $true)][string]$SmokePath
+        [Parameter(Mandatory = $true)][string]$SmokePath,
+        [Parameter(Mandatory = $true)][string]$ReleaseId
     )
 
     $generatedAt = [DateTimeOffset]::Parse("2026-06-19T00:00:00+07:00")
@@ -132,7 +146,6 @@ function New-EvidencePair {
     $completedAt = $generatedAt.AddMinutes(2)
     $apiBaseUrl = "https://api.example.test"
     $adminWebUrl = "https://admin.example.test/admin"
-    $releaseId = "2026-06-19-admin-vps-smoke-evidence-validator"
     $operator = "evidence-validator-regression"
     $sections = @(
         "dashboard",
@@ -158,7 +171,12 @@ function New-EvidencePair {
         generatedAt = $generatedAt.ToString("O")
         environmentName = "staging"
         operator = $operator
-        releaseId = $releaseId
+        releaseId = $ReleaseId
+        remoteReleaseId = ""
+        remoteReleaseCheckRequired = $false
+        remoteReleaseMatched = $true
+        remoteReleaseStatus = "not-required"
+        remoteReleaseMessage = "Remote release check was not required for this synthetic regression."
         apiBaseUrl = $apiBaseUrl
         adminWebUrl = $adminWebUrl
         adminEmail = "owner@example.test"
@@ -166,6 +184,10 @@ function New-EvidencePair {
         preflightReportPath = $PreflightPath
         passwordEnvPresent = $true
         readyForLiveSmoke = $true
+        checkCount = 10
+        passedCheckCount = 10
+        failedCheckCount = 0
+        failedChecks = @()
         checks = @(
             [ordered]@{ name = "api-base-url"; passed = $true; message = "ok" },
             [ordered]@{ name = "admin-web-url"; passed = $true; message = "ok" },
@@ -175,7 +197,8 @@ function New-EvidencePair {
             [ordered]@{ name = "package-command"; passed = $true; message = "ok" },
             [ordered]@{ name = "browser-runner"; passed = $true; message = "ok" },
             [ordered]@{ name = "report-validator"; passed = $true; message = "ok" },
-            [ordered]@{ name = "preflight-validator"; passed = $true; message = "ok" }
+            [ordered]@{ name = "preflight-validator"; passed = $true; message = "ok" },
+            [ordered]@{ name = "remote-latest-release"; passed = $true; message = "not required" }
         )
     }
 
@@ -188,7 +211,7 @@ function New-EvidencePair {
         smokeReportPath = $SmokePath
         startedAt = $startedAt.ToString("O")
         completedAt = $completedAt.ToString("O")
-        releaseId = $releaseId
+        releaseId = $ReleaseId
         operator = $operator
         notes = "Synthetic sanitized evidence validator regression report."
         accountBootstrapChecked = $true
@@ -214,7 +237,8 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 try {
     $preflightPath = Join-Path $outputFullPath "admin-vps-smoke-preflight-report.json"
     $smokePath = Join-Path $outputFullPath "admin-vps-smoke-report.json"
-    New-EvidencePair -PreflightPath $preflightPath -SmokePath $smokePath
+    $latestReleaseId = Get-LatestReleaseId
+    New-EvidencePair -PreflightPath $preflightPath -SmokePath $smokePath -ReleaseId $latestReleaseId
 
     $validOutput = Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $smokePath
     $validOutputText = ($validOutput -join "`n")
@@ -475,7 +499,7 @@ try {
     Write-Utf8NoBomJson -Path $emptyReleasePreflight -Value $emptyRelease
     $testedFailures += [ordered]@{
         name = "missing-preflight-release-id"
-        message = Assert-FailsWith -ExpectedMessage "field is empty: releaseId" -Action {
+        message = Assert-FailsWith -ExpectedMessage "preflight releaseId is required" -Action {
             Invoke-EvidenceValidator -PreflightPath $emptyReleasePreflight -SmokePath $smokePath
         }
     }
@@ -511,7 +535,12 @@ try {
         }
     }
 
+    $badSmokeCompletedPreflightPath = Join-Path $outputFullPath "bad-smoke-completed-preflight.json"
+    $badSmokeCompletedPreflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badSmokeCompletedPath = Join-Path $outputFullPath "bad-smoke-completed-report.json"
+    $badSmokeCompletedPreflight.preflightReportPath = $badSmokeCompletedPreflightPath
+    $badSmokeCompletedPreflight.smokeReportPath = $badSmokeCompletedPath
+    Write-Utf8NoBomJson -Path $badSmokeCompletedPreflightPath -Value $badSmokeCompletedPreflight
     $badSmokeCompleted = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $badSmokeCompleted.smokeReportPath = $badSmokeCompletedPath
     $badSmokeCompleted.completedAt = "2026-06-19T00:00:30+07:00"
@@ -519,11 +548,16 @@ try {
     $testedFailures += [ordered]@{
         name = "smoke-completed-before-started"
         message = Assert-FailsWith -ExpectedMessage "completedAt must be greater than or equal to startedAt" -Action {
-            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $badSmokeCompletedPath
+            Invoke-EvidenceValidator -PreflightPath $badSmokeCompletedPreflightPath -SmokePath $badSmokeCompletedPath
         }
     }
 
+    $failedSmokePreflightPath = Join-Path $outputFullPath "failed-smoke-preflight.json"
+    $failedSmokePreflight = Get-Content -LiteralPath $preflightPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $failedSmokePath = Join-Path $outputFullPath "failed-smoke-report.json"
+    $failedSmokePreflight.preflightReportPath = $failedSmokePreflightPath
+    $failedSmokePreflight.smokeReportPath = $failedSmokePath
+    Write-Utf8NoBomJson -Path $failedSmokePreflightPath -Value $failedSmokePreflight
     $failedSmoke = Get-Content -LiteralPath $smokePath -Raw -Encoding UTF8 | ConvertFrom-Json
     $failedSmoke.smokeReportPath = $failedSmokePath
     $failedSmoke.adminLoginPassed = $false
@@ -531,7 +565,7 @@ try {
     $testedFailures += [ordered]@{
         name = "failed-smoke-report"
         message = Assert-FailsWith -ExpectedMessage "adminLoginPassed must be true" -Action {
-            Invoke-EvidenceValidator -PreflightPath $preflightPath -SmokePath $failedSmokePath
+            Invoke-EvidenceValidator -PreflightPath $failedSmokePreflightPath -SmokePath $failedSmokePath
         }
     }
 
@@ -552,5 +586,12 @@ try {
 finally {
     if (-not $KeepArtifacts -and (Test-Path -LiteralPath $outputFullPath)) {
         Remove-Item -LiteralPath $outputFullPath -Recurse -Force
+    }
+
+    if (-not $KeepArtifacts -and $usingDefaultOutputDirectory) {
+        $tmpDirectory = Resolve-WorkspacePath "tmp"
+        if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+            Remove-Item -LiteralPath $tmpDirectory -Force
+        }
     }
 }
