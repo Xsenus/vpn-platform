@@ -60,6 +60,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-staging-smoke-report.p
 
 Если в отчете есть `blocked`, `failed` или `skipped`, команда с `-RequireAllPassed` завершится ошибкой. Это намеренное fail-closed поведение. Acceptance-режим также запрещает placeholder evidence: строка с `TODO` не считается real evidence даже при `status = passed`.
 
+В acceptance-режиме отчет также должен быть привязан к latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`. Если `releaseId` в отчете устарел, `-RequireAllPassed` падает, даже когда все checks помечены `passed`.
+
 Валидатор также ищет типовые признаки утечки секретов в любом поле отчета: `Authorization:`, `Bearer`, `Cookie:`, `Set-Cookie:`, `.env`, `client_secret`, `api_key`, `private header`, `x-api-key`, `X-Telegram-Bot-Api-Secret-Token`, `PRODUCTION_ENV_FILE`, `VPS_SSH_KEY`, private keys и webhook secrets. Если такой маркер найден, отчет считается небезопасным и не проходит проверку.
 
 Дополнительно валидатор проверяет внутреннюю согласованность отчета: `startedAt` и `completedAt` должны быть ISO-compatible DateTimeOffset, `completedAt` не может быть раньше `startedAt`, а check id не должны повторяться. Duplicate check id считается ошибкой, даже если один из дублей имеет статус `passed`.
@@ -86,5 +88,6 @@ powershell -ExecutionPolicy Bypass -File scripts\vps-production-smoke.ps1 -ApiBa
 - Валидатор проверяет порядок `startedAt`/`completedAt` и запрещает duplicate check id.
 - Валидатор проверяет `apiBaseUrl`, `publicWebUrl`, `cabinetWebUrl` и `adminWebUrl` как absolute http/https URL.
 - Валидатор в `-RequireAllPassed` запрещает `TODO` в evidence, чтобы staging smoke нельзя было принять с незаполненными доказательствами.
+- Валидатор в `-RequireAllPassed` требует latest active release id, чтобы staging smoke нельзя было принять по старому release.
 - `P9-TST-007` получил воспроизводимый чеклист и валидатор.
 - Реальный live/staging smoke report пока не заполнен, поэтому внешние блокеры `P0-*`, `P11-ACC-002` и production-ready статус остаются открытыми.

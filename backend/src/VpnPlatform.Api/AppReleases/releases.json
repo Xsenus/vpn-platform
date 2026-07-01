@@ -7162,5 +7162,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until the latest commits are deployed and a full passed VPS admin smoke report is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-staging-smoke-latest-release-guard",
+    "version": "0.299.0",
+    "releasedAt": "2026-07-01T10:00:00+07:00",
+    "title": "Staging smoke latest release guard",
+    "summary": "Staging smoke acceptance now rejects stale release evidence before a report can be used for roadmap or production readiness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-staging-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-staging-smoke-report-latest-release-guard.ps1` covers the fail-closed path for a fully passed but stale staging smoke report."
+      },
+      {
+        "type": "important",
+        "text": "`P9-TST-007` remains in progress until a real staging/VPS smoke report with current sanitized evidence is captured."
+      }
+    ]
   }
 ]

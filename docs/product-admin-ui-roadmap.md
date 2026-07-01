@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `593/593`.
+- [x] Backend full suite: `594/594`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-06-24-admin-vps-smoke-preflight-report-id-console`, версия `0.298.0`.
+- [x] Latest "Что нового": `2026-07-01-staging-smoke-latest-release-guard`, версия `0.299.0`.
 
 ## Как вести дальше
 

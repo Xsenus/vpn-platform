@@ -150,6 +150,32 @@ public class StagingSmokeChecklistTests
     }
 
     [Fact]
+    public void Staging_Smoke_Report_Validator_Should_Reject_Stale_Release_In_Acceptance_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-staging-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-staging-smoke-report-latest-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestActiveReleaseId",
+                     "AppReleases/releases.json",
+                     "must match latest active release",
+                     "-RequireAllPassed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("stale-release-id", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must match latest active release", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("latest active release", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P9-TST-007F`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Staging_Smoke_Report_Template_Should_Be_Valid_Safe_Json()
     {
         var root = FindRepositoryRoot();

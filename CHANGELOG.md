@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.299.0 - 2026-07-01
+
+Release entry: `2026-07-01-staging-smoke-latest-release-guard`.
+
+### Added
+
+- `scripts/test-staging-smoke-report-latest-release-guard.ps1` proves that a fully passed staging smoke report with stale `releaseId` is rejected.
+- Roadmap item `P9-TST-007F` documents the latest-release acceptance guard while keeping parent `P9-TST-007` open for real staging/VPS evidence.
+
+### Changed
+
+- `scripts/validate-staging-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `304/324` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: staging smoke latest release guard regression OK; targeted backend/docs/release suite `24/24`; backend full suite `594/594`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `507` files, `0` findings.
+
 ## Roadmap checkpoint - 2026-06-24
 
 ### Documentation

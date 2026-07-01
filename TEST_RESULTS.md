@@ -9,6 +9,28 @@ Scope:
 - `docs/PRODUCT_COMPLETION_ROADMAP.md` records the last verification date, temporary pause state and remaining live/VPS blockers.
 - Production/live roadmap items remain open until real VPS/staging/live evidence exists.
 
+## Check 2026-07-01: staging smoke latest release guard
+
+Scope:
+- `scripts/validate-staging-smoke-report.ps1 -RequireAllPassed` now rejects staging smoke reports whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-staging-smoke-report-latest-release-guard.ps1` regression coverage for a fully passed but stale report.
+- `P9-TST-007F` is closed; parent `P9-TST-007` remains in progress until real staging/VPS evidence exists.
+
+Result:
+- Roadmap progress: `304/324` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-staging-smoke-latest-release-guard`, version `0.299.0`.
+- Real live/staging smoke report is still required before closing `P9-TST-007`, `STATE-011`, `STATE-012`, `STATE-013`, P0 blockers or `P11-ACC-002`.
+
+Validation:
+- Staging smoke latest release guard regression: OK.
+- Targeted backend/docs/release suite: OK, `24/24`.
+- Backend full suite: OK, `594/594`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-staging-smoke-latest-release-guard`.
+- Secret scan: OK, files scanned `507`, findings `0`.
+
 Commands:
 
 ```powershell

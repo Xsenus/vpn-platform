@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `593/593`.
+- Backend full suite: `594/594`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-06-24-admin-vps-smoke-preflight-report-id-console`, версия `0.298.0`; admin VPS smoke preflight now prints sanitized `Preflight report id` in console output before browser smoke. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-staging-smoke-latest-release-guard`, версия `0.299.0`; staging smoke acceptance now rejects stale release evidence before `P9-TST-007` can be accepted. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

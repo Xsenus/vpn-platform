@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-06-24.
 
-Временный статус работы с roadmap: активная локальная доработка приостановлена после синхронизации документации, тестов и release seed до `2026-06-24-admin-vps-smoke-preflight-report-id-console`, версия `0.298.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `303/323` проверяемых пунктов, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка возобновлена для локальных safety-guard задач и синхронизирована до `2026-07-01-staging-smoke-latest-release-guard`, версия `0.299.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `304/324` проверяемых пунктов, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `593/593`.
+- [x] `STATE-001` Backend test suite проходит: `594/594`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -51,9 +51,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `593/593`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-06-24-admin-vps-smoke-preflight-report-id-console`, версия `0.298.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `594/594`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-07-01-staging-smoke-latest-release-guard`, версия `0.299.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 8/8, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 15/15, `AdminBootstrapCliScriptTests` 11/11, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, local CLI bootstrap admin smoke, deploy production env normalizer regression, admin VPS smoke navigation fallback regression, admin VPS smoke remote release preflight/diagnostics/console-summary/remote-message/report-id-console/failed-checks/failed-count/check-counts regression, real VPS admin smoke negative evidence for stale release/missing `audit` section, backend full suite `593/593`, frontend tests `66/66`, latest "Что нового" `2026-06-24-admin-vps-smoke-preflight-report-id-console`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 9/9, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 15/15, `AdminBootstrapCliScriptTests` 11/11, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, local CLI bootstrap admin smoke, deploy production env normalizer regression, admin VPS smoke navigation fallback regression, admin VPS smoke remote release preflight/diagnostics/console-summary/remote-message/report-id-console/failed-checks/failed-count/check-counts regression, staging smoke latest release guard regression, real VPS admin smoke negative evidence for stale release/missing `audit` section, backend full suite `594/594`, frontend tests `66/66`, latest "Что нового" `2026-07-01-staging-smoke-latest-release-guard`.
 
 ## P0. Блокеры production-запуска
 
@@ -1080,6 +1080,11 @@ git diff --check
   - Что сделать: запретить принимать staging smoke report, где все checks помечены `passed`, но evidence осталось шаблонным `TODO`.
   - Что сделано: `scripts/validate-staging-smoke-report.ps1` в режиме `-RequireAllPassed` теперь отклоняет evidence с `TODO`; `docs/staging-smoke-checklist.md` явно требует real evidence вместо placeholder-строк.
   - Доказательство: `StagingSmokeChecklistTests` 8/8, expected fail-closed `-RequireAllPassed` для passed checks с TODO evidence, "Что нового" `2026-06-19-staging-smoke-report-evidence-placeholders`, версия `0.181.0`.
+
+- [x] `P9-TST-007F` Staging smoke report latest release guard. 2026-07-01.
+  - Что сделать: не принимать staging smoke report как финальный acceptance evidence, если отчет был заполнен для старого release.
+  - Что сделано: `scripts/validate-staging-smoke-report.ps1 -RequireAllPassed` сверяет `releaseId` отчета с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`; добавлен regression harness `scripts/test-staging-smoke-report-latest-release-guard.ps1`, который доказывает fail-closed поведение на полностью passed отчете со stale `releaseId`.
+  - Доказательство: `StagingSmokeChecklistTests` 9/9, staging smoke latest release guard regression, latest "Что нового" `2026-07-01-staging-smoke-latest-release-guard`, версия `0.299.0`. Реальный live/staging smoke report еще нужен, поэтому `P9-TST-007` остается `[~]`.
 
 - [x] `P9-TST-008` All screens browser smoke. 2026-06-14.
   - Что сделать: пройти все основные public/cabinet/admin экраны в браузере, проверить отсутствие белых экранов, `console.error` и `pageerror`.
