@@ -355,6 +355,12 @@ Regression guard для verified files в receipt доказывает, что r
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-receipt-verified-files-guard.ps1
 ```
 
+Regression guard для Markdown verified files в receipt доказывает, что receipt-validator не принимает Markdown-пару без verified file SHA256:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-receipt-markdown-verified-files-guard.ps1
+```
+
 Для финальной передачи оператору сформируйте checklist:
 
 ```powershell

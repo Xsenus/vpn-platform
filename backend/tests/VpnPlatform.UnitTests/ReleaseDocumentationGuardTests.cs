@@ -261,7 +261,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-078", "2026-07-01-production-evidence-archive-release-guard"),
         new("P11-ACC-079", "2026-07-01-production-handoff-receipt-release-guard"),
         new("P11-ACC-080", "2026-07-01-production-handoff-checklist-release-guard"),
-        new("P11-ACC-081", "2026-07-01-production-handoff-receipt-verified-files-guard")
+        new("P11-ACC-081", "2026-07-01-production-handoff-receipt-verified-files-guard"),
+        new("P11-ACC-082", "2026-07-01-production-handoff-receipt-markdown-verified-files-guard")
     ];
 
     [Fact]

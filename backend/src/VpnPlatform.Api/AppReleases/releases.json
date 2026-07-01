@@ -7902,5 +7902,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-receipt-markdown-verified-files-guard",
+    "version": "0.331.0",
+    "releasedAt": "2026-07-01T19:51:00+07:00",
+    "title": "Production handoff receipt markdown verified files guard",
+    "summary": "Production evidence handoff receipt validation now rejects Markdown receipts that omit verified file details.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-evidence-handoff-receipt.ps1` now requires receipt Markdown to include every verified file name, entry name and SHA256 from the validated receipt JSON."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-receipt-markdown-verified-files-guard.ps1` tampers only the Markdown receipt and proves the validator fails closed."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

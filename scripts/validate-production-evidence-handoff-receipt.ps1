@@ -228,6 +228,14 @@ foreach ($requiredText in @([string]$receipt.releaseId, [string]$receipt.archive
     }
 }
 
+foreach ($file in $verifiedFiles) {
+    foreach ($requiredText in @([string]$file.name, [string]$file.entryName, [string]$file.sha256)) {
+        if (-not $markdown.Contains($requiredText)) {
+            throw "Production evidence handoff receipt markdown is missing verified file detail: $requiredText"
+        }
+    }
+}
+
 $result = [ordered]@{
     status = "valid"
     receiptPath = $receiptFullPath

@@ -1291,6 +1291,40 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Receipt_Validator_Should_Reject_Tampered_Verified_Files_Markdown()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-receipt.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-receipt-markdown-verified-files-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Production evidence handoff receipt markdown is missing verified file detail",
+                     "file.name",
+                     "file.entryName",
+                     "file.sha256"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Production evidence handoff receipt validator accepted tampered verifiedFiles markdown",
+                     "Production evidence handoff receipt markdown is missing verified file detail",
+                     "production evidence handoff receipt markdown verified files guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-receipt-markdown-verified-files-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-082`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Checklist_Should_Gate_Operator_Handoff()
     {
         var root = FindRepositoryRoot();

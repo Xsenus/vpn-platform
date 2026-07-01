@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.331.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-receipt-markdown-verified-files-guard`.
+
+### Fixed
+- `scripts/validate-production-evidence-handoff-receipt.ps1` now rejects receipt Markdown that omits verified file names, entry names or SHA256 values.
+
+### Added
+- `scripts/test-production-evidence-handoff-receipt-markdown-verified-files-guard.ps1` proves that a tampered Markdown receipt fails validation while JSON and ZIP remain valid.
+- `P11-ACC-082` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `336/356` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff receipt markdown verified files guard regression OK; targeted production/docs/release suite `89/89`; backend full suite `626/626`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `539` files, `0` findings; markdown encoding check OK.
+
 ## 0.330.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-receipt-verified-files-guard`.

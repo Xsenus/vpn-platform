@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff receipt markdown verified files guard
+
+Scope:
+- `scripts/validate-production-evidence-handoff-receipt.ps1` now validates the receipt Markdown against `verifiedFiles` from the receipt JSON.
+- Added `scripts/test-production-evidence-handoff-receipt-markdown-verified-files-guard.ps1` regression coverage for a tampered Markdown receipt SHA256 while JSON and ZIP stay valid.
+- `P11-ACC-082` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `336/356` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-receipt-markdown-verified-files-guard`, version `0.331.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff receipt markdown verified files guard regression: OK.
+- Targeted production/docs/release suite: OK, `89/89`.
+- Backend full suite: OK, `626/626`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-receipt-markdown-verified-files-guard`.
+- Secret scan: OK, files scanned `539`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff receipt verified files guard
 
 Scope:
