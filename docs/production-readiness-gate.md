@@ -497,6 +497,8 @@ Regression guard для directory entries доказывает, что archive-v
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-directory-entry-guard.ps1
 ```
 
+Directory-entry guard удаляет созданный ZIP и пустой `tmp` после выполнения, чтобы локальный regression run не оставлял временные artifacts.
+
 Regression guard для backslash entries доказывает, что archive-validator не принимает ZIP с Windows-style path separator в имени entry:
 
 ```powershell
