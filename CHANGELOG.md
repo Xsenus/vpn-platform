@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.369.0 - 2026-07-02
+
+Release entry: `2026-07-02-production-handoff-receipt-release-guard-cleanup`.
+
+### Fixed
+- `test-production-evidence-handoff-receipt-release-guard.ps1` now removes its default `tmp/production-evidence-handoff-receipt-unknown-release-id` bundle directory and empty `tmp` directory after a local run.
+- `ProductionReadinessGateTests` pins the production handoff receipt release guard cleanup.
+- `P11-ACC-118` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `374/394` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff receipt release guard cleanup OK; targeted production/docs/release suite `136/136`; backend full suite `664/664`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.368.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-evidence-archive-release-guard-cleanup`.
