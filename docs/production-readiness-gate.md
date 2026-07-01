@@ -404,7 +404,13 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ha
   -ArchivePath tmp\production-evidence\production-evidence-handoff-package-<release>.zip
 ```
 
-Package archive validator сверяет SHA256 внешнего ZIP, запрещает вложенные и неожиданные entries, проверяет обязательные `production-evidence.zip`, receipt, checklist, package index и `SHA256SUMS.txt`, временно извлекает package и повторно запускает `validate-production-evidence-handoff-package.ps1`. В режиме `-RequireProductionReady` строгая проверка доходит до production-ready handoff на уровне package validator.
+Package archive validator сверяет SHA256 внешнего ZIP, запрещает вложенные и неожиданные entries, проверяет обязательные `production-evidence.zip`, receipt, checklist, package index и `SHA256SUMS.txt`, временно извлекает package и повторно запускает `validate-production-evidence-handoff-package.ps1`. В режиме `-RequireProductionReady` archive validator сначала сверяет `releaseId` package index с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`, затем строгая проверка доходит до production-ready handoff на уровне package validator.
+
+Latest-release guard для package archive:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-latest-release-guard.ps1
+```
 
 Для regression-проверки валидатора на tamper-сценариях используйте отдельный harness:
 

@@ -7488,5 +7488,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-package-archive-latest-release-guard",
+    "version": "0.313.0",
+    "releasedAt": "2026-07-01T17:35:00+07:00",
+    "title": "Production handoff package archive latest release guard",
+    "summary": "Production-ready handoff package archive validation now rejects stale release ZIP artifacts before archive acceptance can continue.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-evidence-handoff-package-archive.ps1 -RequireProductionReady` now requires the package index `releaseId` inside the ZIP to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-latest-release-guard.ps1` covers the fail-closed path for a handoff package archive with stale `releaseId`."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

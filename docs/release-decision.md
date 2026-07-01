@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `607/607`.
+- Backend full suite: `608/608`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-production-evidence-bundle-latest-release-guard`, версия `0.312.0`; production-ready evidence bundle acceptance now rejects stale release reports before `P11-ACC-002` can be accepted. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-production-handoff-package-archive-latest-release-guard`, версия `0.313.0`; production-ready handoff package archive acceptance now rejects stale release ZIP artifacts before `P11-ACC-002` can be accepted. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

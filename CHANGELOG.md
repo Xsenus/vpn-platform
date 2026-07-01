@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.313.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-latest-release-guard`.
+
+### Fixed
+- `scripts/validate-production-evidence-handoff-package-archive.ps1 -RequireProductionReady` now rejects handoff package ZIP artifacts whose package index `releaseId` is stale before archive acceptance can continue.
+
+### Added
+- `scripts/test-production-evidence-handoff-package-archive-latest-release-guard.ps1` proves that a handoff package archive with stale `releaseId` is rejected.
+- `P11-ACC-074` documents the acceptance guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `318/338` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff package archive latest release guard regression OK; targeted production handoff/docs/release suite `81/81`; backend full suite `608/608`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `521` files, `0` findings; markdown encoding check OK.
+
 ## 0.312.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-evidence-bundle-latest-release-guard`.

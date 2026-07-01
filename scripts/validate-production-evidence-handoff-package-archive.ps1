@@ -18,6 +18,18 @@ function Resolve-RepoPath {
     return Join-Path $repoRoot $RelativePath
 }
 
+function Get-LatestActiveReleaseId {
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 function Get-FileSha256 {
     param([string]$PathValue)
 
@@ -69,6 +81,30 @@ function Copy-ZipEntry {
         }
 
         $destinationStream.Dispose()
+    }
+}
+
+function Assert-PackageIndexLatestReleaseId {
+    param(
+        [string]$PackageDirectory,
+        [string]$LatestReleaseId
+    )
+
+    $indexPath = Join-Path $PackageDirectory "production-evidence-handoff-package-index.json"
+    try {
+        $index = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        throw "Production evidence handoff package archive index JSON is invalid: $($_.Exception.Message)"
+    }
+
+    $releaseId = [string]$index.releaseId
+    if ([string]::IsNullOrWhiteSpace($releaseId)) {
+        throw "Production evidence handoff package archive releaseId is required."
+    }
+
+    if (-not [string]::Equals($releaseId, $LatestReleaseId, [System.StringComparison]::Ordinal)) {
+        throw "Production evidence handoff package archive releaseId '$releaseId' must match latest active release '$LatestReleaseId' when -RequireProductionReady is used."
     }
 }
 
@@ -140,6 +176,10 @@ try {
         if ($archiveStream -ne $null) {
             $archiveStream.Dispose()
         }
+    }
+
+    if ($RequireProductionReady) {
+        Assert-PackageIndexLatestReleaseId -PackageDirectory $tempRoot -LatestReleaseId (Get-LatestActiveReleaseId)
     }
 
     $validatorArgs = @{

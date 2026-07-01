@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production handoff package archive latest release guard
+
+Scope:
+- `scripts/validate-production-evidence-handoff-package-archive.ps1 -RequireProductionReady` now rejects handoff package ZIP artifacts whose package index `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-production-evidence-handoff-package-archive-latest-release-guard.ps1` regression coverage for a handoff package archive with stale release evidence.
+- `P11-ACC-074` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `318/338` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-archive-latest-release-guard`, version `0.313.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002` or production-ready decision.
+
+Validation:
+- Production handoff package archive latest release guard regression: OK.
+- Targeted production handoff/docs/release suite: OK, `81/81`.
+- Backend full suite: OK, `608/608`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-archive-latest-release-guard`.
+- Secret scan: OK, files scanned `521`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production evidence bundle latest release guard
 
 Scope:
