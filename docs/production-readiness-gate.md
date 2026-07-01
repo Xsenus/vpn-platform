@@ -1,4 +1,4 @@
-﻿# Production readiness gate
+# Production readiness gate
 
 Документ закрывает локальный roadmap-пункт `P11-ACC-008`: перед тем как называть проект production-ready, теперь есть отдельная fail-closed команда, которая проверяет staging/VPS smoke report и не пропускает релиз, если roadmap или release decision все еще содержат открытые production-блокеры.
 
@@ -474,6 +474,12 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handof
 ```
 
 Harness сначала проверяет исходный ZIP, затем создает временные испорченные копии и ожидает fail-closed ошибки для неверного expected SHA256, лишнего `unexpected-entry.txt` и отсутствующего `SHA256SUMS.txt`.
+
+Regression guard для duplicated entries доказывает, что archive-validator не принимает ZIP с повторяющимся именем файла:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-duplicate-entry-guard.ps1
+```
 
 Чтобы не собирать всю локальную цепочку вручную, можно запустить end-to-end flow одной командой:
 

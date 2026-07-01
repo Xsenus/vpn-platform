@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.334.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-duplicate-entry-guard`.
+
+### Added
+- `scripts/test-production-evidence-handoff-package-archive-duplicate-entry-guard.ps1` creates a ZIP with duplicated `SHA256SUMS.txt` entries and proves the final handoff package archive validator fails closed before delegating to package validation.
+- `ProductionReadinessGateTests` now pins the duplicate-entry archive guard, validator error text and production readiness gate documentation.
+- `P11-ACC-085` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `339/359` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive duplicate entry guard regression OK; targeted production/docs/release suite `92/92`; backend full suite `629/629`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `542` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.333.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-markdown-files-guard`.

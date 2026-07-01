@@ -1639,6 +1639,42 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Validator_Should_Reject_Duplicated_Entries()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-package-archive.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-duplicate-entry-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "duplicated entry",
+                     "seen.Add"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "New-DuplicateEntryArchive",
+                     "ZipArchiveMode]::Create",
+                     "SHA256SUMS.txt",
+                     "Assert-FailsWith",
+                     "validate-production-evidence-handoff-package-archive.ps1",
+                     "duplicated entry",
+                     "production evidence handoff package archive duplicate entry guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-package-archive-duplicate-entry-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-085`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Package_Archive_Flow_Should_Have_Executable_End_To_End_Harness()
     {
         var root = FindRepositoryRoot();

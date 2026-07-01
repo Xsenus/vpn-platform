@@ -264,7 +264,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-081", "2026-07-01-production-handoff-receipt-verified-files-guard"),
         new("P11-ACC-082", "2026-07-01-production-handoff-receipt-markdown-verified-files-guard"),
         new("P11-ACC-083", "2026-07-01-production-handoff-checklist-markdown-gates-guard"),
-        new("P11-ACC-084", "2026-07-01-production-handoff-package-markdown-files-guard")
+        new("P11-ACC-084", "2026-07-01-production-handoff-package-markdown-files-guard"),
+        new("P11-ACC-085", "2026-07-01-production-handoff-package-archive-duplicate-entry-guard")
     ];
 
     [Fact]
