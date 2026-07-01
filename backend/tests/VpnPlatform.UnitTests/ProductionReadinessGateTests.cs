@@ -1967,6 +1967,40 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Readiness_Assertion_Result_Should_Reject_Stale_Release_In_Production_Ready_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-assertion-result.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-result-latest-release-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestActiveReleaseId",
+                     "backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "must match latest active release",
+                     "RequireProductionReady"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "stale-release-id",
+                     "must match latest active release",
+                     "production readiness assertion result latest release guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-readiness-assertion-result-latest-release-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-072`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Readiness_Gate_Should_Be_Documented_In_Index_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

@@ -7442,5 +7442,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-readiness-assertion-latest-release-guard",
+    "version": "0.311.0",
+    "releasedAt": "2026-07-01T17:25:00+07:00",
+    "title": "Production readiness assertion result latest release guard",
+    "summary": "Production-ready assertion result validation now rejects stale release artifacts before final readiness evidence can be accepted.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-readiness-assertion-result.ps1 -RequireProductionReady` now requires the assertion result `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-readiness-assertion-result-latest-release-guard.ps1` covers the fail-closed path for a production-ready assertion result with stale `releaseId`."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

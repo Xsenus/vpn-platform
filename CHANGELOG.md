@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.311.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-readiness-assertion-latest-release-guard`.
+
+### Fixed
+- `scripts/validate-production-readiness-assertion-result.ps1 -RequireProductionReady` now rejects production-ready assertion results whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Added
+- `scripts/test-production-readiness-assertion-result-latest-release-guard.ps1` proves that a production-ready assertion result with stale `releaseId` is rejected before linked report and Markdown checks.
+- `P11-ACC-072` documents the acceptance guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `316/336` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production readiness assertion result latest release guard regression OK; targeted production handoff/docs/release suite `79/79`; backend full suite `606/606`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `519` files, `0` findings; markdown encoding check OK.
+
 ## 0.310.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-readiness-summary-latest-release-guard`.

@@ -16,7 +16,7 @@ Gate агрегирует результаты всех четырех evidence 
 
 Для CI и handoff можно передать `-OutputPath`: gate запишет Markdown и соседний JSON result artifact даже при ожидаемом `blocked`, а затем продолжит fail-closed падать. Result содержит `failedEvidenceReportsCount`, `blockersCount`, пути всех reports, `evidenceReports`, `blockers`, `resultJsonPath` и `resultMarkdownPath`.
 
-Скачанный result artifact можно проверить без повторного запуска gate через `scripts/validate-production-readiness-assertion-result.ps1`. Валидатор сверяет статус `blocked`/`production-ready`, четыре evidence report entries, счетчики, пути reports, roadmap/release decision и Markdown-пару.
+Скачанный result artifact можно проверить без повторного запуска gate через `scripts/validate-production-readiness-assertion-result.ps1`. Валидатор сверяет статус `blocked`/`production-ready`, `releaseId`, четыре evidence report entries, счетчики, пути reports, roadmap/release decision и Markdown-пару. Для финального production-ready artifact добавьте `-RequireProductionReady`: `releaseId` assertion result должен совпадать с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
 
 Это не заменяет реальные live-проверки. Gate нужен, чтобы не забыть зафиксировать доказательства и не выдать локально зеленый проект за production-ready.
 
@@ -52,6 +52,12 @@ Regression-проверка validator на испорченных копиях r
 powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-result-validator.ps1 `
   -ResultJsonPath tmp\production-readiness-assertion.json `
   -WriteJson
+```
+
+Fail-closed regression для latest release guard:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-assertion-result-latest-release-guard.ps1
 ```
 
 CI-friendly wrapper для assertion artifacts:
