@@ -85,8 +85,13 @@ function Update-ReceiptForArchive {
         "",
         "## Verified files",
         "",
-        "Receipt deliberately updated for release guard regression."
+        "| Name | Entry | Bytes | SHA256 |",
+        "| --- | --- | ---: | --- |"
     )
+
+    foreach ($file in @($receipt.verifiedFiles)) {
+        $markdown += ('| ' + $file.name + ' | `' + $file.entryName + '` | ' + $file.lengthBytes + ' | `' + $file.sha256 + '` |')
+    }
 
     [System.IO.File]::WriteAllText(
         [System.IO.Path]::ChangeExtension($ReceiptPath, ".md"),
@@ -176,5 +181,8 @@ try {
 finally {
     if (Test-Path -LiteralPath $bundleDirectory) {
         Remove-Item -LiteralPath $bundleDirectory -Recurse -Force
+    }
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
     }
 }
