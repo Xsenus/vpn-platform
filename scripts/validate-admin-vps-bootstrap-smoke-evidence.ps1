@@ -57,6 +57,18 @@ function Resolve-WorkspacePath {
     return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
 }
 
+function Get-LatestActiveReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 function Normalize-Url {
     param([AllowEmptyString()][string]$Value)
 
@@ -160,11 +172,31 @@ function Assert-ReportIdTimestampMatches {
 $readinessFullPath = Resolve-WorkspacePath $ReadinessReportPath
 $bootstrapFullPath = Resolve-WorkspacePath $BootstrapSmokeReportPath
 
-& $readinessValidatorScript -ReportPath $readinessFullPath -RequireReady | Out-Host
-& $bootstrapValidatorScript -ReportPath $bootstrapFullPath -RequirePassed | Out-Host
-
 $readiness = Get-Content -LiteralPath $readinessFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $bootstrap = Get-Content -LiteralPath $bootstrapFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+$readinessReleaseId = ([string]$readiness.releaseId).Trim()
+$bootstrapReleaseId = ([string]$bootstrap.releaseId).Trim()
+
+if ([string]::IsNullOrWhiteSpace($readinessReleaseId)) {
+    throw "Admin VPS bootstrap smoke evidence readiness releaseId is required."
+}
+
+if ([string]::IsNullOrWhiteSpace($bootstrapReleaseId)) {
+    throw "Admin VPS bootstrap smoke evidence bootstrap releaseId is required."
+}
+
+if (-not [string]::Equals($readinessReleaseId, $bootstrapReleaseId, [System.StringComparison]::Ordinal)) {
+    throw "Admin VPS bootstrap smoke evidence mismatch for releaseId."
+}
+
+$latestReleaseId = Get-LatestActiveReleaseId
+if (-not [string]::Equals($bootstrapReleaseId, $latestReleaseId, [System.StringComparison]::Ordinal)) {
+    throw "Admin VPS bootstrap smoke evidence releaseId '$bootstrapReleaseId' must match latest active release '$latestReleaseId' when -RequireReady and -RequirePassed are used."
+}
+
+& $readinessValidatorScript -ReportPath $readinessFullPath -RequireReady | Out-Host
+& $bootstrapValidatorScript -ReportPath $bootstrapFullPath -RequirePassed | Out-Host
 
 Assert-Same (Normalize-Url ([string]$readiness.apiBaseUrl)) (Normalize-Url ([string]$bootstrap.apiBaseUrl)) "apiBaseUrl"
 Assert-Same (Normalize-Url ([string]$readiness.adminWebUrl)) (Normalize-Url ([string]$bootstrap.adminWebUrl)) "adminWebUrl"
