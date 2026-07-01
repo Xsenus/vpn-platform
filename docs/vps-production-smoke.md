@@ -110,6 +110,12 @@ powershell -ExecutionPolicy Bypass -File scripts\new-vps-production-smoke-report
   -EnvironmentName staging
 ```
 
+Manual `-ReleaseId` must already exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`; unknown values fail before any report file is written. Regression check:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-vps-production-smoke-report-generator-release-guard.ps1
+```
+
 Проверить заполненный отчет:
 
 ```powershell

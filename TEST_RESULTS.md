@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: VPS production smoke generator release guard
+
+Scope:
+- `scripts/new-vps-production-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing a VPS production smoke draft.
+- Added `scripts/test-vps-production-smoke-report-generator-release-guard.ps1` regression coverage for an unknown release id and no generated JSON artifact.
+- `P11-ACC-075` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `326/346` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-vps-production-smoke-generator-release-guard`, version `0.321.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- VPS production smoke generator release guard regression: OK.
+- Targeted VPS/docs/release suite: OK, `24/24`.
+- Backend full suite: OK, `616/616`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-vps-production-smoke-generator-release-guard`.
+- Secret scan: OK, files scanned `529`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: staging smoke generator release guard
 
 Scope:

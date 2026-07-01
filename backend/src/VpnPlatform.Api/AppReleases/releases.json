@@ -7672,5 +7672,28 @@
         "text": "`P9-TST-007` remains in progress until real staging/VPS smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-vps-production-smoke-generator-release-guard",
+    "version": "0.321.0",
+    "releasedAt": "2026-07-01T18:36:00+07:00",
+    "title": "VPS production smoke generator release guard",
+    "summary": "VPS production smoke draft generation now rejects unknown manual release ids before writing acceptance artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/new-vps-production-smoke-report.ps1 -ReleaseId` now requires the supplied release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-vps-production-smoke-report-generator-release-guard.ps1` covers the fail-fast path and proves no draft report is created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]
