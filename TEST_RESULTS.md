@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: production handoff receipt Markdown verified files guard cleanup
+
+Scope:
+- `test-production-evidence-handoff-receipt-markdown-verified-files-guard.ps1` now removes its default `tmp/production-evidence-handoff-receipt-markdown-verified-files-guard` bundle directory and empty `tmp` directory after a local run.
+- The receipt Markdown verified files regression still proves `validate-production-evidence-handoff-receipt.ps1` rejects Markdown receipts with tampered `verifiedFiles` SHA256 details.
+- `P11-ACC-122` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `378/398` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-production-handoff-receipt-markdown-verified-files-guard-cleanup`, version `0.373.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production handoff receipt Markdown verified files guard cleanup: OK.
+- Targeted production/docs/release suite: OK, `140/140`.
+- Backend full suite: OK, `668/668`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-production-handoff-receipt-markdown-verified-files-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: production handoff receipt verified files guard cleanup
 
 Scope:

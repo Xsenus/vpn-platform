@@ -80,4 +80,8 @@ finally {
     if (Test-Path -LiteralPath $bundleDirectory) {
         Remove-Item -LiteralPath $bundleDirectory -Recurse -Force
     }
+
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
+    }
 }
