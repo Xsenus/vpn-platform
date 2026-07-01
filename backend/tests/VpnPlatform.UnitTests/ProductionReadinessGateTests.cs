@@ -917,6 +917,40 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Bundle_Should_Reject_Stale_Release_In_Production_Ready_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-bundle.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-bundle-latest-release-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestActiveReleaseId",
+                     "backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "must match latest active release",
+                     "RequireProductionReady"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "stale-release-id",
+                     "must match latest active release",
+                     "production evidence bundle latest release guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-bundle-latest-release-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-073`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Manifest_Should_Record_Safe_File_Hashes_For_Handoff()
     {
         var root = FindRepositoryRoot();

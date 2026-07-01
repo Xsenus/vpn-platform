@@ -16,6 +16,18 @@ function Resolve-RepoPath {
     return Join-Path $repoRoot $RelativePath
 }
 
+function Get-LatestActiveReleaseId {
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 function Resolve-BundlePath {
     param([string]$DirectoryPath)
 
@@ -52,7 +64,49 @@ function Invoke-BundleValidator {
     }
 }
 
+function Test-LatestReleaseId {
+    param(
+        [string]$Name,
+        [string]$Path,
+        [string]$LatestReleaseId
+    )
+
+    try {
+        $report = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        return [ordered]@{
+            name = "$Name-release-id"
+            status = "invalid"
+            validatorPath = $Path
+            message = "Production evidence bundle report $Name JSON is invalid: $($_.Exception.Message)"
+        }
+    }
+
+    $releaseId = [string]$report.releaseId
+    if ([string]::IsNullOrWhiteSpace($releaseId)) {
+        return [ordered]@{
+            name = "$Name-release-id"
+            status = "invalid"
+            validatorPath = $Path
+            message = "Production evidence bundle report $Name releaseId is required."
+        }
+    }
+
+    if (-not [string]::Equals($releaseId, $LatestReleaseId, [System.StringComparison]::Ordinal)) {
+        return [ordered]@{
+            name = "$Name-release-id"
+            status = "invalid"
+            validatorPath = $Path
+            message = "Production evidence bundle report $Name releaseId '$releaseId' must match latest active release '$LatestReleaseId' when -RequireProductionReady is used."
+        }
+    }
+
+    return $null
+}
+
 $bundleFullPath = Resolve-BundlePath -DirectoryPath $BundleDirectory
+$latestReleaseId = if ($RequireProductionReady) { Get-LatestActiveReleaseId } else { "" }
 $requiredReports = [ordered]@{
     "staging-vps" = [ordered]@{
         fileName = "staging-smoke-report.json"
@@ -87,6 +141,14 @@ foreach ($entry in $requiredReports.GetEnumerator()) {
             message = "Required report file was not found: $path"
         }
         continue
+    }
+
+    if ($RequireProductionReady) {
+        $releaseIdValidation = Test-LatestReleaseId -Name $name -Path $path -LatestReleaseId $latestReleaseId
+        if ($null -ne $releaseIdValidation) {
+            $results += $releaseIdValidation
+            continue
+        }
     }
 
     $parameters = @{

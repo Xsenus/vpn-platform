@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.312.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-evidence-bundle-latest-release-guard`.
+
+### Fixed
+- `scripts/validate-production-evidence-bundle.ps1 -RequireProductionReady` now rejects evidence bundles whose required reports carry stale `releaseId` values before final evidence packaging can continue.
+
+### Added
+- `scripts/test-production-evidence-bundle-latest-release-guard.ps1` proves that a production-ready bundle with stale report `releaseId` is rejected.
+- `P11-ACC-073` documents the acceptance guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `317/337` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence bundle latest release guard regression OK; targeted production handoff/docs/release suite `80/80`; backend full suite `607/607`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `520` files, `0` findings; markdown encoding check OK.
+
 ## 0.311.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-readiness-assertion-latest-release-guard`.

@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `606/606`.
+- [x] Backend full suite: `607/607`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-07-01-production-readiness-assertion-latest-release-guard`, версия `0.311.0`.
+- [x] Latest "Что нового": `2026-07-01-production-evidence-bundle-latest-release-guard`, версия `0.312.0`.
 
 ## Как вести дальше
 

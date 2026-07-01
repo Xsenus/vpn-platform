@@ -254,7 +254,13 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-bu
   -RequireSummary
 ```
 
-Для финального production handoff используйте `-RequireProductionReady`: bundle validator запустит строгие validators всех четырех reports и summary.
+Для финального production handoff используйте `-RequireProductionReady`: bundle validator сверит `releaseId` каждого обязательного report с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`, затем запустит строгие validators всех четырех reports и summary.
+
+Latest-release guard для bundle:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-bundle-latest-release-guard.ps1
+```
 
 Зафиксировать состав bundle для handoff можно manifest-файлом:
 

@@ -7465,5 +7465,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-evidence-bundle-latest-release-guard",
+    "version": "0.312.0",
+    "releasedAt": "2026-07-01T17:30:00+07:00",
+    "title": "Production evidence bundle latest release guard",
+    "summary": "Production-ready evidence bundle validation now rejects stale release reports before final evidence packaging can continue.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-evidence-bundle.ps1 -RequireProductionReady` now requires every required report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-bundle-latest-release-guard.ps1` covers the fail-closed path for a production-ready bundle with stale report `releaseId`."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]
