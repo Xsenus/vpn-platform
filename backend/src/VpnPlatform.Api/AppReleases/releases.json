@@ -7764,5 +7764,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-evidence-bundle-generator-release-guard",
+    "version": "0.325.0",
+    "releasedAt": "2026-07-01T19:03:00+07:00",
+    "title": "Production evidence bundle generator release guard",
+    "summary": "Production evidence bundle generation now rejects unknown manual release ids before creating the output directory or evidence artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/new-production-evidence-bundle.ps1 -ReleaseId` now requires the supplied release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json` before creating the bundle directory."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-bundle-generator-release-guard.ps1` covers the fail-fast path and proves no output directory or JSON artifacts are created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

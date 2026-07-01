@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.325.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-evidence-bundle-generator-release-guard`.
+
+### Fixed
+- `scripts/new-production-evidence-bundle.ps1 -ReleaseId` now rejects unknown manual release ids before creating the output directory or evidence artifacts.
+
+### Added
+- `scripts/test-production-evidence-bundle-generator-release-guard.ps1` proves that bundle generation fails fast and leaves no output directory for an unknown `ReleaseId`.
+- `P11-ACC-076` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `330/350` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence bundle generator release guard regression OK; targeted production/docs/release suite `83/83`; backend full suite `620/620`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `533` files, `0` findings; markdown encoding check OK.
+
 ## 0.324.0 - 2026-07-01
 
 Release entry: `2026-07-01-admin-vps-bootstrap-readiness-release-guard`.

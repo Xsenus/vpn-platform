@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `619/619`.
+- Backend full suite: `620/620`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-admin-vps-bootstrap-readiness-release-guard`, версия `0.324.0`; direct admin VPS bootstrap readiness now rejects unknown manual release ids before writing readiness artifacts. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-production-evidence-bundle-generator-release-guard`, версия `0.325.0`; production evidence bundle generation now rejects unknown manual release ids before creating the output directory. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

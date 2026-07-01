@@ -40,12 +40,31 @@ function Invoke-RequiredScript {
     & $ScriptPath @Parameters | Out-Host
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 $fullOutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
 if ((Test-Path -LiteralPath $fullOutputDirectory) -and -not $Force) {
     $existingFiles = @(Get-ChildItem -LiteralPath $fullOutputDirectory -Filter "*.json" -File -ErrorAction SilentlyContinue)
     if ($existingFiles.Count -gt 0) {
         throw "Output directory already contains JSON reports. Pass -Force to overwrite: $fullOutputDirectory"
     }
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ReleaseId)) {
+    Assert-KnownReleaseId -Value $ReleaseId.Trim()
 }
 
 New-Item -ItemType Directory -Path $fullOutputDirectory -Force | Out-Null

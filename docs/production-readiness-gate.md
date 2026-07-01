@@ -216,6 +216,12 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-bundle.
 
 Скрипт создает `staging-smoke-report.json`, `payment-provider-smoke-report.json`, `admin-vps-smoke-report.json` и `vpn-live-smoke-report.json`, прогоняет обычные validators каждого отчета и при `-RunProductionGate` сохраняет статус агрегированного gate в итоговом сообщении. Черновики остаются `blocked`, пока оператор не заменит TODO на реальные sanitized evidence.
 
+Regression guard для ручного release id доказывает, что bundle-generator не создает даже output directory, если `-ReleaseId` отсутствует в `backend/src/VpnPlatform.Api/AppReleases/releases.json`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-bundle-generator-release-guard.ps1
+```
+
 После этого можно собрать человекочитаемый summary для оператора:
 
 ```powershell
