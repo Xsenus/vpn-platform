@@ -304,6 +304,30 @@ public class AdminBootstrapCliScriptTests
     }
 
     [Fact]
+    public void Local_Admin_Vps_Bootstrap_Smoke_Should_Cleanup_Default_Tmp()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "local-admin-vps-bootstrap-smoke.ps1"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "$tmpRoot = Join-Path $root \"tmp\"",
+                     "Test-Path -LiteralPath $tmpRoot",
+                     "Get-ChildItem -LiteralPath $tmpRoot -Force",
+                     "Remove-Item -LiteralPath $tmpRoot -Force"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("local-admin-vps-bootstrap-smoke.ps1", smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("пустой `tmp`", smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001CE`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Local_Admin_Vps_Bootstrap_Smoke_Wrapper_Regression_Should_Fail_Fast_Before_Local_Smoke()
     {
         var root = FindRepositoryRoot();

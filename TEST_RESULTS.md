@@ -2,6 +2,28 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: Local admin VPS bootstrap smoke cleanup
+
+Scope:
+- `local-admin-vps-bootstrap-smoke.ps1` removes its `tmp/local-admin-vps-bootstrap-smoke` output and empty parent `tmp` after ordinary local runs.
+- `-KeepArtifacts` preserves the local bootstrap SQLite DB, reports and logs for explicit local debugging.
+- `P0-ADMIN-001CE` is closed; real VPS admin bootstrap/smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `408/428` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-local-admin-vps-bootstrap-smoke-cleanup`, version `0.396.0`.
+- Real VPS admin bootstrap/smoke evidence is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Local admin VPS bootstrap smoke cleanup: OK.
+- Targeted bootstrap/docs/release suite: OK, `36/36`.
+- Backend full suite: OK, `691/691`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local bootstrap SQLite smoke: OK; latest release `2026-07-02-local-admin-vps-bootstrap-smoke-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
 ## Check 2026-07-02: Local admin VPS browser smoke cleanup
 
 Scope:
