@@ -119,3 +119,5 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-vps-production-smoke-r
 ```
 
 Если хотя бы один шаг остался `blocked`, `failed`, не заполнено boolean-подтверждение или в evidence попал секретный маркер, validator завершится ошибкой.
+
+В acceptance-режиме отчет также должен быть привязан к latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`. Если `releaseId` в отчете устарел, `-RequireAllPassed` падает даже при `passed` по всем шагам и boolean-подтверждениям.

@@ -7231,5 +7231,28 @@
         "text": "`P0-VPN-001` ... `P0-VPN-005` remain open until real 3x-ui/VPN smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-vps-production-smoke-latest-release-guard",
+    "version": "0.302.0",
+    "releasedAt": "2026-07-01T13:00:00+07:00",
+    "title": "VPS production smoke latest release guard",
+    "summary": "VPS production smoke acceptance now rejects stale release evidence before a report can be used for production-ready decision.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-vps-production-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-vps-production-smoke-report-latest-release-guard.ps1` covers the fail-closed path for a fully passed but stale VPS production smoke report."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

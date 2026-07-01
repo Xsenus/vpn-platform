@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.302.0 - 2026-07-01
+
+Release entry: `2026-07-01-vps-production-smoke-latest-release-guard`.
+
+### Added
+
+- `scripts/test-vps-production-smoke-report-latest-release-guard.ps1` proves that a fully passed VPS production smoke report with stale `releaseId` is rejected.
+- Roadmap item `P11-ACC-065` documents the latest-release acceptance guard while keeping `P11-ACC-002` open for real VPS evidence.
+
+### Changed
+
+- `scripts/validate-vps-production-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `307/327` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: VPS production smoke latest release guard regression OK; targeted VPS production/docs/release suite `23/23`; backend full suite `597/597`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `510` files, `0` findings; markdown encoding check OK.
+
 ## 0.301.0 - 2026-07-01
 
 Release entry: `2026-07-01-vpn-live-smoke-latest-release-guard`.
