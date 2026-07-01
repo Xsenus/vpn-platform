@@ -481,6 +481,8 @@ Regression guard для duplicated entries доказывает, что archive-
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-duplicate-entry-guard.ps1
 ```
 
+Duplicate-entry guard удаляет созданный ZIP и пустой `tmp` после выполнения, чтобы локальный regression run не оставлял временные artifacts.
+
 Regression guard для nested entries доказывает, что archive-validator не принимает ZIP с вложенными путями файлов:
 
 ```powershell
