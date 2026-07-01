@@ -9355,5 +9355,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-fresh-local-smoke-cleanup",
+    "version": "0.394.0",
+    "releasedAt": "2026-07-02T04:06:00+07:00",
+    "title": "Fresh local smoke cleanup",
+    "summary": "Fresh local smoke now removes its empty default tmp directory after ordinary local runs.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`fresh-local-smoke.ps1` now removes `tmp/fresh-local-smoke` and the empty parent `tmp` after ordinary local runs."
+      },
+      {
+        "type": "fixed",
+        "text": "`-KeepArtifacts` still preserves the fresh local SQLite DB and logs for explicit local debugging."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-011`, `STATE-012`, `STATE-013` and `P11-ACC-002` remain open until real VPS/staging/live evidence is captured."
+      }
+    ]
   }
 ]

@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: Fresh local smoke cleanup
+
+Scope:
+- `fresh-local-smoke.ps1` removes its `tmp/fresh-local-smoke` output and empty parent `tmp` after ordinary local runs.
+- `-KeepArtifacts` preserves the fresh local SQLite DB and logs for explicit local debugging.
+- `P11-ACC-129` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `406/426` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-fresh-local-smoke-cleanup`, version `0.394.0`.
+- Real VPS/staging/live evidence is still required before closing `STATE-011`, `STATE-012`, `STATE-013` or `P11-ACC-002`.
+
+Validation:
+- Fresh local smoke cleanup: OK.
+- Targeted fresh-local/docs/release suite: OK, `17/17`.
+- Backend full suite: OK, `689/689`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-fresh-local-smoke-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: Local admin VPS bootstrap smoke wrapper cleanup
 
 Scope:

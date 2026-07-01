@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $tmp = Join-Path $root "tmp\fresh-local-smoke"
+$tmpRoot = Join-Path $root "tmp"
 $resolvedRoot = (Resolve-Path $root).Path
 
 function Assert-InWorkspace {
@@ -260,6 +261,9 @@ finally {
     Start-Sleep -Milliseconds 500
     if (-not $KeepArtifacts) {
         Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
+        if ((Test-Path -LiteralPath $tmpRoot) -and -not (Get-ChildItem -LiteralPath $tmpRoot -Force)) {
+            Remove-Item -LiteralPath $tmpRoot -Force
+        }
     }
     else {
         Write-Host "Artifacts kept in $tmp"

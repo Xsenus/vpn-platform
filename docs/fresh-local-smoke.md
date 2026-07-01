@@ -52,7 +52,7 @@ fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 order=<id> paymen
 
 ## Безопасность
 
-- Скрипт удаляет только папку `tmp/fresh-local-smoke` внутри текущего репозитория.
+- Скрипт удаляет только папку `tmp/fresh-local-smoke` внутри текущего репозитория и пустой `tmp` после обычного запуска без `-KeepArtifacts`.
 - Перед удалением путь проверяется на принадлежность workspace.
 - Все переменные окружения задаются только для текущего процесса PowerShell и восстанавливаются в `finally`.
 - API-процесс всегда останавливается в `finally`.

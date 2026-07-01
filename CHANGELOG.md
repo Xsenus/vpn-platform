@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.394.0 - 2026-07-02
+
+Release entry: `2026-07-02-fresh-local-smoke-cleanup`.
+
+### Fixed
+- `fresh-local-smoke.ps1` now removes its `tmp/fresh-local-smoke` output and empty parent `tmp` after ordinary local runs.
+- `-KeepArtifacts` still preserves the fresh local SQLite DB and logs for explicit local debugging.
+- `P11-ACC-129` documents the local cleanup behavior while real VPS/staging/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `406/426` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: fresh local smoke cleanup OK; targeted fresh-local/docs/release suite `17/17`; backend full suite `689/689`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.393.0 - 2026-07-02
 
 Release entry: `2026-07-02-local-admin-vps-bootstrap-smoke-wrapper-cleanup`.
