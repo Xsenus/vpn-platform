@@ -3,10 +3,30 @@ param(
     [string]$ResultJsonPath,
 
     [string]$ResultMarkdownPath = "",
+    [switch]$RequireProductionReady,
     [switch]$WriteJson
 )
 
 $ErrorActionPreference = "Stop"
+
+function Resolve-RepoPath {
+    param([string]$RelativePath)
+
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    return Join-Path $repoRoot $RelativePath
+}
+
+function Get-LatestActiveReleaseId {
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
 
 function Assert-ExistingFile {
     param(
@@ -55,6 +75,13 @@ Assert-Passed -Value $result.ciSummaryValidatorRegression.status -Label "CI summ
 $releaseId = [string]$result.releaseId
 if ([string]::IsNullOrWhiteSpace($releaseId)) {
     throw "Production evidence handoff package archive CI regression result releaseId is required."
+}
+
+if ($RequireProductionReady) {
+    $latestReleaseId = Get-LatestActiveReleaseId
+    if (-not [string]::Equals($releaseId, $latestReleaseId, [System.StringComparison]::Ordinal)) {
+        throw "Production evidence handoff package archive CI regression result releaseId '$releaseId' must match latest active release '$latestReleaseId' when -RequireProductionReady is used."
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($ResultMarkdownPath)) {

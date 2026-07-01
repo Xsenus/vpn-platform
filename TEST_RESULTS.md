@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production handoff CI result latest release guard
+
+Scope:
+- `scripts/validate-production-evidence-handoff-package-archive-ci-regression-result.ps1 -RequireProductionReady` now rejects production-ready handoff CI results whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-production-evidence-handoff-package-archive-ci-regression-result-latest-release-guard.ps1` regression coverage for a production-ready but stale CI result.
+- `P11-ACC-069` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `313/333` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-ci-result-latest-release-guard`, version `0.308.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002` or production-ready decision.
+
+Validation:
+- Production handoff CI result latest release guard regression: OK.
+- Targeted production handoff/docs/release suite: OK, `76/76`.
+- Backend full suite: OK, `603/603`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-ci-result-latest-release-guard`.
+- Secret scan: OK, files scanned `516`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production handoff flow result latest release guard
 
 Scope:

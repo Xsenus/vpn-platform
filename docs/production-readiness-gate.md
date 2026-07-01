@@ -476,7 +476,13 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ha
   -ResultJsonPath tmp\production-evidence-handoff-package-archive-ci-regression-test\production-evidence-handoff-package-archive-ci-regression-result.json
 ```
 
-Этот валидатор сверяет общий статус, статусы всех вложенных regression harnesses, наличие `ciSummaryValidatorRegression`, обязательные failure-сценарии summary validator regression, Markdown-пару и пути к artifacts.
+Этот валидатор сверяет общий статус, статусы всех вложенных regression harnesses, наличие `ciSummaryValidatorRegression`, обязательные failure-сценарии summary validator regression, Markdown-пару и пути к artifacts. Для финального production-ready artifact добавьте `-RequireProductionReady`: validator потребует, чтобы `releaseId` CI result совпадал с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Latest-release guard для CI result:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-ci-regression-result-latest-release-guard.ps1
+```
 
 Fail-closed поведение этого standalone validator проверяется отдельным regression harness:
 
