@@ -70,6 +70,8 @@ Production gate для заполненного отчета:
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-report.ps1 -ReportPath tmp\admin-vps-smoke-report.json -RequireAllPassed
 ```
 
+Acceptance mode requires `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`, so stale admin VPS smoke evidence cannot close the roadmap after a newer release.
+
 `-RequireAllPassed` должен падать на черновике, потому что все разделы изначально находятся в статусе `blocked`. Перед закрытием `P0-ADMIN-002` нужно заменить статусы на `passed`, выставить `loaded=true`, `httpStatus=200`, заполнить общие флаги и приложить безопасные real evidence. Acceptance mode также отклоняет placeholder evidence вроде `TODO`, `Not checked yet`, `safe screenshot name` и шаблонных browser smoke notes.
 
 `scripts/validate-admin-vps-smoke-report.ps1` читает `docs/admin-vps-smoke-sections.json` и сверяет не только наличие обязательных разделов, но и route каждого раздела с manifest.
@@ -80,6 +82,12 @@ Smoke report содержит `smokeReportPath`; validator сверяет это
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-validator.ps1
+```
+
+`scripts/test-admin-vps-smoke-report-latest-release-guard.ps1` additionally proves that a fully passed but stale admin VPS smoke report is rejected by `-RequireAllPassed` before it can be used as acceptance evidence:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-latest-release-guard.ps1
 ```
 
 ## Preflight перед live-smoke

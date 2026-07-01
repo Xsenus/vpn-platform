@@ -7254,5 +7254,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-admin-vps-smoke-latest-release-guard",
+    "version": "0.303.0",
+    "releasedAt": "2026-07-01T14:00:00+07:00",
+    "title": "Admin VPS smoke latest release guard",
+    "summary": "Admin VPS smoke acceptance now rejects stale release evidence before a report can be used for roadmap or production readiness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-smoke-report-latest-release-guard.ps1` covers the fail-closed path for a fully passed but stale admin VPS smoke report."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
+      }
+    ]
   }
 ]

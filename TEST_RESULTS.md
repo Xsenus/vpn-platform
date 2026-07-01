@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: admin VPS smoke latest release guard
+
+Scope:
+- `scripts/validate-admin-vps-smoke-report.ps1 -RequireAllPassed` now rejects admin VPS smoke reports whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-admin-vps-smoke-report-latest-release-guard.ps1` regression coverage for a fully passed but stale admin VPS report.
+- `P0-ADMIN-002BC` is closed; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+Result:
+- Roadmap progress: `308/328` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-admin-vps-smoke-latest-release-guard`, version `0.303.0`.
+- Real VPS admin smoke report is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Admin VPS smoke latest release guard regression: OK.
+- Targeted admin VPS/docs/release suite: OK, `31/31`.
+- Backend full suite: OK, `598/598`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-admin-vps-smoke-latest-release-guard`.
+- Secret scan: OK, files scanned `511`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: VPS production smoke latest release guard
 
 Scope:

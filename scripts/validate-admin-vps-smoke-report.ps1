@@ -63,6 +63,18 @@ function Resolve-RepoPath {
     return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $PathValue))
 }
 
+function Get-LatestActiveReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 function Get-SectionsContract {
     param([Parameter(Mandatory = $true)][string]$PathValue)
 
@@ -146,6 +158,13 @@ Assert-ReportHttpUrl -Value ([string]$report.adminWebUrl) -Name "adminWebUrl"
 
 if (-not ([string]$report.adminEmail).Contains("@")) {
     throw "Admin VPS smoke report field adminEmail must contain an email address."
+}
+
+if ($RequireAllPassed) {
+    $latestReleaseId = Get-LatestActiveReleaseId
+    if (-not [string]::Equals([string]$report.releaseId, $latestReleaseId, [System.StringComparison]::Ordinal)) {
+        throw "Admin VPS smoke report releaseId '$($report.releaseId)' must match latest active release '$latestReleaseId' when -RequireAllPassed is used."
+    }
 }
 
 $smokeReportPath = Resolve-RepoPath ([string]$report.smokeReportPath)

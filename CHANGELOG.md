@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.303.0 - 2026-07-01
+
+Release entry: `2026-07-01-admin-vps-smoke-latest-release-guard`.
+
+### Added
+
+- `scripts/test-admin-vps-smoke-report-latest-release-guard.ps1` proves that a fully passed admin VPS smoke report with stale `releaseId` is rejected.
+- Roadmap item `P0-ADMIN-002BC` documents the latest-release acceptance guard while keeping real VPS admin smoke items open for external evidence.
+
+### Changed
+
+- `scripts/validate-admin-vps-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `308/328` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke latest release guard regression OK; targeted admin VPS/docs/release suite `31/31`; backend full suite `598/598`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `511` files, `0` findings; markdown encoding check OK.
+
 ## 0.302.0 - 2026-07-01
 
 Release entry: `2026-07-01-vps-production-smoke-latest-release-guard`.
