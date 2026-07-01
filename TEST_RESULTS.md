@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: production handoff checklist Markdown gates guard cleanup
+
+Scope:
+- `test-production-evidence-handoff-checklist-markdown-gates-guard.ps1` now removes its default `tmp/production-evidence-handoff-checklist-markdown-gates-guard` bundle directory and empty `tmp` directory after a local run.
+- The checklist Markdown gates regression still proves `validate-production-evidence-handoff-checklist.ps1` rejects Markdown checklists with tampered gate details.
+- `P11-ACC-123` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `379/399` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-production-handoff-checklist-markdown-gates-guard-cleanup`, version `0.374.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production handoff checklist Markdown gates guard cleanup: OK.
+- Targeted production/docs/release suite: OK, `141/141`.
+- Backend full suite: OK, `669/669`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-production-handoff-checklist-markdown-gates-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: production handoff receipt Markdown verified files guard cleanup
 
 Scope:

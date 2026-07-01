@@ -304,7 +304,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-119", "2026-07-02-production-handoff-checklist-release-guard-cleanup"),
         new("P11-ACC-120", "2026-07-02-production-handoff-package-latest-release-guard-cleanup"),
         new("P11-ACC-121", "2026-07-02-production-handoff-receipt-verified-files-guard-cleanup"),
-        new("P11-ACC-122", "2026-07-02-production-handoff-receipt-markdown-verified-files-guard-cleanup")
+        new("P11-ACC-122", "2026-07-02-production-handoff-receipt-markdown-verified-files-guard-cleanup"),
+        new("P11-ACC-123", "2026-07-02-production-handoff-checklist-markdown-gates-guard-cleanup")
     ];
 
     [Fact]
