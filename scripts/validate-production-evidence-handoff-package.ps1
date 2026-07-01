@@ -16,6 +16,18 @@ function Resolve-RepoPath {
     return Join-Path $repoRoot $RelativePath
 }
 
+function Get-LatestActiveReleaseId {
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 function Resolve-RequiredFile {
     param(
         [string]$PathValue,
@@ -150,6 +162,13 @@ if (-not [string]::IsNullOrWhiteSpace($ExpectedArchiveSha256) -and $ExpectedArch
 $generatedAt = [DateTimeOffset]::MinValue
 if (-not [DateTimeOffset]::TryParse([string]$index.generatedAt, [ref]$generatedAt)) {
     throw "Production evidence handoff package index generatedAt is not a valid DateTimeOffset."
+}
+
+if ($RequireProductionReady) {
+    $latestReleaseId = Get-LatestActiveReleaseId
+    if (-not [string]::Equals([string]$index.releaseId, $latestReleaseId, [System.StringComparison]::Ordinal)) {
+        throw "Production evidence handoff package releaseId '$($index.releaseId)' must match latest active release '$latestReleaseId' when -RequireProductionReady is used."
+    }
 }
 
 $indexFiles = @($index.files)

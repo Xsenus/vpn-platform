@@ -349,7 +349,13 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ha
   -PackageDirectory tmp\production-evidence\production-evidence-handoff-package
 ```
 
-Package validator проверяет whitelist файлов, `production-evidence-handoff-package-index.json`, `SHA256SUMS.txt`, пересчитывает SHA256 каждого artifact и повторно запускает checklist validator. В режиме `-RequireProductionReady` package должен иметь `production-ready-handoff` и проходить строгую проверку checklist.
+Package validator проверяет whitelist файлов, `production-evidence-handoff-package-index.json`, `SHA256SUMS.txt`, пересчитывает SHA256 каждого artifact и повторно запускает checklist validator. В режиме `-RequireProductionReady` package должен иметь `production-ready-handoff`, `releaseId` package index должен совпадать с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`, а checklist должен проходить строгую проверку.
+
+Regression guard для stale release:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-latest-release-guard.ps1
+```
 
 Проверенный package можно упаковать в один ZIP:
 
