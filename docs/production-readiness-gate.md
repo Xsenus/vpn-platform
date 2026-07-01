@@ -517,6 +517,12 @@ Regression guard для rooted entries доказывает, что archive-vali
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-rooted-entry-guard.ps1
 ```
 
+Regression guard для whitespace entries доказывает, что archive-validator не принимает ZIP с пустым или состоящим из пробелов entry именем:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-whitespace-entry-guard.ps1
+```
+
 Чтобы не собирать всю локальную цепочку вручную, можно запустить end-to-end flow одной командой:
 
 ```powershell

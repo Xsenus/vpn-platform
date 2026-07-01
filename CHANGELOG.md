@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.341.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-whitespace-entry-guard`.
+
+### Added
+- `scripts/test-production-evidence-handoff-package-archive-whitespace-entry-guard.ps1` creates a ZIP with a whitespace-only entry and proves the final handoff package archive validator rejects blank entry names fail-closed.
+- `ProductionReadinessGateTests` now pins the whitespace-entry archive guard, validator blank-name check and production readiness gate documentation.
+- `P11-ACC-092` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `346/366` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive whitespace entry guard regression OK; targeted production/docs/release suite `98/98`; backend full suite `636/636`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `549` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.340.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-rooted-entry-guard`.
