@@ -8109,5 +8109,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-package-archive-rooted-entry-guard",
+    "version": "0.340.0",
+    "releasedAt": "2026-07-01T21:01:00+07:00",
+    "title": "Production handoff package archive rooted entry guard",
+    "summary": "Production evidence handoff package archive validation now has regression coverage for rooted ZIP entries.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-rooted-entry-guard.ps1` creates a final handoff package ZIP with `C:\\SHA256SUMS.txt` entry and proves the archive validator fails closed."
+      },
+      {
+        "type": "fixed",
+        "text": "`ProductionReadinessGateTests` now pins rooted-entry archive validation, the regression command and `P11-ACC-091` roadmap closure."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]
