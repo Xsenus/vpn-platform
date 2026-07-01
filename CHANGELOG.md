@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.354.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-ci-regression-default-cleanup`.
+
+### Fixed
+- `test-production-evidence-handoff-package-archive-ci-regression.ps1` now removes its default `tmp/production-evidence-handoff-package-archive-ci-regression-test` output after a non-JSON local run.
+- `ProductionReadinessGateTests` pins the CI regression default-output cleanup while preserving explicit `-OutputDirectory` and `-WriteJson` evidence flows.
+- `P11-ACC-105` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `359/379` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive CI regression default cleanup OK; targeted production/docs/release suite `111/111`; backend full suite `649/649`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.353.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-flow-default-cleanup`.

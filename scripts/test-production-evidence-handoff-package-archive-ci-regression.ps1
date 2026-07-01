@@ -71,11 +71,14 @@ function Add-GitHubStepSummary {
     return $fullSummaryPath
 }
 
-if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$usingDefaultOutputDirectory = [string]::IsNullOrWhiteSpace($OutputDirectory)
+if ($usingDefaultOutputDirectory) {
     $OutputDirectory = Join-Path (Resolve-RepoPath "tmp") "production-evidence-handoff-package-archive-ci-regression-test"
 }
 
 $fullOutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
+$shouldCleanupGeneratedOutput = $usingDefaultOutputDirectory -and -not $WriteJson
 if ((Test-Path -LiteralPath $fullOutputDirectory) -and -not $Force) {
     throw "Production evidence handoff package archive CI regression output directory already exists. Pass -Force to overwrite: $fullOutputDirectory"
 }
@@ -204,4 +207,12 @@ if ($WriteJson) {
 }
 else {
     Write-Host "production evidence handoff package archive CI regression passed $($result | ConvertTo-Json -Depth 12 -Compress)"
+}
+
+if ($shouldCleanupGeneratedOutput -and (Test-Path -LiteralPath $fullOutputDirectory)) {
+    Remove-Item -LiteralPath $fullOutputDirectory -Recurse -Force
+    $tmpDirectory = Join-Path $repoRoot "tmp"
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
+    }
 }
