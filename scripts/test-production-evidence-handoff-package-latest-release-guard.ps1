@@ -64,4 +64,8 @@ finally {
     if (Test-Path -LiteralPath $packageDirectory) {
         Remove-Item -LiteralPath $packageDirectory -Recurse -Force
     }
+
+    if ((Test-Path -LiteralPath $tmpRoot) -and -not (Get-ChildItem -LiteralPath $tmpRoot -Force)) {
+        Remove-Item -LiteralPath $tmpRoot -Force
+    }
 }
