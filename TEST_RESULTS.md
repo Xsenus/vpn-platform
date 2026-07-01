@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: VPS production smoke latest release guard cleanup
+
+Scope:
+- `test-vps-production-smoke-report-latest-release-guard.ps1` now removes its stale-release JSON report and empty default `tmp` directory after a local regression run.
+- The VPS production smoke latest release guard still proves `validate-vps-production-smoke-report.ps1 -RequireAllPassed` rejects a stale `releaseId`.
+- `P11-ACC-127` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `383/403` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-vps-production-smoke-latest-release-guard-cleanup`, version `0.378.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- VPS production smoke latest release guard cleanup: OK.
+- Targeted VPS/docs/release suite: OK, `154/154`.
+- Backend full suite: OK, `673/673`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-vps-production-smoke-latest-release-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: VPS production smoke generator release guard cleanup
 
 Scope:
