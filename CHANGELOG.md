@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.317.0 - 2026-07-01
+
+Release entry: `2026-07-01-admin-vps-smoke-generator-release-guard`.
+
+### Fixed
+- `scripts/new-admin-vps-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing a draft report.
+
+### Added
+- `scripts/test-admin-vps-smoke-report-generator-release-guard.ps1` proves that the generator fails fast and leaves no JSON artifact for an unknown `ReleaseId`.
+- `P0-ADMIN-002BF` documents the local guard while `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `322/342` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke generator release guard regression OK; targeted admin/docs/release suite `34/34`; backend full suite `612/612`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `525` files, `0` findings; markdown encoding check OK.
+
 ## 0.316.0 - 2026-07-01
 
 Release entry: `2026-07-01-admin-vps-bootstrap-smoke-evidence-latest-release-guard`.

@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: admin VPS smoke generator release guard
+
+Scope:
+- `scripts/new-admin-vps-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing an admin VPS smoke draft.
+- Added `scripts/test-admin-vps-smoke-report-generator-release-guard.ps1` regression coverage for an unknown release id and no generated JSON artifact.
+- `P0-ADMIN-002BF` is closed; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+Result:
+- Roadmap progress: `322/342` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-admin-vps-smoke-generator-release-guard`, version `0.317.0`.
+- Real VPS admin smoke report is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Admin VPS smoke generator release guard regression: OK.
+- Targeted admin/docs/release suite: OK, `34/34`.
+- Backend full suite: OK, `612/612`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-admin-vps-smoke-generator-release-guard`.
+- Secret scan: OK, files scanned `525`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: admin VPS bootstrap smoke evidence latest release guard
 
 Scope:

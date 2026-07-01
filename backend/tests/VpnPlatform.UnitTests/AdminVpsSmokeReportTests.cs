@@ -100,6 +100,8 @@ public class AdminVpsSmokeReportTests
                      "TODO: open",
                      "Output file already exists. Pass -Force",
                      "Get-LatestReleaseId",
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
                      "DateTimeOffset]::Parse",
                      "CultureInfo]::InvariantCulture"
                  })
@@ -113,9 +115,43 @@ public class AdminVpsSmokeReportTests
         }
 
         Assert.Contains("new-admin-vps-smoke-report.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-admin-vps-smoke-report-generator-release-guard.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-admin-vps-smoke-report-generator-release-guard.ps1", script + guide, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("password=", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Bearer ", script, StringComparison.Ordinal);
         Assert.DoesNotContain("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Admin_Vps_Smoke_Generator_Should_Reject_Unknown_Manual_Release()
+    {
+        var root = FindRepositoryRoot();
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-admin-vps-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-report-generator-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "missing-release-id-for-regression"
+                 })
+        {
+            Assert.Contains(expected, generator + regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Generator created report artifact after unknown ReleaseId failure",
+                     "admin vps smoke generator release guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-smoke-report-generator-release-guard.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002BF`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

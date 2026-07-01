@@ -10,6 +10,12 @@
 powershell -ExecutionPolicy Bypass -File scripts\new-admin-vps-smoke-report.ps1 -OutputPath tmp\admin-vps-smoke-report.json -ApiBaseUrl https://api.example.test -AdminWebUrl https://example.test/admin/ -AdminEmail owner@example.com -EnvironmentName staging -Operator local-test
 ```
 
+Known release guard regression:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-generator-release-guard.ps1
+```
+
 Скрипт берет `docs/admin-vps-smoke-report.template.json`, подставляет latest release из раздела "Что нового", URL окружения, оператора и `smokeReportPath`, выставляет все разделы в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
 
 ## Что проверять
