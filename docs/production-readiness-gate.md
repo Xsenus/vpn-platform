@@ -513,6 +513,8 @@ Regression guard для dotdot entries доказывает, что archive-vali
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-dotdot-entry-guard.ps1
 ```
 
+Dotdot-entry guard удаляет созданный ZIP и пустой `tmp` после выполнения, чтобы локальный regression run не оставлял временные artifacts.
+
 Regression guard для dot entries доказывает, что archive-validator не принимает ZIP с entry именем `.`:
 
 ```powershell

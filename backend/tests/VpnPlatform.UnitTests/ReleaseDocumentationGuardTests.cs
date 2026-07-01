@@ -278,7 +278,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-095", "2026-07-01-production-handoff-package-archive-duplicate-entry-cleanup"),
         new("P11-ACC-096", "2026-07-01-production-handoff-package-archive-nested-entry-cleanup"),
         new("P11-ACC-097", "2026-07-01-production-handoff-package-archive-directory-entry-cleanup"),
-        new("P11-ACC-098", "2026-07-01-production-handoff-package-archive-backslash-entry-cleanup")
+        new("P11-ACC-098", "2026-07-01-production-handoff-package-archive-backslash-entry-cleanup"),
+        new("P11-ACC-099", "2026-07-01-production-handoff-package-archive-dotdot-entry-cleanup")
     ];
 
     [Fact]

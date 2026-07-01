@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.348.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-dotdot-entry-cleanup`.
+
+### Fixed
+- `scripts/test-production-evidence-handoff-package-archive-dotdot-entry-guard.ps1` now removes its generated ZIP and the empty `tmp` directory after the regression run.
+- `ProductionReadinessGateTests` pins artifact cleanup for the dotdot-entry archive guard.
+- `P11-ACC-099` documents the local cleanup guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `353/373` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive dotdot entry guard regression cleanup OK; targeted production/docs/release suite `105/105`; backend full suite `643/643`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.347.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-backslash-entry-cleanup`.
