@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.300.0 - 2026-07-01
+
+Release entry: `2026-07-01-payment-smoke-latest-release-guard`.
+
+### Added
+
+- `scripts/test-payment-provider-smoke-report-latest-release-guard.ps1` proves that a fully passed payment provider smoke report with stale `releaseId` is rejected.
+- Roadmap item `P0-PAY-015` documents the latest-release acceptance guard while keeping real provider smoke items open for external evidence.
+
+### Changed
+
+- `scripts/validate-payment-provider-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `305/325` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: payment provider smoke latest release guard regression OK; targeted payment provider/docs/release suite `22/22`; backend full suite `595/595`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `508` files, `0` findings; markdown encoding check OK.
+
 ## 0.299.0 - 2026-07-01
 
 Release entry: `2026-07-01-staging-smoke-latest-release-guard`.

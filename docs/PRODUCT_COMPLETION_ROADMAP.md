@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-06-24.
 
-Временный статус работы с roadmap: активная локальная доработка возобновлена для локальных safety-guard задач и синхронизирована до `2026-07-01-staging-smoke-latest-release-guard`, версия `0.299.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `304/324` проверяемых пунктов, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка возобновлена для локальных safety-guard задач и синхронизирована до `2026-07-01-payment-smoke-latest-release-guard`, версия `0.300.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `305/325` проверяемых пунктов, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `594/594`.
+- [x] `STATE-001` Backend test suite проходит: `595/595`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -51,9 +51,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `594/594`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-07-01-staging-smoke-latest-release-guard`, версия `0.299.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `595/595`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-07-01-payment-smoke-latest-release-guard`, версия `0.300.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 9/9, `PaymentProviderSmokeReportTests` 6/6, `AdminVpsSmokeReportTests` 15/15, `AdminBootstrapCliScriptTests` 11/11, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, local CLI bootstrap admin smoke, deploy production env normalizer regression, admin VPS smoke navigation fallback regression, admin VPS smoke remote release preflight/diagnostics/console-summary/remote-message/report-id-console/failed-checks/failed-count/check-counts regression, staging smoke latest release guard regression, real VPS admin smoke negative evidence for stale release/missing `audit` section, backend full suite `594/594`, frontend tests `66/66`, latest "Что нового" `2026-07-01-staging-smoke-latest-release-guard`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 9/9, `PaymentProviderSmokeReportTests` 7/7, `AdminVpsSmokeReportTests` 15/15, `AdminBootstrapCliScriptTests` 11/11, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, local CLI bootstrap admin smoke, deploy production env normalizer regression, admin VPS smoke navigation fallback regression, admin VPS smoke remote release preflight/diagnostics/console-summary/remote-message/report-id-console/failed-checks/failed-count/check-counts regression, staging smoke latest release guard regression, payment provider smoke latest release guard regression, real VPS admin smoke negative evidence for stale release/missing `audit` section, backend full suite `595/595`, frontend tests `66/66`, latest "Что нового" `2026-07-01-payment-smoke-latest-release-guard`.
 
 ## P0. Блокеры production-запуска
 
@@ -599,6 +599,11 @@ git diff --check
   - Что сделать: запретить закрывать live/sandbox smoke провайдера одним `status = passed`, если не подтверждены все обязательные этапы настройки, checkout, provider confirmation, webhook, subscription и refund.
   - Что сделано: `scripts/validate-payment-provider-smoke-report.ps1` при `-RequireAllPassed` теперь требует `true` для `accountConfigured`, `checkoutCreated`, `providerConfirmation`, `webhookProcessed`, `subscriptionActivated` и `refundChecked` у каждого web-провайдера; `docs/payment-provider-smoke.md` объясняет приемочные gates и внешний блокер refund.
   - Доказательство: `PaymentProviderSmokeReportTests` 6/6, expected fail-closed `-RequireAllPassed`, latest "Что нового" `2026-06-19-payment-provider-smoke-report-acceptance-gates`, версия `0.180.0`.
+
+- [x] `P0-PAY-015` Payment provider smoke report latest release guard. 2026-07-01.
+  - Что сделать: не принимать payment provider smoke report как финальный acceptance evidence, если отчет был заполнен для старого release.
+  - Что сделано: `scripts/validate-payment-provider-smoke-report.ps1 -RequireAllPassed` сверяет `releaseId` отчета с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`; добавлен regression harness `scripts/test-payment-provider-smoke-report-latest-release-guard.ps1`, который доказывает fail-closed поведение на полностью passed отчете со stale `releaseId`.
+  - Доказательство: `PaymentProviderSmokeReportTests` 7/7, payment provider smoke latest release guard regression, latest "Что нового" `2026-07-01-payment-smoke-latest-release-guard`, версия `0.300.0`. Реальные smoke по провайдерам `P0-PAY-002` ... `P0-PAY-009` остаются открытыми до внешнего evidence.
 
 ## P1. Полные пользовательские сценарии
 

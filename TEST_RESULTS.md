@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: payment provider smoke latest release guard
+
+Scope:
+- `scripts/validate-payment-provider-smoke-report.ps1 -RequireAllPassed` now rejects payment provider smoke reports whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-payment-provider-smoke-report-latest-release-guard.ps1` regression coverage for a fully passed but stale provider report.
+- `P0-PAY-015` is closed; `P0-PAY-002` ... `P0-PAY-009` remain open until real provider evidence exists.
+
+Result:
+- Roadmap progress: `305/325` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-payment-smoke-latest-release-guard`, version `0.300.0`.
+- Real live/sandbox provider smoke reports are still required before closing `STATE-011` or `P0-PAY-*`.
+
+Validation:
+- Payment provider smoke latest release guard regression: OK.
+- Targeted payment provider/docs/release suite: OK, `22/22`.
+- Backend full suite: OK, `595/595`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-payment-smoke-latest-release-guard`.
+- Secret scan: OK, files scanned `508`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-06-24: roadmap temporary pause checkpoint
 
 Scope:

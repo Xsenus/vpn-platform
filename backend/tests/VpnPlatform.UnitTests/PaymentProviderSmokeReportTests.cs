@@ -110,6 +110,32 @@ public class PaymentProviderSmokeReportTests
     }
 
     [Fact]
+    public void Smoke_Report_Validator_Should_Reject_Stale_Release_In_Acceptance_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-payment-provider-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-payment-provider-smoke-report-latest-release-guard.ps1"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "payment-provider-smoke.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestActiveReleaseId",
+                     "AppReleases/releases.json",
+                     "must match latest active release",
+                     "-RequireAllPassed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("stale-release-id", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must match latest active release", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("latest active release", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-PAY-015`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Smoke_Report_Generator_Should_Create_Safe_Blocked_Report()
     {
         var root = FindRepositoryRoot();

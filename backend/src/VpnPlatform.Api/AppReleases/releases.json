@@ -7185,5 +7185,28 @@
         "text": "`P9-TST-007` remains in progress until a real staging/VPS smoke report with current sanitized evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-payment-smoke-latest-release-guard",
+    "version": "0.300.0",
+    "releasedAt": "2026-07-01T11:00:00+07:00",
+    "title": "Payment smoke latest release guard",
+    "summary": "Payment provider smoke acceptance now rejects stale release evidence before provider reports can be used for roadmap or production readiness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-payment-provider-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-payment-provider-smoke-report-latest-release-guard.ps1` covers the fail-closed path for a fully passed but stale provider smoke report."
+      },
+      {
+        "type": "important",
+        "text": "`P0-PAY-002` ... `P0-PAY-009` remain open until real provider smoke evidence is captured."
+      }
+    ]
   }
 ]

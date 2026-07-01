@@ -73,6 +73,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-payment-provider-smoke
 
 `-RequireAllPassed` должен падать на шаблоне, потому что все провайдеры изначально находятся в статусе `blocked`, а обязательные boolean gates выставлены в `false`. Перед production-ready решением нужно создать отдельный заполненный отчет, заменить статусы на `passed` только после реальной проверки, выставить все обязательные gates в `true` и приложить безопасные доказательства.
 
+В acceptance-режиме отчет также должен быть привязан к latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`. Если `releaseId` в отчете устарел, `-RequireAllPassed` падает даже при `passed` по всем провайдерам и всех boolean gates.
+
 ## Как использовать в roadmap
 
 - Пока нет заполненного отчета с `passed` по всем web-провайдерам, `STATE-011` и пункты `P0-PAY-002` ... `P0-PAY-009` остаются открытыми.
