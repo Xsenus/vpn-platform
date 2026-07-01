@@ -10,7 +10,8 @@ function Resolve-RepoPath {
 }
 
 $validatorPath = Resolve-RepoPath "scripts/validate-production-evidence-bundle.ps1"
-$bundleDirectory = Resolve-RepoPath "tmp/production-evidence-bundle-stale-release-guard"
+$tmpDirectory = Resolve-RepoPath "tmp"
+$bundleDirectory = Join-Path $tmpDirectory "production-evidence-bundle-stale-release-guard"
 
 try {
     New-Item -ItemType Directory -Force -Path $bundleDirectory | Out-Null
@@ -47,5 +48,8 @@ try {
 finally {
     if (Test-Path -LiteralPath $bundleDirectory) {
         Remove-Item -LiteralPath $bundleDirectory -Recurse -Force
+    }
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
     }
 }
