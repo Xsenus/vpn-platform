@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `654/654`.
+- [x] Backend full suite: `655/655`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-07-01-production-handoff-checklist-latest-release-guard-cleanup`, версия `0.359.0`.
+- [x] Latest "Что нового": `2026-07-01-production-handoff-flow-result-latest-release-guard-cleanup`, версия `0.360.0`.
 
 ## Как вести дальше
 

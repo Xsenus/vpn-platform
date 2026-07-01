@@ -290,7 +290,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-107", "2026-07-01-production-readiness-assertion-ci-regression-default-cleanup"),
         new("P11-ACC-108", "2026-07-01-production-readiness-assertion-result-latest-release-guard-cleanup"),
         new("P11-ACC-109", "2026-07-01-production-readiness-summary-latest-release-guard-cleanup"),
-        new("P11-ACC-110", "2026-07-01-production-handoff-checklist-latest-release-guard-cleanup")
+        new("P11-ACC-110", "2026-07-01-production-handoff-checklist-latest-release-guard-cleanup"),
+        new("P11-ACC-111", "2026-07-01-production-handoff-flow-result-latest-release-guard-cleanup")
     ];
 
     [Fact]
