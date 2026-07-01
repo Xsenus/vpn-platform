@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.361.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-ci-result-latest-release-guard-cleanup`.
+
+### Fixed
+- `test-production-evidence-handoff-package-archive-ci-regression-result-latest-release-guard.ps1` now removes its default `tmp/production-evidence-handoff-package-archive-ci-regression-result-stale-release-guard.json` output and empty `tmp` directory after a local run.
+- `ProductionReadinessGateTests` pins the production handoff CI result latest-release guard cleanup.
+- `P11-ACC-112` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `366/386` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff CI result latest release guard cleanup OK; targeted production/docs/release suite `118/118`; backend full suite `656/656`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.360.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-flow-result-latest-release-guard-cleanup`.
