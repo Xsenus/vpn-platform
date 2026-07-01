@@ -97,6 +97,8 @@ Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
+Обычный запуск admin VPS bootstrap smoke wrapper regression удаляет default output directory вместе с пустым `tmp`; `-KeepArtifacts` сохраняет regression evidence для локального расследования.
+
 Regression includes `too-high-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-admin-bootstrap-profile-normalized`, `dry-run-default-operator`, `dry-run-default-environment` and `dry-run-workspace-paths-normalized`: these scenarios must fail before readiness, bootstrap reset, preflight and smoke artifacts or prove that padded profile/workspace values are normalized before readiness/bootstrap.
 
 Readiness gate перед reset-ом пишет sanitized `admin-vps-bootstrap-smoke-readiness-report.json` без пароля и connection string. Валидатор fail-closed требует, чтобы `readyForBootstrapSmoke` совпадал с фактическим массивом `checks`, а `localSqlite=true` всегда сопровождался `provider=Sqlite`, даже если standalone-проверка запущена без `-RequireReady`. Он должен пройти до `admin-bootstrap.ps1`:

@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `686/686`.
+- Backend full suite: `687/687`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-admin-vps-smoke-flow-wrapper-cleanup`, версия `0.391.0`; admin VPS smoke flow wrapper regression removes default local artifacts after ordinary runs while preserving `-KeepArtifacts` debug evidence. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-admin-vps-bootstrap-smoke-wrapper-cleanup`, версия `0.392.0`; admin VPS bootstrap smoke wrapper regression removes default local artifacts after ordinary runs while preserving `-KeepArtifacts` debug evidence. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
