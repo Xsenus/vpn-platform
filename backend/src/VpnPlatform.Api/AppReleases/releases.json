@@ -9171,5 +9171,28 @@
         "text": "`P11-ACC-002` remains open until real live VPS smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-admin-bootstrap-wrapper-cleanup",
+    "version": "0.386.0",
+    "releasedAt": "2026-07-02T03:02:00+07:00",
+    "title": "Admin bootstrap wrapper cleanup",
+    "summary": "Direct admin bootstrap wrapper regression now removes default local artifacts after ordinary runs.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`test-admin-bootstrap-wrapper.ps1` now removes its default output directory and empty `tmp` after ordinary local runs."
+      },
+      {
+        "type": "new",
+        "text": "`AdminBootstrapCliScriptTests` pins cleanup while preserving `-KeepArtifacts` debug evidence."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence is captured."
+      }
+    ]
   }
 ]

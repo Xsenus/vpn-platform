@@ -109,6 +109,30 @@ public class AdminBootstrapCliScriptTests
     }
 
     [Fact]
+    public void Admin_Bootstrap_Wrapper_Regression_Should_Cleanup_Default_Tmp()
+    {
+        var root = FindRepositoryRoot();
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-bootstrap-wrapper.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "$usingDefaultOutputDirectory",
+                     "$defaultOutputDirectory",
+                     "-not $KeepArtifacts -and $usingDefaultOutputDirectory",
+                     "Get-ChildItem -LiteralPath $tmpDirectory -Force",
+                     "Remove-Item -LiteralPath $tmpDirectory -Force"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-bootstrap-wrapper.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001CA`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Bootstrap_Smoke_Wrapper_Should_Run_Reset_Then_Smoke_Without_Printing_Password()
     {
         var root = FindRepositoryRoot();

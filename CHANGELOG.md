@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.386.0 - 2026-07-02
+
+Release entry: `2026-07-02-admin-bootstrap-wrapper-cleanup`.
+
+### Fixed
+- `test-admin-bootstrap-wrapper.ps1` now removes its default output directory and empty `tmp` after ordinary local runs.
+- `AdminBootstrapCliScriptTests` pins the direct bootstrap wrapper cleanup contract while preserving `-KeepArtifacts` debug evidence.
+- `P0-ADMIN-001CA` documents the local cleanup behavior while real VPS admin bootstrap/smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `398/418` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin bootstrap wrapper cleanup OK; targeted admin/docs/release suite `31/31`; backend full suite `681/681`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.385.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-readiness-ci-step-summary-cleanup`.

@@ -7,6 +7,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$defaultOutputDirectory = "tmp/admin-bootstrap-wrapper-regression-test"
+$usingDefaultOutputDirectory = -not $PSBoundParameters.ContainsKey("OutputDirectory") -or [string]::Equals($OutputDirectory, $defaultOutputDirectory, [System.StringComparison]::OrdinalIgnoreCase)
 
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -157,5 +159,12 @@ try {
 finally {
     if (-not $KeepArtifacts -and (Test-Path -LiteralPath $outputFullPath)) {
         Remove-Item -LiteralPath $outputFullPath -Recurse -Force
+    }
+
+    if (-not $KeepArtifacts -and $usingDefaultOutputDirectory) {
+        $tmpDirectory = Resolve-WorkspacePath "tmp"
+        if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+            Remove-Item -LiteralPath $tmpDirectory -Force
+        }
     }
 }

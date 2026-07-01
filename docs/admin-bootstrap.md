@@ -89,6 +89,8 @@ Direct bootstrap wrapper regression covers provider normalization and bad-provid
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-bootstrap-wrapper.ps1
 ```
 
+Обычный запуск direct bootstrap wrapper regression удаляет default output directory и пустой `tmp`; `-KeepArtifacts` сохраняет артефакты для локального расследования.
+
 Fail-closed regression wrapper-а проверяет `format-api-port`, `too-low-api-port`, `too-high-admin-port`, `same-api-admin-port`, `format-max-evidence-chain-minutes`, `format-env-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes`, `bad-env-max-evidence-chain-minutes`, `bad-api-url`, `bad-admin-web-url`, `bad-admin-email`, `same-report-paths`, `dry-run-admin-bootstrap-profile-normalized`, `dry-run-default-operator`, `dry-run-default-environment`, `dry-run-workspace-paths-normalized`, `missing-password`, `missing-confirm-bootstrap-reset`, `missing-connection-string` и `dry-run-no-smoke` без запуска browser smoke и без сохранения пароля. Неверный CLI/env `MaxEvidenceChainMinutes`, неверные локальные порты, невалидные `ApiBaseUrl`/`AdminWebUrl`, невалидный `AdminEmail` и совпадающие report paths останавливаются до readiness report, bootstrap reset и smoke artifacts; пустой `Operator` нормализуется в `manual-operator`, пустой `EnvironmentName` - в `Production`:
 
 ```powershell
