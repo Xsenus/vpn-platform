@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.382.0 - 2026-07-02
+
+Release entry: `2026-07-02-admin-vps-smoke-release-guard-cleanup`.
+
+### Fixed
+- Admin VPS smoke report generator, report latest release, preflight latest release, preflight known release and evidence latest release guard harnesses now remove empty default `tmp` after local runs.
+- `AdminVpsSmokeReportTests` pins the cleanup contract across all admin VPS smoke release guard harnesses.
+- `P0-ADMIN-002BI` ... `P0-ADMIN-002BM` document the local cleanup behavior while real VPS admin smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `392/412` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke release guard cleanup OK; targeted admin/docs/release suite `183/183`; backend full suite `678/678`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.381.0 - 2026-07-02
 
 Release entry: `2026-07-02-payment-smoke-release-guard-cleanup`.
