@@ -8178,5 +8178,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-package-archive-entry-case-cleanup",
+    "version": "0.343.0",
+    "releasedAt": "2026-07-01T21:26:00+07:00",
+    "title": "Production handoff package archive entry case cleanup",
+    "summary": "Production evidence handoff package archive entry-case regression now cleans its temporary artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-entry-case-guard.ps1` now removes the generated ZIP and empty `tmp` directory after the regression run."
+      },
+      {
+        "type": "new",
+        "text": "`ProductionReadinessGateTests` pins artifact cleanup for the entry-case archive guard."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

@@ -11,6 +11,19 @@ function Resolve-RepoPath {
     return Join-Path $root $RelativePath
 }
 
+function Remove-EmptyDirectory {
+    param([string]$DirectoryPath)
+
+    if (-not (Test-Path -LiteralPath $DirectoryPath -PathType Container)) {
+        return
+    }
+
+    $remaining = Get-ChildItem -LiteralPath $DirectoryPath -Force -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $remaining) {
+        Remove-Item -LiteralPath $DirectoryPath -Force
+    }
+}
+
 function Add-ZipTextEntry {
     param(
         [System.IO.Compression.ZipArchive]$Archive,
@@ -102,4 +115,6 @@ finally {
     if (Test-Path -LiteralPath $archivePath) {
         Remove-Item -LiteralPath $archivePath -Force
     }
+
+    Remove-EmptyDirectory -DirectoryPath $tmpDirectory
 }

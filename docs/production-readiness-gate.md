@@ -529,6 +529,8 @@ Regression guard для entry case доказывает, что archive-validato
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-entry-case-guard.ps1
 ```
 
+Entry-case guard удаляет созданный ZIP и пустой `tmp` после выполнения, чтобы локальный regression run не оставлял временные artifacts.
+
 Чтобы не собирать всю локальную цепочку вручную, можно запустить end-to-end flow одной командой:
 
 ```powershell

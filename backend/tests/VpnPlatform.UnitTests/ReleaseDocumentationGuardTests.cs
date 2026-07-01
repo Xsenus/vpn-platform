@@ -273,7 +273,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-090", "2026-07-01-production-handoff-package-archive-dot-entry-guard"),
         new("P11-ACC-091", "2026-07-01-production-handoff-package-archive-rooted-entry-guard"),
         new("P11-ACC-092", "2026-07-01-production-handoff-package-archive-whitespace-entry-guard"),
-        new("P11-ACC-093", "2026-07-01-production-handoff-package-archive-entry-case-guard")
+        new("P11-ACC-093", "2026-07-01-production-handoff-package-archive-entry-case-guard"),
+        new("P11-ACC-094", "2026-07-01-production-handoff-package-archive-entry-case-cleanup")
     ];
 
     [Fact]
