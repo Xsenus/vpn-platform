@@ -166,6 +166,44 @@ if ([string]$archiveValidation.manifestSha256 -ne [string]$receipt.manifestSha25
     throw "Production evidence handoff receipt manifestSha256 does not match archive."
 }
 
+$archiveVerifiedFiles = @($archiveValidation.verifiedFiles)
+if ($verifiedFiles.Count -ne $archiveVerifiedFiles.Count) {
+    throw "Production evidence handoff receipt verifiedFiles count does not match archive."
+}
+
+foreach ($archiveFile in $archiveVerifiedFiles) {
+    $entryName = [string]$archiveFile.entryName
+    $receiptMatches = @($verifiedFiles | Where-Object { [string]$_.entryName -eq $entryName })
+    if ($receiptMatches.Count -eq 0) {
+        throw "Production evidence handoff receipt verifiedFiles is missing archive entry: $entryName"
+    }
+
+    if ($receiptMatches.Count -gt 1) {
+        throw "Production evidence handoff receipt verifiedFiles contains duplicated entry: $entryName"
+    }
+
+    $receiptFile = $receiptMatches[0]
+    if ([string]$receiptFile.name -ne [string]$archiveFile.name) {
+        throw "Production evidence handoff receipt verified file $entryName name does not match archive."
+    }
+
+    if ([int64]$receiptFile.lengthBytes -ne [int64]$archiveFile.lengthBytes) {
+        throw "Production evidence handoff receipt verified file $entryName lengthBytes does not match archive."
+    }
+
+    if ([string]$receiptFile.sha256 -ne [string]$archiveFile.sha256) {
+        throw "Production evidence handoff receipt verified file $entryName sha256 does not match archive."
+    }
+}
+
+$extraVerifiedFile = @($verifiedFiles | Where-Object {
+    $entryName = [string]$_.entryName
+    -not (@($archiveVerifiedFiles | Where-Object { [string]$_.entryName -eq $entryName }).Count -gt 0)
+})
+if ($extraVerifiedFile.Count -gt 0) {
+    throw "Production evidence handoff receipt verifiedFiles contains unexpected entry: $($extraVerifiedFile[0].entryName)"
+}
+
 $archiveEntries = @($archiveValidation.entries | ForEach-Object { [string]$_ })
 $missingFromReceipt = @($archiveEntries | Where-Object { $entries -notcontains $_ })
 if ($missingFromReceipt.Count -gt 0) {

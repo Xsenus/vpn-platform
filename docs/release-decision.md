@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `624/624`.
+- Backend full suite: `625/625`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-production-handoff-checklist-release-guard`, версия `0.329.0`; production evidence handoff checklist generation now rejects unknown receipt release ids before writing checklist artifacts. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-production-handoff-receipt-verified-files-guard`, версия `0.330.0`; production evidence handoff receipt validation now rejects tampered verified file metadata before downstream handoff steps. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

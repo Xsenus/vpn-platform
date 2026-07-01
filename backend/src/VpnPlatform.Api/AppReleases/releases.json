@@ -7879,5 +7879,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-receipt-verified-files-guard",
+    "version": "0.330.0",
+    "releasedAt": "2026-07-01T19:42:00+07:00",
+    "title": "Production handoff receipt verified files guard",
+    "summary": "Production evidence handoff receipt validation now rejects tampered verified file metadata before downstream handoff steps.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-evidence-handoff-receipt.ps1` now compares receipt `verifiedFiles` with the validated archive entries by `entryName`, `name`, `lengthBytes` and `sha256`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-receipt-verified-files-guard.ps1` tampers a receipt `verifiedFiles` hash and proves the validator fails closed."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

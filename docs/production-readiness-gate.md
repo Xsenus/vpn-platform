@@ -349,6 +349,12 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ha
 
 Валидатор receipt сверяет JSON и Markdown receipt с ZIP-архивом, повторно запускает archive validator, проверяет SHA256 архива, SHA256 manifest, entries и verified files.
 
+Regression guard для verified files в receipt доказывает, что receipt-validator не принимает receipt с подмененным `verifiedFiles` SHA256:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-receipt-verified-files-guard.ps1
+```
+
 Для финальной передачи оператору сформируйте checklist:
 
 ```powershell
