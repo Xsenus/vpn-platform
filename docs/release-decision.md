@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `633/633`.
+- Backend full suite: `634/634`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-production-handoff-package-archive-dotdot-entry-guard`, версия `0.338.0`; production evidence handoff package archive validation now has regression coverage for dotdot ZIP entries. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-production-handoff-package-archive-dot-entry-guard`, версия `0.339.0`; production evidence handoff package archive validation now has regression coverage for dot ZIP entries. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
