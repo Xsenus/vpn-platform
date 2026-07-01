@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: Payment provider smoke release guard cleanup
+
+Scope:
+- `test-payment-provider-smoke-report-generator-release-guard.ps1` now removes the empty default `tmp` directory after a local unknown release id regression run.
+- `test-payment-provider-smoke-report-latest-release-guard.ps1` now removes its stale-release JSON report and empty default `tmp` directory after a local regression run.
+- `P0-PAY-017` and `P0-PAY-018` are closed; `P0-PAY-002` ... `P0-PAY-009` remain open until real provider smoke evidence exists.
+
+Result:
+- Roadmap progress: `387/407` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-payment-smoke-release-guard-cleanup`, version `0.381.0`.
+- Real payment provider smoke reports are still required before closing `STATE-011` or `P0-PAY-002` ... `P0-PAY-009`.
+
+Validation:
+- Payment provider smoke release guard cleanup: OK.
+- Targeted payment/docs/release suite: OK, `161/161`.
+- Backend full suite: OK, `677/677`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-payment-smoke-release-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: VPN live smoke latest release guard cleanup
 
 Scope:

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.381.0 - 2026-07-02
+
+Release entry: `2026-07-02-payment-smoke-release-guard-cleanup`.
+
+### Fixed
+- `test-payment-provider-smoke-report-generator-release-guard.ps1` now removes the empty default `tmp` directory after a local unknown release id regression run.
+- `test-payment-provider-smoke-report-latest-release-guard.ps1` now removes its stale-release JSON report and empty default `tmp` directory after a local regression run.
+- `PaymentProviderSmokeReportTests` pins both payment provider smoke release guard cleanup contracts.
+- `P0-PAY-017` and `P0-PAY-018` document the local cleanup behavior while real payment provider smoke items remain open until external provider evidence exists.
+
+### Notes
+- Roadmap progress is now `387/407` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: payment provider smoke release guard cleanup OK; targeted payment/docs/release suite `161/161`; backend full suite `677/677`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.380.0 - 2026-07-02
 
 Release entry: `2026-07-02-vpn-live-smoke-latest-release-guard-cleanup`.
