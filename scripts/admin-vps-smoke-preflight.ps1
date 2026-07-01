@@ -75,6 +75,21 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 function Get-RemoteAdminAccessToken {
     param(
         [Parameter(Mandatory = $true)][string]$BaseUrl,
@@ -153,6 +168,9 @@ Add-Check "preflight-validator" (Test-Path -LiteralPath $preflightValidatorPath 
 $ready = $checks | Where-Object { -not $_.passed } | Select-Object -First 1
 $generatedAt = (Get-Date).ToUniversalTime()
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
+if (-not [string]::IsNullOrWhiteSpace($ReleaseId)) {
+    Assert-KnownReleaseId -Value $releaseValue
+}
 $remoteReleaseId = ""
 $remoteReleaseStatus = "not-required"
 $remoteReleaseMessage = "Remote release check was not required for this preflight run."

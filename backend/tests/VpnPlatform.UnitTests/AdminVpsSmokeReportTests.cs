@@ -871,6 +871,41 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Admin_Vps_Smoke_Preflight_Should_Reject_Unknown_Manual_Release()
+    {
+        var root = FindRepositoryRoot();
+        var preflight = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-smoke-preflight.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-preflight-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "missing-release-id-for-regression"
+                 })
+        {
+            Assert.Contains(expected, preflight + regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Preflight accepted unknown ReleaseId",
+                     "Preflight created report artifact after unknown ReleaseId failure",
+                     "Preflight created smoke report artifact after unknown ReleaseId failure",
+                     "admin vps smoke preflight release guard valid",
+                     "preflight-release-guard-regression-password"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-smoke-preflight-release-guard.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002BH`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Evidence_Validator_Should_Reject_Stale_Release_In_Acceptance_Mode()
     {
         var root = FindRepositoryRoot();

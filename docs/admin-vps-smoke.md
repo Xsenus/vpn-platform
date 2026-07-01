@@ -171,6 +171,12 @@ The wrapper normalizes identity and workspace path inputs before handing them to
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-flow-wrapper.ps1
 ```
 
+Direct preflight release guard доказывает, что `scripts/admin-vps-smoke-preflight.ps1 -ReleaseId` не создает preflight/smoke artifacts и не печатает пароль, если release id отсутствует в `backend/src/VpnPlatform.Api/AppReleases/releases.json`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-preflight-release-guard.ps1
+```
+
 После успешного preflight+browser smoke парный evidence validator сверяет, что оба отчета относятся к одному запуску: URL, environment, operator, path smoke-отчета, непустой release id, уникальные `preflight.reportId`/`smoke.reportId`, ожидаемые префиксы `admin-vps-smoke-preflight-`/`admin-vps-smoke-`, timestamp-суффикс `yyyyMMdd-HHmmss`, совпадение timestamp в `preflight.reportId` с `preflight.generatedAt`, совпадение timestamp в `smoke.reportId` с `smoke.startedAt` и порядок дат. Порядок времени должен быть preflight `generatedAt` -> smoke `startedAt` -> smoke `completedAt`; smoke не может стартовать раньше preflight, а общая цепочка не должна превышать `MaxEvidenceChainMinutes` (по умолчанию 120 минут). `scripts/admin-vps-smoke.ps1` запускает этот validator автоматически, но его можно выполнить отдельно:
 
 ```powershell

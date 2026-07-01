@@ -7718,5 +7718,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-admin-vps-smoke-preflight-release-guard",
+    "version": "0.323.0",
+    "releasedAt": "2026-07-01T18:51:00+07:00",
+    "title": "Admin VPS smoke preflight release guard",
+    "summary": "Admin VPS smoke preflight direct runs now reject unknown manual release ids before writing preflight artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-smoke-preflight.ps1 -ReleaseId` now requires the supplied release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-smoke-preflight-release-guard.ps1` covers the fail-fast path and proves no preflight or smoke report artifacts are created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
+      }
+    ]
   }
 ]

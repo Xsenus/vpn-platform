@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.323.0 - 2026-07-01
+
+Release entry: `2026-07-01-admin-vps-smoke-preflight-release-guard`.
+
+### Fixed
+- `scripts/admin-vps-smoke-preflight.ps1 -ReleaseId` now rejects unknown manual release ids before remote release checks, validator execution or writing preflight artifacts.
+
+### Added
+- `scripts/test-admin-vps-smoke-preflight-release-guard.ps1` proves that direct preflight fails fast, leaves no preflight/smoke JSON artifacts and does not leak the smoke password for an unknown `ReleaseId`.
+- `P0-ADMIN-002BH` documents the local guard while `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `328/348` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke preflight release guard regression OK; targeted admin/docs/release suite `36/36`; backend full suite `618/618`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `531` files, `0` findings; markdown encoding check OK.
+
 ## 0.322.0 - 2026-07-01
 
 Release entry: `2026-07-01-admin-vps-browser-smoke-direct-release-guard`.
