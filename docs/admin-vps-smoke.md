@@ -309,7 +309,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-browser-smoke-di
 powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-browser-smoke.ps1
 ```
 
-Скрипт поднимает API в окружении `Local`, создает временную SQLite-БД в `tmp/local-admin-vps-browser-smoke`, включает demo seed и admin bootstrap, запускает admin-panel через Vite с `VITE_API_BASE_URL` на временный API, выполняет `scripts/admin-vps-smoke.ps1`, затем останавливает процессы и удаляет временные файлы. Для диагностики можно добавить `-KeepArtifacts`.
+Скрипт поднимает API в окружении `Local`, создает временную SQLite-БД в `tmp/local-admin-vps-browser-smoke`, включает demo seed и admin bootstrap, запускает admin-panel через Vite с `VITE_API_BASE_URL` на временный API, выполняет `scripts/admin-vps-smoke.ps1`, затем останавливает процессы и удаляет временные файлы вместе с пустой `tmp` после обычного запуска. Для диагностики можно добавить `-KeepArtifacts`.
 
 ## Что нельзя хранить
 

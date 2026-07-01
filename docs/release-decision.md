@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `689/689`.
+- Backend full suite: `690/690`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-fresh-local-smoke-cleanup`, версия `0.394.0`; fresh local smoke removes default local artifacts after ordinary runs while preserving `-KeepArtifacts` debug evidence. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-local-admin-vps-browser-smoke-cleanup`, версия `0.395.0`; local admin browser smoke removes default local artifacts after ordinary runs while preserving `-KeepArtifacts` debug evidence. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

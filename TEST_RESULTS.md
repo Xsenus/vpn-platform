@@ -2,6 +2,28 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: Local admin VPS browser smoke cleanup
+
+Scope:
+- `local-admin-vps-browser-smoke.ps1` removes its `tmp/local-admin-vps-browser-smoke` output and empty parent `tmp` after ordinary local runs.
+- `-KeepArtifacts` preserves the local admin browser SQLite DB, reports and logs for explicit local debugging.
+- `P0-ADMIN-002BS` is closed; real VPS admin smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `407/427` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-local-admin-vps-browser-smoke-cleanup`, version `0.395.0`.
+- Real VPS admin smoke evidence is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Local admin VPS browser smoke cleanup: OK.
+- Targeted admin/docs/release suite: OK, `43/43`.
+- Backend full suite: OK, `690/690`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local admin browser SQLite smoke: OK; latest release `2026-07-02-local-admin-vps-browser-smoke-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
 ## Check 2026-07-02: Fresh local smoke cleanup
 
 Scope:

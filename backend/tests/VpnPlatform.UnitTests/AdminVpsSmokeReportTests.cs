@@ -322,6 +322,30 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Local_Admin_Vps_Browser_Smoke_Should_Cleanup_Default_Tmp()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "local-admin-vps-browser-smoke.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "$tmpRoot = Join-Path $root \"tmp\"",
+                     "Test-Path -LiteralPath $tmpRoot",
+                     "Get-ChildItem -LiteralPath $tmpRoot -Force",
+                     "Remove-Item -LiteralPath $tmpRoot -Force"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("local-admin-vps-browser-smoke.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("пустой `tmp`", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002BS`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Validator_Should_Reject_Placeholder_Evidence_And_Bad_Status_In_Acceptance_Mode()
     {
         var root = FindRepositoryRoot();
