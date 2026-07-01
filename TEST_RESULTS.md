@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: production evidence bundle generator release guard cleanup
+
+Scope:
+- `test-production-evidence-bundle-generator-release-guard.ps1` now removes the empty default `tmp` directory after a local unknown release id regression run.
+- The bundle generator release guard still proves `new-production-evidence-bundle.ps1` rejects an unknown manual `ReleaseId` and does not create the output directory.
+- `P11-ACC-125` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `381/401` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-production-evidence-bundle-generator-release-guard-cleanup`, version `0.376.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence bundle generator release guard cleanup: OK.
+- Targeted production/docs/release suite: OK, `143/143`.
+- Backend full suite: OK, `671/671`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-production-evidence-bundle-generator-release-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: production handoff package Markdown files guard cleanup
 
 Scope:
