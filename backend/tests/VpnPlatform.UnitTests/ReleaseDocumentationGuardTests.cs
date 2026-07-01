@@ -275,7 +275,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-092", "2026-07-01-production-handoff-package-archive-whitespace-entry-guard"),
         new("P11-ACC-093", "2026-07-01-production-handoff-package-archive-entry-case-guard"),
         new("P11-ACC-094", "2026-07-01-production-handoff-package-archive-entry-case-cleanup"),
-        new("P11-ACC-095", "2026-07-01-production-handoff-package-archive-duplicate-entry-cleanup")
+        new("P11-ACC-095", "2026-07-01-production-handoff-package-archive-duplicate-entry-cleanup"),
+        new("P11-ACC-096", "2026-07-01-production-handoff-package-archive-nested-entry-cleanup")
     ];
 
     [Fact]

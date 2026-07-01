@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff package archive nested entry cleanup
+
+Scope:
+- Updated `scripts/test-production-evidence-handoff-package-archive-nested-entry-guard.ps1` to remove the generated ZIP and empty `tmp` directory after the run.
+- `ProductionReadinessGateTests` now pins artifact cleanup for the nested-entry archive guard.
+- `P11-ACC-096` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `350/370` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-archive-nested-entry-cleanup`, version `0.345.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff package archive nested entry guard cleanup regression: OK.
+- Targeted production/docs/release suite: OK, `102/102`.
+- Backend full suite: OK, `640/640`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-archive-nested-entry-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff package archive duplicate entry cleanup
 
 Scope:

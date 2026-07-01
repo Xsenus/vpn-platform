@@ -489,6 +489,8 @@ Regression guard для nested entries доказывает, что archive-vali
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-nested-entry-guard.ps1
 ```
 
+Nested-entry guard удаляет созданный ZIP и пустой `tmp` после выполнения, чтобы локальный regression run не оставлял временные artifacts.
+
 Regression guard для directory entries доказывает, что archive-validator не принимает ZIP с каталогами вместо файлов:
 
 ```powershell
