@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff package markdown files guard
+
+Scope:
+- `scripts/validate-production-evidence-handoff-package.ps1` now validates package index Markdown against JSON artifact file names, byte lengths and SHA256 values.
+- Added `scripts/test-production-evidence-handoff-package-markdown-files-guard.ps1` regression coverage for a tampered Markdown package index SHA256 while JSON, receipt, checklist and ZIP stay valid.
+- `P11-ACC-084` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `338/358` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-markdown-files-guard`, version `0.333.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff package markdown files guard regression: OK.
+- Targeted production/docs/release suite: OK, `91/91`.
+- Backend full suite: OK, `628/628`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-markdown-files-guard`.
+- Secret scan: OK, files scanned `541`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff checklist markdown gates guard
 
 Scope:

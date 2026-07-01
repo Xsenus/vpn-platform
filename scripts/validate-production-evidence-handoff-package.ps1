@@ -274,6 +274,14 @@ foreach ($requiredText in @([string]$index.releaseId, [string]$index.archiveSha2
     }
 }
 
+foreach ($file in $indexFiles) {
+    foreach ($requiredText in @([string]$file.fileName, [string]$file.lengthBytes, [string]$file.sha256)) {
+        if (-not $markdown.Contains($requiredText)) {
+            throw "Production evidence handoff package markdown is missing file detail: $requiredText"
+        }
+    }
+}
+
 $result = [ordered]@{
     status = "valid"
     packageStatus = [string]$index.status

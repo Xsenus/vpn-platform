@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `627/627`.
+- Backend full suite: `628/628`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-production-handoff-checklist-markdown-gates-guard`, версия `0.332.0`; production evidence handoff checklist validation now rejects Markdown checklists that omit gate or operator action details. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-production-handoff-package-markdown-files-guard`, версия `0.333.0`; production evidence handoff package validation now rejects Markdown package indexes that omit artifact file details. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

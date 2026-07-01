@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.333.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-markdown-files-guard`.
+
+### Fixed
+- `scripts/validate-production-evidence-handoff-package.ps1` now rejects package index Markdown that omits artifact file names, byte lengths or SHA256 values from the JSON index.
+
+### Added
+- `scripts/test-production-evidence-handoff-package-markdown-files-guard.ps1` proves that a tampered Markdown package index fails validation while JSON, receipt, checklist and ZIP remain valid.
+- `P11-ACC-084` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `338/358` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package markdown files guard regression OK; targeted production/docs/release suite `91/91`; backend full suite `628/628`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `541` files, `0` findings; markdown encoding check OK.
+
 ## 0.332.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-checklist-markdown-gates-guard`.
