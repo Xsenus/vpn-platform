@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: production handoff CI summary latest release guard cleanup
+
+Scope:
+- `test-production-evidence-handoff-package-archive-ci-summary-latest-release-guard.ps1` now removes its default `tmp/production-evidence-handoff-package-archive-ci-summary-stale-release-guard.json` and `.md` output plus the empty `tmp` directory after a local run.
+- The stale latest-release regression still proves `validate-production-evidence-handoff-package-archive-ci-summary.ps1 -RequireProductionReady` rejects non-latest release IDs.
+- `P11-ACC-113` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `367/387` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-production-handoff-ci-summary-latest-release-guard-cleanup`, version `0.362.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production handoff CI summary latest release guard cleanup: OK.
+- Targeted production/docs/release suite: OK, `119/119`.
+- Backend full suite: OK, `657/657`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-production-handoff-ci-summary-latest-release-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production handoff CI result latest release guard cleanup
 
 Scope:
