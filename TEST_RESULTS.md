@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: staging smoke generator release guard cleanup
+
+Scope:
+- `test-staging-smoke-report-generator-release-guard.ps1` now removes the empty default `tmp` directory after the unknown-release regression fails before writing a report.
+- The generator regression still proves `new-staging-smoke-report.ps1 -ReleaseId` rejects unknown release IDs before creating a report artifact.
+- `P9-TST-007I` is closed; parent `P9-TST-007` remains in progress until real staging or VPS smoke evidence exists.
+
+Result:
+- Roadmap progress: `371/391` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-staging-smoke-generator-release-guard-cleanup`, version `0.366.0`.
+- Real staging or VPS smoke report is still required before closing `P9-TST-007`.
+
+Validation:
+- Staging smoke generator release guard cleanup: OK.
+- Targeted staging/docs/release suite: OK, `133/133`.
+- Backend full suite: OK, `661/661`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-staging-smoke-generator-release-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: staging smoke latest release guard cleanup
 
 Scope:
