@@ -72,6 +72,21 @@ function New-Gate {
     }
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 $receiptFullPath = Resolve-RequiredFile -PathValue $ReceiptPath -Description "Production evidence handoff receipt"
 $receiptDirectory = Split-Path -Parent $receiptFullPath
 
@@ -91,6 +106,7 @@ if (-not [string]::IsNullOrWhiteSpace($ExpectedArchiveSha256)) {
 
 $receiptValidationJson = & (Resolve-RepoPath "scripts/validate-production-evidence-handoff-receipt.ps1") @archiveArgs
 $receiptValidation = $receiptValidationJson | ConvertFrom-Json
+Assert-KnownReleaseId -Value ([string]$receiptValidation.releaseId)
 
 $summaryPathValue = if ([string]::IsNullOrWhiteSpace($SummaryJsonPath)) {
     Join-Path $receiptDirectory "production-readiness-summary.json"

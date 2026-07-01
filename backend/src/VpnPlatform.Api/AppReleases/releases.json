@@ -7856,5 +7856,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-checklist-release-guard",
+    "version": "0.329.0",
+    "releasedAt": "2026-07-01T19:28:00+07:00",
+    "title": "Production handoff checklist release guard",
+    "summary": "Production evidence handoff checklist generation now rejects unknown receipt release ids before writing checklist artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/new-production-evidence-handoff-checklist.ps1` now requires the validated receipt release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json` before writing JSON or Markdown checklist artifacts."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-checklist-release-guard.ps1` covers a tampered archive/receipt pair and proves no checklist artifacts are created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

@@ -1286,6 +1286,40 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Checklist_Should_Reject_Unknown_Release()
+    {
+        var root = FindRepositoryRoot();
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-production-evidence-handoff-checklist.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-checklist-release-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "missing-release-id-for-checklist-regression"
+                 })
+        {
+            Assert.Contains(expected, generator + regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Production evidence handoff checklist generator accepted unknown releaseId",
+                     "Production evidence handoff checklist generator created checklist after unknown releaseId failure",
+                     "Production evidence handoff checklist generator created markdown after unknown releaseId failure",
+                     "production evidence handoff checklist release guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-checklist-release-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-080`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Checklist_Validator_Should_Verify_Checklist_Against_Receipt()
     {
         var root = FindRepositoryRoot();

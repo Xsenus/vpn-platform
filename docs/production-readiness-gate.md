@@ -360,6 +360,12 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-handoff
 
 Checklist сначала запускает receipt validator, затем пишет `production-evidence-handoff-checklist.json` и `.md` со статусом handoff, release id, SHA256 архива, SHA256 manifest, gates и действиями оператора. В строгом режиме `-RequireProductionReady` команда fail-closed завершится ошибкой, если `production-readiness-summary.json` не подтверждает `production-ready`.
 
+Regression guard для release id в checklist доказывает, что checklist-generator не пишет JSON/Markdown checklist, если receipt содержит неизвестный `releaseId`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-checklist-release-guard.ps1
+```
+
 Проверить checklist перед передачей можно отдельной командой:
 
 ```powershell
