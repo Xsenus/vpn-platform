@@ -1419,6 +1419,41 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Checklist_Validator_Should_Reject_Tampered_Gate_Markdown()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-checklist.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-checklist-markdown-gates-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Production evidence handoff checklist markdown is missing gate detail",
+                     "Production evidence handoff checklist markdown is missing operator action",
+                     "gate.name",
+                     "gate.status",
+                     "gate.message"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Production evidence handoff checklist validator accepted tampered gate markdown",
+                     "Production evidence handoff checklist markdown is missing gate detail",
+                     "production evidence handoff checklist markdown gates guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-checklist-markdown-gates-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-083`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Package_Should_Copy_Only_Verified_Artifacts()
     {
         var root = FindRepositoryRoot();

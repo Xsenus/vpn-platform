@@ -7925,5 +7925,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-checklist-markdown-gates-guard",
+    "version": "0.332.0",
+    "releasedAt": "2026-07-01T19:58:00+07:00",
+    "title": "Production handoff checklist markdown gates guard",
+    "summary": "Production evidence handoff checklist validation now rejects Markdown checklists that omit gate or operator action details.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-evidence-handoff-checklist.ps1` now requires checklist Markdown to include every gate name, status, message and every operator action from the checklist JSON."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-checklist-markdown-gates-guard.ps1` tampers only the Markdown checklist and proves the validator fails closed."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

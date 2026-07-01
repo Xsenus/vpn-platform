@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.332.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-checklist-markdown-gates-guard`.
+
+### Fixed
+- `scripts/validate-production-evidence-handoff-checklist.ps1` now rejects checklist Markdown that omits gate details or operator actions from the JSON checklist.
+
+### Added
+- `scripts/test-production-evidence-handoff-checklist-markdown-gates-guard.ps1` proves that a tampered Markdown checklist fails validation while JSON, receipt and ZIP remain valid.
+- `P11-ACC-083` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `337/357` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff checklist markdown gates guard regression OK; targeted production/docs/release suite `90/90`; backend full suite `627/627`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `540` files, `0` findings; markdown encoding check OK.
+
 ## 0.331.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-receipt-markdown-verified-files-guard`.

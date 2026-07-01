@@ -392,6 +392,12 @@ powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handof
 
 Checklist validator заново запускает receipt validator, сверяет release id, SHA256 архива, SHA256 manifest, Markdown-пару, gates и operator actions. Для финального production handoff добавьте `-RequireProductionReady`: валидатор потребует `production-ready-handoff`, все gates `passed` и `production-readiness-summary.json` со статусом `production-ready`.
 
+Regression guard для Markdown gates в checklist доказывает, что checklist-validator не принимает Markdown-пару без gate/operator details:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-checklist-markdown-gates-guard.ps1
+```
+
 После проверки checklist можно собрать минимальный handoff package:
 
 ```powershell

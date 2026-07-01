@@ -270,6 +270,20 @@ foreach ($requiredText in @([string]$checklist.releaseId, [string]$checklist.arc
     }
 }
 
+foreach ($gate in $gates) {
+    foreach ($requiredText in @([string]$gate.name, [string]$gate.status, [string]$gate.message)) {
+        if (-not $markdown.Contains($requiredText)) {
+            throw "Production evidence handoff checklist markdown is missing gate detail: $requiredText"
+        }
+    }
+}
+
+foreach ($operatorAction in $operatorActions) {
+    if (-not $markdown.Contains($operatorAction)) {
+        throw "Production evidence handoff checklist markdown is missing operator action: $operatorAction"
+    }
+}
+
 $result = [ordered]@{
     status = "valid"
     checklistStatus = [string]$checklist.status
