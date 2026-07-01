@@ -5,6 +5,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$defaultOutputDirectory = "tmp/admin-vps-bootstrap-smoke-readiness-regression-test"
+$usingDefaultOutputDirectory = -not $PSBoundParameters.ContainsKey("OutputDirectory") -or [string]::Equals($OutputDirectory, $defaultOutputDirectory, [System.StringComparison]::OrdinalIgnoreCase)
 $outputPath = if ([System.IO.Path]::IsPathRooted($OutputDirectory)) {
     [System.IO.Path]::GetFullPath($OutputDirectory)
 }
@@ -41,6 +43,27 @@ function Set-ScopedEnv {
         Set-Item -LiteralPath "Env:\$Name" -Value $Value
     }
 }
+
+function Get-LatestActiveReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "Release seed not found: $releasesPath"
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases |
+        Where-Object { $_.isActive } |
+        Sort-Object -Property { [System.DateTimeOffset]::Parse([string]$_.releasedAt, [System.Globalization.CultureInfo]::InvariantCulture) } -Descending |
+        Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active releaseId was not found in $releasesPath"
+    }
+
+    [string]$latest[0].releaseId
+}
+
+$latestReleaseId = Get-LatestActiveReleaseId
 
 function Invoke-ReadinessScenario {
     param(
@@ -117,7 +140,7 @@ function Invoke-ReadinessScenario {
             "-ProjectPath", $ProjectPath,
             "-FrontendPath", $FrontendPath,
             "-Operator", "admin-vps-bootstrap-smoke-readiness-regression",
-            "-ReleaseId", "readiness-regression",
+            "-ReleaseId", $latestReleaseId,
             "-RequireReady"
         )
 
@@ -350,6 +373,7 @@ function Invoke-ReadinessValidatorScenario {
     }
 }
 
+try {
 Assert-InWorkspace $outputPath
 if (Test-Path -LiteralPath $outputPath -PathType Container) {
     Remove-Item -LiteralPath $outputPath -Recurse -Force
@@ -503,3 +527,16 @@ $results += Invoke-ReadinessScenario `
     -SetConnectionString $false
 
 Write-Host "admin vps bootstrap smoke readiness regression passed $($results | ConvertTo-Json -Compress)"
+}
+finally {
+    if ($usingDefaultOutputDirectory -and (Test-Path -LiteralPath $outputPath)) {
+        Remove-Item -LiteralPath $outputPath -Recurse -Force
+    }
+
+    if ($usingDefaultOutputDirectory) {
+        $tmpDirectory = Join-Path $repoRoot "tmp"
+        if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+            Remove-Item -LiteralPath $tmpDirectory -Force
+        }
+    }
+}
