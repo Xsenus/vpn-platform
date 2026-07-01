@@ -7396,5 +7396,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-ci-summary-latest-release-guard",
+    "version": "0.309.0",
+    "releasedAt": "2026-07-01T17:05:00+07:00",
+    "title": "Production handoff CI summary latest release guard",
+    "summary": "Production-ready handoff CI summary validation now rejects stale release summaries before GitHub Actions summary artifacts can be accepted.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1 -RequireProductionReady` now requires the summary `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-ci-summary-latest-release-guard.ps1` covers the fail-closed path for a production-ready CI summary with stale `releaseId`."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

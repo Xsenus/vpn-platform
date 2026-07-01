@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.309.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-ci-summary-latest-release-guard`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-ci-summary-latest-release-guard.ps1` proves that a production-ready handoff CI summary with stale `releaseId` is rejected.
+- Roadmap item `P11-ACC-070` documents the latest-release acceptance guard while keeping real VPS production smoke open.
+
+### Changed
+
+- `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1 -RequireProductionReady` now requires the summary result `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `314/334` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff CI summary latest release guard regression OK; targeted production handoff/docs/release suite `77/77`; backend full suite `604/604`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `517` files, `0` findings; markdown encoding check OK.
+
 ## 0.308.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-ci-result-latest-release-guard`.

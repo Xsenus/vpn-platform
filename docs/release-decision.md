@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `603/603`.
+- Backend full suite: `604/604`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-production-handoff-ci-result-latest-release-guard`, версия `0.308.0`; production-ready handoff CI regression result acceptance now rejects stale release evidence before `P11-ACC-002` can be accepted. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-production-handoff-ci-summary-latest-release-guard`, версия `0.309.0`; production-ready handoff CI summary acceptance now rejects stale release evidence before `P11-ACC-002` can be accepted. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

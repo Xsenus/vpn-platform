@@ -465,7 +465,13 @@ Harness проверяет happy path, затем портит копию workfl
 
 Если доступна переменная `GITHUB_STEP_SUMMARY`, wrapper дополнительно дописывает тот же Markdown-результат в GitHub Actions job summary: общий статус, release id, статус основного flow, result validator regression и long-path regression. Локально это можно проверить, задав `GITHUB_STEP_SUMMARY` на временный `.md` файл перед запуском wrapper.
 
-Wrapper запускает `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1` для result Markdown и для `GITHUB_STEP_SUMMARY`, если summary-файл доступен. Валидатор fail-closed сверяет JSON result artifact с Markdown: `status = passed`, release id, статусы основного flow, result validator regression, long-path regression и пути к обязательным artifacts.
+Wrapper запускает `scripts/validate-production-evidence-handoff-package-archive-ci-summary.ps1` для result Markdown и для `GITHUB_STEP_SUMMARY`, если summary-файл доступен. Валидатор fail-closed сверяет JSON result artifact с Markdown: `status = passed`, release id, статусы основного flow, result validator regression, long-path regression и пути к обязательным artifacts. Для финального production-ready summary добавьте `-RequireProductionReady`: `releaseId` summary result должен совпадать с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Latest-release guard для CI summary:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-ci-summary-latest-release-guard.ps1
+```
 
 Дополнительно wrapper запускает `scripts/test-production-evidence-handoff-package-archive-ci-summary-validator.ps1`. Regression harness портит JSON/Markdown summary и ожидает fail-closed ошибки для неверного статуса, чужого release id, отсутствующего artifact path и неверного long-path статуса. Итог записывается в поле `ciSummaryValidatorRegression` result JSON/Markdown.
 
