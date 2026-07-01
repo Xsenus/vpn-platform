@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: VPN live smoke latest release guard cleanup
+
+Scope:
+- `test-vpn-live-smoke-report-latest-release-guard.ps1` now removes its stale-release JSON report and empty default `tmp` directory after a local regression run.
+- The VPN live smoke latest release guard still proves `validate-vpn-live-smoke-report.ps1 -RequireAllPassed` rejects a stale `releaseId`.
+- `P0-VPN-010` is closed; `P0-VPN-001` ... `P0-VPN-005` remain open until real 3x-ui/VPN live smoke evidence exists.
+
+Result:
+- Roadmap progress: `385/405` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-vpn-live-smoke-latest-release-guard-cleanup`, version `0.380.0`.
+- Real 3x-ui/VPN live smoke report is still required before closing `STATE-012` or `P0-VPN-001` ... `P0-VPN-005`.
+
+Validation:
+- VPN live smoke latest release guard cleanup: OK.
+- Targeted VPN/docs/release suite: OK, `151/151`.
+- Backend full suite: OK, `675/675`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-vpn-live-smoke-latest-release-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: VPN live smoke generator release guard cleanup
 
 Scope:

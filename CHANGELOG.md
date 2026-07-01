@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.380.0 - 2026-07-02
+
+Release entry: `2026-07-02-vpn-live-smoke-latest-release-guard-cleanup`.
+
+### Fixed
+- `test-vpn-live-smoke-report-latest-release-guard.ps1` now removes its stale-release JSON report and empty default `tmp` directory after a local regression run.
+- `VpnLiveSmokeReportTests` pins the VPN live smoke latest release guard cleanup.
+- `P0-VPN-010` documents the local cleanup behavior while real VPN live smoke items remain open until external 3x-ui/VPN evidence exists.
+
+### Notes
+- Roadmap progress is now `385/405` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: VPN live smoke latest release guard cleanup OK; targeted VPN/docs/release suite `151/151`; backend full suite `675/675`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.379.0 - 2026-07-02
 
 Release entry: `2026-07-02-vpn-live-smoke-generator-release-guard-cleanup`.

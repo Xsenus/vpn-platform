@@ -63,4 +63,8 @@ finally {
     if (Test-Path -LiteralPath $reportPath) {
         Remove-Item -LiteralPath $reportPath -Force
     }
+
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
+    }
 }
