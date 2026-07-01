@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.315.0 - 2026-07-01
+
+Release entry: `2026-07-01-admin-vps-smoke-evidence-latest-release-guard`.
+
+### Fixed
+- `scripts/validate-admin-vps-smoke-evidence.ps1` now rejects paired admin VPS smoke evidence whose `releaseId` does not match the latest active release before accepting strict preflight/browser smoke reports.
+
+### Added
+- `scripts/test-admin-vps-smoke-evidence-latest-release-guard.ps1` proves that a stale paired evidence chain is rejected.
+- `P0-ADMIN-002BE` documents the local guard while `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `320/340` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke evidence latest release guard regression OK; targeted admin/docs/release suite `33/33`; backend full suite `610/610`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `523` files, `0` findings; markdown encoding check OK.
+
 ## 0.314.0 - 2026-07-01
 
 Release entry: `2026-07-01-admin-vps-smoke-preflight-latest-release-guard`.

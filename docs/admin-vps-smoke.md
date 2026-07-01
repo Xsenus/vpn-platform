@@ -125,6 +125,12 @@ Latest-release regression для preflight:
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-preflight-latest-release-guard.ps1
 ```
 
+Latest-release regression for paired evidence chain:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-evidence-latest-release-guard.ps1
+```
+
 Локальная regression-проверка validator, включая happy path и tamper-сценарии `empty-release-id`, `bad-ready-flag`, `failed-check`, `missing-check`, `duplicate-check`, `secret-marker`:
 
 ```powershell

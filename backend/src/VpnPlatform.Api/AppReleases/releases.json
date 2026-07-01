@@ -7534,5 +7534,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-admin-vps-smoke-evidence-latest-release-guard",
+    "version": "0.315.0",
+    "releasedAt": "2026-07-01T17:45:00+07:00",
+    "title": "Admin VPS smoke evidence latest release guard",
+    "summary": "Admin VPS smoke evidence chain validation now rejects stale release evidence before paired reports can be accepted.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-smoke-evidence.ps1` now requires the paired preflight and smoke `releaseId` to match the latest active release before strict child validators run."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-smoke-evidence-latest-release-guard.ps1` covers the fail-closed path for an evidence chain with stale `releaseId`."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
+      }
+    ]
   }
 ]

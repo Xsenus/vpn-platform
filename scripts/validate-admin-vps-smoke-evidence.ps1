@@ -51,6 +51,18 @@ function Resolve-WorkspacePath {
     return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
 }
 
+function Get-LatestActiveReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 function Read-JsonFile {
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -153,9 +165,6 @@ $smokeFullPath = Resolve-WorkspacePath $SmokeReportPath
 $preflightValidator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-preflight-report.ps1"
 $smokeValidator = Join-Path $repoRoot "scripts/validate-admin-vps-smoke-report.ps1"
 
-& $preflightValidator -ReportPath $preflightFullPath -RequireReady | Out-Host
-& $smokeValidator -ReportPath $smokeFullPath -RequireAllPassed | Out-Host
-
 $preflight = Read-JsonFile -Path $preflightFullPath
 $smoke = Read-JsonFile -Path $smokeFullPath
 
@@ -190,6 +199,14 @@ if ([string]::IsNullOrWhiteSpace($smokeReleaseId)) {
 if ($releaseIdsDiffer) {
     throw "Admin VPS smoke evidence mismatch for releaseId. Preflight='$preflightReleaseId', smoke='$($smoke.releaseId)'."
 }
+
+$latestReleaseId = Get-LatestActiveReleaseId
+if (-not [string]::Equals($smokeReleaseId, $latestReleaseId, [System.StringComparison]::Ordinal)) {
+    throw "Admin VPS smoke evidence releaseId '$smokeReleaseId' must match latest active release '$latestReleaseId' when -RequireReady and -RequireAllPassed are used."
+}
+
+& $preflightValidator -ReportPath $preflightFullPath -RequireReady | Out-Host
+& $smokeValidator -ReportPath $smokeFullPath -RequireAllPassed | Out-Host
 
 $preflightReportId = ([string]$preflight.reportId).Trim()
 $smokeReportId = ([string]$smoke.reportId).Trim()
