@@ -164,6 +164,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
         new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-VPN-007", "2026-07-01-vpn-live-smoke-latest-release-guard"),
+        new("P0-VPN-008", "2026-07-01-vpn-live-smoke-generator-release-guard"),
         new("P0-PAY-012", "2026-06-14-payment-provider-smoke-report"),
         new("P0-PAY-013", "2026-06-14-payment-provider-smoke-generator"),
         new("P0-PAY-014", "2026-06-19-payment-provider-smoke-report-acceptance-gates"),

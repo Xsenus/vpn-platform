@@ -10,6 +10,12 @@
 powershell -ExecutionPolicy Bypass -File scripts\new-vpn-live-smoke-report.ps1 -OutputPath tmp\vpn-live-smoke-report.json -ApiBaseUrl https://api.example.test -AdminWebUrl https://example.test/admin/ -X3uiPanelUrl https://x3ui.example.test -EnvironmentName staging -Operator local-test
 ```
 
+Manual `-ReleaseId` must already exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`; unknown values fail before any report file is written. Regression check:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-vpn-live-smoke-report-generator-release-guard.ps1
+```
+
 Скрипт берет `docs/vpn-live-smoke-report.template.json`, подставляет latest release из раздела "Что нового", URL окружения и оператора, выставляет все checks в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
 
 ## Что проверять

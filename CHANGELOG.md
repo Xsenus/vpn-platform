@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.318.0 - 2026-07-01
+
+Release entry: `2026-07-01-vpn-live-smoke-generator-release-guard`.
+
+### Fixed
+- `scripts/new-vpn-live-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing a VPN live smoke draft.
+
+### Added
+- `scripts/test-vpn-live-smoke-report-generator-release-guard.ps1` proves that the generator fails fast and leaves no JSON artifact for an unknown `ReleaseId`.
+- `P0-VPN-008` documents the local guard while `STATE-012` and `P0-VPN-001` ... `P0-VPN-005` remain open until real 3x-ui/VPN live smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `323/343` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: VPN live smoke generator release guard regression OK; targeted VPN/docs/release suite `21/21`; backend full suite `613/613`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `526` files, `0` findings; markdown encoding check OK.
+
 ## 0.317.0 - 2026-07-01
 
 Release entry: `2026-07-01-admin-vps-smoke-generator-release-guard`.
