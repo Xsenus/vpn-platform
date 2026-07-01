@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.375.0 - 2026-07-02
+
+Release entry: `2026-07-02-production-handoff-package-markdown-files-guard-cleanup`.
+
+### Fixed
+- `test-production-evidence-handoff-package-markdown-files-guard.ps1` now removes its default `tmp/production-evidence-handoff-package-markdown-files-guard` bundle directory and empty `tmp` directory after a local run.
+- `ProductionReadinessGateTests` pins the production handoff package Markdown files guard cleanup.
+- `P11-ACC-124` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `380/400` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff package Markdown files guard cleanup OK; targeted production/docs/release suite `142/142`; backend full suite `670/670`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.374.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-handoff-checklist-markdown-gates-guard-cleanup`.
