@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.377.0 - 2026-07-02
+
+Release entry: `2026-07-02-vps-production-smoke-generator-release-guard-cleanup`.
+
+### Fixed
+- `test-vps-production-smoke-report-generator-release-guard.ps1` now removes the empty default `tmp` directory after a local unknown release id regression run.
+- `VpsProductionSmokeTests` pins the VPS production smoke generator release guard cleanup.
+- `P11-ACC-126` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `382/402` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: VPS production smoke generator release guard cleanup OK; targeted VPS/docs/release suite `153/153`; backend full suite `672/672`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.376.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-evidence-bundle-generator-release-guard-cleanup`.

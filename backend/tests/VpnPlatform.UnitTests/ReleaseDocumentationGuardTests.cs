@@ -307,7 +307,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-122", "2026-07-02-production-handoff-receipt-markdown-verified-files-guard-cleanup"),
         new("P11-ACC-123", "2026-07-02-production-handoff-checklist-markdown-gates-guard-cleanup"),
         new("P11-ACC-124", "2026-07-02-production-handoff-package-markdown-files-guard-cleanup"),
-        new("P11-ACC-125", "2026-07-02-production-evidence-bundle-generator-release-guard-cleanup")
+        new("P11-ACC-125", "2026-07-02-production-evidence-bundle-generator-release-guard-cleanup"),
+        new("P11-ACC-126", "2026-07-02-vps-production-smoke-generator-release-guard-cleanup")
     ];
 
     [Fact]
