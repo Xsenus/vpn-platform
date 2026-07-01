@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.383.0 - 2026-07-02
+
+Release entry: `2026-07-02-admin-vps-bootstrap-release-guard-cleanup`.
+
+### Fixed
+- Admin VPS bootstrap smoke latest release, bootstrap evidence latest release and bootstrap readiness known release guard harnesses now remove empty default `tmp` after local runs.
+- `AdminBootstrapCliScriptTests` pins the cleanup contract across all admin VPS bootstrap release guard harnesses.
+- `P0-ADMIN-001BX` ... `P0-ADMIN-001BZ` document the local cleanup behavior while real VPS admin bootstrap/smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `395/415` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS bootstrap release guard cleanup OK; targeted admin bootstrap/docs/release suite `198/198`; backend full suite `679/679`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.382.0 - 2026-07-02
 
 Release entry: `2026-07-02-admin-vps-smoke-release-guard-cleanup`.
