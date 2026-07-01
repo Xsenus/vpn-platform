@@ -176,14 +176,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 613/613;
+- backend full suite: 614/614;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - frontend audit: OK, `0 vulnerabilities`;
-- latest "Что нового": `2026-07-01-vpn-live-smoke-generator-release-guard`, версия `0.318.0`.
+- latest "Что нового": `2026-07-01-payment-smoke-generator-release-guard`, версия `0.319.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

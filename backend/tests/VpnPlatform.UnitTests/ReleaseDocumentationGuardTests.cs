@@ -169,6 +169,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-PAY-013", "2026-06-14-payment-provider-smoke-generator"),
         new("P0-PAY-014", "2026-06-19-payment-provider-smoke-report-acceptance-gates"),
         new("P0-PAY-015", "2026-07-01-payment-smoke-latest-release-guard"),
+        new("P0-PAY-016", "2026-07-01-payment-smoke-generator-release-guard"),
         new("P0-PAY-010", "2026-06-14-telegram-stars-invoice-gate"),
         new("P1-TG-005", "2026-06-14-api-telegram-webhook"),
         new("P1-TG-006", "2026-06-14-telegram-webhook-boundary"),

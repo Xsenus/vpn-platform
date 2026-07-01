@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: payment provider smoke generator release guard
+
+Scope:
+- `scripts/new-payment-provider-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing a payment provider smoke draft.
+- Added `scripts/test-payment-provider-smoke-report-generator-release-guard.ps1` regression coverage for an unknown release id and no generated JSON artifact.
+- `P0-PAY-016` is closed; `STATE-011` and `P0-PAY-002` ... `P0-PAY-009` remain open until real payment provider smoke evidence exists.
+
+Result:
+- Roadmap progress: `324/344` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-payment-smoke-generator-release-guard`, version `0.319.0`.
+- Real payment provider smoke reports are still required before closing `STATE-011` or `P0-PAY-002` ... `P0-PAY-009`.
+
+Validation:
+- Payment provider smoke generator release guard regression: OK.
+- Targeted payment/docs/release suite: OK, `23/23`.
+- Backend full suite: OK, `614/614`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-payment-smoke-generator-release-guard`.
+- Secret scan: OK, files scanned `527`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: VPN live smoke generator release guard
 
 Scope:

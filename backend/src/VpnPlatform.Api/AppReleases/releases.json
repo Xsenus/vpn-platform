@@ -7626,5 +7626,28 @@
         "text": "`STATE-012` and `P0-VPN-001` ... `P0-VPN-005` remain open until real 3x-ui/VPN live smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-payment-smoke-generator-release-guard",
+    "version": "0.319.0",
+    "releasedAt": "2026-07-01T18:22:00+07:00",
+    "title": "Payment provider smoke generator release guard",
+    "summary": "Payment provider smoke draft generation now rejects unknown manual release ids before writing acceptance artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/new-payment-provider-smoke-report.ps1 -ReleaseId` now requires the supplied release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-payment-provider-smoke-report-generator-release-guard.ps1` covers the fail-fast path and proves no draft report is created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-011` and `P0-PAY-002` ... `P0-PAY-009` remain open until real payment provider smoke evidence is captured."
+      }
+    ]
   }
 ]

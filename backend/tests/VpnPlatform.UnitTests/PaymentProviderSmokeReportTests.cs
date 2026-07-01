@@ -153,8 +153,10 @@ public class PaymentProviderSmokeReportTests
                      "TODO: run $Mode smoke",
                      "Output file already exists. Pass -Force",
                      "Get-LatestReleaseId",
+                     "Assert-KnownReleaseId",
                      "DateTimeOffset]::Parse",
-                     "CultureInfo]::InvariantCulture"
+                     "CultureInfo]::InvariantCulture",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
@@ -166,10 +168,36 @@ public class PaymentProviderSmokeReportTests
         }
 
         Assert.Contains("new-payment-provider-smoke-report.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test-payment-provider-smoke-report-generator-release-guard.ps1", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("-Mode sandbox", guide, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("password=", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Bearer ", script, StringComparison.Ordinal);
         Assert.DoesNotContain("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Smoke_Report_Generator_Should_Reject_Unknown_Manual_ReleaseId()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "new-payment-provider-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-payment-provider-smoke-report-generator-release-guard.ps1"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "AppReleases/releases.json",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("missing-release-id-for-regression", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Generator accepted unknown ReleaseId", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Generator created report artifact after unknown ReleaseId failure", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("payment provider smoke generator release guard valid", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-PAY-016`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

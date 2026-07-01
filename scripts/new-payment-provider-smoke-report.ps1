@@ -34,6 +34,21 @@ function Get-LatestReleaseId {
     return [string]$latest[0].releaseId
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 $templatePath = Resolve-RepoPath "docs/payment-provider-smoke-report.template.json"
 if (-not (Test-Path -LiteralPath $templatePath)) {
     throw "Template was not found: $templatePath"
@@ -62,6 +77,9 @@ if ([string]::IsNullOrWhiteSpace($operatorValue)) {
 }
 
 $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) { Get-LatestReleaseId } else { $ReleaseId.Trim() }
+if (-not [string]::IsNullOrWhiteSpace($ReleaseId)) {
+    Assert-KnownReleaseId -Value $releaseValue
+}
 
 $report.reportId = "payment-provider-smoke-" + $now.ToString("yyyyMMdd-HHmmss")
 $report.environmentName = $EnvironmentName.Trim()

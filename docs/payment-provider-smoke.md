@@ -24,6 +24,12 @@ Telegram Stars не входит в этот отчет: это не web checkou
 powershell -ExecutionPolicy Bypass -File scripts\new-payment-provider-smoke-report.ps1 -OutputPath tmp\payment-provider-smoke-report.json -EnvironmentName staging -Operator local-test -Mode sandbox
 ```
 
+Manual `-ReleaseId` must already exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`; unknown values fail before any report file is written. Regression check:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-payment-provider-smoke-report-generator-release-guard.ps1
+```
+
 Скрипт подставляет latest release из раздела "Что нового", выставляет все проверки в `blocked`, не перезаписывает существующий файл без `-Force` и сразу запускает валидатор.
 
 В шаблоне перечислены все обязательные web-провайдеры:

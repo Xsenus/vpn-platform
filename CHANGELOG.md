@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.319.0 - 2026-07-01
+
+Release entry: `2026-07-01-payment-smoke-generator-release-guard`.
+
+### Fixed
+- `scripts/new-payment-provider-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing a payment provider smoke draft.
+
+### Added
+- `scripts/test-payment-provider-smoke-report-generator-release-guard.ps1` proves that the generator fails fast and leaves no JSON artifact for an unknown `ReleaseId`.
+- `P0-PAY-016` documents the local guard while `STATE-011` and `P0-PAY-002` ... `P0-PAY-009` remain open until real payment provider smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `324/344` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: payment provider smoke generator release guard regression OK; targeted payment/docs/release suite `23/23`; backend full suite `614/614`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `527` files, `0` findings; markdown encoding check OK.
+
 ## 0.318.0 - 2026-07-01
 
 Release entry: `2026-07-01-vpn-live-smoke-generator-release-guard`.
