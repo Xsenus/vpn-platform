@@ -60,4 +60,8 @@ finally {
     if (Test-Path -LiteralPath $resultJsonPath) {
         Remove-Item -LiteralPath $resultJsonPath -Force
     }
+
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
+    }
 }
