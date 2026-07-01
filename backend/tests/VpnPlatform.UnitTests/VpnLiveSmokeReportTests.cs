@@ -113,6 +113,32 @@ public class VpnLiveSmokeReportTests
     }
 
     [Fact]
+    public void Vpn_Live_Smoke_Validator_Should_Reject_Stale_Release_In_Acceptance_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate-vpn-live-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-vpn-live-smoke-report-latest-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "vpn-live-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestActiveReleaseId",
+                     "AppReleases/releases.json",
+                     "must match latest active release",
+                     "-RequireAllPassed"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("stale-release-id", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must match latest active release", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("latest active release", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-VPN-007`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Vpn_Live_Smoke_Docs_Should_Link_To_Roadmap_And_Docs_Index()
     {
         var root = FindRepositoryRoot();

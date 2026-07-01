@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: VPN live smoke latest release guard
+
+Scope:
+- `scripts/validate-vpn-live-smoke-report.ps1 -RequireAllPassed` now rejects VPN live smoke reports whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-vpn-live-smoke-report-latest-release-guard.ps1` regression coverage for a fully passed but stale VPN live report.
+- `P0-VPN-007` is closed; `P0-VPN-001` ... `P0-VPN-005` remain open until real 3x-ui/VPN evidence exists.
+
+Result:
+- Roadmap progress: `306/326` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-vpn-live-smoke-latest-release-guard`, version `0.301.0`.
+- Real live VPN smoke report is still required before closing `STATE-012` or `P0-VPN-*`.
+
+Validation:
+- VPN live smoke latest release guard regression: OK.
+- Targeted VPN live/docs/release suite: OK, `20/20`.
+- Backend full suite: OK, `596/596`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-vpn-live-smoke-latest-release-guard`.
+- Secret scan: OK, files scanned `509`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: payment provider smoke latest release guard
 
 Scope:

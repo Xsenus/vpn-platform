@@ -7208,5 +7208,28 @@
         "text": "`P0-PAY-002` ... `P0-PAY-009` remain open until real provider smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-vpn-live-smoke-latest-release-guard",
+    "version": "0.301.0",
+    "releasedAt": "2026-07-01T12:00:00+07:00",
+    "title": "VPN live smoke latest release guard",
+    "summary": "VPN live smoke acceptance now rejects stale release evidence before 3x-ui/VPN reports can be used for roadmap or production readiness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-vpn-live-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-vpn-live-smoke-report-latest-release-guard.ps1` covers the fail-closed path for a fully passed but stale VPN live smoke report."
+      },
+      {
+        "type": "important",
+        "text": "`P0-VPN-001` ... `P0-VPN-005` remain open until real 3x-ui/VPN smoke evidence is captured."
+      }
+    ]
   }
 ]

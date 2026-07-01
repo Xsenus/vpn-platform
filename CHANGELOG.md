@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.301.0 - 2026-07-01
+
+Release entry: `2026-07-01-vpn-live-smoke-latest-release-guard`.
+
+### Added
+
+- `scripts/test-vpn-live-smoke-report-latest-release-guard.ps1` proves that a fully passed VPN live smoke report with stale `releaseId` is rejected.
+- Roadmap item `P0-VPN-007` documents the latest-release acceptance guard while keeping real 3x-ui/VPN smoke items open for external evidence.
+
+### Changed
+
+- `scripts/validate-vpn-live-smoke-report.ps1 -RequireAllPassed` now requires the report `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `306/326` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: VPN live smoke latest release guard regression OK; targeted VPN live/docs/release suite `20/20`; backend full suite `596/596`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `509` files, `0` findings; markdown encoding check OK.
+
 ## 0.300.0 - 2026-07-01
 
 Release entry: `2026-07-01-payment-smoke-latest-release-guard`.

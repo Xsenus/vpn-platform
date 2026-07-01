@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-06-24.
 
-Временный статус работы с roadmap: активная локальная доработка возобновлена для локальных safety-guard задач и синхронизирована до `2026-07-01-payment-smoke-latest-release-guard`, версия `0.300.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `305/325` проверяемых пунктов, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка возобновлена для локальных safety-guard задач и синхронизирована до `2026-07-01-vpn-live-smoke-latest-release-guard`, версия `0.301.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `306/326` проверяемых пунктов, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-06-14:
 
-- [x] `STATE-001` Backend test suite проходит: `595/595`.
+- [x] `STATE-001` Backend test suite проходит: `596/596`.
 - [x] `STATE-002` Frontend test suite проходит: `66/66`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -51,9 +51,9 @@ git diff --check
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
 - [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-06-14.
-  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `595/595`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-07-01-payment-smoke-latest-release-guard`, версия `0.300.0`.
+  - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `596/596`, frontend `66/66`, browser console smoke `9/9`, latest release `2026-07-01-vpn-live-smoke-latest-release-guard`, версия `0.301.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
-  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 9/9, `PaymentProviderSmokeReportTests` 7/7, `AdminVpsSmokeReportTests` 15/15, `AdminBootstrapCliScriptTests` 11/11, `VpnLiveSmokeReportTests` 4/4, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, local CLI bootstrap admin smoke, deploy production env normalizer regression, admin VPS smoke navigation fallback regression, admin VPS smoke remote release preflight/diagnostics/console-summary/remote-message/report-id-console/failed-checks/failed-count/check-counts regression, staging smoke latest release guard regression, payment provider smoke latest release guard regression, real VPS admin smoke negative evidence for stale release/missing `audit` section, backend full suite `595/595`, frontend tests `66/66`, latest "Что нового" `2026-07-01-payment-smoke-latest-release-guard`.
+  - Доказательство: `RoadmapCurrentStateTests` 2/2, `BugRegisterConsistencyTests` 2/2, `ProvisioningSecretStatusConsistencyTests` 1/1, `ProductAdminUiRoadmapSyncTests` 1/1, `ProductionReadinessGateTests` 57/57, `VpsProductionSmokeTests` 7/7, `StagingSmokeChecklistTests` 9/9, `PaymentProviderSmokeReportTests` 7/7, `AdminVpsSmokeReportTests` 15/15, `AdminBootstrapCliScriptTests` 11/11, `VpnLiveSmokeReportTests` 5/5, `ChannelWebhooksControllerTests` 2/2, `ReadmeDocumentationTests`, `FinalDocsChangelogTests`, `DocumentationEncodingTests`, local SQLite VPS smoke dry-run, fresh local SQLite smoke, local admin browser smoke через end-to-end wrapper, local CLI bootstrap admin smoke, deploy production env normalizer regression, admin VPS smoke navigation fallback regression, admin VPS smoke remote release preflight/diagnostics/console-summary/remote-message/report-id-console/failed-checks/failed-count/check-counts regression, staging smoke latest release guard regression, payment provider smoke latest release guard regression, VPN live smoke latest release guard regression, real VPS admin smoke negative evidence for stale release/missing `audit` section, backend full suite `596/596`, frontend tests `66/66`, latest "Что нового" `2026-07-01-vpn-live-smoke-latest-release-guard`.
 
 ## P0. Блокеры production-запуска
 
@@ -524,6 +524,11 @@ git diff --check
   - Что сделать: зафиксировать шаблон, генератор и валидатор отчета для проверки реальной 3x-ui панели, inbound, VPN node, production order, webhook, подписки, VPN-клиента, URI/QR и fail-closed поведения.
   - Критерий готовности: отчет содержит все обязательные VPN checks, URL API/admin/3x-ui валидируются как absolute http/https, `-RequireAllPassed` требует все top-level gates и `passed` по каждому check.
   - Доказательство: `docs/vpn-live-smoke-report.template.json`, `scripts/new-vpn-live-smoke-report.ps1`, `scripts/validate-vpn-live-smoke-report.ps1`, `docs/vpn-live-smoke.md`, `VpnLiveSmokeReportTests` 4/4, generator smoke, expected fail-closed `-RequireAllPassed`.
+
+- [x] `P0-VPN-007` VPN live smoke report latest release guard. 2026-07-01.
+  - Что сделать: не принимать VPN live smoke report как финальный acceptance evidence, если отчет был заполнен для старого release.
+  - Что сделано: `scripts/validate-vpn-live-smoke-report.ps1 -RequireAllPassed` сверяет `releaseId` отчета с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`; добавлен regression harness `scripts/test-vpn-live-smoke-report-latest-release-guard.ps1`, который доказывает fail-closed поведение на полностью passed отчете со stale `releaseId`.
+  - Доказательство: `VpnLiveSmokeReportTests` 5/5, VPN live smoke latest release guard regression, latest "Что нового" `2026-07-01-vpn-live-smoke-latest-release-guard`, версия `0.301.0`. Реальные smoke по `P0-VPN-001` ... `P0-VPN-005` остаются открытыми до внешнего evidence.
 
 ### P0.3 Live-платежи
 

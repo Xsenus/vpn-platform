@@ -42,6 +42,8 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-vpn-live-smoke-report.
 
 `-RequireAllPassed` должен падать на черновике, потому что все checks и top-level gates изначально находятся в безопасном состоянии `blocked`/`false`. Перед закрытием `P0-VPN-001` ... `P0-VPN-005` нужно заменить статусы на `passed`, заполнить все gates и приложить safe evidence.
 
+В acceptance-режиме отчет также должен быть привязан к latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`. Если `releaseId` в отчете устарел, `-RequireAllPassed` падает даже при `passed` по всем checks и top-level gates.
+
 ## Что нельзя хранить
 
 В отчете нельзя сохранять пароли, cookies, bearer-токены, private headers, `.env`, SSH-ключи, webhook secrets, полные `vless://`, `vmess://`, `trojan://` ссылки, приватные ключи и raw provider payloads.

@@ -11,6 +11,33 @@ if (-not (Test-Path -LiteralPath $ReportPath)) {
     throw "VPN live smoke report was not found: $ReportPath"
 }
 
+function Resolve-RepositoryRoot {
+    $directory = Get-Item -LiteralPath $PSScriptRoot
+    while ($null -ne $directory) {
+        if ((Test-Path -LiteralPath (Join-Path $directory.FullName "README.md")) -and
+            (Test-Path -LiteralPath (Join-Path $directory.FullName "backend/src/VpnPlatform.Api/AppReleases/releases.json"))) {
+            return $directory.FullName
+        }
+
+        $directory = $directory.Parent
+    }
+
+    throw "Repository root was not found."
+}
+
+function Get-LatestActiveReleaseId {
+    $root = Resolve-RepositoryRoot
+    $releasesPath = Join-Path $root "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 $requiredChecks = @(
     "panel-connection",
     "inbound-sync",
@@ -82,6 +109,13 @@ foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "adminW
 
     if ([string]::IsNullOrWhiteSpace([string]$report.$propertyName)) {
         throw "VPN live smoke report field is empty: $propertyName"
+    }
+}
+
+if ($RequireAllPassed) {
+    $latestReleaseId = Get-LatestActiveReleaseId
+    if (-not [string]::Equals([string]$report.releaseId, $latestReleaseId, [System.StringComparison]::Ordinal)) {
+        throw "VPN live smoke report releaseId '$($report.releaseId)' must match latest active release '$latestReleaseId' when -RequireAllPassed is used."
     }
 }
 
