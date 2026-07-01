@@ -333,6 +333,12 @@ powershell -ExecutionPolicy Bypass -File scripts\new-production-evidence-handoff
 
 Receipt сначала запускает archive validator, затем пишет `production-evidence-handoff-receipt.json` и `.md` с release id, SHA256 архива, SHA256 manifest, размером архива и списком проверенных entries.
 
+Regression guard для release id в receipt доказывает, что receipt-generator не пишет JSON/Markdown receipt, если archive manifest содержит неизвестный `releaseId`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-receipt-release-guard.ps1
+```
+
 Проверить receipt перед передачей можно отдельной командой:
 
 ```powershell

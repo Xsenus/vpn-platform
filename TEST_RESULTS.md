@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff receipt release guard
+
+Scope:
+- `scripts/new-production-evidence-handoff-receipt.ps1` now validates the archive `releaseId` against `backend/src/VpnPlatform.Api/AppReleases/releases.json` before writing JSON or Markdown receipt artifacts.
+- Added `scripts/test-production-evidence-handoff-receipt-release-guard.ps1` regression coverage for a tampered archive manifest with an unknown release id and no generated receipt artifacts.
+- `P11-ACC-079` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `333/353` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-receipt-release-guard`, version `0.328.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff receipt release guard regression: OK.
+- Targeted production/docs/release suite: OK, `86/86`.
+- Backend full suite: OK, `623/623`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-receipt-release-guard`.
+- Secret scan: OK, files scanned `536`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production evidence archive release guard
 
 Scope:

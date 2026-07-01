@@ -1194,6 +1194,40 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Receipt_Should_Reject_Unknown_Release()
+    {
+        var root = FindRepositoryRoot();
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-production-evidence-handoff-receipt.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-receipt-release-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "missing-release-id-for-receipt-regression"
+                 })
+        {
+            Assert.Contains(expected, generator + regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Production evidence handoff receipt generator accepted unknown releaseId",
+                     "Production evidence handoff receipt generator created receipt after unknown releaseId failure",
+                     "Production evidence handoff receipt generator created markdown after unknown releaseId failure",
+                     "production evidence handoff receipt release guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-receipt-release-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-079`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Receipt_Validator_Should_Verify_Receipt_Against_Archive()
     {
         var root = FindRepositoryRoot();

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.328.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-receipt-release-guard`.
+
+### Fixed
+- `scripts/new-production-evidence-handoff-receipt.ps1` now rejects unknown archive release ids before writing JSON or Markdown receipt artifacts.
+
+### Added
+- `scripts/test-production-evidence-handoff-receipt-release-guard.ps1` proves that a tampered archive manifest with an unknown `releaseId` cannot produce receipt artifacts.
+- `P11-ACC-079` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `333/353` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff receipt release guard regression OK; targeted production/docs/release suite `86/86`; backend full suite `623/623`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `536` files, `0` findings; markdown encoding check OK.
+
 ## 0.327.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-evidence-archive-release-guard`.
