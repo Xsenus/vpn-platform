@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.365.0 - 2026-07-02
+
+Release entry: `2026-07-02-staging-smoke-latest-release-guard-cleanup`.
+
+### Fixed
+- `test-staging-smoke-report-latest-release-guard.ps1` now removes its default `tmp/staging-smoke-stale-release-guard.json` report and empty `tmp` directory after a local run.
+- `StagingSmokeChecklistTests` pins the staging smoke latest-release guard cleanup.
+- `P9-TST-007H` documents the local cleanup behavior while parent `P9-TST-007` remains in progress until real staging or VPS smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `370/390` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: staging smoke latest release guard cleanup OK; targeted staging/docs/release suite `132/132`; backend full suite `660/660`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.364.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-evidence-bundle-latest-release-guard-cleanup`.

@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: staging smoke latest release guard cleanup
+
+Scope:
+- `test-staging-smoke-report-latest-release-guard.ps1` now removes its default `tmp/staging-smoke-stale-release-guard.json` report and empty `tmp` directory after a local run.
+- The stale latest-release regression still proves `validate-staging-smoke-report.ps1 -RequireAllPassed` rejects non-latest release IDs.
+- `P9-TST-007H` is closed; parent `P9-TST-007` remains in progress until real staging or VPS smoke evidence exists.
+
+Result:
+- Roadmap progress: `370/390` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-staging-smoke-latest-release-guard-cleanup`, version `0.365.0`.
+- Real staging or VPS smoke report is still required before closing `P9-TST-007`.
+
+Validation:
+- Staging smoke latest release guard cleanup: OK.
+- Targeted staging/docs/release suite: OK, `132/132`.
+- Backend full suite: OK, `660/660`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-staging-smoke-latest-release-guard-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: production evidence bundle latest release guard cleanup
 
 Scope:
