@@ -1,4 +1,4 @@
-# Production readiness gate
+﻿# Production readiness gate
 
 Документ закрывает локальный roadmap-пункт `P11-ACC-008`: перед тем как называть проект production-ready, теперь есть отдельная fail-closed команда, которая проверяет staging/VPS smoke report и не пропускает релиз, если roadmap или release decision все еще содержат открытые production-блокеры.
 
@@ -323,6 +323,11 @@ Checklist сначала запускает receipt validator, затем пиш
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-handoff-checklist.ps1 `
   -ChecklistPath tmp\production-evidence\production-evidence-handoff-checklist.json
+```
+Fail-closed regression for stale production handoff checklist:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-checklist-latest-release-guard.ps1
 ```
 
 Checklist validator заново запускает receipt validator, сверяет release id, SHA256 архива, SHA256 manifest, Markdown-пару, gates и operator actions. Для финального production handoff добавьте `-RequireProductionReady`: валидатор потребует `production-ready-handoff`, все gates `passed` и `production-readiness-summary.json` со статусом `production-ready`.

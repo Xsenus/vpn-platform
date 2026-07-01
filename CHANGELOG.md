@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.305.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-checklist-latest-release-guard`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-checklist-latest-release-guard.ps1` proves that a production-ready handoff checklist with stale `releaseId` is rejected.
+- Roadmap item `P11-ACC-066` documents the latest-release acceptance guard while keeping real VPS production smoke open.
+
+### Changed
+
+- `scripts/validate-production-evidence-handoff-checklist.ps1 -RequireProductionReady` now requires the checklist `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `310/330` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff checklist latest release guard regression OK; targeted production handoff/docs/release suite `73/73`; backend full suite `600/600`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `513` files, `0` findings; markdown encoding check OK.
+
 ## 0.304.0 - 2026-07-01
 
 Release entry: `2026-07-01-admin-vps-bootstrap-smoke-latest-release-guard`.

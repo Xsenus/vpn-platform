@@ -235,7 +235,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-062", "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards"),
         new("P11-ACC-063", "2026-06-19-production-ci-workflow-artifacts-guards-aggregate-ci-step-guards-regression"),
         new("P11-ACC-064", "2026-06-19-vps-production-smoke-report-contract"),
-        new("P11-ACC-065", "2026-07-01-vps-production-smoke-latest-release-guard")
+        new("P11-ACC-065", "2026-07-01-vps-production-smoke-latest-release-guard"),
+        new("P11-ACC-066", "2026-07-01-production-handoff-checklist-latest-release-guard")
     ];
 
     [Fact]
