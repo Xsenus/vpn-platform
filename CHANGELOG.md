@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.314.0 - 2026-07-01
+
+Release entry: `2026-07-01-admin-vps-smoke-preflight-latest-release-guard`.
+
+### Fixed
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady` now rejects ready preflight reports whose `releaseId` does not match the latest active release.
+
+### Added
+- `scripts/test-admin-vps-smoke-preflight-latest-release-guard.ps1` proves that a ready preflight report with stale `releaseId` is rejected before browser smoke can start.
+- `P0-ADMIN-002BD` documents the local guard while `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `319/339` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke preflight latest release guard regression OK; targeted admin/docs/release suite `32/32`; backend full suite `609/609`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `522` files, `0` findings; markdown encoding check OK.
+
 ## 0.313.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-latest-release-guard`.

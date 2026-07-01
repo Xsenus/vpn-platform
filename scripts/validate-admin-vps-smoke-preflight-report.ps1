@@ -7,6 +7,25 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Resolve-RepoPath {
+    param([string]$RelativePath)
+
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    return Join-Path $repoRoot $RelativePath
+}
+
+function Get-LatestActiveReleaseId {
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 if (-not (Test-Path -LiteralPath $ReportPath -PathType Leaf)) {
     throw "Admin VPS smoke preflight report was not found: $ReportPath"
 }
@@ -98,6 +117,13 @@ foreach ($propertyName in @("releaseId", "remoteReleaseId", "remoteReleaseCheckR
 
 if ([string]::IsNullOrWhiteSpace([string]$report.releaseId)) {
     throw "Admin VPS smoke preflight report field is empty: releaseId"
+}
+
+if ($RequireReady) {
+    $latestReleaseId = Get-LatestActiveReleaseId
+    if (-not [string]::Equals([string]$report.releaseId, $latestReleaseId, [System.StringComparison]::Ordinal)) {
+        throw "Admin VPS smoke preflight report releaseId '$($report.releaseId)' must match latest active release '$latestReleaseId' when -RequireReady is used."
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace([string]$report.remoteReleaseStatus)) {

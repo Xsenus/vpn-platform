@@ -119,6 +119,12 @@ Preflight автоматически валидирует JSON через `scrip
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-smoke-preflight-report.ps1 -ReportPath tmp\admin-vps-smoke-preflight-report.json -RequireReady
 ```
 
+Latest-release regression для preflight:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-preflight-latest-release-guard.ps1
+```
+
 Локальная regression-проверка validator, включая happy path и tamper-сценарии `empty-release-id`, `bad-ready-flag`, `failed-check`, `missing-check`, `duplicate-check`, `secret-marker`:
 
 ```powershell

@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: admin VPS smoke preflight latest release guard
+
+Scope:
+- `scripts/validate-admin-vps-smoke-preflight-report.ps1 -RequireReady` now rejects ready preflight reports whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-admin-vps-smoke-preflight-latest-release-guard.ps1` regression coverage for a ready preflight report with stale release evidence.
+- `P0-ADMIN-002BD` is closed; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence exists.
+
+Result:
+- Roadmap progress: `319/339` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-admin-vps-smoke-preflight-latest-release-guard`, version `0.314.0`.
+- Real VPS admin smoke report is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Admin VPS smoke preflight latest release guard regression: OK.
+- Targeted admin/docs/release suite: OK, `32/32`.
+- Backend full suite: OK, `609/609`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-admin-vps-smoke-preflight-latest-release-guard`.
+- Secret scan: OK, files scanned `522`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production handoff package archive latest release guard
 
 Scope:
