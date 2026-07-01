@@ -2146,6 +2146,38 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Entry_Guards_Should_All_Cleanup_Artifacts()
+    {
+        var root = FindRepositoryRoot();
+        var scriptDirectory = Path.Combine(root, "scripts");
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+        var scripts = Directory
+            .EnumerateFiles(scriptDirectory, "test-production-evidence-handoff-package-archive-*-entry-guard.ps1")
+            .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.Equal(8, scripts.Length);
+
+        foreach (var scriptPath in scripts)
+        {
+            var regression = File.ReadAllText(scriptPath);
+
+            foreach (var expected in new[]
+                     {
+                         "Remove-EmptyDirectory",
+                         "Get-ChildItem -LiteralPath $DirectoryPath -Force",
+                         "Remove-Item -LiteralPath $archivePath -Force",
+                         "Remove-EmptyDirectory -DirectoryPath $tmpDirectory"
+                     })
+            {
+                Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        Assert.Contains("[x] `P11-ACC-103`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Package_Archive_Flow_Should_Have_Executable_End_To_End_Harness()
     {
         var root = FindRepositoryRoot();

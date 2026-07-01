@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff package archive entry guard cleanup coverage
+
+Scope:
+- `ProductionReadinessGateTests` now verifies every archive entry guard removes the generated ZIP and empty `tmp` directory.
+- All `test-production-evidence-handoff-package-archive-*-entry-guard.ps1` scripts are pinned by one cleanup coverage test.
+- `P11-ACC-103` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `357/377` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage`, version `0.352.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff package archive entry guard cleanup coverage: OK.
+- Targeted production/docs/release suite: OK, `109/109`.
+- Backend full suite: OK, `647/647`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff package archive whitespace entry cleanup
 
 Scope:

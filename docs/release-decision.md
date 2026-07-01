@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `646/646`.
+- Backend full suite: `647/647`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-production-handoff-package-archive-whitespace-entry-cleanup`, версия `0.351.0`; production evidence handoff package archive whitespace-entry regression now cleans its temporary artifacts. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage`, версия `0.352.0`; production evidence handoff package archive entry-guard cleanup is now covered across all entry regressions. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

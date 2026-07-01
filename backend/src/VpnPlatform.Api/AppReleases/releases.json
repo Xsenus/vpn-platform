@@ -8385,5 +8385,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage",
+    "version": "0.352.0",
+    "releasedAt": "2026-07-01T22:28:00+07:00",
+    "title": "Production handoff package archive entry guard cleanup coverage",
+    "summary": "Production evidence handoff package archive entry-guard cleanup is now covered across all entry regressions.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`ProductionReadinessGateTests` now verifies every archive entry guard removes its generated ZIP and empty `tmp` directory."
+      },
+      {
+        "type": "new",
+        "text": "All `test-production-evidence-handoff-package-archive-*-entry-guard.ps1` scripts are pinned by one cleanup coverage test."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

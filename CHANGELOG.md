@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.352.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage`.
+
+### Fixed
+- `ProductionReadinessGateTests` now verifies every archive entry guard removes its generated ZIP and empty `tmp` directory.
+- All `test-production-evidence-handoff-package-archive-*-entry-guard.ps1` scripts are pinned by one cleanup coverage test.
+- `P11-ACC-103` documents the aggregate cleanup coverage while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `357/377` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive entry guard cleanup coverage OK; targeted production/docs/release suite `109/109`; backend full suite `647/647`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.351.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-whitespace-entry-cleanup`.
