@@ -2,6 +2,28 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: Admin VPS smoke report validator cleanup
+
+Scope:
+- `test-admin-vps-smoke-report-validator.ps1` now uses the latest active release and removes its default output directory plus empty `tmp` after ordinary local runs.
+- `P0-ADMIN-002BO` is closed; real VPS admin smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `399/419` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-admin-vps-smoke-report-validator-cleanup`, version `0.387.0`.
+- Real VPS admin smoke evidence is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Admin VPS smoke report validator cleanup: OK.
+- Targeted admin/docs/release suite: OK, `38/38`.
+- Backend full suite: OK, `682/682`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-02-admin-vps-smoke-report-validator-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-02: Admin bootstrap wrapper cleanup
 
 Scope:

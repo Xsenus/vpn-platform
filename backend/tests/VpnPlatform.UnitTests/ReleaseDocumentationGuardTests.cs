@@ -177,6 +177,7 @@ public class ReleaseDocumentationGuardTests
         new("P0-ADMIN-002BL", "2026-07-02-admin-vps-smoke-release-guard-cleanup"),
         new("P0-ADMIN-002BM", "2026-07-02-admin-vps-smoke-release-guard-cleanup"),
         new("P0-ADMIN-002BN", "2026-07-02-admin-vps-browser-smoke-direct-release-guard-cleanup"),
+        new("P0-ADMIN-002BO", "2026-07-02-admin-vps-smoke-report-validator-cleanup"),
         new("P0-ADMIN-003", "2026-06-14-admin-vps-smoke-report"),
         new("P0-VPN-006", "2026-06-14-vpn-live-smoke-report"),
         new("P0-VPN-007", "2026-07-01-vpn-live-smoke-latest-release-guard"),

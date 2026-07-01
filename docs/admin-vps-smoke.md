@@ -92,6 +92,8 @@ Smoke report содержит `smokeReportPath`; validator сверяет это
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-validator.ps1
 ```
 
+Обычный запуск admin VPS smoke report validator regression берет latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json` и удаляет default output directory вместе с пустым `tmp`; `-KeepArtifacts` сохраняет regression evidence для локального расследования.
+
 `scripts/test-admin-vps-smoke-report-latest-release-guard.ps1` additionally proves that a fully passed but stale admin VPS smoke report is rejected by `-RequireAllPassed` before it can be used as acceptance evidence:
 
 ```powershell

@@ -512,6 +512,33 @@ public class AdminVpsSmokeReportTests
     }
 
     [Fact]
+    public void Admin_Vps_Smoke_Report_Validator_Regression_Should_Use_Latest_Release_And_Cleanup_Default_Tmp()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-smoke-report-validator.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestReleaseId",
+                     "backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "releaseId = $latestReleaseId",
+                     "$usingDefaultOutputDirectory",
+                     "$defaultOutputDirectory",
+                     "-not $KeepArtifacts -and $usingDefaultOutputDirectory",
+                     "Get-ChildItem -LiteralPath $tmpDirectory -Force",
+                     "Remove-Item -LiteralPath $tmpDirectory -Force"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-smoke-report-validator.ps1", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-002BO`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Smoke_Flow_Should_Run_Preflight_Before_Browser_Smoke()
     {
         var root = FindRepositoryRoot();

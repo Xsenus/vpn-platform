@@ -9194,5 +9194,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-admin-vps-smoke-report-validator-cleanup",
+    "version": "0.387.0",
+    "releasedAt": "2026-07-02T03:10:00+07:00",
+    "title": "Admin VPS smoke report validator cleanup",
+    "summary": "Admin VPS smoke report validator regression now tracks the latest active release and removes default local artifacts after ordinary runs.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`test-admin-vps-smoke-report-validator.ps1` now uses the latest active release from `releases.json` before running `-RequireAllPassed` validation."
+      },
+      {
+        "type": "fixed",
+        "text": "The validator regression removes its default output directory and empty `tmp` after ordinary local runs while preserving `-KeepArtifacts` debug evidence."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
+      }
+    ]
   }
 ]

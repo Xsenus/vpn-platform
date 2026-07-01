@@ -7,6 +7,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$defaultOutputDirectory = "tmp/admin-vps-smoke-report-validator-regression-test"
+$usingDefaultOutputDirectory = -not $PSBoundParameters.ContainsKey("OutputDirectory") -or [string]::Equals($OutputDirectory, $defaultOutputDirectory, [System.StringComparison]::OrdinalIgnoreCase)
 
 function Resolve-WorkspacePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -35,6 +37,17 @@ function Write-Utf8NoBomFile {
     )
 
     [System.IO.File]::WriteAllText($PathValue, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Get-LatestReleaseId {
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $activeReleases = @($releases | Where-Object { $_.isActive -eq $true })
+    if ($activeReleases.Count -eq 0) {
+        throw "No active release entries found in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    return [string]$activeReleases[-1].releaseId
 }
 
 function Invoke-SmokeReportValidator {
@@ -109,6 +122,7 @@ New-Item -ItemType Directory -Path $outputFullPath -Force | Out-Null
 
 try {
     $now = (Get-Date).ToUniversalTime()
+    $latestReleaseId = Get-LatestReleaseId
     $validReportPath = Join-Path $outputFullPath "admin-vps-smoke-report.json"
     $sections = @(
         foreach ($section in $requiredSections) {
@@ -133,7 +147,7 @@ try {
         smokeReportPath = $validReportPath
         startedAt = $now.AddMinutes(-1).ToString("O")
         completedAt = $now.ToString("O")
-        releaseId = "manual-admin-vps-smoke-validator-regression"
+        releaseId = $latestReleaseId
         operator = "admin-vps-smoke-report-validator-regression"
         notes = "Synthetic sanitized validator regression report without credentials or tokens."
         accountBootstrapChecked = $true
@@ -246,5 +260,12 @@ try {
 finally {
     if (-not $KeepArtifacts -and (Test-Path -LiteralPath $outputFullPath)) {
         Remove-Item -LiteralPath $outputFullPath -Recurse -Force
+    }
+
+    if (-not $KeepArtifacts -and $usingDefaultOutputDirectory) {
+        $tmpDirectory = Resolve-WorkspacePath "tmp"
+        if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+            Remove-Item -LiteralPath $tmpDirectory -Force
+        }
     }
 }

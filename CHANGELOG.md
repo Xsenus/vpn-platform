@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.387.0 - 2026-07-02
+
+Release entry: `2026-07-02-admin-vps-smoke-report-validator-cleanup`.
+
+### Fixed
+- `test-admin-vps-smoke-report-validator.ps1` now uses the latest active release from `releases.json`, so the regression keeps passing after release rotation.
+- The validator regression removes its default output directory and empty `tmp` after ordinary local runs.
+- `P0-ADMIN-002BO` documents the local cleanup behavior while real VPS admin smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `399/419` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS smoke report validator cleanup OK; targeted admin/docs/release suite `38/38`; backend full suite `682/682`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.386.0 - 2026-07-02
 
 Release entry: `2026-07-02-admin-bootstrap-wrapper-cleanup`.
