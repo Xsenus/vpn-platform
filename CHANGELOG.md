@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.320.0 - 2026-07-01
+
+Release entry: `2026-07-01-staging-smoke-generator-release-guard`.
+
+### Fixed
+- `scripts/new-staging-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing a staging smoke draft.
+
+### Added
+- `scripts/test-staging-smoke-report-generator-release-guard.ps1` proves that the generator fails fast and leaves no JSON artifact for an unknown `ReleaseId`.
+- `P9-TST-007G` documents the local guard while `P9-TST-007` remains in progress until real staging/VPS smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `325/345` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: staging smoke generator release guard regression OK; targeted staging/docs/release suite `25/25`; backend full suite `615/615`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `528` files, `0` findings; markdown encoding check OK.
+
 ## 0.319.0 - 2026-07-01
 
 Release entry: `2026-07-01-payment-smoke-generator-release-guard`.

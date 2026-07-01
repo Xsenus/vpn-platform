@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: staging smoke generator release guard
+
+Scope:
+- `scripts/new-staging-smoke-report.ps1 -ReleaseId` now rejects unknown manual release ids before writing a staging smoke draft.
+- Added `scripts/test-staging-smoke-report-generator-release-guard.ps1` regression coverage for an unknown release id and no generated JSON artifact.
+- `P9-TST-007G` is closed; `P9-TST-007` remains in progress until real staging/VPS smoke evidence exists.
+
+Result:
+- Roadmap progress: `325/345` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-staging-smoke-generator-release-guard`, version `0.320.0`.
+- Real staging/VPS smoke report is still required before closing `P9-TST-007`.
+
+Validation:
+- Staging smoke generator release guard regression: OK.
+- Targeted staging/docs/release suite: OK, `25/25`.
+- Backend full suite: OK, `615/615`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-staging-smoke-generator-release-guard`.
+- Secret scan: OK, files scanned `528`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: payment provider smoke generator release guard
 
 Scope:

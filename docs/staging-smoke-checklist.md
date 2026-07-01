@@ -38,6 +38,12 @@ powershell -ExecutionPolicy Bypass -File scripts\new-staging-smoke-report.ps1 `
   -Operator "name-or-ci-run-id"
 ```
 
+Manual `-ReleaseId` must already exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`; unknown values fail before any report file is written. Regression check:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-staging-smoke-report-generator-release-guard.ps1
+```
+
 2. Скрипт создаст все обязательные checks со статусом `blocked`, подставит latest release из seed "Что нового" и сразу прогонит структурную валидацию.
 3. Если файл уже существует, используйте `-Force` только когда уверены, что старый отчет больше не нужен.
 4. Пройдите каждый пункт smoke и замените `blocked` на `passed`, `failed` или `skipped`.

@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `614/614`.
+- Backend full suite: `615/615`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-payment-smoke-generator-release-guard`, версия `0.319.0`; payment provider smoke draft generation now rejects unknown manual release ids before writing acceptance artifacts. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-staging-smoke-generator-release-guard`, версия `0.320.0`; staging smoke draft generation now rejects unknown manual release ids before writing acceptance artifacts. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

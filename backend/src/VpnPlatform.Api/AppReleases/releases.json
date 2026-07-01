@@ -7649,5 +7649,28 @@
         "text": "`STATE-011` and `P0-PAY-002` ... `P0-PAY-009` remain open until real payment provider smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-staging-smoke-generator-release-guard",
+    "version": "0.320.0",
+    "releasedAt": "2026-07-01T18:29:00+07:00",
+    "title": "Staging smoke generator release guard",
+    "summary": "Staging smoke draft generation now rejects unknown manual release ids before writing acceptance artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/new-staging-smoke-report.ps1 -ReleaseId` now requires the supplied release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-staging-smoke-report-generator-release-guard.ps1` covers the fail-fast path and proves no draft report is created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`P9-TST-007` remains in progress until real staging/VPS smoke evidence is captured."
+      }
+    ]
   }
 ]
