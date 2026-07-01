@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.353.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-flow-default-cleanup`.
+
+### Fixed
+- `test-production-evidence-handoff-package-archive-flow.ps1` now removes its default `tmp/production-evidence-handoff-package-archive-flow-test` output after a non-JSON local run.
+- `ProductionReadinessGateTests` pins the default-output cleanup while preserving explicit `-OutputDirectory` and `-WriteJson` evidence flows.
+- `P11-ACC-104` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `358/378` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive default flow cleanup OK; targeted production/docs/release suite `110/110`; backend full suite `648/648`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.352.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage`.

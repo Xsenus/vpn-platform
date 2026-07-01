@@ -283,7 +283,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-100", "2026-07-01-production-handoff-package-archive-dot-entry-cleanup"),
         new("P11-ACC-101", "2026-07-01-production-handoff-package-archive-rooted-entry-cleanup"),
         new("P11-ACC-102", "2026-07-01-production-handoff-package-archive-whitespace-entry-cleanup"),
-        new("P11-ACC-103", "2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage")
+        new("P11-ACC-103", "2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage"),
+        new("P11-ACC-104", "2026-07-01-production-handoff-package-archive-flow-default-cleanup")
     ];
 
     [Fact]

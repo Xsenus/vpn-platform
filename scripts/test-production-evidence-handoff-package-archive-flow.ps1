@@ -96,12 +96,14 @@ function Assert-SafeOutputDirectory {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$bundleDirectory = if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+$usingDefaultOutputDirectory = [string]::IsNullOrWhiteSpace($OutputDirectory)
+$bundleDirectory = if ($usingDefaultOutputDirectory) {
     Join-Path $repoRoot "tmp/production-evidence-handoff-package-archive-flow-test"
 }
 else {
     [System.IO.Path]::GetFullPath($OutputDirectory)
 }
+$shouldCleanupGeneratedOutput = $usingDefaultOutputDirectory -and -not $WriteJson
 
 Assert-SafeOutputDirectory -PathValue $bundleDirectory -RepositoryRoot $repoRoot
 
@@ -237,4 +239,12 @@ if ($WriteJson) {
 }
 else {
     Write-Host "production evidence handoff package archive flow passed $($result | ConvertTo-Json -Depth 10 -Compress)"
+}
+
+if ($shouldCleanupGeneratedOutput -and (Test-Path -LiteralPath $bundleDirectory)) {
+    Remove-Item -LiteralPath $bundleDirectory -Recurse -Force
+    $tmpDirectory = Join-Path $repoRoot "tmp"
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
+    }
 }
