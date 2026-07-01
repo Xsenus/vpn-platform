@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.307.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-flow-result-latest-release-guard`.
+
+### Added
+
+- `scripts/test-production-evidence-handoff-package-archive-flow-result-latest-release-guard.ps1` proves that a production-ready handoff archive flow result with stale `releaseId` is rejected.
+- Roadmap item `P11-ACC-068` documents the latest-release acceptance guard while keeping real VPS production smoke open.
+
+### Changed
+
+- `scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1 -RequireProductionReady` now requires the result `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `312/332` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff flow result latest release guard regression OK; targeted production handoff/docs/release suite `75/75`; backend full suite `602/602`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `515` files, `0` findings; markdown encoding check OK.
+
 ## 0.306.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-latest-release-guard`.

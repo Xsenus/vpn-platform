@@ -418,7 +418,13 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-evidence-ha
   -ResultJsonPath tmp\production-evidence-handoff-package-archive-flow-test\production-evidence-handoff-package-archive-flow-result.json
 ```
 
-Валидатор проверяет `status = passed`, `regressionStatus = passed`, SHA256 production evidence archive и handoff package archive, Markdown-пару, обязательные tamper-сценарии regression harness и повторно запускает `validate-production-evidence-handoff-package-archive.ps1` для финального ZIP.
+Валидатор проверяет `status = passed`, `regressionStatus = passed`, SHA256 production evidence archive и handoff package archive, Markdown-пару, обязательные tamper-сценарии regression harness и повторно запускает `validate-production-evidence-handoff-package-archive.ps1` для финального ZIP. В режиме `-RequireProductionReady` `releaseId` result должен совпадать с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Latest-release guard для production-ready flow result:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-flow-result-latest-release-guard.ps1
+```
 
 Для проверки fail-closed поведения самого result validator используйте regression harness:
 

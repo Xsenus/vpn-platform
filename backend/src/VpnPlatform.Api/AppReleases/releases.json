@@ -7350,5 +7350,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-flow-result-latest-release-guard",
+    "version": "0.307.0",
+    "releasedAt": "2026-07-01T16:45:00+07:00",
+    "title": "Production handoff flow result latest release guard",
+    "summary": "Production-ready handoff archive flow result validation now rejects stale release artifacts before CI or operators can accept final flow results.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-production-evidence-handoff-package-archive-flow-result.ps1 -RequireProductionReady` now requires the result `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-flow-result-latest-release-guard.ps1` covers the fail-closed path for a production-ready flow result with stale `releaseId`."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]
