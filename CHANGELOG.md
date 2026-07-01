@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.304.0 - 2026-07-01
+
+Release entry: `2026-07-01-admin-vps-bootstrap-smoke-latest-release-guard`.
+
+### Added
+
+- `scripts/test-admin-vps-bootstrap-smoke-latest-release-guard.ps1` proves that ready/passed admin VPS bootstrap smoke reports with stale `releaseId` are rejected.
+- Roadmap item `P0-ADMIN-001BU` documents the latest-release acceptance guard while keeping real VPS admin bootstrap/smoke items open for external evidence.
+
+### Changed
+
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -RequireReady` now requires the readiness `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` now requires the final bootstrap smoke `releaseId` to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+### Notes
+
+- Roadmap progress is now `309/329` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS bootstrap smoke latest release guard regression OK; targeted admin bootstrap/docs/release suite `27/27`; backend full suite `599/599`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `512` files, `0` findings; markdown encoding check OK.
+
 ## 0.303.0 - 2026-07-01
 
 Release entry: `2026-07-01-admin-vps-smoke-latest-release-guard`.

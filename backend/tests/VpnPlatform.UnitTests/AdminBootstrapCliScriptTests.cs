@@ -738,6 +738,55 @@ public class AdminBootstrapCliScriptTests
         Assert.Contains("[x] `P0-ADMIN-001D`", roadmap, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Admin_Vps_Bootstrap_Smoke_Validators_Should_Reject_Stale_Release_In_Acceptance_Mode()
+    {
+        var root = FindRepositoryRoot();
+        var readinessValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-bootstrap-smoke-readiness-report.ps1"));
+        var bootstrapValidator = File.ReadAllText(Path.Combine(root, "scripts", "validate-admin-vps-bootstrap-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-bootstrap-smoke-latest-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestActiveReleaseId",
+                     "backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "must match latest active release",
+                     "RequireReady"
+                 })
+        {
+            Assert.Contains(expected, readinessValidator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Get-LatestActiveReleaseId",
+                     "backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "must match latest active release",
+                     "RequirePassed"
+                 })
+        {
+            Assert.Contains(expected, bootstrapValidator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "stale-release-id",
+                     "-RequireReady",
+                     "-RequirePassed",
+                     "must match latest active release",
+                     "admin vps bootstrap smoke latest release guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-bootstrap-smoke-latest-release-guard.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001BU`", roadmap, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `598/598`.
+- Backend full suite: `599/599`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-01-admin-vps-smoke-latest-release-guard`, версия `0.303.0`; admin VPS smoke acceptance now rejects stale release evidence before `P0-ADMIN-002` can be accepted. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-01-admin-vps-bootstrap-smoke-latest-release-guard`, версия `0.304.0`; admin VPS bootstrap smoke acceptance now rejects stale readiness/final evidence before `P0-ADMIN-001` can be accepted. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

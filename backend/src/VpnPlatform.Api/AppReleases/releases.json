@@ -7277,5 +7277,32 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-admin-vps-bootstrap-smoke-latest-release-guard",
+    "version": "0.304.0",
+    "releasedAt": "2026-07-01T15:00:00+07:00",
+    "title": "Admin VPS bootstrap smoke latest release guard",
+    "summary": "Admin VPS bootstrap smoke acceptance now rejects stale readiness and final bootstrap evidence before reports can be used for roadmap or production readiness.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -RequireReady` now requires the report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "fixed",
+        "text": "`scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` now requires the final report `releaseId` to match the latest active release."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-bootstrap-smoke-latest-release-guard.ps1` covers stale readiness and final bootstrap smoke reports."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence is captured."
+      }
+    ]
   }
 ]

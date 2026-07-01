@@ -104,12 +104,20 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-sm
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-readiness.ps1
 ```
 
+Acceptance mode requires `releaseId` in readiness evidence to match the latest active release from `backend/src/VpnPlatform.Api/AppReleases/releases.json`, so stale bootstrap readiness cannot start or close the VPS admin bootstrap flow after a newer release.
+
 После успешного bootstrap+smoke wrapper пишет sanitized `admin-vps-bootstrap-smoke-report.json`. Отдельная проверка report дополнительно сверяет `releaseId` итогового bootstrap report с preflight и smoke reports:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-report.ps1 -ReportPath tmp\admin-vps-bootstrap-smoke-report.json -RequirePassed
 powershell -ExecutionPolicy Bypass -File scripts\validate-admin-vps-bootstrap-smoke-evidence.ps1 -ReadinessReportPath tmp\admin-vps-bootstrap-smoke-readiness-report.json -BootstrapSmokeReportPath tmp\admin-vps-bootstrap-smoke-report.json
 powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-evidence-validator.ps1
+```
+
+`scripts/test-admin-vps-bootstrap-smoke-latest-release-guard.ps1` proves that both a ready bootstrap readiness report and a passed final bootstrap smoke report with stale `releaseId` are rejected before the reports can be used as acceptance evidence:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-bootstrap-smoke-latest-release-guard.ps1
 ```
 
 Standalone bootstrap evidence validator fail-fast отклоняет нечисловой `MaxEvidenceChainMinutes`, `<= 0` и `> 1440` едиными сообщениями до чтения readiness/bootstrap/preflight/smoke evidence; regression покрывает `format-max-evidence-chain-minutes`, `bad-max-evidence-chain-minutes` и `too-high-max-evidence-chain-minutes`.

@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: admin VPS bootstrap smoke latest release guard
+
+Scope:
+- `scripts/validate-admin-vps-bootstrap-smoke-readiness-report.ps1 -RequireReady` now rejects admin VPS bootstrap readiness reports whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- `scripts/validate-admin-vps-bootstrap-smoke-report.ps1 -RequirePassed` now rejects final admin VPS bootstrap smoke reports whose `releaseId` does not match the latest active release.
+- Added `scripts/test-admin-vps-bootstrap-smoke-latest-release-guard.ps1` regression coverage for ready/passed but stale bootstrap reports.
+- `P0-ADMIN-001BU` is closed; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence exists.
+
+Result:
+- Roadmap progress: `309/329` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-admin-vps-bootstrap-smoke-latest-release-guard`, version `0.304.0`.
+- Real VPS admin bootstrap/smoke report is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Admin VPS bootstrap smoke latest release guard regression: OK.
+- Targeted admin bootstrap/docs/release suite: OK, `27/27`.
+- Backend full suite: OK, `599/599`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-admin-vps-bootstrap-smoke-latest-release-guard`.
+- Secret scan: OK, files scanned `512`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: admin VPS smoke latest release guard
 
 Scope:
