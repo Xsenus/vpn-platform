@@ -529,6 +529,8 @@ Regression guard для rooted entries доказывает, что archive-vali
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-rooted-entry-guard.ps1
 ```
 
+Rooted-entry guard удаляет созданный ZIP и пустой `tmp` после выполнения, чтобы локальный regression run не оставлял временные artifacts.
+
 Regression guard для whitespace entries доказывает, что archive-validator не принимает ZIP с пустым или состоящим из пробелов entry именем:
 
 ```powershell

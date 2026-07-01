@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff package archive rooted entry cleanup
+
+Scope:
+- Updated `scripts/test-production-evidence-handoff-package-archive-rooted-entry-guard.ps1` to remove the generated ZIP and empty `tmp` directory after the run.
+- `ProductionReadinessGateTests` now pins artifact cleanup for the rooted-entry archive guard.
+- `P11-ACC-101` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `355/375` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-archive-rooted-entry-cleanup`, version `0.350.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff package archive rooted entry guard cleanup regression: OK.
+- Targeted production/docs/release suite: OK, `107/107`.
+- Backend full suite: OK, `645/645`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-archive-rooted-entry-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff package archive dot entry cleanup
 
 Scope:
