@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.335.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-nested-entry-guard`.
+
+### Added
+- `scripts/test-production-evidence-handoff-package-archive-nested-entry-guard.ps1` creates a ZIP with `nested/SHA256SUMS.txt` and proves the final handoff package archive validator rejects nested entries fail-closed.
+- `ProductionReadinessGateTests` now pins the nested-entry archive guard, validator path check and production readiness gate documentation.
+- `P11-ACC-086` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `340/360` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive nested entry guard regression OK; targeted production/docs/release suite `93/93`; backend full suite `630/630`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `543` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.334.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-duplicate-entry-guard`.

@@ -481,6 +481,12 @@ Regression guard для duplicated entries доказывает, что archive-
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-duplicate-entry-guard.ps1
 ```
 
+Regression guard для nested entries доказывает, что archive-validator не принимает ZIP с вложенными путями файлов:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-nested-entry-guard.ps1
+```
+
 Чтобы не собирать всю локальную цепочку вручную, можно запустить end-to-end flow одной командой:
 
 ```powershell

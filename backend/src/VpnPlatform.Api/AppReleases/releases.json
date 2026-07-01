@@ -7994,5 +7994,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-package-archive-nested-entry-guard",
+    "version": "0.335.0",
+    "releasedAt": "2026-07-01T20:21:00+07:00",
+    "title": "Production handoff package archive nested entry guard",
+    "summary": "Production evidence handoff package archive validation now has regression coverage for nested ZIP entries.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-nested-entry-guard.ps1` creates a final handoff package ZIP with `nested/SHA256SUMS.txt` and proves the archive validator fails closed."
+      },
+      {
+        "type": "fixed",
+        "text": "`ProductionReadinessGateTests` now pins nested-entry archive validation, the regression command and `P11-ACC-086` roadmap closure."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]
