@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff package archive backslash entry guard
+
+Scope:
+- Added `scripts/test-production-evidence-handoff-package-archive-backslash-entry-guard.ps1` regression coverage for Windows-style backslash entries in the final handoff package ZIP.
+- `ProductionReadinessGateTests` now pins the backslash-entry validator guard, the regression command and roadmap closure.
+- `P11-ACC-088` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `342/362` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-archive-backslash-entry-guard`, version `0.337.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff package archive backslash entry guard regression: OK.
+- Targeted production/docs/release suite: OK, `95/95`.
+- Backend full suite: OK, `632/632`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-archive-backslash-entry-guard`.
+- Secret scan: OK, files scanned `545`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff package archive directory entry guard
 
 Scope:
