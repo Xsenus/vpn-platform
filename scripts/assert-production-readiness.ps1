@@ -43,6 +43,18 @@ function Resolve-RepoRelativePath {
     return Join-Path $repoRoot $RelativePath
 }
 
+function Get-LatestActiveReleaseId {
+    $releasesPath = Resolve-RepoRelativePath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+
+    if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
+        throw "Latest active release was not found in AppReleases seed."
+    }
+
+    return [string]$latest[0].releaseId
+}
+
 function Invoke-EvidenceValidator {
     param(
         [string]$Name,
@@ -87,6 +99,7 @@ function ConvertTo-ReadinessMarkdown {
     $lines.Add("# Production readiness assertion")
     $lines.Add("")
     $lines.Add("- Status: ``$($Result.status)``")
+    $lines.Add("- Release ID: ``$($Result.releaseId)``")
     $lines.Add("- Failed evidence reports: ``$($Result.failedEvidenceReportsCount)``")
     $lines.Add("- Blockers: ``$($Result.blockersCount)``")
     $lines.Add("- Staging/VPS report: ``$($Result.reportPath)``")
@@ -253,8 +266,10 @@ foreach ($decisionMarker in @('staging-ready baseline', 'не production-ready',
 
 $failedEvidenceReports = @($evidenceReports | Where-Object { $_.status -ne "passed" })
 $status = if ($failedEvidenceReports.Count -gt 0 -or $foundBlockers.Count -gt 0) { "blocked" } else { "production-ready" }
+$latestReleaseId = Get-LatestActiveReleaseId
 $summary = [ordered]@{
     status = $status
+    releaseId = $latestReleaseId
     generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
     reportPath = $reportFullPath
     paymentProviderReportPath = $paymentProviderReportFullPath
@@ -273,6 +288,7 @@ Write-ReadinessResult -Result $summary
 if ($status -eq "blocked") {
     $payload = [ordered]@{
         status = "blocked"
+        releaseId = $latestReleaseId
         reportPath = $reportFullPath
         paymentProviderReportPath = $paymentProviderReportFullPath
         adminVpsReportPath = $adminVpsReportFullPath

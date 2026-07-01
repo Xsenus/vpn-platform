@@ -286,7 +286,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-103", "2026-07-01-production-handoff-package-archive-entry-guard-cleanup-coverage"),
         new("P11-ACC-104", "2026-07-01-production-handoff-package-archive-flow-default-cleanup"),
         new("P11-ACC-105", "2026-07-01-production-handoff-package-archive-ci-regression-default-cleanup"),
-        new("P11-ACC-106", "2026-07-01-production-handoff-package-archive-long-path-default-cleanup")
+        new("P11-ACC-106", "2026-07-01-production-handoff-package-archive-long-path-default-cleanup"),
+        new("P11-ACC-107", "2026-07-01-production-readiness-assertion-ci-regression-default-cleanup")
     ];
 
     [Fact]

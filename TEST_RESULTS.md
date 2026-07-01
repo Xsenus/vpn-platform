@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production readiness assertion CI regression default cleanup
+
+Scope:
+- `test-production-readiness-assertion-ci-regression.ps1` now removes its default `tmp/production-readiness-assertion-ci-regression-test` output after a non-JSON local run.
+- Explicit `-OutputDirectory` and `-WriteJson` evidence flows still keep artifacts for validators and CI upload.
+- `P11-ACC-107` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `361/381` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-readiness-assertion-ci-regression-default-cleanup`, version `0.356.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production readiness assertion CI regression default cleanup: OK.
+- Targeted production/docs/release suite: OK, `113/113`.
+- Backend full suite: OK, `651/651`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-readiness-assertion-ci-regression-default-cleanup`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff package archive long-path default cleanup
 
 Scope:

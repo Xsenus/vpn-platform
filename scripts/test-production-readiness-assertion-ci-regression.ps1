@@ -76,10 +76,13 @@ function Add-GitHubStepSummary {
     return $fullSummaryPath
 }
 
-if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$usingDefaultOutputDirectory = [string]::IsNullOrWhiteSpace($OutputDirectory)
+if ($usingDefaultOutputDirectory) {
     $OutputDirectory = Join-Path (Resolve-RepoPath "tmp") "production-readiness-assertion-ci-regression-test"
 }
 
+$shouldCleanupGeneratedOutput = $usingDefaultOutputDirectory -and -not $WriteJson
 $fullOutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
 if ((Test-Path -LiteralPath $fullOutputDirectory) -and -not $Force) {
     throw "Production readiness assertion CI regression output directory already exists. Pass -Force to overwrite: $fullOutputDirectory"
@@ -279,6 +282,14 @@ if (-not [string]::IsNullOrWhiteSpace($githubStepSummaryPath)) {
 }
 
 & (Resolve-RepoPath "scripts/validate-production-readiness-assertion-ci-artifacts.ps1") @artifactValidatorArgs | Out-Null
+
+if ($shouldCleanupGeneratedOutput -and (Test-Path -LiteralPath $fullOutputDirectory)) {
+    Remove-Item -LiteralPath $fullOutputDirectory -Recurse -Force
+    $tmpDirectory = Join-Path $repoRoot "tmp"
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
+    }
+}
 
 if ($WriteJson) {
     Write-Output $resultJson
