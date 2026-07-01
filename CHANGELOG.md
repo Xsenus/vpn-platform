@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.342.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-entry-case-guard`.
+
+### Fixed
+- `validate-production-evidence-handoff-package-archive.ps1` now uses exact ordinal entry-name sets for allowed and seen ZIP entries.
+- `scripts/test-production-evidence-handoff-package-archive-entry-case-guard.ps1` creates a ZIP with lowercase `sha256sums.txt` and proves the final handoff package archive validator rejects case mismatches fail-closed.
+- `P11-ACC-093` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `347/367` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive entry case guard regression OK; targeted production/docs/release suite `99/99`; backend full suite `637/637`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.341.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-whitespace-entry-guard`.

@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff package archive entry case guard
+
+Scope:
+- Updated `scripts/validate-production-evidence-handoff-package-archive.ps1` to require exact ordinal ZIP entry names.
+- Added `scripts/test-production-evidence-handoff-package-archive-entry-case-guard.ps1` regression coverage for case-mismatched entries in the final handoff package ZIP.
+- `P11-ACC-093` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `347/367` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-archive-entry-case-guard`, version `0.342.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff package archive entry case guard regression: OK.
+- Targeted production/docs/release suite: OK, `99/99`.
+- Backend full suite: OK, `637/637`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-archive-entry-case-guard`.
+- Secret scan: OK, files scanned `550`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff package archive whitespace entry guard
 
 Scope:

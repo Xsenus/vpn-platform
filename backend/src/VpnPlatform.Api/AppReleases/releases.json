@@ -8155,5 +8155,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-handoff-package-archive-entry-case-guard",
+    "version": "0.342.0",
+    "releasedAt": "2026-07-01T21:19:00+07:00",
+    "title": "Production handoff package archive entry case guard",
+    "summary": "Production evidence handoff package archive validation now requires exact ZIP entry name casing.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-handoff-package-archive-entry-case-guard.ps1` creates a final handoff package ZIP with `sha256sums.txt` and proves the archive validator fails closed."
+      },
+      {
+        "type": "fixed",
+        "text": "`validate-production-evidence-handoff-package-archive.ps1` now uses ordinal exact entry-name checks for allowed and seen ZIP entries."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]

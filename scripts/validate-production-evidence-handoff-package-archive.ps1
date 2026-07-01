@@ -129,7 +129,7 @@ $requiredEntries = @(
     "SHA256SUMS.txt"
 )
 
-$allowed = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+$allowed = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($entryName in $requiredEntries) {
     [void]$allowed.Add($entryName)
 }
@@ -144,7 +144,7 @@ try {
         $archiveStream = [System.IO.File]::OpenRead($archiveFullPath)
         $archive = [System.IO.Compression.ZipArchive]::new($archiveStream, [System.IO.Compression.ZipArchiveMode]::Read)
 
-        $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
         foreach ($entry in $archive.Entries) {
             if ([string]::IsNullOrWhiteSpace($entry.Name) -or $entry.FullName -ne $entry.Name) {
                 throw "Production evidence handoff package archive contains unexpected entry: $($entry.FullName)"
