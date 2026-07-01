@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.393.0 - 2026-07-02
+
+Release entry: `2026-07-02-local-admin-vps-bootstrap-smoke-wrapper-cleanup`.
+
+### Fixed
+- `test-local-admin-vps-bootstrap-smoke-wrapper.ps1` now removes its default output directory and empty `tmp` after ordinary local runs.
+- `-KeepArtifacts` still preserves local bootstrap wrapper regression evidence for explicit local debugging.
+- `P0-ADMIN-001CD` documents the local cleanup behavior while real VPS admin bootstrap/smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `405/425` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: local admin VPS bootstrap smoke wrapper cleanup OK; targeted bootstrap/docs/release suite `34/34`; backend full suite `688/688`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.392.0 - 2026-07-02
 
 Release entry: `2026-07-02-admin-vps-bootstrap-smoke-wrapper-cleanup`.

@@ -83,6 +83,8 @@ powershell -ExecutionPolicy Bypass -File scripts\local-admin-vps-bootstrap-smoke
 powershell -ExecutionPolicy Bypass -File scripts\test-local-admin-vps-bootstrap-smoke-wrapper.ps1
 ```
 
+Обычный запуск local admin VPS bootstrap smoke wrapper regression удаляет default output directory вместе с пустым `tmp`; `-KeepArtifacts` сохраняет regression evidence для локального расследования.
+
 Direct bootstrap wrapper regression covers provider normalization and bad-provider fail-fast without starting bootstrap or leaking the password:
 
 ```powershell
