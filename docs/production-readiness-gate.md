@@ -537,6 +537,8 @@ Regression guard для whitespace entries доказывает, что archive-
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-whitespace-entry-guard.ps1
 ```
 
+Whitespace-entry guard удаляет созданный ZIP и пустой `tmp` после выполнения, чтобы локальный regression run не оставлял временные artifacts.
+
 Regression guard для entry case доказывает, что archive-validator не принимает ZIP, где обязательное имя entry отличается только регистром, например `sha256sums.txt` вместо `SHA256SUMS.txt`:
 
 ```powershell
