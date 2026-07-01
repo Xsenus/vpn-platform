@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence handoff package archive directory entry guard
+
+Scope:
+- Added `scripts/test-production-evidence-handoff-package-archive-directory-entry-guard.ps1` regression coverage for directory entries in the final handoff package ZIP.
+- `ProductionReadinessGateTests` now pins the directory-entry validator guard, the regression command and roadmap closure.
+- `P11-ACC-087` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `341/361` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-handoff-package-archive-directory-entry-guard`, version `0.336.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence handoff package archive directory entry guard regression: OK.
+- Targeted production/docs/release suite: OK, `94/94`.
+- Backend full suite: OK, `631/631`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-handoff-package-archive-directory-entry-guard`.
+- Secret scan: OK, files scanned `544`, findings `0`.
+- Markdown/code encoding check: OK.
+
 ## Check 2026-07-01: production evidence handoff package archive nested entry guard
 
 Scope:
