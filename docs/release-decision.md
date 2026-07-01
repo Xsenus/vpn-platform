@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `679/679`.
+- Backend full suite: `680/680`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-admin-vps-browser-smoke-direct-release-guard-cleanup`, версия `0.384.0`; direct admin VPS browser smoke release guard now removes its empty tmp directory after local unknown release id runs. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-production-readiness-ci-step-summary-cleanup`, версия `0.385.0`; production readiness assertion CI step summary now removes default local artifacts after ordinary runs. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

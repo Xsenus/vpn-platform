@@ -26,7 +26,8 @@ function Assert-ExistingFile {
     return (Resolve-Path -LiteralPath $PathValue).Path
 }
 
-if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+$usingDefaultOutputDirectory = [string]::IsNullOrWhiteSpace($OutputDirectory)
+if ($usingDefaultOutputDirectory) {
     $OutputDirectory = Join-Path (Resolve-RepoPath "tmp") "production-readiness-assertion-ci-step-summary-test"
 }
 
@@ -115,4 +116,15 @@ try {
 }
 finally {
     $env:GITHUB_STEP_SUMMARY = $previousSummaryPath
+
+    if ($usingDefaultOutputDirectory -and -not $WriteJson) {
+        if (Test-Path -LiteralPath $fullOutputDirectory) {
+            Remove-Item -LiteralPath $fullOutputDirectory -Recurse -Force
+        }
+
+        $tmpDirectory = Resolve-RepoPath "tmp"
+        if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+            Remove-Item -LiteralPath $tmpDirectory -Force
+        }
+    }
 }
