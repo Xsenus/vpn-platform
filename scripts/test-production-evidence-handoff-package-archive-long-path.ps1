@@ -27,9 +27,12 @@ function Get-TextSha256 {
     }
 }
 
-if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$usingDefaultOutputDirectory = [string]::IsNullOrWhiteSpace($OutputDirectory)
+if ($usingDefaultOutputDirectory) {
     $OutputDirectory = Join-Path (Resolve-RepoPath "tmp") "production-evidence-handoff-package-archive-long-release-id-path-regression-test"
 }
+$shouldCleanupGeneratedOutput = $usingDefaultOutputDirectory -and -not $WriteJson
 
 $flowArgs = @{
     OutputDirectory = $OutputDirectory
@@ -90,4 +93,12 @@ if ($WriteJson) {
 }
 else {
     Write-Host "production evidence handoff package archive long path regression passed $($validation | ConvertTo-Json -Depth 8 -Compress)"
+}
+
+if ($shouldCleanupGeneratedOutput -and (Test-Path -LiteralPath $OutputDirectory)) {
+    Remove-Item -LiteralPath $OutputDirectory -Recurse -Force
+    $tmpDirectory = Join-Path $repoRoot "tmp"
+    if ((Test-Path -LiteralPath $tmpDirectory) -and -not (Get-ChildItem -LiteralPath $tmpDirectory -Force)) {
+        Remove-Item -LiteralPath $tmpDirectory -Force
+    }
 }
