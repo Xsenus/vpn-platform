@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.359.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-checklist-latest-release-guard-cleanup`.
+
+### Fixed
+- `test-production-evidence-handoff-checklist-latest-release-guard.ps1` now removes its default `tmp/production-evidence-handoff-checklist-stale-release-guard.json` and `.md` output plus the empty `tmp` directory after a local run.
+- `ProductionReadinessGateTests` pins the production handoff checklist latest-release guard cleanup.
+- `P11-ACC-110` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `364/384` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production handoff checklist latest release guard cleanup OK; targeted production/docs/release suite `116/116`; backend full suite `654/654`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.358.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-readiness-summary-latest-release-guard-cleanup`.
