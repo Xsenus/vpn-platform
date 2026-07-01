@@ -222,6 +222,12 @@ Regression guard для ручного release id доказывает, что b
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-bundle-generator-release-guard.ps1
 ```
 
+Regression guard для release id в manifest доказывает, что manifest-generator не пишет `production-evidence-manifest.json`, если bundle содержит неизвестный `releaseId`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-manifest-release-guard.ps1
+```
+
 После этого можно собрать человекочитаемый summary для оператора:
 
 ```powershell

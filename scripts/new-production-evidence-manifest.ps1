@@ -85,6 +85,21 @@ function Read-ReleaseId {
     return "unknown-release"
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Resolve-RepoPath "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 $bundleFullPath = Resolve-BundlePath -DirectoryPath $BundleDirectory
 $fullOutputPath = if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     Join-Path $bundleFullPath "production-evidence-manifest.json"
@@ -137,6 +152,7 @@ foreach ($fileName in $fileNames) {
 }
 
 $releaseId = Read-ReleaseId -BundlePath $bundleFullPath -StagingReportPath (Join-Path $bundleFullPath "staging-smoke-report.json")
+Assert-KnownReleaseId -Value $releaseId
 $totalBytes = 0L
 foreach ($file in @($files)) {
     $totalBytes += [int64]$file.lengthBytes

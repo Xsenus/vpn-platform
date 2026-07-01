@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production evidence manifest release guard
+
+Scope:
+- `scripts/new-production-evidence-manifest.ps1` now validates the bundle `releaseId` against `backend/src/VpnPlatform.Api/AppReleases/releases.json` before writing `production-evidence-manifest.json`.
+- Added `scripts/test-production-evidence-manifest-release-guard.ps1` regression coverage for a tampered bundle with an unknown release id and no generated manifest.
+- `P11-ACC-077` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `331/351` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-evidence-manifest-release-guard`, version `0.326.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002`.
+
+Validation:
+- Production evidence manifest release guard regression: OK.
+- Targeted production/docs/release suite: OK, `84/84`.
+- Backend full suite: OK, `621/621`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-evidence-manifest-release-guard`.
+- Secret scan: OK, files scanned `534`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production evidence bundle generator release guard
 
 Scope:

@@ -1013,6 +1013,39 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Manifest_Should_Reject_Unknown_Release()
+    {
+        var root = FindRepositoryRoot();
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-production-evidence-manifest.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-manifest-release-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "missing-release-id-for-regression"
+                 })
+        {
+            Assert.Contains(expected, generator + regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Production evidence manifest generator accepted unknown releaseId",
+                     "Production evidence manifest generator created manifest after unknown releaseId failure",
+                     "production evidence manifest release guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-manifest-release-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-077`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Manifest_Validator_Should_Recalculate_Hashes()
     {
         var root = FindRepositoryRoot();

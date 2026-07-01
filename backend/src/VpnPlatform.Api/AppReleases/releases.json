@@ -7787,5 +7787,28 @@
         "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-production-evidence-manifest-release-guard",
+    "version": "0.326.0",
+    "releasedAt": "2026-07-01T19:10:00+07:00",
+    "title": "Production evidence manifest release guard",
+    "summary": "Production evidence manifest generation now rejects unknown release ids before writing handoff metadata.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/new-production-evidence-manifest.ps1` now requires the bundle release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json` before writing `production-evidence-manifest.json`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-production-evidence-manifest-release-guard.ps1` covers a tampered bundle and proves no manifest is created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`P11-ACC-002` remains open until real VPS production smoke evidence is captured."
+      }
+    ]
   }
 ]
