@@ -232,7 +232,13 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-production-readiness-s
   -RequireReportFiles
 ```
 
-Для финального production handoff добавьте `-RequireProductionReady`: валидатор потребует `production-ready`, четыре `passed` evidence reports и отсутствие roadmap blockers.
+Для финального production handoff добавьте `-RequireProductionReady`: валидатор потребует `production-ready`, четыре `passed` evidence reports, отсутствие roadmap blockers и совпадение `releaseId` summary с latest active release из `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+
+Latest-release guard для summary:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-readiness-summary-latest-release-guard.ps1
+```
 
 Проверить весь каталог evidence bundle одной командой:
 

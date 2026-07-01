@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: production readiness summary latest release guard
+
+Scope:
+- `scripts/validate-production-readiness-summary.ps1 -RequireProductionReady` now rejects production-ready summaries whose `releaseId` does not match the latest active release in `backend/src/VpnPlatform.Api/AppReleases/releases.json`.
+- Added `scripts/test-production-readiness-summary-latest-release-guard.ps1` regression coverage for a production-ready but stale summary.
+- `P11-ACC-071` is closed; `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+Result:
+- Roadmap progress: `315/335` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-production-readiness-summary-latest-release-guard`, version `0.310.0`.
+- Real VPS production smoke report is still required before closing `P11-ACC-002` or production-ready decision.
+
+Validation:
+- Production readiness summary latest release guard regression: OK.
+- Targeted production handoff/docs/release suite: OK, `78/78`.
+- Backend full suite: OK, `605/605`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-production-readiness-summary-latest-release-guard`.
+- Secret scan: OK, files scanned `518`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: production handoff CI summary latest release guard
 
 Scope:
