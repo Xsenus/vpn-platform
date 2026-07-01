@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.384.0 - 2026-07-02
+
+Release entry: `2026-07-02-admin-vps-browser-smoke-direct-release-guard-cleanup`.
+
+### Fixed
+- `test-admin-vps-browser-smoke-direct-release-guard.ps1` now removes the empty default `tmp` directory after a local unknown release id regression run.
+- `AdminVpsSmokeReportTests` extends the release guard cleanup contract to cover the direct admin VPS browser smoke guard.
+- `P0-ADMIN-002BN` documents the local cleanup behavior while real VPS admin smoke evidence remains open.
+
+### Notes
+- Roadmap progress is now `396/416` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: admin VPS browser smoke direct release guard cleanup OK; targeted admin/docs/release suite `198/198`; backend full suite `679/679`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.383.0 - 2026-07-02
 
 Release entry: `2026-07-02-admin-vps-bootstrap-release-guard-cleanup`.

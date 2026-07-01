@@ -9125,5 +9125,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-admin-vps-browser-smoke-direct-release-guard-cleanup",
+    "version": "0.384.0",
+    "releasedAt": "2026-07-02T02:39:00+07:00",
+    "title": "Admin VPS browser smoke direct release guard cleanup",
+    "summary": "The direct admin VPS browser smoke release guard now removes its empty tmp directory after local unknown release id runs.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`test-admin-vps-browser-smoke-direct-release-guard.ps1` now removes the empty default `tmp` directory after a local unknown release id regression run."
+      },
+      {
+        "type": "new",
+        "text": "`AdminVpsSmokeReportTests` extends the release guard cleanup contract to cover the direct admin VPS browser smoke guard."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
+      }
+    ]
   }
 ]

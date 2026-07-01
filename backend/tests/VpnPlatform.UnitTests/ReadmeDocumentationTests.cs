@@ -44,7 +44,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-admin-vps-bootstrap-release-guard-cleanup", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-admin-vps-browser-smoke-direct-release-guard-cleanup", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
