@@ -788,6 +788,42 @@ public class AdminBootstrapCliScriptTests
     }
 
     [Fact]
+    public void Admin_Vps_Bootstrap_Readiness_Should_Reject_Unknown_Manual_Release()
+    {
+        var root = FindRepositoryRoot();
+        var readiness = File.ReadAllText(Path.Combine(root, "scripts", "admin-vps-bootstrap-smoke-readiness.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-admin-vps-bootstrap-readiness-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-bootstrap.md"));
+        var smokeGuide = File.ReadAllText(Path.Combine(root, "docs", "admin-vps-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Assert-KnownReleaseId",
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "missing-release-id-for-regression"
+                 })
+        {
+            Assert.Contains(expected, readiness + regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Bootstrap readiness accepted unknown ReleaseId",
+                     "Bootstrap readiness created report artifact after unknown ReleaseId failure",
+                     "Bootstrap readiness created bootstrap smoke artifact after unknown ReleaseId failure",
+                     "admin vps bootstrap readiness release guard valid",
+                     "bootstrap-readiness-release-guard-password"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-admin-vps-bootstrap-readiness-release-guard.ps1", guide + smokeGuide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-ADMIN-001BW`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Admin_Vps_Bootstrap_Smoke_Evidence_Validator_Should_Reject_Stale_Release_In_Acceptance_Mode()
     {
         var root = FindRepositoryRoot();

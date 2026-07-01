@@ -158,6 +158,21 @@ function Test-AdminPasswordEnvNameValue {
     return $Value.IndexOf("PASSWORD", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
 }
 
+function Assert-KnownReleaseId {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
+    if (-not (Test-Path -LiteralPath $releasesPath -PathType Leaf)) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+
+    $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $matchedRelease = @($releases | Where-Object { [string]$_.releaseId -eq $Value } | Select-Object -First 1)
+    if ($matchedRelease.Count -eq 0) {
+        throw "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json."
+    }
+}
+
 $adminPasswordEnvNameValue = Get-AdminPasswordEnvNameValue -Value $AdminPasswordEnvName
 $passwordEnvNameSafe = Test-AdminPasswordEnvNameValue -Value $adminPasswordEnvNameValue
 $password = if ($passwordEnvNameSafe) { [Environment]::GetEnvironmentVariable($adminPasswordEnvNameValue, "Process") } else { "" }
@@ -225,6 +240,9 @@ $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) {
 }
 else {
     $ReleaseId.Trim()
+}
+if (-not [string]::IsNullOrWhiteSpace($ReleaseId)) {
+    Assert-KnownReleaseId -Value $releaseValue
 }
 
 $report = [ordered]@{

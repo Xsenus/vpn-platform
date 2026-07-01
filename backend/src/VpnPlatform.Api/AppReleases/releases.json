@@ -7741,5 +7741,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-01-admin-vps-bootstrap-readiness-release-guard",
+    "version": "0.324.0",
+    "releasedAt": "2026-07-01T18:57:00+07:00",
+    "title": "Admin VPS bootstrap readiness release guard",
+    "summary": "Admin VPS bootstrap readiness direct runs now reject unknown manual release ids before writing readiness artifacts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`scripts/admin-vps-bootstrap-smoke-readiness.ps1 -ReleaseId` now requires the supplied release id to exist in `backend/src/VpnPlatform.Api/AppReleases/releases.json`."
+      },
+      {
+        "type": "new",
+        "text": "`scripts/test-admin-vps-bootstrap-readiness-release-guard.ps1` covers the fail-fast path and proves no readiness or bootstrap smoke artifacts are created for an unknown release id."
+      },
+      {
+        "type": "important",
+        "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence is captured."
+      }
+    ]
   }
 ]

@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-01: admin VPS bootstrap readiness release guard
+
+Scope:
+- `scripts/admin-vps-bootstrap-smoke-readiness.ps1 -ReleaseId` now rejects unknown manual release ids before validator execution or writing readiness artifacts.
+- Added `scripts/test-admin-vps-bootstrap-readiness-release-guard.ps1` regression coverage for an unknown release id, no generated readiness/bootstrap JSON artifacts and no bootstrap password leak.
+- `P0-ADMIN-001BW` is closed; `STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin bootstrap/smoke evidence exists.
+
+Result:
+- Roadmap progress: `329/349` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-01-admin-vps-bootstrap-readiness-release-guard`, version `0.324.0`.
+- Real VPS admin bootstrap/smoke evidence is still required before closing `STATE-013`, `P0-ADMIN-001` or `P0-ADMIN-002`.
+
+Validation:
+- Admin VPS bootstrap readiness release guard regression: OK.
+- Targeted admin bootstrap/docs/release suite: OK, `29/29`.
+- Backend full suite: OK, `619/619`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Fresh local SQLite smoke: OK; latest release `2026-07-01-admin-vps-bootstrap-readiness-release-guard`.
+- Secret scan: OK, files scanned `532`, findings `0`.
+- Markdown encoding check: OK.
+
 ## Check 2026-07-01: admin VPS smoke preflight release guard
 
 Scope:
