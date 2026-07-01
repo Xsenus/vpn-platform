@@ -298,7 +298,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-113", "2026-07-02-production-handoff-ci-summary-latest-release-guard-cleanup"),
         new("P11-ACC-114", "2026-07-02-production-handoff-package-archive-latest-release-guard-cleanup"),
         new("P11-ACC-115", "2026-07-02-production-evidence-bundle-latest-release-guard-cleanup"),
-        new("P11-ACC-116", "2026-07-02-production-evidence-manifest-release-guard-cleanup")
+        new("P11-ACC-116", "2026-07-02-production-evidence-manifest-release-guard-cleanup"),
+        new("P11-ACC-117", "2026-07-02-production-evidence-archive-release-guard-cleanup")
     ];
 
     [Fact]

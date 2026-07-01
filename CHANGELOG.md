@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.368.0 - 2026-07-02
+
+Release entry: `2026-07-02-production-evidence-archive-release-guard-cleanup`.
+
+### Fixed
+- `test-production-evidence-archive-release-guard.ps1` now removes its default `tmp/production-evidence-archive-unknown-release-id` bundle directory and empty `tmp` directory after a local run.
+- `ProductionReadinessGateTests` pins the production evidence archive release guard cleanup.
+- `P11-ACC-117` documents the local cleanup behavior while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `373/393` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence archive release guard cleanup OK; targeted production/docs/release suite `135/135`; backend full suite `663/663`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.367.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-evidence-manifest-release-guard-cleanup`.
