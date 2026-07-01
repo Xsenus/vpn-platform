@@ -268,7 +268,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-085", "2026-07-01-production-handoff-package-archive-duplicate-entry-guard"),
         new("P11-ACC-086", "2026-07-01-production-handoff-package-archive-nested-entry-guard"),
         new("P11-ACC-087", "2026-07-01-production-handoff-package-archive-directory-entry-guard"),
-        new("P11-ACC-088", "2026-07-01-production-handoff-package-archive-backslash-entry-guard")
+        new("P11-ACC-088", "2026-07-01-production-handoff-package-archive-backslash-entry-guard"),
+        new("P11-ACC-089", "2026-07-01-production-handoff-package-archive-dotdot-entry-guard")
     ];
 
     [Fact]

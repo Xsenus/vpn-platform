@@ -499,6 +499,12 @@ Regression guard для backslash entries доказывает, что archive-v
 powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-backslash-entry-guard.ps1
 ```
 
+Regression guard для dotdot entries доказывает, что archive-validator не принимает ZIP с entry именем `..`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\test-production-evidence-handoff-package-archive-dotdot-entry-guard.ps1
+```
+
 Чтобы не собирать всю локальную цепочку вручную, можно запустить end-to-end flow одной командой:
 
 ```powershell

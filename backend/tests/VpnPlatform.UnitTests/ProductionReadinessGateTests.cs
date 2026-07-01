@@ -1780,6 +1780,41 @@ public class ProductionReadinessGateTests
     }
 
     [Fact]
+    public void Production_Evidence_Handoff_Package_Archive_Validator_Should_Reject_DotDot_Entries()
+    {
+        var root = FindRepositoryRoot();
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-evidence-handoff-package-archive.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-evidence-handoff-package-archive-dotdot-entry-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "EntryName -eq \"..\"",
+                     "entry must be a file name only"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "New-DotDotEntryArchive",
+                     "EntryName \"..\"",
+                     "Assert-FailsWith",
+                     "validate-production-evidence-handoff-package-archive.ps1",
+                     "file name only",
+                     "production evidence handoff package archive dotdot entry guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-evidence-handoff-package-archive-dotdot-entry-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-089`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Evidence_Handoff_Package_Archive_Flow_Should_Have_Executable_End_To_End_Harness()
     {
         var root = FindRepositoryRoot();

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.338.0 - 2026-07-01
+
+Release entry: `2026-07-01-production-handoff-package-archive-dotdot-entry-guard`.
+
+### Added
+- `scripts/test-production-evidence-handoff-package-archive-dotdot-entry-guard.ps1` creates a ZIP with `..` entry and proves the final handoff package archive validator rejects dotdot entries fail-closed.
+- `ProductionReadinessGateTests` now pins the dotdot-entry archive guard, validator file-name-only check and production readiness gate documentation.
+- `P11-ACC-089` documents the local guard while `P11-ACC-002` remains open until real VPS production smoke evidence exists.
+
+### Notes
+- Roadmap progress is now `343/363` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: production evidence handoff package archive dotdot entry guard regression OK; targeted production/docs/release suite `96/96`; backend full suite `633/633`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `546` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.337.0 - 2026-07-01
 
 Release entry: `2026-07-01-production-handoff-package-archive-backslash-entry-guard`.
