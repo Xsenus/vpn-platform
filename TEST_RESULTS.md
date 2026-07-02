@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: status docs production-ready claim guard
+
+Scope:
+- `RoadmapCurrentStateTests` now verifies that current status docs do not claim production-ready acceptance without external evidence.
+- README, CHANGELOG, TEST_RESULTS, final runbook, release decision, product/admin UI roadmap and master roadmap must keep `P11-ACC-002` open until real evidence exists.
+- `P11-ACC-153` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `443/463` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-status-docs-production-ready-claim-guard`, version `0.431.0`.
+- `P11-ACC-153` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `10/10`.
+- Targeted docs/release/encoding suite: OK, `33/33`.
+- Backend full suite: OK, `722/722`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-status-docs-production-ready-claim-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
 ## Check 2026-07-02: release seed secret literal guard
 
 Scope:

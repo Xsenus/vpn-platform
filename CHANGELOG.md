@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.431.0 - 2026-07-02
+
+Release entry: `2026-07-02-status-docs-production-ready-claim-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that current status docs do not claim production-ready acceptance or close `P11-ACC-002` without external evidence.
+- `P11-ACC-153` documents the status docs production-ready claim guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `443/463` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 10/10; targeted docs/release/encoding suite 33/33; backend full suite `722/722`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
 ## 0.430.0 - 2026-07-02
 
 Release entry: `2026-07-02-release-seed-secret-literal-guard`.

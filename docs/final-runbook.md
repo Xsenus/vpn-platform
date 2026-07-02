@@ -176,14 +176,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 721/721;
+- backend full suite: 722/722;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - frontend audit: OK, `0 vulnerabilities`;
-- latest "Что нового": `2026-07-02-release-seed-secret-literal-guard`, версия `0.430.0`.
+- latest "Что нового": `2026-07-02-status-docs-production-ready-claim-guard`, версия `0.431.0`.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production
@@ -191,6 +191,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 Проект нельзя считать production-ready только по локальным проверкам. До production нужны:
 
 - live VPS smoke с реальным доменом и HTTPS;
+- closed `P11-ACC-002` with real VPS/staging smoke evidence;
 - ротация всех секретов, которые могли быть раскрыты вне secret manager;
 - проверка backup/restore на staging PostgreSQL;
 - реальные sandbox-кабинеты платежных провайдеров;

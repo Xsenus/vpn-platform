@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-release-seed-secret-literal-guard";
-    private const string CurrentVersion = "0.430.0";
+    private const string CurrentReleaseId = "2026-07-02-status-docs-production-ready-claim-guard";
+    private const string CurrentVersion = "0.431.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,10 +18,10 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-06-14", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("721/721", roadmap, StringComparison.Ordinal);
+        Assert.Contains("722/722", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
         Assert.Contains("66/66", roadmap, StringComparison.Ordinal);
-        Assert.Contains("9/9", roadmap, StringComparison.Ordinal);
+        Assert.Contains("10/10", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(CurrentVersion, roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-014`", roadmap, StringComparison.Ordinal);
@@ -183,9 +183,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("721/721", readme, StringComparison.Ordinal);
-        Assert.Contains("721/721", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("721/721", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("722/722", readme, StringComparison.Ordinal);
+        Assert.Contains("722/722", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("722/722", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,
@@ -209,6 +209,33 @@ public class RoadmapCurrentStateTests
         Assert.Equal(CurrentReleaseId, latest.GetProperty("releaseId").GetString());
         Assert.Contains("STATE-014", testResults, StringComparison.Ordinal);
         Assert.Contains("STATE-014", File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md")), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Current_Status_Docs_Should_Not_Claim_Production_Ready_Without_External_Evidence()
+    {
+        var root = FindRepositoryRoot();
+        var documents = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["README.md"] = File.ReadAllText(Path.Combine(root, "README.md")),
+            ["CHANGELOG.md"] = File.ReadAllText(Path.Combine(root, "CHANGELOG.md")),
+            ["TEST_RESULTS.md"] = File.ReadAllText(Path.Combine(root, "TEST_RESULTS.md")),
+            ["docs/final-runbook.md"] = File.ReadAllText(Path.Combine(root, "docs", "final-runbook.md")),
+            ["docs/release-decision.md"] = File.ReadAllText(Path.Combine(root, "docs", "release-decision.md")),
+            ["docs/product-admin-ui-roadmap.md"] = File.ReadAllText(Path.Combine(root, "docs", "product-admin-ui-roadmap.md")),
+            ["docs/PRODUCT_COMPLETION_ROADMAP.md"] = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"))
+        };
+
+        foreach (var (path, document) in documents)
+        {
+            Assert.Contains(CurrentReleaseId, document, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(CurrentVersion, document, StringComparison.Ordinal);
+            Assert.Contains("staging-ready baseline", document, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("production-ready accepted", document, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("production-ready: true", document, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("[x] `P11-ACC-002`", document, StringComparison.Ordinal);
+            Assert.Contains("P11-ACC-002", document, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

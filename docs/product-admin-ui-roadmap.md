@@ -21,7 +21,7 @@
 - [ ] Live-платежи всех провайдеров не подтверждены реальными кабинетами.
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
-- [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`.
+- [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
 
 ## Что уже реализовано продуктово
 
@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `721/721`.
+- [x] Backend full suite: `722/722`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-07-02-release-seed-secret-literal-guard`, версия `0.430.0`.
+- [x] Latest "Что нового": `2026-07-02-status-docs-production-ready-claim-guard`, версия `0.431.0`.
 
 ## Как вести дальше
 
