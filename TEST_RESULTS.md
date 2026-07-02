@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent image attachment guard
+
+Scope:
+- `AGENTS.md` now requires checking whether requested image/screenshot attachments are available in the current context.
+- The same section requires using customer notes and comments when images are available.
+- Missing images must be disclosed without inventing text from unavailable attachments.
+
+Result:
+- Roadmap progress: `459/479` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-image-attachment-guard`, version `0.447.0`.
+- `P11-ACC-169` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `7/7`.
+- Targeted docs/release/encoding suite: OK, `41/41`.
+- Backend full suite: OK, `730/730`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-image-attachment-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent git delivery guard
 
 Scope:

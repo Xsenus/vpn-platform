@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.447.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-image-attachment-guard`.
+
+### Fixed
+- `AGENTS.md` now contains an Image And Screenshot Inputs section for attachment availability checks, customer-note handling and missing-image disclosure.
+- `DocumentationEncodingTests` now verifies those image attachment rules so future instruction edits cannot silently remove them.
+- `P11-ACC-169` documents the agent image attachment guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `459/479` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 41/41, backend full suite `730/730`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.446.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-git-delivery-guard`.
