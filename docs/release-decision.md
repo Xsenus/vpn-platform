@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `731/731`.
+- Backend full suite: `732/732`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,8 +32,8 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-agent-duplicate-task-guard`, версия `0.448.0`; DocumentationEncodingTests now verifies that AGENTS.md requires checking roadmap, changelog, TEST_RESULTS, What's New and code before reworking duplicate, completed or partial tasks. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `460/480` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-07-02-agent-local-db-scope-guard`, версия `0.449.0`; DocumentationEncodingTests now verifies that AGENTS.md requires local DB coverage for new user, API, payment, VPN, admin, cabinet and provisioning scenarios. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `461/481` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

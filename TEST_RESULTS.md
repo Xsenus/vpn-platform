@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent local DB scenario scope guard
+
+Scope:
+- `DocumentationEncodingTests` now pins the full `AGENTS.md` local DB scenario list.
+- New user, API, payment, VPN, admin, cabinet and provisioning scenarios must stay covered by local DB checks when a local DB or SQLite mode exists.
+- `P11-ACC-171` records this local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `461/481` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-local-db-scope-guard`, version `0.449.0`.
+- `P11-ACC-171` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `9/9`.
+- Targeted docs/release/encoding suite: OK, `43/43`.
+- Backend full suite: OK, `732/732`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-local-db-scope-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent duplicate task guard
 
 Scope:

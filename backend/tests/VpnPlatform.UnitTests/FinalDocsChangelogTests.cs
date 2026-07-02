@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("731/731", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-agent-duplicate-task-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("732/732", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-agent-local-db-scope-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "731/731",
-                     "2026-07-02-agent-duplicate-task-guard",
-                     "0.448.0",
+                     "732/732",
+                     "2026-07-02-agent-local-db-scope-guard",
+                     "0.449.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-duplicate-task-guard",
-                     "0.448.0",
-                     "460/480",
+                     "2026-07-02-agent-local-db-scope-guard",
+                     "0.449.0",
+                     "461/481",
                      "95.8%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `731/731`",
+                     "Backend full suite: OK, `732/732`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-duplicate-task-guard",
-                     "0.448.0",
-                     "460/480",
+                     "2026-07-02-agent-local-db-scope-guard",
+                     "0.449.0",
+                     "461/481",
                      "95.8%",
                      "20",
                      "19",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 42/42",
-                     "backend full suite `731/731`",
+                     "targeted docs/release/encoding suite 43/43",
+                     "backend full suite `732/732`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })

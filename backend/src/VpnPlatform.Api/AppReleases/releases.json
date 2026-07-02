@@ -10468,5 +10468,24 @@
         "text": "Roadmap progress is 460/480 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-local-db-scope-guard",
+    "version": "0.449.0",
+    "releasedAt": "2026-07-02T14:43:00+07:00",
+    "title": "Agent local DB scenario scope guard",
+    "summary": "Agent instruction tests now pin local DB coverage for user, API, payment, VPN, admin, cabinet and provisioning scenarios.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires local DB checks for new user, API, payment, VPN, admin, cabinet and provisioning scenarios."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 461/481 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

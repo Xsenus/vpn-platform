@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.449.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-local-db-scope-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now verifies that `AGENTS.md` requires local DB validation for new user, API, payment, VPN, admin, cabinet and provisioning scenarios.
+- `P11-ACC-171` documents the agent local DB scenario scope guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `461/481` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 43/43, backend full suite `732/732`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.448.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-duplicate-task-guard`.

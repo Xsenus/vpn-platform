@@ -190,6 +190,30 @@ public class DocumentationEncodingTests
     }
 
     [Fact]
+    public void Agent_Instructions_Should_Require_Local_Db_For_User_Api_Payment_Vpn_Admin_Cabinet_And_Provisioning()
+    {
+        var root = FindRepositoryRoot();
+        var instructions = File.ReadAllText(Path.Combine(root, "AGENTS.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "\u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0430\u044F \u0411\u0414",
+                     "\u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 SQLite-\u0440\u0435\u0436\u0438\u043C",
+                     "\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435",
+                     "API",
+                     "payment",
+                     "VPN",
+                     "admin",
+                     "cabinet",
+                     "provisioning",
+                     "\u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0438 \u043D\u0443\u0436\u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u043D\u0430 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 \u0411\u0414"
+                 })
+        {
+            Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void Documentation_And_Release_Seed_Should_Be_Strict_Utf8_Without_Bom()
     {
         var root = FindRepositoryRoot();
