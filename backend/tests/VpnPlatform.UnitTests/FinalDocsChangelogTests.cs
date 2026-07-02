@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("723/723", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-latest-release-evidence-caveat-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("724/724", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-docs-strict-utf8-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "723/723",
-                     "2026-07-02-latest-release-evidence-caveat-guard",
-                     "0.432.0",
+                     "724/724",
+                     "2026-07-02-docs-strict-utf8-guard",
+                     "0.433.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-latest-release-evidence-caveat-guard",
-                     "0.432.0",
-                     "444/464",
+                     "2026-07-02-docs-strict-utf8-guard",
+                     "0.433.0",
+                     "445/465",
                      "95.7%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `723/723`",
+                     "Backend full suite: OK, `724/724`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-latest-release-evidence-caveat-guard",
-                     "0.432.0",
-                     "444/464",
+                     "2026-07-02-docs-strict-utf8-guard",
+                     "0.433.0",
+                     "445/465",
                      "95.7%",
                      "20",
                      "19",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 34/34",
-                     "backend full suite `723/723`",
+                     "targeted docs/release/encoding suite 35/35",
+                     "backend full suite `724/724`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })

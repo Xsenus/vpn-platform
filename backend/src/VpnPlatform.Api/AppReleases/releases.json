@@ -10164,5 +10164,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-docs-strict-utf8-guard",
+    "version": "0.433.0",
+    "releasedAt": "2026-07-02T11:08:00+07:00",
+    "title": "Docs strict UTF-8 guard",
+    "summary": "Documentation encoding tests now guard status docs and the release seed against invalid UTF-8 and BOM drift.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that docs, status files and the release seed are strict UTF-8 without BOM."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

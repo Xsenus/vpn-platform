@@ -1,3 +1,4 @@
+using System.Text;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
@@ -74,6 +75,36 @@ public class DocumentationEncodingTests
                  })
         {
             Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Documentation_And_Release_Seed_Should_Be_Strict_Utf8_Without_Bom()
+    {
+        var root = FindRepositoryRoot();
+        var files = Directory
+            .EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
+            .Concat([
+                Path.Combine(root, "AGENTS.md"),
+                Path.Combine(root, "README.md"),
+                Path.Combine(root, "CHANGELOG.md"),
+                Path.Combine(root, "TEST_RESULTS.md"),
+                Path.Combine(root, "backend", "src", "VpnPlatform.Api", "AppReleases", "releases.json")
+            ])
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var strictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+        {
+            var bytes = File.ReadAllBytes(file);
+            Assert.NotEmpty(bytes);
+            Assert.False(
+                bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF,
+                $"{Path.GetRelativePath(root, file)} must be UTF-8 without BOM.");
+
+            _ = strictUtf8.GetString(bytes);
         }
     }
 

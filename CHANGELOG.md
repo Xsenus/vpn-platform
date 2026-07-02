@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.433.0 - 2026-07-02
+
+Release entry: `2026-07-02-docs-strict-utf8-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now verifies that docs, status files and the release seed are strict UTF-8 without BOM.
+- `P11-ACC-155` documents the strict UTF-8 guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `445/465` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `DocumentationEncodingTests` 3/3; targeted docs/release/encoding suite 35/35; backend full suite `724/724`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
 ## 0.432.0 - 2026-07-02
 
 Release entry: `2026-07-02-latest-release-evidence-caveat-guard`.
