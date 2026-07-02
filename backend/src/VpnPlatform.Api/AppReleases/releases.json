@@ -10240,5 +10240,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-project-files-utf8-guard",
+    "version": "0.437.0",
+    "releasedAt": "2026-07-02T12:08:00+07:00",
+    "title": "Project files UTF-8 guard",
+    "summary": "Documentation encoding tests now include project/config file types and the solution file is normalized to UTF-8 without BOM.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now covers `.sln`, `.csproj`, `.props`, `.targets`, `.http`, `.config` and `.xml` files for mojibake and strict UTF-8."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

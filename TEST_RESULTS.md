@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: project files UTF-8 guard
+
+Scope:
+- `DocumentationEncodingTests` now covers `.sln`, `.csproj`, `.props`, `.targets`, `.http`, `.config` and `.xml` files for mojibake and strict UTF-8.
+- `backend/VpnPlatform.sln` was normalized to UTF-8 without BOM.
+- `P11-ACC-159` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `449/469` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-project-files-utf8-guard`, version `0.437.0`.
+- `P11-ACC-159` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `3/3`.
+- Targeted docs/release/encoding suite: OK, `35/35`.
+- Backend full suite: OK, `724/724`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-project-files-utf8-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
 ## Check 2026-07-02: changelog mojibake guard
 
 Scope:
