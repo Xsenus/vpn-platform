@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.430.0 - 2026-07-02
+
+Release entry: `2026-07-02-release-seed-secret-literal-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that `releases.json` does not contain PEM private keys, bearer values, provider keys or raw provider payload markers.
+- `P11-ACC-152` documents the release seed secret literal guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `442/462` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 9/9; targeted docs/release/encoding suite 32/32; backend full suite `721/721`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.429.0 - 2026-07-02
 
 Release entry: `2026-07-02-release-seed-file-order-guard`.

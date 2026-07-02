@@ -10107,5 +10107,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-release-seed-secret-literal-guard",
+    "version": "0.430.0",
+    "releasedAt": "2026-07-02T11:05:00+07:00",
+    "title": "Release seed secret literal guard",
+    "summary": "Roadmap tests now guard the release seed against secret-like literals and raw provider payload markers.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that `releases.json` does not contain PEM private keys, bearer values, provider keys or raw provider payload markers."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
