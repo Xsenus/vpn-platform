@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: release seed file order guard
+
+Scope:
+- `RoadmapCurrentStateTests` now verifies that `releases.json` entries are physically ordered by increasing `releasedAt` timestamps.
+- The What's New seed must keep manual file order aligned with chronological order to make review and admin history safer.
+- `P11-ACC-151` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `441/461` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-release-seed-file-order-guard`, version `0.429.0`.
+- `P11-ACC-151` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `8/8`.
+- Targeted docs/release/encoding suite: OK, `31/31`.
+- Backend full suite: OK, `720/720`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-release-seed-file-order-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: release seed version order guard
 
 Scope:

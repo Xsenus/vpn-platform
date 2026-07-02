@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.429.0 - 2026-07-02
+
+Release entry: `2026-07-02-release-seed-file-order-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that `releases.json` entries are physically ordered by increasing `releasedAt` timestamps.
+- `P11-ACC-151` documents the release seed file order guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `441/461` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 8/8; targeted docs/release/encoding suite 31/31; backend full suite `720/720`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.428.0 - 2026-07-02
 
 Release entry: `2026-07-02-release-seed-version-order-guard`.

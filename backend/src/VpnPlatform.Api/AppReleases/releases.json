@@ -10088,5 +10088,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-release-seed-file-order-guard",
+    "version": "0.429.0",
+    "releasedAt": "2026-07-02T11:04:00+07:00",
+    "title": "Release seed file order guard",
+    "summary": "Roadmap tests now guard the physical release seed order against timestamp regressions.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that `releases.json` entries are physically ordered by increasing `releasedAt` timestamps."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
