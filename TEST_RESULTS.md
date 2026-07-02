@@ -2,6 +2,31 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: provision-node wrapper cleanup
+
+Scope:
+- `scripts/provision-node.sh` resolves the Ansible runner and playbooks from the repository root, so it works when the runner executes from a temp workdir.
+- The wrapper replaces fixed `/tmp/vpnplatform-manual-*` default workdirs with a per-run `mktemp` directory and removes it on exit.
+- `P8-CI-012` is closed; explicit custom workdirs remain available for operator diagnostics, and real staging/VPS/live smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `416/436` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-provision-node-wrapper-cleanup`, version `0.404.0`.
+- Production readiness still requires real staging/VPS/live evidence.
+
+Validation:
+- `DeployWorkflowGuardTests`: OK.
+- `bash -n scripts/provision-node.sh`: OK.
+- Targeted deploy/docs/release suite: OK.
+- Backend full suite: OK, `699/699`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-provision-node-wrapper-cleanup`.
+- Secret scan: OK, `550` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp`, frontend `dist` and `/tmp/vpnplatform-manual-*` default workdirs are absent after checks.
+
 ## Check 2026-07-02: validate_repo Ansible tmp cleanup
 
 Scope:

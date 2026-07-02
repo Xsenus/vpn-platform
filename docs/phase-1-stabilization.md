@@ -38,6 +38,7 @@
   - `scripts/apply-migrations.sh`
 - `scripts/validate_repo.sh` теперь условно запускает backend checks, если доступен .NET SDK, и не падает там, где отсутствует `ansible-playbook`.
 - `scripts/validate_repo.sh` removes its temporary Ansible inventory directory with a trap even when syntax-check fails.
+- `scripts/provision-node.sh` resolves runner and playbook paths from the repository root, uses a per-run default workdir and removes that default workdir on exit; an explicit custom workdir is kept for operator diagnostics.
 
 ### Frontend
 

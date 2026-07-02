@@ -201,6 +201,42 @@ public class DeployWorkflowGuardTests
         Assert.Contains("[x] `P8-CI-011`", roadmap, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Provision_Node_Wrapper_Should_Use_Absolute_Paths_And_Cleanup_Default_Workdir()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "provision-node.sh"));
+        var documentation = File.ReadAllText(Path.Combine(root, "docs", "phase-1-stabilization.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "ROOT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/..\" && pwd)\"",
+                     "PYTHON_BIN=\"${PYTHON_BIN:-python3}\"",
+                     "PLAYBOOK=\"$ROOT_DIR/infra/ansible/playbooks/precheck-node.yml\"",
+                     "PLAYBOOK=\"$ROOT_DIR/infra/ansible/playbooks/provision-node.yml\"",
+                     "WORKDIR=\"$(mktemp -d \"${TMPDIR:-/tmp}/vpnplatform-manual-$MODE.XXXXXX\")\"",
+                     "cleanup_workdir()",
+                     "rm -rf \"$WORKDIR\"",
+                     "trap cleanup_workdir EXIT",
+                     "\"$ROOT_DIR/infra/ansible/runner/run_playbook.py\""
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("if [ \"$#\" -ge 6 ] && [ -n \"${6:-}\" ]; then", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("WORKDIR=\"$6\"", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("WORKDIR=\"${6:-/tmp/vpnplatform-manual-$MODE}\"", script, StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            script.IndexOf("trap cleanup_workdir EXIT", StringComparison.OrdinalIgnoreCase)
+            < script.IndexOf("CMD=(", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains("provision-node.sh", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("default workdir", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P8-CI-012`", roadmap, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

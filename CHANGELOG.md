@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.404.0 - 2026-07-02
+
+Release entry: `2026-07-02-provision-node-wrapper-cleanup`.
+
+### Fixed
+- `scripts/provision-node.sh` now resolves the Ansible runner and playbooks from the repository root instead of passing relative paths into a temp workdir.
+- The wrapper now creates a unique per-run default workdir with `mktemp` and removes it with `trap cleanup_workdir EXIT`.
+- `P8-CI-012` documents manual provisioning wrapper cleanup while explicit custom workdirs remain available for operator diagnostics.
+
+### Notes
+- Roadmap progress is now `416/436` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `DeployWorkflowGuardTests`; `bash -n scripts/provision-node.sh`; targeted deploy/docs/release suite; backend full suite `699/699`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.403.0 - 2026-07-02
 
 Release entry: `2026-07-02-validate-repo-ansible-tmp-cleanup`.

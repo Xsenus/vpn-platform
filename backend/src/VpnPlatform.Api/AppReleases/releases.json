@@ -9585,5 +9585,28 @@
         "text": "Real staging, VPS and live provider smoke evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-provision-node-wrapper-cleanup",
+    "version": "0.404.0",
+    "releasedAt": "2026-07-02T09:47:00+07:00",
+    "title": "provision-node wrapper cleanup",
+    "summary": "Manual provisioning wrapper now uses absolute runner/playbook paths and removes its default temporary workdir on exit.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`provision-node.sh` now resolves the Ansible runner and playbooks from the repository root before invoking the runner."
+      },
+      {
+        "type": "fixed",
+        "text": "The wrapper creates a unique per-run default workdir with `mktemp` and removes it with `trap cleanup_workdir EXIT`."
+      },
+      {
+        "type": "important",
+        "text": "Explicit custom workdirs remain available for operator diagnostics; real staging, VPS and live provider smoke evidence remains required before production readiness."
+      }
+    ]
   }
 ]
