@@ -162,13 +162,13 @@ public class PaymentProviderSandboxSeedTests
             return false;
         }
 
-        return value.Contains("Рџ", StringComparison.Ordinal)
-               || value.Contains("Р‘", StringComparison.Ordinal)
-               || value.Contains("Р ", StringComparison.Ordinal)
-               || value.Contains("СЃ", StringComparison.Ordinal)
-               || value.Contains("С‚", StringComparison.Ordinal)
-               || value.Contains("вЂ", StringComparison.Ordinal)
-               || value.Contains("Р", StringComparison.Ordinal);
+        return value.Contains("\u0420\u045F", StringComparison.Ordinal)
+               || value.Contains("\u0420\u2018", StringComparison.Ordinal)
+               || value.Contains("\u0420\u00A0", StringComparison.Ordinal)
+               || value.Contains("\u0420\u040E", StringComparison.Ordinal)
+               || value.Contains("\u0421\u201A", StringComparison.Ordinal)
+               || value.Contains("\u0420\u0406", StringComparison.Ordinal)
+               || value.Contains("\u0420\u0098", StringComparison.Ordinal);
     }
 
     private static ApplicationDbContext CreateDbContext()

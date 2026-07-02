@@ -136,9 +136,9 @@ public class PaymentProviderContractTests
             Assert.All(rules, rule =>
             {
                 Assert.False(string.IsNullOrWhiteSpace(rule.Label));
-                Assert.DoesNotContain("РЎ", rule.Label, StringComparison.Ordinal);
-                Assert.DoesNotContain("Рџ", rule.Label, StringComparison.Ordinal);
-                Assert.DoesNotContain("СЂ", rule.Label, StringComparison.Ordinal);
+                Assert.DoesNotContain("\u0420\u040E", rule.Label, StringComparison.Ordinal);
+                Assert.DoesNotContain("\u0420\u045F", rule.Label, StringComparison.Ordinal);
+                Assert.DoesNotContain("\u0421\u0402", rule.Label, StringComparison.Ordinal);
             });
         }
     }

@@ -1,4 +1,16 @@
 # Changelog
+## 0.435.0 - 2026-07-02
+
+Release entry: `2026-07-02-source-mojibake-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now scans source-like tracked files for mojibake markers and strict UTF-8.
+- Payment provider tests keep mojibake checks as Unicode escape literals instead of damaged Cyrillic text.
+- `P11-ACC-157` documents the source mojibake guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `447/467` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `DocumentationEncodingTests` 3/3; targeted docs/release/encoding suite 35/35; backend full suite `724/724`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
 ## 0.434.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-instructions-readable-utf8-guard`.

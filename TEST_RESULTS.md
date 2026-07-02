@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: source mojibake guard
+
+Scope:
+- `DocumentationEncodingTests` now scans source-like tracked files for mojibake markers and strict UTF-8, excluding generated EF migrations from the no-BOM rule.
+- Payment provider tests no longer store damaged Cyrillic literals; mojibake checks use Unicode escape sequences.
+- `P11-ACC-157` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `447/467` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-source-mojibake-guard`, version `0.435.0`.
+- `P11-ACC-157` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `3/3`.
+- Targeted docs/release/encoding suite: OK, `35/35`.
+- Backend full suite: OK, `724/724`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-source-mojibake-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
 ## Check 2026-07-02: agent instructions readable UTF-8 guard
 
 Scope:

@@ -370,6 +370,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-154", "2026-07-02-latest-release-evidence-caveat-guard"),
         new("P11-ACC-155", "2026-07-02-docs-strict-utf8-guard"),
         new("P11-ACC-156", "2026-07-02-agent-instructions-readable-utf8-guard"),
+        new("P11-ACC-157", "2026-07-02-source-mojibake-guard"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")

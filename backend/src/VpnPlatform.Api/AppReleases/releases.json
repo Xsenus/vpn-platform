@@ -10202,5 +10202,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-source-mojibake-guard",
+    "version": "0.435.0",
+    "releasedAt": "2026-07-02T11:41:00+07:00",
+    "title": "Source mojibake guard",
+    "summary": "Documentation encoding tests now scan source-like files for mojibake markers, and payment provider tests no longer store damaged Cyrillic literals.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now covers source-like tracked files, while payment provider mojibake checks use escaped Unicode literals."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

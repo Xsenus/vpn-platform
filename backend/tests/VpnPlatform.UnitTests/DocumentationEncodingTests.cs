@@ -16,6 +16,7 @@ public class DocumentationEncodingTests
                 Path.Combine(root, "README.md"),
                 Path.Combine(root, "TEST_RESULTS.md")
             ])
+            .Concat(EnumerateSourceLikeFiles(root))
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
@@ -30,6 +31,11 @@ public class DocumentationEncodingTests
             "\u00C2",
             new string(['\u00E2', '\u20AC']),
             new string(['\u0420', '\u00AD']),
+            new string(['\u0420', '\u00A0']),
+            new string(['\u0420', '\u0098']),
+            new string(['\u0420', '\u0406']),
+            new string(['\u0420', '\u040E']),
+            new string(['\u0420', '\u2018']),
             new string(['\u0420', '\u045F']),
             new string(['\u0420', '\u0402']),
             new string(['\u0420', '\u0491']),
@@ -92,6 +98,7 @@ public class DocumentationEncodingTests
                 Path.Combine(root, "TEST_RESULTS.md"),
                 Path.Combine(root, "backend", "src", "VpnPlatform.Api", "AppReleases", "releases.json")
             ])
+            .Concat(EnumerateSourceLikeFiles(root))
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var strictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
@@ -111,6 +118,37 @@ public class DocumentationEncodingTests
 
     private static string Describe(string marker)
         => string.Join(" ", marker.Select(character => $"U+{(int)character:X4}"));
+
+    private static IEnumerable<string> EnumerateSourceLikeFiles(string root)
+    {
+        var sourceExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".cs",
+            ".ts",
+            ".tsx",
+            ".js",
+            ".mjs",
+            ".json",
+            ".yml",
+            ".yaml",
+            ".ps1",
+            ".sh"
+        };
+
+        return Directory
+            .EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            .Where(file =>
+            {
+                var relativePath = Path.GetRelativePath(root, file);
+                return sourceExtensions.Contains(Path.GetExtension(file))
+                       && !relativePath.StartsWith($".git{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                       && !relativePath.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                       && !relativePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                       && !relativePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                       && !relativePath.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                       && !relativePath.Contains($"{Path.DirectorySeparatorChar}dist{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+            });
+    }
 
     private static string FindRepositoryRoot()
     {
