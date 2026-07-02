@@ -106,6 +106,24 @@ public class DocumentationEncodingTests
     }
 
     [Fact]
+    public void Agent_Instructions_Should_Require_Unavailable_Checks_And_Residual_Risk_In_Final_Answer()
+    {
+        var root = FindRepositoryRoot();
+        var instructions = File.ReadAllText(Path.Combine(root, "AGENTS.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "\u0415\u0441\u043B\u0438 \u0442\u0435\u0441\u0442, \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0430\u044F \u0411\u0414 \u0438\u043B\u0438 \u0432\u043D\u0435\u0448\u043D\u044F\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B",
+                     "\u0447\u0442\u043E \u043D\u0435 \u0431\u044B\u043B\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u0435\u043D\u043E",
+                     "\u043F\u043E\u0447\u0435\u043C\u0443",
+                     "\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u044B\u0439 \u0440\u0438\u0441\u043A"
+                 })
+        {
+            Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void Documentation_And_Release_Seed_Should_Be_Strict_Utf8_Without_Bom()
     {
         var root = FindRepositoryRoot();

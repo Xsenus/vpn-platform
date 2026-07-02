@@ -10392,5 +10392,24 @@
         "text": "Roadmap progress is 456/476 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-unavailable-checks-risk-guard",
+    "version": "0.445.0",
+    "releasedAt": "2026-07-02T14:11:00+07:00",
+    "title": "Agent unavailable checks risk guard",
+    "summary": "Agent instruction tests now pin final-answer disclosure for unavailable tests, local DB checks and external checks.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires final answers to state what was not checked, why and what residual risk remains when a test, local DB or external check is unavailable."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 457/477 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

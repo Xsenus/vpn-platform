@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent unavailable checks risk guard
+
+Scope:
+- `DocumentationEncodingTests` now pins the `AGENTS.md` requirement to disclose unavailable tests, local DB checks and external checks in final answers.
+- The same guard requires final answers to state what was not checked, why and what residual risk remains.
+- `P11-ACC-167` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `457/477` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-unavailable-checks-risk-guard`, version `0.445.0`.
+- `P11-ACC-167` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `5/5`.
+- Targeted docs/release/encoding suite: OK, `39/39`.
+- Backend full suite: OK, `728/728`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-unavailable-checks-risk-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent source/version reporting guard
 
 Scope:

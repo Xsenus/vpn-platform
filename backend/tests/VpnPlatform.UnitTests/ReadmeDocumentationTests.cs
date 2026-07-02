@@ -38,13 +38,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("727/727", readme, StringComparison.Ordinal);
+        Assert.Contains("728/728", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-agent-source-version-reporting-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-agent-unavailable-checks-risk-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "727/727",
-                     "2026-07-02-agent-source-version-reporting-guard",
-                     "0.444.0",
+                     "728/728",
+                     "2026-07-02-agent-unavailable-checks-risk-guard",
+                     "0.445.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

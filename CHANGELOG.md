@@ -1,4 +1,17 @@
 # Changelog
+
+## 0.445.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-unavailable-checks-risk-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now verifies that `AGENTS.md` requires final-answer disclosure for unavailable tests, local DB checks and external checks.
+- `P11-ACC-167` documents the agent unavailable checks risk guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `457/477` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 39/39, backend full suite `728/728`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.444.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-source-version-reporting-guard`.
