@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: release seed identity guard
+
+Scope:
+- `RoadmapCurrentStateTests` now verifies that release seed `releaseId`, `version` and `releasedAt` values stay unique.
+- The What's New seed must not allow duplicate release identity fields that could break docs, sorting or admin release history.
+- `P11-ACC-149` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `439/459` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-release-seed-identity-guard`, version `0.427.0`.
+- `P11-ACC-149` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `6/6`.
+- Targeted docs/release/encoding suite: OK, `29/29`.
+- Backend full suite: OK, `718/718`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-release-seed-identity-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: latest release seed order guard
 
 Scope:

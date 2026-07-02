@@ -10050,5 +10050,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-release-seed-identity-guard",
+    "version": "0.427.0",
+    "releasedAt": "2026-07-02T11:02:00+07:00",
+    "title": "Release seed identity guard",
+    "summary": "Roadmap tests now guard release seed identity fields against duplicates.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that release seed `releaseId`, `version` and `releasedAt` values stay unique."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
