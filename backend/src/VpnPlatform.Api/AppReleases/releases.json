@@ -9841,5 +9841,24 @@
         "text": "The project remains a staging-ready baseline and not production-ready until live VPS/staging/payment/3x-ui evidence is provided."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-product-ui-external-evidence-open-guard",
+    "version": "0.416.0",
+    "releasedAt": "2026-07-02T10:51:00+07:00",
+    "title": "Product UI external evidence open guard",
+    "summary": "Product/admin UI roadmap tests now guard live VPS, payment, VPN and staging evidence rows from being closed locally.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`ProductAdminUiRoadmapSyncTests` now verifies that product/admin UI roadmap external evidence rows stay open or in progress until real evidence exists."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production readiness can be accepted."
+      }
+    ]
   }
 ]

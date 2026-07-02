@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.416.0 - 2026-07-02
+
+Release entry: `2026-07-02-product-ui-external-evidence-open-guard`.
+
+### Fixed
+- `ProductAdminUiRoadmapSyncTests` now verifies that product/admin UI roadmap live VPS, payment, VPN and staging evidence rows stay open or in progress until real evidence exists.
+- `P11-ACC-138` documents the product/admin UI external evidence open guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `428/448` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `ProductAdminUiRoadmapSyncTests` 2/2; targeted docs/release/encoding suite 20/20; backend full suite `709/709`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.415.0 - 2026-07-02
 
 Release entry: `2026-07-02-external-evidence-open-guard`.

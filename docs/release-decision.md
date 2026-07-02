@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `708/708`.
+- Backend full suite: `709/709`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-external-evidence-open-guard`, версия `0.415.0`; roadmap current-state tests now keep live VPS, admin, VPN, payment, staging and production smoke evidence items open or in progress until real external proof exists. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-product-ui-external-evidence-open-guard`, версия `0.416.0`; product/admin UI roadmap tests now keep live VPS, payment, VPN and staging evidence rows open or in progress until real external proof exists. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

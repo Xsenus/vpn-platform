@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `708/708`",
+                     "Backend full suite: `709/709`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-07-02-external-evidence-open-guard",
-                     "0.415.0"
+                     "2026-07-02-product-ui-external-evidence-open-guard",
+                     "0.416.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,9 +58,44 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-external-evidence-open-guard", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-external-evidence-open-guard", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-product-ui-external-evidence-open-guard", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-product-ui-external-evidence-open-guard", releases, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Product_Admin_Ui_Roadmap_External_Evidence_Items_Should_Remain_Unclosed()
+    {
+        var root = FindRepositoryRoot();
+        var productRoadmap = File.ReadAllText(Path.Combine(root, "docs", "product-admin-ui-roadmap.md"));
+
+        foreach (var expected in new[]
+                 {
+                     new ExpectedStatus("~", "Staging/VPS smoke checklist"),
+                     new ExpectedStatus(" ", "Live-"),
+                     new ExpectedStatus(" ", "production-like", "3x-ui"),
+                     new ExpectedStatus(" ", "VPS", "production admin"),
+                     new ExpectedStatus(" ", "Production-ready"),
+                     new ExpectedStatus(" ", "production admin", "VPS"),
+                     new ExpectedStatus(" ", "3x-ui", "VPN node"),
+                     new ExpectedStatus(" ", "production-like order smoke"),
+                     new ExpectedStatus(" ", "YooKassa", "PayPal"),
+                     new ExpectedStatus(" ", "staging/VPS smoke report")
+                 })
+        {
+            AssertRoadmapLineHasStatus(productRoadmap, expected.Status, expected.Tokens);
+        }
+    }
+
+    private static void AssertRoadmapLineHasStatus(string roadmap, string expectedStatus, params string[] tokens)
+    {
+        var expectedPrefix = $"- [{expectedStatus}]";
+        Assert.Contains(
+            roadmap.Split('\n'),
+            line => line.StartsWith(expectedPrefix, StringComparison.Ordinal)
+                && tokens.All(token => line.Contains(token, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private sealed record ExpectedStatus(string Status, params string[] Tokens);
 
     private static string FindRepositoryRoot()
     {
