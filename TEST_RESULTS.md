@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: production readiness summary self-link
+
+Scope:
+- `scripts/new-production-readiness-summary.ps1` now writes `summaryPath` and `jsonSummaryPath` into the JSON summary.
+- `scripts/validate-production-readiness-summary.ps1` resolves both self-links and rejects a summary when either path does not match the actual validated file.
+- `scripts/test-production-readiness-summary-self-link-guard.ps1` covers the mismatch and removes generated `tmp` artifacts.
+
+Result:
+- Roadmap progress: `421/441` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-production-readiness-summary-self-link`, version `0.409.0`.
+- `P11-ACC-131` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `ProductionReadinessGateTests`: OK.
+- `scripts/test-production-readiness-summary-self-link-guard.ps1`: OK.
+- `scripts/new-production-readiness-summary.ps1` + validator happy path: OK.
+- Targeted docs/release suite: OK.
+- Backend full suite: OK, `704/704`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-production-readiness-summary-self-link`.
+- Secret scan: OK, `555` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: VPN live smoke report self-link
 
 Scope:

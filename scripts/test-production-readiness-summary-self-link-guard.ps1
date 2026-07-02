@@ -13,7 +13,7 @@ $validatorPath = Resolve-RepoPath "scripts/validate-production-readiness-summary
 $tmpDirectory = Resolve-RepoPath "tmp"
 New-Item -ItemType Directory -Force -Path $tmpDirectory | Out-Null
 
-$summaryPath = Join-Path $tmpDirectory "production-readiness-summary-stale-release-guard.md"
+$summaryPath = Join-Path $tmpDirectory "production-readiness-summary-self-link-guard.md"
 $summaryJsonPath = [System.IO.Path]::ChangeExtension($summaryPath, ".json")
 
 try {
@@ -33,9 +33,9 @@ try {
 
     $summary = [ordered]@{
         status = "production-ready"
-        releaseId = "stale-release-id"
-        generatedAt = "2026-07-01T17:15:00+07:00"
-        summaryPath = $summaryPath
+        releaseId = "2026-07-02-vpn-live-smoke-report-self-link"
+        generatedAt = "2026-07-02T10:40:00+07:00"
+        summaryPath = "tmp/other-production-readiness-summary.md"
         jsonSummaryPath = $summaryJsonPath
         roadmapPath = "docs/PRODUCT_COMPLETION_ROADMAP.md"
         releaseDecisionPath = "docs/release-decision.md"
@@ -70,20 +70,20 @@ Sanitized summary only.
 
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    $output = & powershell -NoProfile -ExecutionPolicy Bypass -File $validatorPath -SummaryPath $summaryPath -JsonSummaryPath $summaryJsonPath -RequireProductionReady 2>&1
+    $output = & powershell -NoProfile -ExecutionPolicy Bypass -File $validatorPath -SummaryPath $summaryPath -JsonSummaryPath $summaryJsonPath 2>&1
     $validatorExitCode = $LASTEXITCODE
     $ErrorActionPreference = $previousErrorActionPreference
 
     if ($validatorExitCode -eq 0) {
-        throw "Validator accepted stale releaseId in -RequireProductionReady mode."
+        throw "Validator accepted mismatched summaryPath."
     }
 
     $text = [string]::Join("`n", @($output | ForEach-Object { [string]$_ }))
-    if ($text.IndexOf("must match latest active release", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+    if ($text.IndexOf("summaryPath must match validated summary path", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
         throw "Validator failed for an unexpected reason: $text"
     }
 
-    Write-Output "production readiness summary latest release guard valid"
+    Write-Output "production readiness summary self-link guard valid"
 }
 finally {
     foreach ($path in @($summaryPath, $summaryJsonPath)) {

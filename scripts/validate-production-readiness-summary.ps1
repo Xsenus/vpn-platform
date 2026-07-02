@@ -81,6 +81,33 @@ $jsonSummaryFullPath = if ([string]::IsNullOrWhiteSpace($JsonSummaryPath)) {
 }
 $jsonSummaryFullPath = Resolve-RequiredPath -PathValue $jsonSummaryFullPath
 
+function Resolve-SummaryLinkedPath {
+    param([string]$PathValue)
+
+    if ([string]::IsNullOrWhiteSpace($PathValue)) {
+        return ""
+    }
+
+    if ([System.IO.Path]::IsPathRooted($PathValue)) {
+        return [System.IO.Path]::GetFullPath($PathValue)
+    }
+
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $PathValue))
+}
+
+function Assert-SamePath {
+    param(
+        [string]$Actual,
+        [string]$Expected,
+        [string]$FieldName
+    )
+
+    if (-not [string]::Equals($Actual, $Expected, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Production readiness summary $FieldName must match validated summary path."
+    }
+}
+
 $secretMarkers = @(
     "password=",
     "authorization:",
@@ -140,9 +167,12 @@ catch {
     throw "Production readiness summary JSON is invalid: $($_.Exception.Message)"
 }
 
-foreach ($fieldName in @("status", "releaseId", "generatedAt", "roadmapPath", "releaseDecisionPath")) {
+foreach ($fieldName in @("status", "releaseId", "generatedAt", "summaryPath", "jsonSummaryPath", "roadmapPath", "releaseDecisionPath")) {
     Assert-StringField -Object $summary -PropertyName $fieldName -Context "Production readiness summary"
 }
+
+Assert-SamePath -Actual (Resolve-SummaryLinkedPath ([string]$summary.summaryPath)) -Expected $summaryFullPath -FieldName "summaryPath"
+Assert-SamePath -Actual (Resolve-SummaryLinkedPath ([string]$summary.jsonSummaryPath)) -Expected $jsonSummaryFullPath -FieldName "jsonSummaryPath"
 
 if (@("blocked", "production-ready") -notcontains ([string]$summary.status)) {
     throw "Production readiness summary status is unsupported: $($summary.status)"
@@ -248,6 +278,8 @@ if ($RequireProductionReady) {
 $result = [ordered]@{
     status = $summary.status
     releaseId = $summary.releaseId
+    summaryPath = $summaryFullPath
+    jsonSummaryPath = $jsonSummaryFullPath
     reports = @($summary.reports).Count
     nonPassedReports = $nonPassedReports.Count
     roadmapBlockers = $roadmapBlockers.Count

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.409.0 - 2026-07-02
+
+Release entry: `2026-07-02-production-readiness-summary-self-link`.
+
+### Fixed
+- Production readiness summary JSON now includes `summaryPath` and `jsonSummaryPath`.
+- `validate-production-readiness-summary.ps1` resolves both self-links and rejects summary JSON when either path does not match the actual validated Markdown/JSON file.
+- `P11-ACC-131` documents the standalone production readiness summary self-link guard while real VPS/staging/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `421/441` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `ProductionReadinessGateTests`; targeted docs/release suite; backend full suite `704/704`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `555` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.408.0 - 2026-07-02
 
 Release entry: `2026-07-02-vpn-live-smoke-report-self-link`.

@@ -9700,5 +9700,28 @@
         "text": "Real 3x-ui and live VPN smoke evidence remains required before closing VPN production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-production-readiness-summary-self-link",
+    "version": "0.409.0",
+    "releasedAt": "2026-07-02T10:33:56+07:00",
+    "title": "Production readiness summary self-link",
+    "summary": "Production readiness summary JSON now self-links to the validated Markdown and JSON files, and the validator rejects mismatched summary paths.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`new-production-readiness-summary.ps1` now writes `summaryPath` and `jsonSummaryPath` into the JSON summary."
+      },
+      {
+        "type": "fixed",
+        "text": "`validate-production-readiness-summary.ps1` resolves both summary self-links and requires them to match the actual validated files."
+      },
+      {
+        "type": "important",
+        "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

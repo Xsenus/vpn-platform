@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `703/703`.
+- [x] Backend full suite: `704/704`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-07-02-vpn-live-smoke-report-self-link`, версия `0.408.0`.
+- [x] Latest "Что нового": `2026-07-02-production-readiness-summary-self-link`, версия `0.409.0`.
 
 ## Как вести дальше
 
