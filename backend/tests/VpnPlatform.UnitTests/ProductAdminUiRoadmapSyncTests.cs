@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `711/711`",
+                     "Backend full suite: `712/712`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-07-02-final-runbook-external-evidence-open-guard",
-                     "0.418.0"
+                     "2026-07-02-test-results-external-evidence-open-guard",
+                     "0.419.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-final-runbook-external-evidence-open-guard", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-final-runbook-external-evidence-open-guard", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-test-results-external-evidence-open-guard", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-test-results-external-evidence-open-guard", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

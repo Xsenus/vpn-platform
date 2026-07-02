@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.419.0 - 2026-07-02
+
+Release entry: `2026-07-02-test-results-external-evidence-open-guard`.
+
+### Fixed
+- `FinalDocsChangelogTests` now verifies that `TEST_RESULTS.md` keeps current release status, local validation evidence and artifact cleanup explicit.
+- `P11-ACC-141` documents the test results external evidence open guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `431/451` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `FinalDocsChangelogTests` 5/5; targeted docs/release/encoding suite 23/23; backend full suite `712/712`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.418.0 - 2026-07-02
 
 Release entry: `2026-07-02-final-runbook-external-evidence-open-guard`.

@@ -9898,5 +9898,24 @@
         "text": "The runbook continues to require live VPS/staging/payment/3x-ui evidence before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-test-results-external-evidence-open-guard",
+    "version": "0.419.0",
+    "releasedAt": "2026-07-02T10:54:00+07:00",
+    "title": "Test results external evidence open guard",
+    "summary": "Test results documentation now guards current release status, local validation evidence and open production limitations.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`FinalDocsChangelogTests` now verifies that `TEST_RESULTS.md` keeps current release status, local validation evidence and artifact cleanup explicit."
+      },
+      {
+        "type": "important",
+        "text": "The validation journal continues to show real VPS/staging/payment/3x-ui evidence as required before production-ready acceptance."
+      }
+    ]
   }
 ]
