@@ -10354,5 +10354,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-whats-new-progress-consistency-guard",
+    "version": "0.443.0",
+    "releasedAt": "2026-07-02T13:47:00+07:00",
+    "title": "What's New progress consistency guard",
+    "summary": "The latest What's New seed now carries roadmap progress: 455/475 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that the latest active What's New release reports the same roadmap progress counters as the master roadmap."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 455/475 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

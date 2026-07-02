@@ -1,4 +1,16 @@
 # Changelog
+## 0.443.0 - 2026-07-02
+
+Release entry: `2026-07-02-whats-new-progress-consistency-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that the latest active What's New release reports the same roadmap progress counters as the master roadmap markers.
+- `P11-ACC-165` documents the What's New progress consistency guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `455/475` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 37/37, backend full suite `726/726`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.442.0 - 2026-07-02
 
 Release entry: `2026-07-02-status-docs-progress-consistency-guard`.

@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("725/725", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-status-docs-progress-consistency-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("726/726", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-whats-new-progress-consistency-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "725/725",
-                     "2026-07-02-status-docs-progress-consistency-guard",
-                     "0.442.0",
+                     "726/726",
+                     "2026-07-02-whats-new-progress-consistency-guard",
+                     "0.443.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-status-docs-progress-consistency-guard",
-                     "0.442.0",
-                     "454/474",
+                     "2026-07-02-whats-new-progress-consistency-guard",
+                     "0.443.0",
+                     "455/475",
                      "95.8%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `725/725`",
+                     "Backend full suite: OK, `726/726`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-status-docs-progress-consistency-guard",
-                     "0.442.0",
-                     "454/474",
+                     "2026-07-02-whats-new-progress-consistency-guard",
+                     "0.443.0",
+                     "455/475",
                      "95.8%",
                      "20",
                      "19",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 36/36",
-                     "backend full suite `725/725`",
+                     "targeted docs/release/encoding suite 37/37",
+                     "backend full suite `726/726`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })
