@@ -38,13 +38,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("734/734", readme, StringComparison.Ordinal);
+        Assert.Contains("735/735", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-agent-encoding-verification-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-agent-customer-chat-image-comment-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "734/734",
-                     "2026-07-02-agent-encoding-verification-guard",
-                     "0.451.0",
+                     "735/735",
+                     "2026-07-02-agent-customer-chat-image-comment-guard",
+                     "0.452.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

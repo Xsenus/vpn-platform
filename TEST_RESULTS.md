@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent customer chat image comment guard
+
+Scope:
+- `AGENTS.md` now requires using customer chat comments above attached images together with OCR and visual text.
+- Direct customer clarification must take priority over ambiguous image interpretation.
+- `P11-ACC-174` records this local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `464/484` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-customer-chat-image-comment-guard`, version `0.452.0`.
+- `P11-ACC-174` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `12/12`.
+- Targeted docs/release/encoding suite: OK, `46/46`.
+- Backend full suite: OK, `735/735`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-customer-chat-image-comment-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent encoding verification guard
 
 Scope:

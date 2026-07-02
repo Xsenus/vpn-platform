@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("734/734", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-agent-encoding-verification-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("735/735", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-agent-customer-chat-image-comment-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "734/734",
-                     "2026-07-02-agent-encoding-verification-guard",
-                     "0.451.0",
+                     "735/735",
+                     "2026-07-02-agent-customer-chat-image-comment-guard",
+                     "0.452.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-encoding-verification-guard",
-                     "0.451.0",
-                     "463/483",
+                     "2026-07-02-agent-customer-chat-image-comment-guard",
+                     "0.452.0",
+                     "464/484",
                      "95.9%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `734/734`",
+                     "Backend full suite: OK, `735/735`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-encoding-verification-guard",
-                     "0.451.0",
-                     "463/483",
+                     "2026-07-02-agent-customer-chat-image-comment-guard",
+                     "0.452.0",
+                     "464/484",
                      "95.9%",
                      "20",
                      "19",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 45/45",
-                     "backend full suite `734/734`",
+                     "targeted docs/release/encoding suite 46/46",
+                     "backend full suite `735/735`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })

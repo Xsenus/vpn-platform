@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.452.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-customer-chat-image-comment-guard`.
+
+### Fixed
+- `AGENTS.md` now explicitly requires using customer chat comments above attached images together with OCR and visual text.
+- `DocumentationEncodingTests` now verifies that direct customer clarification has priority over ambiguous image interpretation.
+- `P11-ACC-174` documents the customer chat image comment guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `464/484` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 46/46, backend full suite `735/735`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.451.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-encoding-verification-guard`.

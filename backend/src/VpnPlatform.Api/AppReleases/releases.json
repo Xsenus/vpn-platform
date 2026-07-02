@@ -10525,5 +10525,24 @@
         "text": "Roadmap progress is 463/483 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-customer-chat-image-comment-guard",
+    "version": "0.452.0",
+    "releasedAt": "2026-07-02T15:26:00+07:00",
+    "title": "Agent customer chat image comment guard",
+    "summary": "Agent instructions now require customer chat comments above images to be considered together with OCR and visual text.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires customer chat comments above attached images to be considered with OCR/visual text and prioritized when they directly clarify ambiguous image interpretation."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 464/484 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
