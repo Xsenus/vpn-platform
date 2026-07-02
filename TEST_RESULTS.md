@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: changelog/test results top release guard
+
+Scope:
+- `FinalDocsChangelogTests` now verifies that the top `CHANGELOG.md` and `TEST_RESULTS.md` blocks match the latest active release seed.
+- Changelog and test results must stay aligned with `releases.json` after every new local acceptance release.
+- `P11-ACC-147` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `437/457` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-changelog-test-results-top-release-guard`, version `0.425.0`.
+- `P11-ACC-147` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `FinalDocsChangelogTests`: OK, `7/7`.
+- Targeted docs/release/encoding suite: OK, `27/27`.
+- Backend full suite: OK, `716/716`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-changelog-test-results-top-release-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: status docs latest release seed guard
 
 Scope:

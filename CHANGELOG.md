@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.425.0 - 2026-07-02
+
+Release entry: `2026-07-02-changelog-test-results-top-release-guard`.
+
+### Fixed
+- `FinalDocsChangelogTests` now verifies that the top `CHANGELOG.md` and `TEST_RESULTS.md` blocks match the latest active release seed.
+- `P11-ACC-147` documents the changelog/test results top release guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `437/457` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `FinalDocsChangelogTests` 7/7; targeted docs/release/encoding suite 27/27; backend full suite `716/716`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.424.0 - 2026-07-02
 
 Release entry: `2026-07-02-status-docs-latest-release-seed-guard`.

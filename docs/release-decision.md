@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `715/715`.
+- Backend full suite: `716/716`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-status-docs-latest-release-seed-guard`, версия `0.424.0`; status docs now guard the latest release seed, including the product/admin roadmap. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-changelog-test-results-top-release-guard`, версия `0.425.0`; CHANGELOG and TEST_RESULTS now guard top blocks against the latest release seed. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

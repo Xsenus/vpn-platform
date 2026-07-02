@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
@@ -18,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("715/715", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-status-docs-latest-release-seed-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("716/716", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-changelog-test-results-top-release-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -64,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "715/715",
-                     "2026-07-02-status-docs-latest-release-seed-guard",
-                     "0.424.0",
+                     "716/716",
+                     "2026-07-02-changelog-test-results-top-release-guard",
+                     "0.425.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -103,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-status-docs-latest-release-seed-guard",
-                     "0.424.0",
-                     "436/456",
+                     "2026-07-02-changelog-test-results-top-release-guard",
+                     "0.425.0",
+                     "437/457",
                      "95.6%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `715/715`",
+                     "Backend full suite: OK, `716/716`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -153,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-status-docs-latest-release-seed-guard",
-                     "0.424.0",
-                     "436/456",
+                     "2026-07-02-changelog-test-results-top-release-guard",
+                     "0.425.0",
+                     "437/457",
                      "95.6%",
                      "20",
                      "19",
@@ -164,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 26/26",
-                     "backend full suite `715/715`",
+                     "targeted docs/release/encoding suite 27/27",
+                     "backend full suite `716/716`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })
@@ -214,6 +215,43 @@ public class FinalDocsChangelogTests
 
         Assert.Equal("0.103.0", finalDocsRelease.GetProperty("version").GetString());
         Assert.Contains("final-runbook.md", finalDocsRelease.GetProperty("summary").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Changelog_And_Test_Results_Top_Blocks_Should_Match_Latest_Release_Seed()
+    {
+        var root = FindRepositoryRoot();
+        var changelog = File.ReadAllText(Path.Combine(root, "CHANGELOG.md"));
+        var testResults = File.ReadAllText(Path.Combine(root, "TEST_RESULTS.md"));
+        using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            root,
+            "backend",
+            "src",
+            "VpnPlatform.Api",
+            "AppReleases",
+            "releases.json")));
+
+        var latestRelease = releasesJson.RootElement
+            .EnumerateArray()
+            .Where(x => x.GetProperty("isActive").GetBoolean())
+            .OrderByDescending(x => x.GetProperty("releasedAt").GetDateTimeOffset())
+            .First();
+        var releaseId = latestRelease.GetProperty("releaseId").GetString() ?? string.Empty;
+        var version = latestRelease.GetProperty("version").GetString() ?? string.Empty;
+
+        var changelogTopEntry = Regex.Match(
+            changelog,
+            @"(?s)\A# Changelog\s+## (?<version>[^\r\n]+?) - 2026-07-02(?<body>.*?)(?:\r?\n## |\z)");
+        Assert.True(changelogTopEntry.Success, "CHANGELOG.md must start with the latest release block.");
+        Assert.Contains(version, changelogTopEntry.Groups["version"].Value, StringComparison.Ordinal);
+        Assert.Contains(releaseId, changelogTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
+
+        var testResultsTopEntry = Regex.Match(
+            testResults,
+            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-05-25\.\s+## Check 2026-07-02: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
+        Assert.True(testResultsTopEntry.Success, "TEST_RESULTS.md must start with the latest release check block.");
+        Assert.Contains(releaseId, testResultsTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(version, testResultsTopEntry.Groups["body"].Value, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

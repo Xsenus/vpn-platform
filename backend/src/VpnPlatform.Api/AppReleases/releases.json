@@ -10012,5 +10012,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-changelog-test-results-top-release-guard",
+    "version": "0.425.0",
+    "releasedAt": "2026-07-02T11:00:00+07:00",
+    "title": "Changelog and test results top release guard",
+    "summary": "Changelog and test results tests now guard top blocks against the latest active release seed.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`FinalDocsChangelogTests` now verifies that the top `CHANGELOG.md` and `TEST_RESULTS.md` blocks match the latest active release seed."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
