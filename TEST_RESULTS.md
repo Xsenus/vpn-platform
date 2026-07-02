@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: changelog external evidence open guard
+
+Scope:
+- `FinalDocsChangelogTests` now guards `CHANGELOG.md` current roadmap progress, validation evidence and production limitations.
+- Changelog must keep `staging-ready baseline`, not production-ready, while live VPS/staging/payment/3x-ui evidence is missing.
+- `P11-ACC-142` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `432/452` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-changelog-external-evidence-open-guard`, version `0.420.0`.
+- `P11-ACC-142` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `FinalDocsChangelogTests`: OK, `6/6`.
+- Targeted docs/release/encoding suite: OK, `24/24`.
+- Backend full suite: OK, `713/713`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-changelog-external-evidence-open-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: test results external evidence open guard
 
 Scope:

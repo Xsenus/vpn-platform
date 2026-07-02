@@ -9917,5 +9917,24 @@
         "text": "The validation journal continues to show real VPS/staging/payment/3x-ui evidence as required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-changelog-external-evidence-open-guard",
+    "version": "0.420.0",
+    "releasedAt": "2026-07-02T10:55:00+07:00",
+    "title": "Changelog external evidence open guard",
+    "summary": "Changelog tests now guard current roadmap progress, validation evidence and production limitations.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`FinalDocsChangelogTests` now verifies that `CHANGELOG.md` keeps current roadmap progress, validation evidence and production limitations explicit."
+      },
+      {
+        "type": "important",
+        "text": "The changelog continues to mark the project as staging-ready baseline until real VPS/staging/payment/3x-ui evidence is provided."
+      }
+    ]
   }
 ]

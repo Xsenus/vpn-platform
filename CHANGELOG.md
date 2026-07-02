@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.420.0 - 2026-07-02
+
+Release entry: `2026-07-02-changelog-external-evidence-open-guard`.
+
+### Fixed
+- `FinalDocsChangelogTests` now verifies that `CHANGELOG.md` keeps current roadmap progress, validation evidence and production limitations explicit.
+- `P11-ACC-142` documents the changelog external evidence open guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `432/452` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `FinalDocsChangelogTests` 6/6; targeted docs/release/encoding suite 24/24; backend full suite `713/713`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.419.0 - 2026-07-02
 
 Release entry: `2026-07-02-test-results-external-evidence-open-guard`.

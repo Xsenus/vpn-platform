@@ -18,8 +18,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("712/712", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-test-results-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("713/713", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-changelog-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -64,9 +64,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "712/712",
-                     "2026-07-02-test-results-external-evidence-open-guard",
-                     "0.419.0",
+                     "713/713",
+                     "2026-07-02-changelog-external-evidence-open-guard",
+                     "0.420.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -103,15 +103,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-test-results-external-evidence-open-guard",
-                     "0.419.0",
-                     "431/451",
+                     "2026-07-02-changelog-external-evidence-open-guard",
+                     "0.420.0",
+                     "432/452",
                      "95.6%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `712/712`",
+                     "Backend full suite: OK, `713/713`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -129,6 +129,57 @@ public class FinalDocsChangelogTests
                  })
         {
             Assert.DoesNotContain(forbidden, testResults, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var openMarker in new[]
+                 {
+                     "[ ] `STATE-011`",
+                     "[ ] `STATE-012`",
+                     "[ ] `STATE-013`",
+                     "[ ] `P11-ACC-002`",
+                     "[~] `P9-TST-007`"
+                 })
+        {
+            Assert.Contains(openMarker, roadmap, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Changelog_Should_Keep_Current_External_Evidence_Status_Explicit()
+    {
+        var root = FindRepositoryRoot();
+        var changelog = File.ReadAllText(Path.Combine(root, "CHANGELOG.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "2026-07-02-changelog-external-evidence-open-guard",
+                     "0.420.0",
+                     "432/452",
+                     "95.6%",
+                     "20",
+                     "19",
+                     "1",
+                     "`0` blocked",
+                     "staging-ready baseline",
+                     "not production-ready",
+                     "FinalDocsChangelogTests",
+                     "targeted docs/release/encoding suite 24/24",
+                     "backend full suite `713/713`",
+                     "fresh local SQLite smoke OK",
+                     "secret scan `556` files, `0` findings"
+                 })
+        {
+            Assert.Contains(expected, changelog, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var forbidden in new[]
+                 {
+                     "pending final local validation",
+                     "production-ready accepted"
+                 })
+        {
+            Assert.DoesNotContain(forbidden, changelog, StringComparison.OrdinalIgnoreCase);
         }
 
         foreach (var openMarker in new[]
