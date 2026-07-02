@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("724/724", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-source-mojibake-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-changelog-mojibake-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "724/724",
-                     "2026-07-02-source-mojibake-guard",
-                     "0.435.0",
+                     "2026-07-02-changelog-mojibake-guard",
+                     "0.436.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,9 +104,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-source-mojibake-guard",
-                     "0.435.0",
-                     "447/467",
+                     "2026-07-02-changelog-mojibake-guard",
+                     "0.436.0",
+                     "448/468",
                      "95.7%",
                      "20",
                      "19",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-source-mojibake-guard",
-                     "0.435.0",
-                     "447/467",
+                     "2026-07-02-changelog-mojibake-guard",
+                     "0.436.0",
+                     "448/468",
                      "95.7%",
                      "20",
                      "19",

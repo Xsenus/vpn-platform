@@ -14,6 +14,7 @@ public class DocumentationEncodingTests
             .Concat([
                 Path.Combine(root, "AGENTS.md"),
                 Path.Combine(root, "README.md"),
+                Path.Combine(root, "CHANGELOG.md"),
                 Path.Combine(root, "TEST_RESULTS.md")
             ])
             .Concat(EnumerateSourceLikeFiles(root))

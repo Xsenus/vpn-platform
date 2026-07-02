@@ -10221,5 +10221,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-changelog-mojibake-guard",
+    "version": "0.436.0",
+    "releasedAt": "2026-07-02T11:55:00+07:00",
+    "title": "Changelog mojibake guard",
+    "summary": "Documentation encoding tests now include CHANGELOG.md in mojibake marker checks as well as strict UTF-8 checks.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now scans `CHANGELOG.md` for mojibake markers in addition to strict UTF-8 validation."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

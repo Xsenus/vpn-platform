@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-source-mojibake-guard";
-    private const string CurrentVersion = "0.435.0";
+    private const string CurrentReleaseId = "2026-07-02-changelog-mojibake-guard";
+    private const string CurrentVersion = "0.436.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

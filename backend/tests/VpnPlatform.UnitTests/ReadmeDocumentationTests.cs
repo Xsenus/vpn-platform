@@ -44,7 +44,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-source-mojibake-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-changelog-mojibake-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,8 +57,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "724/724",
-                     "2026-07-02-source-mojibake-guard",
-                     "0.435.0",
+                     "2026-07-02-changelog-mojibake-guard",
+                     "0.436.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",
