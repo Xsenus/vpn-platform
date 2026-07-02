@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.423.0 - 2026-07-02
+
+Release entry: `2026-07-02-roadmap-external-evidence-open-set-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that every not-closed roadmap marker belongs to the explicit external-evidence set.
+- `P11-ACC-145` documents the roadmap external evidence open-set guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `435/455` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 4/4; targeted docs/release/encoding suite 26/26; backend full suite `715/715`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.422.0 - 2026-07-02
 
 Release entry: `2026-07-02-product-roadmap-external-evidence-open-guard`.

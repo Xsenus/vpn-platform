@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: roadmap external evidence open-set guard
+
+Scope:
+- `RoadmapCurrentStateTests` now guards that every not-closed roadmap marker belongs to the explicit external-evidence set.
+- Roadmap must keep only live VPS/staging/payment/3x-ui evidence items open or in progress until real evidence exists.
+- `P11-ACC-145` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `435/455` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-roadmap-external-evidence-open-set-guard`, version `0.423.0`.
+- `P11-ACC-145` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `4/4`.
+- Targeted docs/release/encoding suite: OK, `26/26`.
+- Backend full suite: OK, `715/715`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-roadmap-external-evidence-open-set-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: product/admin UI roadmap external evidence open guard
 
 Scope:

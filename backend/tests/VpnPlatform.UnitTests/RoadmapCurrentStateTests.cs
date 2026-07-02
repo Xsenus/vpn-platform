@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-product-roadmap-external-evidence-open-guard";
-    private const string CurrentVersion = "0.422.0";
+    private const string CurrentReleaseId = "2026-07-02-roadmap-external-evidence-open-set-guard";
+    private const string CurrentVersion = "0.423.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -85,6 +85,21 @@ public class RoadmapCurrentStateTests
             Assert.True(markers.TryGetValue(id, out var actualStatus), $"Roadmap marker {id} must exist.");
             Assert.Equal(expectedStatus, actualStatus);
             Assert.DoesNotContain($"[x] `{id}`", roadmap, StringComparison.Ordinal);
+        }
+
+        var actualNotClosedItems = markers
+            .Where(x => x.Value != "x")
+            .OrderBy(x => x.Key, StringComparer.Ordinal)
+            .ToArray();
+        var expectedNotClosedItems = expectedOpenItems
+            .OrderBy(x => x.Key, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expectedNotClosedItems.Length, actualNotClosedItems.Length);
+        for (var i = 0; i < expectedNotClosedItems.Length; i++)
+        {
+            Assert.Equal(expectedNotClosedItems[i].Key, actualNotClosedItems[i].Key);
+            Assert.Equal(expectedNotClosedItems[i].Value, actualNotClosedItems[i].Value);
         }
 
         var headerLine = roadmap

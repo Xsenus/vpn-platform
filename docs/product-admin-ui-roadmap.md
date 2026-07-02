@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-07-02-product-roadmap-external-evidence-open-guard`, версия `0.422.0`.
+- [x] Latest "Что нового": `2026-07-02-roadmap-external-evidence-open-set-guard`, версия `0.423.0`.
 
 ## Как вести дальше
 

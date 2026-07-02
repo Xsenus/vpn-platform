@@ -9974,5 +9974,24 @@
         "text": "Product/admin UI roadmap still requires real VPS/staging/payment/3x-ui evidence before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-roadmap-external-evidence-open-set-guard",
+    "version": "0.423.0",
+    "releasedAt": "2026-07-02T10:58:00+07:00",
+    "title": "Roadmap external evidence open set guard",
+    "summary": "Roadmap tests now guard the exact not-closed external-evidence set.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that every not-closed roadmap marker belongs to the explicit external-evidence set."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
