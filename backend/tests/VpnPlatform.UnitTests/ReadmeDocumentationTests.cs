@@ -38,13 +38,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("736/736", readme, StringComparison.Ordinal);
+        Assert.Contains("737/737", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-agent-end-to-end-completion-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-agent-external-evidence-boundary-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "736/736",
-                     "2026-07-02-agent-end-to-end-completion-guard",
-                     "0.453.0",
+                     "737/737",
+                     "2026-07-02-agent-external-evidence-boundary-guard",
+                     "0.454.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

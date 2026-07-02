@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `736/736`.
+- Backend full suite: `737/737`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,8 +32,8 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-agent-end-to-end-completion-guard`, версия `0.453.0`; DocumentationEncodingTests now verifies that AGENTS.md requires implementation tasks to be completed end-to-end in one pass: analysis, code, tests, local DB/SQLite when applicable, encoding, docs, What's New, cleanup, final `git status` and commit. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `465/485` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-07-02-agent-external-evidence-boundary-guard`, версия `0.454.0`; DocumentationEncodingTests now verifies that AGENTS.md forbids closing real VPS, staging, live payment, production-like VPN, 3x-ui/x-ui and provider-cabinet roadmap items with only local tests, mocks, dry-run or SQLite smoke. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `466/486` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

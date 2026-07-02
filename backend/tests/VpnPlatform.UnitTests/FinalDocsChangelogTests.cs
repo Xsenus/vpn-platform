@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("736/736", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-agent-end-to-end-completion-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("737/737", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-agent-external-evidence-boundary-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "736/736",
-                     "2026-07-02-agent-end-to-end-completion-guard",
-                     "0.453.0",
+                     "737/737",
+                     "2026-07-02-agent-external-evidence-boundary-guard",
+                     "0.454.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-end-to-end-completion-guard",
-                     "0.453.0",
-                     "465/485",
+                     "2026-07-02-agent-external-evidence-boundary-guard",
+                     "0.454.0",
+                     "466/486",
                      "95.9%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `736/736`",
+                     "Backend full suite: OK, `737/737`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-end-to-end-completion-guard",
-                     "0.453.0",
-                     "465/485",
+                     "2026-07-02-agent-external-evidence-boundary-guard",
+                     "0.454.0",
+                     "466/486",
                      "95.9%",
                      "20",
                      "19",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 47/47",
-                     "backend full suite `736/736`",
+                     "targeted docs/release/encoding suite 48/48",
+                     "backend full suite `737/737`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })

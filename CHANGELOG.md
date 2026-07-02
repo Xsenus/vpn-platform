@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.454.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-external-evidence-boundary-guard`.
+
+### Fixed
+- `AGENTS.md` now contains an External Evidence Boundaries section for real VPS, staging, live payment, production-like VPN, 3x-ui/x-ui and provider-cabinet roadmap items.
+- `DocumentationEncodingTests` now verifies that local tests, mocks, dry-run and SQLite smoke cannot close external-evidence items by themselves.
+- `P11-ACC-176` documents the external evidence boundary guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `466/486` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 48/48, backend full suite `737/737`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.453.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-end-to-end-completion-guard`.

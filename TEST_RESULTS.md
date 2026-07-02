@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent external evidence boundary guard
+
+Scope:
+- `AGENTS.md` now forbids closing real VPS, staging, live payment, production-like VPN, 3x-ui/x-ui and provider-cabinet roadmap items with only local evidence.
+- Local tests, mocks, dry-run and SQLite smoke may be used as preparation, but real evidence must remain required.
+- `P11-ACC-176` records this local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `466/486` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-external-evidence-boundary-guard`, version `0.454.0`.
+- `P11-ACC-176` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `14/14`.
+- Targeted docs/release/encoding suite: OK, `48/48`.
+- Backend full suite: OK, `737/737`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-external-evidence-boundary-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent end-to-end completion guard
 
 Scope:

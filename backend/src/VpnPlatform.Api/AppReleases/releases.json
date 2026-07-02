@@ -10563,5 +10563,24 @@
         "text": "Roadmap progress is 465/485 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-external-evidence-boundary-guard",
+    "version": "0.454.0",
+    "releasedAt": "2026-07-02T15:55:00+07:00",
+    "title": "Agent external evidence boundary guard",
+    "summary": "Agent instructions now forbid closing external-evidence roadmap items with only local tests or smoke runs.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` forbids closing real VPS, staging, live payment, production-like VPN, 3x-ui/x-ui and provider-cabinet roadmap items with only local tests, mocks, dry-run or SQLite smoke."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 466/486 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

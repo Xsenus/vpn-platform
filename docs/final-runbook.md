@@ -176,15 +176,15 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 736/736;
+- backend full suite: 737/737;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 9/9;
 - frontend audit: OK, `0 vulnerabilities`;
-- latest "Что нового": `2026-07-02-agent-end-to-end-completion-guard`, версия `0.453.0`.
-- roadmap progress: `465/485` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-07-02-agent-external-evidence-boundary-guard`, версия `0.454.0`.
+- roadmap progress: `466/486` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production
