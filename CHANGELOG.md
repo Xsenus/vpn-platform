@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.412.0 - 2026-07-02
+
+Release entry: `2026-07-02-roadmap-progress-percent-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies the roadmap readiness percent against actual checklist markers using `completed / total * 100`.
+- `P11-ACC-134` documents the roadmap percent guard while real VPS/staging/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `424/444` closed, readiness `95.5%`, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 3/3; targeted docs/release suite 17/17; backend full suite `706/706`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.411.0 - 2026-07-02
 
 Release entry: `2026-07-02-roadmap-progress-counter-guard`.

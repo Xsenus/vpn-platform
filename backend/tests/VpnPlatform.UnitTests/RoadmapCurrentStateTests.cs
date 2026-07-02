@@ -1,13 +1,14 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-roadmap-progress-counter-guard";
-    private const string CurrentVersion = "0.411.0";
+    private const string CurrentReleaseId = "2026-07-02-roadmap-progress-percent-guard";
+    private const string CurrentVersion = "0.412.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -42,7 +43,7 @@ public class RoadmapCurrentStateTests
     }
 
     [Fact]
-    public void Roadmap_Header_Progress_Should_Match_Checklist_Markers()
+    public void Roadmap_Header_Progress_Should_Match_Checklist_Markers_And_Percent()
     {
         var root = FindRepositoryRoot();
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
@@ -56,15 +57,22 @@ public class RoadmapCurrentStateTests
         var open = markers.Count(x => x.Groups["status"].Value == " ");
         var inProgress = markers.Count(x => x.Groups["status"].Value == "~");
         var blocked = markers.Count(x => x.Groups["status"].Value == "!");
-        var total = markerMatches.Count;
+        var total = markers.Length;
 
+        var headerLine = roadmap
+            .Split('\n')
+            .FirstOrDefault(x => x.Contains("staging-ready baseline", StringComparison.OrdinalIgnoreCase)
+                && x.Contains("P11-ACC-002", StringComparison.OrdinalIgnoreCase));
         var headerMatch = Regex.Match(
-            roadmap,
-            @"закрыто `(?<done>\d+)/(?<total>\d+)` проверяемых пунктов, открыто `(?<open>\d+)`, в работе `(?<inProgress>\d+)`, блокеров `\[!\]` нет");
+            headerLine ?? string.Empty,
+            @"`(?<done>\d+)/(?<total>\d+)`.*?`(?<percent>\d+\.\d)%`.*?`(?<open>\d+)`.*?`(?<inProgress>\d+)`.*?\[!\]");
 
-        Assert.True(headerMatch.Success, "Roadmap header must include completed, total, open, in-progress and blocked counts.");
+        Assert.True(headerMatch.Success, "Roadmap header must include completed, total, percent, open, in-progress and blocked counts.");
         Assert.Equal(done, int.Parse(headerMatch.Groups["done"].Value));
         Assert.Equal(total, int.Parse(headerMatch.Groups["total"].Value));
+        var actualPercent = decimal.Parse(headerMatch.Groups["percent"].Value, CultureInfo.InvariantCulture);
+        var expectedPercent = Math.Round(done * 100m / total, 1, MidpointRounding.AwayFromZero);
+        Assert.Equal(expectedPercent, actualPercent);
         Assert.Equal(open, int.Parse(headerMatch.Groups["open"].Value));
         Assert.Equal(inProgress, int.Parse(headerMatch.Groups["inProgress"].Value));
         Assert.Equal(0, blocked);

@@ -9765,5 +9765,24 @@
         "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-roadmap-progress-percent-guard",
+    "version": "0.412.0",
+    "releasedAt": "2026-07-02T10:47:00+07:00",
+    "title": "Roadmap progress percent guard",
+    "summary": "Roadmap current-state tests now verify that the header readiness percent matches completed checklist markers.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now checks the roadmap readiness percent as `completed / total * 100` rounded to one decimal place."
+      },
+      {
+        "type": "important",
+        "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]
