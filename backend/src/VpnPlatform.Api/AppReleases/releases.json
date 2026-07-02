@@ -10544,5 +10544,24 @@
         "text": "Roadmap progress is 464/484 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-end-to-end-completion-guard",
+    "version": "0.453.0",
+    "releasedAt": "2026-07-02T15:41:00+07:00",
+    "title": "Agent end-to-end completion guard",
+    "summary": "Agent instructions now require implementation requests to be completed end-to-end before commit.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires implementation requests to be completed end-to-end: analysis, code, tests, local DB/SQLite, encoding, docs, What's New, cleanup, final `git status` and commit."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 465/485 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

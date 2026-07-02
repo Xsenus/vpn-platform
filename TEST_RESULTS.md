@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent end-to-end completion guard
+
+Scope:
+- `AGENTS.md` now requires implementation requests to be completed end-to-end instead of stopping at a plan or partial implementation.
+- The required cycle covers analysis, code, tests, local DB/SQLite, encoding, docs, What's New, cleanup, final `git status` and commit.
+- `P11-ACC-175` records this local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `465/485` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-end-to-end-completion-guard`, version `0.453.0`.
+- `P11-ACC-175` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `13/13`.
+- Targeted docs/release/encoding suite: OK, `47/47`.
+- Backend full suite: OK, `736/736`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-end-to-end-completion-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent customer chat image comment guard
 
 Scope:

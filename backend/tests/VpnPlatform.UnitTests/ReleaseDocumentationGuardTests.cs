@@ -388,6 +388,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-172", "2026-07-02-agent-verification-handoff-guard"),
         new("P11-ACC-173", "2026-07-02-agent-encoding-verification-guard"),
         new("P11-ACC-174", "2026-07-02-agent-customer-chat-image-comment-guard"),
+        new("P11-ACC-175", "2026-07-02-agent-end-to-end-completion-guard"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")

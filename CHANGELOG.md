@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.453.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-end-to-end-completion-guard`.
+
+### Fixed
+- `AGENTS.md` now contains an End-To-End Task Completion section for implementation requests.
+- `DocumentationEncodingTests` now verifies that agent tasks must cover analysis, code, tests, local DB/SQLite, encoding, docs, What's New, cleanup, final `git status` and commit.
+- `P11-ACC-175` documents the end-to-end completion guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `465/485` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 47/47, backend full suite `736/736`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.452.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-customer-chat-image-comment-guard`.

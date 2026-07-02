@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `735/735`.
+- Backend full suite: `736/736`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,8 +32,8 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-agent-customer-chat-image-comment-guard`, версия `0.452.0`; DocumentationEncodingTests now verifies that AGENTS.md requires customer chat comments above images to be considered together with OCR/visual text, with direct customer clarification taking priority over ambiguous image interpretation. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `464/484` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-07-02-agent-end-to-end-completion-guard`, версия `0.453.0`; DocumentationEncodingTests now verifies that AGENTS.md requires implementation tasks to be completed end-to-end in one pass: analysis, code, tests, local DB/SQLite when applicable, encoding, docs, What's New, cleanup, final `git status` and commit. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `465/485` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 
