@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `728/728`.
+- Backend full suite: `729/729`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,8 +32,8 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-agent-unavailable-checks-risk-guard`, версия `0.445.0`; DocumentationEncodingTests now verifies that AGENTS.md requires unavailable checks and residual risk disclosure in final answers. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `457/477` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-07-02-agent-git-delivery-guard`, версия `0.446.0`; DocumentationEncodingTests now verifies that AGENTS.md requires Russian commit messages and no push without an explicit user request. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `458/478` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

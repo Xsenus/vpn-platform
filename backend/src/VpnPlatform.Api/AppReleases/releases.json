@@ -10411,5 +10411,24 @@
         "text": "Roadmap progress is 457/477 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-git-delivery-guard",
+    "version": "0.446.0",
+    "releasedAt": "2026-07-02T14:19:00+07:00",
+    "title": "Agent git delivery guard",
+    "summary": "Agent instructions now pin Russian commit messages, task-scoped staging and no push without an explicit user request.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires Russian commit messages, task-scoped staging and no push until the user explicitly asks for push."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 458/478 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

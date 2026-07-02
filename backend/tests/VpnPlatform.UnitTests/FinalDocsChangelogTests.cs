@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("728/728", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-agent-unavailable-checks-risk-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("729/729", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-agent-git-delivery-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "728/728",
-                     "2026-07-02-agent-unavailable-checks-risk-guard",
-                     "0.445.0",
+                     "729/729",
+                     "2026-07-02-agent-git-delivery-guard",
+                     "0.446.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-unavailable-checks-risk-guard",
-                     "0.445.0",
-                     "457/477",
+                     "2026-07-02-agent-git-delivery-guard",
+                     "0.446.0",
+                     "458/478",
                      "95.8%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `728/728`",
+                     "Backend full suite: OK, `729/729`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-unavailable-checks-risk-guard",
-                     "0.445.0",
-                     "457/477",
+                     "2026-07-02-agent-git-delivery-guard",
+                     "0.446.0",
+                     "458/478",
                      "95.8%",
                      "20",
                      "19",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 39/39",
-                     "backend full suite `728/728`",
+                     "targeted docs/release/encoding suite 40/40",
+                     "backend full suite `729/729`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })
