@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.421.0 - 2026-07-02
+
+Release entry: `2026-07-02-readme-external-evidence-open-guard`.
+
+### Fixed
+- `ReadmeDocumentationTests` now verifies that `README.md` keeps current release status and production limitations explicit.
+- `P11-ACC-143` documents the README external evidence open guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `433/453` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `ReadmeDocumentationTests` 4/4; targeted docs/release/encoding suite 25/25; backend full suite `714/714`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.420.0 - 2026-07-02
 
 Release entry: `2026-07-02-changelog-external-evidence-open-guard`.

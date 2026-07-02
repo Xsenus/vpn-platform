@@ -356,6 +356,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-140", "2026-07-02-final-runbook-external-evidence-open-guard"),
         new("P11-ACC-141", "2026-07-02-test-results-external-evidence-open-guard"),
         new("P11-ACC-142", "2026-07-02-changelog-external-evidence-open-guard"),
+        new("P11-ACC-143", "2026-07-02-readme-external-evidence-open-guard"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")

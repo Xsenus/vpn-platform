@@ -38,13 +38,51 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("713/713", readme, StringComparison.Ordinal);
+        Assert.Contains("714/714", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-changelog-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-readme-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Readme_Should_Keep_Current_External_Evidence_Status_Explicit()
+    {
+        var root = FindRepositoryRoot();
+        var readme = File.ReadAllText(Path.Combine(root, "README.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "714/714",
+                     "2026-07-02-readme-external-evidence-open-guard",
+                     "0.421.0",
+                     "staging-ready baseline",
+                     "production-ready",
+                     "VPS smoke",
+                     "3x-ui",
+                     "live",
+                     "payment",
+                     "секрет",
+                     "release decision"
+                 })
+        {
+            Assert.Contains(expected, readme, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var openMarker in new[]
+                 {
+                     "[ ] `STATE-011`",
+                     "[ ] `STATE-012`",
+                     "[ ] `STATE-013`",
+                     "[ ] `P11-ACC-002`",
+                     "[~] `P9-TST-007`"
+                 })
+        {
+            Assert.Contains(openMarker, roadmap, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

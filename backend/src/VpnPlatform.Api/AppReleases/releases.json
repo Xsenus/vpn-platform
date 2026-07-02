@@ -9936,5 +9936,24 @@
         "text": "The changelog continues to mark the project as staging-ready baseline until real VPS/staging/payment/3x-ui evidence is provided."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-readme-external-evidence-open-guard",
+    "version": "0.421.0",
+    "releasedAt": "2026-07-02T10:56:00+07:00",
+    "title": "README external evidence open guard",
+    "summary": "README tests now guard current release status and production limitations while external evidence remains open.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`ReadmeDocumentationTests` now verifies that `README.md` keeps current release status and production limitations explicit."
+      },
+      {
+        "type": "important",
+        "text": "The README continues to show that real VPS/staging/payment/3x-ui evidence is required before production-ready acceptance."
+      }
+    ]
   }
 ]
