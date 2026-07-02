@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.418.0 - 2026-07-02
+
+Release entry: `2026-07-02-final-runbook-external-evidence-open-guard`.
+
+### Fixed
+- `FinalDocsChangelogTests` now verifies that the final runbook keeps current release status and production limitations explicit.
+- `P11-ACC-140` documents the final runbook external evidence open guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `430/450` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `FinalDocsChangelogTests` 4/4; targeted docs/release/encoding suite 22/22; backend full suite `711/711`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.417.0 - 2026-07-02
 
 Release entry: `2026-07-02-release-decision-external-evidence-open-guard`.

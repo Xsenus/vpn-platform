@@ -9879,5 +9879,24 @@
         "text": "The release decision remains staging-ready baseline and not production-ready until live VPS/staging/payment/3x-ui evidence exists."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-final-runbook-external-evidence-open-guard",
+    "version": "0.418.0",
+    "releasedAt": "2026-07-02T10:53:00+07:00",
+    "title": "Final runbook external evidence open guard",
+    "summary": "Final runbook tests now guard current release status and production limits while external evidence remains open.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`FinalDocsChangelogTests` now verifies that the final runbook keeps current release status and production limitations explicit."
+      },
+      {
+        "type": "important",
+        "text": "The runbook continues to require live VPS/staging/payment/3x-ui evidence before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: final runbook external evidence open guard
+
+Scope:
+- `FinalDocsChangelogTests` now guards final runbook current release status and production limitations.
+- Final runbook must keep `staging-ready baseline`, not production-ready, while live VPS/staging/payment/3x-ui evidence is missing.
+- `P11-ACC-140` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `430/450` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-final-runbook-external-evidence-open-guard`, version `0.418.0`.
+- `P11-ACC-140` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `FinalDocsChangelogTests`: OK, `4/4`.
+- Targeted docs/release/encoding suite: OK, `22/22`.
+- Backend full suite: OK, `711/711`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-final-runbook-external-evidence-open-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: release decision external evidence open guard
 
 Scope:

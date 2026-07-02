@@ -18,8 +18,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("710/710", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-release-decision-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("711/711", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-final-runbook-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -53,6 +53,45 @@ public class FinalDocsChangelogTests
         Assert.Contains("production-ready", runbook, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ротация", runbook, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("3x-ui", runbook, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Final_Runbook_Should_Keep_Current_External_Evidence_Limits_Explicit()
+    {
+        var root = FindRepositoryRoot();
+        var runbook = File.ReadAllText(Path.Combine(root, "docs", "final-runbook.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "711/711",
+                     "2026-07-02-final-runbook-external-evidence-open-guard",
+                     "0.418.0",
+                     "staging-ready baseline",
+                     "production-ready",
+                     "live VPS smoke",
+                     "HTTPS",
+                     "secret manager",
+                     "backup/restore",
+                     "sandbox",
+                     "3x-ui",
+                     "P11-ACC-008 Production readiness gate"
+                 })
+        {
+            Assert.Contains(expected, runbook, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var openMarker in new[]
+                 {
+                     "[ ] `STATE-011`",
+                     "[ ] `STATE-012`",
+                     "[ ] `STATE-013`",
+                     "[ ] `P11-ACC-002`",
+                     "[~] `P9-TST-007`"
+                 })
+        {
+            Assert.Contains(openMarker, roadmap, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
