@@ -237,6 +237,32 @@ public class DocumentationEncodingTests
     }
 
     [Fact]
+    public void Agent_Instructions_Should_Require_Encoding_Verification_For_Text_And_Release_Seed_Changes()
+    {
+        var root = FindRepositoryRoot();
+        var instructions = File.ReadAllText(Path.Combine(root, "AGENTS.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "## Encoding Verification",
+                     "\u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u043A\u043E\u0434\u0438\u0440\u043E\u0432\u043A\u0443",
+                     "markdown",
+                     "JSON",
+                     "C#",
+                     "TypeScript",
+                     "strict UTF-8 without BOM",
+                     "mojibake markers",
+                     "\u0440\u0443\u0441\u0441\u043A\u043E\u044F\u0437\u044B\u0447\u043D\u044B\u0435 \u0442\u0435\u043A\u0441\u0442\u044B",
+                     "roadmap/status-\u0434\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u044B",
+                     "release seed",
+                     "encoding guard"
+                 })
+        {
+            Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void Documentation_And_Release_Seed_Should_Be_Strict_Utf8_Without_Bom()
     {
         var root = FindRepositoryRoot();

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.451.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-encoding-verification-guard`.
+
+### Fixed
+- `AGENTS.md` now contains an Encoding Verification section for changed markdown, JSON, C#, TypeScript, JavaScript, CSS, HTML and config files.
+- `DocumentationEncodingTests` now verifies strict UTF-8 without BOM, mojibake marker checks and encoding guard requirements for Russian docs/status text and the release seed.
+- `P11-ACC-173` documents the agent encoding verification guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `463/483` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 45/45, backend full suite `734/734`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.450.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-verification-handoff-guard`.

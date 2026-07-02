@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent encoding verification guard
+
+Scope:
+- `AGENTS.md` now requires encoding checks for changed docs, source files and release seed updates.
+- Changed Russian docs/status text and the release seed must stay strict UTF-8 without BOM and free of mojibake markers.
+- `P11-ACC-173` records this local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `463/483` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-encoding-verification-guard`, version `0.451.0`.
+- `P11-ACC-173` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `11/11`.
+- Targeted docs/release/encoding suite: OK, `45/45`.
+- Backend full suite: OK, `734/734`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-encoding-verification-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent verification handoff guard
 
 Scope:

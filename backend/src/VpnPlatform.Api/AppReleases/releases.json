@@ -10506,5 +10506,24 @@
         "text": "Roadmap progress is 462/482 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-encoding-verification-guard",
+    "version": "0.451.0",
+    "releasedAt": "2026-07-02T15:12:00+07:00",
+    "title": "Agent encoding verification guard",
+    "summary": "Agent instructions now require encoding checks for changed docs, source files and release seed updates.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires encoding checks for changed markdown, JSON, C#, TypeScript, JavaScript, CSS, HTML, config and release seed files."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 463/483 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
