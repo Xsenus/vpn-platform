@@ -44,7 +44,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-roadmap-external-evidence-open-set-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-status-docs-latest-release-seed-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,8 +57,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "715/715",
-                     "2026-07-02-roadmap-external-evidence-open-set-guard",
-                     "0.423.0",
+                     "2026-07-02-status-docs-latest-release-seed-guard",
+                     "0.424.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

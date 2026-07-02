@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: status docs latest release seed guard
+
+Scope:
+- `RoadmapCurrentStateTests` now verifies that status documents include the latest active release seed.
+- README, CHANGELOG, TEST_RESULTS, final runbook, release decision and product/admin UI roadmap must stay aligned with `releases.json`.
+- `P11-ACC-146` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `436/456` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-status-docs-latest-release-seed-guard`, version `0.424.0`.
+- `P11-ACC-146` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `4/4`.
+- Targeted docs/release/encoding suite: OK, `26/26`.
+- Backend full suite: OK, `715/715`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-status-docs-latest-release-seed-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: roadmap external evidence open-set guard
 
 Scope:

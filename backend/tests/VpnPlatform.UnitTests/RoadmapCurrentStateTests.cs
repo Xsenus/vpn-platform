@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-roadmap-external-evidence-open-set-guard";
-    private const string CurrentVersion = "0.423.0";
+    private const string CurrentReleaseId = "2026-07-02-status-docs-latest-release-seed-guard";
+    private const string CurrentVersion = "0.424.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -173,8 +173,9 @@ public class RoadmapCurrentStateTests
         var testResults = File.ReadAllText(Path.Combine(root, "TEST_RESULTS.md"));
         var finalRunbook = File.ReadAllText(Path.Combine(root, "docs", "final-runbook.md"));
         var releaseDecision = File.ReadAllText(Path.Combine(root, "docs", "release-decision.md"));
+        var productRoadmap = File.ReadAllText(Path.Combine(root, "docs", "product-admin-ui-roadmap.md"));
 
-        foreach (var document in new[] { readme, changelog, testResults, finalRunbook, releaseDecision })
+        foreach (var document in new[] { readme, changelog, testResults, finalRunbook, releaseDecision, productRoadmap })
         {
             Assert.Contains(CurrentReleaseId, document, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(CurrentVersion, document, StringComparison.Ordinal);

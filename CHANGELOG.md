@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.424.0 - 2026-07-02
+
+Release entry: `2026-07-02-status-docs-latest-release-seed-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that status documents include the latest active release seed, including the product/admin UI roadmap.
+- `P11-ACC-146` documents the status docs latest release seed guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `436/456` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 4/4; targeted docs/release/encoding suite 26/26; backend full suite `715/715`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.423.0 - 2026-07-02
 
 Release entry: `2026-07-02-roadmap-external-evidence-open-set-guard`.

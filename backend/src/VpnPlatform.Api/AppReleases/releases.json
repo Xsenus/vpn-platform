@@ -9993,5 +9993,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-status-docs-latest-release-seed-guard",
+    "version": "0.424.0",
+    "releasedAt": "2026-07-02T10:59:00+07:00",
+    "title": "Status docs latest release seed guard",
+    "summary": "Status docs tests now guard the latest active release seed, including the product/admin roadmap.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that status documents include the latest active release seed, including `docs/product-admin-ui-roadmap.md`."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

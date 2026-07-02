@@ -19,7 +19,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("715/715", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-roadmap-external-evidence-open-set-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-status-docs-latest-release-seed-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,8 +65,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "715/715",
-                     "2026-07-02-roadmap-external-evidence-open-set-guard",
-                     "0.423.0",
+                     "2026-07-02-status-docs-latest-release-seed-guard",
+                     "0.424.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -103,9 +103,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-roadmap-external-evidence-open-set-guard",
-                     "0.423.0",
-                     "435/455",
+                     "2026-07-02-status-docs-latest-release-seed-guard",
+                     "0.424.0",
+                     "436/456",
                      "95.6%",
                      "20",
                      "19",
@@ -153,9 +153,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-roadmap-external-evidence-open-set-guard",
-                     "0.423.0",
-                     "435/455",
+                     "2026-07-02-status-docs-latest-release-seed-guard",
+                     "0.424.0",
+                     "436/456",
                      "95.6%",
                      "20",
                      "19",
