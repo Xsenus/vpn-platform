@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.426.0 - 2026-07-02
+
+Release entry: `2026-07-02-latest-release-seed-order-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that the active release seed has exactly one newest `releasedAt` entry and that it matches the current roadmap release.
+- `P11-ACC-148` documents the latest release seed order guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `438/458` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 5/5; targeted docs/release/encoding suite 28/28; backend full suite `717/717`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.425.0 - 2026-07-02
 
 Release entry: `2026-07-02-changelog-test-results-top-release-guard`.

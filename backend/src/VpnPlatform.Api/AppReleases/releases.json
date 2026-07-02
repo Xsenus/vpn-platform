@@ -10031,5 +10031,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-latest-release-seed-order-guard",
+    "version": "0.426.0",
+    "releasedAt": "2026-07-02T11:01:00+07:00",
+    "title": "Latest release seed order guard",
+    "summary": "Roadmap tests now guard the unique newest active release seed used by What's New.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that the active release seed has exactly one newest `releasedAt` entry and that it matches the current roadmap release."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

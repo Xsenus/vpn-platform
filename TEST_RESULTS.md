@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: latest release seed order guard
+
+Scope:
+- `RoadmapCurrentStateTests` now verifies that the active release seed has exactly one newest `releasedAt` entry and that it matches the current roadmap release.
+- The What's New seed must keep the current release strictly newest, without ties on the latest timestamp.
+- `P11-ACC-148` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `438/458` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-latest-release-seed-order-guard`, version `0.426.0`.
+- `P11-ACC-148` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `5/5`.
+- Targeted docs/release/encoding suite: OK, `28/28`.
+- Backend full suite: OK, `717/717`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-latest-release-seed-order-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: changelog/test results top release guard
 
 Scope:

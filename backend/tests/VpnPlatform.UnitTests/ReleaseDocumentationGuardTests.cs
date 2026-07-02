@@ -361,6 +361,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-145", "2026-07-02-roadmap-external-evidence-open-set-guard"),
         new("P11-ACC-146", "2026-07-02-status-docs-latest-release-seed-guard"),
         new("P11-ACC-147", "2026-07-02-changelog-test-results-top-release-guard"),
+        new("P11-ACC-148", "2026-07-02-latest-release-seed-order-guard"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")
