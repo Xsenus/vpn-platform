@@ -10278,5 +10278,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-env-example-utf8-guard",
+    "version": "0.439.0",
+    "releasedAt": "2026-07-02T12:39:00+07:00",
+    "title": ".env.example UTF-8 guard",
+    "summary": "Documentation encoding tests now include the tracked environment template in strict UTF-8 and mojibake checks.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now covers `.env.example` for mojibake and strict UTF-8 without BOM."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: .env.example UTF-8 guard
+
+Scope:
+- `DocumentationEncodingTests` now includes the tracked `.env.example` environment template in mojibake and strict UTF-8 checks.
+- The template was verified as UTF-8 without BOM before being added to the guard.
+- `P11-ACC-161` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `451/471` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-env-example-utf8-guard`, version `0.439.0`.
+- `P11-ACC-161` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `3/3`.
+- Targeted docs/release/encoding suite: OK, `35/35`.
+- Backend full suite: OK, `724/724`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-env-example-utf8-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: dotfiles UTF-8 guard
 
 Scope:

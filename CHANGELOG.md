@@ -1,4 +1,15 @@
 # Changelog
+## 0.439.0 - 2026-07-02
+
+Release entry: `2026-07-02-env-example-utf8-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now includes the tracked `.env.example` environment template in strict UTF-8 and mojibake checks.
+- `P11-ACC-161` documents the `.env.example` UTF-8 guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `451/471` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+
 ## 0.438.0 - 2026-07-02
 
 Release entry: `2026-07-02-dotfiles-utf8-guard`.

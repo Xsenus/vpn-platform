@@ -146,6 +146,7 @@ public class DocumentationEncodingTests
         {
             ".dockerignore",
             ".editorconfig",
+            ".env.example",
             ".gitattributes",
             ".gitignore"
         };

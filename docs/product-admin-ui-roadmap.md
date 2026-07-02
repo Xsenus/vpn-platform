@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-07-02-dotfiles-utf8-guard`, версия `0.438.0`.
+- [x] Latest "Что нового": `2026-07-02-env-example-utf8-guard`, версия `0.439.0`.
 
 ## Как вести дальше
 
