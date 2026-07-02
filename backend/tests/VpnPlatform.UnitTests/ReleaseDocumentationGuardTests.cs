@@ -383,6 +383,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-167", "2026-07-02-agent-unavailable-checks-risk-guard"),
         new("P11-ACC-168", "2026-07-02-agent-git-delivery-guard"),
         new("P11-ACC-169", "2026-07-02-agent-image-attachment-guard"),
+        new("P11-ACC-170", "2026-07-02-agent-duplicate-task-guard"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")

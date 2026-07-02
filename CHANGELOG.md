@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.448.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-duplicate-task-guard`.
+
+### Fixed
+- `AGENTS.md` now contains a Duplicate And Completed Tasks section for checking roadmap, changelog, TEST_RESULTS, What's New and code before reworking repeated tasks.
+- `DocumentationEncodingTests` now verifies completed-task skip and partial-task delta rules.
+- `P11-ACC-170` documents the agent duplicate task guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `460/480` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 42/42, backend full suite `731/731`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.447.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-image-attachment-guard`.

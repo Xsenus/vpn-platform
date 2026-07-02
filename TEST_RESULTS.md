@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent duplicate task guard
+
+Scope:
+- `AGENTS.md` now requires checking roadmap, changelog, TEST_RESULTS, What's New and code before reworking repeated tasks.
+- Fully completed and verified tasks must not be reopened or duplicated.
+- Partially completed tasks must be handled only by implementing the missing delta and updating evidence.
+
+Result:
+- Roadmap progress: `460/480` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-duplicate-task-guard`, version `0.448.0`.
+- `P11-ACC-170` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `8/8`.
+- Targeted docs/release/encoding suite: OK, `42/42`.
+- Backend full suite: OK, `731/731`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-duplicate-task-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent image attachment guard
 
 Scope:

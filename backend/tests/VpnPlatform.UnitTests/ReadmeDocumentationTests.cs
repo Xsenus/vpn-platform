@@ -38,13 +38,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("730/730", readme, StringComparison.Ordinal);
+        Assert.Contains("731/731", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-agent-image-attachment-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-agent-duplicate-task-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "730/730",
-                     "2026-07-02-agent-image-attachment-guard",
-                     "0.447.0",
+                     "731/731",
+                     "2026-07-02-agent-duplicate-task-guard",
+                     "0.448.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

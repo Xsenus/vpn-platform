@@ -10449,5 +10449,24 @@
         "text": "Roadmap progress is 459/479 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-duplicate-task-guard",
+    "version": "0.448.0",
+    "releasedAt": "2026-07-02T14:35:00+07:00",
+    "title": "Agent duplicate task guard",
+    "summary": "Agent instructions now pin duplicate, completed and partial task checks before implementation.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires checking roadmap, changelog, TEST_RESULTS, What's New and code before reworking duplicate, completed or partial tasks."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 460/480 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
