@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("732/732", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-agent-local-db-scope-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("733/733", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-agent-verification-handoff-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "732/732",
-                     "2026-07-02-agent-local-db-scope-guard",
-                     "0.449.0",
+                     "733/733",
+                     "2026-07-02-agent-verification-handoff-guard",
+                     "0.450.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-local-db-scope-guard",
-                     "0.449.0",
-                     "461/481",
-                     "95.8%",
+                     "2026-07-02-agent-verification-handoff-guard",
+                     "0.450.0",
+                     "462/482",
+                     "95.9%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `732/732`",
+                     "Backend full suite: OK, `733/733`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,10 +154,10 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-agent-local-db-scope-guard",
-                     "0.449.0",
-                     "461/481",
-                     "95.8%",
+                     "2026-07-02-agent-verification-handoff-guard",
+                     "0.450.0",
+                     "462/482",
+                     "95.9%",
                      "20",
                      "19",
                      "1",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 43/43",
-                     "backend full suite `732/732`",
+                     "targeted docs/release/encoding suite 44/44",
+                     "backend full suite `733/733`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })

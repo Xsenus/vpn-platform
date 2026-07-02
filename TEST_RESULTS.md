@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent verification handoff guard
+
+Scope:
+- `AGENTS.md` now requires completing checks before updating What's New or committing.
+- Local DB/SQLite validation, artifact cleanup, roadmap/status sync and final `git status` are part of the handoff rule.
+- `P11-ACC-172` records this local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `462/482` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-verification-handoff-guard`, version `0.450.0`.
+- `P11-ACC-172` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `10/10`.
+- Targeted docs/release/encoding suite: OK, `44/44`.
+- Backend full suite: OK, `733/733`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-verification-handoff-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: agent local DB scenario scope guard
 
 Scope:
@@ -1322,7 +1346,7 @@ Result:
 
 Validation:
 - Local admin VPS browser smoke cleanup: OK.
-- Targeted admin/docs/release suite: OK, `43/43`.
+- Targeted admin/docs/release suite: OK, `44/44`.
 - Backend full suite: OK, `690/690`.
 - Frontend tests: OK, `66/66`.
 - Frontend typecheck/build: OK.

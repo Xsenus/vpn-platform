@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.450.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-verification-handoff-guard`.
+
+### Fixed
+- `AGENTS.md` now contains a Verification And Release Handoff section that requires checks, local DB/SQLite validation, What's New updates, artifact cleanup and final `git status` before commit.
+- `DocumentationEncodingTests` now verifies the verification-to-release handoff order.
+- `P11-ACC-172` documents the agent verification handoff guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `462/482` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 44/44, backend full suite `733/733`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.449.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-local-db-scope-guard`.

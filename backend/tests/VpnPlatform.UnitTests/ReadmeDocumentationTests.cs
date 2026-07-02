@@ -38,13 +38,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("732/732", readme, StringComparison.Ordinal);
+        Assert.Contains("733/733", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-agent-local-db-scope-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-agent-verification-handoff-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "732/732",
-                     "2026-07-02-agent-local-db-scope-guard",
-                     "0.449.0",
+                     "733/733",
+                     "2026-07-02-agent-verification-handoff-guard",
+                     "0.450.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

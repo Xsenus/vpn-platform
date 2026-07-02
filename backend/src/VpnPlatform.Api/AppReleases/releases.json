@@ -10487,5 +10487,24 @@
         "text": "Roadmap progress is 461/481 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-verification-handoff-guard",
+    "version": "0.450.0",
+    "releasedAt": "2026-07-02T14:58:00+07:00",
+    "title": "Agent verification handoff guard",
+    "summary": "Agent instructions now require checks, local DB validation, What's New updates, cleanup and final git status before commit.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires checks, local DB/SQLite validation, What's New updates, artifact cleanup and final `git status` before commit."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 462/482 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
