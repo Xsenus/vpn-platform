@@ -373,6 +373,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-157", "2026-07-02-source-mojibake-guard"),
         new("P11-ACC-158", "2026-07-02-changelog-mojibake-guard"),
         new("P11-ACC-159", "2026-07-02-project-files-utf8-guard"),
+        new("P11-ACC-160", "2026-07-02-dotfiles-utf8-guard"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")

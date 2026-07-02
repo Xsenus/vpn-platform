@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-project-files-utf8-guard`, версия `0.437.0`; DocumentationEncodingTests now cover project/config file types and the solution file is normalized to UTF-8 without BOM. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-dotfiles-utf8-guard`, версия `0.438.0`; DocumentationEncodingTests now include tracked dotfiles such as `.dockerignore`, `.editorconfig`, `.gitattributes` and `.gitignore` in strict UTF-8 and mojibake checks. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

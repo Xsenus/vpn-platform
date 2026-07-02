@@ -10259,5 +10259,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-dotfiles-utf8-guard",
+    "version": "0.438.0",
+    "releasedAt": "2026-07-02T12:24:00+07:00",
+    "title": "Dotfiles UTF-8 guard",
+    "summary": "Documentation encoding tests now include tracked dotfiles in strict UTF-8 and mojibake checks.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now covers `.dockerignore`, `.editorconfig`, `.gitattributes` and `.gitignore` files for mojibake and strict UTF-8."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

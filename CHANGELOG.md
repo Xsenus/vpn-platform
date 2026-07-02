@@ -1,4 +1,15 @@
 # Changelog
+## 0.438.0 - 2026-07-02
+
+Release entry: `2026-07-02-dotfiles-utf8-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now includes tracked dotfiles such as `.dockerignore`, `.editorconfig`, `.gitattributes` and `.gitignore` in strict UTF-8 and mojibake checks.
+- `P11-ACC-160` documents the dotfiles UTF-8 guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `450/470` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+
 ## 0.437.0 - 2026-07-02
 
 Release entry: `2026-07-02-project-files-utf8-guard`.

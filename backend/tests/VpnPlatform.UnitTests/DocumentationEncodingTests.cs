@@ -142,14 +142,23 @@ public class DocumentationEncodingTests
             ".ps1",
             ".sh"
         };
+        var sourceFileNamesWithoutExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".dockerignore",
+            ".editorconfig",
+            ".gitattributes",
+            ".gitignore"
+        };
 
         return Directory
             .EnumerateFiles(root, "*", SearchOption.AllDirectories)
             .Where(file =>
             {
                 var relativePath = Path.GetRelativePath(root, file);
-                return sourceExtensions.Contains(Path.GetExtension(file))
+                return (sourceExtensions.Contains(Path.GetExtension(file))
+                       || sourceFileNamesWithoutExtensions.Contains(Path.GetFileName(file)))
                        && !relativePath.StartsWith($".git{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                       && !relativePath.StartsWith($".serena{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
