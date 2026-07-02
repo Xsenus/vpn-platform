@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `705/705`",
+                     "Backend full suite: `706/706`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-07-02-production-readiness-assertion-result-self-link",
-                     "0.410.0"
+                     "2026-07-02-roadmap-progress-counter-guard",
+                     "0.411.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-production-readiness-assertion-result-self-link", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-production-readiness-assertion-result-self-link", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-roadmap-progress-counter-guard", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-roadmap-progress-counter-guard", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

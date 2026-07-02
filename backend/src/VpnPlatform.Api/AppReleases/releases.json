@@ -9746,5 +9746,24 @@
         "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-roadmap-progress-counter-guard",
+    "version": "0.411.0",
+    "releasedAt": "2026-07-02T10:46:00+07:00",
+    "title": "Roadmap progress counter guard",
+    "summary": "Roadmap current-state tests now verify that the header progress counts match the actual checklist markers.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now parses `PRODUCT_COMPLETION_ROADMAP.md` and compares completed, total, open, in-progress and blocked counts with the header."
+      },
+      {
+        "type": "important",
+        "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

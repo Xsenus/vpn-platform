@@ -1,12 +1,13 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-production-readiness-assertion-result-self-link";
-    private const string CurrentVersion = "0.410.0";
+    private const string CurrentReleaseId = "2026-07-02-roadmap-progress-counter-guard";
+    private const string CurrentVersion = "0.411.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -16,7 +17,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-06-14", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("705/705", roadmap, StringComparison.Ordinal);
+        Assert.Contains("706/706", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
         Assert.Contains("66/66", roadmap, StringComparison.Ordinal);
         Assert.Contains("9/9", roadmap, StringComparison.Ordinal);
@@ -41,6 +42,35 @@ public class RoadmapCurrentStateTests
     }
 
     [Fact]
+    public void Roadmap_Header_Progress_Should_Match_Checklist_Markers()
+    {
+        var root = FindRepositoryRoot();
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        var markerMatches = Regex.Matches(
+            roadmap,
+            @"(?m)^- \[(?<status>x| |~|!)\] `(?<id>[^`]+)`");
+
+        var markers = markerMatches.Cast<Match>().ToArray();
+        var done = markers.Count(x => x.Groups["status"].Value == "x");
+        var open = markers.Count(x => x.Groups["status"].Value == " ");
+        var inProgress = markers.Count(x => x.Groups["status"].Value == "~");
+        var blocked = markers.Count(x => x.Groups["status"].Value == "!");
+        var total = markerMatches.Count;
+
+        var headerMatch = Regex.Match(
+            roadmap,
+            @"закрыто `(?<done>\d+)/(?<total>\d+)` проверяемых пунктов, открыто `(?<open>\d+)`, в работе `(?<inProgress>\d+)`, блокеров `\[!\]` нет");
+
+        Assert.True(headerMatch.Success, "Roadmap header must include completed, total, open, in-progress and blocked counts.");
+        Assert.Equal(done, int.Parse(headerMatch.Groups["done"].Value));
+        Assert.Equal(total, int.Parse(headerMatch.Groups["total"].Value));
+        Assert.Equal(open, int.Parse(headerMatch.Groups["open"].Value));
+        Assert.Equal(inProgress, int.Parse(headerMatch.Groups["inProgress"].Value));
+        Assert.Equal(0, blocked);
+    }
+
+    [Fact]
     public void Current_State_Should_Be_Linked_From_Docs_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();
@@ -58,9 +88,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("705/705", readme, StringComparison.Ordinal);
-        Assert.Contains("705/705", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("705/705", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("706/706", readme, StringComparison.Ordinal);
+        Assert.Contains("706/706", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("706/706", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

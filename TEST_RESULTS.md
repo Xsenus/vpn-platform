@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: roadmap progress counter guard
+
+Scope:
+- `RoadmapCurrentStateTests` now parses roadmap checklist markers and compares the factual counts with the top roadmap status.
+- The guard covers completed, total, open, in-progress and blocked statuses so final progress reporting cannot silently drift.
+- `P11-ACC-133` records the local acceptance guard while live VPS/staging evidence remains open.
+
+Result:
+- Roadmap progress: `423/443` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-roadmap-progress-counter-guard`, version `0.411.0`.
+- `P11-ACC-133` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `3/3`.
+- Targeted docs/release suite: OK, `17/17`.
+- Backend full suite: OK, `706/706`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-roadmap-progress-counter-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: production readiness assertion result self-link
 
 Scope:

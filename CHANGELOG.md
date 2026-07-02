@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.411.0 - 2026-07-02
+
+Release entry: `2026-07-02-roadmap-progress-counter-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now parses `PRODUCT_COMPLETION_ROADMAP.md` checklist markers and verifies completed, total, open, in-progress and blocked counts against the roadmap header.
+- `P11-ACC-133` documents the roadmap progress counter guard while real VPS/staging/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `423/443` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 3/3; targeted docs/release suite 17/17; backend full suite `706/706`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.410.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-readiness-assertion-result-self-link`.

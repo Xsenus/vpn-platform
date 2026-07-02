@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `705/705`.
+- Backend full suite: `706/706`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-production-readiness-assertion-result-self-link`, версия `0.410.0`; Production readiness assertion result now self-links `resultJsonPath` and `resultMarkdownPath`, and the validator rejects mismatched result paths. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-roadmap-progress-counter-guard`, версия `0.411.0`; roadmap current-state tests now verify that header progress counts match actual checklist markers. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
