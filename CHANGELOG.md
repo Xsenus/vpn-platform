@@ -1,4 +1,16 @@
 # Changelog
+## 0.434.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-instructions-readable-utf8-guard`.
+
+### Fixed
+- `AGENTS.md` is readable UTF-8 and no longer stores mojibake text for the mandatory agent rules.
+- `DocumentationEncodingTests` now asserts the real Russian progress, cleanup, testing and local DB clauses.
+- `P11-ACC-156` documents the readable agent instructions guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `446/466` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `DocumentationEncodingTests` 3/3; targeted docs/release/encoding suite 35/35; backend full suite `724/724`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
 
 ## 0.433.0 - 2026-07-02
 

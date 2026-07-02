@@ -29,6 +29,7 @@ public class DocumentationEncodingTests
             "\u00C3",
             "\u00C2",
             new string(['\u00E2', '\u20AC']),
+            new string(['\u0420', '\u00AD']),
             new string(['\u0420', '\u045F']),
             new string(['\u0420', '\u0402']),
             new string(['\u0420', '\u0491']),
@@ -61,17 +62,17 @@ public class DocumentationEncodingTests
         foreach (var expected in new[]
                  {
                      "## Roadmap And Progress Reporting",
-                     "сколько задач выполнено",
-                     "сколько задач осталось",
-                     "процент готовности",
-                     "выполнено / всего * 100",
+                     "\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0437\u0430\u0434\u0430\u0447 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E",
+                     "\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0437\u0430\u0434\u0430\u0447 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C",
+                     "\u043F\u0440\u043E\u0446\u0435\u043D\u0442 \u0433\u043E\u0442\u043E\u0432\u043D\u043E\u0441\u0442\u0438",
+                     "\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E / \u0432\u0441\u0435\u0433\u043E * 100",
                      "## Artifact Cleanup",
-                     "убрать за собой временные артефакты",
-                     "нет секретов",
+                     "\u0443\u0431\u0440\u0430\u0442\u044C \u0437\u0430 \u0441\u043E\u0431\u043E\u0439 \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442\u044B",
+                     "\u043D\u0435\u0442 \u0441\u0435\u043A\u0440\u0435\u0442\u043E\u0432",
                      "## Testing Requirements",
-                     "каждая добавленная или измененная функция",
-                     "локальная БД",
-                     "локальный SQLite-режим"
+                     "\u043A\u0430\u0436\u0434\u0430\u044F \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u0438\u043B\u0438 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u043D\u0430\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u044F",
+                     "\u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0430\u044F \u0411\u0414",
+                     "\u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 SQLite-\u0440\u0435\u0436\u0438\u043C"
                  })
         {
             Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);

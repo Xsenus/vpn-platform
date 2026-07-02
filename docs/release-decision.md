@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-docs-strict-utf8-guard`, версия `0.433.0`; DocumentationEncodingTests now guard docs and the release seed as strict UTF-8 without BOM. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-agent-instructions-readable-utf8-guard`, версия `0.434.0`; AGENTS.md is readable UTF-8 and DocumentationEncodingTests now assert the real Russian agent rules instead of mojibake text. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

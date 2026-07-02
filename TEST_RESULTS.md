@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent instructions readable UTF-8 guard
+
+Scope:
+- `AGENTS.md` is restored as readable UTF-8 instead of mojibake text.
+- `DocumentationEncodingTests` now asserts the real Russian progress, cleanup, testing and local DB clauses.
+- `P11-ACC-156` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `446/466` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-instructions-readable-utf8-guard`, version `0.434.0`.
+- `P11-ACC-156` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `3/3`.
+- Targeted docs/release/encoding suite: OK, `35/35`.
+- Backend full suite: OK, `724/724`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-instructions-readable-utf8-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
 ## Check 2026-07-02: docs strict UTF-8 guard
 
 Scope:

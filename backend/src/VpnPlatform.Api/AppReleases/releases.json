@@ -10183,5 +10183,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-instructions-readable-utf8-guard",
+    "version": "0.434.0",
+    "releasedAt": "2026-07-02T11:24:00+07:00",
+    "title": "Agent instructions readable UTF-8 guard",
+    "summary": "Agent instructions are restored as readable UTF-8 and tests now assert the real Russian acceptance rules instead of mojibake text.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`AGENTS.md` is readable UTF-8 and `DocumentationEncodingTests` now checks the actual Russian progress, cleanup, testing and local DB rules."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
