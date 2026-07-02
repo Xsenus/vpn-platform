@@ -10335,5 +10335,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-status-docs-progress-consistency-guard",
+    "version": "0.442.0",
+    "releasedAt": "2026-07-02T13:31:00+07:00",
+    "title": "Status docs progress consistency guard",
+    "summary": "Roadmap current state tests now verify that status documents report the same progress counters as the master roadmap.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now compares README, changelog, test results, final runbook, release decision and product/admin roadmap counters with the master roadmap markers."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

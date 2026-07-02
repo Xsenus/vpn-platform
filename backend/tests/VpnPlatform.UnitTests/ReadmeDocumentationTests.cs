@@ -38,13 +38,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("724/724", readme, StringComparison.Ordinal);
+        Assert.Contains("725/725", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-all-markdown-utf8-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-status-docs-progress-consistency-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "724/724",
-                     "2026-07-02-all-markdown-utf8-guard",
-                     "0.441.0",
+                     "725/725",
+                     "2026-07-02-status-docs-progress-consistency-guard",
+                     "0.442.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

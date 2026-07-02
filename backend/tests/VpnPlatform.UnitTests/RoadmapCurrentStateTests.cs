@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-all-markdown-utf8-guard";
-    private const string CurrentVersion = "0.441.0";
+    private const string CurrentReleaseId = "2026-07-02-status-docs-progress-consistency-guard";
+    private const string CurrentVersion = "0.442.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,7 +18,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-06-14", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("724/724", roadmap, StringComparison.Ordinal);
+        Assert.Contains("725/725", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
         Assert.Contains("66/66", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
@@ -165,6 +165,43 @@ public class RoadmapCurrentStateTests
     }
 
     [Fact]
+    public void Current_Status_Docs_Should_Report_Same_Roadmap_Progress_Counters()
+    {
+        var root = FindRepositoryRoot();
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+        var counters = CalculateRoadmapCounters(roadmap);
+        var documents = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["README.md"] = File.ReadAllText(Path.Combine(root, "README.md")),
+            ["CHANGELOG.md"] = File.ReadAllText(Path.Combine(root, "CHANGELOG.md")),
+            ["TEST_RESULTS.md"] = File.ReadAllText(Path.Combine(root, "TEST_RESULTS.md")),
+            ["docs/final-runbook.md"] = File.ReadAllText(Path.Combine(root, "docs", "final-runbook.md")),
+            ["docs/release-decision.md"] = File.ReadAllText(Path.Combine(root, "docs", "release-decision.md")),
+            ["docs/product-admin-ui-roadmap.md"] = File.ReadAllText(Path.Combine(root, "docs", "product-admin-ui-roadmap.md"))
+        };
+
+        var expectedTokens = new[]
+        {
+            $"`{counters.Done}/{counters.Total}`",
+            $"`{counters.Percent}%`",
+            $"`{counters.Remaining}`",
+            $"`{counters.Open}`",
+            $"`{counters.InProgress}`",
+            $"`{counters.Blocked}`"
+        };
+
+        foreach (var (path, document) in documents)
+        {
+            Assert.Contains(CurrentReleaseId, document, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(CurrentVersion, document, StringComparison.Ordinal);
+            foreach (var token in expectedTokens)
+            {
+                Assert.Contains(token, document, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    [Fact]
     public void Current_State_Should_Be_Linked_From_Docs_Changelog_Test_Results_And_Release_Seed()
     {
         var root = FindRepositoryRoot();
@@ -183,9 +220,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("724/724", readme, StringComparison.Ordinal);
-        Assert.Contains("724/724", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("724/724", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("725/725", readme, StringComparison.Ordinal);
+        Assert.Contains("725/725", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("725/725", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,
@@ -445,6 +482,34 @@ public class RoadmapCurrentStateTests
             duplicates.Length == 0,
             $"Release seed must not contain duplicate {propertyName} values: {string.Join(", ", duplicates)}.");
     }
+
+    private static RoadmapCounters CalculateRoadmapCounters(string roadmap)
+    {
+        var markers = Regex.Matches(
+                roadmap,
+                @"(?m)^- \[(?<status>x| |~|!)\] `(?<id>[^`]+)`")
+            .Cast<Match>()
+            .ToArray();
+
+        var done = markers.Count(x => x.Groups["status"].Value == "x");
+        var open = markers.Count(x => x.Groups["status"].Value == " ");
+        var inProgress = markers.Count(x => x.Groups["status"].Value == "~");
+        var blocked = markers.Count(x => x.Groups["status"].Value == "!");
+        var total = markers.Length;
+        var percent = Math.Round(done * 100m / total, 1, MidpointRounding.AwayFromZero)
+            .ToString("0.0", CultureInfo.InvariantCulture);
+
+        return new RoadmapCounters(total, done, total - done, open, inProgress, blocked, percent);
+    }
+
+    private sealed record RoadmapCounters(
+        int Total,
+        int Done,
+        int Remaining,
+        int Open,
+        int InProgress,
+        int Blocked,
+        string Percent);
 
     private static string FindRepositoryRoot()
     {

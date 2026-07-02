@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: status docs progress consistency guard
+
+Scope:
+- `RoadmapCurrentStateTests` now calculates roadmap progress counters from `PRODUCT_COMPLETION_ROADMAP.md` markers.
+- README, CHANGELOG, TEST_RESULTS, final runbook, release decision and product/admin UI roadmap must contain the same completed/total, readiness, remaining, open, in-progress and blocked counters.
+- `P11-ACC-164` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `454/474` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-status-docs-progress-consistency-guard`, version `0.442.0`.
+- `P11-ACC-164` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `12/12`.
+- Targeted docs/release/encoding suite: OK, `36/36`.
+- Backend full suite: OK, `725/725`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-status-docs-progress-consistency-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: all markdown UTF-8 guard
 
 Scope:

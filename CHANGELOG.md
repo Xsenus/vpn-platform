@@ -1,4 +1,16 @@
 # Changelog
+## 0.442.0 - 2026-07-02
+
+Release entry: `2026-07-02-status-docs-progress-consistency-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now calculates roadmap progress from `PRODUCT_COMPLETION_ROADMAP.md` markers and verifies README, CHANGELOG, TEST_RESULTS, final runbook, release decision and product/admin UI roadmap show the same counters.
+- `P11-ACC-164` documents the status docs progress consistency guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `454/474` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 36/36, backend full suite `725/725`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.441.0 - 2026-07-02
 
 Release entry: `2026-07-02-all-markdown-utf8-guard`.

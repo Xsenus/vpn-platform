@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `724/724`.
+- Backend full suite: `725/725`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,8 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-all-markdown-utf8-guard`, версия `0.441.0`; DocumentationEncodingTests now include all tracked markdown files, including delivery and infra notes outside docs, in strict UTF-8 and mojibake checks. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-status-docs-progress-consistency-guard`, версия `0.442.0`; RoadmapCurrentStateTests now verify that status documents report the same progress counters as the master roadmap. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `454/474` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 
