@@ -9631,5 +9631,28 @@
         "text": "Real staging, VPS and live provider smoke evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-staging-smoke-report-self-link",
+    "version": "0.406.0",
+    "releasedAt": "2026-07-02T10:07:00+07:00",
+    "title": "Staging smoke report self-link",
+    "summary": "Staging smoke evidence reports now self-link to the validated JSON path and the validator rejects mismatched report paths.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "The staging smoke report template and generator now include `smokeReportPath`."
+      },
+      {
+        "type": "fixed",
+        "text": "`validate-staging-smoke-report.ps1` resolves `smokeReportPath` and requires it to match the actual `-ReportPath`."
+      },
+      {
+        "type": "important",
+        "text": "Real staging, VPS and live provider smoke evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

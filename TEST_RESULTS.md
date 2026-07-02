@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: staging smoke report self-link
+
+Scope:
+- `docs/staging-smoke-report.template.json` now includes `smokeReportPath`.
+- `scripts/new-staging-smoke-report.ps1` writes the resolved output path into `smokeReportPath`.
+- `scripts/validate-staging-smoke-report.ps1` resolves `smokeReportPath` and rejects a report when it does not match the actual `-ReportPath`.
+
+Result:
+- Roadmap progress: `418/438` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-staging-smoke-report-self-link`, version `0.406.0`.
+- `P9-TST-007J` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `StagingSmokeChecklistTests`: OK.
+- `scripts/test-staging-smoke-report-self-link-guard.ps1`: OK.
+- `scripts/new-staging-smoke-report.ps1` + validator happy path: OK.
+- Targeted docs/release suite: OK.
+- Backend full suite: OK, `701/701`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-staging-smoke-report-self-link`.
+- Secret scan: OK, `552` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: VPS production smoke report self-link
 
 Scope:

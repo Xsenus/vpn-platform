@@ -66,6 +66,21 @@ function Resolve-RepositoryRoot {
     throw "Repository root was not found."
 }
 
+function Resolve-WorkspacePath {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    if ([System.IO.Path]::IsPathRooted($Value)) {
+        return [System.IO.Path]::GetFullPath($Value)
+    }
+
+    $root = Resolve-RepositoryRoot
+    return [System.IO.Path]::GetFullPath((Join-Path $root $Value))
+}
+
 function Get-LatestActiveReleaseId {
     $root = Resolve-RepositoryRoot
     $releasesPath = Join-Path $root "backend/src/VpnPlatform.Api/AppReleases/releases.json"
@@ -93,8 +108,13 @@ if ([string]::IsNullOrWhiteSpace($raw)) {
 
 $report = $raw | ConvertFrom-Json
 
-foreach ($field in @("reportId", "environmentName", "apiBaseUrl", "startedAt", "completedAt", "releaseId", "operator")) {
+foreach ($field in @("reportId", "environmentName", "apiBaseUrl", "smokeReportPath", "startedAt", "completedAt", "releaseId", "operator")) {
     Assert-ReportValue $report.$field "Required report field '$field' is empty."
+}
+
+$resolvedSmokeReportPath = Resolve-WorkspacePath ([string]$report.smokeReportPath)
+if (-not [string]::Equals($resolvedSmokeReportPath, $fullPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Staging smoke report smokeReportPath must match ReportPath."
 }
 
 if ($RequireAllPassed) {
@@ -215,6 +235,7 @@ $summary = @{
     reportId = [string]$report.reportId
     environmentName = [string]$report.environmentName
     releaseId = [string]$report.releaseId
+    smokeReportPath = $resolvedSmokeReportPath
     checks = $checks.Count
     passed = ($checks | Where-Object { ([string]$_.status).ToLowerInvariant() -eq "passed" }).Count
     blocked = ($checks | Where-Object { ([string]$_.status).ToLowerInvariant() -eq "blocked" }).Count

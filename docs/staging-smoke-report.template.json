@@ -5,6 +5,7 @@
   "publicWebUrl": "https://example.test/",
   "cabinetWebUrl": "https://example.test/cabinet/",
   "adminWebUrl": "https://example.test/admin/",
+  "smokeReportPath": "tmp/staging-smoke-report.json",
   "startedAt": "2026-06-14T00:00:00+07:00",
   "completedAt": "2026-06-14T00:30:00+07:00",
   "releaseId": "2026-06-14-staging-smoke-checklist",

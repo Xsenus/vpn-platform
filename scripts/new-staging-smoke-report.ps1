@@ -117,6 +117,7 @@ $report.apiBaseUrl = $ApiBaseUrl.TrimEnd("/")
 $report.publicWebUrl = $PublicWebUrl.Trim()
 $report.cabinetWebUrl = $CabinetWebUrl.Trim()
 $report.adminWebUrl = $AdminWebUrl.Trim()
+$report.smokeReportPath = $fullOutputPath
 $report.startedAt = $now.ToString("o")
 $report.completedAt = $now.ToString("o")
 $report.releaseId = $releaseValue

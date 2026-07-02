@@ -19,6 +19,7 @@ public class StagingSmokeChecklistTests
                      "new-staging-smoke-report.ps1",
                      "validate-staging-smoke-report.ps1",
                      "-RequireAllPassed",
+                     "smokeReportPath",
                      "fail-closed",
                      "vps-production-smoke.ps1",
                      "secret-rotation",
@@ -60,7 +61,8 @@ public class StagingSmokeChecklistTests
                      "Assert-KnownReleaseId",
                      "DateTimeOffset]::Parse",
                      "CultureInfo]::InvariantCulture",
-                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json"
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "smokeReportPath"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
@@ -76,6 +78,27 @@ public class StagingSmokeChecklistTests
         Assert.DoesNotContain("password=", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Bearer ", script, StringComparison.Ordinal);
         Assert.DoesNotContain("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Staging_Smoke_Report_Should_Self_Link_To_Validated_Report_Path()
+    {
+        var root = FindRepositoryRoot();
+        var template = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-report.template.json"));
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-staging-smoke-report.ps1"));
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-staging-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-staging-smoke-report-self-link-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Contains("\"smokeReportPath\"", template, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$report.smokeReportPath = $fullOutputPath", generator, StringComparison.Ordinal);
+        Assert.Contains("Resolve-WorkspacePath", validator, StringComparison.Ordinal);
+        Assert.Contains("smokeReportPath must match ReportPath", validator, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("staging smoke report self-link guard valid", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("tmp/other-staging-smoke-report.json", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Staging smoke reports include `smokeReportPath`", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P9-TST-007J`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -220,6 +243,7 @@ public class StagingSmokeChecklistTests
         }
 
         Assert.Contains("stale-release-id", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("smokeReportPath", regression, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("must match latest active release", regression, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("latest active release", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P9-TST-007F`", roadmap, StringComparison.Ordinal);
@@ -257,6 +281,7 @@ public class StagingSmokeChecklistTests
 
         Assert.Equal("staging-smoke-YYYY-MM-DD", rootElement.GetProperty("reportId").GetString());
         Assert.Equal("2026-06-14-staging-smoke-checklist", rootElement.GetProperty("releaseId").GetString());
+        Assert.Equal("tmp/staging-smoke-report.json", rootElement.GetProperty("smokeReportPath").GetString());
 
         var checks = rootElement.GetProperty("checks").EnumerateArray().ToArray();
         Assert.Equal(RequiredCheckIds.Length, checks.Length);

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.406.0 - 2026-07-02
+
+Release entry: `2026-07-02-staging-smoke-report-self-link`.
+
+### Fixed
+- Staging smoke reports now include `smokeReportPath` in the template and generated report.
+- `validate-staging-smoke-report.ps1` resolves `smokeReportPath` and rejects reports whose self-link does not match the actual `-ReportPath`.
+- `P9-TST-007J` documents the standalone staging smoke evidence self-link guard while real staging/VPS smoke remains open.
+
+### Notes
+- Roadmap progress is now `418/438` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `StagingSmokeChecklistTests`; targeted docs/release suite; backend full suite `701/701`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `552` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.405.0 - 2026-07-02
 
 Release entry: `2026-07-02-vps-production-smoke-report-self-link`.
