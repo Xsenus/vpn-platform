@@ -9723,5 +9723,28 @@
         "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-production-readiness-assertion-result-self-link",
+    "version": "0.410.0",
+    "releasedAt": "2026-07-02T10:45:08+07:00",
+    "title": "Production readiness assertion result self-link",
+    "summary": "Production readiness assertion result JSON now self-links to the validated JSON and Markdown files, and the validator rejects mismatched result paths.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`validate-production-readiness-assertion-result.ps1` now requires `resultJsonPath` to match the actual validated JSON file."
+      },
+      {
+        "type": "fixed",
+        "text": "When Markdown is present, the assertion result validator also verifies `resultMarkdownPath` against the actual Markdown file."
+      },
+      {
+        "type": "important",
+        "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

@@ -156,6 +156,7 @@ public class ProductionReadinessGateTests
                      "releaseId",
                      "failedEvidenceReportsCount",
                      "blockersCount",
+                     "must match validated result path",
                      "staging-vps",
                      "payment-providers",
                      "admin-vps",
@@ -3466,6 +3467,50 @@ public class ProductionReadinessGateTests
 
         Assert.Contains("test-production-readiness-assertion-result-latest-release-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P11-ACC-072`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_Readiness_Assertion_Result_Should_Self_Link_To_Validated_Files()
+    {
+        var root = FindRepositoryRoot();
+        var gate = File.ReadAllText(Path.Combine(root, "scripts", "assert-production-readiness.ps1"));
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-production-readiness-assertion-result.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-production-readiness-assertion-result-self-link-guard.ps1"));
+        var docs = File.ReadAllText(Path.Combine(root, "docs", "production-readiness-gate.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "resultMarkdownPath = $markdownPath",
+                     "resultJsonPath = $jsonPath"
+                 })
+        {
+            Assert.Contains(expected, gate, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "Resolve-LinkedPath",
+                     "Assert-SamePath",
+                     "resultJsonPath is required",
+                     "must match validated result path"
+                 })
+        {
+            Assert.Contains(expected, validator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var expected in new[]
+                 {
+                     "tmp/other-production-readiness-assertion-result.json",
+                     "Validator accepted mismatched resultJsonPath",
+                     "production readiness assertion result self-link guard valid"
+                 })
+        {
+            Assert.Contains(expected, regression, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("test-production-readiness-assertion-result-self-link-guard.ps1", docs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-132`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

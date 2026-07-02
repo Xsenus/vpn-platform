@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: production readiness assertion result self-link
+
+Scope:
+- `scripts/validate-production-readiness-assertion-result.ps1` now requires `resultJsonPath` to match the actual validated JSON file.
+- The validator compares `resultMarkdownPath` with the actual Markdown file when Markdown is provided.
+- `scripts/test-production-readiness-assertion-result-self-link-guard.ps1` covers a mismatched `resultJsonPath` and removes generated `tmp` artifacts.
+
+Result:
+- Roadmap progress: `422/442` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-production-readiness-assertion-result-self-link`, version `0.410.0`.
+- `P11-ACC-132` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `ProductionReadinessGateTests`: OK.
+- `scripts/test-production-readiness-assertion-result-self-link-guard.ps1`: OK.
+- `scripts/test-production-readiness-assertion-result-validator.ps1`: OK.
+- `scripts/test-production-readiness-assertion-result-latest-release-guard.ps1`: OK.
+- `scripts/assert-production-readiness.ps1` + validator artifact path: OK, expected fail-closed `blocked`.
+- Targeted docs/release suite: OK.
+- Backend full suite: OK, `705/705`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-production-readiness-assertion-result-self-link`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: production readiness summary self-link
 
 Scope:

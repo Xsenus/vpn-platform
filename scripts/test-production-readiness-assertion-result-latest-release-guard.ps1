@@ -25,6 +25,7 @@ try {
         vpnLiveReportPath = "tmp/vpn-live-smoke-report.json"
         roadmapPath = "docs/PRODUCT_COMPLETION_ROADMAP.md"
         releaseDecisionPath = "docs/release-decision.md"
+        resultJsonPath = $resultJsonPath
         resultMarkdownPath = "tmp/production-readiness-assertion.md"
         evidenceReports = @(
             [ordered]@{ name = "staging-vps"; status = "passed"; reportPath = "tmp/staging-smoke-report.json"; validatorPath = "scripts/validate-staging-smoke-report.ps1" },

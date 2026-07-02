@@ -52,8 +52,41 @@ function Assert-MarkdownContains {
     }
 }
 
+function Resolve-LinkedPath {
+    param([string]$PathValue)
+
+    if ([string]::IsNullOrWhiteSpace($PathValue)) {
+        return ""
+    }
+
+    if ([System.IO.Path]::IsPathRooted($PathValue)) {
+        return [System.IO.Path]::GetFullPath($PathValue)
+    }
+
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    return [System.IO.Path]::GetFullPath((Join-Path $repoRoot $PathValue))
+}
+
+function Assert-SamePath {
+    param(
+        [string]$Actual,
+        [string]$Expected,
+        [string]$FieldName
+    )
+
+    if (-not [string]::Equals($Actual, $Expected, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Production readiness assertion result $FieldName must match validated result path."
+    }
+}
+
 $resultJsonFullPath = Assert-ExistingFile -PathValue $ResultJsonPath -Label "JSON"
 $result = Get-Content -LiteralPath $resultJsonFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+if ([string]::IsNullOrWhiteSpace([string]$result.resultJsonPath)) {
+    throw "Production readiness assertion result resultJsonPath is required."
+}
+
+Assert-SamePath -Actual (Resolve-LinkedPath ([string]$result.resultJsonPath)) -Expected $resultJsonFullPath -FieldName "resultJsonPath"
 
 $status = [string]$result.status
 if ($status -notin @("blocked", "production-ready")) {
@@ -129,6 +162,10 @@ if ([string]::IsNullOrWhiteSpace($ResultMarkdownPath)) {
 $resultMarkdownFullPath = ""
 if (-not [string]::IsNullOrWhiteSpace($ResultMarkdownPath)) {
     $resultMarkdownFullPath = Assert-ExistingFile -PathValue $ResultMarkdownPath -Label "Markdown"
+    if (-not [string]::IsNullOrWhiteSpace([string]$result.resultMarkdownPath)) {
+        Assert-SamePath -Actual (Resolve-LinkedPath ([string]$result.resultMarkdownPath)) -Expected $resultMarkdownFullPath -FieldName "resultMarkdownPath"
+    }
+
     $markdown = Get-Content -LiteralPath $resultMarkdownFullPath -Raw -Encoding UTF8
     foreach ($expected in @(
             "# Production readiness assertion",

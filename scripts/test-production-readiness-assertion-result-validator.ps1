@@ -74,6 +74,10 @@ function Copy-ResultJson {
         [string]$DestinationPath
     )
 
+    if ($Source.PSObject.Properties.Name -contains "resultJsonPath") {
+        $Source.resultJsonPath = $DestinationPath
+    }
+
     Write-Utf8NoBomFile -PathValue $DestinationPath -Content ($Source | ConvertTo-Json -Depth 12)
     return $DestinationPath
 }
@@ -130,8 +134,11 @@ try {
     $badMarkdownPath = Join-Path $tempRoot "bad-result.md"
     $badMarkdown = $markdown.Replace("## Evidence reports", "## Evidence reportz")
     Write-Utf8NoBomFile -PathValue $badMarkdownPath -Content $badMarkdown
+    $badMarkdownResult = Get-Content -LiteralPath $resultJsonFullPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $badMarkdownResult.resultMarkdownPath = $badMarkdownPath
+    $badMarkdownResultPath = Copy-ResultJson -Source $badMarkdownResult -DestinationPath (Join-Path $tempRoot "bad-markdown-result.json")
     $badMarkdownMessage = Assert-FailsWith -ExpectedMessage "markdown is missing" -Action {
-        Invoke-ResultValidator -JsonPath $resultJsonFullPath -MarkdownPath $badMarkdownPath
+        Invoke-ResultValidator -JsonPath $badMarkdownResultPath -MarkdownPath $badMarkdownPath
     }
 
     $requireProductionReadyMessage = Assert-FailsWith -ExpectedMessage "must be production-ready" -Action {
