@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: CI Ansible tmp cleanup
+
+Scope:
+- `.github/workflows/ci.yml` removes the provisioning syntax-check inventory temp directory after the Ansible step exits.
+- The workflow no longer writes a fixed `/tmp/vpnplatform-ci` directory.
+- `P8-CI-010` is closed; real staging/VPS/live smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `414/434` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-ci-ansible-tmp-cleanup`, version `0.402.0`.
+- Production readiness still requires real staging/VPS/live evidence.
+
+Validation:
+- `DeployWorkflowGuardTests`: OK.
+- Targeted deploy/docs/release suite: OK.
+- Backend full suite: OK, `697/697`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-ci-ansible-tmp-cleanup`.
+- Secret scan: OK, `550` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, fixed `/tmp/vpnplatform-ci` replaced by a cleaned per-run `mktemp` directory.
+
 ## Check 2026-07-02: Deploy VPS Docker tmp cleanup
 
 Scope:

@@ -21,6 +21,7 @@ public class ReleaseDocumentationGuardTests
         new("P8-CI-007", "2026-07-02-production-env-normalizer-cleanup"),
         new("P8-CI-008", "2026-07-02-docker-validation-tmp-cleanup"),
         new("P8-CI-009", "2026-07-02-deploy-vps-docker-tmp-cleanup"),
+        new("P8-CI-010", "2026-07-02-ci-ansible-tmp-cleanup"),
         new("P9-TST-001", "2026-06-13-backend-validation-gate"),
         new("P9-TST-002", "2026-06-13-frontend-validation-gate"),
         new("P9-TST-003", "2026-06-13-playwright-public-e2e"),

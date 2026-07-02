@@ -4,6 +4,8 @@
 
 ## Workflows
 
+CI `Ansible syntax check` writes its temporary inventory into a per-run temp directory and removes it on exit.
+
 - `.github/workflows/ci.yml` проверяет backend, frontend, provisioning и Docker-сборку.
 - `.github/workflows/staging-validation.yml` запускает расширенную staging-проверку.
 - `.github/workflows/deploy-vps.yml` валидирует проект и деплоит на VPS при push в `main`/`master` или ручном запуске.

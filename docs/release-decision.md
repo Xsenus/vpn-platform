@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `696/696`.
+- Backend full suite: `697/697`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-deploy-vps-docker-tmp-cleanup`, версия `0.401.0`; Docker deploy workflow removes its remote temporary compose config artifact after the Docker stack step exits. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-ci-ansible-tmp-cleanup`, версия `0.402.0`; CI Ansible syntax-check removes its temporary inventory directory after the provisioning job step exits. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

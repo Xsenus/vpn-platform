@@ -80,7 +80,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `696/696`.
+- [x] Backend full suite: `697/697`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -90,7 +90,7 @@
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-07-02-deploy-vps-docker-tmp-cleanup`, версия `0.401.0`.
+- [x] Latest "Что нового": `2026-07-02-ci-ansible-tmp-cleanup`, версия `0.402.0`.
 
 ## Как вести дальше
 

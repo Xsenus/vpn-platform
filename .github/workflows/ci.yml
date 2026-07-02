@@ -280,10 +280,14 @@ jobs:
 
       - name: Ansible syntax check
         run: |
-          mkdir -p /tmp/vpnplatform-ci
-          printf '[vpn_nodes]\nlocal ansible_connection=local ansible_python_interpreter=/usr/bin/python3\n' > /tmp/vpnplatform-ci/inventory.ini
-          ansible-playbook --syntax-check -i /tmp/vpnplatform-ci/inventory.ini infra/ansible/playbooks/precheck-node.yml
-          ansible-playbook --syntax-check -i /tmp/vpnplatform-ci/inventory.ini infra/ansible/playbooks/provision-node.yml
+          tmp_dir="$(mktemp -d)"
+          cleanup() {
+            rm -rf "$tmp_dir"
+          }
+          trap cleanup EXIT
+          printf '[vpn_nodes]\nlocal ansible_connection=local ansible_python_interpreter=/usr/bin/python3\n' > "$tmp_dir/inventory.ini"
+          ansible-playbook --syntax-check -i "$tmp_dir/inventory.ini" infra/ansible/playbooks/precheck-node.yml
+          ansible-playbook --syntax-check -i "$tmp_dir/inventory.ini" infra/ansible/playbooks/provision-node.yml
 
 
   docker-build:

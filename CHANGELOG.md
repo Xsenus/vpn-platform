@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.402.0 - 2026-07-02
+
+Release entry: `2026-07-02-ci-ansible-tmp-cleanup`.
+
+### Fixed
+- `.github/workflows/ci.yml` now writes the CI Ansible syntax-check inventory into a per-run `mktemp` directory.
+- The provisioning syntax-check job removes that temporary inventory directory with `trap cleanup EXIT` and no longer leaves `/tmp/vpnplatform-ci`.
+- `P8-CI-010` documents CI Ansible temp cleanup while real staging/VPS/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `414/434` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `DeployWorkflowGuardTests`; targeted deploy/docs/release suite; backend full suite `697/697`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.401.0 - 2026-07-02
 
 Release entry: `2026-07-02-deploy-vps-docker-tmp-cleanup`.

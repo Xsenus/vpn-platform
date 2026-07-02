@@ -137,6 +137,37 @@ public class DeployWorkflowGuardTests
         Assert.Contains("[x] `P8-CI-009`", roadmap, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Ci_Ansible_Syntax_Check_Should_Cleanup_Tmp_Inventory()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var documentation = File.ReadAllText(Path.Combine(root, "docs", "github-deployment.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "tmp_dir=\"$(mktemp -d)\"",
+                     "cleanup()",
+                     "rm -rf \"$tmp_dir\"",
+                     "trap cleanup EXIT",
+                     "\"$tmp_dir/inventory.ini\"",
+                     "ansible-playbook --syntax-check -i \"$tmp_dir/inventory.ini\""
+                 })
+        {
+            Assert.Contains(expected, workflow, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.DoesNotContain("/tmp/vpnplatform-ci", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            workflow.IndexOf("trap cleanup EXIT", StringComparison.OrdinalIgnoreCase)
+            < workflow.IndexOf("ansible-playbook --syntax-check", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains("Ansible syntax check", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("per-run temp directory", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P8-CI-010`", roadmap, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

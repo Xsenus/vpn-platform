@@ -18,8 +18,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("696/696", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-deploy-vps-docker-tmp-cleanup", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("697/697", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-ci-ansible-tmp-cleanup", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);

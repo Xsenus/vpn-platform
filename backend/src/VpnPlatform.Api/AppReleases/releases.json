@@ -9539,5 +9539,28 @@
         "text": "Real VPS deploy and post-deploy smoke evidence are still required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-ci-ansible-tmp-cleanup",
+    "version": "0.402.0",
+    "releasedAt": "2026-07-02T09:33:00+07:00",
+    "title": "CI Ansible tmp cleanup",
+    "summary": "CI Ansible syntax-check now removes its temporary inventory directory after the provisioning job step exits.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "The CI provisioning job now writes the Ansible syntax-check inventory into a unique per-run temp directory."
+      },
+      {
+        "type": "fixed",
+        "text": "The workflow removes that directory with `trap cleanup EXIT` and no longer leaves `/tmp/vpnplatform-ci`."
+      },
+      {
+        "type": "important",
+        "text": "Real staging, VPS and live provider smoke evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]
