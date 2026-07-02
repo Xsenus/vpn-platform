@@ -30,6 +30,7 @@ public class VpnLiveSmokeReportTests
         Assert.False(json.RootElement.GetProperty("productionProvisioningEnabled").GetBoolean());
         Assert.False(json.RootElement.GetProperty("noSandboxFallback").GetBoolean());
         Assert.False(json.RootElement.GetProperty("failClosedChecked").GetBoolean());
+        Assert.Equal("tmp/vpn-live-smoke-report.json", json.RootElement.GetProperty("smokeReportPath").GetString());
 
         var checks = json.RootElement.GetProperty("checks").EnumerateArray().ToArray();
         Assert.Equal(RequiredChecks.Order(StringComparer.Ordinal), checks.Select(x => x.GetProperty("id").GetString()).Order(StringComparer.Ordinal));
@@ -63,6 +64,7 @@ public class VpnLiveSmokeReportTests
                      "productionProvisioningEnabled",
                      "noSandboxFallback",
                      "failClosedChecked",
+                     "smokeReportPath",
                      "RequireAllPassed",
                      "must be passed when -RequireAllPassed is used"
                  })
@@ -97,7 +99,8 @@ public class VpnLiveSmokeReportTests
                      "Assert-KnownReleaseId",
                      "DateTimeOffset]::Parse",
                      "CultureInfo]::InvariantCulture",
-                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json"
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "smokeReportPath"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
@@ -113,6 +116,27 @@ public class VpnLiveSmokeReportTests
         Assert.DoesNotContain("password=", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Bearer ", script, StringComparison.Ordinal);
         Assert.DoesNotContain("BEGIN OPENSSH PRIVATE KEY", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Vpn_Live_Smoke_Report_Should_Self_Link_To_Validated_Report_Path()
+    {
+        var root = FindRepositoryRoot();
+        var template = File.ReadAllText(Path.Combine(root, "docs", "vpn-live-smoke-report.template.json"));
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-vpn-live-smoke-report.ps1"));
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-vpn-live-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-vpn-live-smoke-report-self-link-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "vpn-live-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Contains("\"smokeReportPath\"", template, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$report.smokeReportPath = $fullOutputPath", generator, StringComparison.Ordinal);
+        Assert.Contains("Resolve-WorkspacePath", validator, StringComparison.Ordinal);
+        Assert.Contains("smokeReportPath must match ReportPath", validator, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("vpn live smoke report self-link guard valid", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("tmp/other-vpn-live-smoke-report.json", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VPN live smoke reports include `smokeReportPath`", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-VPN-011`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -183,6 +207,7 @@ public class VpnLiveSmokeReportTests
         }
 
         Assert.Contains("stale-release-id", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("smokeReportPath", regression, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("must match latest active release", regression, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("latest active release", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-VPN-007`", roadmap, StringComparison.Ordinal);

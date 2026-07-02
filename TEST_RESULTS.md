@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: VPN live smoke report self-link
+
+Scope:
+- `docs/vpn-live-smoke-report.template.json` now includes `smokeReportPath`.
+- `scripts/new-vpn-live-smoke-report.ps1` writes the resolved output path into `smokeReportPath`.
+- `scripts/validate-vpn-live-smoke-report.ps1` resolves `smokeReportPath` and rejects a report when it does not match the actual `-ReportPath`.
+
+Result:
+- Roadmap progress: `420/440` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-vpn-live-smoke-report-self-link`, version `0.408.0`.
+- `P0-VPN-011` is closed; real 3x-ui/live VPN evidence remains open until external smoke exists.
+
+Validation:
+- `VpnLiveSmokeReportTests`: OK.
+- `scripts/test-vpn-live-smoke-report-self-link-guard.ps1`: OK.
+- `scripts/new-vpn-live-smoke-report.ps1` + validator happy path: OK.
+- Targeted docs/release suite: OK.
+- Backend full suite: OK, `703/703`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-vpn-live-smoke-report-self-link`.
+- Secret scan: OK, `554` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: payment provider smoke report self-link
 
 Scope:

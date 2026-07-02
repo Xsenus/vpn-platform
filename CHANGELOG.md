@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.408.0 - 2026-07-02
+
+Release entry: `2026-07-02-vpn-live-smoke-report-self-link`.
+
+### Fixed
+- VPN live smoke reports now include `smokeReportPath` in the template and generated report.
+- `validate-vpn-live-smoke-report.ps1` resolves `smokeReportPath` and rejects reports whose self-link does not match the actual `-ReportPath`.
+- `P0-VPN-011` documents the standalone VPN live smoke evidence self-link guard while real 3x-ui/live VPN smoke remains open.
+
+### Notes
+- Roadmap progress is now `420/440` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `VpnLiveSmokeReportTests`; targeted docs/release suite; backend full suite `703/703`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `554` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.407.0 - 2026-07-02
 
 Release entry: `2026-07-02-payment-provider-smoke-report-self-link`.

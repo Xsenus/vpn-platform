@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `702/702`.
+- Backend full suite: `703/703`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-payment-provider-smoke-report-self-link`, версия `0.407.0`; Payment provider smoke reports now self-link `smokeReportPath` and the validator rejects mismatched report paths. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-vpn-live-smoke-report-self-link`, версия `0.408.0`; VPN live smoke reports now self-link `smokeReportPath` and the validator rejects mismatched report paths. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
