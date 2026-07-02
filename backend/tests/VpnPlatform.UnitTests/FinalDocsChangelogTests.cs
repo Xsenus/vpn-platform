@@ -18,8 +18,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("714/714", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-readme-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("715/715", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-product-roadmap-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -64,9 +64,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "714/714",
-                     "2026-07-02-readme-external-evidence-open-guard",
-                     "0.421.0",
+                     "715/715",
+                     "2026-07-02-product-roadmap-external-evidence-open-guard",
+                     "0.422.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -103,15 +103,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-readme-external-evidence-open-guard",
-                     "0.421.0",
-                     "433/453",
+                     "2026-07-02-product-roadmap-external-evidence-open-guard",
+                     "0.422.0",
+                     "434/454",
                      "95.6%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `714/714`",
+                     "Backend full suite: OK, `715/715`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -153,9 +153,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-readme-external-evidence-open-guard",
-                     "0.421.0",
-                     "433/453",
+                     "2026-07-02-product-roadmap-external-evidence-open-guard",
+                     "0.422.0",
+                     "434/454",
                      "95.6%",
                      "20",
                      "19",
@@ -164,8 +164,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 25/25",
-                     "backend full suite `714/714`",
+                     "targeted docs/release/encoding suite 26/26",
+                     "backend full suite `715/715`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })

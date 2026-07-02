@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.422.0 - 2026-07-02
+
+Release entry: `2026-07-02-product-roadmap-external-evidence-open-guard`.
+
+### Fixed
+- `ProductAdminUiRoadmapSyncTests` now verifies that `docs/product-admin-ui-roadmap.md` keeps current validation status and production limitations explicit.
+- `P11-ACC-144` documents the product/admin UI roadmap external evidence open guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `434/454` closed, readiness `95.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `ProductAdminUiRoadmapSyncTests` 3/3; targeted docs/release/encoding suite 26/26; backend full suite `715/715`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.421.0 - 2026-07-02
 
 Release entry: `2026-07-02-readme-external-evidence-open-guard`.

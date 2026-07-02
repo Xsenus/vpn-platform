@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `714/714`",
+                     "Backend full suite: `715/715`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-07-02-readme-external-evidence-open-guard",
-                     "0.421.0"
+                     "2026-07-02-product-roadmap-external-evidence-open-guard",
+                     "0.422.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,47 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-readme-external-evidence-open-guard", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-readme-external-evidence-open-guard", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-product-roadmap-external-evidence-open-guard", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-product-roadmap-external-evidence-open-guard", releases, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Product_Admin_Ui_Roadmap_Should_Keep_Current_External_Evidence_Status_Explicit()
+    {
+        var root = FindRepositoryRoot();
+        var productRoadmap = File.ReadAllText(Path.Combine(root, "docs", "product-admin-ui-roadmap.md"));
+        var masterRoadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "Backend full suite: `715/715`",
+                     "Frontend unit tests: `66/66`",
+                     "Fresh local SQLite smoke: OK",
+                     "Secret scan: OK",
+                     "2026-07-02-product-roadmap-external-evidence-open-guard",
+                     "0.422.0",
+                     "staging-ready baseline",
+                     "Production-ready",
+                     "Live-",
+                     "3x-ui",
+                     "VPS",
+                     "staging/VPS smoke report"
+                 })
+        {
+            Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var openMarker in new[]
+                 {
+                     "[ ] `STATE-011`",
+                     "[ ] `STATE-012`",
+                     "[ ] `STATE-013`",
+                     "[ ] `P11-ACC-002`",
+                     "[~] `P9-TST-007`"
+                 })
+        {
+            Assert.Contains(openMarker, masterRoadmap, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

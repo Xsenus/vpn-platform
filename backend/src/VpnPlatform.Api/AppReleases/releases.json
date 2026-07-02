@@ -9955,5 +9955,24 @@
         "text": "The README continues to show that real VPS/staging/payment/3x-ui evidence is required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-product-roadmap-external-evidence-open-guard",
+    "version": "0.422.0",
+    "releasedAt": "2026-07-02T10:57:00+07:00",
+    "title": "Product roadmap external evidence open guard",
+    "summary": "Product/admin UI roadmap tests now guard current validation status and production limitations.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`ProductAdminUiRoadmapSyncTests` now verifies that `docs/product-admin-ui-roadmap.md` keeps current validation status and production limitations explicit."
+      },
+      {
+        "type": "important",
+        "text": "Product/admin UI roadmap still requires real VPS/staging/payment/3x-ui evidence before production-ready acceptance."
+      }
+    ]
   }
 ]
