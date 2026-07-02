@@ -168,6 +168,39 @@ public class DeployWorkflowGuardTests
         Assert.Contains("[x] `P8-CI-010`", roadmap, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Validate_Repo_Should_Cleanup_Ansible_Tmp_Inventory_On_Failure()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "validate_repo.sh"));
+        var documentation = File.ReadAllText(Path.Combine(root, "docs", "phase-1-stabilization.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "TMP_DIR=\"$(mktemp -d)\"",
+                     "cleanup_ansible_tmp()",
+                     "rm -rf \"$TMP_DIR\"",
+                     "trap cleanup_ansible_tmp EXIT",
+                     "\"$TMP_DIR/inventory.ini\""
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.True(
+            script.IndexOf("trap cleanup_ansible_tmp EXIT", StringComparison.OrdinalIgnoreCase)
+            < script.IndexOf("ansible-playbook --syntax-check", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            "ansible-playbook --syntax-check -i \"$TMP_DIR/inventory.ini\" infra/ansible/playbooks/provision-node.yml\n  rm -rf \"$TMP_DIR\"",
+            script.Replace("\r\n", "\n"),
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains("validate_repo.sh", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("temporary Ansible inventory", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P8-CI-011`", roadmap, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

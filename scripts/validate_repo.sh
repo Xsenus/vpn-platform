@@ -26,10 +26,13 @@ echo '[3/6] python unit tests for ansible runner'
 echo '[4/6] ansible syntax check when ansible-playbook is available'
 if command -v ansible-playbook >/dev/null 2>&1; then
   TMP_DIR="$(mktemp -d)"
+  cleanup_ansible_tmp() {
+    rm -rf "$TMP_DIR"
+  }
+  trap cleanup_ansible_tmp EXIT
   printf '[vpn_nodes]\nlocal ansible_connection=local ansible_python_interpreter=/usr/bin/python3\n' > "$TMP_DIR/inventory.ini"
   ansible-playbook --syntax-check -i "$TMP_DIR/inventory.ini" infra/ansible/playbooks/precheck-node.yml
   ansible-playbook --syntax-check -i "$TMP_DIR/inventory.ini" infra/ansible/playbooks/provision-node.yml
-  rm -rf "$TMP_DIR"
 else
   echo 'ansible-playbook not found; skipping ansible syntax check in this environment.'
 fi

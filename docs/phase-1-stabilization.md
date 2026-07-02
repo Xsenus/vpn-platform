@@ -37,6 +37,7 @@
   - `scripts/backup-db.sh`
   - `scripts/apply-migrations.sh`
 - `scripts/validate_repo.sh` теперь условно запускает backend checks, если доступен .NET SDK, и не падает там, где отсутствует `ansible-playbook`.
+- `scripts/validate_repo.sh` removes its temporary Ansible inventory directory with a trap even when syntax-check fails.
 
 ### Frontend
 

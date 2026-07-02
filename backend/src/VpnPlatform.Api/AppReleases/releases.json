@@ -9562,5 +9562,28 @@
         "text": "Real staging, VPS and live provider smoke evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-validate-repo-ansible-tmp-cleanup",
+    "version": "0.403.0",
+    "releasedAt": "2026-07-02T09:41:00+07:00",
+    "title": "validate_repo Ansible tmp cleanup",
+    "summary": "Local repository validation now removes its temporary Ansible syntax-check inventory directory even when syntax-check fails.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`validate_repo.sh` now registers cleanup immediately after creating the temporary Ansible inventory directory."
+      },
+      {
+        "type": "fixed",
+        "text": "The script removes that directory with `trap cleanup_ansible_tmp EXIT` even when `ansible-playbook --syntax-check` fails."
+      },
+      {
+        "type": "important",
+        "text": "Real staging, VPS and live provider smoke evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

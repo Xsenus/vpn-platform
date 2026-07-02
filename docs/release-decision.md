@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `697/697`.
+- Backend full suite: `698/698`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-ci-ansible-tmp-cleanup`, версия `0.402.0`; CI Ansible syntax-check removes its temporary inventory directory after the provisioning job step exits. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-validate-repo-ansible-tmp-cleanup`, версия `0.403.0`; validate_repo.sh removes its temporary Ansible inventory directory even when syntax-check fails. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 

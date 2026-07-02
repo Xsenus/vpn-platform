@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.403.0 - 2026-07-02
+
+Release entry: `2026-07-02-validate-repo-ansible-tmp-cleanup`.
+
+### Fixed
+- `scripts/validate_repo.sh` now registers cleanup immediately after creating the temporary Ansible syntax-check inventory directory.
+- The local repository validation script removes that directory with `trap cleanup_ansible_tmp EXIT` even when `ansible-playbook --syntax-check` fails.
+- `P8-CI-011` documents local validation temp cleanup while real staging/VPS/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `415/435` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `DeployWorkflowGuardTests`; `bash -n scripts/validate_repo.sh`; targeted deploy/docs/release suite; backend full suite `698/698`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.402.0 - 2026-07-02
 
 Release entry: `2026-07-02-ci-ansible-tmp-cleanup`.

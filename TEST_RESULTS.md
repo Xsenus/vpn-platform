@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: validate_repo Ansible tmp cleanup
+
+Scope:
+- `scripts/validate_repo.sh` removes the temporary Ansible syntax-check inventory directory after local repository validation exits.
+- Cleanup is registered before the first `ansible-playbook --syntax-check`, so failure paths do not leave the `mktemp` directory.
+- `P8-CI-011` is closed; real staging/VPS/live smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `415/435` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-validate-repo-ansible-tmp-cleanup`, version `0.403.0`.
+- Production readiness still requires real staging/VPS/live evidence.
+
+Validation:
+- `DeployWorkflowGuardTests`: OK.
+- `bash -n scripts/validate_repo.sh`: OK.
+- Targeted deploy/docs/release suite: OK.
+- Backend full suite: OK, `698/698`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-validate-repo-ansible-tmp-cleanup`.
+- Secret scan: OK, `550` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp`, frontend `dist` and `/tmp/vpnplatform-validate-repo*` are absent after checks.
 ## Check 2026-07-02: CI Ansible tmp cleanup
 
 Scope:
