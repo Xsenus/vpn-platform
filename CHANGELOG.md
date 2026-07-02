@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.417.0 - 2026-07-02
+
+Release entry: `2026-07-02-release-decision-external-evidence-open-guard`.
+
+### Fixed
+- `ReleaseDecisionTests` now verifies that production readiness blockers remain tied to open roadmap evidence items.
+- `P11-ACC-139` documents the release decision external evidence open guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `429/449` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `ReleaseDecisionTests` 4/4; targeted docs/release/encoding suite 21/21; backend full suite `710/710`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.416.0 - 2026-07-02
 
 Release entry: `2026-07-02-product-ui-external-evidence-open-guard`.

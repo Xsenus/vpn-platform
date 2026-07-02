@@ -9860,5 +9860,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production readiness can be accepted."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-release-decision-external-evidence-open-guard",
+    "version": "0.417.0",
+    "releasedAt": "2026-07-02T10:52:00+07:00",
+    "title": "Release decision external evidence open guard",
+    "summary": "Release decision tests now tie production readiness blockers to open roadmap evidence items.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`ReleaseDecisionTests` now verifies that production readiness blockers remain tied to open roadmap evidence items."
+      },
+      {
+        "type": "important",
+        "text": "The release decision remains staging-ready baseline and not production-ready until live VPS/staging/payment/3x-ui evidence exists."
+      }
+    ]
   }
 ]

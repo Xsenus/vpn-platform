@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: release decision external evidence open guard
+
+Scope:
+- `ReleaseDecisionTests` now ties production readiness blockers to open roadmap evidence items.
+- Release decision must stay `staging-ready baseline`, not production-ready, while live VPS/staging/payment/3x-ui evidence is missing.
+- `P11-ACC-139` records the local acceptance guard while live VPS/staging evidence remains open.
+
+Result:
+- Roadmap progress: `429/449` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-release-decision-external-evidence-open-guard`, version `0.417.0`.
+- `P11-ACC-139` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `ReleaseDecisionTests`: OK, `4/4`.
+- Targeted docs/release/encoding suite: OK, `21/21`.
+- Backend full suite: OK, `710/710`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-release-decision-external-evidence-open-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: product UI external evidence open guard
 
 Scope:

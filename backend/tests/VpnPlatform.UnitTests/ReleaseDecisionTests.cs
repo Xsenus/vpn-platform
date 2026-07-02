@@ -23,7 +23,7 @@ public class ReleaseDecisionTests
         Assert.Contains("[x] `P11-ACC-007`", roadmap, StringComparison.Ordinal);
 
         Assert.Contains("staging-ready baseline", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-product-ui-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-release-decision-external-evidence-open-guard", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0.104.0 - 2026-06-14", changelog, StringComparison.Ordinal);
         Assert.Contains("staging-ready baseline", changelog, StringComparison.OrdinalIgnoreCase);
     }
@@ -73,6 +73,51 @@ public class ReleaseDecisionTests
         Assert.Contains("payment sandbox webhook", decision, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("VPN access URI", decision, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cookies, tokens, `.env`", decision, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Release_Decision_Should_Keep_External_Evidence_Blockers_Tied_To_Open_Roadmap_Items()
+    {
+        var root = FindRepositoryRoot();
+        var decision = File.ReadAllText(Path.Combine(root, "docs", "release-decision.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var openMarker in new[]
+                 {
+                     "[ ] `STATE-011`",
+                     "[ ] `STATE-012`",
+                     "[ ] `STATE-013`",
+                     "[ ] `P0-ADMIN-001`",
+                     "[ ] `P0-ADMIN-002`",
+                     "[ ] `P0-VPN-001`",
+                     "[ ] `P0-VPN-004`",
+                     "[ ] `P0-PAY-002`",
+                     "[ ] `P0-PAY-009`",
+                     "[~] `P9-TST-007`",
+                     "[ ] `P11-ACC-002`"
+                 })
+        {
+            Assert.Contains(openMarker, roadmap, StringComparison.Ordinal);
+        }
+
+        foreach (var blocker in new[]
+                 {
+                     "P11-ACC-002 VPS production smoke",
+                     "live deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access",
+                     "домен",
+                     "HTTPS",
+                     "PostgreSQL backup/restore",
+                     "sandbox",
+                     "3x-ui",
+                     "Telegram bot webhook/invoice flow"
+                 })
+        {
+            Assert.Contains(blocker, decision, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("staging-ready baseline", decision, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("не production-ready", decision, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("production-ready accepted", decision, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()
