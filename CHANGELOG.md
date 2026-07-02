@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.407.0 - 2026-07-02
+
+Release entry: `2026-07-02-payment-provider-smoke-report-self-link`.
+
+### Fixed
+- Payment provider smoke reports now include `smokeReportPath` in the template and generated report.
+- `validate-payment-provider-smoke-report.ps1` resolves `smokeReportPath` and rejects reports whose self-link does not match the actual `-ReportPath`.
+- `P0-PAY-019` documents the standalone payment provider smoke evidence self-link guard while real live provider smoke remains open.
+
+### Notes
+- Roadmap progress is now `419/439` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `PaymentProviderSmokeReportTests`; targeted docs/release suite; backend full suite `702/702`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `553` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.406.0 - 2026-07-02
 
 Release entry: `2026-07-02-staging-smoke-report-self-link`.

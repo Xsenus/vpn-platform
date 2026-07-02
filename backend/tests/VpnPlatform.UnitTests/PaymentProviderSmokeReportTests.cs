@@ -30,6 +30,7 @@ public class PaymentProviderSmokeReportTests
 
         Assert.Equal(RequiredProviders.Order(StringComparer.Ordinal), providers.Order(StringComparer.Ordinal));
         Assert.DoesNotContain("TelegramStars", providers);
+        Assert.Equal("tmp/payment-provider-smoke-report.json", json.RootElement.GetProperty("smokeReportPath").GetString());
     }
 
     [Fact]
@@ -72,6 +73,7 @@ public class PaymentProviderSmokeReportTests
                      "subscriptionActivated",
                      "refundChecked",
                      "evidence",
+                     "smokeReportPath",
                      "RequireAllPassed"
                  })
         {
@@ -80,6 +82,27 @@ public class PaymentProviderSmokeReportTests
 
         Assert.Contains("Payment provider smoke report contains forbidden secret marker", script, StringComparison.Ordinal);
         Assert.Contains("must be passed when -RequireAllPassed is used", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Smoke_Report_Should_Self_Link_To_Validated_Report_Path()
+    {
+        var root = FindRepositoryRoot();
+        var template = File.ReadAllText(Path.Combine(root, "docs", "payment-provider-smoke-report.template.json"));
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-payment-provider-smoke-report.ps1"));
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-payment-provider-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-payment-provider-smoke-report-self-link-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "payment-provider-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Contains("\"smokeReportPath\"", template, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$report.smokeReportPath = $fullOutputPath", generator, StringComparison.Ordinal);
+        Assert.Contains("Resolve-WorkspacePath", validator, StringComparison.Ordinal);
+        Assert.Contains("smokeReportPath must match ReportPath", validator, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("payment provider smoke report self-link guard valid", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("tmp/other-payment-provider-smoke-report.json", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Payment provider smoke reports include `smokeReportPath`", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-PAY-019`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -130,6 +153,7 @@ public class PaymentProviderSmokeReportTests
         }
 
         Assert.Contains("stale-release-id", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("smokeReportPath", regression, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("must match latest active release", regression, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("latest active release", guide, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[x] `P0-PAY-015`", roadmap, StringComparison.Ordinal);
@@ -178,7 +202,8 @@ public class PaymentProviderSmokeReportTests
                      "Assert-KnownReleaseId",
                      "DateTimeOffset]::Parse",
                      "CultureInfo]::InvariantCulture",
-                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json"
+                     "ReleaseId must exist in backend/src/VpnPlatform.Api/AppReleases/releases.json",
+                     "smokeReportPath"
                  })
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);

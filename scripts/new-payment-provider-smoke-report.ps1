@@ -85,6 +85,7 @@ $report.reportId = "payment-provider-smoke-" + $now.ToString("yyyyMMdd-HHmmss")
 $report.environmentName = $EnvironmentName.Trim()
 $report.startedAt = $now.ToString("o")
 $report.completedAt = $now.ToString("o")
+$report.smokeReportPath = $fullOutputPath
 $report.releaseId = $releaseValue
 $report.operator = $operatorValue
 $report.notes = "Generated safely. Replace blocked providers with real sandbox/live evidence only after external provider smoke. Do not include credentials, auth headers, cookies, keys or provider secrets."

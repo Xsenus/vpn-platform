@@ -11,6 +11,8 @@ if (-not (Test-Path -LiteralPath $ReportPath)) {
     throw "Payment provider smoke report was not found: $ReportPath"
 }
 
+$fullReportPath = (Resolve-Path -LiteralPath $ReportPath).Path
+
 function Resolve-RepositoryRoot {
     $directory = Get-Item -LiteralPath $PSScriptRoot
     while ($null -ne $directory) {
@@ -23,6 +25,21 @@ function Resolve-RepositoryRoot {
     }
 
     throw "Repository root was not found."
+}
+
+function Resolve-WorkspacePath {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ""
+    }
+
+    if ([System.IO.Path]::IsPathRooted($Value)) {
+        return [System.IO.Path]::GetFullPath($Value)
+    }
+
+    $root = Resolve-RepositoryRoot
+    return [System.IO.Path]::GetFullPath((Join-Path $root $Value))
 }
 
 function Get-LatestActiveReleaseId {
@@ -80,7 +97,7 @@ $secretMarkers = @(
     "begin openssh private key"
 )
 
-$raw = Get-Content -LiteralPath $ReportPath -Raw -Encoding UTF8
+$raw = Get-Content -LiteralPath $fullReportPath -Raw -Encoding UTF8
 $lowerRaw = $raw.ToLowerInvariant()
 foreach ($marker in $secretMarkers) {
     if ($lowerRaw.Contains($marker)) {
@@ -95,7 +112,7 @@ catch {
     throw "Payment provider smoke report is not valid JSON: $($_.Exception.Message)"
 }
 
-foreach ($propertyName in @("reportId", "environmentName", "startedAt", "completedAt", "releaseId", "operator", "notes")) {
+foreach ($propertyName in @("reportId", "environmentName", "startedAt", "completedAt", "smokeReportPath", "releaseId", "operator", "notes")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "Payment provider smoke report is missing required field: $propertyName"
     }
@@ -103,6 +120,11 @@ foreach ($propertyName in @("reportId", "environmentName", "startedAt", "complet
     if ([string]::IsNullOrWhiteSpace([string]$report.$propertyName)) {
         throw "Payment provider smoke report field is empty: $propertyName"
     }
+}
+
+$resolvedSmokeReportPath = Resolve-WorkspacePath ([string]$report.smokeReportPath)
+if (-not [string]::Equals($resolvedSmokeReportPath, $fullReportPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Payment provider smoke report smokeReportPath must match ReportPath."
 }
 
 if ($RequireAllPassed) {
@@ -188,6 +210,7 @@ $summary = [ordered]@{
     reportId = $report.reportId
     environmentName = $report.environmentName
     releaseId = $report.releaseId
+    smokeReportPath = $resolvedSmokeReportPath
     providers = $providerNames.Count
     passed = @($report.providers | Where-Object { $_.status -eq "passed" }).Count
     failed = @($report.providers | Where-Object { $_.status -eq "failed" }).Count

@@ -3,6 +3,7 @@
   "environmentName": "staging",
   "startedAt": "2026-06-14T00:00:00+07:00",
   "completedAt": "2026-06-14T00:00:00+07:00",
+  "smokeReportPath": "tmp/payment-provider-smoke-report.json",
   "releaseId": "2026-06-14-payment-provider-smoke-report",
   "operator": "TODO: operator name",
   "notes": "Fill this report after real sandbox or live provider checks. Do not store credentials, cookies, sensitive request headers or raw provider payloads.",

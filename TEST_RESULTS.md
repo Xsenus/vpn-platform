@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: payment provider smoke report self-link
+
+Scope:
+- `docs/payment-provider-smoke-report.template.json` now includes `smokeReportPath`.
+- `scripts/new-payment-provider-smoke-report.ps1` writes the resolved output path into `smokeReportPath`.
+- `scripts/validate-payment-provider-smoke-report.ps1` resolves `smokeReportPath` and rejects a report when it does not match the actual `-ReportPath`.
+
+Result:
+- Roadmap progress: `419/439` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-payment-provider-smoke-report-self-link`, version `0.407.0`.
+- `P0-PAY-019` is closed; real live provider evidence remains open until external provider smoke exists.
+
+Validation:
+- `PaymentProviderSmokeReportTests`: OK.
+- `scripts/test-payment-provider-smoke-report-self-link-guard.ps1`: OK.
+- `scripts/new-payment-provider-smoke-report.ps1` + validator happy path: OK.
+- Targeted docs/release suite: OK.
+- Backend full suite: OK, `702/702`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-payment-provider-smoke-report-self-link`.
+- Secret scan: OK, `553` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: staging smoke report self-link
 
 Scope:
