@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-release-seed-identity-guard";
-    private const string CurrentVersion = "0.427.0";
+    private const string CurrentReleaseId = "2026-07-02-release-seed-version-order-guard";
+    private const string CurrentVersion = "0.428.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,7 +18,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-06-14", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("718/718", roadmap, StringComparison.Ordinal);
+        Assert.Contains("719/719", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
         Assert.Contains("66/66", roadmap, StringComparison.Ordinal);
         Assert.Contains("9/9", roadmap, StringComparison.Ordinal);
@@ -183,9 +183,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("718/718", readme, StringComparison.Ordinal);
-        Assert.Contains("718/718", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("718/718", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("719/719", readme, StringComparison.Ordinal);
+        Assert.Contains("719/719", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("719/719", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,
@@ -277,6 +277,39 @@ public class RoadmapCurrentStateTests
         AssertNoDuplicates(releases.Select(x => x.ReleaseId), "releaseId");
         AssertNoDuplicates(releases.Select(x => x.Version), "version");
         AssertNoDuplicates(releases.Select(x => x.ReleasedAt), "releasedAt");
+    }
+
+    [Fact]
+    public void Release_Seed_Versions_Should_Increase_With_Release_Timestamps()
+    {
+        var root = FindRepositoryRoot();
+        using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            root,
+            "backend",
+            "src",
+            "VpnPlatform.Api",
+            "AppReleases",
+            "releases.json")));
+
+        var releases = releasesJson.RootElement
+            .EnumerateArray()
+            .Select(x => new
+            {
+                ReleaseId = x.GetProperty("releaseId").GetString() ?? string.Empty,
+                Version = Version.Parse(x.GetProperty("version").GetString() ?? "0.0.0"),
+                ReleasedAt = x.GetProperty("releasedAt").GetDateTimeOffset()
+            })
+            .OrderBy(x => x.ReleasedAt)
+            .ToArray();
+
+        for (var i = 1; i < releases.Length; i++)
+        {
+            var previous = releases[i - 1];
+            var current = releases[i];
+            Assert.True(
+                current.Version > previous.Version,
+                $"Release {current.ReleaseId} version {current.Version} must be greater than {previous.ReleaseId} version {previous.Version}.");
+        }
     }
 
     private static void AssertNoDuplicates(IEnumerable<string> values, string propertyName)

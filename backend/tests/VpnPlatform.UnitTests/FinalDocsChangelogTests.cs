@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("718/718", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-release-seed-identity-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("719/719", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-07-02-release-seed-version-order-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "718/718",
-                     "2026-07-02-release-seed-identity-guard",
-                     "0.427.0",
+                     "719/719",
+                     "2026-07-02-release-seed-version-order-guard",
+                     "0.428.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-release-seed-identity-guard",
-                     "0.427.0",
-                     "439/459",
-                     "95.6%",
+                     "2026-07-02-release-seed-version-order-guard",
+                     "0.428.0",
+                     "440/460",
+                     "95.7%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `718/718`",
+                     "Backend full suite: OK, `719/719`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `556` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,10 +154,10 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-07-02-release-seed-identity-guard",
-                     "0.427.0",
-                     "439/459",
-                     "95.6%",
+                     "2026-07-02-release-seed-version-order-guard",
+                     "0.428.0",
+                     "440/460",
+                     "95.7%",
                      "20",
                      "19",
                      "1",
@@ -165,8 +165,8 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite 29/29",
-                     "backend full suite `718/718`",
+                     "targeted docs/release/encoding suite 30/30",
+                     "backend full suite `719/719`",
                      "fresh local SQLite smoke OK",
                      "secret scan `556` files, `0` findings"
                  })
