@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: external evidence open guard
+
+Scope:
+- `RoadmapCurrentStateTests` now checks all external live VPS, admin, VPN, payment, staging and production smoke evidence markers.
+- External evidence items must remain `[ ]` or `[~]` until real VPS/staging/payment/3x-ui proof exists.
+- `P11-ACC-137` records the local acceptance guard while live VPS/staging evidence remains open.
+
+Result:
+- Roadmap progress: `427/447` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-external-evidence-open-guard`, version `0.415.0`.
+- `P11-ACC-137` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `4/4`.
+- Targeted docs/release/encoding suite: OK, `19/19`.
+- Backend full suite: OK, `708/708`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-external-evidence-open-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: agent instructions guard
 
 Scope:

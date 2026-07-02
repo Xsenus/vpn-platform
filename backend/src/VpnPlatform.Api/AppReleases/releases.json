@@ -9822,5 +9822,24 @@
         "text": "`DocumentationEncodingTests` now includes `AGENTS.md` and checks the required agent instruction clauses."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-external-evidence-open-guard",
+    "version": "0.415.0",
+    "releasedAt": "2026-07-02T10:50:00+07:00",
+    "title": "External evidence open guard",
+    "summary": "Roadmap current-state tests now guard every live VPS, VPN and payment evidence item from being closed without real external proof.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies all live VPS, admin, VPN, payment, staging and production smoke evidence markers stay open or in progress until real evidence exists."
+      },
+      {
+        "type": "important",
+        "text": "The project remains a staging-ready baseline and not production-ready until live VPS/staging/payment/3x-ui evidence is provided."
+      }
+    ]
   }
 ]

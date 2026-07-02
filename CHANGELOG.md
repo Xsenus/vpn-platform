@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.415.0 - 2026-07-02
+
+Release entry: `2026-07-02-external-evidence-open-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies every external live VPS, admin, VPN, payment, staging and production smoke evidence marker stays open or in progress until real evidence exists.
+- `P11-ACC-137` documents the external evidence open guard while live VPS/staging/payment/3x-ui proof remains required.
+
+### Notes
+- Roadmap progress is now `427/447` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 4/4; targeted docs/release/encoding suite 19/19; backend full suite `708/708`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.414.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-instructions-guard`.

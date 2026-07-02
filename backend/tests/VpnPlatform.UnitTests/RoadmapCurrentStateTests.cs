@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-agent-instructions-guard";
-    private const string CurrentVersion = "0.414.0";
+    private const string CurrentReleaseId = "2026-07-02-external-evidence-open-guard";
+    private const string CurrentVersion = "0.415.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,7 +18,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-06-14", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("707/707", roadmap, StringComparison.Ordinal);
+        Assert.Contains("708/708", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
         Assert.Contains("66/66", roadmap, StringComparison.Ordinal);
         Assert.Contains("9/9", roadmap, StringComparison.Ordinal);
@@ -40,6 +40,74 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("production-ready", roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("staging-ready baseline", roadmap, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Roadmap_External_Evidence_Items_Should_Remain_Unclosed_Until_Real_Evidence()
+    {
+        var root = FindRepositoryRoot();
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+        var markers = Regex.Matches(
+                roadmap,
+                @"(?m)^- \[(?<status>x| |~|!)\] `(?<id>[^`]+)`")
+            .Cast<Match>()
+            .ToDictionary(
+                x => x.Groups["id"].Value,
+                x => x.Groups["status"].Value,
+                StringComparer.Ordinal);
+
+        var expectedOpenItems = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["STATE-011"] = " ",
+            ["STATE-012"] = " ",
+            ["STATE-013"] = " ",
+            ["P0-ADMIN-001"] = " ",
+            ["P0-ADMIN-002"] = " ",
+            ["P0-VPN-001"] = " ",
+            ["P0-VPN-002"] = " ",
+            ["P0-VPN-003"] = " ",
+            ["P0-VPN-004"] = " ",
+            ["P0-VPN-005"] = " ",
+            ["P0-PAY-002"] = " ",
+            ["P0-PAY-003"] = " ",
+            ["P0-PAY-004"] = " ",
+            ["P0-PAY-005"] = " ",
+            ["P0-PAY-006"] = " ",
+            ["P0-PAY-007"] = " ",
+            ["P0-PAY-008"] = " ",
+            ["P0-PAY-009"] = " ",
+            ["P9-TST-007"] = "~",
+            ["P11-ACC-002"] = " "
+        };
+
+        foreach (var (id, expectedStatus) in expectedOpenItems)
+        {
+            Assert.True(markers.TryGetValue(id, out var actualStatus), $"Roadmap marker {id} must exist.");
+            Assert.Equal(expectedStatus, actualStatus);
+            Assert.DoesNotContain($"[x] `{id}`", roadmap, StringComparison.Ordinal);
+        }
+
+        var headerLine = roadmap
+            .Split('\n')
+            .FirstOrDefault(x => x.Contains("staging-ready baseline", StringComparison.OrdinalIgnoreCase)
+                && x.Contains("P11-ACC-002", StringComparison.OrdinalIgnoreCase));
+
+        Assert.NotNull(headerLine);
+        foreach (var expectedHeaderToken in new[]
+                 {
+                     "STATE-011",
+                     "STATE-012",
+                     "STATE-013",
+                     "P0-ADMIN-001",
+                     "P0-ADMIN-002",
+                     "P0-VPN-*",
+                     "P0-PAY-*",
+                     "P9-TST-007",
+                     "P11-ACC-002"
+                 })
+        {
+            Assert.Contains(expectedHeaderToken, headerLine, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -99,9 +167,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("707/707", readme, StringComparison.Ordinal);
-        Assert.Contains("707/707", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("707/707", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("708/708", readme, StringComparison.Ordinal);
+        Assert.Contains("708/708", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("708/708", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

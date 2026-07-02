@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `707/707`.
+- Backend full suite: `708/708`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -32,7 +32,7 @@ Production-ready решение заблокировано следующими 
 - Frontend audit: OK, `0 vulnerabilities`.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-agent-instructions-guard`, версия `0.414.0`; `AGENTS.md` is readable UTF-8 and covered by tests for required progress, cleanup, testing and local DB instructions. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Latest "Что нового": `2026-07-02-external-evidence-open-guard`, версия `0.415.0`; roadmap current-state tests now keep live VPS, admin, VPN, payment, staging and production smoke evidence items open or in progress until real external proof exists. Production readiness gate и full live VPS/staging evidence все еще требуются.
 
 ## Команды проверки
 
