@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.401.0 - 2026-07-02
+
+Release entry: `2026-07-02-deploy-vps-docker-tmp-cleanup`.
+
+### Fixed
+- `.github/workflows/deploy-vps.yml` now writes the remote Docker compose config check into a per-run `mktemp` directory during `Start Docker production stack`.
+- The remote Docker deploy step removes that temporary compose config artifact with `trap cleanup EXIT` and no longer leaves `/tmp/vpnplatform-compose.yml` on the VPS.
+- `P8-CI-009` documents Docker deploy temp cleanup while real VPS deploy and post-deploy smoke evidence remain open.
+
+### Notes
+- Roadmap progress is now `413/433` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `DeployWorkflowGuardTests`; targeted deploy/docs/release suite; backend full suite `696/696`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.400.0 - 2026-07-02
 
 Release entry: `2026-07-02-docker-validation-tmp-cleanup`.

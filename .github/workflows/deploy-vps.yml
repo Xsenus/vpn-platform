@@ -271,12 +271,18 @@ jobs:
           command -v docker >/dev/null
           docker compose version >/dev/null
 
+          tmp_dir="$(mktemp -d)"
+          cleanup() {
+            rm -rf "$tmp_dir"
+          }
+          trap cleanup EXIT
+
           release_dir="$APP_DIR/releases/$RELEASE_SHA"
           cd "$release_dir"
           tar -xzf release.tar.gz
           cp "$APP_DIR/shared/.env" .env
 
-          docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml config >/tmp/vpnplatform-compose.yml
+          docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml config >"$tmp_dir/vpnplatform-compose.yml"
           docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml up -d --build --remove-orphans
 
           for endpoint in /health/live /health/ready; do

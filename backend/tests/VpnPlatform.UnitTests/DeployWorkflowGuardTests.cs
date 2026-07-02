@@ -107,6 +107,36 @@ public class DeployWorkflowGuardTests
         Assert.Contains("[x] `P8-CI-007`", roadmap, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Docker_Deploy_Workflow_Should_Cleanup_Remote_Tmp_Artifacts()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-vps.yml"));
+        var documentation = File.ReadAllText(Path.Combine(root, "docs", "github-deployment.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "tmp_dir=\"$(mktemp -d)\"",
+                     "cleanup()",
+                     "rm -rf \"$tmp_dir\"",
+                     "trap cleanup EXIT",
+                     ">\"$tmp_dir/vpnplatform-compose.yml\""
+                 })
+        {
+            Assert.Contains(expected, workflow, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.DoesNotContain(">/tmp/vpnplatform-compose.yml", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            workflow.IndexOf("trap cleanup EXIT", StringComparison.OrdinalIgnoreCase)
+            < workflow.IndexOf("docker compose --project-name vpnplatform --env-file .env -f docker-compose.yml config", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains("Start Docker production stack", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("temporary compose config artifact", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P8-CI-009`", roadmap, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

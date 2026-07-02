@@ -9516,5 +9516,28 @@
         "text": "Real staging/VPS smoke evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-deploy-vps-docker-tmp-cleanup",
+    "version": "0.401.0",
+    "releasedAt": "2026-07-02T09:26:00+07:00",
+    "title": "Deploy VPS Docker tmp cleanup",
+    "summary": "Docker deploy workflow now removes its remote temporary compose config artifact after the stack step exits.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`deploy-vps.yml` now writes the remote Docker compose config check into a per-run temp directory and removes it with a trap."
+      },
+      {
+        "type": "fixed",
+        "text": "The Docker deploy step no longer leaves a fixed `/tmp/vpnplatform-compose.yml` artifact on the VPS."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS deploy and post-deploy smoke evidence are still required before closing production readiness blockers."
+      }
+    ]
   }
 ]

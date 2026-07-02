@@ -130,6 +130,8 @@ Workflow перед upload запускает `scripts/normalize-production-env.
 8. После деплоя проверяются `http://127.0.0.1:8080/health/live` и `/health/ready`.
 9. При неудачном systemd health check workflow пытается откатить предыдущие папки `api` и `web`.
 
+`Start Docker production stack` writes the remote Docker compose config check into a per-run temp directory and removes that temporary compose config artifact on exit.
+
 ## Проверка после деплоя
 
 На VPS:

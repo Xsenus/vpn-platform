@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: Deploy VPS Docker tmp cleanup
+
+Scope:
+- `.github/workflows/deploy-vps.yml` removes the remote Docker compose config temp file after the Docker stack step exits.
+- The workflow no longer writes a fixed `/tmp/vpnplatform-compose.yml` artifact on the VPS.
+- `P8-CI-009` is closed; real VPS deploy/post-deploy smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `413/433` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-deploy-vps-docker-tmp-cleanup`, version `0.401.0`.
+- Production readiness still requires real VPS deploy and post-deploy smoke evidence.
+
+Validation:
+- `DeployWorkflowGuardTests`: OK.
+- Targeted deploy/docs/release suite: OK.
+- Backend full suite: OK, `696/696`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-deploy-vps-docker-tmp-cleanup`.
+- Secret scan: OK, `550` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, fixed remote `/tmp/vpnplatform-compose.yml` replaced by a cleaned per-run `mktemp` directory.
+
 ## Check 2026-07-02: Docker validation tmp cleanup
 
 Scope:
