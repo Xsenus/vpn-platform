@@ -10373,5 +10373,24 @@
         "text": "Roadmap progress is 455/475 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-source-version-reporting-guard",
+    "version": "0.444.0",
+    "releasedAt": "2026-07-02T14:03:00+07:00",
+    "title": "Agent source and version reporting guard",
+    "summary": "Agent instruction tests now pin source and date/version reporting for roadmap-derived final status answers.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now verifies that `AGENTS.md` requires final roadmap/status answers to include the source and status date/version when markdown is used."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 456/476 closed, readiness 95.8%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

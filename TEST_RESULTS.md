@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent source/version reporting guard
+
+Scope:
+- `DocumentationEncodingTests` now pins the `AGENTS.md` requirement to cite the source when roadmap or markdown status data is used.
+- The same guard requires status date/version reporting when that metadata exists in the source.
+- `P11-ACC-166` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `456/476` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-source-version-reporting-guard`, version `0.444.0`.
+- `P11-ACC-166` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `DocumentationEncodingTests`: OK, `4/4`.
+- Targeted docs/release/encoding suite: OK, `38/38`.
+- Backend full suite: OK, `727/727`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-source-version-reporting-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+
 ## Check 2026-07-02: What's New progress consistency guard
 
 Scope:

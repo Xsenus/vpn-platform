@@ -1,4 +1,16 @@
 # Changelog
+## 0.444.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-source-version-reporting-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now verifies that `AGENTS.md` requires source and status date/version reporting when roadmap or markdown data is used in final answers.
+- `P11-ACC-166` documents the agent source/version reporting guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `456/476` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Validation includes targeted docs/release/encoding suite 38/38, backend full suite `727/727`, fresh local SQLite smoke OK and secret scan `556` files, `0` findings.
+
 ## 0.443.0 - 2026-07-02
 
 Release entry: `2026-07-02-whats-new-progress-consistency-guard`.

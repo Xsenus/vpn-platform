@@ -73,6 +73,8 @@ public class DocumentationEncodingTests
                      "\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0437\u0430\u0434\u0430\u0447 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C",
                      "\u043F\u0440\u043E\u0446\u0435\u043D\u0442 \u0433\u043E\u0442\u043E\u0432\u043D\u043E\u0441\u0442\u0438",
                      "\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E / \u0432\u0441\u0435\u0433\u043E * 100",
+                     "\u0443\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A",
+                     "\u0434\u0430\u0442\u0443/\u0432\u0435\u0440\u0441\u0438\u044E \u0441\u0442\u0430\u0442\u0443\u0441\u0430",
                      "## Artifact Cleanup",
                      "\u0443\u0431\u0440\u0430\u0442\u044C \u0437\u0430 \u0441\u043E\u0431\u043E\u0439 \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442\u044B",
                      "\u043D\u0435\u0442 \u0441\u0435\u043A\u0440\u0435\u0442\u043E\u0432",
@@ -80,6 +82,23 @@ public class DocumentationEncodingTests
                      "\u043A\u0430\u0436\u0434\u0430\u044F \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u0438\u043B\u0438 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u043D\u0430\u044F \u0444\u0443\u043D\u043A\u0446\u0438\u044F",
                      "\u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0430\u044F \u0411\u0414",
                      "\u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 SQLite-\u0440\u0435\u0436\u0438\u043C"
+                 })
+        {
+            Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Agent_Instructions_Should_Require_Source_And_Date_Version_For_Roadmap_Status()
+    {
+        var root = FindRepositoryRoot();
+        var instructions = File.ReadAllText(Path.Combine(root, "AGENTS.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "\u0434\u0430\u043D\u043D\u044B\u0435 \u0431\u0435\u0440\u0443\u0442\u0441\u044F \u0438\u0437 roadmap",
+                     "\u0443\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A",
+                     "\u0434\u0430\u0442\u0443/\u0432\u0435\u0440\u0441\u0438\u044E \u0441\u0442\u0430\u0442\u0443\u0441\u0430"
                  })
         {
             Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);

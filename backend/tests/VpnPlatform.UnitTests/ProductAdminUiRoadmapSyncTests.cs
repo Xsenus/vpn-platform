@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-06-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `726/726`",
+                     "Backend full suite: `727/727`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-07-02-whats-new-progress-consistency-guard",
-                     "0.443.0"
+                     "2026-07-02-agent-source-version-reporting-guard",
+                     "0.444.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-07-02-whats-new-progress-consistency-guard", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-07-02-whats-new-progress-consistency-guard", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-agent-source-version-reporting-guard", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-07-02-agent-source-version-reporting-guard", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `726/726`",
+                     "Backend full suite: `727/727`",
                      "Frontend unit tests: `66/66`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-07-02-whats-new-progress-consistency-guard",
-                     "0.443.0",
+                     "2026-07-02-agent-source-version-reporting-guard",
+                     "0.444.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
