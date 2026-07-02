@@ -1,4 +1,15 @@
 # Changelog
+## 0.441.0 - 2026-07-02
+
+Release entry: `2026-07-02-all-markdown-utf8-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now includes all tracked markdown files, including delivery and infra notes outside `docs`, in strict UTF-8 and mojibake checks.
+- `P11-ACC-163` documents the all-markdown UTF-8 guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `453/473` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+
 ## 0.440.0 - 2026-07-02
 
 Release entry: `2026-07-02-deploy-frontend-text-utf8-guard`.

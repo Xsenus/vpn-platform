@@ -10316,5 +10316,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-all-markdown-utf8-guard",
+    "version": "0.441.0",
+    "releasedAt": "2026-07-02T13:12:00+07:00",
+    "title": "All markdown UTF-8 guard",
+    "summary": "Documentation encoding tests now include all tracked markdown files, including delivery and infra notes outside docs.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now covers all `.md` files for mojibake and strict UTF-8 without BOM."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

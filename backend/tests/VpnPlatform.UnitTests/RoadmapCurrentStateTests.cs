@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-deploy-frontend-text-utf8-guard";
-    private const string CurrentVersion = "0.440.0";
+    private const string CurrentReleaseId = "2026-07-02-all-markdown-utf8-guard";
+    private const string CurrentVersion = "0.441.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

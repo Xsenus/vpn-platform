@@ -131,6 +131,7 @@ public class DocumentationEncodingTests
             ".mjs",
             ".css",
             ".html",
+            ".md",
             ".json",
             ".csproj",
             ".sln",
