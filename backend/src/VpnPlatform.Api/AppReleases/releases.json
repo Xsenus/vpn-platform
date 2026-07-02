@@ -9608,5 +9608,28 @@
         "text": "Explicit custom workdirs remain available for operator diagnostics; real staging, VPS and live provider smoke evidence remains required before production readiness."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-vps-production-smoke-report-self-link",
+    "version": "0.405.0",
+    "releasedAt": "2026-07-02T10:00:00+07:00",
+    "title": "VPS production smoke report self-link",
+    "summary": "VPS production smoke evidence reports now self-link to the validated JSON path and the validator rejects mismatched report paths.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "The VPS production smoke report template and generator now include `smokeReportPath`."
+      },
+      {
+        "type": "fixed",
+        "text": "`validate-vps-production-smoke-report.ps1` resolves `smokeReportPath` and requires it to match the actual `-ReportPath`."
+      },
+      {
+        "type": "important",
+        "text": "Real staging, VPS and live provider smoke evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

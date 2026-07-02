@@ -119,7 +119,20 @@ catch {
     throw "VPS production smoke report is not valid JSON: $($_.Exception.Message)"
 }
 
-foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "publicWebUrl", "cabinetWebUrl", "adminWebUrl", "startedAt", "completedAt", "releaseId", "operator", "notes")) {
+$fullReportPath = (Resolve-Path -LiteralPath $ReportPath).Path
+
+function Resolve-WorkspacePath {
+    param([string]$Path)
+
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return [System.IO.Path]::GetFullPath($Path)
+    }
+
+    $root = Resolve-RepositoryRoot
+    return [System.IO.Path]::GetFullPath((Join-Path $root $Path))
+}
+
+foreach ($propertyName in @("reportId", "smokeReportPath", "environmentName", "apiBaseUrl", "publicWebUrl", "cabinetWebUrl", "adminWebUrl", "startedAt", "completedAt", "releaseId", "operator", "notes")) {
     if (-not $report.PSObject.Properties.Name.Contains($propertyName)) {
         throw "VPS production smoke report is missing required field: $propertyName"
     }
@@ -127,6 +140,11 @@ foreach ($propertyName in @("reportId", "environmentName", "apiBaseUrl", "public
     if ([string]::IsNullOrWhiteSpace([string]$report.$propertyName)) {
         throw "VPS production smoke report field is empty: $propertyName"
     }
+}
+
+$reportSelfPath = Resolve-WorkspacePath ([string]$report.smokeReportPath)
+if (-not [string]::Equals($reportSelfPath, $fullReportPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "VPS production smoke report smokeReportPath must match ReportPath."
 }
 
 if ($RequireAllPassed) {
@@ -211,6 +229,7 @@ foreach ($entry in $report.steps) {
 
 $summary = [ordered]@{
     reportId = $report.reportId
+    smokeReportPath = $report.smokeReportPath
     environmentName = $report.environmentName
     releaseId = $report.releaseId
     steps = $stepIds.Count

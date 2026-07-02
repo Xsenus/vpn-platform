@@ -151,6 +151,9 @@ public class VpsProductionSmokeTests
         foreach (var expected in new[]
                  {
                      "Assert-ReportHttpUrl",
+                     "smokeReportPath",
+                     "Resolve-WorkspacePath",
+                     "must match ReportPath",
                      "apiBaseUrl",
                      "publicWebUrl",
                      "cabinetWebUrl",
@@ -166,6 +169,32 @@ public class VpsProductionSmokeTests
         {
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    [Fact]
+    public void Vps_Production_Smoke_Report_Should_Self_Link_To_Validated_Report_Path()
+    {
+        var root = FindRepositoryRoot();
+        using var template = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "docs", "vps-production-smoke-report.template.json")));
+        var generator = File.ReadAllText(Path.Combine(root, "scripts", "new-vps-production-smoke-report.ps1"));
+        var validator = File.ReadAllText(Path.Combine(root, "scripts", "validate-vps-production-smoke-report.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-vps-production-smoke-report-self-link-guard.ps1"));
+        var latestReleaseGuard = File.ReadAllText(Path.Combine(root, "scripts", "test-vps-production-smoke-report-latest-release-guard.ps1"));
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "vps-production-smoke.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Equal("tmp/vps-production-smoke-report.json", template.RootElement.GetProperty("smokeReportPath").GetString());
+        Assert.Contains("$report.smokeReportPath = $fullOutputPath", generator, StringComparison.Ordinal);
+        Assert.Contains("\"smokeReportPath\"", validator, StringComparison.Ordinal);
+        Assert.Contains("Resolve-WorkspacePath ([string]$report.smokeReportPath)", validator, StringComparison.Ordinal);
+        Assert.Contains("smokeReportPath must match ReportPath", validator, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("tmp/other-vps-production-smoke-report.json", regression, StringComparison.Ordinal);
+        Assert.Contains("Validator accepted mismatched smokeReportPath", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("vps production smoke report self-link guard valid", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Remove-Item -LiteralPath $reportPath -Force", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$report.smokeReportPath = \"tmp/vps-production-smoke-stale-release-guard.json\"", latestReleaseGuard, StringComparison.Ordinal);
+        Assert.Contains("smokeReportPath", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-130`", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -195,7 +224,7 @@ public class VpsProductionSmokeTests
             Assert.Contains(expected, script, StringComparison.OrdinalIgnoreCase);
         }
 
-        foreach (var field in new[] { "OutputPath", "ApiBaseUrl", "PublicWebUrl", "CabinetWebUrl", "AdminWebUrl", "EnvironmentName", "Operator", "ReleaseId" })
+        foreach (var field in new[] { "OutputPath", "smokeReportPath", "ApiBaseUrl", "PublicWebUrl", "CabinetWebUrl", "AdminWebUrl", "EnvironmentName", "Operator", "ReleaseId" })
         {
             Assert.Contains(field, script, StringComparison.Ordinal);
         }

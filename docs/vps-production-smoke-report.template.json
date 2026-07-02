@@ -1,5 +1,6 @@
 {
   "reportId": "vps-production-smoke-YYYYMMDD-HHMM",
+  "smokeReportPath": "tmp/vps-production-smoke-report.json",
   "environmentName": "staging",
   "apiBaseUrl": "https://api.example.test",
   "publicWebUrl": "https://example.test",

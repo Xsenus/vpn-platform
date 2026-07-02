@@ -342,7 +342,8 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-126", "2026-07-02-vps-production-smoke-generator-release-guard-cleanup"),
         new("P11-ACC-127", "2026-07-02-vps-production-smoke-latest-release-guard-cleanup"),
         new("P11-ACC-128", "2026-07-02-production-readiness-ci-step-summary-cleanup"),
-        new("P11-ACC-129", "2026-07-02-fresh-local-smoke-cleanup")
+        new("P11-ACC-129", "2026-07-02-fresh-local-smoke-cleanup"),
+        new("P11-ACC-130", "2026-07-02-vps-production-smoke-report-self-link")
     ];
 
     [Fact]

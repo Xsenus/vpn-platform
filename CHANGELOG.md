@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.405.0 - 2026-07-02
+
+Release entry: `2026-07-02-vps-production-smoke-report-self-link`.
+
+### Fixed
+- VPS production smoke reports now include `smokeReportPath` in the template and generated report.
+- `validate-vps-production-smoke-report.ps1` resolves `smokeReportPath` and rejects reports whose self-link does not match the actual `-ReportPath`.
+- `P11-ACC-130` documents the standalone VPS production smoke evidence self-link guard while real live VPS smoke remains open.
+
+### Notes
+- Roadmap progress is now `417/437` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `VpsProductionSmokeTests`; targeted docs/release suite; backend full suite `700/700`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `551` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.404.0 - 2026-07-02
 
 Release entry: `2026-07-02-provision-node-wrapper-cleanup`.

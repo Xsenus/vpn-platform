@@ -110,6 +110,7 @@ if (-not [string]::IsNullOrWhiteSpace($ReleaseId)) {
 }
 
 $report.reportId = "vps-production-smoke-" + $now.ToString("yyyyMMdd-HHmmss")
+$report.smokeReportPath = $fullOutputPath
 $report.environmentName = $EnvironmentName.Trim()
 $report.apiBaseUrl = $ApiBaseUrl.TrimEnd("/")
 $report.publicWebUrl = $PublicWebUrl.TrimEnd("/")
