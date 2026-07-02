@@ -10297,5 +10297,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-deploy-frontend-text-utf8-guard",
+    "version": "0.440.0",
+    "releasedAt": "2026-07-02T12:55:00+07:00",
+    "title": "Deploy and frontend text UTF-8 guard",
+    "summary": "Documentation encoding tests now include frontend HTML/CSS, Dockerfiles, nginx config, Ansible inventory/templates and Python helper files.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now covers `.html`, `.css`, `.conf`, `.ini`, `.j2`, `.py` and `Dockerfile*` files for mojibake and strict UTF-8 without BOM."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

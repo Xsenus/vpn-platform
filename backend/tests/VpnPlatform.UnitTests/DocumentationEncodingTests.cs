@@ -129,6 +129,8 @@ public class DocumentationEncodingTests
             ".tsx",
             ".js",
             ".mjs",
+            ".css",
+            ".html",
             ".json",
             ".csproj",
             ".sln",
@@ -136,9 +138,13 @@ public class DocumentationEncodingTests
             ".targets",
             ".http",
             ".config",
+            ".conf",
+            ".ini",
             ".xml",
+            ".j2",
             ".yml",
             ".yaml",
+            ".py",
             ".ps1",
             ".sh"
         };
@@ -156,8 +162,11 @@ public class DocumentationEncodingTests
             .Where(file =>
             {
                 var relativePath = Path.GetRelativePath(root, file);
+                var fileName = Path.GetFileName(file);
                 return (sourceExtensions.Contains(Path.GetExtension(file))
-                       || sourceFileNamesWithoutExtensions.Contains(Path.GetFileName(file)))
+                       || sourceFileNamesWithoutExtensions.Contains(fileName)
+                       || fileName.Equals("Dockerfile", StringComparison.OrdinalIgnoreCase)
+                       || fileName.StartsWith("Dockerfile.", StringComparison.OrdinalIgnoreCase))
                        && !relativePath.StartsWith($".git{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.StartsWith($".serena{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)

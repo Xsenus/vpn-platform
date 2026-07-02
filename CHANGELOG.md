@@ -1,4 +1,15 @@
 # Changelog
+## 0.440.0 - 2026-07-02
+
+Release entry: `2026-07-02-deploy-frontend-text-utf8-guard`.
+
+### Fixed
+- `DocumentationEncodingTests` now includes frontend HTML/CSS, Dockerfiles, nginx config, Ansible inventory/templates and Python helper files in strict UTF-8 and mojibake checks.
+- `P11-ACC-162` documents the deploy/frontend text UTF-8 guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `452/472` closed, readiness `95.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+
 ## 0.439.0 - 2026-07-02
 
 Release entry: `2026-07-02-env-example-utf8-guard`.
