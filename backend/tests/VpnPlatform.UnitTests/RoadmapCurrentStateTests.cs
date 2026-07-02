@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-status-docs-production-ready-claim-guard";
-    private const string CurrentVersion = "0.431.0";
+    private const string CurrentReleaseId = "2026-07-02-latest-release-evidence-caveat-guard";
+    private const string CurrentVersion = "0.432.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,10 +18,10 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-06-14", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("722/722", roadmap, StringComparison.Ordinal);
+        Assert.Contains("723/723", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
         Assert.Contains("66/66", roadmap, StringComparison.Ordinal);
-        Assert.Contains("10/10", roadmap, StringComparison.Ordinal);
+        Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(CurrentVersion, roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-014`", roadmap, StringComparison.Ordinal);
@@ -183,9 +183,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("722/722", readme, StringComparison.Ordinal);
-        Assert.Contains("722/722", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("722/722", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("723/723", readme, StringComparison.Ordinal);
+        Assert.Contains("723/723", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("723/723", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,
@@ -209,6 +209,40 @@ public class RoadmapCurrentStateTests
         Assert.Equal(CurrentReleaseId, latest.GetProperty("releaseId").GetString());
         Assert.Contains("STATE-014", testResults, StringComparison.Ordinal);
         Assert.Contains("STATE-014", File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md")), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Latest_Active_Release_Should_Include_Production_Evidence_Caveat()
+    {
+        var root = FindRepositoryRoot();
+        using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            root,
+            "backend",
+            "src",
+            "VpnPlatform.Api",
+            "AppReleases",
+            "releases.json")));
+
+        var latest = releasesJson.RootElement
+            .EnumerateArray()
+            .Where(x => x.GetProperty("isActive").GetBoolean())
+            .OrderByDescending(x => x.GetProperty("releasedAt").GetDateTimeOffset())
+            .First();
+
+        Assert.Equal(CurrentReleaseId, latest.GetProperty("releaseId").GetString());
+        Assert.Equal(CurrentVersion, latest.GetProperty("version").GetString());
+
+        var importantItems = latest
+            .GetProperty("items")
+            .EnumerateArray()
+            .Where(x => string.Equals(x.GetProperty("type").GetString(), "important", StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.GetProperty("text").GetString() ?? string.Empty)
+            .ToArray();
+
+        Assert.NotEmpty(importantItems);
+        Assert.Contains(importantItems, text =>
+            text.Contains("Real VPS/staging/payment/3x-ui evidence", StringComparison.OrdinalIgnoreCase)
+            && text.Contains("still required", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

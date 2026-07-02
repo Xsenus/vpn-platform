@@ -10145,5 +10145,24 @@
         "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-latest-release-evidence-caveat-guard",
+    "version": "0.432.0",
+    "releasedAt": "2026-07-02T11:07:00+07:00",
+    "title": "Latest release evidence caveat guard",
+    "summary": "Roadmap tests now guard the latest release note against missing external evidence caveats.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now verifies that the latest active release note contains an `important` caveat about required external evidence."
+      },
+      {
+        "type": "important",
+        "text": "Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

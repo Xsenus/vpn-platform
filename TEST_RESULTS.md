@@ -2,6 +2,29 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: latest release evidence caveat guard
+
+Scope:
+- `RoadmapCurrentStateTests` now verifies that the latest active What's New release includes an `important` external evidence caveat.
+- The release seed must not let the newest visible release omit the real VPS/staging/payment/3x-ui evidence requirement while production blockers remain open.
+- `P11-ACC-154` records the local acceptance guard while external evidence remains open.
+
+Result:
+- Roadmap progress: `444/464` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-latest-release-evidence-caveat-guard`, version `0.432.0`.
+- `P11-ACC-154` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `11/11`.
+- Targeted docs/release/encoding suite: OK, `34/34`.
+- Backend full suite: OK, `723/723`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-latest-release-evidence-caveat-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
 ## Check 2026-07-02: status docs production-ready claim guard
 
 Scope:

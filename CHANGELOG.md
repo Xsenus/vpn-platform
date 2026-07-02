@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.432.0 - 2026-07-02
+
+Release entry: `2026-07-02-latest-release-evidence-caveat-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies that the latest active release note contains an `important` caveat about required external evidence.
+- `P11-ACC-154` documents the latest release evidence caveat guard while production proof remains required.
+
+### Notes
+- Roadmap progress is now `444/464` closed, readiness `95.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 11/11; targeted docs/release/encoding suite 34/34; backend full suite `723/723`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
 ## 0.431.0 - 2026-07-02
 
 Release entry: `2026-07-02-status-docs-production-ready-claim-guard`.
