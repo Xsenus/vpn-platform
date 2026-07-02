@@ -9803,5 +9803,24 @@
         "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-agent-instructions-guard",
+    "version": "0.414.0",
+    "releasedAt": "2026-07-02T10:49:00+07:00",
+    "title": "Agent instructions guard",
+    "summary": "Agent instructions are now stored as clean UTF-8 and covered by tests for progress reporting, cleanup and local DB checks.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`AGENTS.md` is normalized to readable UTF-8 Russian text with required roadmap progress, artifact cleanup and testing rules."
+      },
+      {
+        "type": "fixed",
+        "text": "`DocumentationEncodingTests` now includes `AGENTS.md` and checks the required agent instruction clauses."
+      }
+    ]
   }
 ]

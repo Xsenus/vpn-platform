@@ -349,6 +349,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-133", "2026-07-02-roadmap-progress-counter-guard"),
         new("P11-ACC-134", "2026-07-02-roadmap-progress-percent-guard"),
         new("P11-ACC-135", "2026-07-02-roadmap-progress-remaining-guard"),
+        new("P11-ACC-136", "2026-07-02-agent-instructions-guard"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")

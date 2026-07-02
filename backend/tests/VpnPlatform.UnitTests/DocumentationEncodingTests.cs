@@ -11,6 +11,7 @@ public class DocumentationEncodingTests
         var markdownFiles = Directory
             .EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
             .Concat([
+                Path.Combine(root, "AGENTS.md"),
                 Path.Combine(root, "README.md"),
                 Path.Combine(root, "TEST_RESULTS.md")
             ])
@@ -47,6 +48,32 @@ public class DocumentationEncodingTests
                         $"Mojibake marker {Describe(marker)} found in {Path.GetRelativePath(root, file)}:{index + 1}.");
                 }
             }
+        }
+    }
+
+    [Fact]
+    public void Agent_Instructions_Should_Cover_Progress_Cleanup_Testing_And_Local_Db()
+    {
+        var root = FindRepositoryRoot();
+        var instructions = File.ReadAllText(Path.Combine(root, "AGENTS.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "## Roadmap And Progress Reporting",
+                     "сколько задач выполнено",
+                     "сколько задач осталось",
+                     "процент готовности",
+                     "выполнено / всего * 100",
+                     "## Artifact Cleanup",
+                     "убрать за собой временные артефакты",
+                     "нет секретов",
+                     "## Testing Requirements",
+                     "каждая добавленная или измененная функция",
+                     "локальная БД",
+                     "локальный SQLite-режим"
+                 })
+        {
+            Assert.Contains(expected, instructions, StringComparison.OrdinalIgnoreCase);
         }
     }
 

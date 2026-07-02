@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.414.0 - 2026-07-02
+
+Release entry: `2026-07-02-agent-instructions-guard`.
+
+### Fixed
+- `AGENTS.md` is normalized to readable UTF-8 Russian text.
+- `DocumentationEncodingTests` now covers `AGENTS.md` and required progress, cleanup, testing and local DB instructions.
+- `P11-ACC-136` documents the agent instructions guard while real VPS/staging/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `426/446` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 3/3; targeted docs/release/encoding suite 18/18; backend full suite `707/707`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.413.0 - 2026-07-02
 
 Release entry: `2026-07-02-roadmap-progress-remaining-guard`.

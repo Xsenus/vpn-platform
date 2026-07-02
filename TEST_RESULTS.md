@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: agent instructions guard
+
+Scope:
+- `AGENTS.md` is normalized to readable UTF-8 Russian text.
+- `DocumentationEncodingTests` now includes `AGENTS.md` and checks required progress, cleanup, testing and local DB instructions.
+- `P11-ACC-136` records the local acceptance guard while live VPS/staging evidence remains open.
+
+Result:
+- Roadmap progress: `426/446` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-agent-instructions-guard`, version `0.414.0`.
+- `P11-ACC-136` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `3/3`.
+- Targeted docs/release/encoding suite: OK, `18/18`.
+- Backend full suite: OK, `707/707`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-agent-instructions-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: roadmap progress remaining guard
 
 Scope:
