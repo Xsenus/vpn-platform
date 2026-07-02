@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-roadmap-progress-percent-guard";
-    private const string CurrentVersion = "0.412.0";
+    private const string CurrentReleaseId = "2026-07-02-roadmap-progress-remaining-guard";
+    private const string CurrentVersion = "0.413.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -43,7 +43,7 @@ public class RoadmapCurrentStateTests
     }
 
     [Fact]
-    public void Roadmap_Header_Progress_Should_Match_Checklist_Markers_And_Percent()
+    public void Roadmap_Header_Progress_Should_Match_Checklist_Markers_Percent_And_Remaining()
     {
         var root = FindRepositoryRoot();
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
@@ -65,14 +65,17 @@ public class RoadmapCurrentStateTests
                 && x.Contains("P11-ACC-002", StringComparison.OrdinalIgnoreCase));
         var headerMatch = Regex.Match(
             headerLine ?? string.Empty,
-            @"`(?<done>\d+)/(?<total>\d+)`.*?`(?<percent>\d+\.\d)%`.*?`(?<open>\d+)`.*?`(?<inProgress>\d+)`.*?\[!\]");
+            @"`(?<done>\d+)/(?<total>\d+)`.*?`(?<percent>\d+\.\d)%`.*?`(?<remaining>\d+)`.*?`(?<open>\d+)`.*?`(?<inProgress>\d+)`.*?\[!\]");
 
-        Assert.True(headerMatch.Success, "Roadmap header must include completed, total, percent, open, in-progress and blocked counts.");
+        Assert.True(headerMatch.Success, "Roadmap header must include completed, total, percent, remaining, open, in-progress and blocked counts.");
         Assert.Equal(done, int.Parse(headerMatch.Groups["done"].Value));
         Assert.Equal(total, int.Parse(headerMatch.Groups["total"].Value));
         var actualPercent = decimal.Parse(headerMatch.Groups["percent"].Value, CultureInfo.InvariantCulture);
         var expectedPercent = Math.Round(done * 100m / total, 1, MidpointRounding.AwayFromZero);
         Assert.Equal(expectedPercent, actualPercent);
+        var remaining = int.Parse(headerMatch.Groups["remaining"].Value);
+        Assert.Equal(total - done, remaining);
+        Assert.Equal(open + inProgress + blocked, remaining);
         Assert.Equal(open, int.Parse(headerMatch.Groups["open"].Value));
         Assert.Equal(inProgress, int.Parse(headerMatch.Groups["inProgress"].Value));
         Assert.Equal(0, blocked);

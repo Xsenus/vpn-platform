@@ -9784,5 +9784,24 @@
         "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-roadmap-progress-remaining-guard",
+    "version": "0.413.0",
+    "releasedAt": "2026-07-02T10:48:00+07:00",
+    "title": "Roadmap progress remaining guard",
+    "summary": "Roadmap current-state tests now verify the explicit remaining task count in the header.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`RoadmapCurrentStateTests` now checks that the roadmap remaining count equals `total - completed` and open plus in-progress plus blocked markers."
+      },
+      {
+        "type": "important",
+        "text": "Real live VPS, payment and 3x-ui evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

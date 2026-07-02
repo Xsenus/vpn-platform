@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.413.0 - 2026-07-02
+
+Release entry: `2026-07-02-roadmap-progress-remaining-guard`.
+
+### Fixed
+- `RoadmapCurrentStateTests` now verifies the explicit remaining task count in the roadmap header.
+- `P11-ACC-135` documents the roadmap remaining count guard while real VPS/staging/live evidence remains open.
+
+### Notes
+- Roadmap progress is now `425/445` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `RoadmapCurrentStateTests` 3/3; targeted docs/release suite 17/17; backend full suite `706/706`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `556` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.412.0 - 2026-07-02
 
 Release entry: `2026-07-02-roadmap-progress-percent-guard`.

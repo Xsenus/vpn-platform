@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: roadmap progress remaining guard
+
+Scope:
+- `RoadmapCurrentStateTests` now checks the explicit remaining task count in the roadmap header.
+- The remaining count must equal `total - completed` and `open + in-progress + blocked`.
+- `P11-ACC-135` records the local acceptance guard while live VPS/staging evidence remains open.
+
+Result:
+- Roadmap progress: `425/445` closed, readiness `95.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-roadmap-progress-remaining-guard`, version `0.413.0`.
+- `P11-ACC-135` is closed; real VPS/staging/live evidence remains open until external evidence exists.
+
+Validation:
+- `RoadmapCurrentStateTests`: OK, `3/3`.
+- Targeted docs/release suite: OK, `17/17`.
+- Backend full suite: OK, `706/706`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-roadmap-progress-remaining-guard`.
+- Secret scan: OK, `556` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, local `tmp` and frontend `dist` are absent after checks.
+
 ## Check 2026-07-02: roadmap progress percent guard
 
 Scope:
