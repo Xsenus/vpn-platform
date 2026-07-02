@@ -7,6 +7,11 @@ BOT_BASE_URL="${BOT_BASE_URL:-http://localhost:8081}"
 KEEP_STACK="${KEEP_STACK:-0}"
 BUILD_SERVICES=(backend-api telegram-bot public-web cabinet admin-panel)
 SMOKE_SERVICES=(postgres redis rabbitmq backend-api telegram-bot)
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/vpnplatform-validate-docker.XXXXXX")"
+CURL_OUTPUT_FILE="$TMP_DIR/curl-output.txt"
+CURL_ERROR_FILE="$TMP_DIR/curl-error.txt"
+COMPOSE_CONFIG_FILE="$TMP_DIR/compose-config.yml"
+RUNTIME_LOG_FILE="$TMP_DIR/runtime-logs.txt"
 
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -46,15 +51,15 @@ wait_url() {
 
   echo "[wait] $name $url"
   for ((i = 1; i <= attempts; i++)); do
-    if curl -fsS "$url" >/tmp/vpnplatform-curl-output.txt 2>/tmp/vpnplatform-curl-error.txt; then
-      cat /tmp/vpnplatform-curl-output.txt
+    if curl -fsS "$url" >"$CURL_OUTPUT_FILE" 2>"$CURL_ERROR_FILE"; then
+      cat "$CURL_OUTPUT_FILE"
       echo
       return 0
     fi
     if (( i == attempts )); then
       echo "[FAIL] $name did not become healthy after $attempts attempts: $url" >&2
       echo "[last curl stderr]" >&2
-      cat /tmp/vpnplatform-curl-error.txt >&2 || true
+      cat "$CURL_ERROR_FILE" >&2 || true
       echo "[compose ps]" >&2
       compose ps >&2 || true
       echo "[recent logs]" >&2
@@ -70,7 +75,13 @@ cleanup() {
     echo "[cleanup] docker compose down"
     compose down --remove-orphans >/dev/null 2>&1 || true
   fi
+
+  if [[ -n "${TMP_DIR:-}" && -d "$TMP_DIR" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
 }
+
+trap cleanup EXIT
 
 cd "$ROOT_DIR"
 ./scripts/check-validation-safety.sh
@@ -112,8 +123,6 @@ export Payments__Prodamus__Mode="Disabled"
 export Payments__Stripe__Mode="Disabled"
 export Payments__PayPal__Mode="Disabled"
 
-trap cleanup EXIT
-
 echo "[1/10] Docker environment"
 run docker --version
 run_compose version
@@ -128,8 +137,8 @@ echo "  X3UI_PASSWORD=$(redacted_state "$X3UI_PASSWORD")"
 echo "  payment providers: Disabled"
 
 echo "[2/10] Docker compose config"
-run_compose config >/tmp/vpnplatform-compose-config.yml
-wc -l /tmp/vpnplatform-compose-config.yml
+run_compose config >"$COMPOSE_CONFIG_FILE"
+wc -l "$COMPOSE_CONFIG_FILE"
 
 echo "[3/10] Docker compose build ${BUILD_SERVICES[*]}"
 run_compose build "${BUILD_SERVICES[@]}"
@@ -155,13 +164,13 @@ run_compose exec -T redis redis-cli ping
 run_compose exec -T rabbitmq rabbitmq-diagnostics -q ping
 
 echo "[9/10] Runtime logs"
-run_compose logs --tail=250 backend-api telegram-bot > /tmp/vpnplatform-runtime-logs.txt
-cat /tmp/vpnplatform-runtime-logs.txt
+run_compose logs --tail=250 backend-api telegram-bot > "$RUNTIME_LOG_FILE"
+cat "$RUNTIME_LOG_FILE"
 
 echo "[10/10] Fatal log scan"
-if grep -Eiq "fatal|unhandled exception|application startup exception|host terminated unexpectedly" /tmp/vpnplatform-runtime-logs.txt; then
+if grep -Eiq "fatal|unhandled exception|application startup exception|host terminated unexpectedly" "$RUNTIME_LOG_FILE"; then
   echo "[FAIL] fatal-looking runtime log entries detected:" >&2
-  grep -Ein "fatal|unhandled exception|application startup exception|host terminated unexpectedly" /tmp/vpnplatform-runtime-logs.txt >&2
+  grep -Ein "fatal|unhandled exception|application startup exception|host terminated unexpectedly" "$RUNTIME_LOG_FILE" >&2
   exit 1
 fi
 

@@ -125,6 +125,8 @@ docker compose exec -T rabbitmq rabbitmq-diagnostics -q ping
 docker compose logs --tail=250 backend-api telegram-bot
 ```
 
+`scripts/validate-docker.sh` stores temporary curl/config/log artifacts in a per-run `mktemp` directory and removes those temporary curl/config/log artifacts on exit. `KEEP_STACK=1` keeps the Docker stack running for manual inspection, but it still removes the temporary files created only by the validation script.
+
 Expected result:
 
 - Compose config is valid;

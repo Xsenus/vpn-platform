@@ -432,6 +432,47 @@ public class SandboxE2EScenariosMvpTests
         Assert.Contains("check-validation-safety.sh", checkEfDrift, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Docker_Validation_Gate_Should_Cleanup_Temporary_Artifacts()
+    {
+        var root = FindRepositoryRoot();
+        var validateDocker = File.ReadAllText(Path.Combine(root, "scripts", "validate-docker.sh"));
+        var runbook = File.ReadAllText(Path.Combine(root, "docs", "STAGING_VALIDATION_RUNBOOK.md"));
+
+        foreach (var expected in new[]
+                 {
+                     "TMP_DIR=\"$(mktemp -d",
+                     "CURL_OUTPUT_FILE=\"$TMP_DIR/curl-output.txt\"",
+                     "COMPOSE_CONFIG_FILE=\"$TMP_DIR/compose-config.yml\"",
+                     "RUNTIME_LOG_FILE=\"$TMP_DIR/runtime-logs.txt\"",
+                     "rm -rf \"$TMP_DIR\"",
+                     "trap cleanup EXIT"
+                 })
+        {
+            Assert.Contains(expected, validateDocker, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var forbidden in new[]
+                 {
+                     ">/tmp/vpnplatform-curl-output.txt",
+                     "2>/tmp/vpnplatform-curl-error.txt",
+                     ">/tmp/vpnplatform-compose-config.yml",
+                     ">/tmp/vpnplatform-runtime-logs.txt"
+                 })
+        {
+            Assert.DoesNotContain(forbidden, validateDocker, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("validate-docker.sh", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("temporary curl/config/log artifacts", runbook, StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            validateDocker.IndexOf("trap cleanup EXIT", StringComparison.OrdinalIgnoreCase)
+            < validateDocker.IndexOf("./scripts/check-validation-safety.sh", StringComparison.OrdinalIgnoreCase));
+        Assert.True(
+            validateDocker.IndexOf("trap cleanup EXIT", StringComparison.OrdinalIgnoreCase)
+            < validateDocker.IndexOf("require docker", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static IReadOnlyDictionary<string, string> EmptyHeaders() => new Dictionary<string, string>();
 
     private static string SandboxWebhook(string paymentId, string eventId, decimal amount, string currency, Guid orderId, string shopId)

@@ -2,6 +2,33 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-07-02: Docker validation tmp cleanup
+
+Scope:
+- `scripts/validate-docker.sh` removes per-run curl/config/log temp files after ordinary local runs.
+- `KEEP_STACK=1` can keep the compose stack for manual inspection without preserving validation-only temp files.
+- `P8-CI-008` is closed; real staging/VPS smoke remains open until external evidence exists.
+
+Result:
+- Roadmap progress: `412/432` closed, `19` open, `1` in progress, `0` blockers.
+- What's New received release `2026-07-02-docker-validation-tmp-cleanup`, version `0.400.0`.
+- Production readiness still requires real staging/VPS smoke evidence.
+
+Validation:
+- `SandboxE2EScenariosMvpTests`: OK.
+- Docker validation shell syntax: OK, `bash -n scripts/validate-docker.sh`.
+- Docker validation early missing-Docker cleanup: OK.
+- Full Docker validation runtime: blocked by local Docker Desktop Linux engine not running (`dockerDesktopLinuxEngine` pipe unavailable); temp directory cleanup after this failure: OK.
+- Targeted docker/docs/release suite: OK.
+- Backend full suite: OK, `695/695`.
+- Frontend tests: OK, `66/66`.
+- Frontend typecheck/build: OK.
+- Frontend audit: OK, `0 vulnerabilities`.
+- Local SQLite smoke: OK, latest release `2026-07-02-docker-validation-tmp-cleanup`.
+- Secret scan: OK, `550` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK, fixed `/tmp/vpnplatform-*` files replaced by a cleaned per-run `mktemp` directory.
+
 ## Check 2026-07-02: Production env normalizer cleanup
 
 Scope:

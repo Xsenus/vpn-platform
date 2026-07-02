@@ -9493,5 +9493,28 @@
         "text": "`STATE-013`, `P0-ADMIN-001` and `P0-ADMIN-002` remain open until real VPS admin smoke evidence is captured."
       }
     ]
+  },
+  {
+    "releaseId": "2026-07-02-docker-validation-tmp-cleanup",
+    "version": "0.400.0",
+    "releasedAt": "2026-07-02T09:14:00+07:00",
+    "title": "Docker validation tmp cleanup",
+    "summary": "Docker validation gate now removes per-run curl/config/log temporary files after ordinary local runs.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "`validate-docker.sh` now writes curl output, compose config and runtime logs into a unique per-run temp directory and removes it on exit."
+      },
+      {
+        "type": "fixed",
+        "text": "`KEEP_STACK=1` still keeps the Docker stack for manual inspection, while temporary validation-only files are cleaned up."
+      },
+      {
+        "type": "important",
+        "text": "Real staging/VPS smoke evidence remains required before closing production readiness blockers."
+      }
+    ]
   }
 ]

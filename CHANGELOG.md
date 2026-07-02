@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.400.0 - 2026-07-02
+
+Release entry: `2026-07-02-docker-validation-tmp-cleanup`.
+
+### Fixed
+- `scripts/validate-docker.sh` now stores curl output, compose config and runtime logs in a unique per-run temp directory instead of fixed `/tmp/vpnplatform-*` files.
+- The Docker validation gate removes its temp directory on exit even when `KEEP_STACK=1` keeps the compose stack for manual inspection.
+- `P8-CI-008` documents Docker validation temp cleanup while real staging/VPS evidence remains open.
+
+### Notes
+- Roadmap progress is now `412/432` closed, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+- Verification: `SandboxE2EScenariosMvpTests`; `bash -n scripts/validate-docker.sh`; early missing-Docker cleanup regression; targeted docker/docs/release suite; backend full suite `695/695`; frontend tests `66/66`; frontend typecheck/build/audit OK; fresh local SQLite smoke OK; secret scan `550` files, `0` findings; markdown/code encoding check OK.
+
 ## 0.399.0 - 2026-07-02
 
 Release entry: `2026-07-02-production-env-normalizer-cleanup`.
