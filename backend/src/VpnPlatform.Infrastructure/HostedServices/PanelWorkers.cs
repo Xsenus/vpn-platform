@@ -161,7 +161,7 @@ public class PanelSyncWorker : BackgroundService
                 }
 
                 var service = panelScope.ServiceProvider.GetRequiredService<X3UiPanelService>();
-                var result = await service.SyncPanelAsync(panel.Id, cancellationToken);
+                var result = await service.SyncPanelIfCurrentAsync(panel.Id, panel.LastSyncAt, cancellationToken);
                 if (!result.IsSuccess)
                 {
                     _logger.LogWarning("Panel {PanelId} sync failed: {Error}", panel.Id, result.Error);

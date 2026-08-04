@@ -127,7 +127,87 @@ public static class LocalSqliteSchemaRepair
             }
         }
 
+        if (await TableExistsAsync(db, "PanelSyncRuns", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "PanelSyncRuns", "IX_PanelSyncRuns_Running_VpnPanelId", cancellationToken))
+        {
+            await RedactLegacyPanelErrorsAsync(db, cancellationToken);
+            await BackfillDuplicateRunningPanelSyncRunsAsync(db, cancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                """DROP INDEX IF EXISTS "IX_PanelSyncRuns_Running_VpnPanelId";""",
+                cancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                """CREATE UNIQUE INDEX "IX_PanelSyncRuns_Running_VpnPanelId" ON "PanelSyncRuns" ("VpnPanelId") WHERE "Status" = 1;""",
+                cancellationToken);
+            repaired++;
+        }
+
         return repaired;
+    }
+
+    private static async Task BackfillDuplicateRunningPanelSyncRunsAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TEMP TABLE "__DuplicateRunningPanelSyncRuns" AS
+            SELECT "Id" FROM (
+                SELECT
+                    "Id",
+                    row_number() OVER (
+                        PARTITION BY "VpnPanelId"
+                        ORDER BY "StartedAt", "CreatedAt", "Id") AS running_rank
+                FROM "PanelSyncRuns"
+                WHERE "Status" = 1
+            ) AS ranked
+            WHERE running_rank > 1;
+
+            UPDATE "PanelSyncRuns"
+            SET
+                "Status" = 3,
+                "FinishedAt" = CURRENT_TIMESTAMP,
+                "ErrorMessage" = 'Duplicate running panel sync quarantined during local schema repair.',
+                "UpdatedAt" = CURRENT_TIMESTAMP
+            WHERE "Id" IN (SELECT "Id" FROM "__DuplicateRunningPanelSyncRuns");
+
+            DROP TABLE "__DuplicateRunningPanelSyncRuns";
+            """,
+            cancellationToken);
+    }
+
+    private static async Task RedactLegacyPanelErrorsAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE "PanelSyncRuns"
+            SET "ErrorMessage" = 'Historical panel sync error redacted during local schema repair.'
+            WHERE "ErrorMessage" <> '';
+            """,
+            cancellationToken);
+
+        if (await TableExistsAsync(db, "VpnPanels", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "VpnPanels"
+                SET "LastError" = 'Historical panel error redacted during local schema repair.'
+                WHERE "LastError" <> '';
+                """,
+                cancellationToken);
+        }
+
+        if (await TableExistsAsync(db, "PanelHealthChecks", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "PanelHealthChecks"
+                SET "ErrorMessage" = 'Historical panel health error redacted during local schema repair.'
+                WHERE "ErrorMessage" <> '';
+                """,
+                cancellationToken);
+        }
     }
 
     private static async Task BackfillDuplicateActiveProvisioningRunsAsync(

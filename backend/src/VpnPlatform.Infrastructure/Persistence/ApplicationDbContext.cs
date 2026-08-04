@@ -111,6 +111,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<VpnClient>().HasIndex(x => new { x.VpnPanelId, x.VpnInboundId, x.Uuid }).IsUnique();
         modelBuilder.Entity<VpnClient>().HasIndex(x => new { x.VpnPanelId, x.ExternalClientId }).IsUnique();
         modelBuilder.Entity<PanelSyncRun>().HasIndex(x => new { x.VpnPanelId, x.StartedAt });
+        modelBuilder.Entity<PanelSyncRun>()
+            .HasIndex(x => x.VpnPanelId)
+            .HasDatabaseName("IX_PanelSyncRuns_Running_VpnPanelId")
+            .HasFilter("\"Status\" = 1")
+            .IsUnique();
         modelBuilder.Entity<PanelSyncEvent>().HasIndex(x => new { x.PanelSyncRunId, x.EventType });
         modelBuilder.Entity<PanelHealthCheck>().HasIndex(x => new { x.VpnPanelId, x.CheckedAt });
         modelBuilder.Entity<AccessCredentialHistory>().HasIndex(x => new { x.AccessCredentialId, x.CreatedAt });

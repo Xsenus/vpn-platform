@@ -11051,5 +11051,28 @@
         "text": "Lifecycle, order expiry, panel health и panel sync изолируют ошибки отдельных записей. Roadmap progress is 485/505 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Live email and real VPS/staging/payment/3x-ui evidence are still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-panel-sync-recovery",
+    "version": "0.474.0",
+    "releasedAt": "2026-08-04T22:18:00+07:00",
+    "title": "Синхронизация 3x-ui защищена от двойного запуска",
+    "summary": "Panel sync получил межинстансный claim, stale recovery и безопасную health/sync диагностику.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Для одной панели может выполняться только один Running sync; зависший запуск закрывается по lease, а устаревший worker snapshot не повторяет уже завершенную синхронизацию."
+      },
+      {
+        "type": "fixed",
+        "text": "Ошибки panel secret и preflight сохраняют Unhealthy history и audit только в redacted виде; потенциально чувствительные legacy errors очищаются при upgrade."
+      },
+      {
+        "type": "important",
+        "text": "Админка показывает время health-check и фактическую ошибку failed sync. Roadmap progress is 486/506 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

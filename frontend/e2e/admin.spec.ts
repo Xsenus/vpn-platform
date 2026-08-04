@@ -154,7 +154,7 @@ function vpnPanel(overrides: Record<string, unknown> = {}) {
     lastHealthCheckAt: now,
     lastSyncAt: now,
     version: '2.4.8',
-    lastError: '',
+    lastError: 'Panel sync lease expired before completion.',
     createdAt: now,
     updatedAt: now,
     ...overrides
@@ -438,7 +438,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/sync-runs') {
-      await fulfillJson(route, [{ id: 'panel-sync-e2e', vpnPanelId: 'panel-eu', status: 'Succeeded', startedAt: now, finishedAt: now, summaryJson: '{"clients":1}', errorMessage: '' }])
+      await fulfillJson(route, [{ id: 'panel-sync-e2e', vpnPanelId: 'panel-eu', status: 'Failed', startedAt: now, finishedAt: now, summaryJson: '{}', errorMessage: 'Remote panel sync failed.' }])
       return
     }
 
@@ -526,6 +526,8 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await openAdminSection(page, '3x-ui панели', 'panels')
   await expect(page.locator('#panels strong').filter({ hasText: 'EU 3x-ui Sandbox' })).toBeVisible()
   await expect(page.locator('#panels strong').filter({ hasText: 'client@example.test' })).toBeVisible()
+  await expect(page.getByText('Последняя ошибка: Panel sync lease expired before completion.')).toBeVisible()
+  await expect(page.getByText('Remote panel sync failed.')).toBeVisible()
   await page.locator('#panels').getByRole('button', { name: 'Проверить' }).click()
   await expect(page.getByText('Проверка панели: Healthy (2.4.9)')).toBeVisible()
   await page.locator('#panels').getByRole('button', { name: 'Синхронизировать' }).first().click()

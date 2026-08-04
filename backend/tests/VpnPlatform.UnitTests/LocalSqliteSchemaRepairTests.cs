@@ -245,6 +245,58 @@ public class LocalSqliteSchemaRepairTests
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
     }
 
+    [Fact]
+    public async Task ApplyAsync_Should_Quarantine_Duplicate_Running_Panel_Sync_And_Create_Unique_Index()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "PanelSyncRuns" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "VpnPanelId" TEXT NOT NULL,
+                "Status" INTEGER NOT NULL,
+                "StartedAt" TEXT NOT NULL,
+                "FinishedAt" TEXT NULL,
+                "SummaryJson" TEXT NOT NULL,
+                "ErrorMessage" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
+            );
+            """);
+        var panelId = Guid.NewGuid();
+        var firstId = Guid.NewGuid();
+        var duplicateId = Guid.NewGuid();
+        var historicalFailureId = Guid.NewGuid();
+        var startedAt = new DateTimeOffset(2026, 8, 4, 12, 0, 0, TimeSpan.Zero);
+        var summaryJson = "{}";
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "PanelSyncRuns"
+                ("Id", "VpnPanelId", "Status", "StartedAt", "FinishedAt", "SummaryJson", "ErrorMessage", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({firstId}, {panelId}, 1, {startedAt}, NULL, {summaryJson}, '', {startedAt}, {startedAt}),
+                ({duplicateId}, {panelId}, 1, {startedAt.AddMinutes(1)}, NULL, {summaryJson}, '', {startedAt.AddMinutes(1)}, {startedAt.AddMinutes(1)}),
+                ({historicalFailureId}, {panelId}, 3, {startedAt.AddMinutes(2)}, {startedAt.AddMinutes(2)}, {summaryJson}, 'password=legacy-secret', {startedAt.AddMinutes(2)}, {startedAt.AddMinutes(2)});
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(1, repaired);
+        Assert.True(await IndexIsUniqueAsync(connection, "PanelSyncRuns", "IX_PanelSyncRuns_Running_VpnPanelId"));
+        var runs = (await db.PanelSyncRuns.AsNoTracking().ToListAsync()).OrderBy(x => x.StartedAt).ToList();
+        Assert.Equal(PanelSyncRunStatus.Running, runs[0].Status);
+        Assert.Equal(PanelSyncRunStatus.Failed, runs[1].Status);
+        Assert.NotNull(runs[1].FinishedAt);
+        Assert.Contains("quarantined", runs[1].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("legacy-secret", runs[2].ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("redacted", runs[2].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+    }
+
     private static TelegramBotNotification Notification()
         => new()
         {

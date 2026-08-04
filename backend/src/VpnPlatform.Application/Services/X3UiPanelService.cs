@@ -13,6 +13,8 @@ namespace VpnPlatform.Application.Services;
 
 public class X3UiPanelService
 {
+    private static readonly TimeSpan SyncLeaseDuration = TimeSpan.FromMinutes(5);
+
     private readonly IApplicationDbContext _db;
     private readonly IX3UiClient _client;
     private readonly ISecretProtector _secretProtector;
@@ -230,24 +232,31 @@ public class X3UiPanelService
             return Result<PanelHealthCheckDto>.Success(MapHealth(entity));
         }
 
+        var sw = Stopwatch.StartNew();
         if (string.IsNullOrWhiteSpace(panel.BaseUrl) || string.IsNullOrWhiteSpace(panel.Login) || string.IsNullOrWhiteSpace(panel.EncryptedPassword))
         {
-            return Result<PanelHealthCheckDto>.Failure("Panel not configured: base URL, login and password are required.");
+            return await RecordHealthFailureAsync(
+                panel,
+                actorUserId,
+                before,
+                sw,
+                "Panel not configured: base URL, login and password are required.",
+                cancellationToken);
         }
 
-        var password = _secretProtector.Unprotect(panel.EncryptedPassword);
-        var sw = Stopwatch.StartNew();
         try
         {
+            var password = _secretProtector.Unprotect(panel.EncryptedPassword);
             var health = await _client.CheckHealthAsync(panel, password, cancellationToken);
             sw.Stop();
+            var safeError = string.IsNullOrWhiteSpace(health.ErrorMessage) ? string.Empty : SafeError(health.ErrorMessage);
             var entity = new PanelHealthCheck
             {
                 VpnPanelId = panel.Id,
                 Status = health.IsHealthy ? HealthStatus.Healthy : HealthStatus.Unhealthy,
                 LatencyMs = health.LatencyMs == 0 ? sw.ElapsedMilliseconds : health.LatencyMs,
                 Version = health.Version,
-                ErrorMessage = health.ErrorMessage ?? string.Empty,
+                ErrorMessage = safeError,
                 CheckedAt = _clock.UtcNow
             };
             _db.PanelHealthChecks.Add(entity);
@@ -266,37 +275,64 @@ public class X3UiPanelService
         }
         catch (Exception ex)
         {
-            sw.Stop();
-            var entity = new PanelHealthCheck
-            {
-                VpnPanelId = panel.Id,
-                Status = HealthStatus.Unhealthy,
-                LatencyMs = sw.ElapsedMilliseconds,
-                ErrorMessage = ex.Message,
-                CheckedAt = _clock.UtcNow
-            };
-            _db.PanelHealthChecks.Add(entity);
-            panel.HealthStatus = HealthStatus.Unhealthy;
-            panel.LastHealthCheckAt = entity.CheckedAt;
-            panel.LastError = ex.Message;
-            AddAudit("vpn_panel.health_check.failed", "VpnPanel", panel.Id, actorUserId, before, HealthAuditSnapshot(entity));
-            await _db.SaveChangesAsync(cancellationToken);
-            return Result<PanelHealthCheckDto>.Failure(ex.Message);
+            return await RecordHealthFailureAsync(panel, actorUserId, before, sw, ex.Message, CancellationToken.None);
         }
     }
 
     public Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, CancellationToken cancellationToken = default)
         => SyncPanelAsync(panelId, null, cancellationToken);
 
-    public async Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, Guid? actorUserId, CancellationToken cancellationToken = default)
+    public Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, Guid? actorUserId, CancellationToken cancellationToken = default)
+        => SyncPanelCoreAsync(panelId, actorUserId, enforceExpectedLastSyncAt: false, expectedLastSyncAt: null, cancellationToken);
+
+    public Task<Result<PanelSyncRunDto>> SyncPanelIfCurrentAsync(
+        Guid panelId,
+        DateTimeOffset? expectedLastSyncAt,
+        CancellationToken cancellationToken = default)
+        => SyncPanelCoreAsync(
+            panelId,
+            actorUserId: null,
+            enforceExpectedLastSyncAt: true,
+            expectedLastSyncAt: expectedLastSyncAt,
+            cancellationToken: cancellationToken);
+
+    private async Task<Result<PanelSyncRunDto>> SyncPanelCoreAsync(
+        Guid panelId,
+        Guid? actorUserId,
+        bool enforceExpectedLastSyncAt,
+        DateTimeOffset? expectedLastSyncAt,
+        CancellationToken cancellationToken)
     {
         var panel = await _db.VpnPanels.Include(x => x.Inbounds).FirstOrDefaultAsync(x => x.Id == panelId, cancellationToken);
         if (panel is null)
         {
             return Result<PanelSyncRunDto>.Failure("VPN panel not found.");
         }
+        if (enforceExpectedLastSyncAt && panel.LastSyncAt != expectedLastSyncAt)
+        {
+            return Result<PanelSyncRunDto>.Failure("Panel sync observation is stale; a newer sync already completed.");
+        }
 
         var before = PanelAuditSnapshot(panel);
+        var now = _clock.UtcNow;
+        var staleRuns = (await _db.PanelSyncRuns
+                .Where(x => x.VpnPanelId == panel.Id && x.Status == PanelSyncRunStatus.Running)
+                .ToListAsync(cancellationToken))
+            .Where(x => x.StartedAt < now - SyncLeaseDuration)
+            .ToList();
+        foreach (var staleRun in staleRuns)
+        {
+            staleRun.Status = PanelSyncRunStatus.Failed;
+            staleRun.FinishedAt = now;
+            staleRun.ErrorMessage = "Panel sync lease expired before completion; a new attempt may start.";
+            staleRun.UpdatedAt = now;
+            AddAudit("vpn_panel.sync.lease_expired", "VpnPanel", panel.Id, actorUserId, before, SyncAuditSnapshot(staleRun));
+        }
+        if (staleRuns.Count > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
         var inboundSnapshots = panel.Inbounds.ToDictionary(x => x.Id, VpnInboundSyncSnapshot.Create);
         var previousLastSyncAt = panel.LastSyncAt;
         var initialSyncAuditIds = _db.AuditLogs.Local
@@ -310,7 +346,21 @@ public class X3UiPanelService
             StartedAt = _clock.UtcNow
         };
         _db.PanelSyncRuns.Add(run);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            _db.PanelSyncRuns.Remove(run);
+            if (await _db.PanelSyncRuns.AsNoTracking().AnyAsync(
+                    x => x.VpnPanelId == panel.Id && x.Status == PanelSyncRunStatus.Running,
+                    CancellationToken.None))
+            {
+                return Result<PanelSyncRunDto>.Failure("Panel sync is already running for this panel.");
+            }
+            throw;
+        }
 
         try
         {
@@ -414,15 +464,43 @@ public class X3UiPanelService
         }
         catch (Exception ex)
         {
+            var safeError = SafeError(ex.Message);
             RestorePendingSyncChanges(panel, run, inboundSnapshots, previousLastSyncAt, initialSyncAuditIds);
             run.Status = PanelSyncRunStatus.Failed;
             run.FinishedAt = _clock.UtcNow;
-            run.ErrorMessage = ex.Message;
-            panel.LastError = ex.Message;
+            run.ErrorMessage = safeError;
+            panel.LastError = safeError;
             AddAudit("vpn_panel.sync.failed", "VpnPanel", panel.Id, actorUserId, before, SyncAuditSnapshot(run));
             await _db.SaveChangesAsync(CancellationToken.None);
-            return Result<PanelSyncRunDto>.Failure(ex.Message);
+            return Result<PanelSyncRunDto>.Failure(safeError);
         }
+    }
+
+    private async Task<Result<PanelHealthCheckDto>> RecordHealthFailureAsync(
+        VpnPanel panel,
+        Guid? actorUserId,
+        object before,
+        Stopwatch stopwatch,
+        string? error,
+        CancellationToken cancellationToken)
+    {
+        stopwatch.Stop();
+        var safeError = SafeError(error);
+        var entity = new PanelHealthCheck
+        {
+            VpnPanelId = panel.Id,
+            Status = HealthStatus.Unhealthy,
+            LatencyMs = stopwatch.ElapsedMilliseconds,
+            ErrorMessage = safeError,
+            CheckedAt = _clock.UtcNow
+        };
+        _db.PanelHealthChecks.Add(entity);
+        panel.HealthStatus = HealthStatus.Unhealthy;
+        panel.LastHealthCheckAt = entity.CheckedAt;
+        panel.LastError = safeError;
+        AddAudit("vpn_panel.health_check.failed", "VpnPanel", panel.Id, actorUserId, before, HealthAuditSnapshot(entity));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<PanelHealthCheckDto>.Failure(safeError);
     }
 
     private void RestorePendingSyncChanges(
@@ -1345,6 +1423,11 @@ public class X3UiPanelService
     }
 
     private bool IsSandboxMode() => string.Equals(_configuration?["Vpn:X3Ui:Mode"], "Sandbox", StringComparison.OrdinalIgnoreCase);
+
+    private static string SafeError(string? value)
+        => string.IsNullOrWhiteSpace(value)
+            ? "Panel operation failed."
+            : SensitiveDataRedactor.Redact(value, maxLength: 500);
 
     private static string NormalizeBaseUrl(string baseUrl) => baseUrl.Trim().TrimEnd('/');
 

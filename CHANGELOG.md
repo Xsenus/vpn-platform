@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.474.0 - 2026-08-04
+
+Release entry: `2026-08-04-panel-sync-recovery`.
+
+### Исправлено
+
+- `PanelSyncRun` стал durable claim: частичный unique index не допускает два `Running` для одной 3x-ui панели в разных API-инстансах.
+- Worker передаёт ожидаемый `LastSyncAt`, поэтому устаревший snapshot не запускает повтор сразу после завершения более свежей синхронизации; зависший run восстанавливается по пятиминутной lease.
+- Ошибки расшифровки panel secret и preflight теперь создают `Unhealthy` health history, timestamp и audit вместо потери диагностики до `try`.
+- Новые health/sync ошибки redacted и ограничены по длине; upgrade очищает потенциально чувствительные raw errors из старых panel, health и sync записей.
+- Админка показывает время последней health-проверки и безопасную ошибку панели, а failed sync больше не скрывается пустым `summaryJson`.
+
+### Проверено
+
+- Backend full suite `930/930`; targeted X3Ui/panel/SQLite suite `52/52`; SQLite concurrent/stale/preflight fault-injection regression, migration `20260804150807_PanelSyncRecovery`, PostgreSQL SQL и EF model drift check OK.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`, fresh local SQLite smoke latest release OK, secret scan: `603` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `486/506` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.473.0 - 2026-08-04
 
 Release entry: `2026-08-04-subscription-lifecycle-recovery`.

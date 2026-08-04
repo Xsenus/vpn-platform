@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Panel sync recovery
+
+Scope:
+- Проверены межинстансный panel sync claim, stale lease recovery, stale worker snapshot, secret/preflight health history, redacted diagnostics, old SQLite upgrade и отображение ошибок в админке.
+
+Results:
+- Roadmap progress: `486/506` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-panel-sync-recovery`, version `0.474.0`.
+- Backend full suite: OK, `930/930`; targeted X3Ui/panel/SQLite suite: OK, `52/52`.
+- EF migration `20260804150807_PanelSyncRecovery`: OK; PostgreSQL SQL: OK; pending model changes: none.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`; admin panel error state verified on desktop and mobile projects.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-panel-sync-recovery`.
+- Secret scan: OK, `603` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-04: Subscription lifecycle recovery
 
 Scope:

@@ -41,7 +41,10 @@ public class PanelWorkerIsolationTests
         Assert.Equal(1, client.HealthCalls);
         using var assertScope = services.CreateScope();
         var assertDb = assertScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        Assert.Null((await assertDb.VpnPanels.SingleAsync(x => x.Id == failedPanelId)).LastHealthCheckAt);
+        var failedPanel = await assertDb.VpnPanels.SingleAsync(x => x.Id == failedPanelId);
+        Assert.Equal(TestClock.Now, failedPanel.LastHealthCheckAt);
+        Assert.Equal(HealthStatus.Unhealthy, failedPanel.HealthStatus);
+        Assert.Contains(await assertDb.PanelHealthChecks.ToListAsync(), x => x.VpnPanelId == failedPanelId && x.Status == HealthStatus.Unhealthy);
         Assert.Equal(TestClock.Now, (await assertDb.VpnPanels.SingleAsync(x => x.Id == healthyPanelId)).LastHealthCheckAt);
     }
 
