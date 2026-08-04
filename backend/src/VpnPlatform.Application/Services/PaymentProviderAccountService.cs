@@ -41,19 +41,16 @@ public class PaymentProviderAccountService
             : Result<PaymentProviderAccountDto>.Success(MapToDto(account));
     }
 
-    public async Task<Result<PaymentProviderAccount>> GetEnabledAccountEntityAsync(PaymentProvider provider, CancellationToken cancellationToken = default)
+    public async Task<Result<PaymentProviderAccount>> GetWebCheckoutAccountEntityAsync(PaymentProvider provider, CancellationToken cancellationToken = default)
     {
         var candidates = await _db.PaymentProviderAccounts
             .Where(x => x.Provider == provider && x.IsEnabled && x.Mode != PaymentProviderMode.Disabled)
             .ToListAsync(cancellationToken);
 
-        var account = candidates
-            .OrderByDescending(x => x.IsDefault)
-            .ThenBy(x => x.CreatedAt)
-            .FirstOrDefault();
+        var account = PaymentProviderConfigurationRules.SelectWebCheckoutAccount(candidates, provider);
 
         return account is null
-            ? Result<PaymentProviderAccount>.Failure($"Payment provider {provider} is not configured or disabled.")
+            ? Result<PaymentProviderAccount>.Failure($"Payment provider {provider} is not configured for web checkout or disabled.")
             : Result<PaymentProviderAccount>.Success(account);
     }
 

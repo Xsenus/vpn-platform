@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Public;
+using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
@@ -56,6 +58,66 @@ public class PaymentProvidersPublicControllerTests
         Assert.Empty(providers);
     }
 
+    [Fact]
+    public async Task Public_List_And_Web_Checkout_Should_Select_The_Same_Configured_Account()
+    {
+        await using var db = CreateDbContext();
+        var unconfiguredDefault = Account(
+            PaymentProvider.YooKassa,
+            PaymentProviderMode.Production,
+            isEnabled: true,
+            publicName: "Unavailable default",
+            secret: "");
+        unconfiguredDefault.IsDefault = true;
+        unconfiguredDefault.CreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        var configuredFallback = Account(
+            PaymentProvider.YooKassa,
+            PaymentProviderMode.Sandbox,
+            isEnabled: true,
+            publicName: "Configured checkout",
+            secret: "sandbox-secret");
+        configuredFallback.IsDefault = false;
+        configuredFallback.CreatedAt = new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero);
+
+        db.PaymentProviderAccounts.AddRange(unconfiguredDefault, configuredFallback);
+        await db.SaveChangesAsync();
+
+        var publicResult = await new PaymentsController(db).GetAvailableProviders(CancellationToken.None);
+        var accountResult = await new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock())
+            .GetWebCheckoutAccountEntityAsync(PaymentProvider.YooKassa, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(publicResult);
+        var provider = Assert.Single(Assert.IsAssignableFrom<IReadOnlyCollection<PublicPaymentProviderDto>>(ok.Value));
+        Assert.Equal("Configured checkout", provider.PublicName);
+        Assert.True(accountResult.IsSuccess);
+        Assert.Equal(configuredFallback.Id, accountResult.Value?.Id);
+    }
+
+    [Fact]
+    public async Task Public_List_And_Web_Checkout_Should_Use_Deterministic_Order_When_No_Default_Exists()
+    {
+        await using var db = CreateDbContext();
+        var olderByCreation = Account(PaymentProvider.Stripe, PaymentProviderMode.Sandbox, true, "Zulu checkout", "sandbox-secret");
+        olderByCreation.IsDefault = false;
+        olderByCreation.CreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var firstByName = Account(PaymentProvider.Stripe, PaymentProviderMode.Sandbox, true, "Alpha checkout", "sandbox-secret");
+        firstByName.IsDefault = false;
+        firstByName.CreatedAt = new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero);
+        db.PaymentProviderAccounts.AddRange(firstByName, olderByCreation);
+        await db.SaveChangesAsync();
+
+        var publicResult = await new PaymentsController(db).GetAvailableProviders(CancellationToken.None);
+        var accountResult = await new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock())
+            .GetWebCheckoutAccountEntityAsync(PaymentProvider.Stripe, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(publicResult);
+        var provider = Assert.Single(Assert.IsAssignableFrom<IReadOnlyCollection<PublicPaymentProviderDto>>(ok.Value));
+        Assert.Equal("Zulu checkout", provider.PublicName);
+        Assert.True(accountResult.IsSuccess);
+        Assert.Equal(olderByCreation.Id, accountResult.Value?.Id);
+    }
+
     private static PaymentProviderAccount Account(PaymentProvider provider, PaymentProviderMode mode, bool isEnabled, string publicName, string secret = "", string? shopId = null, string extraSettingsJson = "{}")
         => new()
         {
@@ -80,5 +142,17 @@ public class PaymentProvidersPublicControllerTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private sealed class TestSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext) => plaintext;
+        public string Unprotect(string protectedValue) => protectedValue;
+        public string Mask(string? protectedValue, int visibleSuffix = 4) => protectedValue ?? string.Empty;
+    }
+
+    private sealed class TestClock : IClock
+    {
+        public DateTimeOffset UtcNow => new(2026, 8, 5, 0, 0, 0, TimeSpan.Zero);
     }
 }

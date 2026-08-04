@@ -116,7 +116,7 @@ public class PaymentE2EHarnessTests
             PublicName = "YooKassa",
             IsEnabled = true,
             IsDefault = true,
-            ShopId = string.Empty,
+            ShopId = "local-sandbox-shop",
             ApiBaseUrl = "https://api.yookassa.ru/v3",
             ReturnUrl = "https://cabinet.example.test/payments",
             SecretKeyProtected = string.Empty,

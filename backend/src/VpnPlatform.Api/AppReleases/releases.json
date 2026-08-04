@@ -11281,5 +11281,28 @@
         "text": "Unique conflicts возвращают controlled failure, остальные DB errors не маскируются. Roadmap progress is 495/515 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-payment-checkout-account-selection",
+    "version": "0.484.0",
+    "releasedAt": "2026-08-05T02:24:00+07:00",
+    "title": "Показанный способ оплаты совпадает с checkout-аккаунтом",
+    "summary": "Public API и PaymentOrchestrator используют единый детерминированный выбор настроенного web-аккаунта провайдера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Неготовый default-аккаунт больше не перехватывает платеж после показа рабочего fallback в публичном UI."
+      },
+      {
+        "type": "fixed",
+        "text": "При отсутствии default public list и checkout одинаково выбирают аккаунт по CreatedAt и Id; Telegram Stars остается отдельным bot invoice-flow."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 496/516 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

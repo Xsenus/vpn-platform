@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.484.0 - 2026-08-05
+
+Release entry: `2026-08-05-payment-checkout-account-selection`.
+
+### Исправлено
+
+- Публичный список способов оплаты и фактический checkout теперь выбирают один и тот же настроенный web-аккаунт провайдера.
+- Неготовый default-аккаунт больше не перехватывает платеж после того, как UI показал готовый fallback; Telegram Stars invoice-flow остается отдельным bot-only путем.
+- При отсутствии default выбор детерминирован по `CreatedAt` и `Id`, поэтому имя и режим в UI соответствуют аккаунту, записанному в платеж.
+
+### Проверено
+
+- Backend full suite `983/983`; targeted public/account/payment suite `26/26`, регрессия public/checkout selection `4/4`.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright desktop/mobile/all-screens responsive suite `12/12`; secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `496/516` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/live payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.483.0 - 2026-08-05
 
 Release entry: `2026-08-05-payment-provider-default-uniqueness`.

@@ -75,7 +75,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 981/981.
+- Backend full suite: 983/983.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -84,7 +84,7 @@ git diff --check
 - Subscription activation compensates remote access after local credential save failure and preserves a `SyncRequired` reconciliation marker when cleanup fails: OK.
 - Telegram `update_id` is durably claimed before side effects; concurrent/fresh/stale/cancelled processing paths are fail-closed and retryable: OK.
 - Outbox payload is validated fail-closed; delivery errors are redacted and terminal failures are separated from pending health metrics: OK.
-- Latest local release: `2026-08-05-payment-provider-default-uniqueness`, версия `0.483.0`.
+- Latest local release: `2026-08-05-payment-checkout-account-selection`, версия `0.484.0`.
 - Frontend tests: 68/68.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

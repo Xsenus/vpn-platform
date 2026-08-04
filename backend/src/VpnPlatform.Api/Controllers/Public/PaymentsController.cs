@@ -36,9 +36,10 @@ public class PaymentsController : ControllerBase
             .ToListAsync(cancellationToken);
 
         var providers = enabledAccounts
-            .Where(PaymentProviderConfigurationRules.IsWebCheckoutConfigured)
             .GroupBy(x => x.Provider)
-            .Select(group => MapProvider(group.First()))
+            .Select(group => PaymentProviderConfigurationRules.SelectWebCheckoutAccount(group, group.Key))
+            .Where(account => account is not null)
+            .Select(account => MapProvider(account!))
             .OrderBy(x => x.Provider, StringComparer.Ordinal)
             .ToList();
 

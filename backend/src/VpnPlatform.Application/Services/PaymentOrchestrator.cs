@@ -97,7 +97,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<PaymentInitResult>.Failure("Order must be bound to a user before payment initialization.");
         }
 
-        var accountResult = await _providerAccounts.GetEnabledAccountEntityAsync(command.Provider, cancellationToken);
+        var accountResult = await _providerAccounts.GetWebCheckoutAccountEntityAsync(command.Provider, cancellationToken);
         if (!accountResult.IsSuccess || accountResult.Value is null)
         {
             return Result<PaymentInitResult>.Failure(accountResult.Error ?? "Payment provider account is not configured.");

@@ -23,6 +23,16 @@ public static class PaymentProviderConfigurationRules
     public static bool IsWebCheckoutConfigured(PaymentProviderAccount account)
         => SupportsWebCheckout(account.Provider) && IsCheckoutConfigured(account);
 
+    public static PaymentProviderAccount? SelectWebCheckoutAccount(
+        IEnumerable<PaymentProviderAccount> accounts,
+        PaymentProvider provider)
+        => accounts
+            .Where(x => x.Provider == provider && IsWebCheckoutConfigured(x))
+            .OrderByDescending(x => x.IsDefault)
+            .ThenBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .FirstOrDefault();
+
     public static string? GetCheckoutConfigurationIssue(PaymentProviderAccount account)
     {
         if (!account.IsEnabled)

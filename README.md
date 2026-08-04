@@ -207,9 +207,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 ## Текущий статус
 
-На 2026-08-04 локально подтверждено:
+На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `981/981` unit tests;
+- backend на .NET 9: `983/983` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `68/68`;
 - frontend typecheck и production build: OK;
@@ -226,6 +226,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - административные user/content/release/referral/support/Telegram и 3x-ui операции создают redacted audit trail с admin/system actor; panel sync откатывает частичные изменения, а remote inbound/client create компенсируется при отказе локального commit;
 - возвраты резервируются локально до provider call; параллельные повторы дедуплицируются, а `New/Pending/Unknown` refund блокирует новую операцию до ручной сверки;
 - payment init сериализуется по order id, сохраняет reservation до provider call и восстанавливает remote checkout после transient final commit failure;
+- публичный список payment providers и checkout используют единый детерминированный selector готового web-аккаунта; неготовый default не перехватывает показанный fallback;
 - activation компенсирует remote access после local credential save failure, сохраняет `SyncRequired` при неудачном cleanup и пробрасывает caller cancellation после durable retry-state;
 - Telegram update резервируется до side effects, защищен lease и повторяется после failed/stale processing без двойного invoice или потери long-poll offset;
 - Telegram response и pre-checkout acknowledgement сохраняются до отправки, доставляются через отдельную lease/backoff и восстанавливаются webhook/long-polling без повторной обработки update;
@@ -238,7 +239,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
 - terminal cancel подписки атомарно отзывает VPN-доступ, удаляет provider-клиента и освобождает node/panel/inbound capacity; rollback и reconciliation покрыты SQLite fault-injection;
 - ручной перенос 3x-ui клиента резервирует target panel/inbound capacity до remote add и полностью компенсирует source/target при failure/cancellation/local-save ошибке;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-payment-provider-default-uniqueness`, версия `0.483.0`;
-- roadmap progress: `495/515` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-payment-checkout-account-selection`, версия `0.484.0`;
+- roadmap progress: `496/516` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
