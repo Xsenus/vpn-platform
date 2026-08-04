@@ -221,6 +221,119 @@ public class AdminServerManagementTests
         Assert.Equal(HealthStatus.Unhealthy, node.HealthStatus);
     }
 
+    [Fact]
+    public async Task CheckServerHealth_Should_Propagate_Caller_Cancellation_Without_State_Change()
+    {
+        await using var db = CreateDbContext();
+        var healthStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseHealth = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var provider = new TestVpnProvider(HealthStatus.Healthy, healthStarted: healthStarted, releaseHealth: releaseHealth);
+        var controller = CreateController(db, provider);
+        var node = NewNode("cancelled-health-node");
+        node.Provider = provider.Name;
+        node.LastHealthCheckAt = null;
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        using var cancellation = new CancellationTokenSource();
+
+        var healthTask = controller.CheckServerHealth(node.Id, cancellation.Token);
+        await healthStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => healthTask);
+        Assert.Equal(HealthStatus.Healthy, node.HealthStatus);
+        Assert.Null(node.LastHealthCheckAt);
+        Assert.Empty(db.NodeHealthChecks);
+        Assert.DoesNotContain(db.AuditLogs, x => x.Action == "server.health-check" && x.EntityId == node.Id.ToString());
+    }
+
+    [Fact]
+    public async Task UpdateServer_Should_Reject_Capacity_Below_Used_Slots()
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateController(db);
+        var node = NewNode("used-capacity-node");
+        node.Capacity = 10;
+        node.UsedCapacity = 4;
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = await controller.UpdateServer(node.Id, UpdateRequest(node, capacity: 3), CancellationToken.None);
+
+        var error = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("used capacity", error.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(10, node.Capacity);
+        Assert.DoesNotContain(db.AuditLogs, x => x.Action == "server.update" && x.EntityId == node.Id.ToString());
+    }
+
+    [Fact]
+    public async Task UpdateServer_Should_Wait_For_Concurrent_Health_Check()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-node-health-{Guid.NewGuid():N}.db");
+        var healthStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseHealth = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath};Pooling=False")
+                .Options;
+            Guid nodeId;
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                var node = NewNode("concurrent-health-node");
+                node.Provider = "x3ui";
+                seed.VpnNodes.Add(node);
+                await seed.SaveChangesAsync();
+                nodeId = node.Id;
+            }
+
+            var updateCompletedBeforeHealth = false;
+            var provider = new TestVpnProvider(HealthStatus.Healthy, healthStarted: healthStarted, releaseHealth: releaseHealth);
+            await using (var healthDb = new ApplicationDbContext(options))
+            await using (var updateDb = new ApplicationDbContext(options))
+            {
+                var healthController = CreateController(healthDb, provider);
+                var updateController = CreateController(updateDb);
+
+                var healthTask = healthController.CheckServerHealth(nodeId, CancellationToken.None);
+                await healthStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                var observed = await updateDb.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == nodeId);
+                var updateTask = updateController.UpdateServer(nodeId, UpdateRequest(observed, name: "updated-after-health"), CancellationToken.None);
+
+                await Task.Delay(100);
+                updateCompletedBeforeHealth = updateTask.IsCompleted;
+                releaseHealth.TrySetResult(true);
+                Assert.IsType<OkObjectResult>(await healthTask);
+                Assert.IsType<OkObjectResult>(await updateTask);
+            }
+
+            string savedName;
+            HealthStatus savedHealth;
+            int healthCheckCount;
+            await using (var verify = new ApplicationDbContext(options))
+            {
+                var saved = await verify.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == nodeId);
+                savedName = saved.Name;
+                savedHealth = saved.HealthStatus;
+                healthCheckCount = await verify.NodeHealthChecks.CountAsync(x => x.NodeId == nodeId);
+            }
+
+            Assert.Equal("updated-after-health", savedName);
+            Assert.Equal(HealthStatus.Healthy, savedHealth);
+            Assert.Equal(1, healthCheckCount);
+            Assert.False(updateCompletedBeforeHealth);
+        }
+        finally
+        {
+            releaseHealth.TrySetResult(true);
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
     private static VpnNode NewNode(string name)
         => new()
         {
@@ -237,6 +350,31 @@ public class AdminServerManagementTests
             Capacity = 100,
             IsAvailableForNewUsers = true
         };
+
+    private static CreateServerHttpRequest UpdateRequest(VpnNode node, int? capacity = null, string? name = null)
+        => new(
+            name ?? node.Name,
+            node.Host,
+            node.IpAddress,
+            node.Provider,
+            node.Region,
+            node.Country,
+            node.Datacenter,
+            capacity ?? node.Capacity,
+            node.SupportedProtocolsCsv,
+            node.Priority,
+            node.TagsCsv,
+            node.SshUser,
+            node.SshPort,
+            node.SshPrivateKeyPath,
+            node.SkipHostKeyChecking,
+            node.PanelBaseUrl,
+            node.PanelUsername,
+            PanelPassword: null,
+            node.PanelInboundId,
+            node.PublicHostname,
+            node.PublicPort,
+            node.NodeGroupId);
 
     private static AdminOperationsController CreateController(ApplicationDbContext db, IVpnProvider? vpnProvider = null)
     {
@@ -303,11 +441,19 @@ public class AdminServerManagementTests
     {
         private readonly HealthStatus _healthStatus;
         private readonly Exception? _exception;
+        private readonly TaskCompletionSource<bool>? _healthStarted;
+        private readonly TaskCompletionSource<bool>? _releaseHealth;
 
-        public TestVpnProvider(HealthStatus healthStatus, Exception? exception = null)
+        public TestVpnProvider(
+            HealthStatus healthStatus,
+            Exception? exception = null,
+            TaskCompletionSource<bool>? healthStarted = null,
+            TaskCompletionSource<bool>? releaseHealth = null)
         {
             _healthStatus = healthStatus;
             _exception = exception;
+            _healthStarted = healthStarted;
+            _releaseHealth = releaseHealth;
         }
 
         public string Name => "x3ui";
@@ -317,14 +463,20 @@ public class AdminServerManagementTests
         public Task DeleteAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;
         public Task<VpnUsageSnapshot> GetUsageAsync(string providerAccessId, CancellationToken cancellationToken) => Task.FromResult(new VpnUsageSnapshot(providerAccessId, null, null, DateTimeOffset.UtcNow));
 
-        public Task<HealthStatus> GetNodeHealthAsync(VpnNode node, CancellationToken cancellationToken)
+        public async Task<HealthStatus> GetNodeHealthAsync(VpnNode node, CancellationToken cancellationToken)
         {
             if (_exception is not null)
             {
                 throw _exception;
             }
 
-            return Task.FromResult(_healthStatus);
+            _healthStarted?.TrySetResult(true);
+            if (_releaseHealth is not null)
+            {
+                await _releaseHealth.Task.WaitAsync(cancellationToken);
+            }
+
+            return _healthStatus;
         }
     }
 }

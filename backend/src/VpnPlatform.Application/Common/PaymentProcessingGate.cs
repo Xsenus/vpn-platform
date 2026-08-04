@@ -24,7 +24,10 @@ public static class PaymentProcessingGate
         => await AcquireAsync($"outbox:{messageId:N}", cancellationToken);
 
     public static async ValueTask<IAsyncDisposable> AcquireProvisioningNodeAsync(Guid nodeId, CancellationToken cancellationToken)
-        => await AcquireAsync($"provisioning-node:{nodeId:N}", cancellationToken);
+        => await AcquireVpnNodeStateAsync(nodeId, cancellationToken);
+
+    public static async ValueTask<IAsyncDisposable> AcquireVpnNodeStateAsync(Guid nodeId, CancellationToken cancellationToken)
+        => await AcquireAsync($"vpn-node-state:{nodeId:N}", cancellationToken);
 
     public static async ValueTask<IAsyncDisposable> AcquireSubscriptionLifecycleAsync(Guid subscriptionId, CancellationToken cancellationToken)
         => await AcquireAsync($"subscription-lifecycle:{subscriptionId:N}", cancellationToken);

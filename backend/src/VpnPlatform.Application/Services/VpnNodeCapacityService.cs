@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 
 namespace VpnPlatform.Application.Services;
 
@@ -14,6 +15,7 @@ public sealed class VpnNodeCapacityService
 
     public async Task<bool> TryReserveAsync(Guid nodeId, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(nodeId, cancellationToken);
         if (IsInMemoryProvider())
         {
             var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId, cancellationToken);
@@ -37,6 +39,7 @@ public sealed class VpnNodeCapacityService
 
     public async Task<bool> ReleaseAsync(Guid nodeId, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(nodeId, cancellationToken);
         if (IsInMemoryProvider())
         {
             var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId, cancellationToken);

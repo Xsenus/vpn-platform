@@ -1243,6 +1243,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
     public async Task<IActionResult> UpdateServer(Guid id, [FromBody] CreateServerHttpRequest request, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null)
         {
@@ -1264,6 +1265,12 @@ public class AdminOperationsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(request.SshCredential) && authMethod != "password" && authMethod != "ssh_key")
         {
             return BadRequest(new { error = "Unsupported SSH auth method." });
+        }
+
+        var capacity = request.Capacity > 0 ? request.Capacity : 5000;
+        if (capacity < node.UsedCapacity)
+        {
+            return BadRequest(new { error = "Server capacity cannot be lower than used capacity." });
         }
 
         var owner = string.IsNullOrWhiteSpace(request.OwnerType)
@@ -1322,7 +1329,7 @@ public class AdminOperationsController : ControllerBase
         node.Region = request.Region.Trim();
         node.Country = request.Country.Trim();
         node.Datacenter = request.Datacenter.Trim();
-        node.Capacity = request.Capacity > 0 ? request.Capacity : 5000;
+        node.Capacity = capacity;
         node.SupportedProtocolsCsv = string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv) ? "vless,vmess,trojan" : request.SupportedProtocolsCsv.Trim();
         node.Priority = request.Priority > 0 ? request.Priority : 100;
         node.SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim();
@@ -1392,6 +1399,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> DisableServer(Guid id, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
         if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
@@ -1409,6 +1417,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
     public async Task<IActionResult> DeleteServer(Guid id, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null)
         {
@@ -1453,6 +1462,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> CheckServerHealth(Guid id, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null)
         {
@@ -1489,6 +1499,10 @@ public class AdminOperationsController : ControllerBase
                 status = await _vpnProviderFactory.Get(providerName).GetNodeHealthAsync(node, cancellationToken);
                 reason = status == HealthStatus.Healthy ? "VPN-сервер отвечает." : "VPN-сервер не прошел проверку провайдера.";
                 errorText = status == HealthStatus.Healthy ? string.Empty : reason;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -1740,6 +1754,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> Maintenance(Guid id, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
         if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
@@ -1757,6 +1772,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> DisableMaintenance(Guid id, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
         if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
@@ -1774,6 +1790,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> DisableAllocation(Guid id, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
         if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
@@ -1791,6 +1808,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> EnableAllocation(Guid id, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
         if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });

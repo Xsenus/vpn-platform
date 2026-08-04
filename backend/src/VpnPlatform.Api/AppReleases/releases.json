@@ -11235,5 +11235,28 @@
         "text": "Capacity панели и inbound нельзя уменьшить ниже текущего usage. Roadmap progress is 493/513 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-vpn-node-state-consistency",
+    "version": "0.482.0",
+    "releasedAt": "2026-08-05T01:37:00+07:00",
+    "title": "Состояние VPN-сервера изменяется последовательно",
+    "summary": "Server CRUD, health, provisioning и slot reservation сериализованы, capacity не опускается ниже usage, а отмененный health-check не оставляет ложную историю.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Update/delete, health-check, provisioning, capacity reserve/release и режимы сервера используют единый node-scoped gate."
+      },
+      {
+        "type": "fixed",
+        "text": "Capacity VPN-сервера нельзя уменьшить ниже UsedCapacity; проверка выполняется до secret rotation и audit."
+      },
+      {
+        "type": "important",
+        "text": "Caller cancellation не записывает ложный Unhealthy result. Roadmap progress is 494/514 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

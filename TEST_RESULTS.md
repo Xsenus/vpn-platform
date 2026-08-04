@@ -2,6 +2,28 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: VPN node state consistency
+
+Scope:
+- Проверены server update/delete/health, provisioning, capacity reservation/release и режимы maintenance/allocation: общий gate, capacity invariant, caller cancellation и concurrent provider observation.
+
+Results:
+- Roadmap progress: `494/514` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-vpn-node-state-consistency`, version `0.482.0`.
+- Backend full suite: OK, `974/974`; targeted server management: OK, `12/12`; server/provisioning/capacity suite: OK, `86/86`.
+- File-backed SQLite regression: server update ждёт активный provider health-check; после завершения сохраняются подтвержденный health result и последующий update без stale overwrite.
+- Capacity regression: server update не принимает значение ниже `UsedCapacity` и не создаёт audit.
+- Capacity reservation/release ждут тот же node-state gate, поэтому update перечитывает актуальный usage перед изменением лимита.
+- Cancellation regression: caller cancellation не сохраняет ложный `Unhealthy` health record или audit.
+- EF schema: no changes; pending model changes: none.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-05-vpn-node-state-consistency`.
+- Secret scan: OK, `607` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: X3Ui panel health consistency
 
 Scope:

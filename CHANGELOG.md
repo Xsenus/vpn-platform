@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.482.0 - 2026-08-05
+
+Release entry: `2026-08-05-vpn-node-state-consistency`.
+
+### Исправлено
+
+- Server update/delete, health-check, provisioning, capacity reservation/release и режимы maintenance/allocation используют единый node-scoped gate; устаревший provider result и slot reservation не пересекаются с изменением или архивацией узла.
+- Capacity VPN-сервера нельзя уменьшить ниже `UsedCapacity`; проверка выполняется до ротации секретов, audit и сохранения.
+- Caller cancellation во время provider health-check пробрасывается без ложной `Unhealthy` history или audit.
+
+### Проверено
+
+- Backend full suite `974/974`; targeted server management `12/12`, server/provisioning/capacity suite `86/86`, включая file-backed SQLite concurrency, shared capacity gate и cancellation regression; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; EF model drift отсутствует, fresh local SQLite smoke latest release OK; secret scan `607` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `494/514` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.481.0 - 2026-08-05
 
 Release entry: `2026-08-05-x3ui-panel-health-consistency`.

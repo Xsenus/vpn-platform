@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
@@ -70,6 +71,29 @@ public class VpnNodeCapacityServiceTests
         Assert.True(await service.ReleaseAsync(node.Id));
         Assert.False(await service.ReleaseAsync(node.Id));
         Assert.Equal(0, node.UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Reservation_Should_Wait_For_Server_State_Gate()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"vpn-node-capacity-{Guid.NewGuid():N}")
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        var node = CreateNode(Guid.NewGuid(), capacity: 2);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var service = new VpnNodeCapacityService(db);
+        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(node.Id, CancellationToken.None);
+
+        var reservation = service.TryReserveAsync(node.Id);
+        await Task.Delay(100);
+        var completedBeforeRelease = reservation.IsCompleted;
+        await gate.DisposeAsync();
+
+        Assert.True(await reservation);
+        Assert.False(completedBeforeRelease);
+        Assert.Equal(1, node.UsedCapacity);
     }
 
     private static VpnNode CreateNode(Guid id, int capacity)
