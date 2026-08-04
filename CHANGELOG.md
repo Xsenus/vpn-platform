@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.470.0 - 2026-08-04
+
+Release entry: `2026-08-04-telegram-notification-enqueue-deduplication`.
+
+### Fixed
+- Все producer-пути `TelegramBotNotification` получают стабильный `DeduplicationKey`; одинаковые user/type/payload больше не создают несколько активных записей при параллельном `AnyAsync` -> `Add`.
+- `ApplicationDbContext` сохраняет notification через атомарный PostgreSQL/SQLite upsert в одной транзакции с бизнес-изменениями: существующие `sent/pending/sending` не дублируются, а `failed/cancelled` безопасно переактивируются.
+- EF migration нормализует исторические записи до unique index и отменяет активные дубли; local SQLite repair выполняет тот же backfill для баз, созданных через `EnsureCreated`.
+- При ошибке business save транзакция откатывает notification, а EF tracker сохраняет её в `Added` для корректного повторного commit.
+
+### Notes
+- Validation: backend full suite `881/881`, targeted Telegram persistence/delivery/SQLite repair suite `23/23`, PostgreSQL migration SQL OK, API and TelegramBot Release builds `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `575` files, `0` findings; encoding guard and artifact cleanup: OK.
+- Roadmap progress is `482/502` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.469.0 - 2026-08-04
 
 Release entry: `2026-08-04-telegram-notification-dispatch-recovery`.

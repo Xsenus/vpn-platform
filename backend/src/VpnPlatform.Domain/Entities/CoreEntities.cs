@@ -400,6 +400,7 @@ public class TelegramBotNotification : AuditableEntity
     public long TelegramUserId { get; set; }
     public string Type { get; set; } = string.Empty;
     public string PayloadJson { get; set; } = "{}";
+    public string DeduplicationKey { get; set; } = string.Empty;
     public string Status { get; set; } = "pending";
     public int AttemptCount { get; set; }
     public DateTimeOffset? NextAttemptAt { get; set; }

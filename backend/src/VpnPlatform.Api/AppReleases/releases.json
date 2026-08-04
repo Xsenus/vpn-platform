@@ -10959,5 +10959,28 @@
         "text": "Malformed JSON/reply markup блокируется до Telegram API, legacy plain text поддержан. Roadmap progress is 481/501 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-telegram-notification-enqueue-deduplication",
+    "version": "0.470.0",
+    "releasedAt": "2026-08-04T19:55:00+07:00",
+    "title": "Telegram notifications не дублируются при конкурентной постановке",
+    "summary": "Стабильный deduplication key и транзакционный database upsert защищают все producer-пути без потери атомарности бизнес-операций.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Одинаковые user/type/payload атомарно схлопываются unique index даже при одновременной работе нескольких API или worker instances."
+      },
+      {
+        "type": "fixed",
+        "text": "Failed/cancelled notification переактивируется, а sent/pending/sending остается единственной записью; business rollback не теряет notification для retry."
+      },
+      {
+        "type": "important",
+        "text": "PostgreSQL migration и local SQLite repair нормализуют историю до unique index. Roadmap progress is 482/502 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

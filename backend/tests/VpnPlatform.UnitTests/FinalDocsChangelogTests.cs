@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("873/873", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-telegram-notification-dispatch-recovery", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("881/881", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-04-telegram-notification-enqueue-deduplication", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "873/873",
-                     "2026-08-04-telegram-notification-dispatch-recovery",
-                     "0.469.0",
+                     "881/881",
+                     "2026-08-04-telegram-notification-enqueue-deduplication",
+                     "0.470.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,17 +104,17 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-telegram-notification-dispatch-recovery",
-                     "0.469.0",
-                     "481/501",
+                     "2026-08-04-telegram-notification-enqueue-deduplication",
+                     "0.470.0",
+                     "482/502",
                      "96.0%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `873/873`",
+                     "Backend full suite: OK, `881/881`",
                      "Local SQLite smoke: OK",
-                     "Secret scan: OK, `564` files, `0` findings",
+                     "Secret scan: OK, `575` files, `0` findings",
                      "Artifact cleanup: OK",
                      "external evidence remains open",
                      "real VPS/staging/live evidence remains open"
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-telegram-notification-dispatch-recovery",
-                     "0.469.0",
-                     "481/501",
+                     "2026-08-04-telegram-notification-enqueue-deduplication",
+                     "0.470.0",
+                     "482/502",
                      "96.0%",
                      "20",
                      "19",
@@ -165,10 +165,10 @@ public class FinalDocsChangelogTests
                      "staging-ready baseline",
                      "not production-ready",
                      "FinalDocsChangelogTests",
-                     "targeted docs/release/encoding suite `51/51`",
-                     "backend full suite `873/873`",
+                     "targeted Telegram persistence/delivery/SQLite repair suite `23/23`",
+                     "backend full suite `881/881`",
                      "fresh local SQLite smoke OK",
-                     "Secret scan: `564` files, `0` findings"
+                     "secret scan: `575` files, `0` findings"
                  })
         {
             Assert.Contains(expected, changelog, StringComparison.OrdinalIgnoreCase);

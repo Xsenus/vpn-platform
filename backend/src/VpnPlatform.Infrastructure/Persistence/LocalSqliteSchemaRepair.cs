@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Application.Common;
 
 namespace VpnPlatform.Infrastructure.Persistence;
 
@@ -22,8 +23,72 @@ public static class LocalSqliteSchemaRepair
             repaired++;
         }
 
+        if (await TableExistsAsync(db, "TelegramBotNotifications", cancellationToken))
+        {
+            if (!await ColumnExistsAsync(db, "TelegramBotNotifications", "DeduplicationKey", cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    """ALTER TABLE "TelegramBotNotifications" ADD COLUMN "DeduplicationKey" TEXT NOT NULL DEFAULT '';""",
+                    cancellationToken);
+                repaired++;
+            }
+
+            await BackfillTelegramNotificationDeduplicationKeysAsync(db, cancellationToken);
+            if (!await IndexExistsAsync(db, "IX_TelegramBotNotifications_DeduplicationKey", cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    """CREATE UNIQUE INDEX "IX_TelegramBotNotifications_DeduplicationKey" ON "TelegramBotNotifications" ("DeduplicationKey");""",
+                    cancellationToken);
+                repaired++;
+            }
+        }
+
         return repaired;
     }
+
+    private static async Task BackfillTelegramNotificationDeduplicationKeysAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var notifications = await db.TelegramBotNotifications
+            .Where(x => x.DeduplicationKey == string.Empty)
+            .ToListAsync(cancellationToken);
+        foreach (var group in notifications.GroupBy(x => TelegramNotificationDeduplication.CreateKey(
+                     x.TelegramUserId,
+                     x.Type,
+                     x.PayloadJson), StringComparer.Ordinal))
+        {
+            var ordered = group
+                .OrderBy(NotificationPriority)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .ToList();
+            ordered[0].DeduplicationKey = group.Key;
+            foreach (var duplicate in ordered.Skip(1))
+            {
+                duplicate.DeduplicationKey = $"legacy:{duplicate.Id:N}";
+                if (duplicate.Status is "pending" or "sending")
+                {
+                    duplicate.Status = "cancelled";
+                    duplicate.NextAttemptAt = null;
+                    duplicate.ErrorText = "Duplicate Telegram notification cancelled during local schema repair.";
+                }
+            }
+        }
+
+        if (notifications.Count > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static int NotificationPriority(VpnPlatform.Domain.Entities.TelegramBotNotification notification)
+        => notification.Status switch
+        {
+            "sent" => 0,
+            "pending" or "sending" => 1,
+            _ => 2
+        };
 
     private static async Task<bool> TableExistsAsync(ApplicationDbContext db, string tableName, CancellationToken cancellationToken)
     {
@@ -52,6 +117,17 @@ public static class LocalSqliteSchemaRepair
         }
 
         return false;
+    }
+
+    private static async Task<bool> IndexExistsAsync(ApplicationDbContext db, string indexName, CancellationToken cancellationToken)
+    {
+        await using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type = 'index' AND name = $indexName";
+        AddParameter(command, "$indexName", indexName);
+
+        await EnsureOpenAsync(db, cancellationToken);
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return Convert.ToInt32(result) > 0;
     }
 
     private static async Task EnsureOpenAsync(ApplicationDbContext db, CancellationToken cancellationToken)

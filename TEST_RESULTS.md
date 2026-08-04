@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Telegram notification enqueue deduplication
+
+Scope:
+- Проверены все producer-пути Telegram notification, параллельный multi-context enqueue, повторная постановка terminal-записи, duplicate в одном unit of work и rollback при ошибке окружающего business save.
+- Сгенерирована EF migration `20260804124229_AddTelegramNotificationDeduplication`; проверены PostgreSQL backfill SQL, порядок нормализации до unique index и local SQLite schema repair.
+
+Result:
+- Стабильный `DeduplicationKey` вычисляется из Telegram user/type/payload до сохранения; PostgreSQL и SQLite выполняют атомарный `ON CONFLICT` в одной транзакции с бизнес-изменениями.
+- Существующая `sent/pending/sending` запись не дублируется; `failed/cancelled` запись переактивируется с нулевым attempt count; ошибка business save откатывает notification и оставляет её доступной для retry в EF tracker.
+- Исторические активные дубли отменяются до создания unique index; существующая локальная SQLite база получает колонку, backfill и индекс через idempotent repair.
+- Roadmap progress: `482/502` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-telegram-notification-enqueue-deduplication`, version `0.470.0`.
+
+Validation:
+- Backend full suite: OK, `881/881`; targeted Telegram persistence/delivery/SQLite repair suite: OK, `23/23`.
+- EF migration list and generated PostgreSQL SQL: OK; deduplication column, backfill and unique index verified.
+- API and TelegramBot Release builds with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-telegram-notification-enqueue-deduplication`.
+- Secret scan: OK, `575` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: Telegram notification dispatch recovery
 
 Scope:

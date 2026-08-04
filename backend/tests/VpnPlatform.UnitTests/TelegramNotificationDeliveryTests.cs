@@ -256,11 +256,16 @@ public class TelegramNotificationDeliveryTests
         await db.Database.EnsureCreatedAsync();
         var clock = new MutableClock(new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero));
         var due = Notification(clock.UtcNow.Subtract(TimeSpan.FromMinutes(3)));
+        due.Type = "test-due";
         var scheduled = Notification(clock.UtcNow);
+        scheduled.Type = "test-scheduled";
         scheduled.NextAttemptAt = clock.UtcNow.AddMinutes(1);
         var stale = Notification(clock.UtcNow.Subtract(TimeSpan.FromMinutes(2)), "sending", attemptCount: 1);
+        stale.Type = "test-stale";
         var active = Notification(clock.UtcNow, "sending", attemptCount: 1);
+        active.Type = "test-active";
         var sent = Notification(clock.UtcNow, "sent", attemptCount: 1);
+        sent.Type = "test-sent";
         sent.SentAt = clock.UtcNow;
         db.TelegramBotNotifications.AddRange(due, scheduled, stale, active, sent);
         await db.SaveChangesAsync();

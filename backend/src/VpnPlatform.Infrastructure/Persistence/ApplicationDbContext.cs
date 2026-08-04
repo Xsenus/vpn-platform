@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 
 namespace VpnPlatform.Infrastructure.Persistence;
@@ -99,6 +101,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<TelegramBotCallbackQuery>().HasIndex(x => x.CallbackQueryId).IsUnique();
         modelBuilder.Entity<TelegramBotPayment>().HasIndex(x => x.TelegramPaymentChargeId).IsUnique();
         modelBuilder.Entity<TelegramBotDeepLink>().HasIndex(x => x.TokenHash).IsUnique();
+        modelBuilder.Entity<TelegramBotNotification>().HasIndex(x => x.DeduplicationKey).IsUnique();
         modelBuilder.Entity<SupportConversation>().HasIndex(x => new { x.TelegramUserId, x.Status });
         modelBuilder.Entity<VpnPanel>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<VpnPanel>().HasIndex(x => x.BaseUrl).IsUnique();
@@ -405,6 +408,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<TelegramBotPayment>().Property(x => x.InvoicePayload).HasColumnType("text");
         modelBuilder.Entity<TelegramBotPayment>().Property(x => x.RawPayload).HasColumnType("text");
         modelBuilder.Entity<TelegramBotDeepLink>().Property(x => x.MetadataJson).HasColumnType("text");
+        modelBuilder.Entity<TelegramBotNotification>().Property(x => x.DeduplicationKey).HasMaxLength(64);
         modelBuilder.Entity<TelegramBotNotification>().Property(x => x.PayloadJson).HasColumnType("text");
         modelBuilder.Entity<TelegramBotNotification>().Property(x => x.ErrorText).HasColumnType("text");
         modelBuilder.Entity<SupportMessage>().Property(x => x.Text).HasColumnType("text");
@@ -462,5 +466,214 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Tariff>().Property(x => x.Badge).HasMaxLength(80);
         modelBuilder.Entity<Tariff>().Property(x => x.ProvisioningScenario).HasMaxLength(120);
         modelBuilder.Entity<Tariff>().Property(x => x.AfterPaymentText).HasColumnType("text");
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        var notifications = ExtractAddedTelegramNotifications();
+        if (notifications.Count == 0 || !Database.IsRelational())
+        {
+            PrepareNonRelationalNotifications(notifications);
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        using var transaction = BeginTransactionIfNeeded();
+        try
+        {
+            var affected = base.SaveChanges(acceptAllChangesOnSuccess: false);
+            affected += UpsertTelegramNotifications(notifications);
+            transaction?.Commit();
+            if (acceptAllChangesOnSuccess)
+            {
+                ChangeTracker.AcceptAllChanges();
+            }
+
+            return affected;
+        }
+        catch
+        {
+            transaction?.Rollback();
+            RestoreTelegramNotifications(notifications);
+            throw;
+        }
+    }
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        var notifications = ExtractAddedTelegramNotifications();
+        if (notifications.Count == 0 || !Database.IsRelational())
+        {
+            PrepareNonRelationalNotifications(notifications);
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        await using var transaction = await BeginTransactionIfNeededAsync(cancellationToken);
+        try
+        {
+            var affected = await base.SaveChangesAsync(acceptAllChangesOnSuccess: false, cancellationToken);
+            affected += await UpsertTelegramNotificationsAsync(notifications, cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            if (acceptAllChangesOnSuccess)
+            {
+                ChangeTracker.AcceptAllChanges();
+            }
+
+            return affected;
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+
+            RestoreTelegramNotifications(notifications);
+            throw;
+        }
+    }
+
+    private List<TelegramBotNotification> ExtractAddedTelegramNotifications()
+    {
+        var notifications = ChangeTracker.Entries<TelegramBotNotification>()
+            .Where(x => x.State == EntityState.Added)
+            .Select(x => x.Entity)
+            .ToList();
+        foreach (var notification in notifications)
+        {
+            notification.DeduplicationKey = TelegramNotificationDeduplication.CreateKey(
+                notification.TelegramUserId,
+                notification.Type,
+                notification.PayloadJson);
+        }
+
+        var unique = new List<TelegramBotNotification>(notifications.Count);
+        foreach (var group in notifications.GroupBy(x => x.DeduplicationKey, StringComparer.Ordinal))
+        {
+            unique.Add(group.First());
+            foreach (var duplicate in group.Skip(1))
+            {
+                Entry(duplicate).State = EntityState.Detached;
+            }
+        }
+
+        if (Database.IsRelational())
+        {
+            foreach (var notification in unique)
+            {
+                Entry(notification).State = EntityState.Detached;
+            }
+        }
+
+        return unique;
+    }
+
+    private void PrepareNonRelationalNotifications(IReadOnlyCollection<TelegramBotNotification> notifications)
+    {
+        foreach (var notification in notifications)
+        {
+            var existing = TelegramBotNotifications.Local.FirstOrDefault(x =>
+                !ReferenceEquals(x, notification)
+                && string.Equals(x.DeduplicationKey, notification.DeduplicationKey, StringComparison.Ordinal));
+            if (existing is null)
+            {
+                existing = TelegramBotNotifications.FirstOrDefault(x => x.DeduplicationKey == notification.DeduplicationKey);
+            }
+
+            if (existing is null)
+            {
+                continue;
+            }
+
+            Entry(notification).State = EntityState.Detached;
+            ReviveTerminalNotification(existing, notification);
+        }
+    }
+
+    private void RestoreTelegramNotifications(IEnumerable<TelegramBotNotification> notifications)
+    {
+        foreach (var notification in notifications)
+        {
+            if (Entry(notification).State == EntityState.Detached)
+            {
+                TelegramBotNotifications.Add(notification);
+            }
+        }
+    }
+
+    private IDbContextTransaction? BeginTransactionIfNeeded()
+        => Database.CurrentTransaction is null ? Database.BeginTransaction() : null;
+
+    private async Task<IDbContextTransaction?> BeginTransactionIfNeededAsync(CancellationToken cancellationToken)
+        => Database.CurrentTransaction is null
+            ? await Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
+    private int UpsertTelegramNotifications(IEnumerable<TelegramBotNotification> notifications)
+        => notifications.Sum(UpsertTelegramNotification);
+
+    private async Task<int> UpsertTelegramNotificationsAsync(
+        IEnumerable<TelegramBotNotification> notifications,
+        CancellationToken cancellationToken)
+    {
+        var affected = 0;
+        foreach (var notification in notifications)
+        {
+            affected += await UpsertTelegramNotificationAsync(notification, cancellationToken);
+        }
+
+        return affected;
+    }
+
+    private int UpsertTelegramNotification(TelegramBotNotification notification)
+        => Database.ExecuteSqlInterpolated($"""
+            INSERT INTO "TelegramBotNotifications"
+                ("Id", "TelegramUserId", "Type", "PayloadJson", "DeduplicationKey", "Status", "AttemptCount", "NextAttemptAt", "SentAt", "ErrorText", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({notification.Id}, {notification.TelegramUserId}, {notification.Type}, {notification.PayloadJson}, {notification.DeduplicationKey}, {notification.Status}, {notification.AttemptCount}, {notification.NextAttemptAt}, {notification.SentAt}, {notification.ErrorText}, {notification.CreatedAt}, {notification.UpdatedAt})
+            ON CONFLICT ("DeduplicationKey") DO UPDATE SET
+                "Status" = 'pending',
+                "AttemptCount" = 0,
+                "NextAttemptAt" = excluded."NextAttemptAt",
+                "SentAt" = NULL,
+                "ErrorText" = '',
+                "UpdatedAt" = excluded."UpdatedAt"
+            WHERE "Status" IN ('failed', 'cancelled');
+            """);
+
+    private Task<int> UpsertTelegramNotificationAsync(
+        TelegramBotNotification notification,
+        CancellationToken cancellationToken)
+        => Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "TelegramBotNotifications"
+                ("Id", "TelegramUserId", "Type", "PayloadJson", "DeduplicationKey", "Status", "AttemptCount", "NextAttemptAt", "SentAt", "ErrorText", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({notification.Id}, {notification.TelegramUserId}, {notification.Type}, {notification.PayloadJson}, {notification.DeduplicationKey}, {notification.Status}, {notification.AttemptCount}, {notification.NextAttemptAt}, {notification.SentAt}, {notification.ErrorText}, {notification.CreatedAt}, {notification.UpdatedAt})
+            ON CONFLICT ("DeduplicationKey") DO UPDATE SET
+                "Status" = 'pending',
+                "AttemptCount" = 0,
+                "NextAttemptAt" = excluded."NextAttemptAt",
+                "SentAt" = NULL,
+                "ErrorText" = '',
+                "UpdatedAt" = excluded."UpdatedAt"
+            WHERE "Status" IN ('failed', 'cancelled');
+            """, cancellationToken);
+
+    private void ReviveTerminalNotification(TelegramBotNotification existing, TelegramBotNotification replacement)
+    {
+        if (existing.Status is not ("failed" or "cancelled"))
+        {
+            return;
+        }
+
+        existing.Status = "pending";
+        existing.AttemptCount = 0;
+        existing.NextAttemptAt = replacement.NextAttemptAt;
+        existing.SentAt = null;
+        existing.ErrorText = string.Empty;
+        existing.UpdatedAt = replacement.UpdatedAt;
     }
 }
