@@ -1091,6 +1091,10 @@ test('admin UI source keeps secret fields write-only and validation mode visible
   assert.match(source, /Подписка отменена, VPN-доступ отозван и удален с сервера/)
   assert.match(source, /inbound\.usedCapacity < inbound\.capacity/)
   assert.match(source, /Сначала будет занято по одному временному slot панели и target inbound/)
+  assert.match(source, /syncStatus\.includes\('uncertain'\)/)
+  assert.match(source, /syncStatus\.includes\('compensation-failed'\)/)
+  assert.match(source, /Необратимо обнулить счётчики трафика VPN-клиента/)
+  assert.match(source, /При сетевой неопределённости доступ получит статус SyncRequired/)
 })
 
 

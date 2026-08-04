@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: X3Ui client state reconciliation
+
+Scope:
+- Проверены admin/provider enable, disable и reset traffic: subscription gate, ambiguous remote mutation, local-save failure, reverse update, compensation failure, durable uncertainty и desktop/mobile destructive dialog.
+
+Results:
+- Roadmap progress: `491/511` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-x3ui-client-state-reconciliation`, version `0.479.0`.
+- Backend full suite: OK, `961/961`; X3Ui integration suite: OK, `63/63`; targeted client-state/reset regression: OK, `7/7`.
+- Enable/disable regression: ambiguous update и local save failure выполняют reverse provider update; compensation failure сохраняет `client-state-compensation-failed`, `SyncRequired` и redacted audit.
+- Reset regression: необратимый remote reset при timeout/cancellation/local save failure сохраняет `traffic-reset-uncertain`; admin и provider paths требуют reconciliation вместо ложного success.
+- EF schema: no changes; pending model changes: none.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`; reset confirmation and reconciliation status verified on desktop and mobile without horizontal overflow.
+- Fresh local SQLite smoke: OK; latest release `2026-08-05-x3ui-client-state-reconciliation`.
+- Secret scan: OK, `607` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-04: X3Ui client migration atomicity
 
 Scope:

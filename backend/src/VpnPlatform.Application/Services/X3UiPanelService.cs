@@ -870,6 +870,14 @@ public class X3UiPanelService
 
     public async Task<Result<VpnClientDto>> SyncClientAsync(Guid clientId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
+        var observedClient = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (observedClient?.VpnPanel is null || observedClient.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireVpnSubscriptionAsync(observedClient.SubscriptionId, cancellationToken);
+        ClearTracker();
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
         {
@@ -903,6 +911,14 @@ public class X3UiPanelService
 
     public async Task<Result<VpnClientDto>> ResetClientTrafficAsync(Guid clientId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
+        var observedClient = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (observedClient?.VpnPanel is null || observedClient.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireVpnSubscriptionAsync(observedClient.SubscriptionId, cancellationToken);
+        ClearTracker();
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
         {
@@ -910,6 +926,8 @@ public class X3UiPanelService
         }
 
         var before = ClientAuditSnapshot(client);
+        var remoteMutationAttempted = false;
+        var remoteMutationCompleted = false;
         if (!IsSandboxMode())
         {
             var configurationError = ValidatePanelCredentials(client.VpnPanel);
@@ -919,16 +937,34 @@ public class X3UiPanelService
             }
 
             var password = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
-            await _client.ResetClientTrafficAsync(client.VpnPanel, password, client.VpnInbound.ExternalInboundId, client.Uuid, cancellationToken);
+            try
+            {
+                remoteMutationAttempted = true;
+                await _client.ResetClientTrafficAsync(client.VpnPanel, password, client.VpnInbound.ExternalInboundId, client.Uuid, cancellationToken);
+                remoteMutationCompleted = true;
+            }
+            catch (Exception remoteError)
+            {
+                await PersistTrafficResetUncertaintyAsync(client.Id, actorUserId, before, remoteError, "remote_operation_failed");
+                throw;
+            }
         }
 
-        client.SyncStatus = IsSandboxMode() ? "sandbox-traffic-reset" : "traffic-reset";
-        client.LastSyncedAt = _clock.UtcNow;
-        client.UpdatedAt = _clock.UtcNow;
-        await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
-        AddAudit("vpn_client.traffic.reset", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Result<VpnClientDto>.Success(MapClient(client));
+        try
+        {
+            client.SyncStatus = IsSandboxMode() ? "sandbox-traffic-reset" : "traffic-reset";
+            client.LastSyncedAt = _clock.UtcNow;
+            client.UpdatedAt = _clock.UtcNow;
+            await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+            AddAudit("vpn_client.traffic.reset", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<VpnClientDto>.Success(MapClient(client));
+        }
+        catch (Exception localError) when (remoteMutationAttempted && remoteMutationCompleted)
+        {
+            await PersistTrafficResetUncertaintyAsync(client.Id, actorUserId, before, localError, "local_persistence_failed");
+            throw;
+        }
     }
 
     public Task<Result<VpnClientDto>> MigrateClientAsync(Guid clientId, MigrateVpnClientCommand command, CancellationToken cancellationToken = default)
@@ -1159,13 +1195,38 @@ public class X3UiPanelService
 
     private async Task<Result<VpnClientDto>> SetClientEnabledAsync(Guid clientId, bool enabled, Guid? actorUserId, CancellationToken cancellationToken)
     {
+        var observedClient = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (observedClient?.VpnPanel is null || observedClient.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireVpnSubscriptionAsync(observedClient.SubscriptionId, cancellationToken);
+        ClearTracker();
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
         {
             return Result<VpnClientDto>.Failure("VPN client not found.");
         }
+        if (client.Enable == enabled)
+        {
+            return Result<VpnClientDto>.Success(MapClient(client));
+        }
 
         var before = ClientAuditSnapshot(client);
+        var action = enabled ? "vpn_client.enable" : "vpn_client.disable";
+        var previousRemoteRequest = new X3UiUpdateClientRequest(
+            client.VpnInbound.ExternalInboundId,
+            client.Uuid,
+            client.Email,
+            client.Uuid,
+            client.Flow,
+            client.LimitIp,
+            client.TotalGb,
+            client.ExpiryTime,
+            client.Enable);
+        var remoteMutationAttempted = false;
+        string? password = null;
         if (!IsSandboxMode())
         {
             var configurationError = ValidatePanelCredentials(client.VpnPanel);
@@ -1174,20 +1235,137 @@ public class X3UiPanelService
                 return Result<VpnClientDto>.Failure(configurationError);
             }
 
-            var password = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
-            await _client.UpdateClientAsync(client.VpnPanel, password, new X3UiUpdateClientRequest(client.VpnInbound.ExternalInboundId, client.Uuid, client.Email, client.Uuid, client.Flow, client.LimitIp, client.TotalGb, client.ExpiryTime, enabled), cancellationToken);
+            password = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
+            try
+            {
+                remoteMutationAttempted = true;
+                await _client.UpdateClientAsync(client.VpnPanel, password, previousRemoteRequest with { Enable = enabled }, cancellationToken);
+            }
+            catch (Exception remoteError)
+            {
+                await CompensateClientEnabledFailureAsync(client, password, previousRemoteRequest, actorUserId, before, action, remoteError, "remote_operation_failed");
+                throw;
+            }
         }
 
-        client.Enable = enabled;
-        client.SyncStatus = IsSandboxMode()
-            ? enabled ? "sandbox-enabled" : "sandbox-disabled"
-            : enabled ? "enabled" : "disabled";
-        client.LastSyncedAt = _clock.UtcNow;
-        client.UpdatedAt = _clock.UtcNow;
-        await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
-        AddAudit(enabled ? "vpn_client.enable" : "vpn_client.disable", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Result<VpnClientDto>.Success(MapClient(client));
+        try
+        {
+            client.Enable = enabled;
+            client.SyncStatus = IsSandboxMode()
+                ? enabled ? "sandbox-enabled" : "sandbox-disabled"
+                : enabled ? "enabled" : "disabled";
+            client.LastSyncedAt = _clock.UtcNow;
+            client.UpdatedAt = _clock.UtcNow;
+            await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+            AddAudit(action, "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<VpnClientDto>.Success(MapClient(client));
+        }
+        catch (Exception localError) when (remoteMutationAttempted)
+        {
+            await CompensateClientEnabledFailureAsync(client, password!, previousRemoteRequest, actorUserId, before, action, localError, "local_persistence_failed");
+            throw;
+        }
+    }
+
+    private async Task CompensateClientEnabledFailureAsync(
+        VpnClient client,
+        string password,
+        X3UiUpdateClientRequest previousRemoteRequest,
+        Guid? actorUserId,
+        object before,
+        string action,
+        Exception operationError,
+        string outcome)
+    {
+        try
+        {
+            await _client.UpdateClientAsync(client.VpnPanel!, password, previousRemoteRequest, CancellationToken.None);
+        }
+        catch (Exception compensationError)
+        {
+            await PersistClientStateCompensationFailureAsync(client.Id, actorUserId, before, action, operationError, compensationError, outcome);
+            throw new InvalidOperationException(
+                "VPN client state is uncertain and remote rollback failed; manual provider reconciliation is required.",
+                new AggregateException(operationError, compensationError));
+        }
+
+        ClearTracker();
+        AddAudit($"{action}.failed", "VpnClient", client.Id, actorUserId, before, new
+        {
+            compensated = true,
+            outcome,
+            error = SafeError(operationError.Message)
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private async Task PersistClientStateCompensationFailureAsync(
+        Guid clientId,
+        Guid? actorUserId,
+        object before,
+        string action,
+        Exception operationError,
+        Exception compensationError,
+        string outcome)
+    {
+        ClearTracker();
+        var persistedClient = await _db.VpnClients.FirstOrDefaultAsync(x => x.Id == clientId, CancellationToken.None);
+        if (persistedClient is not null)
+        {
+            persistedClient.SyncStatus = "client-state-compensation-failed";
+            persistedClient.LastSyncedAt = _clock.UtcNow;
+            persistedClient.UpdatedAt = _clock.UtcNow;
+            await MarkLinkedAccessSyncRequiredAsync(persistedClient, CancellationToken.None);
+        }
+        AddAudit($"{action}.compensation_failed", "VpnClient", clientId, actorUserId, before, new
+        {
+            compensated = false,
+            outcome,
+            error = SafeError(operationError.Message),
+            compensationError = SafeError(compensationError.Message)
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private async Task PersistTrafficResetUncertaintyAsync(
+        Guid clientId,
+        Guid? actorUserId,
+        object before,
+        Exception error,
+        string outcome)
+    {
+        ClearTracker();
+        var persistedClient = await _db.VpnClients.FirstOrDefaultAsync(x => x.Id == clientId, CancellationToken.None);
+        if (persistedClient is not null)
+        {
+            persistedClient.SyncStatus = "traffic-reset-uncertain";
+            persistedClient.LastSyncedAt = _clock.UtcNow;
+            persistedClient.UpdatedAt = _clock.UtcNow;
+            await MarkLinkedAccessSyncRequiredAsync(persistedClient, CancellationToken.None);
+        }
+        AddAudit("vpn_client.traffic.reset.uncertain", "VpnClient", clientId, actorUserId, before, new
+        {
+            outcome,
+            reconciliationRequired = true,
+            error = SafeError(error.Message)
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private async Task MarkLinkedAccessSyncRequiredAsync(VpnClient client, CancellationToken cancellationToken)
+    {
+        var accesses = await _db.AccessCredentials
+            .Where(x => x.SubscriptionId == client.SubscriptionId && (x.ProviderAccessId == client.ExternalClientId || x.ProviderAccessId == client.Id.ToString()))
+            .ToListAsync(cancellationToken);
+        foreach (var access in accesses)
+        {
+            if (StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.SyncRequired, _clock.UtcNow).IsSuccess)
+            {
+                access.LastSyncedAt = _clock.UtcNow;
+                access.Revision += 1;
+            }
+        }
     }
 
     private async Task<Result<bool>> TryReserveMigrationTargetCapacityAsync(VpnInbound targetInbound, CancellationToken cancellationToken)

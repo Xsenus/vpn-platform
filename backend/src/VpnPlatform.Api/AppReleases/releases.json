@@ -11166,5 +11166,28 @@
         "text": "Админка показывает occupancy доступных целей и подтверждает временную add-before-delete резервацию. Roadmap progress is 490/510 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-x3ui-client-state-reconciliation",
+    "version": "0.479.0",
+    "releasedAt": "2026-08-05T00:38:00+07:00",
+    "title": "Операции клиента 3x-ui сохраняют согласованное состояние",
+    "summary": "Enable/disable получают reverse update, а необратимый reset traffic оставляет durable reconciliation marker при неопределённом результате.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin enable/disable компенсирует ambiguous provider update и local save failure; неудачный rollback переводит связанный доступ в SyncRequired."
+      },
+      {
+        "type": "fixed",
+        "text": "Reset traffic больше не теряет возможную remote-мутацию: admin и provider paths сохраняют traffic-reset-uncertain для ручной сверки."
+      },
+      {
+        "type": "important",
+        "text": "Админка перечитывает состояние после ошибки и предупреждает о необратимом reset. Roadmap progress is 491/511 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

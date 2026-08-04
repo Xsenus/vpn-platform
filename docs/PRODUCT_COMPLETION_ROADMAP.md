@@ -2,11 +2,11 @@
 
 Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
 
-Дата актуализации: 2026-08-04.
+Дата актуализации: 2026-08-05.
 
-Дата последней сверки: 2026-08-04.
+Дата последней сверки: 2026-08-05.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-04-x3ui-client-migration-atomicity`, версия `0.478.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `490/510` проверяемых пунктов, готовность `96.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-05-x3ui-client-state-reconciliation`, версия `0.479.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `491/511` проверяемых пунктов, готовность `96.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -35,9 +35,9 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-08-04:
+Что подтверждено на 2026-08-05:
 
-- [x] `STATE-001` Backend test suite проходит: `954/954`.
+- [x] `STATE-001` Backend test suite проходит: `961/961`.
 - [x] `STATE-002` Frontend test suite проходит: `68/68`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -1656,6 +1656,10 @@ git diff --check
   - Что сделать: manual migration не должна переполнять target panel/inbound, создавать две неконтролируемые remote-копии при гонке или оставлять source/target и counters рассинхронизированными после ambiguous add, source delete, cancellation и local save failure.
   - Что сделано: `X3UiPanelService` сериализует перенос по подписке, атомарно резервирует временные panel/inbound slots до remote add, освобождает source после local commit и выполняет обратный remote move при сбое. Неопределённая компенсация сохраняет резерв и `migration-compensation-failed`; админка исключает заполненные цели, показывает occupancy и подтверждает add-before-delete.
   - Доказательство: backend `954/954`, X3Ui integration `56/56`, targeted migration `9/9`, file-backed SQLite last-slot concurrency и fault/cancellation tests, API/TelegramBot Release builds `0` warnings/`0` errors, EF model drift отсутствует, fresh local SQLite smoke latest release OK, frontend `68/68`, typecheck/build, dependency audit `0 vulnerabilities`, Playwright console/responsive `12/12`, secret scan `607` files/`0` findings, latest "Что нового" `2026-08-04-x3ui-client-migration-atomicity`, версия `0.478.0`. Real VPS/staging/payment/production-like 3x-ui evidence остаётся внешним и этим пунктом не закрывается.
+- [x] `P11-ACC-201` Согласованность ручных client state операций и reset traffic. 2026-08-05.
+  - Что сделать: admin enable/disable не должны оставлять provider и БД в разных состояниях после ambiguous update, cancellation или local save failure; необратимый reset traffic не должен терять факт возможной remote-мутации.
+  - Что сделано: client actions сериализованы по подписке; enable/disable выполняют reverse provider update и сохраняют failure audit, а неудачная компенсация помечает клиента `client-state-compensation-failed` и связанный доступ `SyncRequired`. Admin и provider reset paths сохраняют `traffic-reset-uncertain`; UI перечитывает состояние после ошибки, показывает reconciliation badge и подтверждает необратимость.
+  - Доказательство: backend `961/961`, X3Ui integration `63/63`, targeted client-state/reset `7/7`, ambiguous update, cancellation, compensation failure и local-save fault injection, API/TelegramBot Release builds `0` warnings/`0` errors, EF model drift отсутствует, fresh local SQLite smoke latest release OK, frontend `68/68`, typecheck/build, dependency audit `0 vulnerabilities`, Playwright console/responsive `12/12`, secret scan `607` files/`0` findings, latest "Что нового" `2026-08-05-x3ui-client-state-reconciliation`, версия `0.479.0`. Real VPS/staging/payment/production-like 3x-ui evidence остаётся внешним и этим пунктом не закрывается.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2232,6 +2236,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-08-05 | Codex | Admin/provider enable, disable и reset traffic: rollback, uncertainty и reconciliation UI | Зеленое локально | Backend `961/961`, X3Ui `63/63`, targeted `7/7`, Playwright `12/12`; production-like 3x-ui остаётся открытым evidence |
 | 2026-08-04 | Codex | X3Ui client migration capacity, concurrency и remote rollback | Зеленое локально | Backend `954/954`, X3Ui `56/56`, targeted `9/9`, file-backed SQLite last-slot race, Playwright `12/12`; production-like 3x-ui остаётся открытым evidence |
 | 2026-08-04 | Codex | Terminal subscription cancel, X3Ui revoke/delete и node/panel/inbound rollback | Зеленое локально | Backend `948/948`, targeted `23/23`, real adapter file-backed SQLite fault injection, Playwright `12/12`; production-like 3x-ui остаётся открытым evidence |
 | 2026-08-04 | Codex | 3x-ui create/update/delete/enable/disable, concurrent capacity и SQLite selection | Зеленое локально | Backend `939/939`, X3Ui `48/48`, file-backed SQLite concurrency, Playwright `12/12`; production-like 3x-ui остаётся открытым evidence |
@@ -2265,6 +2270,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-05-016` | P1 | VPN/3x-ui client state | Ручные enable/disable не компенсировали successful/ambiguous remote update при local failure, а reset traffic мог выполниться в 3x-ui без durable uncertainty marker. | Исправлено | Reverse update, `SyncRequired`, redacted audit, durable reset uncertainty и desktop/mobile dialog покрыты fault-injection/X3Ui/Playwright; production-like 3x-ui smoke остаётся внешней проверкой. |
 | `BUG-2026-08-04-015` | P1 | VPN/3x-ui migration | Manual client migration не проверяла target capacity, обычным `+= 1` допускала oversubscription и не восстанавливала source/target после local commit failure или ambiguous remote side effect. | Исправлено | Durable target reservation, source restore/target cleanup, uncertainty marker и desktop/mobile flow покрыты SQLite/X3Ui/Playwright; production-like 3x-ui smoke остаётся внешней проверкой. |
 | `BUG-2026-08-04-014` | P1 | Subscription/VPN lifecycle | Terminal `Cancelled` только отключал доступ и оставлял provider-клиента, ссылки подписки и node/panel/inbound capacity занятыми навсегда. | Исправлено | Transactional revoke/delete, симметричный capacity release, rollback/reconciliation и desktop/mobile destructive-flow покрыты SQLite/X3Ui/Playwright; production-like 3x-ui smoke остаётся внешней проверкой. |
 | `BUG-2026-08-04-012` | P1 | VPN/3x-ui | Параллельная выдача могла переполнить последний inbound slot, продление переносило клиента с заполненной назначенной панели без удаления старой копии, delete не освобождал capacity, SQLite selection падал на сортировке. | Исправлено | Subscription gate, optimistic concurrency, assigned-inbound renewal, симметричные capacity counters, remote compensation и SQLite regression добавлены; production-like 3x-ui smoke остаётся внешней проверкой. |

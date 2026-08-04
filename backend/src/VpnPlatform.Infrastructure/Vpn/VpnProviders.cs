@@ -235,16 +235,58 @@ public class X3UiVpnProvider : IVpnProvider
         if (vpnClient is null) return;
 
         var isSandboxClient = IsSandboxClient(vpnClient);
-        if (!isSandboxClient && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
+        var remoteMutationAttempted = false;
+        try
         {
-            var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
-            await _client.ResetClientTrafficAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
+            if (!isSandboxClient && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
+            {
+                var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
+                remoteMutationAttempted = true;
+                await _client.ResetClientTrafficAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
+            }
+
+            vpnClient.SyncStatus = isSandboxClient ? "sandbox-traffic-reset" : "traffic-reset";
+            vpnClient.LastSyncedAt = _clock.UtcNow;
+            vpnClient.UpdatedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch when (remoteMutationAttempted)
+        {
+            await PersistTrafficResetUncertaintyAsync(vpnClient.Id);
+            throw;
+        }
+    }
+
+    private async Task PersistTrafficResetUncertaintyAsync(Guid clientId)
+    {
+        if (_db is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
         }
 
-        vpnClient.SyncStatus = isSandboxClient ? "sandbox-traffic-reset" : "traffic-reset";
-        vpnClient.LastSyncedAt = _clock.UtcNow;
-        vpnClient.UpdatedAt = _clock.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
+        var persistedClient = await _db.VpnClients.FirstOrDefaultAsync(x => x.Id == clientId, CancellationToken.None);
+        if (persistedClient is null)
+        {
+            return;
+        }
+
+        persistedClient.SyncStatus = "traffic-reset-uncertain";
+        persistedClient.LastSyncedAt = _clock.UtcNow;
+        persistedClient.UpdatedAt = _clock.UtcNow;
+        var accesses = await _db.AccessCredentials
+            .Where(x => x.SubscriptionId == persistedClient.SubscriptionId
+                && (x.ProviderAccessId == persistedClient.ExternalClientId || x.ProviderAccessId == persistedClient.Id.ToString()))
+            .ToListAsync(CancellationToken.None);
+        foreach (var access in accesses)
+        {
+            if (StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.SyncRequired, _clock.UtcNow).IsSuccess)
+            {
+                access.LastSyncedAt = _clock.UtcNow;
+                access.Revision += 1;
+            }
+        }
+
+        await _db.SaveChangesAsync(CancellationToken.None);
     }
 
     public async Task<VpnUsageSnapshot> GetUsageAsync(string providerAccessId, CancellationToken cancellationToken)

@@ -728,6 +728,177 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Admin_Client_Disable_Should_Restore_Remote_State_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        db.AccessCredentials.Add(new AccessCredential
+        {
+            SubscriptionId = ids.SubscriptionId,
+            ProviderAccessId = "client-1",
+            ServerId = Guid.NewGuid(),
+            AccessUri = "vless://old",
+            Status = AccessCredentialStatus.Active
+        });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.DisableClientAsync(ids.ClientId, CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(2, remote.UpdateClientCalls);
+        Assert.False(remote.UpdateRequests[0].Enable);
+        Assert.True(remote.UpdateRequests[1].Enable);
+        Assert.True((await db.VpnClients.SingleAsync()).Enable);
+        Assert.Equal(AccessCredentialStatus.Active, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.disable.failed" && x.AfterJson.Contains("compensated"));
+    }
+
+    [Fact]
+    public async Task Admin_Client_Enable_Should_Roll_Back_Ambiguous_Remote_Update()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var persisted = await db.VpnClients.SingleAsync();
+        persisted.Enable = false;
+        persisted.SyncStatus = "disabled";
+        await db.SaveChangesAsync();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        remote.FailingUpdateClientCalls.Add(1);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<TimeoutException>(() => service.EnableClientAsync(ids.ClientId, CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(2, remote.UpdateClientCalls);
+        Assert.True(remote.UpdateRequests[0].Enable);
+        Assert.False(remote.UpdateRequests[1].Enable);
+        Assert.False((await db.VpnClients.SingleAsync()).Enable);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.enable.failed" && x.AfterJson.Contains("compensated"));
+    }
+
+    [Fact]
+    public async Task Admin_Client_Disable_Should_Mark_Reconciliation_When_Remote_Rollback_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        db.AccessCredentials.Add(new AccessCredential
+        {
+            SubscriptionId = ids.SubscriptionId,
+            ProviderAccessId = "client-1",
+            ServerId = Guid.NewGuid(),
+            AccessUri = "vless://old",
+            Status = AccessCredentialStatus.Active
+        });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        remote.FailingUpdateClientCalls.Add(2);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.DisableClientAsync(ids.ClientId, CancellationToken.None));
+
+        Assert.Contains("manual provider reconciliation", error.Message, StringComparison.OrdinalIgnoreCase);
+        db.ChangeTracker.Clear();
+        Assert.Equal("client-state-compensation-failed", (await db.VpnClients.SingleAsync()).SyncStatus);
+        Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.disable.compensation_failed");
+    }
+
+    [Fact]
+    public async Task Admin_Client_Traffic_Reset_Should_Persist_Uncertainty_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        db.AccessCredentials.Add(new AccessCredential
+        {
+            SubscriptionId = ids.SubscriptionId,
+            ProviderAccessId = "client-1",
+            ServerId = Guid.NewGuid(),
+            AccessUri = "vless://old",
+            Status = AccessCredentialStatus.Active
+        });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ResetClientTrafficAsync(ids.ClientId, CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(1, remote.ResetTrafficCalls);
+        Assert.Equal("traffic-reset-uncertain", (await db.VpnClients.SingleAsync()).SyncStatus);
+        Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.traffic.reset.uncertain");
+    }
+
+    [Fact]
+    public async Task Admin_Client_Traffic_Reset_Should_Persist_Uncertainty_After_Ambiguous_Remote_Failure()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var remote = new FakeX3UiClient(clock.UtcNow) { FailResetTrafficAfterSideEffect = true };
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<TimeoutException>(() => service.ResetClientTrafficAsync(ids.ClientId, CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal("traffic-reset-uncertain", (await db.VpnClients.SingleAsync()).SyncStatus);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.traffic.reset.uncertain" && x.AfterJson.Contains("remote_operation_failed"));
+    }
+
+    [Fact]
+    public async Task Admin_Client_Traffic_Reset_Cancellation_After_Remote_Side_Effect_Should_Persist_Uncertainty()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        using var cancellation = new CancellationTokenSource();
+        var remote = new FakeX3UiClient(clock.UtcNow) { AfterResetTraffic = cancellation.Cancel };
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.ResetClientTrafficAsync(ids.ClientId, cancellation.Token));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(1, remote.ResetTrafficCalls);
+        Assert.Equal("traffic-reset-uncertain", (await db.VpnClients.SingleAsync()).SyncStatus);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.traffic.reset.uncertain" && x.AfterJson.Contains("remote_operation_failed"));
+    }
+
+    [Fact]
+    public async Task Real_Vpn_Provider_Traffic_Reset_Should_Mark_Reconciliation_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        db.AccessCredentials.Add(new AccessCredential
+        {
+            SubscriptionId = ids.SubscriptionId,
+            ProviderAccessId = "client-1",
+            ServerId = Guid.NewGuid(),
+            AccessUri = "vless://old",
+            Status = AccessCredentialStatus.Active
+        });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.ResetTrafficAsync("client-1", CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal("traffic-reset-uncertain", (await db.VpnClients.SingleAsync()).SyncStatus);
+        Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+    }
+
+    [Fact]
     public async Task Client_Migration_Should_Reject_Full_Target_Inbound_Before_Remote_Mutation()
     {
         await using var db = CreateDbContext();
@@ -1914,6 +2085,9 @@ public class X3UiIntegrationTests
         public TaskCompletionSource<bool>? AddClientStarted { get; init; }
         public TaskCompletionSource<bool>? ReleaseAddClient { get; init; }
         public Action<string>? AfterDeleteClient { get; init; }
+        public HashSet<int> FailingUpdateClientCalls { get; } = [];
+        public bool FailResetTrafficAfterSideEffect { get; init; }
+        public Action? AfterResetTraffic { get; init; }
         public List<X3UiUpdateClientRequest> UpdateRequests { get; } = [];
 
         public Task<X3UiSession> LoginAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiSession("session=test", _now));
@@ -1970,6 +2144,10 @@ public class X3UiIntegrationTests
         {
             UpdateClientCalls += 1;
             UpdateRequests.Add(request);
+            if (FailingUpdateClientCalls.Contains(UpdateClientCalls))
+            {
+                throw new TimeoutException("simulated ambiguous update timeout");
+            }
             return Task.FromResult(new X3UiClientDto(request.ClientId, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null));
         }
 
@@ -1998,6 +2176,12 @@ public class X3UiIntegrationTests
         public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
         {
             ResetTrafficCalls += 1;
+            AfterResetTraffic?.Invoke();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (FailResetTrafficAfterSideEffect)
+            {
+                throw new TimeoutException("simulated ambiguous traffic reset timeout");
+            }
             return Task.CompletedTask;
         }
         public Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string clientId, CancellationToken cancellationToken)

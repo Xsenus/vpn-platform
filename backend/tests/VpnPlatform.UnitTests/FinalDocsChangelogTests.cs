@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("954/954", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-x3ui-client-migration-atomicity", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("961/961", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-x3ui-client-state-reconciliation", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "954/954",
-                     "2026-08-04-x3ui-client-migration-atomicity",
-                     "0.478.0",
+                     "961/961",
+                     "2026-08-05-x3ui-client-state-reconciliation",
+                     "0.479.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-x3ui-client-migration-atomicity",
-                     "0.478.0",
-                     "490/510",
+                     "2026-08-05-x3ui-client-state-reconciliation",
+                     "0.479.0",
+                     "491/511",
                      "96.1%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `954/954`",
+                     "Backend full suite: OK, `961/961`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `603` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-x3ui-client-migration-atomicity",
-                     "0.478.0",
-                     "490/510",
+                     "2026-08-05-x3ui-client-state-reconciliation",
+                     "0.479.0",
+                     "491/511",
                      "96.1%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `954/954`",
+                     "backend full suite `961/961`",
                      "PostgreSQL SQL",
                      "secret scan: `603` files, `0` findings"
                  })
@@ -241,14 +241,14 @@ public class FinalDocsChangelogTests
 
         var changelogTopEntry = Regex.Match(
             changelog,
-            @"(?s)\A# Changelog\s+## (?<version>[^\r\n]+?) - 2026-08-04(?<body>.*?)(?:\r?\n## |\z)");
+            @"(?s)\A# Changelog\s+## (?<version>[^\r\n]+?) - 2026-08-05(?<body>.*?)(?:\r?\n## |\z)");
         Assert.True(changelogTopEntry.Success, "CHANGELOG.md must start with the latest release block.");
         Assert.Contains(version, changelogTopEntry.Groups["version"].Value, StringComparison.Ordinal);
         Assert.Contains(releaseId, changelogTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
 
         var testResultsTopEntry = Regex.Match(
             testResults,
-            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-05-25\.\s+## Check 2026-08-04: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
+            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-05-25\.\s+## Check 2026-08-05: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
         Assert.True(testResultsTopEntry.Success, "TEST_RESULTS.md must start with the latest release check block.");
         Assert.Contains(releaseId, testResultsTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(version, testResultsTopEntry.Groups["body"].Value, StringComparison.Ordinal);
