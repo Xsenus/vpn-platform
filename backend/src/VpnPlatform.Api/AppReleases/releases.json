@@ -11396,5 +11396,28 @@
         "text": "Roadmap progress is 500/520 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-cabinet-expired-order-payment-guard",
+    "version": "0.489.0",
+    "releasedAt": "2026-08-05T03:31:00+07:00",
+    "title": "Истёкший заказ ведёт к новому оформлению",
+    "summary": "Кабинет учитывает backend-срок заказа и не предлагает повторную оплату после истечения статуса или expiresAt.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Expired и stale PendingPayment отображаются как истёкшие без кнопки повторной оплаты; пользователю доступен переход к новому заказу."
+      },
+      {
+        "type": "fixed",
+        "text": "Time-aware handler guard не вызывает payment API; SQLite подтверждает отказ до provider call и отсутствие новой payment row."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 501/521 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

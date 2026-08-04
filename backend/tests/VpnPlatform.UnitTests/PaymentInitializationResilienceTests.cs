@@ -108,6 +108,25 @@ public class PaymentInitializationResilienceTests
         Assert.Empty(await verificationDb.Payments.ToListAsync());
     }
 
+    [Theory]
+    [InlineData(OrderStatus.Expired, false)]
+    [InlineData(OrderStatus.PendingPayment, true)]
+    public async Task Expired_Order_Should_Not_Create_A_Checkout_On_Sqlite(OrderStatus status, bool deadlineElapsed)
+    {
+        await using var fixture = await PaymentFixture.CreateAsync(status, deadlineElapsed: deadlineElapsed);
+        var provider = new TrackingPaymentProvider();
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(fixture.Command, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("expired", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.InitCalls);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        Assert.Equal(OrderStatus.Expired, (await verificationDb.Orders.SingleAsync(x => x.Id == fixture.OrderId)).Status);
+        Assert.Empty(await verificationDb.Payments.ToListAsync());
+    }
+
     [Fact]
     public async Task Provider_Cancellation_Should_Keep_Reservation_And_Propagate_Cancellation()
     {
@@ -146,7 +165,7 @@ public class PaymentInitializationResilienceTests
         public Guid OrderId { get; }
         public PaymentInitCommand Command => new(OrderId, PaymentProvider.YooKassa, "https://example.test/return");
 
-        public static async Task<PaymentFixture> CreateAsync(OrderStatus status = OrderStatus.PendingPayment, DateTimeOffset? paidAt = null)
+        public static async Task<PaymentFixture> CreateAsync(OrderStatus status = OrderStatus.PendingPayment, DateTimeOffset? paidAt = null, bool deadlineElapsed = false)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -154,7 +173,7 @@ public class PaymentInitializationResilienceTests
             var db = new FailingSaveApplicationDbContext(options);
             await db.Database.EnsureCreatedAsync();
             var now = new DateTimeOffset(2026, 8, 4, 11, 30, 0, TimeSpan.Zero);
-            var orderId = await SeedOrderAsync(db, now, status, paidAt);
+            var orderId = await SeedOrderAsync(db, now, status, paidAt, deadlineElapsed);
             return new PaymentFixture(connection, options, db, orderId, now);
         }
 
@@ -175,12 +194,12 @@ public class PaymentInitializationResilienceTests
         }
     }
 
-    private static async Task<Guid> SeedOrderAsync(ApplicationDbContext db, DateTimeOffset now, OrderStatus status, DateTimeOffset? paidAt)
+    private static async Task<Guid> SeedOrderAsync(ApplicationDbContext db, DateTimeOffset now, OrderStatus status, DateTimeOffset? paidAt, bool deadlineElapsed)
     {
         var user = new User { Id = Guid.NewGuid(), Email = $"init-{Guid.NewGuid():N}@example.test", DisplayName = "Init User", PasswordHash = "hash", ReferralCode = $"init-{Guid.NewGuid():N}" };
         var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Init tariff", Slug = $"init-{Guid.NewGuid():N}", Description = "Init", DurationDays = 30, Price = 100m, Currency = "RUB", MaxDevices = 3, IsActive = true };
         var account = new PaymentProviderAccount { Id = Guid.NewGuid(), Provider = PaymentProvider.YooKassa, Mode = PaymentProviderMode.Sandbox, Name = $"init-{Guid.NewGuid():N}", PublicName = "YooKassa", IsEnabled = true, IsDefault = true, ShopId = "shop", SecretKeyProtected = "secret", ReturnUrl = "https://example.test/return" };
-        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Amount = 100m, Currency = "RUB", Status = status, PaidAt = paidAt, ExpiresAt = now.AddMinutes(15), PaymentProvider = PaymentProvider.YooKassa };
+        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Amount = 100m, Currency = "RUB", Status = status, PaidAt = paidAt, ExpiresAt = deadlineElapsed ? now.AddMinutes(-1) : now.AddMinutes(15), PaymentProvider = PaymentProvider.YooKassa };
 
         db.Users.Add(user);
         db.Tariffs.Add(tariff);

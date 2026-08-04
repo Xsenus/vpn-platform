@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.489.0 - 2026-08-05
+
+Release entry: `2026-08-05-cabinet-expired-order-payment-guard`.
+
+### Исправлено
+
+- Кабинет больше не предлагает повторную оплату `Expired` заказа, которую backend гарантированно отклоняет.
+- `PendingPayment` и `Failed` дополнительно проверяются по `expiresAt`: stale карточка получает эффективный статус `Expired` и понятное объяснение.
+- Вместо нерабочей команды показан переход к новому заказу; handler независимо проверяет срок и не вызывает payment API при программном обходе UI.
+
+### Проверено
+
+- Backend full suite `989/989`; targeted payment initialization SQLite suite `8/8`, включая явный `Expired` и просроченный `PendingPayment` без provider call и payment row.
+- Frontend `71/71`, typecheck/build OK; cabinet desktop/mobile `2/2`, Playwright desktop/mobile/all-screens responsive suite `12/12` без overflow/console errors.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `501/521` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остаётся `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.488.0 - 2026-08-05
 
 Release entry: `2026-08-05-cabinet-qr-availability`.

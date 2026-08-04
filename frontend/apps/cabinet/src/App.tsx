@@ -24,7 +24,7 @@ import {
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, getAccessQrAvailability, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
-import { buildOrderExportText, canRetryOrderPayment, formatPaymentMoney, getLatestPaymentForOrder, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
+import { buildOrderExportText, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
@@ -500,6 +500,11 @@ export function App() {
 
   const handleRetryOrderPayment = async (order: OrderDto) => {
     if (!token) return
+    const paymentAvailability = getOrderPaymentAvailability(order)
+    if (!paymentAvailability.canRetry) {
+      setError(paymentAvailability.reason ?? 'Этот заказ нельзя оплатить повторно. Создайте новый заказ.')
+      return
+    }
     if (!provider) {
       setError('Нет доступных платежных провайдеров для повторной оплаты.')
       return
@@ -884,6 +889,7 @@ export function App() {
             {orders.map((order) => {
               const orderPayments = paymentsByOrderId.get(order.id) ?? []
               const latestPayment = getLatestPaymentForOrder(order, orderPayments)
+              const paymentAvailability = getOrderPaymentAvailability(order)
               const exportText = buildOrderExportText(order, orderPayments)
               const exportHref = `data:application/json;charset=utf-8,${encodeURIComponent(exportText)}`
 
@@ -894,9 +900,9 @@ export function App() {
                       <strong>{formatPaymentMoney(order.amount, order.currency)}</strong>
                       <div className="muted">Тариф: {order.tariffName || order.tariffId}</div>
                     </div>
-                    <StatusBadge value={order.status} />
+                    <StatusBadge value={paymentAvailability.isExpired ? 'Expired' : order.status} />
                   </div>
-                  <p className="muted no-margin-bottom">{getOrderStatusMessage(order.status)}</p>
+                  <p className="muted no-margin-bottom">{paymentAvailability.reason ?? getOrderStatusMessage(order.status)}</p>
                   <dl className="payment-meta-grid">
                     <div><dt>Тип</dt><dd>{order.type ?? '—'}</dd></div>
                     <div><dt>Канал</dt><dd>{order.channel ?? '—'}</dd></div>
@@ -913,9 +919,10 @@ export function App() {
                     </div>
                   )}
                   <div className="toolbar compact">
-                    {canRetryOrderPayment(order.status) && (
+                    {paymentAvailability.canRetry && (
                       <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRetryOrderPayment(order)}>Повторить оплату</PrimaryButton>
                     )}
+                    {paymentAvailability.shouldCreateNewOrder && <a className="button" href={`${publicWebUrl}/tariffs`}>Создать новый заказ</a>}
                     <CopyButton value={exportText} label="Скопировать данные" />
                     <a className="button button-ghost" download={`order-${order.id}.json`} href={exportHref}>Скачать JSON</a>
                   </div>

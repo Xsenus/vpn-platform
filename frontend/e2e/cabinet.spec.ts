@@ -92,6 +92,20 @@ const paidOrder = {
   updatedAt: now
 }
 
+const stalePendingOrder = {
+  ...paidOrder,
+  id: 'order-stale-pending',
+  tariffName: 'Истёкший заказ',
+  status: 'PendingPayment',
+  expiresAt: '2026-06-12T00:00:00Z',
+  paidAt: null,
+  isFirstPurchase: false,
+  paymentAttemptsCount: 0,
+  lastPaymentId: null,
+  lastPaymentStatus: null,
+  linkedSubscriptionId: null
+}
+
 const paidPayment = {
   id: 'payment-paid',
   orderId: paidOrder.id,
@@ -266,7 +280,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/orders') {
-      await fulfillJson(route, [paidOrder])
+      await fulfillJson(route, [paidOrder, stalePendingOrder])
       return
     }
 
@@ -427,6 +441,12 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
   await expect(page.getByText('yk-paid-1')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'EU Sandbox' })).toBeVisible()
+
+  const staleOrderCard = page.locator('.payment-record').filter({ hasText: 'Истёкший заказ' })
+  await expect(staleOrderCard.getByText('Expired')).toBeVisible()
+  await expect(staleOrderCard.getByText('Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.')).toBeVisible()
+  await expect(staleOrderCard.getByRole('button', { name: 'Повторить оплату' })).toHaveCount(0)
+  await expect(staleOrderCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)
 
   const blockedCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Заблокированный тариф' }) })
   const cancelledCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отменённый тариф' }) })

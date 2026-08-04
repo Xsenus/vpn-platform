@@ -2,7 +2,7 @@ import type { OrderDto, PaymentAttemptDto } from '@vpn-platform/api-client'
 
 export type PaymentStatusTone = 'pending' | 'success' | 'failed' | 'neutral'
 
-const retryableOrderStatuses = new Set(['PendingPayment', 'Failed', 'Expired'])
+const retryableOrderStatuses = new Set(['PendingPayment', 'Failed'])
 const successfulStatuses = new Set(['Paid', 'Completed', 'Succeeded', 'Success', 'Activated', 'Refunded', 'PartiallyRefunded'])
 const failedStatuses = new Set(['Failed', 'Canceled', 'Cancelled', 'Expired', 'Rejected'])
 const pendingStatuses = new Set(['Pending', 'PendingPayment', 'Created', 'Processing', 'WaitingForCapture'])
@@ -11,8 +11,27 @@ export function formatPaymentMoney(amount: number, currency: string) {
   return `${amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${currency}`
 }
 
-export function canRetryOrderPayment(status: string) {
-  return retryableOrderStatuses.has(status)
+export function getOrderPaymentAvailability(order: Pick<OrderDto, 'status' | 'expiresAt'>, now = new Date()) {
+  const hasRetryableStatus = retryableOrderStatuses.has(order.status)
+  const expiresAt = Date.parse(order.expiresAt)
+  const isExpired = order.status === 'Expired'
+    || (hasRetryableStatus && !Number.isNaN(expiresAt) && expiresAt <= now.getTime())
+
+  if (isExpired) {
+    return {
+      canRetry: false,
+      shouldCreateNewOrder: true,
+      isExpired: true,
+      reason: 'Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.'
+    }
+  }
+
+  return {
+    canRetry: hasRetryableStatus,
+    shouldCreateNewOrder: order.status === 'Cancelled' || order.status === 'Canceled',
+    isExpired: false,
+    reason: null
+  }
 }
 
 export function getPaymentStatusTone(status: string): PaymentStatusTone {
@@ -36,7 +55,7 @@ export function getOrderStatusMessage(status: string) {
     case 'Failed':
       return 'Оплата не прошла. Проверьте способ оплаты или повторите попытку.'
     case 'Expired':
-      return 'Срок оплаты заказа истек. Можно повторить оплату или создать новый заказ.'
+      return 'Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.'
     case 'Canceled':
     case 'Cancelled':
       return 'Заказ отменен. Для покупки VPN выберите тариф заново.'

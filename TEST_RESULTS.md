@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: cabinet expired order payment guard
+
+Scope:
+- Проверено соответствие повторной оплаты в кабинете backend-правилу истечения заказа по статусу и `expiresAt`.
+
+Results:
+- Roadmap progress: `501/521` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-cabinet-expired-order-payment-guard`, version `0.489.0`.
+- Backend full suite: OK, `989/989`; targeted payment initialization SQLite suite: OK, `8/8`.
+- Явный `Expired` и stale `PendingPayment` отклоняются до provider call; SQLite подтверждает статус `Expired` и отсутствие новой payment row.
+- Карточка вычисляет effective expiry, не показывает «Повторить оплату», предлагает новый заказ; handler имеет независимый time-aware guard без вызова API.
+- Frontend tests: OK, `71/71`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Cabinet desktop/mobile regression: OK, `2/2`; Playwright desktop/mobile/all-screens responsive suite: OK, `12/12`, без overflow/console errors.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `610` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: cabinet QR availability
 
 Scope:

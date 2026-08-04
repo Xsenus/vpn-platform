@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import type { OrderDto, PaymentAttemptDto } from '../packages/api-client/src/index.ts'
 import {
   buildOrderExportText,
-  canRetryOrderPayment,
   formatPaymentMoney,
   getLatestPaymentForOrder,
+  getOrderPaymentAvailability,
   getOrderStatusMessage,
   getPaymentStatusMessage,
   getPaymentStatusTone,
@@ -48,19 +48,34 @@ function payment(overrides: Partial<PaymentAttemptDto> = {}): PaymentAttemptDto 
   }
 }
 
-test('cabinet payments allows retry only for recoverable order statuses', () => {
-  assert.equal(canRetryOrderPayment('PendingPayment'), true)
-  assert.equal(canRetryOrderPayment('Failed'), true)
-  assert.equal(canRetryOrderPayment('Expired'), true)
+test('cabinet payments allows retry only for backend-supported order statuses', () => {
+  const now = new Date('2026-05-27T12:00:00Z')
+  assert.equal(getOrderPaymentAvailability(order(), now).canRetry, true)
+  assert.equal(getOrderPaymentAvailability(order({ status: 'Failed' }), now).canRetry, true)
+  assert.equal(getOrderPaymentAvailability(order({ status: 'Expired' }), now).canRetry, false)
+  assert.equal(getOrderPaymentAvailability(order({ status: 'Completed' }), now).canRetry, false)
+  assert.equal(getOrderPaymentAvailability(order({ status: 'Paid' }), now).canRetry, false)
+})
 
-  assert.equal(canRetryOrderPayment('Completed'), false)
-  assert.equal(canRetryOrderPayment('Paid'), false)
+test('cabinet payments treats a stale pending order as expired and offers a new order', () => {
+  const availability = getOrderPaymentAvailability(
+    order({ status: 'PendingPayment', expiresAt: '2026-05-27T11:59:59Z' }),
+    new Date('2026-05-27T12:00:00Z')
+  )
+
+  assert.deepEqual(availability, {
+    canRetry: false,
+    shouldCreateNewOrder: true,
+    isExpired: true,
+    reason: 'Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.'
+  })
 })
 
 test('cabinet payments returns human messages and tones for important statuses', () => {
   assert.match(getOrderStatusMessage('PendingPayment'), /ожидает оплаты/)
   assert.match(getOrderStatusMessage('Failed'), /не прошла/)
   assert.match(getOrderStatusMessage('Paid'), /подтверждена/)
+  assert.doesNotMatch(getOrderStatusMessage('Expired'), /повторить оплату/)
 
   assert.match(getPaymentStatusMessage('Pending'), /ожидает подтверждения/)
   assert.match(getPaymentStatusMessage('Failed'), /ошибкой/)
