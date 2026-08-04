@@ -146,7 +146,6 @@ public class PanelSyncWorker : BackgroundService
         {
             try
             {
-                await using var gate = await PaymentProcessingGate.AcquirePanelSyncAsync(panel.Id, cancellationToken);
                 using var panelScope = _scopeFactory.CreateScope();
                 var db = panelScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
                 var current = await db.VpnPanels.AsNoTracking()

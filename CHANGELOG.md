@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.480.0 - 2026-08-05
+
+Release entry: `2026-08-05-x3ui-inbound-update-reconciliation`.
+
+### Исправлено
+
+- Create/edit/default и panel sync используют единый panel-scoped gate; конкурентные edit больше не могут зафиксировать локальное состояние в порядке, отличном от 3x-ui.
+- Edit inbound компенсирует ambiguous provider timeout и ошибку локального commit обратным remote update с исходной конфигурацией.
+- Неудачная reverse update создаёт redacted `vpn_inbound.update.compensation_failed` audit с явным `reconciliationRequired`, не маскируя неопределённое состояние провайдера.
+- Одновременный sync ожидает защищённую секцию и затем отклоняется как stale без повторного remote вызова.
+
+### Проверено
+
+- Backend full suite `965/965`; X3Ui integration suite `67/67`, targeted X3Ui/panel/SQLite suite `73/73`, inbound update regression `4/4`, включая file-backed SQLite concurrency, ambiguous timeout, local-save fault injection и compensation failure; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; EF model drift отсутствует, fresh local SQLite smoke latest release OK; secret scan `607` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `492/512` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.479.0 - 2026-08-05
 
 Release entry: `2026-08-05-x3ui-client-state-reconciliation`.

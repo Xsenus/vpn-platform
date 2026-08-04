@@ -610,6 +610,139 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Inbound_Update_Should_Restore_Remote_State_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PatchInboundAsync(
+            ids.InboundId,
+            NewInboundCommand(name: "changed-vless", port: 8443, capacity: 250),
+            CancellationToken.None));
+
+        Assert.Equal(2, remote.UpdateInboundCalls);
+        Assert.Equal("changed-vless", remote.InboundUpdateRequests[0].Remark);
+        Assert.Equal("vless", remote.InboundUpdateRequests[1].Remark);
+        Assert.Equal(443, remote.InboundUpdateRequests[1].Port);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnInbounds.SingleAsync();
+        Assert.Equal("vless", persisted.Name);
+        Assert.Equal(443, persisted.Port);
+        Assert.Equal(100, persisted.Capacity);
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_inbound.update.failed");
+        Assert.Contains("local_persistence_failed", audit.AfterJson, StringComparison.Ordinal);
+        Assert.Contains("true", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Inbound_Update_Should_Compensate_Ambiguous_Remote_Failure()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        remote.FailingUpdateInboundCalls.Add(1);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+
+        await Assert.ThrowsAsync<TimeoutException>(() => service.PatchInboundAsync(
+            ids.InboundId,
+            NewInboundCommand(name: "changed-vless", port: 8443),
+            CancellationToken.None));
+
+        Assert.Equal(2, remote.UpdateInboundCalls);
+        Assert.Equal("changed-vless", remote.InboundUpdateRequests[0].Remark);
+        Assert.Equal("vless", remote.InboundUpdateRequests[1].Remark);
+        db.ChangeTracker.Clear();
+        Assert.Equal("vless", (await db.VpnInbounds.SingleAsync()).Name);
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_inbound.update.failed");
+        Assert.Contains("remote_operation_failed", audit.AfterJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Inbound_Update_Should_Record_Manual_Reconciliation_When_Compensation_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        remote.FailingUpdateInboundCalls.Add(2);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        db.FailNextSave = true;
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.PatchInboundAsync(
+            ids.InboundId,
+            NewInboundCommand(name: "changed-vless", port: 8443),
+            CancellationToken.None));
+
+        Assert.Contains("manual provider reconciliation", error.Message, StringComparison.OrdinalIgnoreCase);
+        db.ChangeTracker.Clear();
+        Assert.Equal("vless", (await db.VpnInbounds.SingleAsync()).Name);
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_inbound.update.compensation_failed");
+        Assert.Contains("reconciliationRequired", audit.AfterJson, StringComparison.Ordinal);
+        Assert.Contains("true", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Inbound_Update_Should_Serialize_Concurrent_Changes_Per_Panel()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-inbound-update-{Guid.NewGuid():N}.db");
+        var updateStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseUpdate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var options = SqliteOptions(databasePath);
+            var clock = new FixedClock();
+            var remote = new FakeX3UiClient(clock.UtcNow)
+            {
+                UpdateInboundStarted = updateStarted,
+                ReleaseUpdateInbound = releaseUpdate
+            };
+            Guid inboundId;
+            await using (var seedDb = new ApplicationDbContext(options))
+            {
+                await seedDb.Database.EnsureCreatedAsync();
+                var panel = new VpnPanel { Id = Guid.NewGuid(), Name = "panel", BaseUrl = "https://vpn.example.com:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100 };
+                var inbound = new VpnInbound { Id = Guid.NewGuid(), VpnPanelId = panel.Id, ExternalInboundId = "1", Name = "vless", Protocol = "vless", Port = 443, StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}", SettingsJson = "{\"clients\":[]}", IsDefault = true, IsActive = true, Capacity = 100 };
+                seedDb.VpnPanels.Add(panel);
+                seedDb.VpnInbounds.Add(inbound);
+                await seedDb.SaveChangesAsync();
+                inboundId = inbound.Id;
+            }
+
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var firstService = new X3UiPanelService(firstDb, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+            var secondService = new X3UiPanelService(secondDb, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+            var first = firstService.PatchInboundAsync(inboundId, NewInboundCommand(name: "first-edit", port: 8443), CancellationToken.None);
+            await updateStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var second = secondService.PatchInboundAsync(inboundId, NewInboundCommand(name: "second-edit", port: 9443), CancellationToken.None);
+            await Task.Delay(100);
+
+            Assert.False(second.IsCompleted);
+            releaseUpdate.TrySetResult(true);
+            Assert.True((await first).IsSuccess);
+            Assert.True((await second).IsSuccess);
+
+            Assert.Equal(new[] { "first-edit", "second-edit" }, remote.InboundUpdateRequests.Select(x => x.Remark));
+            await using var verifyDb = new ApplicationDbContext(options);
+            var persisted = await verifyDb.VpnInbounds.SingleAsync();
+            Assert.Equal("second-edit", persisted.Name);
+            Assert.Equal(9443, persisted.Port);
+        }
+        finally
+        {
+            releaseUpdate.TrySetResult(true);
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(databasePath)) File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task Inbound_Management_Should_Create_Edit_Toggle_And_Protect_Inactive_Default()
     {
         await using var db = CreateDbContext();
@@ -2070,9 +2203,12 @@ public class X3UiIntegrationTests
         public CancellationTokenSource? CancelGetInboundsWith { get; set; }
         public HashSet<string> FailingDeleteInboundIds { get; } = new(StringComparer.Ordinal);
         public HashSet<string> FailingInboundDeleteIds { get; } = new(StringComparer.Ordinal);
+        public HashSet<int> FailingUpdateInboundCalls { get; } = [];
         public List<string> DeleteInboundIds { get; } = [];
         public List<string> DeletedInboundIds { get; } = [];
+        public List<X3UiUpdateInboundRequest> InboundUpdateRequests { get; } = [];
         public int CreateInboundCalls { get; private set; }
+        public int UpdateInboundCalls { get; private set; }
         public int AddClientCalls => _addClientCalls;
         public int UpdateClientCalls { get; private set; }
         public int DeleteClientCalls { get; private set; }
@@ -2084,6 +2220,8 @@ public class X3UiIntegrationTests
         public bool FailAddClientAfterSideEffect { get; init; }
         public TaskCompletionSource<bool>? AddClientStarted { get; init; }
         public TaskCompletionSource<bool>? ReleaseAddClient { get; init; }
+        public TaskCompletionSource<bool>? UpdateInboundStarted { get; init; }
+        public TaskCompletionSource<bool>? ReleaseUpdateInbound { get; init; }
         public Action<string>? AfterDeleteClient { get; init; }
         public HashSet<int> FailingUpdateClientCalls { get; } = [];
         public bool FailResetTrafficAfterSideEffect { get; init; }
@@ -2121,8 +2259,25 @@ public class X3UiIntegrationTests
             return Task.CompletedTask;
         }
 
-        public Task<X3UiInboundDto> UpdateInboundAsync(VpnPanel panel, string password, X3UiUpdateInboundRequest request, CancellationToken cancellationToken)
-            => Task.FromResult(new X3UiInboundDto(request.Id, request.Remark, request.Protocol, request.Port, request.Listen, request.SettingsJson, request.StreamSettingsJson, request.SniffingJson, request.Enable));
+        public async Task<X3UiInboundDto> UpdateInboundAsync(VpnPanel panel, string password, X3UiUpdateInboundRequest request, CancellationToken cancellationToken)
+        {
+            UpdateInboundCalls += 1;
+            var call = UpdateInboundCalls;
+            InboundUpdateRequests.Add(request);
+            if (call == 1 && UpdateInboundStarted is not null)
+            {
+                UpdateInboundStarted.TrySetResult(true);
+                if (ReleaseUpdateInbound is not null)
+                {
+                    await ReleaseUpdateInbound.Task.WaitAsync(cancellationToken);
+                }
+            }
+            if (FailingUpdateInboundCalls.Contains(call))
+            {
+                throw new TimeoutException("simulated ambiguous inbound update timeout");
+            }
+            return new X3UiInboundDto(request.Id, request.Remark, request.Protocol, request.Port, request.Listen, request.SettingsJson, request.StreamSettingsJson, request.SniffingJson, request.Enable);
+        }
 
         public async Task<X3UiClientDto> AddClientAsync(VpnPanel panel, string password, X3UiAddClientRequest request, CancellationToken cancellationToken)
         {

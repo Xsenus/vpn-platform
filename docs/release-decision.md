@@ -4,7 +4,7 @@
 
 ## Решение
 
-Статус на 2026-08-04: **staging-ready baseline, не production-ready**.
+Статус на 2026-08-05: **staging-ready baseline, не production-ready**.
 
 Проект можно использовать для локальной проверки, демонстрации продукта, подготовки staging и дальнейшего live smoke. Проект нельзя считать production-ready, пока не закрыт VPS production smoke и не проверены реальные внешние интеграции.
 
@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `961/961`.
+- Backend full suite: `965/965`.
 - API Release build: OK.
 - Frontend unit tests: `68/68`.
 - Frontend typecheck/build: OK.
@@ -46,8 +46,8 @@ Production-ready решение заблокировано следующими 
 - Panel sync uses a cross-instance unique claim, stale lease/snapshot recovery and redacted persisted diagnostics; legacy raw panel errors are cleared by the upgrade path.
 - Terminal subscription cancellation атомарно отзывает доступ, удаляет provider-клиента и освобождает capacity; rollback и provider uncertainty проверены fault-injection тестами.
 - X3Ui client migration резервирует target capacity до remote add и компенсирует remote/local failure; last-slot concurrency проверена на независимых SQLite-контекстах.
-- Latest "Что нового": `2026-08-05-x3ui-client-state-reconciliation`, версия `0.479.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `491/511` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-x3ui-inbound-update-reconciliation`, версия `0.480.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `492/512` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

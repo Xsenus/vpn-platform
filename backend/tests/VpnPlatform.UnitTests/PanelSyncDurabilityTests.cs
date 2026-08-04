@@ -45,10 +45,10 @@ public class PanelSyncDurabilityTests
         var firstResult = await first;
         var secondResult = await second;
 
-        Assert.Same(second, secondCompletion);
+        Assert.NotSame(second, secondCompletion);
         Assert.True(firstResult.IsSuccess);
         Assert.False(secondResult.IsSuccess);
-        Assert.Contains("already running", secondResult.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("stale", secondResult.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, client.GetInboundsCalls);
         await using var assertDb = new ApplicationDbContext(options);
         Assert.Single(await assertDb.PanelSyncRuns.Where(x => x.VpnPanelId == panelId && x.Status == PanelSyncRunStatus.Succeeded).ToListAsync());

@@ -283,19 +283,34 @@ public class X3UiPanelService
     public Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, CancellationToken cancellationToken = default)
         => SyncPanelAsync(panelId, null, cancellationToken);
 
-    public Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, Guid? actorUserId, CancellationToken cancellationToken = default)
-        => SyncPanelCoreAsync(panelId, actorUserId, enforceExpectedLastSyncAt: false, expectedLastSyncAt: null, cancellationToken);
+    public async Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, Guid? actorUserId, CancellationToken cancellationToken = default)
+    {
+        var observation = await _db.VpnPanels.AsNoTracking()
+            .Where(x => x.Id == panelId)
+            .Select(x => new { x.LastSyncAt })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (observation is null)
+        {
+            return Result<PanelSyncRunDto>.Failure("VPN panel not found.");
+        }
 
-    public Task<Result<PanelSyncRunDto>> SyncPanelIfCurrentAsync(
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(panelId, cancellationToken);
+        return await SyncPanelCoreAsync(panelId, actorUserId, enforceExpectedLastSyncAt: true, observation.LastSyncAt, cancellationToken);
+    }
+
+    public async Task<Result<PanelSyncRunDto>> SyncPanelIfCurrentAsync(
         Guid panelId,
         DateTimeOffset? expectedLastSyncAt,
         CancellationToken cancellationToken = default)
-        => SyncPanelCoreAsync(
+    {
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(panelId, cancellationToken);
+        return await SyncPanelCoreAsync(
             panelId,
             actorUserId: null,
             enforceExpectedLastSyncAt: true,
             expectedLastSyncAt: expectedLastSyncAt,
             cancellationToken: cancellationToken);
+    }
 
     private async Task<Result<PanelSyncRunDto>> SyncPanelCoreAsync(
         Guid panelId,
@@ -549,6 +564,7 @@ public class X3UiPanelService
             return Result<VpnInboundDto>.Failure(validationError);
         }
 
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(panelId, cancellationToken);
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == panelId, cancellationToken);
         if (panel is null)
         {
@@ -656,6 +672,16 @@ public class X3UiPanelService
             return Result<VpnInboundDto>.Failure(validationError);
         }
 
+        var observedPanelId = await _db.VpnInbounds.AsNoTracking()
+            .Where(x => x.Id == inboundId)
+            .Select(x => (Guid?)x.VpnPanelId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (observedPanelId is null)
+        {
+            return Result<VpnInboundDto>.Failure("VPN inbound not found.");
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(observedPanelId.Value, cancellationToken);
         var inbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == inboundId, cancellationToken);
         if (inbound?.VpnPanel is null)
         {
@@ -663,6 +689,18 @@ public class X3UiPanelService
         }
 
         var before = InboundAuditSnapshot(inbound);
+        var previousRemoteRequest = new X3UiUpdateInboundRequest(
+            inbound.ExternalInboundId,
+            inbound.Name,
+            inbound.Protocol,
+            inbound.Port,
+            inbound.Listen,
+            inbound.SettingsJson,
+            inbound.StreamSettingsJson,
+            inbound.SniffingJson,
+            inbound.IsActive);
+        var remoteMutationAttempted = false;
+        string? password = null;
         X3UiInboundDto remote;
         if (IsSandboxMode())
         {
@@ -674,34 +712,93 @@ public class X3UiPanelService
             {
                 return Result<VpnInboundDto>.Failure("Panel not configured: base URL, login and password are required.");
             }
-            var password = _secretProtector.Unprotect(inbound.VpnPanel.EncryptedPassword);
-            remote = await _client.UpdateInboundAsync(inbound.VpnPanel, password, new X3UiUpdateInboundRequest(inbound.ExternalInboundId, command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive), cancellationToken);
-        }
-
-        inbound.Name = remote.Remark;
-        inbound.Protocol = remote.Protocol;
-        inbound.Port = remote.Port;
-        inbound.Listen = remote.Listen;
-        inbound.SettingsJson = remote.SettingsJson;
-        inbound.StreamSettingsJson = remote.StreamSettingsJson;
-        inbound.SniffingJson = remote.SniffingJson;
-        inbound.IsActive = remote.Enable;
-        inbound.IsDefault = command.IsDefault && inbound.IsActive;
-        inbound.Capacity = command.Capacity > 0 ? command.Capacity : inbound.Capacity;
-        inbound.UpdatedAt = _clock.UtcNow;
-        if (inbound.IsDefault)
-        {
-            var defaults = await _db.VpnInbounds.Where(x => x.VpnPanelId == inbound.VpnPanelId && x.Id != inbound.Id && x.IsDefault).ToListAsync(cancellationToken);
-            foreach (var item in defaults)
+            password = _secretProtector.Unprotect(inbound.VpnPanel.EncryptedPassword);
+            try
             {
-                item.IsDefault = false;
-                item.UpdatedAt = _clock.UtcNow;
+                remoteMutationAttempted = true;
+                remote = await _client.UpdateInboundAsync(inbound.VpnPanel, password, new X3UiUpdateInboundRequest(inbound.ExternalInboundId, command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive), cancellationToken);
+            }
+            catch (Exception remoteError)
+            {
+                await CompensateInboundUpdateFailureAsync(inbound, password, previousRemoteRequest, actorUserId, before, remoteError, "remote_operation_failed");
+                throw;
             }
         }
 
-        AddAudit("vpn_inbound.update", "VpnInbound", inbound.Id, actorUserId, before, InboundAuditSnapshot(inbound));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Result<VpnInboundDto>.Success(MapInbound(inbound));
+        try
+        {
+            inbound.Name = remote.Remark;
+            inbound.Protocol = remote.Protocol;
+            inbound.Port = remote.Port;
+            inbound.Listen = remote.Listen;
+            inbound.SettingsJson = remote.SettingsJson;
+            inbound.StreamSettingsJson = remote.StreamSettingsJson;
+            inbound.SniffingJson = remote.SniffingJson;
+            inbound.IsActive = remote.Enable;
+            inbound.IsDefault = command.IsDefault && inbound.IsActive;
+            inbound.Capacity = command.Capacity > 0 ? command.Capacity : inbound.Capacity;
+            inbound.UpdatedAt = _clock.UtcNow;
+            if (inbound.IsDefault)
+            {
+                var defaults = await _db.VpnInbounds.Where(x => x.VpnPanelId == inbound.VpnPanelId && x.Id != inbound.Id && x.IsDefault).ToListAsync(cancellationToken);
+                foreach (var item in defaults)
+                {
+                    item.IsDefault = false;
+                    item.UpdatedAt = _clock.UtcNow;
+                }
+            }
+
+            AddAudit("vpn_inbound.update", "VpnInbound", inbound.Id, actorUserId, before, InboundAuditSnapshot(inbound));
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<VpnInboundDto>.Success(MapInbound(inbound));
+        }
+        catch (Exception localError) when (remoteMutationAttempted)
+        {
+            await CompensateInboundUpdateFailureAsync(inbound, password!, previousRemoteRequest, actorUserId, before, localError, "local_persistence_failed");
+            throw;
+        }
+    }
+
+    private async Task CompensateInboundUpdateFailureAsync(
+        VpnInbound inbound,
+        string password,
+        X3UiUpdateInboundRequest previousRemoteRequest,
+        Guid? actorUserId,
+        object before,
+        Exception operationError,
+        string outcome)
+    {
+        try
+        {
+            await _client.UpdateInboundAsync(inbound.VpnPanel!, password, previousRemoteRequest, CancellationToken.None);
+        }
+        catch (Exception compensationError)
+        {
+            ClearTracker();
+            AddAudit("vpn_inbound.update.compensation_failed", "VpnInbound", inbound.Id, actorUserId, before, new
+            {
+                remoteInboundId = previousRemoteRequest.Id,
+                compensated = false,
+                reconciliationRequired = true,
+                outcome,
+                error = SafeError(operationError.Message),
+                compensationError = SafeError(compensationError.Message)
+            });
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw new InvalidOperationException(
+                "VPN inbound state is uncertain and remote rollback failed; manual provider reconciliation is required.",
+                new AggregateException(operationError, compensationError));
+        }
+
+        ClearTracker();
+        AddAudit("vpn_inbound.update.failed", "VpnInbound", inbound.Id, actorUserId, before, new
+        {
+            remoteInboundId = previousRemoteRequest.Id,
+            compensated = true,
+            outcome,
+            error = SafeError(operationError.Message)
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
     }
 
     public Task<Result<VpnInboundDto>> SetDefaultInboundAsync(Guid inboundId, CancellationToken cancellationToken = default)
@@ -709,6 +806,16 @@ public class X3UiPanelService
 
     public async Task<Result<VpnInboundDto>> SetDefaultInboundAsync(Guid inboundId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
+        var observedPanelId = await _db.VpnInbounds.AsNoTracking()
+            .Where(x => x.Id == inboundId)
+            .Select(x => (Guid?)x.VpnPanelId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (observedPanelId is null)
+        {
+            return Result<VpnInboundDto>.Failure("VPN inbound not found.");
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(observedPanelId.Value, cancellationToken);
         var inbound = await _db.VpnInbounds.FirstOrDefaultAsync(x => x.Id == inboundId, cancellationToken);
         if (inbound is null)
         {
