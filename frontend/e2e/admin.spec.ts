@@ -328,7 +328,15 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/audit-logs') {
-      await fulfillJson(route, [{ id: 'audit-login', actorType: 'Admin', actorId: 'admin-user', action: 'auth.login', entityType: 'Auth', entityId: 'admin-user', beforeJson: '{}', afterJson: '{}', ip: '127.0.0.1', userAgent: 'Playwright', createdAt: now }])
+      const financeVisible = request.headers().authorization !== 'Bearer support-e2e-token'
+      const supportVisible = request.headers().authorization !== 'Bearer finance-e2e-token'
+      const botVisible = request.headers().authorization !== 'Bearer finance-e2e-token' && request.headers().authorization !== 'Bearer support-e2e-token'
+      await fulfillJson(route, [
+        { id: 'audit-login', actorType: 'Admin', actorId: 'admin-user', action: 'auth.login', entityType: 'Auth', entityId: 'admin-user', beforeJson: '{}', afterJson: '{"scope":"common"}', ip: '127.0.0.1', userAgent: 'Playwright', createdAt: now },
+        ...(financeVisible ? [{ id: 'audit-payment', actorType: 'System', actorId: 'payments', action: 'payment.status.changed', entityType: 'PaymentAttempt', entityId: 'payment-e2e', beforeJson: '{}', afterJson: '{"scope":"finance"}', ip: '', userAgent: '', createdAt: now }] : []),
+        ...(supportVisible ? [{ id: 'audit-support', actorType: 'Admin', actorId: 'support', action: 'support.reply', entityType: 'SupportConversation', entityId: 'support-e2e', beforeJson: '{}', afterJson: '{"scope":"support"}', ip: '127.0.0.1', userAgent: 'Playwright', createdAt: now }] : []),
+        ...(botVisible ? [{ id: 'audit-bot', actorType: 'Admin', actorId: 'bot', action: 'telegram_bot.settings.update', entityType: 'TelegramBotSettings', entityId: 'bot-settings', beforeJson: '{}', afterJson: '{"scope":"bot"}', ip: '127.0.0.1', userAgent: 'Playwright', createdAt: now }] : [])
+      ])
       return
     }
 
@@ -800,6 +808,13 @@ test('finance role loads only permitted data and keeps common sections read-only
   expect(api.getLastRequest('/api/admin/support/conversations', 'GET')).toBeUndefined()
   expect(api.getLastRequest('/api/admin/telegram-bot/settings', 'GET')).toBeUndefined()
 
+  await openAdminSection(page, 'Аудит', 'audit')
+  await expect(page.getByText('payment.status.changed', { exact: true })).toBeVisible()
+  await expect(page.getByText('support.reply', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('telegram_bot.settings.update', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Изменения платежных провайдеров и ротация секретов')).toBeVisible()
+  await expect(page.getByText('Ответы, заметки и статусы обращений')).toHaveCount(0)
+
   await openAdminSection(page, 'Тарифы', 'tariffs')
   await expect(page.getByText('Только просмотр')).toBeVisible()
   await expect(page.locator('#tariffs form').first()).toBeHidden()
@@ -838,5 +853,13 @@ test('support role dashboard hides finance data and keeps support queue visible'
   expect(api.getLastRequest('/api/admin/payments', 'GET')).toBeUndefined()
   expect(api.getLastRequest('/api/admin/orders', 'GET')).toBeUndefined()
   expect(api.getLastRequest('/api/admin/support/conversations', 'GET')).toBeTruthy()
+
+  await openAdminSection(page, 'Аудит', 'audit')
+  await expect(page.getByText('auth.login', { exact: true })).toBeVisible()
+  await expect(page.getByText('support.reply', { exact: true })).toBeVisible()
+  await expect(page.getByText('payment.status.changed', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('telegram_bot.settings.update', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Ответы, заметки и статусы обращений')).toBeVisible()
+  await expect(page.getByText('Изменения платежных провайдеров и ротация секретов')).toHaveCount(0)
   expect(failedResponses).toEqual([])
 })

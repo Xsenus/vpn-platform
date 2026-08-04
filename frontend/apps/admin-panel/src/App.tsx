@@ -2701,11 +2701,12 @@ export function App() {
           </div>
         </Card>
         <Card>
-          <h3>Что пишется в аудит</h3>
+          <h3>Доступные категории аудита</h3>
           <div className="list-stack">
-            <div className="list-item"><span>Админские изменения платежных провайдеров</span><StatusBadge value="admin" /></div>
-            <div className="list-item"><span>Ротация SecretKey и webhook secret без раскрытия значений</span><StatusBadge value="redacted" /></div>
-            <div className="list-item"><span>Переходы статусов платежей из webhook и recheck</span><StatusBadge value="system" /></div>
+            {canReadFinance && <div className="list-item"><span>Изменения платежных провайдеров и ротация секретов</span><StatusBadge value="finance" /></div>}
+            {canReadFinance && <div className="list-item"><span>Переходы статусов платежей из webhook и recheck</span><StatusBadge value="system" /></div>}
+            {canReadSupport && <div className="list-item"><span>Ответы, заметки и статусы обращений</span><StatusBadge value="support" /></div>}
+            {adminSession?.capabilities.botManage && <div className="list-item"><span>Настройки и ротация секретов Telegram-бота</span><StatusBadge value="bot" /></div>}
             <div className="list-item"><span>VPN provisioning и lifecycle-действия доступа</span><StatusBadge value="vpn" /></div>
           </div>
         </Card>

@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `999/999`.
+- Backend full suite: `1004/1004`.
 - API Release build: OK.
 - Frontend unit tests: `77/77`.
 - Frontend typecheck/build: OK.
@@ -46,10 +46,11 @@ Production-ready решение заблокировано следующими 
 - Panel sync uses a cross-instance unique claim, stale lease/snapshot recovery and redacted persisted diagnostics; legacy raw panel errors are cleared by the upgrade path.
 - Admin session returns a backend-owned capability matrix; partial roles only load permitted sections and user overview redacts finance/support domains without their read policies.
 - Dashboard summary avoids finance/support queries without matching read policies, filters payment/Telegram readiness checks and keeps partial-role UI free of hidden-domain metrics and actions.
+- Audit log applies finance/support/Telegram capability scope before Action/EntityType/Search and keeps cross-domain actions, entity types and JSON payload out of partial-role responses and UI categories.
 - Terminal subscription cancellation атомарно отзывает доступ, удаляет provider-клиента и освобождает capacity; rollback и provider uncertainty проверены fault-injection тестами.
 - X3Ui client migration резервирует target capacity до remote add и компенсирует remote/local failure; last-slot concurrency проверена на независимых SQLite-контекстах.
-- Latest "Что нового": `2026-08-05-admin-dashboard-domain-redaction`, версия `0.495.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `507/527` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-admin-audit-domain-scope`, версия `0.496.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `508/528` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

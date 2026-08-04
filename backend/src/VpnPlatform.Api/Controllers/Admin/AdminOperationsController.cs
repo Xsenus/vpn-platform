@@ -73,6 +73,24 @@ public class AdminOperationsController : ControllerBase
 {
     private const string PrecheckReportStepName = "Precheck report";
 
+    private static readonly string[] FinanceAuditEntityTypes =
+    [
+        nameof(CheckoutSession),
+        nameof(Order),
+        nameof(PaymentProviderAccount),
+        nameof(PaymentProviderSetting),
+        nameof(PaymentAttempt),
+        nameof(PaymentWebhookEvent),
+        nameof(Refund),
+        nameof(PaymentReceipt)
+    ];
+
+    private static readonly string[] SupportAuditEntityTypes =
+    [
+        nameof(SupportConversation),
+        nameof(SupportMessage)
+    ];
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -125,6 +143,31 @@ public class AdminOperationsController : ControllerBase
     {
         var limit = Math.Clamp(filters.Limit, 1, 500);
         var query = _db.AuditLogs.AsNoTracking().AsQueryable();
+        var roles = User?.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray() ?? [];
+
+        if (!AdminPolicies.HasAccess(roles, AdminPolicies.FinanceRead))
+        {
+            query = query.Where(x =>
+                !x.Action.StartsWith("payment") &&
+                !x.Action.StartsWith("checkout.") &&
+                !x.Action.StartsWith("refund.") &&
+                !x.Action.StartsWith("order.") &&
+                !FinanceAuditEntityTypes.Contains(x.EntityType));
+        }
+
+        if (!AdminPolicies.HasAccess(roles, AdminPolicies.SupportRead))
+        {
+            query = query.Where(x =>
+                !x.Action.StartsWith("support.") &&
+                !SupportAuditEntityTypes.Contains(x.EntityType));
+        }
+
+        if (!AdminPolicies.HasAccess(roles, AdminPolicies.BotManage))
+        {
+            query = query.Where(x =>
+                !x.Action.StartsWith("telegram_bot.") &&
+                x.EntityType != "TelegramBotSettings");
+        }
 
         if (!string.IsNullOrWhiteSpace(filters.Action))
         {

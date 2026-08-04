@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `999/999` unit tests;
+- backend на .NET 9: `1004/1004` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `77/77`;
 - frontend typecheck и production build: OK;
@@ -246,7 +246,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - cabinet logout гарантированно удаляет локальные токены и пользовательские/VPN-данные при success или failure backend revoke;
 - admin-panel получает capability matrix из защищенной административной сессии, скрывает недоступные разделы и команды, не вызывает запрещенные доменные API, а user overview не раскрывает finance/support данные без соответствующего read-policy;
 - dashboard редактирует финансовые и support-агрегаты по backend policy, readiness не возвращает недоступные payment/Telegram checks, а UI не показывает скрытые метрики и переходы partial roles;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-admin-dashboard-domain-redaction`, версия `0.495.0`;
-- roadmap progress: `507/527` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- журнал аудита применяет finance/support/Telegram scope до пользовательских фильтров и не возвращает partial role чужие actions, entity types или JSON payload;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-admin-audit-domain-scope`, версия `0.496.0`;
+- roadmap progress: `508/528` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.496.0 - 2026-08-05
+
+Release entry: `2026-08-05-admin-audit-domain-scope`.
+
+### Исправлено
+
+- `GET /api/admin/audit-logs` теперь применяет доменную область видимости до пользовательских фильтров: finance, support и Telegram-записи доступны только при `FinanceRead`, `SupportRead` и `BotManage` соответственно.
+- Поиск по action, entity type и содержимому payload больше не позволяет partial role обойти ограничение и получить чужие `BeforeJson`/`AfterJson`.
+- Admin-panel показывает только доступные роли категории аудита и не рекламирует Support финансовые события, а Finance — support-события.
+
+### Проверено
+
+- Backend full suite `1004/1004`; targeted audit SQLite role matrix `9/9` для Support, Finance, Operator, ReadOnly и Admin, включая прямую попытку обхода фильтрами.
+- Frontend `77/77`, typecheck/build OK; Finance и Support desktop/mobile подтверждают видимость разрешенных записей и отсутствие finance/support/Telegram payload соседних доменов.
+- Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow; fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `615` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `508/528` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.495.0 - 2026-08-05
 
 Release entry: `2026-08-05-admin-dashboard-domain-redaction`.

@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: admin audit domain scope
+
+Scope:
+- Проверено, что административный журнал применяет finance/support/Telegram scope до пользовательских фильтров и не раскрывает partial role чужие actions, entity types или JSON payload.
+
+Results:
+- Roadmap progress: `508/528` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-admin-audit-domain-scope`, version `0.496.0`.
+- Backend full suite: OK, `1004/1004`; targeted audit SQLite role matrix: OK, `9/9` для Support, Finance, Operator, ReadOnly и Admin.
+- Audit query применяет capability scope раньше Action/EntityType/Search; прямая попытка Finance получить support payload через все три фильтра возвращает пустой список.
+- Frontend tests: OK, `77/77`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Finance/Support desktop/mobile regression подтверждает только разрешенные audit actions/categories и отсутствие payload соседнего домена.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, без неожиданных console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа, latest release `2026-08-05-admin-audit-domain-scope`.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `615` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: admin dashboard domain redaction
 
 Scope:

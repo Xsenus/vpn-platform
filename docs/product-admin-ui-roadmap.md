@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `507/527` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `508/528` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -62,6 +62,7 @@
 - [x] RBAC, audit log, rate limit, security headers и secret scan проверяются тестами.
 - [x] Capability matrix административной сессии ограничивает разделы, чтение и команды для Finance, Support, Operator и ReadOnly; user overview редактирует finance/support данные по backend policy.
 - [x] Dashboard summary и readiness редактируют finance/support/Telegram данные по capabilities; partial-role UI не показывает скрытые tiles, карточки и переходы.
+- [x] Audit log применяет finance/support/Telegram scope до Action/EntityType/Search и не раскрывает partial role чужие JSON payload; UI показывает только доступные категории.
 
 ## Что остается до production
 
@@ -83,7 +84,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `999/999`.
+- [x] Backend full suite: `1004/1004`.
 - [x] Frontend unit tests: `77/77`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -111,7 +112,8 @@
 - [x] Cabinet logout очищает токены и все пользовательские/VPN-данные даже при недоступном backend revoke, сохраняя явное предупреждение.
 - [x] Admin capability matrix проверена unit и desktop/mobile E2E: partial roles не видят чужие разделы, не отправляют запрещенные запросы и не получают чужие finance/support данные из user overview.
 - [x] Support dashboard проверен desktop/mobile E2E: finance tiles/orders/readiness actions отсутствуют, support queue видима, запрещенные API не вызываются, overflow отсутствует.
-- [x] Latest "Что нового": `2026-08-05-admin-dashboard-domain-redaction`, версия `0.495.0`.
+- [x] Audit domain scope проверен SQLite role matrix и Finance/Support desktop/mobile E2E: чужие actions, entity types, payload и категории отсутствуют.
+- [x] Latest "Что нового": `2026-08-05-admin-audit-domain-scope`, версия `0.496.0`.
 
 ## Как вести дальше
 

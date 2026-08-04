@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("999/999", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-admin-dashboard-domain-redaction", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1004/1004", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-admin-audit-domain-scope", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "999/999",
-                     "2026-08-05-admin-dashboard-domain-redaction",
-                     "0.495.0",
+                     "1004/1004",
+                     "2026-08-05-admin-audit-domain-scope",
+                     "0.496.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-admin-dashboard-domain-redaction",
-                     "0.495.0",
-                     "507/527",
+                     "2026-08-05-admin-audit-domain-scope",
+                     "0.496.0",
+                     "508/528",
                      "96.2%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `999/999`",
+                     "Backend full suite: OK, `1004/1004`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `615` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-admin-dashboard-domain-redaction",
-                     "0.495.0",
-                     "507/527",
+                     "2026-08-05-admin-audit-domain-scope",
+                     "0.496.0",
+                     "508/528",
                      "96.2%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `999/999`",
+                     "backend full suite `1004/1004`",
                      "PostgreSQL SQL",
                      "secret scan `615` files, `0` findings"
                  })

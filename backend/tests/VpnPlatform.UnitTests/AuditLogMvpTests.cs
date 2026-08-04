@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +36,51 @@ public class AuditLogMvpTests
         var log = Assert.Single(logs);
         Assert.Equal("payment_provider.update", log.Action);
         Assert.Equal("admin", log.ActorType);
+    }
+
+    [Theory]
+    [InlineData(UserRoles.SupportAgent, false, true, false)]
+    [InlineData(UserRoles.FinanceManager, true, false, false)]
+    [InlineData(UserRoles.Operator, false, true, true)]
+    [InlineData(UserRoles.ReadOnly, true, true, false)]
+    [InlineData(UserRoles.Admin, true, true, true)]
+    public async Task Admin_Audit_Logs_Should_Apply_Domain_Scope_Before_User_Filters(
+        string role,
+        bool expectFinance,
+        bool expectSupport,
+        bool expectBot)
+    {
+        await using var db = CreateDbContext();
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 5, 5, 50, 0, TimeSpan.FromHours(7));
+        db.AuditLogs.AddRange(
+            new AuditLog { ActorType = "admin", ActorId = "admin-1", Action = "auth.login", EntityType = "Auth", EntityId = "admin-1", BeforeJson = "{}", AfterJson = "{\"scope\":\"common\"}", CreatedAt = now },
+            new AuditLog { ActorType = "system", ActorId = "payments", Action = "payment.status.changed", EntityType = nameof(PaymentAttempt), EntityId = Guid.NewGuid().ToString(), BeforeJson = "{}", AfterJson = "{\"scope\":\"finance-private\"}", CreatedAt = now.AddSeconds(-1) },
+            new AuditLog { ActorType = "admin", ActorId = "support", Action = "support.reply", EntityType = nameof(SupportConversation), EntityId = Guid.NewGuid().ToString(), BeforeJson = "{}", AfterJson = "{\"scope\":\"support-private\"}", CreatedAt = now.AddSeconds(-2) },
+            new AuditLog { ActorType = "admin", ActorId = "bot", Action = "telegram_bot.settings.update", EntityType = "TelegramBotSettings", EntityId = Guid.NewGuid().ToString(), BeforeJson = "{}", AfterJson = "{\"scope\":\"bot-private\"}", CreatedAt = now.AddSeconds(-3) });
+        await db.SaveChangesAsync();
+
+        var controller = CreateAdminController(db, new FixedClock(now), role);
+        var response = await controller.GetAuditLogs(new AdminAuditLogFilters(), CancellationToken.None);
+        var logs = AssertOk<List<AdminAuditLogDto>>(response);
+
+        Assert.Contains(logs, x => x.Action == "auth.login");
+        Assert.Equal(expectFinance, logs.Any(x => x.Action == "payment.status.changed"));
+        Assert.Equal(expectSupport, logs.Any(x => x.Action == "support.reply"));
+        Assert.Equal(expectBot, logs.Any(x => x.Action == "telegram_bot.settings.update"));
+
+        var serialized = string.Join('\n', logs.Select(x => x.AfterJson));
+        Assert.Equal(expectFinance, serialized.Contains("finance-private", StringComparison.Ordinal));
+        Assert.Equal(expectSupport, serialized.Contains("support-private", StringComparison.Ordinal));
+        Assert.Equal(expectBot, serialized.Contains("bot-private", StringComparison.Ordinal));
+
+        if (!expectFinance)
+        {
+            var bypassAttempt = AssertOk<List<AdminAuditLogDto>>(await controller.GetAuditLogs(
+                new AdminAuditLogFilters(Action: "payment", EntityType: nameof(PaymentAttempt), Search: "payment"),
+                CancellationToken.None));
+            Assert.Empty(bypassAttempt);
+        }
     }
 
     [Fact]
@@ -121,10 +168,20 @@ public class AuditLogMvpTests
         Assert.Empty(await db.OutboxMessages.ToListAsync());
     }
 
-    private static AdminOperationsController CreateAdminController(ApplicationDbContext db, FixedClock clock)
+    private static AdminOperationsController CreateAdminController(ApplicationDbContext db, FixedClock clock, string role = UserRoles.Admin)
     {
         var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
-        return new AdminOperationsController(db, null!, null!, providerAccounts, secretProtector: new TestSecretProtector());
+        var controller = new AdminOperationsController(db, null!, null!, providerAccounts, secretProtector: new TestSecretProtector());
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    new[] { new Claim(ClaimTypes.Role, role) },
+                    "test"))
+            }
+        };
+        return controller;
     }
 
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, FixedClock clock, IPaymentProvider paymentProvider)

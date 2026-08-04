@@ -11557,5 +11557,28 @@
         "text": "Roadmap progress is 507/527 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-admin-audit-domain-scope",
+    "version": "0.496.0",
+    "releasedAt": "2026-08-05T05:45:00+07:00",
+    "title": "Журнал аудита учитывает права роли",
+    "summary": "Finance, Support и Operator получают только разрешенные audit-события и не видят JSON payload соседних доменов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Backend применяет finance, support и Telegram scope до Action, EntityType и Search, поэтому пользовательские фильтры не обходят capability matrix."
+      },
+      {
+        "type": "fixed",
+        "text": "Admin-panel показывает только доступные категории аудита; SQLite role matrix и Finance/Support desktop/mobile regressions проверяют отсутствие чужих actions и payload."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 508/528 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
