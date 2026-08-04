@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("811/811", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-x3ui-sync-atomicity-hardening", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("817/817", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-04-x3ui-remote-create-compensation", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "811/811",
-                     "2026-08-04-x3ui-sync-atomicity-hardening",
-                     "0.461.0",
+                     "817/817",
+                     "2026-08-04-x3ui-remote-create-compensation",
+                     "0.462.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-x3ui-sync-atomicity-hardening",
-                     "0.461.0",
-                     "473/493",
-                     "95.9%",
+                     "2026-08-04-x3ui-remote-create-compensation",
+                     "0.462.0",
+                     "474/494",
+                     "96.0%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `811/811`",
+                     "Backend full suite: OK, `817/817`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `560` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,10 +154,10 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-x3ui-sync-atomicity-hardening",
-                     "0.461.0",
-                     "473/493",
-                     "95.9%",
+                     "2026-08-04-x3ui-remote-create-compensation",
+                     "0.462.0",
+                     "474/494",
+                     "96.0%",
                      "20",
                      "19",
                      "1",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted docs/release/encoding suite `51/51`",
-                     "backend full suite `811/811`",
+                     "backend full suite `817/817`",
                      "fresh local SQLite smoke OK",
                      "Secret scan: `560` files, `0` findings"
                  })

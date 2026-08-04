@@ -180,60 +180,92 @@ public class X3UiVpnProvider : IVpnProvider
         var flow = existing?.Flow ?? ReadFlow(inbound);
         var totalGb = request.TrafficLimit ?? await ResolveTrafficLimitAsync(request.TariffId, cancellationToken);
 
-        if (existing is null)
+        var remoteClientCreated = false;
+        var localStateSaved = false;
+        try
         {
-            var created = await _client.AddClientAsync(panel, password, new X3UiAddClientRequest(inbound.ExternalInboundId, email, uuid, flow, request.MaxDevices, totalGb, request.EndsAt, true), cancellationToken);
-            existing = new VpnClient
+            if (existing is null)
             {
-                UserId = request.UserId,
-                SubscriptionId = request.SubscriptionId,
-                VpnPanelId = panel.Id,
-                VpnInboundId = inbound.Id,
-                ExternalClientId = string.IsNullOrWhiteSpace(created.Id) ? uuid : created.Id,
-                Email = email,
-                Uuid = uuid,
-                Flow = flow,
-                LimitIp = request.MaxDevices,
-                TotalGb = totalGb,
-                ExpiryTime = request.EndsAt,
-                Enable = true,
-                LastSyncedAt = _clock.UtcNow
-            };
-            _db.VpnClients.Add(existing);
-            panel.UsedCapacity += 1;
-            inbound.UsedCapacity += 1;
-        }
-        else
-        {
-            await _client.UpdateClientAsync(panel, password, new X3UiUpdateClientRequest(inbound.ExternalInboundId, existing.Uuid, existing.Email, existing.Uuid, flow, request.MaxDevices, totalGb, request.EndsAt, true), cancellationToken);
-            existing.VpnPanelId = panel.Id;
-            existing.VpnInboundId = inbound.Id;
-            existing.Flow = flow;
-            existing.LimitIp = request.MaxDevices;
-            existing.TotalGb = totalGb;
-            existing.ExpiryTime = request.EndsAt;
-            existing.Enable = true;
-            existing.LastSyncedAt = _clock.UtcNow;
-            existing.UpdatedAt = _clock.UtcNow;
-        }
+                var created = await _client.AddClientAsync(panel, password, new X3UiAddClientRequest(inbound.ExternalInboundId, email, uuid, flow, request.MaxDevices, totalGb, request.EndsAt, true), cancellationToken);
+                remoteClientCreated = true;
+                existing = new VpnClient
+                {
+                    UserId = request.UserId,
+                    SubscriptionId = request.SubscriptionId,
+                    VpnPanelId = panel.Id,
+                    VpnInboundId = inbound.Id,
+                    ExternalClientId = string.IsNullOrWhiteSpace(created.Id) ? uuid : created.Id,
+                    Email = email,
+                    Uuid = uuid,
+                    Flow = flow,
+                    LimitIp = request.MaxDevices,
+                    TotalGb = totalGb,
+                    ExpiryTime = request.EndsAt,
+                    Enable = true,
+                    LastSyncedAt = _clock.UtcNow
+                };
+                _db.VpnClients.Add(existing);
+                panel.UsedCapacity += 1;
+                inbound.UsedCapacity += 1;
+            }
+            else
+            {
+                await _client.UpdateClientAsync(panel, password, new X3UiUpdateClientRequest(inbound.ExternalInboundId, existing.Uuid, existing.Email, existing.Uuid, flow, request.MaxDevices, totalGb, request.EndsAt, true), cancellationToken);
+                existing.VpnPanelId = panel.Id;
+                existing.VpnInboundId = inbound.Id;
+                existing.Flow = flow;
+                existing.LimitIp = request.MaxDevices;
+                existing.TotalGb = totalGb;
+                existing.ExpiryTime = request.EndsAt;
+                existing.Enable = true;
+                existing.LastSyncedAt = _clock.UtcNow;
+                existing.UpdatedAt = _clock.UtcNow;
+            }
 
-        var uri = X3UiConfigUriGenerator.BuildUri(panel, inbound, existing);
-        if (string.IsNullOrWhiteSpace(uri))
-        {
-            existing.SyncStatus = "RequiresAdminReview";
+            var uri = X3UiConfigUriGenerator.BuildUri(panel, inbound, existing);
+            if (string.IsNullOrWhiteSpace(uri))
+            {
+                existing.SyncStatus = "RequiresAdminReview";
+                await _db.SaveChangesAsync(cancellationToken);
+                localStateSaved = true;
+                throw new InvalidOperationException($"Inbound settings are insufficient to generate {inbound.Protocol} config URI. Access requires admin review.");
+            }
+
+            var qr = request.GenerateQrCode
+                ? _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{existing.Id:N}")
+                : new QrCodeGenerationResult(uri, null, false, _clock.UtcNow);
+            existing.ConfigUri = uri;
+            existing.QrCodePayload = request.GenerateQrCode ? qr.Payload : string.Empty;
+            existing.SyncStatus = "synced";
+            await QueueAccessReadyNotificationAsync(existing, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
-            throw new InvalidOperationException($"Inbound settings are insufficient to generate {inbound.Protocol} config URI. Access requires admin review.");
+            localStateSaved = true;
+            return new VpnProvisionResult(existing.ExternalClientId, uri, request.GenerateQrCode ? qr.Payload : string.Empty, qr.ImagePath ?? string.Empty);
         }
+        catch (Exception saveError) when (remoteClientCreated && !localStateSaved)
+        {
+            if (existing is not null)
+            {
+                var pendingNotifications = _db.TelegramBotNotifications.Local.Where(x => x.PayloadJson.Contains(existing.Id.ToString(), StringComparison.OrdinalIgnoreCase)).ToList();
+                _db.TelegramBotNotifications.RemoveRange(pendingNotifications);
+                _db.VpnClients.Remove(existing);
+            }
+            if (panel.UsedCapacity > 0) panel.UsedCapacity -= 1;
+            if (inbound.UsedCapacity > 0) inbound.UsedCapacity -= 1;
 
-        var qr = request.GenerateQrCode
-            ? _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{existing.Id:N}")
-            : new QrCodeGenerationResult(uri, null, false, _clock.UtcNow);
-        existing.ConfigUri = uri;
-        existing.QrCodePayload = request.GenerateQrCode ? qr.Payload : string.Empty;
-        existing.SyncStatus = "synced";
-        await QueueAccessReadyNotificationAsync(existing, cancellationToken);
-        await _db.SaveChangesAsync(cancellationToken);
-        return new VpnProvisionResult(existing.ExternalClientId, uri, request.GenerateQrCode ? qr.Payload : string.Empty, qr.ImagePath ?? string.Empty);
+            try
+            {
+                await _client.DeleteClientAsync(panel, password, inbound.ExternalInboundId, uuid, CancellationToken.None);
+            }
+            catch (Exception compensationError)
+            {
+                throw new InvalidOperationException(
+                    "VPN client was created remotely but local persistence and remote cleanup failed; manual provider cleanup is required.",
+                    new AggregateException(saveError, compensationError));
+            }
+
+            throw;
+        }
     }
 
     private async Task<VpnProvisionResult> CreateOrUpdateSandboxAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
@@ -424,7 +456,26 @@ public class X3UiVpnProvider : IVpnProvider
             Capacity = 5000
         };
         _db.VpnInbounds.Add(inbound);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception saveError)
+        {
+            _db.VpnInbounds.Remove(inbound);
+            try
+            {
+                await _client.DeleteInboundAsync(panel, password, remote.Id, CancellationToken.None);
+            }
+            catch (Exception compensationError)
+            {
+                throw new InvalidOperationException(
+                    "VPN inbound was created remotely but local persistence and remote cleanup failed; manual provider cleanup is required.",
+                    new AggregateException(saveError, compensationError));
+            }
+
+            throw;
+        }
         return inbound;
     }
 

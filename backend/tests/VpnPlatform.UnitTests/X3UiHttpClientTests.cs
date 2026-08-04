@@ -73,6 +73,17 @@ public class X3UiHttpClientTests
     }
 
     [Fact]
+    public async Task DeleteInbound_Should_Call_Delete_Endpoint()
+    {
+        var handler = new QueueHandler(LoginResponse(), new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(string.Empty) });
+        var client = CreateClient(handler);
+
+        await client.DeleteInboundAsync(Panel(), "secret", "inbound/1", CancellationToken.None);
+
+        Assert.Contains(handler.Requests, x => x.Path == "/panel/api/inbounds/del/inbound%2F1");
+    }
+
+    [Fact]
     public async Task UpdateClient_Should_Send_Expiry_Request()
     {
         var handler = new QueueHandler(LoginResponse(), new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(string.Empty) });

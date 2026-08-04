@@ -476,8 +476,9 @@ public class X3UiPanelService
             return Result<VpnInboundDto>.Failure("VPN panel not found.");
         }
 
+        var sandboxMode = IsSandboxMode();
         X3UiInboundDto remote;
-        if (IsSandboxMode())
+        if (sandboxMode)
         {
             var nextNumber = await _db.VpnInbounds.CountAsync(x => x.VpnPanelId == panel.Id, cancellationToken) + 1;
             remote = new X3UiInboundDto($"sandbox-inbound-{nextNumber}", command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive);
@@ -507,14 +508,55 @@ public class X3UiPanelService
             IsActive = remote.Enable,
             Capacity = command.Capacity > 0 ? command.Capacity : 5000
         };
+        var previousDefaults = new List<VpnInbound>();
         if (command.IsDefault)
         {
-            var defaults = await _db.VpnInbounds.Where(x => x.VpnPanelId == panel.Id && x.IsDefault).ToListAsync(cancellationToken);
-            foreach (var item in defaults) item.IsDefault = false;
+            previousDefaults = await _db.VpnInbounds.Where(x => x.VpnPanelId == panel.Id && x.IsDefault).ToListAsync(cancellationToken);
+            foreach (var item in previousDefaults) item.IsDefault = false;
         }
         _db.VpnInbounds.Add(inbound);
         AddAudit("vpn_inbound.create", "VpnInbound", inbound.Id, actorUserId, null, InboundAuditSnapshot(inbound));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception saveError) when (!sandboxMode)
+        {
+            _db.VpnInbounds.Remove(inbound);
+            foreach (var item in previousDefaults) item.IsDefault = true;
+            var pendingAudit = _db.AuditLogs.Local
+                .Where(x => x.Action == "vpn_inbound.create" && x.EntityId == inbound.Id.ToString())
+                .ToList();
+            _db.AuditLogs.RemoveRange(pendingAudit);
+
+            try
+            {
+                var password = _secretProtector.Unprotect(panel.EncryptedPassword);
+                await _client.DeleteInboundAsync(panel, password, remote.Id, CancellationToken.None);
+            }
+            catch (Exception compensationError)
+            {
+                AddAudit("vpn_inbound.create.compensation_failed", "VpnInbound", inbound.Id, actorUserId, null, new
+                {
+                    panelId = panel.Id,
+                    remoteInboundId = remote.Id,
+                    compensated = false
+                });
+                await _db.SaveChangesAsync(CancellationToken.None);
+                throw new InvalidOperationException(
+                    "VPN inbound was created remotely but local persistence and remote cleanup failed; manual provider cleanup is required.",
+                    new AggregateException(saveError, compensationError));
+            }
+
+            AddAudit("vpn_inbound.create.failed", "VpnInbound", inbound.Id, actorUserId, null, new
+            {
+                panelId = panel.Id,
+                remoteInboundId = remote.Id,
+                compensated = true
+            });
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
         return Result<VpnInboundDto>.Success(MapInbound(inbound));
     }
 

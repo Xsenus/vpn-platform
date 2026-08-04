@@ -554,6 +554,60 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Inbound_Create_Should_Delete_Remote_Copy_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var panelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "panel",
+            BaseUrl = "https://panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateInboundAsync(panelId, NewInboundCommand(), CancellationToken.None));
+
+        Assert.Equal(new[] { "1" }, remote.DeletedInboundIds);
+        db.ChangeTracker.Clear();
+        Assert.Empty(await db.VpnInbounds.ToListAsync());
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_inbound.create.failed");
+        Assert.Contains("true", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Inbound_Create_Should_Record_Manual_Cleanup_When_Remote_Compensation_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        remote.FailingInboundDeleteIds.Add("1");
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var panelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel { Id = panelId, Name = "panel", BaseUrl = "https://panel.example.test:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, Capacity = 100 });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateInboundAsync(panelId, NewInboundCommand(), CancellationToken.None));
+
+        Assert.Contains("manual provider cleanup", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(new[] { "1" }, remote.DeletedInboundIds);
+        db.ChangeTracker.Clear();
+        Assert.Empty(await db.VpnInbounds.ToListAsync());
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_inbound.create.compensation_failed");
+        Assert.Contains("false", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Inbound_Management_Should_Create_Edit_Toggle_And_Protect_Inactive_Default()
     {
         await using var db = CreateDbContext();
@@ -783,6 +837,91 @@ public class X3UiIntegrationTests
         Assert.Equal(1, client.AddClientCalls);
     }
 
+    [Fact]
+    public async Task Real_Vpn_Provider_Should_Delete_Auto_Created_Inbound_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow) { ReturnNoInbounds = true };
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var tariffId = Guid.NewGuid();
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Monthly", Slug = "monthly-auto-failure", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true });
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = Guid.NewGuid(),
+            Name = "prod-panel",
+            BaseUrl = "https://vpn.example.com:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            HealthStatus = HealthStatus.Healthy,
+            Capacity = 100,
+            AutoCreateInbound = true,
+            DefaultInboundTemplateJson = "{\"remark\":\"auto-vless\",\"protocol\":\"vless\",\"port\":443,\"settings\":{\"clients\":[]},\"streamSettings\":{\"network\":\"tcp\",\"security\":\"tls\"},\"sniffing\":{}}"
+        });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.CreateAccessAsync(new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), tariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None));
+
+        Assert.Equal(new[] { "1" }, remote.DeletedInboundIds);
+        Assert.Equal(0, remote.AddClientCalls);
+        db.ChangeTracker.Clear();
+        Assert.Empty(await db.VpnInbounds.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Real_Vpn_Provider_Should_Delete_New_Remote_Client_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Monthly", Slug = "monthly-client-failure", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true });
+        db.VpnPanels.Add(new VpnPanel { Id = panelId, Name = "prod-panel", BaseUrl = "https://vpn.example.com:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100 });
+        db.VpnInbounds.Add(new VpnInbound { Id = Guid.NewGuid(), VpnPanelId = panelId, ExternalInboundId = "1", Name = "vless", Protocol = "vless", Port = 443, SettingsJson = "{\"clients\":[]}", StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}", IsDefault = true, IsActive = true, Capacity = 100 });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.CreateAccessAsync(new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), tariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None));
+
+        Assert.Equal(1, remote.AddClientCalls);
+        Assert.Equal(new[] { "1" }, remote.DeleteInboundIds);
+        db.ChangeTracker.Clear();
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Equal(0, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Real_Vpn_Provider_Should_Require_Manual_Cleanup_When_Client_Compensation_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        remote.FailingDeleteInboundIds.Add("1");
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Monthly", Slug = "monthly-client-compensation-failure", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true });
+        db.VpnPanels.Add(new VpnPanel { Id = panelId, Name = "prod-panel", BaseUrl = "https://vpn.example.com:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100 });
+        db.VpnInbounds.Add(new VpnInbound { Id = Guid.NewGuid(), VpnPanelId = panelId, ExternalInboundId = "1", Name = "vless", Protocol = "vless", Port = 443, SettingsJson = "{\"clients\":[]}", StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}", IsDefault = true, IsActive = true, Capacity = 100 });
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.CreateAccessAsync(new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), tariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None));
+
+        Assert.Contains("manual provider cleanup", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(new[] { "1" }, remote.DeleteInboundIds);
+        db.ChangeTracker.Clear();
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Equal(0, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
+    }
+
     [Theory]
     [InlineData("trojan", "trojan://")]
     [InlineData("vmess", "vmess://")]
@@ -959,6 +1098,14 @@ public class X3UiIntegrationTests
         return new ApplicationDbContext(options);
     }
 
+    private static FailingSaveApplicationDbContext CreateFailingDbContext()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        return new FailingSaveApplicationDbContext(options);
+    }
+
     private static IConfiguration ProductionConfiguration()
         => new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Vpn:X3Ui:Mode"] = "Production" }).Build();
 
@@ -1003,6 +1150,24 @@ public class X3UiIntegrationTests
         public DateTimeOffset UtcNow { get; } = new(2026, 4, 30, 12, 0, 0, TimeSpan.Zero);
     }
 
+    private sealed class FailingSaveApplicationDbContext : ApplicationDbContext
+    {
+        public FailingSaveApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+        public bool FailNextSave { get; set; }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (FailNextSave)
+            {
+                FailNextSave = false;
+                return Task.FromException<int>(new InvalidOperationException("simulated local save failure"));
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     private sealed class TestSecretProtector : ISecretProtector
     {
         public string Protect(string plaintext) => plaintext;
@@ -1018,7 +1183,9 @@ public class X3UiIntegrationTests
         public IReadOnlyCollection<X3UiInboundDto>? Inbounds { get; set; }
         public CancellationTokenSource? CancelGetInboundsWith { get; set; }
         public HashSet<string> FailingDeleteInboundIds { get; } = new(StringComparer.Ordinal);
+        public HashSet<string> FailingInboundDeleteIds { get; } = new(StringComparer.Ordinal);
         public List<string> DeleteInboundIds { get; } = [];
+        public List<string> DeletedInboundIds { get; } = [];
         public int CreateInboundCalls { get; private set; }
         public int AddClientCalls { get; private set; }
         public int UpdateClientCalls { get; private set; }
@@ -1045,6 +1212,16 @@ public class X3UiIntegrationTests
         {
             CreateInboundCalls += 1;
             return Task.FromResult(new X3UiInboundDto("1", request.Remark, request.Protocol, request.Port, request.Listen, request.SettingsJson, request.StreamSettingsJson, request.SniffingJson, request.Enable));
+        }
+
+        public Task DeleteInboundAsync(VpnPanel panel, string password, string inboundId, CancellationToken cancellationToken)
+        {
+            DeletedInboundIds.Add(inboundId);
+            if (FailingInboundDeleteIds.Contains(inboundId))
+            {
+                throw new InvalidOperationException($"inbound delete failed for {inboundId}");
+            }
+            return Task.CompletedTask;
         }
 
         public Task<X3UiInboundDto> UpdateInboundAsync(VpnPanel panel, string password, X3UiUpdateInboundRequest request, CancellationToken cancellationToken)

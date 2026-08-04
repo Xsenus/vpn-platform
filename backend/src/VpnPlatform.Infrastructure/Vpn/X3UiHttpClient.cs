@@ -118,6 +118,11 @@ public class X3UiHttpClient : IX3UiClient
         return ParseInboundObject(raw) ?? new X3UiInboundDto(TryReadString(raw, "id"), request.Remark, request.Protocol, request.Port, request.Listen, request.SettingsJson, request.StreamSettingsJson, request.SniffingJson, request.Enable);
     }
 
+    public async Task DeleteInboundAsync(VpnPanel panel, string password, string inboundId, CancellationToken cancellationToken)
+    {
+        await PostRawAsync(panel, password, $"panel/api/inbounds/del/{Uri.EscapeDataString(inboundId)}", new { }, cancellationToken, allowEmptySuccess: true);
+    }
+
     public async Task<X3UiInboundDto> UpdateInboundAsync(VpnPanel panel, string password, X3UiUpdateInboundRequest request, CancellationToken cancellationToken)
     {
         var payload = new

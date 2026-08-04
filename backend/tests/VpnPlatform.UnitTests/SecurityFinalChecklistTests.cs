@@ -31,8 +31,8 @@ public class SecurityFinalChecklistTests
         Assert.Contains("ProvisioningSecretMaterializerTests", checklist, StringComparison.Ordinal);
         Assert.Contains("PaymentWebhookIdempotencyContractTests", checklist, StringComparison.Ordinal);
         Assert.Contains("оператор обязан ротировать", checklist, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("811/811", checklist, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-x3ui-sync-atomicity-hardening", checklist, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("817/817", checklist, StringComparison.Ordinal);
+        Assert.Contains("2026-08-04-x3ui-remote-create-compensation", checklist, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("[x] `P11-ACC-005`", roadmap, StringComparison.Ordinal);
         Assert.Contains("security-final-checklist.md", docsIndex, StringComparison.OrdinalIgnoreCase);

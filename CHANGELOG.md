@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.462.0 - 2026-08-04
+
+Release entry: `2026-08-04-x3ui-remote-create-compensation`.
+
+### Fixed
+- Admin create inbound удаляет уже созданный remote inbound, если локальный commit завершается ошибкой, и сохраняет redacted audit результата компенсации.
+- Production provider компенсирует auto-created inbound при локальном save failure до создания клиента.
+- Новая VPN-выдача удаляет remote client при ошибке локального сохранения или подготовки notification, очищает pending local entity и восстанавливает capacity.
+- Двойной отказ local save и provider cleanup возвращает явную ошибку о необходимости ручной очистки вместо скрытого orphan state.
+
+### Notes
+- Validation: backend full suite `817/817`, targeted 3x-ui suite `49/49`, API Release build `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `51/51` keep current evidence synchronized.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `560` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `474/494` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.461.0 - 2026-08-04
 
 Release entry: `2026-08-04-x3ui-sync-atomicity-hardening`.

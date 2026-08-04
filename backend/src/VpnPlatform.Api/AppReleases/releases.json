@@ -10775,5 +10775,28 @@
         "text": "Roadmap progress is 473/493 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-x3ui-remote-create-compensation",
+    "version": "0.462.0",
+    "releasedAt": "2026-08-04T16:40:00+07:00",
+    "title": "3x-ui ресурсы очищаются после ошибки сохранения",
+    "summary": "Если inbound или VPN-клиент создан на панели, но локальная база не сохранила операцию, созданный remote-ресурс удаляется автоматически.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Создание inbound из админки и автоматическое создание при выдаче больше не оставляют remote-копию после локальной ошибки."
+      },
+      {
+        "type": "fixed",
+        "text": "Неуспешная выдача удаляет нового клиента с панели и восстанавливает локальные счетчики capacity."
+      },
+      {
+        "type": "important",
+        "text": "При неудаче автоматической очистки операция явно требует ручного вмешательства. Roadmap progress is 474/494 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
