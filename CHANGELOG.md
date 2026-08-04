@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.481.0 - 2026-08-05
+
+Release entry: `2026-08-05-x3ui-panel-health-consistency`.
+
+### Исправлено
+
+- Update/delete панели, health-check, sync и inbound management используют единый panel-scoped gate; изменение credentials/status не пересекается с активной provider-проверкой.
+- Transient local save failure после успешного remote health-check очищает pending EF state и сохраняет ровно один подтверждённый health result с redacted recovery audit.
+- Ambiguous commit определяется по стабильному ID health record и не создаёт повторную историю или audit.
+- Panel и inbound capacity нельзя уменьшить ниже `UsedCapacity`; проверка выполняется до audit и remote mutation.
+- Параллельные health workers после ожидания отклоняют stale observation без второго provider call.
+
+### Проверено
+
+- Backend full suite `970/970`; X3Ui integration suite `72/72`, targeted X3Ui/panel/SQLite suite `78/78`, targeted health/capacity regression `5/5`, включая pre-commit/ambiguous-commit fault injection и file-backed SQLite concurrency; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; EF model drift отсутствует, fresh local SQLite smoke latest release OK; secret scan `607` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `493/513` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.480.0 - 2026-08-05
 
 Release entry: `2026-08-05-x3ui-inbound-update-reconciliation`.

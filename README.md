@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-04 локально подтверждено:
 
-- backend на .NET 9: `965/965` unit tests;
+- backend на .NET 9: `970/970` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `68/68`;
 - frontend typecheck и production build: OK;
@@ -238,7 +238,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
 - terminal cancel подписки атомарно отзывает VPN-доступ, удаляет provider-клиента и освобождает node/panel/inbound capacity; rollback и reconciliation покрыты SQLite fault-injection;
 - ручной перенос 3x-ui клиента резервирует target panel/inbound capacity до remote add и полностью компенсирует source/target при failure/cancellation/local-save ошибке;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-x3ui-inbound-update-reconciliation`, версия `0.480.0`;
-- roadmap progress: `492/512` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-x3ui-panel-health-consistency`, версия `0.481.0`;
+- roadmap progress: `493/513` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

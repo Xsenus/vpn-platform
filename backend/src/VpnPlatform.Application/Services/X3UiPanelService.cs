@@ -110,6 +110,7 @@ public class X3UiPanelService
 
     public async Task<Result<VpnPanelDto>> UpdatePanelAsync(Guid id, UpdateVpnPanelCommand command, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(id, cancellationToken);
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (panel is null)
         {
@@ -138,6 +139,10 @@ public class X3UiPanelService
         if (validationError is not null)
         {
             return Result<VpnPanelDto>.Failure(validationError);
+        }
+        if (capacity < panel.UsedCapacity)
+        {
+            return Result<VpnPanelDto>.Failure("Panel capacity cannot be lower than used capacity.");
         }
 
         if (await _db.VpnPanels.AnyAsync(
@@ -170,6 +175,7 @@ public class X3UiPanelService
 
     public async Task<Result<DeleteVpnPanelResultDto>> DeletePanelAsync(Guid id, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(id, cancellationToken);
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (panel is null)
         {
@@ -204,10 +210,39 @@ public class X3UiPanelService
 
     public async Task<Result<PanelHealthCheckDto>> CheckHealthAsync(Guid panelId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(panelId, cancellationToken);
+        return await CheckHealthCoreAsync(panelId, actorUserId, enforceExpectedLastHealthCheckAt: false, expectedLastHealthCheckAt: null, requireOperationalStatus: false, cancellationToken);
+    }
+
+    public async Task<Result<PanelHealthCheckDto>> CheckHealthIfCurrentAsync(
+        Guid panelId,
+        DateTimeOffset? expectedLastHealthCheckAt,
+        CancellationToken cancellationToken = default)
+    {
+        await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(panelId, cancellationToken);
+        return await CheckHealthCoreAsync(panelId, actorUserId: null, enforceExpectedLastHealthCheckAt: true, expectedLastHealthCheckAt, requireOperationalStatus: true, cancellationToken);
+    }
+
+    private async Task<Result<PanelHealthCheckDto>> CheckHealthCoreAsync(
+        Guid panelId,
+        Guid? actorUserId,
+        bool enforceExpectedLastHealthCheckAt,
+        DateTimeOffset? expectedLastHealthCheckAt,
+        bool requireOperationalStatus,
+        CancellationToken cancellationToken)
+    {
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == panelId, cancellationToken);
         if (panel is null)
         {
             return Result<PanelHealthCheckDto>.Failure("VPN panel not found.");
+        }
+        if (enforceExpectedLastHealthCheckAt && panel.LastHealthCheckAt != expectedLastHealthCheckAt)
+        {
+            return Result<PanelHealthCheckDto>.Failure("Panel health observation is stale; a newer check already completed.");
+        }
+        if (requireOperationalStatus && panel.Status is not (VpnPanelStatus.Active or VpnPanelStatus.New))
+        {
+            return Result<PanelHealthCheckDto>.Failure("Panel is no longer active for scheduled health checks.");
         }
 
         var before = PanelAuditSnapshot(panel);
@@ -245,30 +280,11 @@ public class X3UiPanelService
                 cancellationToken);
         }
 
+        X3UiHealthResult health;
         try
         {
             var password = _secretProtector.Unprotect(panel.EncryptedPassword);
-            var health = await _client.CheckHealthAsync(panel, password, cancellationToken);
-            sw.Stop();
-            var safeError = string.IsNullOrWhiteSpace(health.ErrorMessage) ? string.Empty : SafeError(health.ErrorMessage);
-            var entity = new PanelHealthCheck
-            {
-                VpnPanelId = panel.Id,
-                Status = health.IsHealthy ? HealthStatus.Healthy : HealthStatus.Unhealthy,
-                LatencyMs = health.LatencyMs == 0 ? sw.ElapsedMilliseconds : health.LatencyMs,
-                Version = health.Version,
-                ErrorMessage = safeError,
-                CheckedAt = _clock.UtcNow
-            };
-            _db.PanelHealthChecks.Add(entity);
-            panel.HealthStatus = entity.Status;
-            panel.LastHealthCheckAt = entity.CheckedAt;
-            panel.LastError = entity.ErrorMessage;
-            panel.Version = entity.Version;
-            panel.Status = entity.Status == HealthStatus.Healthy && panel.Status == VpnPanelStatus.New ? VpnPanelStatus.Active : panel.Status;
-            AddAudit("vpn_panel.health_check", "VpnPanel", panel.Id, actorUserId, before, HealthAuditSnapshot(entity));
-            await _db.SaveChangesAsync(cancellationToken);
-            return Result<PanelHealthCheckDto>.Success(MapHealth(entity));
+            health = await _client.CheckHealthAsync(panel, password, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -278,6 +294,93 @@ public class X3UiPanelService
         {
             return await RecordHealthFailureAsync(panel, actorUserId, before, sw, ex.Message, CancellationToken.None);
         }
+
+        sw.Stop();
+        var safeError = string.IsNullOrWhiteSpace(health.ErrorMessage) ? string.Empty : SafeError(health.ErrorMessage);
+        var healthCheck = new PanelHealthCheck
+        {
+            VpnPanelId = panel.Id,
+            Status = health.IsHealthy ? HealthStatus.Healthy : HealthStatus.Unhealthy,
+            LatencyMs = health.LatencyMs == 0 ? sw.ElapsedMilliseconds : health.LatencyMs,
+            Version = health.Version,
+            ErrorMessage = safeError,
+            CheckedAt = _clock.UtcNow
+        };
+        _db.PanelHealthChecks.Add(healthCheck);
+        ApplyHealthResult(panel, healthCheck);
+        AddAudit("vpn_panel.health_check", "VpnPanel", panel.Id, actorUserId, before, HealthAuditSnapshot(healthCheck));
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<PanelHealthCheckDto>.Success(MapHealth(healthCheck));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception persistenceError)
+        {
+            return await RecoverHealthPersistenceAsync(panel.Id, actorUserId, before, healthCheck, persistenceError);
+        }
+    }
+
+    private async Task<Result<PanelHealthCheckDto>> RecoverHealthPersistenceAsync(
+        Guid panelId,
+        Guid? actorUserId,
+        object before,
+        PanelHealthCheck attempted,
+        Exception persistenceError)
+    {
+        ClearTracker();
+        var persistedAttempt = await _db.PanelHealthChecks.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == attempted.Id, CancellationToken.None);
+        if (persistedAttempt is not null)
+        {
+            return Result<PanelHealthCheckDto>.Success(MapHealth(persistedAttempt));
+        }
+
+        var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == panelId, CancellationToken.None)
+            ?? throw new InvalidOperationException("VPN panel disappeared while recovering health-check persistence.", persistenceError);
+        var recovered = new PanelHealthCheck
+        {
+            Id = attempted.Id,
+            VpnPanelId = panel.Id,
+            Status = attempted.Status,
+            LatencyMs = attempted.LatencyMs,
+            Version = attempted.Version,
+            ErrorMessage = attempted.ErrorMessage,
+            CheckedAt = attempted.CheckedAt
+        };
+        _db.PanelHealthChecks.Add(recovered);
+        ApplyHealthResult(panel, recovered);
+        AddAudit("vpn_panel.health_check.persistence_recovered", "VpnPanel", panel.Id, actorUserId, before, new
+        {
+            health = HealthAuditSnapshot(recovered),
+            recovered = true,
+            persistenceError = SafeError(persistenceError.Message)
+        });
+        try
+        {
+            await _db.SaveChangesAsync(CancellationToken.None);
+            return Result<PanelHealthCheckDto>.Success(MapHealth(recovered));
+        }
+        catch (Exception recoveryError)
+        {
+            throw new InvalidOperationException(
+                "VPN panel health result could not be persisted after retry.",
+                new AggregateException(persistenceError, recoveryError));
+        }
+    }
+
+    private static void ApplyHealthResult(VpnPanel panel, PanelHealthCheck health)
+    {
+        panel.HealthStatus = health.Status;
+        panel.LastHealthCheckAt = health.CheckedAt;
+        panel.LastError = health.ErrorMessage;
+        panel.Version = health.Version;
+        panel.Status = health.Status == HealthStatus.Healthy && panel.Status == VpnPanelStatus.New
+            ? VpnPanelStatus.Active
+            : panel.Status;
     }
 
     public Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, CancellationToken cancellationToken = default)
@@ -686,6 +789,10 @@ public class X3UiPanelService
         if (inbound?.VpnPanel is null)
         {
             return Result<VpnInboundDto>.Failure("VPN inbound not found.");
+        }
+        if (command.Capacity < inbound.UsedCapacity)
+        {
+            return Result<VpnInboundDto>.Failure("Inbound capacity cannot be lower than used capacity.");
         }
 
         var before = InboundAuditSnapshot(inbound);

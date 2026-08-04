@@ -11212,5 +11212,28 @@
         "text": "Неудачный remote rollback сохраняет redacted audit с требованием ручной сверки. Roadmap progress is 492/512 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-x3ui-panel-health-consistency",
+    "version": "0.481.0",
+    "releasedAt": "2026-08-05T01:19:00+07:00",
+    "title": "Health-check панели сохраняет однозначную историю",
+    "summary": "Panel CRUD и проверки здоровья сериализованы, transient DB failure восстанавливается без дублей, а capacity не опускается ниже занятых slots.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "После успешного remote health-check локальный save retry сохраняет один результат; ambiguous commit распознаётся по стабильному ID."
+      },
+      {
+        "type": "fixed",
+        "text": "Panel update/delete, health, sync и inbound operations используют общий gate; stale worker не повторяет provider call."
+      },
+      {
+        "type": "important",
+        "text": "Capacity панели и inbound нельзя уменьшить ниже текущего usage. Roadmap progress is 493/513 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

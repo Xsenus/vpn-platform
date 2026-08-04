@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: X3Ui panel health consistency
+
+Scope:
+- Проверены panel update/delete/health, scheduled health workers и capacity panel/inbound: общий gate, transient/ambiguous local commit, stale observation и provider boundary.
+
+Results:
+- Roadmap progress: `493/513` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-x3ui-panel-health-consistency`, version `0.481.0`.
+- Backend full suite: OK, `970/970`; X3Ui integration suite: OK, `72/72`; targeted X3Ui/panel/SQLite suite: OK, `78/78`; health/capacity regression: OK, `5/5`.
+- Health persistence regression: pre-commit failure очищает pending success state и сохраняет один recovered healthy record; ambiguous committed outcome находится по стабильному ID без дубля.
+- File-backed SQLite regression: panel update ждёт активный health-check; concurrent workers отклоняют stale observation без второго remote call.
+- Capacity regression: panel/inbound не принимают значение ниже `UsedCapacity`, не создают audit и не вызывают 3x-ui.
+- EF schema: no changes; pending model changes: none.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-05-x3ui-panel-health-consistency`.
+- Secret scan: OK, `607` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: X3Ui inbound update reconciliation
 
 Scope:

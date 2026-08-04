@@ -61,7 +61,6 @@ public class PanelHealthWorker : BackgroundService
         {
             try
             {
-                await using var gate = await PaymentProcessingGate.AcquirePanelHealthAsync(panel.Id, cancellationToken);
                 using var panelScope = _scopeFactory.CreateScope();
                 var db = panelScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
                 var current = await db.VpnPanels.AsNoTracking()
@@ -76,7 +75,7 @@ public class PanelHealthWorker : BackgroundService
                 }
 
                 var service = panelScope.ServiceProvider.GetRequiredService<X3UiPanelService>();
-                var result = await service.CheckHealthAsync(panel.Id, cancellationToken);
+                var result = await service.CheckHealthIfCurrentAsync(panel.Id, panel.LastHealthCheckAt, cancellationToken);
                 if (!result.IsSuccess)
                 {
                     _logger.LogWarning("Panel {PanelId} health check failed: {Error}", panel.Id, result.Error);

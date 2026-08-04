@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `492/512` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `493/513` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -81,7 +81,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `965/965`.
+- [x] Backend full suite: `970/970`.
 - [x] Frontend unit tests: `68/68`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -101,7 +101,7 @@
 - [x] Subscription activation compensates remote access after local persistence failure, preserves `SyncRequired` on cleanup uncertainty and keeps renewal retries idempotent.
 - [x] Telegram update ingress reserves `update_id` before side effects and safely retries failed/stale processing without duplicate invoice calls.
 - [x] Frontend dependency audit: `0 vulnerabilities` on React 19.2.8, React Router 8.3.0 and Node.js 22.22.0.
-- [x] Latest "Что нового": `2026-08-05-x3ui-inbound-update-reconciliation`, версия `0.480.0`.
+- [x] Latest "Что нового": `2026-08-05-x3ui-panel-health-consistency`, версия `0.481.0`.
 
 ## Как вести дальше
 

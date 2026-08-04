@@ -130,6 +130,131 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Health_Should_Recover_One_Success_Record_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "health-recovery-panel",
+            BaseUrl = "https://health-recovery.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        };
+        db.VpnPanels.Add(panel);
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.CheckHealthAsync(panel.Id, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        db.ChangeTracker.Clear();
+        var check = await db.PanelHealthChecks.SingleAsync();
+        Assert.Equal(HealthStatus.Healthy, check.Status);
+        Assert.Equal(HealthStatus.Healthy, (await db.VpnPanels.SingleAsync()).HealthStatus);
+        Assert.Single(await db.AuditLogs.Where(x => x.Action == "vpn_panel.health_check.persistence_recovered").ToListAsync());
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.health_check.failed");
+    }
+
+    [Fact]
+    public async Task Panel_Health_Should_Not_Duplicate_Ambiguously_Committed_Result()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "health-ambiguous-panel",
+            BaseUrl = "https://health-ambiguous.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        };
+        db.VpnPanels.Add(panel);
+        await db.SaveChangesAsync();
+        db.FailNextSaveAfterCommit = true;
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.CheckHealthAsync(panel.Id, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        db.ChangeTracker.Clear();
+        Assert.Single(await db.PanelHealthChecks.ToListAsync());
+        Assert.Single(await db.AuditLogs.Where(x => x.Action == "vpn_panel.health_check").ToListAsync());
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.health_check.persistence_recovered");
+    }
+
+    [Fact]
+    public async Task Panel_Update_Should_Wait_For_Concurrent_Health_Check()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-panel-health-{Guid.NewGuid():N}.db");
+        var healthStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseHealth = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var options = SqliteOptions(databasePath);
+            var clock = new FixedClock();
+            var remote = new FakeX3UiClient(clock.UtcNow)
+            {
+                HealthCheckStarted = healthStarted,
+                ReleaseHealthCheck = releaseHealth
+            };
+            Guid panelId;
+            await using (var seedDb = new ApplicationDbContext(options))
+            {
+                await seedDb.Database.EnsureCreatedAsync();
+                var panel = new VpnPanel { Name = "health-gate-panel", BaseUrl = "https://health-gate.example.test:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, Capacity = 100 };
+                seedDb.VpnPanels.Add(panel);
+                await seedDb.SaveChangesAsync();
+                panelId = panel.Id;
+            }
+
+            await using var healthDb = new ApplicationDbContext(options);
+            await using var updateDb = new ApplicationDbContext(options);
+            var healthService = new X3UiPanelService(healthDb, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+            var updateService = new X3UiPanelService(updateDb, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+            var healthTask = healthService.CheckHealthAsync(panelId, CancellationToken.None);
+            await healthStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var updateTask = updateService.UpdatePanelAsync(panelId, new UpdateVpnPanelCommand(
+                Name: "updated-after-health",
+                BaseUrl: null,
+                Login: null,
+                Password: null,
+                Region: null,
+                Capacity: null,
+                SslVerificationMode: null,
+                ApiVariant: null,
+                AutoCreateInbound: null,
+                DefaultInboundTemplateJson: null,
+                Status: null), CancellationToken.None);
+            await Task.Delay(100);
+
+            Assert.False(updateTask.IsCompleted);
+            releaseHealth.TrySetResult(true);
+            Assert.True((await healthTask).IsSuccess);
+            Assert.True((await updateTask).IsSuccess);
+
+            await using var verifyDb = new ApplicationDbContext(options);
+            var persisted = await verifyDb.VpnPanels.SingleAsync();
+            Assert.Equal("updated-after-health", persisted.Name);
+            Assert.Equal(HealthStatus.Healthy, persisted.HealthStatus);
+            Assert.Equal(1, remote.HealthCheckCalls);
+        }
+        finally
+        {
+            releaseHealth.TrySetResult(true);
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(databasePath)) File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task Panel_Sync_Should_Close_Run_When_Panel_Is_Not_Configured()
     {
         await using var db = CreateDbContext();
@@ -228,6 +353,35 @@ public class X3UiIntegrationTests
         Assert.Equal("original-panel", panel.Name);
         Assert.Equal("https://panel.example.test", panel.BaseUrl);
         Assert.Equal(100, panel.Capacity);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Panel_Update_Should_Reject_Capacity_Below_Used_Slots()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel { Name = "used-panel", BaseUrl = "https://used-panel.example.test", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, Capacity = 10, UsedCapacity = 4 };
+        db.VpnPanels.Add(panel);
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.UpdatePanelAsync(panel.Id, new UpdateVpnPanelCommand(
+            Name: null,
+            BaseUrl: null,
+            Login: null,
+            Password: null,
+            Region: null,
+            Capacity: 3,
+            SslVerificationMode: null,
+            ApiVariant: null,
+            AutoCreateInbound: null,
+            DefaultInboundTemplateJson: null,
+            Status: null), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("used capacity", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(10, panel.Capacity);
         Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
@@ -636,6 +790,31 @@ public class X3UiIntegrationTests
         var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_inbound.update.failed");
         Assert.Contains("local_persistence_failed", audit.AfterJson, StringComparison.Ordinal);
         Assert.Contains("true", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Inbound_Update_Should_Reject_Capacity_Below_Used_Slots_Before_Remote_Call()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var inbound = await db.VpnInbounds.SingleAsync(x => x.Id == ids.InboundId);
+        inbound.Capacity = 10;
+        inbound.UsedCapacity = 4;
+        await db.SaveChangesAsync();
+
+        var result = await service.PatchInboundAsync(
+            ids.InboundId,
+            NewInboundCommand(name: inbound.Name, capacity: 3),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("used capacity", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, remote.UpdateInboundCalls);
+        Assert.Equal(10, inbound.Capacity);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
     [Fact]
@@ -2168,16 +2347,24 @@ public class X3UiIntegrationTests
         public FailingSaveApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public bool FailNextSave { get; set; }
+        public bool FailNextSaveAfterCommit { get; set; }
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             if (FailNextSave)
             {
                 FailNextSave = false;
-                return Task.FromException<int>(new InvalidOperationException("simulated local save failure"));
+                throw new InvalidOperationException("simulated local save failure");
             }
 
-            return base.SaveChangesAsync(cancellationToken);
+            var result = await base.SaveChangesAsync(cancellationToken);
+            if (FailNextSaveAfterCommit)
+            {
+                FailNextSaveAfterCommit = false;
+                throw new InvalidOperationException("simulated ambiguous local save outcome");
+            }
+
+            return result;
         }
     }
 
@@ -2209,6 +2396,7 @@ public class X3UiIntegrationTests
         public List<X3UiUpdateInboundRequest> InboundUpdateRequests { get; } = [];
         public int CreateInboundCalls { get; private set; }
         public int UpdateInboundCalls { get; private set; }
+        public int HealthCheckCalls { get; private set; }
         public int AddClientCalls => _addClientCalls;
         public int UpdateClientCalls { get; private set; }
         public int DeleteClientCalls { get; private set; }
@@ -2222,6 +2410,8 @@ public class X3UiIntegrationTests
         public TaskCompletionSource<bool>? ReleaseAddClient { get; init; }
         public TaskCompletionSource<bool>? UpdateInboundStarted { get; init; }
         public TaskCompletionSource<bool>? ReleaseUpdateInbound { get; init; }
+        public TaskCompletionSource<bool>? HealthCheckStarted { get; init; }
+        public TaskCompletionSource<bool>? ReleaseHealthCheck { get; init; }
         public Action<string>? AfterDeleteClient { get; init; }
         public HashSet<int> FailingUpdateClientCalls { get; } = [];
         public bool FailResetTrafficAfterSideEffect { get; init; }
@@ -2229,7 +2419,16 @@ public class X3UiIntegrationTests
         public List<X3UiUpdateClientRequest> UpdateRequests { get; } = [];
 
         public Task<X3UiSession> LoginAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiSession("session=test", _now));
-        public Task<X3UiHealthResult> CheckHealthAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiHealthResult(true, "2.4.12", 12));
+        public async Task<X3UiHealthResult> CheckHealthAsync(VpnPanel panel, string password, CancellationToken cancellationToken)
+        {
+            HealthCheckCalls += 1;
+            HealthCheckStarted?.TrySetResult(true);
+            if (ReleaseHealthCheck is not null)
+            {
+                await ReleaseHealthCheck.Task.WaitAsync(cancellationToken);
+            }
+            return new X3UiHealthResult(true, "2.4.12", 12);
+        }
         public Task<X3UiPanelVersionResult> GetPanelVersionAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiPanelVersionResult("2.4.12", "{}"));
         public Task<X3UiInboundDto?> GetInboundAsync(VpnPanel panel, string password, string inboundId, CancellationToken cancellationToken) => Task.FromResult<X3UiInboundDto?>(DefaultInbound());
         public Task<IReadOnlyCollection<X3UiInboundDto>> GetInboundsAsync(VpnPanel panel, string password, CancellationToken cancellationToken)

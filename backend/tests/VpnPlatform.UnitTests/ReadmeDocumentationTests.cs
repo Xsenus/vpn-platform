@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("965/965", readme, StringComparison.Ordinal);
+        Assert.Contains("970/970", readme, StringComparison.Ordinal);
         Assert.Contains("68/68", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-x3ui-inbound-update-reconciliation", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-x3ui-panel-health-consistency", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "965/965",
-                     "2026-08-05-x3ui-inbound-update-reconciliation",
-                     "0.480.0",
+                     "970/970",
+                     "2026-08-05-x3ui-panel-health-consistency",
+                     "0.481.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",
