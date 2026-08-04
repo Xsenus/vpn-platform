@@ -1,6 +1,6 @@
 # Product/UI roadmap: сайт, кабинет и админка VPN Platform
 
-Дата актуализации: 2026-06-14.
+Дата актуализации: 2026-08-04.
 
 Этот документ был исходным продуктовым планом по единому сайту, кабинету и админке. Актуальный источник правды по production-ready статусу находится в [PRODUCT_COMPLETION_ROADMAP.md](PRODUCT_COMPLETION_ROADMAP.md). Здесь оставлен компактный продуктовый срез, чтобы старые незакрытые чекбоксы не противоречили фактическим проверкам.
 
@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `469/489` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `470/490` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -81,7 +81,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `778/778`.
+- [x] Backend full suite: `797/797`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -95,8 +95,9 @@
 - [x] Page quality gate covers landmarks, duplicate IDs, image alt text and accessible control names on public, cabinet and all 16 admin screens.
 - [x] Subscription migration and archived-node mode actions are fail-closed and covered by SQLite regression.
 - [x] Mobile admin navigation uses the compact section selector; desktop counters and previous/next order match the grouped menu.
+- [x] Subscription commands fail closed on VPN provider errors; node deletion preserves health/migration history and reports all linked records in the admin UI.
 - [x] Frontend dependency audit: `0 vulnerabilities` on React 19.2.8, React Router 8.3.0 and Node.js 22.22.0.
-- [x] Latest "Что нового": `2026-08-04-migration-node-and-frontend-hardening`, версия `0.457.0`.
+- [x] Latest "Что нового": `2026-08-04-subscription-node-integrity-hardening`, версия `0.458.0`.
 
 ## Как вести дальше
 

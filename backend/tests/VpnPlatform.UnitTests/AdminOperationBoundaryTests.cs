@@ -31,9 +31,13 @@ public class AdminOperationBoundaryTests
         var source = Node("source", NodeStatus.Ready, true);
         var target = Node("target", NodeStatus.Ready, true);
         var unavailableTarget = Node("archived", NodeStatus.Archived, false);
+        var unhealthyTarget = Node("unhealthy", NodeStatus.Ready, true);
+        unhealthyTarget.HealthStatus = HealthStatus.Unhealthy;
+        var fullTarget = Node("full", NodeStatus.Ready, true);
+        fullTarget.UsedCapacity = fullTarget.Capacity;
         db.Users.Add(user);
         db.Tariffs.Add(tariff);
-        db.VpnNodes.AddRange(source, target, unavailableTarget);
+        db.VpnNodes.AddRange(source, target, unavailableTarget, unhealthyTarget, fullTarget);
         await db.SaveChangesAsync();
 
         var subscription = new Subscription
@@ -78,6 +82,8 @@ public class AdminOperationBoundaryTests
         Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, source.Id, CancellationToken.None));
         Assert.IsType<NotFoundObjectResult>(await controller.MigrateSubscription(subscription.Id, Guid.NewGuid(), CancellationToken.None));
         Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, unavailableTarget.Id, CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, unhealthyTarget.Id, CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, fullTarget.Id, CancellationToken.None));
         Assert.Empty(await db.MigrationJobs.ToListAsync());
 
         Assert.IsType<OkObjectResult>(await controller.MigrateSubscription(subscription.Id, target.Id, CancellationToken.None));

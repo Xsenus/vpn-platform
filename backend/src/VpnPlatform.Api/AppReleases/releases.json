@@ -10667,5 +10667,36 @@
         "text": "Roadmap progress is 469/489 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-subscription-node-integrity-hardening",
+    "version": "0.458.0",
+    "releasedAt": "2026-08-04T15:20:00+07:00",
+    "title": "Усилена целостность подписок и VPN-операций",
+    "summary": "Административные команды подписок согласованы с VPN lifecycle, удаление серверов сохраняет операционную историю, а миграции и сценарии получили дополнительные fail-closed границы.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Extend, activate, block, unblock и cancel изменяют подписку только после успешного enable/disable VPN-доступа; ошибки провайдера больше не оставляют частично примененный статус."
+      },
+      {
+        "type": "fixed",
+        "text": "VPN-сервер с health-check или migration job архивируется вместо физического удаления, а API и админка показывают полный счетчик связанных записей."
+      },
+      {
+        "type": "fixed",
+        "text": "Ручная миграция отклоняет unhealthy и заполненные target-ноды, а ключ сценария нельзя переименовать, пока на него ссылается тариф."
+      },
+      {
+        "type": "improved",
+        "text": "Browser E2E выполняет удаление сервера с confirmation panel на desktop и mobile и проверяет отсутствие горизонтального переполнения."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 470/490 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

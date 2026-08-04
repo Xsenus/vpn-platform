@@ -2002,8 +2002,8 @@ export class ApiClient {
     })
   }
 
-  deleteAdminServer(token: string, serverId: string): Promise<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number }> {
-    return this.request<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number }>(`/api/admin/servers/${serverId}`, {
+  deleteAdminServer(token: string, serverId: string): Promise<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number; linkedHealthChecks: number; linkedMigrationJobs: number }> {
+    return this.request<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number; linkedHealthChecks: number; linkedMigrationJobs: number }>(`/api/admin/servers/${serverId}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage

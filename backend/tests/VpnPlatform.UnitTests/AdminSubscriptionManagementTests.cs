@@ -82,6 +82,192 @@ public class AdminSubscriptionManagementTests
         Assert.Contains("current VPN access", JsonSerializer.Serialize(badRequest.Value), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("extend", SubscriptionStatus.Expired, AccessCredentialStatus.Disabled, true)]
+    [InlineData("activate", SubscriptionStatus.PendingActivation, AccessCredentialStatus.Disabled, true)]
+    [InlineData("unblock", SubscriptionStatus.Blocked, AccessCredentialStatus.Disabled, true)]
+    [InlineData("block", SubscriptionStatus.Active, AccessCredentialStatus.Active, false)]
+    [InlineData("cancel", SubscriptionStatus.Active, AccessCredentialStatus.Active, false)]
+    public async Task Subscription_Command_Should_Not_Mutate_Subscription_When_Vpn_Provider_Fails(
+        string command,
+        SubscriptionStatus initialSubscriptionStatus,
+        AccessCredentialStatus initialAccessStatus,
+        bool failEnable)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 9, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        subscription.Status = initialSubscriptionStatus;
+        subscription.EndAt = command == "extend" ? clock.UtcNow.AddDays(-1) : clock.UtcNow.AddDays(10);
+        subscription.BlockReason = command == "unblock" ? "manual hold" : "original reason";
+        subscription.CancelledAt = null;
+        access.Status = initialAccessStatus;
+        access.DisabledAt = initialAccessStatus == AccessCredentialStatus.Disabled ? clock.UtcNow.AddHours(-1) : null;
+        await db.SaveChangesAsync();
+
+        var initialEndAt = subscription.EndAt;
+        var initialBlockReason = subscription.BlockReason;
+        var provider = new TrackingVpnProvider(clock.UtcNow, failEnable: failEnable, failDisable: !failEnable);
+        var controller = CreateController(db, provider, clock);
+
+        var result = command switch
+        {
+            "extend" => await controller.ExtendSubscription(ids.SubscriptionId, new AdminSubscriptionExtendHttpRequest(30, "operator action"), CancellationToken.None),
+            "activate" => await controller.ActivateSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "unblock" => await controller.UnblockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "block" => await controller.BlockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "cancel" => await controller.CancelSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            _ => throw new InvalidOperationException($"Unknown test command: {command}")
+        };
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persistedSubscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var persistedAccess = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        Assert.Equal(initialSubscriptionStatus, persistedSubscription.Status);
+        Assert.Equal(initialEndAt, persistedSubscription.EndAt);
+        Assert.Equal(initialBlockReason, persistedSubscription.BlockReason);
+        Assert.Null(persistedSubscription.CancelledAt);
+        Assert.Equal(AccessCredentialStatus.Error, persistedAccess.Status);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == $"subscription.{command}");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (failEnable ? "access.enable.failed" : "access.disable.failed"));
+    }
+
+    [Fact]
+    public async Task Unblock_Subscription_Ending_Now_Should_Expire_Without_Enabling_Access()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        subscription.Status = SubscriptionStatus.Blocked;
+        subscription.EndAt = clock.UtcNow;
+        subscription.BlockReason = "manual hold";
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var controller = CreateController(db, provider, clock);
+
+        Assert.IsType<OkObjectResult>(await controller.UnblockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("reviewed"), CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        var persistedSubscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var persistedAccess = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        Assert.Equal(SubscriptionStatus.Expired, persistedSubscription.Status);
+        Assert.Null(persistedSubscription.BlockReason);
+        Assert.Equal(AccessCredentialStatus.Disabled, persistedAccess.Status);
+        Assert.Equal(0, provider.EnableCalls);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "subscription.unblock");
+    }
+
+    [Theory]
+    [InlineData("extend", SubscriptionStatus.Expired, AccessCredentialStatus.Disabled)]
+    [InlineData("activate", SubscriptionStatus.PendingActivation, AccessCredentialStatus.Disabled)]
+    [InlineData("unblock", SubscriptionStatus.Blocked, AccessCredentialStatus.Disabled)]
+    [InlineData("block", SubscriptionStatus.Active, AccessCredentialStatus.Active)]
+    [InlineData("cancel", SubscriptionStatus.Active, AccessCredentialStatus.Active)]
+    public async Task Subscription_Command_Should_Fail_Closed_When_Access_Lifecycle_Is_Missing(
+        string command,
+        SubscriptionStatus initialSubscriptionStatus,
+        AccessCredentialStatus initialAccessStatus)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 11, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        subscription.Status = initialSubscriptionStatus;
+        subscription.EndAt = command == "extend" ? clock.UtcNow.AddDays(-1) : clock.UtcNow.AddDays(10);
+        subscription.BlockReason = command == "unblock" ? "manual hold" : "original reason";
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        access.Status = initialAccessStatus;
+        access.DisabledAt = initialAccessStatus == AccessCredentialStatus.Disabled ? clock.UtcNow.AddHours(-1) : null;
+        await db.SaveChangesAsync();
+        var controller = new AdminOperationsController(db, null!, null!, null!, clock: clock)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+
+        var result = command switch
+        {
+            "extend" => await controller.ExtendSubscription(ids.SubscriptionId, new AdminSubscriptionExtendHttpRequest(30, "operator action"), CancellationToken.None),
+            "activate" => await controller.ActivateSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "unblock" => await controller.UnblockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "block" => await controller.BlockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "cancel" => await controller.CancelSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            _ => throw new InvalidOperationException($"Unknown test command: {command}")
+        };
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        db.ChangeTracker.Clear();
+        Assert.Equal(initialSubscriptionStatus, (await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId)).Status);
+        Assert.Equal(initialAccessStatus, (await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId)).Status);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("extend", SubscriptionStatus.Expired, AccessCredentialStatus.Disabled, SubscriptionStatus.Active, AccessCredentialStatus.Active)]
+    [InlineData("block", SubscriptionStatus.Active, AccessCredentialStatus.Active, SubscriptionStatus.Blocked, AccessCredentialStatus.Disabled)]
+    [InlineData("unblock", SubscriptionStatus.Blocked, AccessCredentialStatus.Disabled, SubscriptionStatus.Active, AccessCredentialStatus.Active)]
+    [InlineData("cancel", SubscriptionStatus.Active, AccessCredentialStatus.Active, SubscriptionStatus.Cancelled, AccessCredentialStatus.Disabled)]
+    public async Task Subscription_Command_Should_Update_Subscription_After_Vpn_Provider_Succeeds(
+        string command,
+        SubscriptionStatus initialSubscriptionStatus,
+        AccessCredentialStatus initialAccessStatus,
+        SubscriptionStatus expectedSubscriptionStatus,
+        AccessCredentialStatus expectedAccessStatus)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 12, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        subscription.Status = initialSubscriptionStatus;
+        subscription.EndAt = command == "extend" ? clock.UtcNow.AddDays(-2) : clock.UtcNow.AddDays(10);
+        subscription.BlockReason = command == "unblock" ? "manual hold" : null;
+        access.Status = initialAccessStatus;
+        access.DisabledAt = initialAccessStatus == AccessCredentialStatus.Disabled ? clock.UtcNow.AddHours(-1) : null;
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var controller = CreateController(db, provider, clock);
+
+        var result = command switch
+        {
+            "extend" => await controller.ExtendSubscription(ids.SubscriptionId, new AdminSubscriptionExtendHttpRequest(30, "operator action"), CancellationToken.None),
+            "block" => await controller.BlockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "unblock" => await controller.UnblockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            "cancel" => await controller.CancelSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None),
+            _ => throw new InvalidOperationException($"Unknown test command: {command}")
+        };
+
+        Assert.IsType<OkObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persistedSubscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var persistedAccess = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        Assert.Equal(expectedSubscriptionStatus, persistedSubscription.Status);
+        Assert.Equal(expectedAccessStatus, persistedAccess.Status);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == $"subscription.{command}");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (expectedAccessStatus == AccessCredentialStatus.Active ? "access.enable" : "access.disable"));
+        if (command == "extend") Assert.Equal(clock.UtcNow.AddDays(30), persistedSubscription.EndAt);
+        if (command == "cancel") Assert.Equal(clock.UtcNow, persistedSubscription.CancelledAt);
+    }
+
     private static async Task<(Guid SubscriptionId, Guid AccessId)> SeedSubscriptionWithDisabledAccessAsync(ApplicationDbContext db, DateTimeOffset now)
     {
         var userId = Guid.NewGuid();
@@ -171,10 +357,11 @@ public class AdminSubscriptionManagementTests
         public IVpnProvider Get(string providerName) => provider;
     }
 
-    private sealed class TrackingVpnProvider(DateTimeOffset now) : IVpnProvider
+    private sealed class TrackingVpnProvider(DateTimeOffset now, bool failEnable = false, bool failDisable = false) : IVpnProvider
     {
         public string Name => "x3ui";
         public int EnableCalls { get; private set; }
+        public int DisableCalls { get; private set; }
         public int SyncCalls { get; private set; }
 
         public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
@@ -183,12 +370,20 @@ public class AdminSubscriptionManagementTests
         public Task<VpnProvisionResult> UpdateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new VpnProvisionResult("client-1", "vless://client-1", "vless://client-1", "/configs/client-1.json"));
 
-        public Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken)
+        {
+            DisableCalls += 1;
+            return failDisable
+                ? Task.FromException(new InvalidOperationException("simulated provider disable failure"))
+                : Task.CompletedTask;
+        }
 
         public Task EnableAccessAsync(string providerAccessId, CancellationToken cancellationToken)
         {
             EnableCalls += 1;
-            return Task.CompletedTask;
+            return failEnable
+                ? Task.FromException(new InvalidOperationException("simulated provider enable failure"))
+                : Task.CompletedTask;
         }
 
         public Task<VpnUsageSnapshot> SyncAccessAsync(string providerAccessId, CancellationToken cancellationToken)

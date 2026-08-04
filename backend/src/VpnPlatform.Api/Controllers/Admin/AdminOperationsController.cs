@@ -54,7 +54,15 @@ public sealed record AdminSupportNoteHttpRequest(string Text);
 public sealed record AdminSubscriptionExtendHttpRequest(int Days, string? Reason = null);
 public sealed record AdminAccessActionHttpRequest(string? Reason = null);
 public sealed record SetNodeAllocationHttpRequest(bool Available);
-public sealed record DeleteServerHttpResponse(Guid Id, bool Deleted, bool Archived, int LinkedSubscriptions, int LinkedAccesses, int LinkedProvisioningRuns);
+public sealed record DeleteServerHttpResponse(
+    Guid Id,
+    bool Deleted,
+    bool Archived,
+    int LinkedSubscriptions,
+    int LinkedAccesses,
+    int LinkedProvisioningRuns,
+    int LinkedHealthChecks,
+    int LinkedMigrationJobs);
 public sealed record NodeHealthCheckDto(Guid Id, Guid NodeId, string Status, DateTimeOffset CheckedAt, long LatencyMs, string MetadataJson, string ErrorText);
 public sealed record AdminAuditLogFilters(string? Action = null, string? EntityType = null, string? ActorType = null, string? Search = null, DateTimeOffset? From = null, DateTimeOffset? To = null, int Limit = 200);
 
@@ -255,18 +263,36 @@ public class AdminOperationsController : ControllerBase
 
         var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.EndAt, subscription.GracePeriodEndAt, subscription.BlockReason });
+        if (!StatusStateMachine.CanTransition(subscription.Status, SubscriptionStatus.Active))
+        {
+            return BadRequest(new { error = $"Subscription status transition {subscription.Status} -> {SubscriptionStatus.Active} is not allowed." });
+        }
+
+        if (subscription.CurrentAccess is not null && subscription.CurrentAccess.Status != AccessCredentialStatus.Active)
+        {
+            if (_vpnAccessLifecycleService is null)
+            {
+                return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+            }
+
+            var accessResult = await _vpnAccessLifecycleService.EnableAccessAsync(
+                subscription.CurrentAccess.Id,
+                request.Reason ?? "manual_subscription_extend",
+                ResolveUserId(),
+                cancellationToken);
+            if (!accessResult.IsSuccess)
+            {
+                return BadRequest(new { error = accessResult.Error });
+            }
+        }
+
         var baseDate = subscription.EndAt > now ? subscription.EndAt : now;
         subscription.EndAt = baseDate.AddDays(request.Days);
         subscription.GracePeriodEndAt = subscription.EndAt.AddDays(3);
-        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
-        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
+        StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
         subscription.BlockReason = null;
         AddAuditLog("subscription.extend", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.EndAt, request.Days, request.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
-        if (subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null && subscription.CurrentAccess.Status != AccessCredentialStatus.Active)
-        {
-            await _vpnAccessLifecycleService.EnableAccessAsync(subscription.CurrentAccess.Id, request.Reason ?? "manual_subscription_extend", ResolveUserId(), cancellationToken);
-        }
         return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.EndAt, subscription.GracePeriodEndAt });
     }
 
@@ -284,49 +310,39 @@ public class AdminOperationsController : ControllerBase
 
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason, subscription.SuspendedAt, subscription.CancelledAt });
         var now = _clock.UtcNow;
-        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
-        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
+        if (!StatusStateMachine.CanTransition(subscription.Status, SubscriptionStatus.Active))
+        {
+            return BadRequest(new { error = $"Subscription status transition {subscription.Status} -> {SubscriptionStatus.Active} is not allowed." });
+        }
+
+        AdminAccessActionResult? accessResult = null;
+        if (subscription.CurrentAccess is not null && subscription.CurrentAccess.Status != AccessCredentialStatus.Active)
+        {
+            if (_vpnAccessLifecycleService is null)
+            {
+                return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+            }
+
+            var result = await _vpnAccessLifecycleService.EnableAccessAsync(
+                subscription.CurrentAccess.Id,
+                request?.Reason ?? "manual_subscription_activate",
+                ResolveUserId(),
+                cancellationToken);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new { error = result.Error });
+            }
+
+            accessResult = result.Value;
+        }
+
+        StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
         subscription.BlockReason = null;
         subscription.SuspendedAt = null;
         subscription.CancelledAt = null;
         subscription.GracePeriodEndAt ??= subscription.EndAt.AddDays(3);
         AddAuditLog("subscription.activate", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
-
-        AdminAccessActionResult? accessResult = null;
-        if (subscription.CurrentAccess is not null)
-        {
-            if (_vpnAccessLifecycleService is not null)
-            {
-                var result = await _vpnAccessLifecycleService.EnableAccessAsync(subscription.CurrentAccess.Id, request?.Reason ?? "manual_subscription_activate", ResolveUserId(), cancellationToken);
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(new { error = result.Error });
-                }
-
-                accessResult = result.Value;
-            }
-            else if (subscription.CurrentAccess.Status != AccessCredentialStatus.Active || subscription.CurrentAccess.DisabledAt.HasValue)
-            {
-                var accessBefore = JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, subscription.CurrentAccess.DisabledAt });
-                var accessStatusResult = StatusStateMachine.TrySetAccessStatus(subscription.CurrentAccess, AccessCredentialStatus.Active, _clock.UtcNow);
-                if (!accessStatusResult.IsSuccess) return BadRequest(new { error = accessStatusResult.Error });
-                subscription.CurrentAccess.DisabledAt = null;
-                subscription.CurrentAccess.LastSyncedAt = _clock.UtcNow;
-                subscription.CurrentAccess.Revision += 1;
-                _db.AccessCredentialHistories.Add(new AccessCredentialHistory
-                {
-                    AccessCredentialId = subscription.CurrentAccess.Id,
-                    SubscriptionId = subscription.Id,
-                    EventType = "manual_subscription_activate",
-                    OldValueJson = accessBefore,
-                    NewValueJson = JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, request?.Reason })
-                });
-                AddAuditLog("access.enable", "AccessCredential", subscription.CurrentAccess.Id, accessBefore, JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, request?.Reason }));
-                await _db.SaveChangesAsync(cancellationToken);
-                accessResult = new AdminAccessActionResult(subscription.CurrentAccess.Id, subscription.CurrentAccess.Status.ToString(), subscription.CurrentAccess.DisabledAt, subscription.CurrentAccess.LastSyncedAt, subscription.CurrentAccess.Revision, null, "Access enabled.");
-            }
-        }
 
         return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.EndAt, subscription.CurrentAccessId, Access = accessResult });
     }
@@ -340,15 +356,35 @@ public class AdminOperationsController : ControllerBase
 
         var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason });
-        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Blocked, now);
-        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
-        subscription.BlockReason = string.IsNullOrWhiteSpace(request?.Reason) ? "manual_admin_action" : request!.Reason!.Trim();
+        if (!StatusStateMachine.CanTransition(subscription.Status, SubscriptionStatus.Blocked))
+        {
+            return BadRequest(new { error = $"Subscription status transition {subscription.Status} -> {SubscriptionStatus.Blocked} is not allowed." });
+        }
+
+        var blockReason = string.IsNullOrWhiteSpace(request?.Reason) ? "manual_admin_action" : request!.Reason!.Trim();
+        if (subscription.CurrentAccess is not null)
+        {
+            if (_vpnAccessLifecycleService is null)
+            {
+                return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+            }
+
+            var accessResult = await _vpnAccessLifecycleService.DisableAccessAsync(
+                subscription.CurrentAccess.Id,
+                "AccessDisabledOnSubscriptionBlock",
+                blockReason,
+                ResolveUserId(),
+                cancellationToken);
+            if (!accessResult.IsSuccess)
+            {
+                return BadRequest(new { error = accessResult.Error });
+            }
+        }
+
+        StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Blocked, now);
+        subscription.BlockReason = blockReason;
         AddAuditLog("subscription.block", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason }));
         await _db.SaveChangesAsync(cancellationToken);
-        if (subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null)
-        {
-            await _vpnAccessLifecycleService.DisableAccessAsync(subscription.CurrentAccess.Id, "AccessDisabledOnSubscriptionBlock", subscription.BlockReason, ResolveUserId(), cancellationToken);
-        }
         return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.BlockReason });
     }
 
@@ -361,16 +397,36 @@ public class AdminOperationsController : ControllerBase
 
         var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason });
-        var nextStatus = subscription.EndAt >= now ? SubscriptionStatus.Active : SubscriptionStatus.Expired;
-        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, nextStatus, now);
-        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
+        var nextStatus = subscription.EndAt > now ? SubscriptionStatus.Active : SubscriptionStatus.Expired;
+        if (!StatusStateMachine.CanTransition(subscription.Status, nextStatus))
+        {
+            return BadRequest(new { error = $"Subscription status transition {subscription.Status} -> {nextStatus} is not allowed." });
+        }
+
+        if (nextStatus == SubscriptionStatus.Active
+            && subscription.CurrentAccess is not null
+            && subscription.CurrentAccess.Status != AccessCredentialStatus.Active)
+        {
+            if (_vpnAccessLifecycleService is null)
+            {
+                return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+            }
+
+            var accessResult = await _vpnAccessLifecycleService.EnableAccessAsync(
+                subscription.CurrentAccess.Id,
+                request?.Reason ?? "manual_subscription_unblock",
+                ResolveUserId(),
+                cancellationToken);
+            if (!accessResult.IsSuccess)
+            {
+                return BadRequest(new { error = accessResult.Error });
+            }
+        }
+
+        StatusStateMachine.SetSubscriptionStatus(subscription, nextStatus, now);
         subscription.BlockReason = null;
         AddAuditLog("subscription.unblock", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
-        if (subscription.Status == SubscriptionStatus.Active && subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null)
-        {
-            await _vpnAccessLifecycleService.EnableAccessAsync(subscription.CurrentAccess.Id, request?.Reason ?? "manual_subscription_unblock", ResolveUserId(), cancellationToken);
-        }
         return Ok(new { subscription.Id, Status = subscription.Status.ToString() });
     }
 
@@ -383,16 +439,35 @@ public class AdminOperationsController : ControllerBase
 
         var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt });
-        var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Cancelled, now);
-        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
+        if (!StatusStateMachine.CanTransition(subscription.Status, SubscriptionStatus.Cancelled))
+        {
+            return BadRequest(new { error = $"Subscription status transition {subscription.Status} -> {SubscriptionStatus.Cancelled} is not allowed." });
+        }
+
+        if (subscription.CurrentAccess is not null)
+        {
+            if (_vpnAccessLifecycleService is null)
+            {
+                return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+            }
+
+            var accessResult = await _vpnAccessLifecycleService.DisableAccessAsync(
+                subscription.CurrentAccess.Id,
+                "AccessDisabledOnSubscriptionCancel",
+                request?.Reason ?? "manual_subscription_cancel",
+                ResolveUserId(),
+                cancellationToken);
+            if (!accessResult.IsSuccess)
+            {
+                return BadRequest(new { error = accessResult.Error });
+            }
+        }
+
+        StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Cancelled, now);
         subscription.CancelledAt = now;
         subscription.BlockReason = string.IsNullOrWhiteSpace(request?.Reason) ? subscription.BlockReason : request!.Reason!.Trim();
         AddAuditLog("subscription.cancel", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
-        if (subscription.CurrentAccess is not null && _vpnAccessLifecycleService is not null)
-        {
-            await _vpnAccessLifecycleService.DisableAccessAsync(subscription.CurrentAccess.Id, "AccessDisabledOnSubscriptionCancel", request?.Reason ?? "manual_subscription_cancel", ResolveUserId(), cancellationToken);
-        }
         return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.CancelledAt });
     }
 
@@ -561,7 +636,10 @@ public class AdminOperationsController : ControllerBase
                 return NotFound(new { error = "Target VPN server not found." });
             }
 
-            if (targetNode.Status != NodeStatus.Ready || !targetNode.IsAvailableForNewUsers)
+            if (targetNode.Status != NodeStatus.Ready
+                || !targetNode.IsAvailableForNewUsers
+                || targetNode.HealthStatus == HealthStatus.Unhealthy
+                || targetNode.UsedCapacity >= targetNode.Capacity)
             {
                 return BadRequest(new { error = "Target VPN server is not ready for allocation." });
             }
@@ -1309,6 +1387,8 @@ public class AdminOperationsController : ControllerBase
         var linkedSubscriptions = await _db.Subscriptions.CountAsync(x => x.CurrentServerId == id, cancellationToken);
         var linkedAccesses = await _db.AccessCredentials.CountAsync(x => x.ServerId == id, cancellationToken);
         var linkedRuns = await _db.ProvisioningRuns.CountAsync(x => x.NodeId == id, cancellationToken);
+        var linkedHealthChecks = await _db.NodeHealthChecks.CountAsync(x => x.NodeId == id, cancellationToken);
+        var linkedMigrationJobs = await _db.MigrationJobs.CountAsync(x => x.SourceNodeId == id || x.TargetNodeId == id, cancellationToken);
         var before = JsonSerializer.Serialize(new
         {
             node.Name,
@@ -1317,23 +1397,25 @@ public class AdminOperationsController : ControllerBase
             node.IsAvailableForNewUsers,
             linkedSubscriptions,
             linkedAccesses,
-            linkedRuns
+            linkedRuns,
+            linkedHealthChecks,
+            linkedMigrationJobs
         });
 
-        if (linkedSubscriptions > 0 || linkedAccesses > 0 || linkedRuns > 0)
+        if (linkedSubscriptions > 0 || linkedAccesses > 0 || linkedRuns > 0 || linkedHealthChecks > 0 || linkedMigrationJobs > 0)
         {
             node.Status = NodeStatus.Archived;
             node.IsAvailableForNewUsers = false;
             node.UpdatedAt = _clock.UtcNow;
-            AddAuditLog("server.archive", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers, linkedSubscriptions, linkedAccesses, linkedRuns }));
+            AddAuditLog("server.archive", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers, linkedSubscriptions, linkedAccesses, linkedRuns, linkedHealthChecks, linkedMigrationJobs }));
             await _db.SaveChangesAsync(cancellationToken);
-            return Ok(new DeleteServerHttpResponse(id, Deleted: false, Archived: true, linkedSubscriptions, linkedAccesses, linkedRuns));
+            return Ok(new DeleteServerHttpResponse(id, Deleted: false, Archived: true, linkedSubscriptions, linkedAccesses, linkedRuns, linkedHealthChecks, linkedMigrationJobs));
         }
 
         _db.VpnNodes.Remove(node);
         AddAuditLog("server.delete", "VpnNode", id, before, "{}");
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new DeleteServerHttpResponse(id, Deleted: true, Archived: false, linkedSubscriptions, linkedAccesses, linkedRuns));
+        return Ok(new DeleteServerHttpResponse(id, Deleted: true, Archived: false, linkedSubscriptions, linkedAccesses, linkedRuns, linkedHealthChecks, linkedMigrationJobs));
     }
 
     [HttpPost("servers/{id:guid}/health-check")]

@@ -59,14 +59,22 @@ public class AdminWorkScenariosController : ControllerBase
         var scenario = await _db.WorkScenarios.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (scenario is null) return NotFound();
 
-        var error = Apply(scenario, request);
+        var candidate = new WorkScenario();
+        var error = Apply(candidate, request);
         if (error is not null) return BadRequest(new { error });
 
-        if (await _db.WorkScenarios.AnyAsync(x => x.Id != id && x.Key == scenario.Key, cancellationToken))
+        if (await _db.WorkScenarios.AnyAsync(x => x.Id != id && x.Key == candidate.Key, cancellationToken))
         {
             return BadRequest(new { error = "Scenario key already exists." });
         }
 
+        if (!string.Equals(scenario.Key, candidate.Key, StringComparison.Ordinal)
+            && await _db.Tariffs.AnyAsync(x => x.ProvisioningScenario == scenario.Key, cancellationToken))
+        {
+            return BadRequest(new { error = "Scenario key cannot be changed while the scenario is selected in tariffs." });
+        }
+
+        Copy(candidate, scenario);
         scenario.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(Map(scenario));
@@ -123,6 +131,29 @@ public class AdminWorkScenariosController : ControllerBase
 
     private static string NormalizeText(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+
+    private static void Copy(WorkScenario source, WorkScenario target)
+    {
+        target.Name = source.Name;
+        target.Key = source.Key;
+        target.IsActive = source.IsActive;
+        target.AllowedTariffIdsJson = source.AllowedTariffIdsJson;
+        target.VpnProtocol = source.VpnProtocol;
+        target.ServerSelectionRule = source.ServerSelectionRule;
+        target.InboundSelectionRule = source.InboundSelectionRule;
+        target.ProvisioningMode = source.ProvisioningMode;
+        target.OnPaymentSucceeded = source.OnPaymentSucceeded;
+        target.OnPaymentFailed = source.OnPaymentFailed;
+        target.OnRefund = source.OnRefund;
+        target.OnSubscriptionExpired = source.OnSubscriptionExpired;
+        target.OnRenewal = source.OnRenewal;
+        target.CabinetText = source.CabinetText;
+        target.TelegramText = source.TelegramText;
+        target.GenerateQrCode = source.GenerateQrCode;
+        target.MaxDevices = source.MaxDevices;
+        target.TrafficLimit = source.TrafficLimit;
+        target.SortOrder = source.SortOrder;
+    }
 
     private static string NormalizeScenarioToken(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();

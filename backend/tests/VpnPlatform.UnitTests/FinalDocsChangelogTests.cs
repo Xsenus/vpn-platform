@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("778/778", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-migration-node-and-frontend-hardening", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("797/797", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-04-subscription-node-integrity-hardening", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "778/778",
-                     "2026-08-04-migration-node-and-frontend-hardening",
-                     "0.457.0",
+                     "797/797",
+                     "2026-08-04-subscription-node-integrity-hardening",
+                     "0.458.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-migration-node-and-frontend-hardening",
-                     "0.457.0",
-                     "469/489",
+                     "2026-08-04-subscription-node-integrity-hardening",
+                     "0.458.0",
+                     "470/490",
                      "95.9%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `778/778`",
+                     "Backend full suite: OK, `797/797`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `559` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-migration-node-and-frontend-hardening",
-                     "0.457.0",
-                     "469/489",
+                     "2026-08-04-subscription-node-integrity-hardening",
+                     "0.458.0",
+                     "470/490",
                      "95.9%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted docs/release/encoding suite `51/51`",
-                     "backend full suite `778/778`",
+                     "backend full suite `797/797`",
                      "fresh local SQLite smoke OK",
                      "Secret scan: `559` files, `0` findings"
                  })

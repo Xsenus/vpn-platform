@@ -79,6 +79,42 @@ public class WorkScenarioControllerTests
     }
 
     [Fact]
+    public async Task AdminWorkScenarios_Should_Reject_Linked_Key_Rename_Without_Mutating_Scenario()
+    {
+        await using var db = CreateDb();
+        var scenario = Scenario("auto");
+        db.WorkScenarios.Add(scenario);
+        db.Tariffs.Add(new Tariff
+        {
+            Id = Guid.NewGuid(),
+            Name = "Monthly",
+            Slug = "monthly-linked-rename",
+            DurationDays = 30,
+            Price = 490m,
+            Currency = "RUB",
+            MaxDevices = 3,
+            ProvisioningScenario = "auto"
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+
+        var result = await controller.Update(
+            scenario.Id,
+            Request("renamed-auto") with { Name = "Mutated name", MaxDevices = 9 },
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("auto", scenario.Key);
+        Assert.Equal("Автоматическая выдача", scenario.Name);
+        Assert.Equal(3, scenario.MaxDevices);
+        db.ChangeTracker.Clear();
+        var persisted = await db.WorkScenarios.SingleAsync(x => x.Id == scenario.Id);
+        Assert.Equal("auto", persisted.Key);
+        Assert.Equal("Автоматическая выдача", persisted.Name);
+        Assert.Equal(3, persisted.MaxDevices);
+    }
+
+    [Fact]
     public async Task AdminWorkScenarios_Should_Reject_Invalid_Request()
     {
         await using var db = CreateDb();

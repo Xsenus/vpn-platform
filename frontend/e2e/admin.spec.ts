@@ -392,6 +392,11 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'DELETE' && path === '/api/admin/servers/server-eu') {
+      await fulfillJson(route, { id: 'server-eu', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 2, linkedMigrationJobs: 1 })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/servers') {
       await fulfillJson(route, [{ id: 'server-eu', name: 'EU Sandbox', host: 'eu.example.test', ipAddress: '10.0.0.1', provider: 'Local', region: 'EU', country: 'DE', datacenter: 'FRA', status: 'Active', capacity: 1000, usedCapacity: 12, supportedProtocolsCsv: 'vless', healthStatus: 'Healthy', lastHealthCheckAt: now, lastHealthLatencyMs: 15, lastHealthError: null, lastHealthMetadataJson: '{}', provisioningStatus: 'Ready', provisioningMode: 'auto', provisioningModeTitle: 'Автоматически', provisioningRiskLevel: 'safe', liveDeployAllowed: false, provisioningNextAction: null, provisioningOperatorWarning: null, precheckMode: 'validation', precheckModeTitle: 'Validation', installedVersion: '1.0.0', backupStatus: 'Ready', monitoringStatus: 'Ready', loggingStatus: 'Ready', tagsCsv: 'validation-mode:true', priority: 10, isAvailableForNewUsers: true, sshUser: 'root', sshPort: 22, sshAuthMethod: 'Password', sshCredentialConfigured: true, skipHostKeyChecking: true, panelBaseUrl: 'https://panel-eu.example.test', panelUsername: 'admin', panelPasswordConfigured: true, panelInboundId: 1, publicHostname: 'vpn-eu.example.test', publicPort: 443, nodeGroupId: 'default' }])
       return
@@ -508,6 +513,15 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   await openAdminSection(page, 'VPN-доступы', 'vpn')
   await expect(page.getByText('vless://admin-e2e@example.test')).toBeVisible()
+
+  await openAdminSection(page, 'Серверы', 'nodes')
+  const nodesPanel = page.locator('#nodes')
+  await nodesPanel.getByRole('button', { name: 'Удалить' }).click()
+  await expect(nodesPanel.getByRole('dialog')).toContainText('health-check или миграций')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Сервер EU Sandbox архивирован: связей 3.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-eu', 'DELETE')).toBeTruthy()
 
   await openAdminSection(page, '3x-ui панели', 'panels')
   await expect(page.locator('#panels strong').filter({ hasText: 'EU 3x-ui Sandbox' })).toBeVisible()

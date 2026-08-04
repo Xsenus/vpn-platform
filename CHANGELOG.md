@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.458.0 - 2026-08-04
+
+Release entry: `2026-08-04-subscription-node-integrity-hardening`.
+
+### Fixed
+- Admin subscription `extend`, `activate`, `block`, `unblock` and `cancel` commands now apply subscription status/date changes only after the corresponding VPN enable/disable succeeds; provider failures preserve the original subscription and record the access failure.
+- Unblocking at the exact subscription end time now results in `Expired` without re-enabling VPN access, and commands fail closed when the access lifecycle service is unavailable.
+- Deleting a VPN server now archives nodes linked by health checks or source/target migration jobs, preventing orphaned operational history; API and admin UI expose both counters.
+- Manual migration rejects unhealthy or capacity-exhausted target nodes, matching automatic allocation rules.
+- A linked work scenario key cannot be renamed until tariffs are moved, and rejected updates no longer mutate the tracked entity.
+
+### Improved
+- Admin browser E2E performs server deletion through the confirmation panel on desktop and mobile, verifies all linked-history counters and checks horizontal overflow.
+
+### Notes
+- Validation: backend full suite `797/797`, targeted SQLite/controller suite `38/38`, frontend `66/66`, Playwright console suite `12/12`, targeted admin desktop/mobile `2/2`, responsive all-screens `6/6`, fresh local SQLite smoke OK, Release build/typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `51/51` keep current evidence synchronized.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `559` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `470/490` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.457.0 - 2026-08-04
 
 Release entry: `2026-08-04-migration-node-and-frontend-hardening`.

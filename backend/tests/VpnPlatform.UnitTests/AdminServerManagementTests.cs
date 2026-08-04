@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -50,6 +51,8 @@ public class AdminServerManagementTests
         var response = Assert.IsType<DeleteServerHttpResponse>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.True(response.Deleted);
         Assert.False(response.Archived);
+        Assert.Equal(0, response.LinkedHealthChecks);
+        Assert.Equal(0, response.LinkedMigrationJobs);
         Assert.False(await db.VpnNodes.AnyAsync(x => x.Id == node.Id));
         Assert.Contains(db.AuditLogs, x => x.Action == "server.delete" && x.EntityId == node.Id.ToString());
     }
@@ -97,10 +100,64 @@ public class AdminServerManagementTests
         Assert.Equal(1, response.LinkedSubscriptions);
         Assert.Equal(1, response.LinkedAccesses);
         Assert.Equal(1, response.LinkedProvisioningRuns);
+        Assert.Equal(0, response.LinkedHealthChecks);
+        Assert.Equal(0, response.LinkedMigrationJobs);
         Assert.Equal(NodeStatus.Archived, node.Status);
         Assert.False(node.IsAvailableForNewUsers);
         Assert.True(await db.VpnNodes.AnyAsync(x => x.Id == node.Id));
         Assert.Contains(db.AuditLogs, x => x.Action == "server.archive" && x.EntityId == node.Id.ToString());
+    }
+
+    [Theory]
+    [InlineData("health-check", 1, 0)]
+    [InlineData("migration-source", 0, 1)]
+    [InlineData("migration-target", 0, 1)]
+    public async Task DeleteServer_Should_Archive_Server_When_Historical_Operations_Are_Linked(
+        string dependency,
+        int expectedHealthChecks,
+        int expectedMigrationJobs)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var controller = CreateController(db);
+        var node = NewNode($"historical-{dependency}");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        if (dependency == "health-check")
+        {
+            db.NodeHealthChecks.Add(new NodeHealthCheck
+            {
+                NodeId = node.Id,
+                CheckedAt = DateTimeOffset.UtcNow,
+                Status = HealthStatus.Healthy
+            });
+        }
+        else
+        {
+            db.MigrationJobs.Add(new MigrationJob
+            {
+                SourceNodeId = dependency == "migration-source" ? node.Id : Guid.NewGuid(),
+                TargetNodeId = dependency == "migration-target" ? node.Id : null,
+                Status = MigrationJobStatus.Completed,
+                Type = "historical-test"
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var result = await controller.DeleteServer(node.Id, CancellationToken.None);
+
+        var response = Assert.IsType<DeleteServerHttpResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.False(response.Deleted);
+        Assert.True(response.Archived);
+        Assert.Equal(expectedHealthChecks, response.LinkedHealthChecks);
+        Assert.Equal(expectedMigrationJobs, response.LinkedMigrationJobs);
+        Assert.Equal(NodeStatus.Archived, node.Status);
+        Assert.True(await db.VpnNodes.AnyAsync(x => x.Id == node.Id));
+        Assert.Equal(expectedHealthChecks, await db.NodeHealthChecks.CountAsync(x => x.NodeId == node.Id));
+        Assert.Equal(expectedMigrationJobs, await db.MigrationJobs.CountAsync(x => x.SourceNodeId == node.Id || x.TargetNodeId == node.Id));
     }
 
     [Fact]
@@ -216,6 +273,9 @@ public class AdminServerManagementTests
             .Options;
         return new ApplicationDbContext(options);
     }
+
+    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
+        => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
 
     private sealed class TestClock : IClock
     {

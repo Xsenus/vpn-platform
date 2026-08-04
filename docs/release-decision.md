@@ -4,7 +4,7 @@
 
 ## Решение
 
-Статус на 2026-06-14: **staging-ready baseline, не production-ready**.
+Статус на 2026-08-04: **staging-ready baseline, не production-ready**.
 
 Проект можно использовать для локальной проверки, демонстрации продукта, подготовки staging и дальнейшего live smoke. Проект нельзя считать production-ready, пока не закрыт VPS production smoke и не проверены реальные внешние интеграции.
 
@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `778/778`.
+- Backend full suite: `797/797`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -34,8 +34,9 @@ Production-ready решение заблокировано следующими 
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
 - Operation boundary regression подтверждает 400 для некорректных enum/JSON без частичной записи; восемь payment webhook routes и fail-closed VPN provisioning покрыты контроллерными/SQLite-тестами.
 - Subscription migration, archived-node fail-closed actions and compact mobile admin navigation are covered by SQLite/frontend/Playwright regression.
-- Latest "Что нового": `2026-08-04-migration-node-and-frontend-hardening`, версия `0.457.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `469/489` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Subscription commands apply status/date changes only after successful VPN lifecycle; historical node operations and linked scenario keys are protected by SQLite/browser regression.
+- Latest "Что нового": `2026-08-04-subscription-node-integrity-hardening`, версия `0.458.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `470/490` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

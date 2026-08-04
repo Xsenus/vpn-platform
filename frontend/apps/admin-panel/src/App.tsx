@@ -2229,7 +2229,7 @@ export function App() {
   const handleDeleteServer = (server: VpnNodeDto) => runAction(`delete-server-${server.id}`, async () => {
     const result = await api.deleteAdminServer(token, server.id)
     setNotice(result.archived
-      ? `Сервер ${server.name} архивирован: связей ${result.linkedSubscriptions + result.linkedAccesses + result.linkedProvisioningRuns}.`
+      ? `Сервер ${server.name} архивирован: связей ${result.linkedSubscriptions + result.linkedAccesses + result.linkedProvisioningRuns + result.linkedHealthChecks + result.linkedMigrationJobs}.`
       : `Сервер ${server.name} удалён.`)
     if (editingServerId === server.id) cancelServerEdit()
     await loadAll(token)
@@ -3060,7 +3060,7 @@ export function App() {
                   <PrimaryButton className="button-secondary" disabled={server.status === 'Archived'} onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
                   <ConfirmButton className="button-secondary" disabled={server.status === 'Archived'} message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
                   <ConfirmButton className="button-secondary" disabled={server.status === 'Disabled' || server.status === 'Archived'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton>
-                  <ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? Если у него есть подписки, VPN-доступы или запуски подготовки, он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton>
+                  <ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? При наличии подписок, VPN-доступов, запусков подготовки, health-check или миграций он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}

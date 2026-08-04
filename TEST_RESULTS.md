@@ -2,6 +2,35 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: subscription and node integrity hardening
+
+Scope:
+- Проверены `extend/activate/block/unblock/cancel` при успешном VPN lifecycle, исключениях провайдера и отсутствии lifecycle service.
+- Проверена граница `EndAt == now`, unhealthy/full migration target и удаление VPN-сервера с health-check/source/target migration history.
+- Проверено переименование ключа рабочего сценария, выбранного тарифом, включая отсутствие tracked/persisted mutation после 400.
+- Проверен typed delete contract и confirmation flow админки на desktop/mobile без horizontal overflow.
+
+Result:
+- Provider failure переводит только VPN access в диагностический `Error`; статус, срок, BlockReason и CancelledAt подписки остаются исходными, subscription audit не создается.
+- Истекшая ровно сейчас подписка становится `Expired` без enable call; штатные команды после успешного провайдера сохраняют согласованные subscription/access статусы.
+- Узел с health-check или migration job архивируется и сохраняет историю; UI показывает сумму всех пяти типов связей.
+- Migration target следует тем же health/capacity ограничениям, что автоматический allocator; linked scenario key rename отклоняется без частичной мутации.
+- Roadmap progress: `470/490` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-subscription-node-integrity-hardening`, version `0.458.0`.
+
+Validation:
+- Backend full suite: OK, `797/797`; targeted SQLite/controller suite: OK, `38/38`.
+- Targeted docs/release/encoding suite: OK, `51/51`.
+- API Release build with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; targeted admin desktop/mobile: OK, `2/2`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-subscription-node-integrity-hardening`.
+- Secret scan: OK, `559` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: migration, archived node and frontend hardening
 
 Scope:

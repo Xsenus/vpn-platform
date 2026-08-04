@@ -356,7 +356,7 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (init?.method === 'DELETE') {
-      return new Response(JSON.stringify({ id: 'node-1', deleted: true, archived: false, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0 }), {
+      return new Response(JSON.stringify({ id: 'node-1', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 2, linkedMigrationJobs: 1 }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -417,7 +417,7 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   await client.disableAdminServer('admin-token', 'node-1')
   await client.checkAdminServerHealth('admin-token', 'node-1')
   await client.getAdminServerHealthChecks('admin-token', 'node-1')
-  await client.deleteAdminServer('admin-token', 'node-1')
+  const deletion = await client.deleteAdminServer('admin-token', 'node-1')
 
   const headers = new Headers(calls[0]?.init?.headers)
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers')
@@ -439,6 +439,9 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   assert.equal(calls[5]?.url, 'http://localhost:8080/api/admin/servers/node-1')
   assert.equal(calls[5]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(deletion.archived, true)
+  assert.equal(deletion.linkedHealthChecks, 2)
+  assert.equal(deletion.linkedMigrationJobs, 1)
 })
 
 test('ApiClient provisioning run details and actions are tokenized', async () => {
