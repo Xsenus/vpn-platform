@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   AccessCredentialDto,
   AdminAuditLogDto,
@@ -8,6 +8,7 @@ import {
   AdminUserDto,
   AdminUserOverviewDto,
   ApiClient,
+  ApiClientError,
   AppReleaseOverviewDto,
   AppReleaseDto,
   AppReleaseUpsertPayload,
@@ -56,6 +57,7 @@ const ADMIN_EMAIL_STORAGE_KEY = 'vpn-platform-admin-email'
 const yookassaAllowedIps = '185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32'
 const paymentProviderOptions: PaymentProvider[] = ['YooKassa', 'RoboKassa', 'YooMoney', 'TelegramStars', 'CloudPayments', 'TBankAcquiring', 'Prodamus', 'Stripe', 'PayPal']
 const adminAuthRequiredMessage = 'Войдите как администратор, чтобы включить загрузку данных и действия в разделах.'
+const adminAccessDeniedMessage = 'У этой учетной записи нет доступа к админ-панели. Войдите с административной ролью.'
 
 type PaymentProviderSetup = {
   title: string
@@ -923,8 +925,8 @@ async function copyToClipboard(text: string, setNotice: (value: string) => void)
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
-  const loadedToken = useRef('')
-  const adminDisabledTitle = token ? undefined : adminAuthRequiredMessage
+  const [adminAccessVerified, setAdminAccessVerified] = useState(false)
+  const adminDisabledTitle = adminAccessVerified ? undefined : adminAuthRequiredMessage
   const [email, setEmail] = useState(readSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY) ?? '')
   const [password, setPassword] = useState('')
   const [rememberAdminEmail, setRememberAdminEmail] = useState(() => Boolean(readSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY)))
@@ -1077,7 +1079,7 @@ export function App() {
     if (!selectedUserId && nextUsers.length > 0) setSelectedUserId(String(nextUsers[0].id ?? ''))
   }
 
-  const loadAll = async (currentToken: string) => {
+  const loadAll = async (currentToken: string, verifiedSummary?: AdminDashboardSummaryDto) => {
     if (!currentToken) return
     setBusy(true)
     setError('')
@@ -1108,7 +1110,7 @@ export function App() {
       nextVpnPanels,
       nextBotSettings
     ] = await Promise.all([
-      safeLoad('dashboard', () => api.getAdminDashboardSummary(currentToken), null, errors),
+      verifiedSummary ?? safeLoad('dashboard', () => api.getAdminDashboardSummary(currentToken), null, errors),
       safeLoad('аудит', () => api.getAdminAuditLogs(currentToken, { action: auditActionFilter, entityType: auditEntityTypeFilter, actorType: auditActorTypeFilter, search: auditSearch, limit: 200 }), [], errors),
       safeLoad('users', () => api.getAdminUsers(currentToken, { search: userSearch, status: userStatusFilter }), [], errors),
       safeLoad('subscriptions', () => api.getAdminSubscriptions(currentToken), [], errors),
@@ -1180,11 +1182,55 @@ export function App() {
     setBusy(false)
   }
 
+  const isAdminAccessDenied = (error: unknown) =>
+    error instanceof ApiClientError && (error.status === 401 || error.status === 403)
+
+  const verifyAdminSession = async (accessToken: string, currentRefreshToken: string, revokeOnFailure = false) => {
+    try {
+      return await api.getAdminDashboardSummary(accessToken)
+    } catch (error) {
+      if (revokeOnFailure || isAdminAccessDenied(error)) {
+        try {
+          await api.logout(accessToken, currentRefreshToken || null)
+        } catch {
+          // Local admission still fails closed when server-side cleanup cannot be confirmed.
+        }
+      }
+      if (!isAdminAccessDenied(error)) throw error
+
+      const denied = error as ApiClientError
+      throw new ApiClientError(adminAccessDeniedMessage, denied.status, denied.payload)
+    }
+  }
+
   useEffect(() => {
-    if (!token || loadedToken.current === token) return
-    loadedToken.current = token
-    void loadAll(token)
-  }, [token])
+    if (!token || adminAccessVerified) return
+    let cancelled = false
+    setBusy(true)
+    setError('')
+    void verifyAdminSession(token, refreshToken)
+      .then(async (verifiedSummary) => {
+        if (cancelled) return
+        setAdminAccessVerified(true)
+        await loadAll(token, verifiedSummary)
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setAdminAccessVerified(false)
+        if (isAdminAccessDenied(error)) {
+          removeSessionStorageItem(TOKEN_STORAGE_KEY)
+          removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
+          setToken('')
+          setRefreshToken('')
+        }
+        setError(error instanceof Error ? error.message : 'Не удалось проверить административный доступ')
+      })
+      .finally(() => {
+        if (!cancelled) setBusy(false)
+      })
+
+    return () => { cancelled = true }
+  }, [token, refreshToken, adminAccessVerified])
 
   useEffect(() => {
     const syncActiveSection = () => setActiveSection(readAdminSectionFromHash())
@@ -1298,9 +1344,9 @@ export function App() {
   const clearAdminSession = () => {
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
-    loadedToken.current = ''
     setToken('')
     setRefreshToken('')
+    setAdminAccessVerified(false)
     setPassword('')
     setUsers([])
     setSelectedUserId('')
@@ -1377,6 +1423,7 @@ export function App() {
     try {
       const normalizedEmail = email.trim()
       const response = await api.login(normalizedEmail, password)
+      const verifiedSummary = await verifyAdminSession(response.accessToken, response.refreshToken, true)
       writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
       writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
       if (rememberAdminEmail) {
@@ -1384,12 +1431,12 @@ export function App() {
       } else {
         removeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY)
       }
-      loadedToken.current = response.accessToken
+      setAdminAccessVerified(true)
       setToken(response.accessToken)
       setRefreshToken(response.refreshToken)
       setPassword('')
       setNotice('Сессия администратора открыта. Токены сохранены в sessionStorage и не показываются в UI.')
-      await loadAll(response.accessToken)
+      await loadAll(response.accessToken, verifiedSummary)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось получить admin token')
     } finally {
@@ -1406,16 +1453,20 @@ export function App() {
     setBusy(true)
     setError('')
     setNotice('')
+    let refreshRotated = false
     try {
       const response = await api.refresh(refreshToken)
+      refreshRotated = true
+      const verifiedSummary = await verifyAdminSession(response.accessToken, response.refreshToken, true)
       writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
       writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-      loadedToken.current = response.accessToken
+      setAdminAccessVerified(true)
       setToken(response.accessToken)
       setRefreshToken(response.refreshToken)
-      await loadAll(response.accessToken)
+      await loadAll(response.accessToken, verifiedSummary)
       setNotice('Сессия администратора обновлена.')
     } catch (e) {
+      if (refreshRotated || isAdminAccessDenied(e)) clearAdminSession()
       setError(e instanceof Error ? e.message : 'Не удалось обновить сессию администратора')
     } finally {
       setBusy(false)
@@ -2373,7 +2424,7 @@ export function App() {
   const inboundFormErrors = validateInboundForm(inboundForm, selectedVpnPanelId)
   const workScenarioFormErrors = validateWorkScenarioForm(workScenarioForm)
 
-  if (!token) {
+  if (!token || !adminAccessVerified) {
     return (
       <PageShell title="Админ-панель VPN Platform">
         <SkipLink href="#admin-login" />

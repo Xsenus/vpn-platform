@@ -11488,5 +11488,28 @@
         "text": "Roadmap progress is 504/524 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-admin-rbac-admission",
+    "version": "0.493.0",
+    "releasedAt": "2026-08-05T04:37:00+07:00",
+    "title": "Админка проверяет роль до открытия панели",
+    "summary": "Обычная пользовательская сессия больше не сохраняется и не открывает административный интерфейс.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "AdminRead подтверждается защищенным dashboard endpoint до записи токенов и показа admin-shell; denied refresh session отзывается."
+      },
+      {
+        "type": "fixed",
+        "text": "HTTP status сохраняется в ApiClientError, восстановление сессии переживает StrictMode remount, а dashboard smoke запрещает [object Object]."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 505/525 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   ApiClient,
+  ApiClientError,
   buildAuthHeaders,
   isValidEmail,
   normalizeApiError,
@@ -22,6 +23,25 @@ test('normalizeApiError prefers error field and message field', () => {
   assert.equal(normalizeApiError({ error: 'boom' }, 'fallback'), 'boom')
   assert.equal(normalizeApiError({ message: 'denied' }, 'fallback'), 'denied')
   assert.equal(normalizeApiError(null, 'fallback'), 'fallback')
+})
+
+test('ApiClient errors preserve HTTP status and normalized payload', async () => {
+  globalThis.fetch = (async () => new Response(
+    JSON.stringify({ error: 'forbidden' }),
+    { status: 403, headers: { 'Content-Type': 'application/json' } }
+  )) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await assert.rejects(
+    () => client.getAdminDashboardSummary('user-token'),
+    (error: unknown) => {
+      assert.ok(error instanceof ApiClientError)
+      assert.equal(error.status, 403)
+      assert.equal(error.message, 'forbidden')
+      assert.deepEqual(error.payload, { error: 'forbidden' })
+      return true
+    }
+  )
 })
 
 test('auth helpers validate forms and translate backend codes to Russian text', () => {

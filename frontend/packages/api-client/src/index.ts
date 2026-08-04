@@ -1137,6 +1137,17 @@ export function normalizeApiError(payload: unknown, fallback: string): string {
 
 const apiFallbackErrorMessage = 'Не удалось выполнить запрос. Попробуйте еще раз.'
 
+export class ApiClientError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly payload: unknown
+  ) {
+    super(message)
+    this.name = 'ApiClientError'
+  }
+}
+
 export class ApiClient {
   constructor(private readonly baseUrl: string) {}
 
@@ -1159,7 +1170,7 @@ export class ApiClient {
 
     const payload = await readJsonOrText(response)
     if (!response.ok) {
-      throw new Error(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage))
+      throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
     }
 
     return payload as T
@@ -1182,7 +1193,7 @@ export class ApiClient {
     const text = await response.text()
     if (!response.ok) {
       const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
-      throw new Error(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage))
+      throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
     }
 
     return text

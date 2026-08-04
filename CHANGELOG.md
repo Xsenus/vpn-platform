@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.493.0 - 2026-08-05
+
+Release entry: `2026-08-05-admin-rbac-admission`.
+
+### Исправлено
+
+- Admin-panel подтверждает защищенный `AdminRead` до сохранения токенов и показа shell; обычная пользовательская учетная запись остается на login screen, а выданная refresh-сессия отзывается.
+- API client сохраняет HTTP status и нормализованный payload в `ApiClientError`, поэтому `401/403` отличаются от сетевой ошибки без разбора строк.
+- Восстановление сохраненной admin-сессии корректно переживает React StrictMode remount и не оставляет форму навечно в состоянии «Проверяем доступ...».
+- All-screens fixture соответствует числовому dashboard DTO и больше не маскирует `[object Object]` в статистике свежих платежей/заказов.
+
+### Проверено
+
+- Backend full suite `989/989`; targeted RBAC/auth suite `34/34` подтверждает запрет `AdminRead` для роли `User`, разрешенные admin-роли, refresh и revoke.
+- Frontend `72/72`, typecheck/build OK; admin desktop/mobile `2/2` покрывает non-admin `403`, немедленный revoke, пустой storage и последующий полный admin flow.
+- Playwright desktop/mobile/all-screens responsive suite `12/12` без неожиданных console errors/overflow и без `[object Object]` на dashboard.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `505/525` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё еще требуется.
+
 ## 0.492.0 - 2026-08-05
 
 Release entry: `2026-08-05-admin-session-lifecycle`.

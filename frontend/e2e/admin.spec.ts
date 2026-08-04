@@ -164,6 +164,7 @@ function vpnPanel(overrides: Record<string, unknown> = {}) {
 async function mockAdminApi(page: Page) {
   const requests: Array<{ method: string; path: string; body: unknown; authorization: string }> = []
   let logoutShouldFail = false
+  let dashboardShouldDeny = false
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const releases = [release()]
@@ -196,6 +197,16 @@ async function mockAdminApi(page: Page) {
     })
 
     if (method === 'POST' && path === '/api/auth/login') {
+      const loginEmail = String((body as { email?: string } | null)?.email ?? '')
+      if (loginEmail === 'user-e2e@example.test') {
+        await fulfillJson(route, {
+          accessToken: 'user-e2e-token',
+          refreshToken: 'user-e2e-refresh',
+          email: loginEmail,
+          displayName: 'User E2E'
+        })
+        return
+      }
       await fulfillJson(route, {
         accessToken: 'admin-e2e-token',
         refreshToken: 'admin-e2e-refresh',
@@ -221,6 +232,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/dashboard/summary') {
+      if (request.headers().authorization === 'Bearer user-e2e-token' || dashboardShouldDeny) {
+        dashboardShouldDeny = false
+        await fulfillJson(route, { error: 'forbidden' }, 403)
+        return
+      }
       await fulfillJson(route, {
         totalUsers: 4,
         telegramUsers: 2,
@@ -503,6 +519,7 @@ async function mockAdminApi(page: Page) {
   return {
     getLastRequest: (path: string, method = 'POST') =>
       requests.findLast((item) => item.method === method && item.path === path),
+    denyNextDashboard: () => { dashboardShouldDeny = true },
     failLogout: () => { logoutShouldFail = true }
   }
 }
@@ -533,6 +550,24 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  await page.locator('.admin-login-form input[type="email"]').fill('user-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('UserPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.getByText('У этой учетной записи нет доступа к админ-панели. Войдите с административной ролью.')).toBeVisible()
+  await expect(page.locator('.admin-shell')).toBeHidden()
+  expect(api.getLastRequest('/api/auth/logout')?.body).toEqual({ refreshToken: 'user-e2e-refresh' })
+  expect(api.getLastRequest('/api/auth/logout')?.authorization).toBe('Bearer user-e2e-token')
+  expect(await page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+
+  const expectedDeniedResponse = failedResponses.findIndex((item) => item.includes('403') && item.includes('/api/admin/dashboard/summary'))
+  expect(expectedDeniedResponse).toBeGreaterThanOrEqual(0)
+  failedResponses.splice(expectedDeniedResponse, 1)
+  const expectedDeniedConsoleError = consoleErrors.findIndex((item) => item.includes('403'))
+  if (expectedDeniedConsoleError >= 0) consoleErrors.splice(expectedDeniedConsoleError, 1)
+
   await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
   await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
   await page.getByRole('button', { name: 'Войти в админку' }).click()
@@ -652,6 +687,25 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
     access: sessionStorage.getItem('vpn-platform-admin-token'),
     refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
   }))).toEqual({ access: null, refresh: null })
+
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  api.denyNextDashboard()
+  await page.getByRole('button', { name: 'Обновить сессию' }).click()
+  await expect(page.getByText('У этой учетной записи нет доступа к админ-панели. Войдите с административной ролью.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  expect(api.getLastRequest('/api/auth/logout')?.body).toEqual({ refreshToken: 'admin-e2e-refresh-rotated' })
+  expect(await page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+
+  const expectedRefreshDeniedResponse = failedResponses.findIndex((item) => item.includes('403') && item.includes('/api/admin/dashboard/summary'))
+  expect(expectedRefreshDeniedResponse).toBeGreaterThanOrEqual(0)
+  failedResponses.splice(expectedRefreshDeniedResponse, 1)
+  const expectedRefreshDeniedConsoleError = consoleErrors.findIndex((item) => item.includes('403'))
+  if (expectedRefreshDeniedConsoleError >= 0) consoleErrors.splice(expectedRefreshDeniedConsoleError, 1)
 
   await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
   await page.getByRole('button', { name: 'Войти в админку' }).click()

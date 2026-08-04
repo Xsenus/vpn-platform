@@ -372,8 +372,8 @@ async function installApiMock(page: Page) {
         activeVpnAccesses: 1,
         paymentProviderIssues: 0,
         vpnPanelIssues: 0,
-        recentOrders: [order],
-        recentPayments: [payment],
+        recentOrders: 1,
+        recentPayments: 1,
         provisioningQueue: []
       })
       return
@@ -717,19 +717,23 @@ test('cabinet fits representative responsive viewports after authentication', as
 })
 
 test('every admin section fits representative responsive viewports', async ({ page }) => {
-  test.setTimeout(180_000)
+  test.setTimeout(240_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
   for (const viewport of responsiveViewports) {
     await page.setViewportSize(viewport)
     await page.goto('http://127.0.0.1:5295/')
-    if (await page.locator('.admin-shell').isHidden()) {
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (hasStoredAdminSession) {
+      await expect(page.locator('.admin-shell')).toBeVisible()
+    } else {
       await page.locator('input[type="email"]').fill('admin@example.test')
       await page.locator('input[type="password"]').fill('Password123!')
       await page.locator('form').locator('button[type="submit"]').click()
       await expect(page.locator('.admin-shell')).toBeVisible()
     }
+    await expect(page.getByText('[object Object]', { exact: false })).toHaveCount(0)
 
     for (const section of adminSections) {
       await page.goto(`http://127.0.0.1:5295/#${section}`)

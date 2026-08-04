@@ -177,7 +177,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-05 локально подтверждено:
 
 - backend full suite: 989/989;
-- frontend tests: 71/71;
+- frontend tests: 72/72;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -196,8 +196,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Subscription lifecycle consistency: expiration сначала отключает VPN-доступ, затем меняет статус; provider failure сохраняет `GracePeriod`, lease/backoff и retry diagnostics, а batch workers изолируют ошибки отдельных записей.
 - Panel sync consistency: частичный unique index сериализует `Running` между инстансами, stale lease и worker snapshot восстанавливаются, health/sync diagnostics сохраняются redacted.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-admin-session-lifecycle`, версия `0.492.0`.
-- roadmap progress: `504/524` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-admin-rbac-admission`, версия `0.493.0`.
+- roadmap progress: `505/525` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

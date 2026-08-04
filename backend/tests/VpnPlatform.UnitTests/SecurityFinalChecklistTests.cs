@@ -32,7 +32,7 @@ public class SecurityFinalChecklistTests
         Assert.Contains("PaymentWebhookIdempotencyContractTests", checklist, StringComparison.Ordinal);
         Assert.Contains("оператор обязан ротировать", checklist, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("989/989", checklist, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-admin-session-lifecycle", checklist, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-admin-rbac-admission", checklist, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("[x] `P11-ACC-005`", roadmap, StringComparison.Ordinal);
         Assert.Contains("security-final-checklist.md", docsIndex, StringComparison.OrdinalIgnoreCase);
