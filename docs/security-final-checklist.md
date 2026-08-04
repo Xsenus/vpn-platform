@@ -75,12 +75,13 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 824/824.
+- Backend full suite: 831/831.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
 - Refund provider calls use durable reservations and fail closed on concurrent, cancelled or locally uncommitted outcomes: OK.
-- Latest local release: `2026-08-04-payment-refund-commit-resilience`, версия `0.463.0`.
+- Payment initialization uses a durable reservation and order gate; paid intermediate orders and uncommitted local reservations do not call the provider: OK.
+- Latest local release: `2026-08-04-payment-init-commit-resilience`, версия `0.464.0`.
 - Frontend tests: 66/66.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

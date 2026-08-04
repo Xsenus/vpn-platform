@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.464.0 - 2026-08-04
+
+Release entry: `2026-08-04-payment-init-commit-resilience`.
+
+### Fixed
+- Payment initialization сериализуется по order id: одинаковые параллельные запросы используют один local payment и один provider checkout.
+- Local payment reservation сохраняется до provider call; конфликт или отказ reservation возвращает управляемую fail-closed ошибку без внешнего запроса.
+- Успешный remote checkout после transient final commit failure сохраняется независимым token и возвращается клиенту как success; двойной save failure оставляет retriable `New` reservation с тем же idempotency key.
+- Заказы `FulfillmentInProgress`, `PartiallyProcessed` и любые заказы с `PaidAt` больше не создают повторный checkout.
+
+### Notes
+- Validation: backend full suite `831/831`, targeted payment/refund suite `154/154`, API Release build `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `51/51` keep current evidence synchronized.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `562` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `476/496` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.463.0 - 2026-08-04
 
 Release entry: `2026-08-04-payment-refund-commit-resilience`.

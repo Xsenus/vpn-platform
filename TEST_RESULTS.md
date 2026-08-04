@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: payment init commit resilience
+
+Scope:
+- SQLite concurrency запускает два payment init одного order/provider одновременно.
+- Fault-injection отклоняет reservation save, один final save и два последовательных final saves после успешного provider response.
+- Проверены caller cancellation и paid intermediate order statuses `FulfillmentInProgress`/`PartiallyProcessed`.
+
+Result:
+- Order gate и повторное чтение актуального order state исключают второй provider checkout и stale-state initialization.
+- Reservation failure не вызывает провайдера; concurrent conflict возвращает существующий checkout или управляемый in-progress result.
+- Transient final save recovery возвращает success с сохраненным provider id/URL; двойной failure оставляет один `New` payment для idempotent retry.
+- Cancellation пробрасывается после независимого сохранения диагностического состояния, а оплаченные intermediate orders отклоняются до provider call.
+- Roadmap progress: `476/496` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-payment-init-commit-resilience`, version `0.464.0`.
+
+Validation:
+- Backend full suite: OK, `831/831`; targeted payment/refund suite: OK, `154/154`.
+- Targeted docs/release/encoding suite: OK, `51/51`.
+- API Release build with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-payment-init-commit-resilience`.
+- Secret scan: OK, `562` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: payment refund commit resilience
 
 Scope:

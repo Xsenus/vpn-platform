@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-04 локально подтверждено:
 
-- backend full suite: 824/824;
+- backend full suite: 831/831;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -188,8 +188,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - subscription migration and archived-node boundaries: source/target/duplicate validation, migration item/audit persistence and fail-closed archived mode-actions are covered by SQLite tests.
 - subscription/VPN consistency: provider failures leave subscription status and dates unchanged; server deletion preserves health/migration history; scenario key renames are guarded.
 - refund consistency: provider call выполняется после durable reservation; concurrent duplicate, unresolved state, final commit failure и cancellation покрыты SQLite/fault-injection regression.
-- latest "Что нового": `2026-08-04-payment-refund-commit-resilience`, версия `0.463.0`.
-- roadmap progress: `475/495` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- payment init consistency: order gate, pre-provider reservation, concurrent duplicate, paid intermediate states и remote outcome recovery покрыты SQLite/fault-injection regression.
+- latest "Что нового": `2026-08-04-payment-init-commit-resilience`, версия `0.464.0`.
+- roadmap progress: `476/496` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

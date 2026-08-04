@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `824/824`.
+- Backend full suite: `831/831`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -37,8 +37,9 @@ Production-ready решение заблокировано следующими 
 - Subscription commands apply status/date changes only after successful VPN lifecycle; historical node operations and linked scenario keys are protected by SQLite/browser regression.
 - Admin writes and 3x-ui panel/inbound/client commands create redacted actor-aware audit records; incomplete panel configuration closes sync-runs as failed.
 - Refund flow reserves an operation before provider call, blocks unresolved retries and preserves ambiguous provider outcomes for manual reconciliation without changing confirmed payment totals.
-- Latest "Что нового": `2026-08-04-payment-refund-commit-resilience`, версия `0.463.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `475/495` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Payment initialization uses an order gate and durable reservation, rejects paid intermediate states and recovers successful provider outcomes after transient local commit failure.
+- Latest "Что нового": `2026-08-04-payment-init-commit-resilience`, версия `0.464.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `476/496` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

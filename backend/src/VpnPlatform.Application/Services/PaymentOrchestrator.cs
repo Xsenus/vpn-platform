@@ -65,24 +65,32 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<PaymentInitResult>.Failure("Order not found.");
         }
 
-        if (order.Status == OrderStatus.Completed || order.Status == OrderStatus.PaymentReceived || order.Status == OrderStatus.Refunded)
+        await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(order.Id, cancellationToken);
+        var currentOrder = await _db.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == command.OrderId, cancellationToken);
+        if (currentOrder is null)
+        {
+            return Result<PaymentInitResult>.Failure("Order not found.");
+        }
+
+        RestoreTrackedOrder(order, currentOrder);
+        if (HasReceivedPayment(currentOrder))
         {
             return Result<PaymentInitResult>.Failure("Order is already paid.");
         }
 
-        if (order.Status == OrderStatus.Cancelled)
+        if (currentOrder.Status == OrderStatus.Cancelled)
         {
             return Result<PaymentInitResult>.Failure("Order is cancelled.");
         }
 
-        if (order.Status == OrderStatus.Expired || order.ExpiresAt <= _clock.UtcNow)
+        if (currentOrder.Status == OrderStatus.Expired || currentOrder.ExpiresAt <= _clock.UtcNow)
         {
             StatusStateMachine.SetOrderStatus(order, OrderStatus.Expired, _clock.UtcNow);
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PaymentInitResult>.Failure("Order expired.");
         }
 
-        if (order.UserId == Guid.Empty)
+        if (currentOrder.UserId == Guid.Empty)
         {
             return Result<PaymentInitResult>.Failure("Order must be bound to a user before payment initialization.");
         }
@@ -104,7 +112,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         var existingPendingCandidates = await _db.Payments
             .Where(x =>
-                x.OrderId == order.Id &&
+                x.OrderId == currentOrder.Id &&
                 x.Provider == command.Provider &&
                 x.PaymentProviderAccountId == account.Id &&
                 (x.Status == PaymentStatus.New || x.Status == PaymentStatus.Pending || x.Status == PaymentStatus.WaitingConfirmation))
@@ -120,15 +128,15 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         var payment = existingPending ?? new PaymentAttempt
         {
-            OrderId = order.Id,
+            OrderId = currentOrder.Id,
             PaymentProviderAccountId = account.Id,
             Provider = command.Provider,
             ProviderMode = account.Mode,
-            Amount = order.Amount,
-            Currency = order.Currency,
+            Amount = currentOrder.Amount,
+            Currency = currentOrder.Currency,
             Status = PaymentStatus.New,
             ProviderPaymentId = $"local_{Guid.NewGuid():N}",
-            IdempotencyKey = BuildPaymentIdempotencyKey(order.Id, command.Provider, account.Id),
+            IdempotencyKey = BuildPaymentIdempotencyKey(currentOrder.Id, command.Provider, account.Id),
             ReturnUrl = returnUrl,
             RawRequest = "{}",
             RawResponse = "{}"
@@ -137,7 +145,38 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         if (existingPending is null)
         {
             _db.Payments.Add(payment);
-            await _db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                _db.Payments.Remove(payment);
+                try
+                {
+                    var concurrentPayment = await _db.Payments.AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.IdempotencyKey == payment.IdempotencyKey, cancellationToken);
+                    if (concurrentPayment is not null && !string.IsNullOrWhiteSpace(concurrentPayment.ConfirmationUrl))
+                    {
+                        return Result<PaymentInitResult>.Success(new PaymentInitResult(concurrentPayment.ProviderPaymentId, concurrentPayment.ConfirmationUrl, concurrentPayment.RawResponse));
+                    }
+
+                    if (concurrentPayment is not null)
+                    {
+                        return Result<PaymentInitResult>.Failure("Payment initialization is already in progress; retry shortly.");
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch
+                {
+                    // No provider call has happened, so a failed conflict lookup remains fail-closed.
+                }
+
+                return Result<PaymentInitResult>.Failure("Payment reservation could not be saved; the payment provider was not called.");
+            }
         }
         else
         {
@@ -145,29 +184,85 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             payment.UpdatedAt = now;
         }
 
+        PaymentInitResult init;
         try
         {
-            var init = await provider.CreatePaymentAsync(new PaymentCreateRequest(order, payment, account, returnUrl), cancellationToken);
-
-            payment.ProviderPaymentId = init.PaymentId;
-            payment.RawResponse = init.RawResponse;
-            payment.ConfirmationUrl = init.RedirectUrl;
-            StatusStateMachine.SetPaymentStatus(payment, PaymentStatus.Pending, now);
-            payment.ProviderMode = account.Mode;
-            payment.PaymentProviderAccountId = account.Id;
-            StatusStateMachine.SetOrderStatus(order, OrderStatus.PendingPayment, now);
-            order.PaymentProvider = command.Provider;
-
-            await _db.SaveChangesAsync(cancellationToken);
-            return Result<PaymentInitResult>.Success(init);
+            init = await provider.CreatePaymentAsync(new PaymentCreateRequest(currentOrder, payment, account, returnUrl), cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            payment.StatusReason = "Payment provider call was cancelled before its outcome could be confirmed.";
+            payment.UpdatedAt = now;
+            await TrySavePaymentStateAsync();
+            throw;
         }
         catch (Exception ex)
         {
             payment.StatusReason = ex.Message;
             payment.UpdatedAt = now;
-            await _db.SaveChangesAsync(cancellationToken);
+            await TrySavePaymentStateAsync();
             return Result<PaymentInitResult>.Failure(ex.Message);
         }
+
+        payment.ProviderPaymentId = init.PaymentId;
+        payment.RawResponse = init.RawResponse;
+        payment.ConfirmationUrl = init.RedirectUrl;
+        payment.StatusReason = string.Empty;
+        StatusStateMachine.SetPaymentStatus(payment, PaymentStatus.Pending, now);
+        payment.ProviderMode = account.Mode;
+        payment.PaymentProviderAccountId = account.Id;
+        RestoreTrackedOrder(order, currentOrder);
+        StatusStateMachine.SetOrderStatus(order, OrderStatus.PendingPayment, now);
+        order.PaymentProvider = command.Provider;
+
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<PaymentInitResult>.Success(init);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await TrySavePaymentStateAsync();
+            throw;
+        }
+        catch
+        {
+            if (await TrySavePaymentStateAsync())
+            {
+                return Result<PaymentInitResult>.Success(init);
+            }
+
+            return Result<PaymentInitResult>.Failure("Payment was created by the provider but its local outcome could not be finalized; retry with the same order before creating another payment.");
+        }
+    }
+
+    private async Task<bool> TrySavePaymentStateAsync()
+    {
+        try
+        {
+            await _db.SaveChangesAsync(CancellationToken.None);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool HasReceivedPayment(Order order)
+        => order.PaidAt.HasValue
+            || order.Status is OrderStatus.PaymentReceived
+                or OrderStatus.FulfillmentInProgress
+                or OrderStatus.PartiallyProcessed
+                or OrderStatus.Completed
+                or OrderStatus.Refunded;
+
+    private static void RestoreTrackedOrder(Order order, Order currentOrder)
+    {
+        order.Status = currentOrder.Status;
+        order.PaymentProvider = currentOrder.PaymentProvider;
+        order.PaidAt = currentOrder.PaidAt;
+        order.UpdatedAt = currentOrder.UpdatedAt;
     }
 
     public Task<Result<string>> HandleWebhookAsync(PaymentProvider provider, string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken = default)

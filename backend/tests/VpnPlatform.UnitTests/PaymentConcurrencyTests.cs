@@ -144,6 +144,43 @@ public class PaymentConcurrencyTests
         }
     }
 
+    [Fact]
+    public async Task Same_Payment_Init_In_Parallel_Should_Call_Provider_Once()
+    {
+        var dbPath = CreateDatabasePath();
+        var connectionString = CreateConnectionString(dbPath);
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 4, 11, 0, 0, TimeSpan.Zero));
+        var paymentProvider = new TestPaymentProvider("evt-parallel-init");
+        var vpnProvider = new CountingVpnProvider();
+        var orderId = await SeedOrderForInitializationAsync(connectionString, clock.UtcNow);
+
+        try
+        {
+            await using var firstDb = CreateDbContext(connectionString);
+            await using var secondDb = CreateDbContext(connectionString);
+            var first = CreateOrchestrator(firstDb, clock, paymentProvider, vpnProvider);
+            var second = CreateOrchestrator(secondDb, clock, paymentProvider, vpnProvider);
+
+            var results = await Task.WhenAll(
+                first.InitPaymentAsync(new PaymentInitCommand(orderId, PaymentProvider.YooKassa, "https://example.test/return"), CancellationToken.None),
+                second.InitPaymentAsync(new PaymentInitCommand(orderId, PaymentProvider.YooKassa, "https://example.test/return"), CancellationToken.None));
+
+            Assert.All(results, result => Assert.True(result.IsSuccess, result.Error));
+            Assert.Equal(1, paymentProvider.InitCalls);
+            Assert.Equal(results[0].Value!.PaymentId, results[1].Value!.PaymentId);
+
+            await using var db = CreateDbContext(connectionString);
+            Assert.Equal(1, await db.Payments.CountAsync());
+            var payment = await db.Payments.SingleAsync();
+            Assert.Equal(PaymentStatus.Pending, payment.Status);
+            Assert.NotEmpty(payment.ConfirmationUrl);
+        }
+        finally
+        {
+            TryDeleteDatabase(dbPath);
+        }
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(
         ApplicationDbContext db,
         FixedClock clock,
@@ -194,6 +231,24 @@ public class PaymentConcurrencyTests
         await db.SaveChangesAsync();
 
         return payment.Id;
+    }
+
+    private static async Task<Guid> SeedOrderForInitializationAsync(string connectionString, DateTimeOffset now)
+    {
+        await using var db = CreateDbContext(connectionString);
+        await db.Database.EnsureCreatedAsync();
+
+        var user = new User { Id = Guid.NewGuid(), Email = $"init-{Guid.NewGuid():N}@example.test", DisplayName = "Init Buyer", PasswordHash = "hash", ReferralCode = $"init-{Guid.NewGuid():N}" };
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Init Monthly", Slug = $"init-{Guid.NewGuid():N}", Description = "Init", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true };
+        var account = new PaymentProviderAccount { Id = Guid.NewGuid(), Provider = PaymentProvider.YooKassa, Mode = PaymentProviderMode.Sandbox, Name = $"init-{Guid.NewGuid():N}", PublicName = "YooKassa", IsEnabled = true, IsDefault = true, ApiBaseUrl = "https://api.yookassa.ru/v3", ReturnUrl = "https://example.test/return", SecretKeyProtected = string.Empty };
+        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Web, PaymentProvider = PaymentProvider.YooKassa, Status = OrderStatus.PendingPayment, Amount = tariff.Price, Currency = tariff.Currency, ExpiresAt = now.AddMinutes(15), IsFirstPurchase = true };
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();
+        return order.Id;
     }
 
     private static ApplicationDbContext CreateDbContext(string connectionString)
@@ -253,6 +308,7 @@ public class PaymentConcurrencyTests
     private sealed class TestPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier
     {
         private readonly string _eventId;
+        private int _initCalls;
         private int _refundCalls;
 
         public TestPaymentProvider(string eventId)
@@ -263,10 +319,15 @@ public class PaymentConcurrencyTests
 
         public PaymentProvider Provider => PaymentProvider.YooKassa;
         public string PaymentId { get; }
+        public int InitCalls => Volatile.Read(ref _initCalls);
         public int RefundCalls => Volatile.Read(ref _refundCalls);
 
-        public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
-            => Task.FromResult(new PaymentInitResult(PaymentId, "https://example.test/pay", "{}"));
+        public async Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _initCalls);
+            await Task.Delay(50, cancellationToken);
+            return new PaymentInitResult(PaymentId, "https://example.test/pay", "{}");
+        }
 
         public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
             => Task.FromResult(new PaymentWebhookParseResult(_eventId, "payment.succeeded", PaymentId, PaymentStatus.Succeeded, rawBody, true, 490m, "RUB", true));
