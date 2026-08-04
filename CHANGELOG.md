@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.466.0 - 2026-08-04
+
+Release entry: `2026-08-04-subscription-activation-compensation`.
+
+### Fixed
+- Если VPN-провайдер создал доступ, а локальное сохранение credential завершилось ошибкой, `SubscriptionService` удаляет remote access до фиксации retry-состояния.
+- Если remote cleanup тоже завершился ошибкой, provider ID сохраняется как `SyncRequired`: повтор использует update существующего доступа и не создает второй remote client.
+- Caller cancellation после remote create выполняет компенсацию, независимо сохраняет `PendingActivation`/`PartiallyProcessed` и audit, затем пробрасывается вызывающему коду.
+- Provisioning failures возвращают retryable result; повтор renewal по тому же `LastPaymentId` не увеличивает срок и `RenewalCount` второй раз.
+
+### Notes
+- Validation: backend full suite `843/843`, targeted subscription/X3Ui suite `48/48`, API Release build `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `564` files, `0` findings; encoding guard and artifact cleanup: OK.
+- Roadmap progress is `478/498` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.465.0 - 2026-08-04
 
 Release entry: `2026-08-04-payment-webhook-recovery`.

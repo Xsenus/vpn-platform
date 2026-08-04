@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-04",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `839/839`",
+                     "Backend full suite: `843/843`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `12/12`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-04-payment-webhook-recovery",
-                     "0.465.0"
+                     "2026-08-04-subscription-activation-compensation",
+                     "0.466.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-payment-webhook-recovery", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-04-payment-webhook-recovery", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-subscription-activation-compensation", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-subscription-activation-compensation", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `839/839`",
+                     "Backend full suite: `843/843`",
                      "Frontend unit tests: `66/66`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-04-payment-webhook-recovery",
-                     "0.465.0",
+                     "2026-08-04-subscription-activation-compensation",
+                     "0.466.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

@@ -10867,5 +10867,28 @@
         "text": "Provisioning retry продолжает ту же подписку по LastPaymentId и восстанавливает activation marker. Roadmap progress is 477/497 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-subscription-activation-compensation",
+    "version": "0.466.0",
+    "releasedAt": "2026-08-04T18:13:00+07:00",
+    "title": "Выдача VPN компенсируется после сбоя сохранения",
+    "summary": "Remote access удаляется после отказа локального commit, а неопределенный cleanup сохраняется для безопасной сверки и повтора без дубликата.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "После успешного provider create и ошибки локального credential save выполняется независимый remote cleanup."
+      },
+      {
+        "type": "fixed",
+        "text": "Неудачный cleanup сохраняет provider ID со статусом SyncRequired, поэтому повтор обновляет существующий доступ без второго create."
+      },
+      {
+        "type": "important",
+        "text": "Cancellation пробрасывается после фиксации retry-состояния, а renewal по тому же LastPaymentId не продлевается дважды. Roadmap progress is 478/498 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

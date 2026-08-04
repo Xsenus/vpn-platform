@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `477/497` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `478/498` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -81,7 +81,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `839/839`.
+- [x] Backend full suite: `843/843`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -98,8 +98,9 @@
 - [x] Subscription commands fail closed on VPN provider errors; node deletion preserves health/migration history and reports all linked records in the admin UI.
 - [x] Refund actions use a durable reservation, deduplicate parallel retries and expose a fail-closed blocker while provider reconciliation is unfinished.
 - [x] Payment init serializes concurrent checkout requests, blocks paid intermediate orders and preserves remote checkout data across transient local commit failures.
+- [x] Subscription activation compensates remote access after local persistence failure, preserves `SyncRequired` on cleanup uncertainty and keeps renewal retries idempotent.
 - [x] Frontend dependency audit: `0 vulnerabilities` on React 19.2.8, React Router 8.3.0 and Node.js 22.22.0.
-- [x] Latest "Что нового": `2026-08-04-payment-webhook-recovery`, версия `0.465.0`.
+- [x] Latest "Что нового": `2026-08-04-subscription-activation-compensation`, версия `0.466.0`.
 
 ## Как вести дальше
 

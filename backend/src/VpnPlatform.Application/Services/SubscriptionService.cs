@@ -109,6 +109,7 @@ public class SubscriptionService
         }
 
         var previousServerId = subscription.CurrentServerId;
+        string? provisioningFailureOverride = null;
 
         try
         {
@@ -132,24 +133,65 @@ public class SubscriptionService
 
             if (access is null)
             {
-                var provisionResult = await provider.CreateAccessAsync(request, cancellationToken);
-                access = new AccessCredential
+                VpnProvisionResult? provisionResult = null;
+                AccessCredential? createdAccess = null;
+                try
                 {
-                    SubscriptionId = subscription.Id,
-                    ProviderType = provider.Name,
-                    ProviderAccessId = provisionResult.ProviderAccessId,
-                    ServerId = node.Id,
-                    AccessUri = provisionResult.AccessUri,
-                    QrCodePath = provisionResult.QrCodePath,
-                    ConfigPath = provisionResult.ConfigPath,
-                    Status = AccessCredentialStatus.Active,
-                    IssuedAt = now,
-                    LastSyncedAt = now,
-                    Revision = 1
-                };
+                    provisionResult = await provider.CreateAccessAsync(request, cancellationToken);
+                    createdAccess = new AccessCredential
+                    {
+                        SubscriptionId = subscription.Id,
+                        ProviderType = provider.Name,
+                        ProviderAccessId = provisionResult.ProviderAccessId,
+                        ServerId = node.Id,
+                        AccessUri = provisionResult.AccessUri,
+                        QrCodePath = provisionResult.QrCodePath,
+                        ConfigPath = provisionResult.ConfigPath,
+                        Status = AccessCredentialStatus.Active,
+                        IssuedAt = now,
+                        LastSyncedAt = now,
+                        Revision = 1
+                    };
 
-                _db.AccessCredentials.Add(access);
-                await _db.SaveChangesAsync(cancellationToken);
+                    _db.AccessCredentials.Add(createdAccess);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await _db.SaveChangesAsync(cancellationToken);
+                    access = createdAccess;
+                }
+                catch (Exception ex) when (provisionResult is not null)
+                {
+                    var cleanupError = await TryDeleteCreatedAccessAsync(provider, provisionResult.ProviderAccessId);
+                    if (cleanupError is null)
+                    {
+                        if (createdAccess is not null)
+                        {
+                            _db.AccessCredentials.Remove(createdAccess);
+                        }
+                    }
+                    else if (createdAccess is not null)
+                    {
+                        StatusStateMachine.SetAccessStatus(createdAccess, AccessCredentialStatus.SyncRequired, now);
+                        _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+                        {
+                            AccessCredentialId = createdAccess.Id,
+                            SubscriptionId = subscription.Id,
+                            EventType = "AccessCreateCleanupFailed",
+                            OldValueJson = "{}",
+                            NewValueJson = JsonSerializer.Serialize(new
+                            {
+                                createdAccess.ProviderAccessId,
+                                createdAccess.Status,
+                                provisioningError = SafeError(ex.Message),
+                                cleanupError
+                            })
+                        });
+                        access = createdAccess;
+                        provisioningFailureOverride = $"{SafeError(ex.Message)} Remote VPN access cleanup failed; manual reconciliation is required.";
+                    }
+
+                    throw;
+                }
+
                 _db.AccessCredentialHistories.Add(new AccessCredentialHistory
                 {
                     AccessCredentialId = access.Id,
@@ -217,26 +259,17 @@ public class SubscriptionService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<ActivationResult>.Success(new ActivationResult(subscription.Id, access.Id, scenarioKey, scenario?.CabinetText ?? string.Empty, scenario?.TelegramText ?? string.Empty));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            var safeError = provisioningFailureOverride ?? "VPN access provisioning was cancelled.";
+            await RecordProvisioningFailureAsync(subscription, order, tariff, scenarioKey, safeError, "vpn_access.provisioning_cancelled", now);
+            throw;
+        }
         catch (Exception ex)
         {
-            var safeError = SafeError(ex.Message);
-            StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.PendingActivation, now);
-            subscription.BlockReason = safeError;
-            StatusStateMachine.SetOrderStatus(order, OrderStatus.PartiallyProcessed, now);
-            _db.AuditLogs.Add(new AuditLog
-            {
-                ActorType = "system",
-                ActorId = "system",
-                Action = "vpn_access.provisioning_failed",
-                EntityType = "Subscription",
-                EntityId = subscription.Id.ToString(),
-                BeforeJson = "{}",
-                AfterJson = JsonSerializer.Serialize(new { error = safeError, orderId = order.Id, tariffId = tariff.Id, scenarioKey }),
-                CreatedAt = now
-            });
-            await QueueVpnAccessFailedNotificationAsync(subscription, tariff, safeError, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-            return Result<ActivationResult>.Failure(safeError);
+            var safeError = provisioningFailureOverride ?? SafeError(ex.Message);
+            await RecordProvisioningFailureAsync(subscription, order, tariff, scenarioKey, safeError, "vpn_access.provisioning_failed", now);
+            return Result<ActivationResult>.Failure(safeError, isRetryable: true);
         }
     }
 
@@ -398,6 +431,46 @@ public class SubscriptionService
                 Status = "pending",
                 NextAttemptAt = _clock.UtcNow
             });
+        }
+    }
+
+    private async Task RecordProvisioningFailureAsync(
+        Subscription subscription,
+        Order order,
+        Tariff tariff,
+        string scenarioKey,
+        string safeError,
+        string auditAction,
+        DateTimeOffset now)
+    {
+        StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.PendingActivation, now);
+        subscription.BlockReason = safeError;
+        StatusStateMachine.SetOrderStatus(order, OrderStatus.PartiallyProcessed, now);
+        _db.AuditLogs.Add(new AuditLog
+        {
+            ActorType = "system",
+            ActorId = "system",
+            Action = auditAction,
+            EntityType = "Subscription",
+            EntityId = subscription.Id.ToString(),
+            BeforeJson = "{}",
+            AfterJson = JsonSerializer.Serialize(new { error = safeError, orderId = order.Id, tariffId = tariff.Id, scenarioKey }),
+            CreatedAt = now
+        });
+        await QueueVpnAccessFailedNotificationAsync(subscription, tariff, safeError, CancellationToken.None);
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private static async Task<string?> TryDeleteCreatedAccessAsync(IVpnProvider provider, string providerAccessId)
+    {
+        try
+        {
+            await provider.DeleteAccessAsync(providerAccessId, CancellationToken.None);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return SafeError(ex.Message);
         }
     }
 

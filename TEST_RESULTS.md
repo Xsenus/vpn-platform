@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: subscription activation compensation
+
+Scope:
+- SQLite fault injection отклоняет локальный commit сразу после успешного remote access create.
+- Проверены успешный remote cleanup, двойной отказ create/save+cleanup, caller cancellation и повтор renewal после provider update failure.
+
+Result:
+- После подтвержденного cleanup локальный credential удаляется, подписка остается `PendingActivation`, заказ `PartiallyProcessed`, а повтор создает один рабочий доступ.
+- При cleanup failure provider ID сохраняется в credential со статусом `SyncRequired`; повтор выполняет update без второго create.
+- Cancellation независимо фиксирует retry-состояние и audit `vpn_access.provisioning_cancelled`, затем пробрасывается вызывающему коду.
+- Повтор renewal с тем же `LastPaymentId` не продлевает период и не увеличивает `RenewalCount` второй раз.
+- Roadmap progress: `478/498` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-subscription-activation-compensation`, version `0.466.0`.
+
+Validation:
+- Backend full suite: OK, `843/843`; targeted subscription/X3Ui suite: OK, `48/48`.
+- API Release build with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-subscription-activation-compensation`.
+- Secret scan: OK, `564` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: payment webhook recovery
 
 Scope:
