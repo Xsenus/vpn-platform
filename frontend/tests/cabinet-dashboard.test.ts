@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { AccessCredentialDto, SubscriptionDto } from '../packages/api-client/src/index.ts'
-import { buildCabinetSummary, daysUntil, findAccessForSubscription, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
+import { buildCabinetSummary, daysUntil, findAccessForSubscription, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
 
 function subscription(overrides: Partial<SubscriptionDto>): SubscriptionDto {
   return {
@@ -79,4 +79,17 @@ test('cabinet dashboard returns empty summary when user has no subscription', ()
   assert.equal(summary.currentAccess, null)
   assert.equal(summary.hasActiveSubscription, false)
   assert.equal(summary.hasConnectionLink, false)
+})
+
+test('cabinet dashboard exposes renewal only for backend-supported subscription statuses', () => {
+  assert.deepEqual(getSubscriptionRenewalAvailability(subscription({ status: 'Active' })), { canRenew: true, reason: null })
+  assert.deepEqual(getSubscriptionRenewalAvailability(subscription({ status: 'Expired' })), { canRenew: true, reason: null })
+  assert.deepEqual(getSubscriptionRenewalAvailability(subscription({ status: 'Blocked' })), {
+    canRenew: false,
+    reason: 'Продление заблокировано. Обратитесь в поддержку.'
+  })
+  assert.deepEqual(getSubscriptionRenewalAvailability(subscription({ status: 'Cancelled' })), {
+    canRenew: false,
+    reason: 'Отменённую подписку нельзя продлить. Оформите новый тариф.'
+  })
 })

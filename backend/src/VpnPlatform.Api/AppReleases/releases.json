@@ -11350,5 +11350,28 @@
         "text": "Roadmap progress is 498/518 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-cabinet-renewal-status-guard",
+    "version": "0.487.0",
+    "releasedAt": "2026-08-05T03:04:00+07:00",
+    "title": "Кабинет не предлагает недоступное продление",
+    "summary": "Действие продления согласовано с backend-правилами для заблокированных и отменённых подписок.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Для Blocked и Cancelled подписок кнопка продления заменена понятным следующим действием; handler также блокирует программный вызов."
+      },
+      {
+        "type": "fixed",
+        "text": "SQLite подтверждает ответ 400 без создания заказа, а desktop/mobile browser flow проверяет карточки без overflow и ошибок консоли."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 499/519 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

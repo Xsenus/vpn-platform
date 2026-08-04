@@ -40,6 +40,32 @@ const subscription = {
   updatedAt: now
 }
 
+const blockedSubscription = {
+  ...subscription,
+  id: 'sub-blocked',
+  tariffName: 'Заблокированный тариф',
+  status: 'Blocked',
+  currentAccessId: null,
+  lastPaymentId: null,
+  accessUri: null,
+  qrCodePath: null,
+  configPath: null,
+  blockReason: 'support review'
+}
+
+const cancelledSubscription = {
+  ...subscription,
+  id: 'sub-cancelled',
+  tariffName: 'Отменённый тариф',
+  status: 'Cancelled',
+  currentAccessId: null,
+  lastPaymentId: null,
+  accessUri: null,
+  qrCodePath: null,
+  configPath: null,
+  cancelledAt: now
+}
+
 const paidOrder = {
   id: 'order-paid',
   userId: user.id,
@@ -221,7 +247,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/subscriptions') {
-      await fulfillJson(route, [subscription])
+      await fulfillJson(route, [subscription, blockedSubscription, cancelledSubscription])
       return
     }
 
@@ -387,6 +413,13 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
   await expect(page.getByText('yk-paid-1')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'EU Sandbox' })).toBeVisible()
+
+  const blockedCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Заблокированный тариф' }) })
+  const cancelledCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отменённый тариф' }) })
+  await expect(blockedCard.getByText('Продление заблокировано. Обратитесь в поддержку.')).toBeVisible()
+  await expect(cancelledCard.getByText('Отменённую подписку нельзя продлить. Оформите новый тариф.')).toBeVisible()
+  await expect(blockedCard.getByRole('button', { name: 'Продлить' })).toHaveCount(0)
+  await expect(cancelledCard.getByRole('button', { name: 'Продлить' })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
   await expect(page.locator('.qr-preview').first()).toContainText('qr-e2e')

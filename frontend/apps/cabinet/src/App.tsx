@@ -23,7 +23,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
-import { buildCabinetSummary } from './cabinet-dashboard'
+import { buildCabinetSummary, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { buildOrderExportText, canRetryOrderPayment, formatPaymentMoney, getLatestPaymentForOrder, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -515,6 +515,11 @@ export function App() {
 
   const handleRenew = async (subscription: SubscriptionDto) => {
     if (!token) return
+    const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
+    if (!renewalAvailability.canRenew) {
+      setError(renewalAvailability.reason ?? 'Эту подписку нельзя продлить.')
+      return
+    }
     if (!provider) {
       setError('Нет доступных платежных провайдеров для продления.')
       return
@@ -802,8 +807,9 @@ export function App() {
           />
         )}
         <div className="card-list">
-          {subscriptions.map((subscription) => (
-            <div className="card" key={subscription.id}>
+          {subscriptions.map((subscription) => {
+            const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
+            return <div className="card" key={subscription.id}>
               <div className="card-head">
                 <div>
                   <h3>{subscription.tariffName || subscription.status}</h3>
@@ -825,11 +831,15 @@ export function App() {
               {subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[subscription.currentAccessId] }} />}
               {subscription.configPath && <p>Конфигурация: {subscription.configPath}</p>}
               <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый VLESS/Xray клиент. Если доступ требует проверки, дождитесь подтверждения администратора.</p>
-              <div className="toolbar">
-                <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRenew(subscription)}>Продлить</PrimaryButton>
-              </div>
+              {renewalAvailability.canRenew ? (
+                <div className="toolbar">
+                  <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRenew(subscription)}>Продлить</PrimaryButton>
+                </div>
+              ) : (
+                <p className="safe-note" role="status">{renewalAvailability.reason}</p>
+              )}
             </div>
-          ))}
+          })}
         </div>
       </div>
 

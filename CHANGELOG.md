@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.487.0 - 2026-08-05
+
+Release entry: `2026-08-05-cabinet-renewal-status-guard`.
+
+### Исправлено
+
+- Кабинет больше не показывает заведомо нерабочую кнопку «Продлить» для `Blocked` и `Cancelled` подписок.
+- Для заблокированной подписки отображается переход к поддержке, для отменённой — предложение оформить новый тариф; handler повторно блокирует программный вызов.
+- Правило UI согласовано с backend-контрактом, который возвращает `400` и не создаёт заказ для этих статусов.
+
+### Проверено
+
+- Backend full suite `986/986`; targeted cabinet SQLite suite `8/8`, включая `Blocked/Cancelled` без создания заказа.
+- Frontend `69/69`, typecheck/build OK; cabinet desktop/mobile `2/2`, Playwright desktop/mobile/all-screens responsive suite `12/12` без overflow/console errors.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `499/519` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.486.0 - 2026-08-05
 
 Release entry: `2026-08-05-payment-provider-configuration-check`.

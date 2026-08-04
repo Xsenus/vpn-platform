@@ -73,6 +73,40 @@ public class MeCabinetControllerTests
         Assert.Empty(await db.Payments.ToListAsync());
     }
 
+    [Theory]
+    [InlineData(SubscriptionStatus.Blocked)]
+    [InlineData(SubscriptionStatus.Cancelled)]
+    public async Task Cabinet_Should_Reject_Renewal_For_Unsupported_Subscription_Status_On_Sqlite(SubscriptionStatus status)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Monthly", Slug = $"monthly-{status.ToString().ToLowerInvariant()}", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Status = status,
+            StartAt = DateTimeOffset.UtcNow.AddDays(-30),
+            EndAt = DateTimeOffset.UtcNow
+        };
+        db.Users.Add(User(userId, $"{status.ToString().ToLowerInvariant()}-renewal@example.test"));
+        db.Tariffs.Add(tariff);
+        db.Subscriptions.Add(subscription);
+        await db.SaveChangesAsync();
+
+        var result = await CreateController(db, userId).CreateOrder(
+            new CreateMeOrderHttpRequest(tariff.Id, "Renewal", "Web", "YooKassa", null, false, subscription.Id),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.Orders.AsNoTracking().ToListAsync());
+    }
+
     [Fact]
     public async Task Cabinet_Should_Return_Empty_Subscriptions_And_Accesses_For_User_Without_Subscription_On_Sqlite()
     {

@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: cabinet renewal status guard
+
+Scope:
+- Проверено соответствие кнопки продления подписки backend-правилам для `Blocked` и `Cancelled`.
+
+Results:
+- Roadmap progress: `499/519` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-cabinet-renewal-status-guard`, version `0.487.0`.
+- Backend full suite: OK, `986/986`; targeted cabinet SQLite suite: OK, `8/8`.
+- Backend возвращает `400` и не создаёт renewal order для `Blocked/Cancelled`; SQLite regression покрывает оба статуса.
+- Кабинет не показывает кнопку «Продлить» для неподдерживаемых статусов и объясняет доступное следующее действие; handler имеет независимый guard.
+- Frontend tests: OK, `69/69`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Cabinet desktop/mobile regression: OK, `2/2`; Playwright desktop/mobile/all-screens responsive suite: OK, `12/12`, без overflow/console errors.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `610` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: payment provider configuration-only check
 
 Scope:

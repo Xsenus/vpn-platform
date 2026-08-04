@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("984/984", readme, StringComparison.Ordinal);
-        Assert.Contains("68/68", readme, StringComparison.Ordinal);
+        Assert.Contains("986/986", readme, StringComparison.Ordinal);
+        Assert.Contains("69/69", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-payment-provider-configuration-check", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-cabinet-renewal-status-guard", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "984/984",
-                     "2026-08-05-payment-provider-configuration-check",
-                     "0.486.0",
+                     "986/986",
+                     "2026-08-05-cabinet-renewal-status-guard",
+                     "0.487.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

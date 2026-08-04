@@ -4,6 +4,24 @@ export function isCurrentSubscription(subscription: SubscriptionDto) {
   return subscription.status === 'Active' || subscription.status === 'GracePeriod'
 }
 
+export function getSubscriptionRenewalAvailability(subscription: SubscriptionDto) {
+  if (subscription.status === 'Blocked') {
+    return {
+      canRenew: false,
+      reason: 'Продление заблокировано. Обратитесь в поддержку.'
+    }
+  }
+
+  if (subscription.status === 'Cancelled') {
+    return {
+      canRenew: false,
+      reason: 'Отменённую подписку нельзя продлить. Оформите новый тариф.'
+    }
+  }
+
+  return { canRenew: true, reason: null }
+}
+
 export function selectCurrentSubscription(subscriptions: SubscriptionDto[]) {
   const sorted = subscriptions.filter(isCurrentSubscription).sort((left, right) => {
     const leftEndAt = new Date(left.endAt).getTime()
