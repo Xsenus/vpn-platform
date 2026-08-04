@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -69,6 +70,10 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (user is null) return NotFound();
 
+        var roles = User.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray();
+        var canReadFinance = AdminPolicies.HasAccess(roles, AdminPolicies.FinanceRead);
+        var canReadSupport = AdminPolicies.HasAccess(roles, AdminPolicies.SupportRead);
+
         var telegramAccounts = await _db.TelegramAccounts.AsNoTracking()
             .Where(x => x.UserId == id)
             .Select(x => new
@@ -87,7 +92,8 @@ public class AdminUsersController : ControllerBase
             .ToListAsync(cancellationToken);
         telegramAccounts = telegramAccounts.OrderByDescending(x => x.LastSeenAt ?? x.LinkedAt).ToList();
 
-        var orders = await _db.Orders.AsNoTracking()
+        var orders = canReadFinance
+            ? await _db.Orders.AsNoTracking()
             .Where(x => x.UserId == id)
             .Select(x => new
             {
@@ -113,10 +119,12 @@ public class AdminUsersController : ControllerBase
                 x.CreatedAt,
                 x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            : [];
         orders = orders.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
 
-        var payments = await _db.Payments.AsNoTracking()
+        var payments = canReadFinance
+            ? await _db.Payments.AsNoTracking()
             .Where(x => x.Order != null && x.Order.UserId == id)
             .Select(x => new
             {
@@ -148,7 +156,8 @@ public class AdminUsersController : ControllerBase
                 x.CreatedAt,
                 x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            : [];
         payments = payments.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
 
         var subscriptions = await _db.Subscriptions.AsNoTracking()
@@ -206,7 +215,8 @@ public class AdminUsersController : ControllerBase
 
         var telegramUserIds = telegramAccounts.Select(t => t.TelegramUserId).ToList();
 
-        var supportConversations = await _db.SupportConversations.AsNoTracking()
+        var supportConversations = canReadSupport
+            ? await _db.SupportConversations.AsNoTracking()
             .Where(x => x.UserId == id || (x.TelegramUserId.HasValue && telegramUserIds.Contains(x.TelegramUserId.Value)))
             .Select(x => new
             {
@@ -222,7 +232,8 @@ public class AdminUsersController : ControllerBase
                 x.CreatedAt,
                 x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            : [];
         supportConversations = supportConversations.OrderByDescending(x => x.UpdatedAt).Take(20).ToList();
 
         return Ok(new

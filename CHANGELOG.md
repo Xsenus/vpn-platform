@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.494.0 - 2026-08-05
+
+Release entry: `2026-08-05-admin-capability-aware-ui`.
+
+### Исправлено
+
+- Добавлен защищенный `/api/admin/session` с backend-owned capability matrix для всех административных ролей и policies.
+- Admin-panel показывает только разрешенные разделы, не загружает недоступные доменные API, скрывает запрещенные write controls и повторно проверяет capability в command handlers до network call.
+- Роль только для чтения получает явный режим просмотра, а переход по недоступному hash безопасно ведет в первый разрешенный раздел.
+- User overview больше не раскрывает finance-данные ролям без `FinanceRead` и support-диалоги ролям без `SupportRead`.
+
+### Проверено
+
+- Backend full suite `996/996`; targeted admin policy/session/user overview `50/50`, включая SQLite redaction для Finance и Support.
+- Frontend `77/77`, typecheck/build OK; admin desktop/mobile `4/4` покрывает full и Finance роли, фильтрацию навигации/данных, отсутствие запрещенных запросов и read-only controls.
+- Playwright desktop/mobile/all-screens responsive suite `14/14` без неожиданных console errors/overflow; fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `614` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `506/526` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.493.0 - 2026-08-05
 
 Release entry: `2026-08-05-admin-rbac-admission`.

@@ -361,6 +361,28 @@ async function installApiMock(page: Page) {
       return
     }
 
+    if (method === 'GET' && path === '/api/admin/session') {
+      await fulfillJson(route, {
+        userId: 'admin-all-screens',
+        email: 'admin@example.test',
+        displayName: 'Admin Smoke',
+        roles: ['Admin'],
+        capabilities: {
+          adminRead: true,
+          adminWrite: true,
+          financeRead: true,
+          financeWrite: true,
+          supportRead: true,
+          supportWrite: true,
+          provisioningManage: true,
+          vpnManage: true,
+          botManage: true,
+          settingsManage: true
+        }
+      })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/dashboard/summary') {
       await fulfillJson(route, {
         generatedAt: now,

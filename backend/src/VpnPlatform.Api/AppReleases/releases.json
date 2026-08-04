@@ -11511,5 +11511,28 @@
         "text": "Roadmap progress is 505/525 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-admin-capability-aware-ui",
+    "version": "0.494.0",
+    "releasedAt": "2026-08-05T05:12:00+07:00",
+    "title": "Админка учитывает возможности каждой роли",
+    "summary": "Finance, Support, Operator и ReadOnly видят только разрешенные разделы, данные и команды административной панели.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Защищенная административная сессия возвращает единую матрицу возможностей; навигация, загрузка данных и команды admin-panel следуют фактическим backend policies."
+      },
+      {
+        "type": "fixed",
+        "text": "User overview скрывает финансовые данные без FinanceRead и обращения поддержки без SupportRead, поэтому partial role не получает данные соседнего домена."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 506/526 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

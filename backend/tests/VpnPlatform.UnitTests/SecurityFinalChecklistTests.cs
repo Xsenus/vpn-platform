@@ -31,8 +31,8 @@ public class SecurityFinalChecklistTests
         Assert.Contains("ProvisioningSecretMaterializerTests", checklist, StringComparison.Ordinal);
         Assert.Contains("PaymentWebhookIdempotencyContractTests", checklist, StringComparison.Ordinal);
         Assert.Contains("оператор обязан ротировать", checklist, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("989/989", checklist, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-admin-rbac-admission", checklist, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("996/996", checklist, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-admin-capability-aware-ui", checklist, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("[x] `P11-ACC-005`", roadmap, StringComparison.Ordinal);
         Assert.Contains("security-final-checklist.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -55,6 +55,7 @@ public class SecurityFinalChecklistTests
             nameof(AdminDashboardController),
             nameof(AdminFaqController),
             nameof(AdminOperationsController),
+            nameof(AdminSessionController),
             nameof(AdminSiteContentController),
             nameof(AdminTelegramBotSettingsController),
             nameof(AdminUsersController),

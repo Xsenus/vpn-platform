@@ -802,6 +802,27 @@ export type AdminDashboardSummaryDto = {
   generatedAt: string
 }
 
+export type AdminSessionCapabilitiesDto = {
+  adminRead: boolean
+  adminWrite: boolean
+  financeRead: boolean
+  financeWrite: boolean
+  supportRead: boolean
+  supportWrite: boolean
+  provisioningManage: boolean
+  vpnManage: boolean
+  botManage: boolean
+  settingsManage: boolean
+}
+
+export type AdminSessionDto = {
+  userId: string
+  email: string
+  displayName: string
+  roles: string[]
+  capabilities: AdminSessionCapabilitiesDto
+}
+
 export type AdminProductionReadinessDto = {
   isReady: boolean
   status: string
@@ -1442,6 +1463,10 @@ export class ApiClient {
 
   getAdminDashboardSummary(token: string): Promise<AdminDashboardSummaryDto> {
     return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: apiFallbackErrorMessage })
+  }
+
+  getAdminSession(token: string): Promise<AdminSessionDto> {
+    return this.request<AdminSessionDto>('/api/admin/session', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminAuditLogs(token: string, filters: AdminAuditLogFilters = {}): Promise<AdminAuditLogDto[]> {

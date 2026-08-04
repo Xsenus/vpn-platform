@@ -44,6 +44,28 @@ test('ApiClient errors preserve HTTP status and normalized payload', async () =>
   )
 })
 
+test('ApiClient.getAdminSession loads the capability contract with bearer auth', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify({
+      userId: 'admin-1',
+      email: 'admin@example.test',
+      displayName: 'Admin',
+      roles: ['FinanceManager'],
+      capabilities: { adminRead: true, financeRead: true, financeWrite: true }
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const session = await client.getAdminSession('admin-token')
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/session')
+  assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.deepEqual(session.roles, ['FinanceManager'])
+  assert.equal(session.capabilities.financeWrite, true)
+})
+
 test('auth helpers validate forms and translate backend codes to Russian text', () => {
   assert.equal(isValidEmail('user@example.test'), true)
   assert.equal(isValidEmail('broken-email'), false)

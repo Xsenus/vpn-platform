@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: admin capability-aware UI
+
+Scope:
+- Проверено, что Finance, Support, Operator и ReadOnly работают в admin-panel по фактическим backend policies: без чужих разделов, запросов, команд и междоменных данных user overview.
+
+Results:
+- Roadmap progress: `506/526` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-admin-capability-aware-ui`, version `0.494.0`.
+- Backend full suite: OK, `996/996`; targeted admin policy/session/user overview: OK, `50/50`.
+- `/api/admin/session` возвращает роли и capabilities из единой policy matrix; SQLite user overview подтверждает finance/support redaction для partial roles.
+- Frontend tests: OK, `77/77`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Admin desktop/mobile regression: OK, `4/4`; full и Finance роли подтверждают фильтрацию навигации/данных, отсутствие запрещенных запросов и write controls.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `14/14`, без неожиданных console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа, latest release `2026-08-05-admin-capability-aware-ui`.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `614` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: admin RBAC admission
 
 Scope:

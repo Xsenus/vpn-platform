@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `505/525` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `506/526` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -60,6 +60,7 @@
 - [x] Управление Telegram-ботом, текстами, webhook/long polling и WebApp URL.
 - [x] Управление FAQ, контентом главной, сценариями работы и релизами "Что нового".
 - [x] RBAC, audit log, rate limit, security headers и secret scan проверяются тестами.
+- [x] Capability matrix административной сессии ограничивает разделы, чтение и команды для Finance, Support, Operator и ReadOnly; user overview редактирует finance/support данные по backend policy.
 
 ## Что остается до production
 
@@ -81,12 +82,12 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `989/989`.
-- [x] Frontend unit tests: `72/72`.
+- [x] Backend full suite: `996/996`.
+- [x] Frontend unit tests: `77/77`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `12/12`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `14/14`.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
@@ -107,7 +108,8 @@
 - [x] Cabinet payment retry учитывает `expiresAt`: истёкший заказ не вызывает заведомый backend отказ и ведёт к созданию нового заказа.
 - [x] Public access/refresh session ротируется после `401`, а logout отзывает backend refresh session и очищает browser storage при success/failure.
 - [x] Cabinet logout очищает токены и все пользовательские/VPN-данные даже при недоступном backend revoke, сохраняя явное предупреждение.
-- [x] Latest "Что нового": `2026-08-05-admin-rbac-admission`, версия `0.493.0`.
+- [x] Admin capability matrix проверена unit и desktop/mobile E2E: partial roles не видят чужие разделы, не отправляют запрещенные запросы и не получают чужие finance/support данные из user overview.
+- [x] Latest "Что нового": `2026-08-05-admin-capability-aware-ui`, версия `0.494.0`.
 
 ## Как вести дальше
 

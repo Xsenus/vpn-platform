@@ -104,4 +104,10 @@ public static class AdminPolicies
         [BotManage] = BotManageRoles,
         [SettingsManage] = SettingsManageRoles
     };
+
+    public static bool HasAccess(IEnumerable<string> roles, string policy)
+    {
+        var allowedRoles = PolicyRoles[policy];
+        return roles.Any(role => allowedRoles.Contains(role, StringComparer.OrdinalIgnoreCase));
+    }
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -589,6 +590,13 @@ public class SandboxE2EScenariosMvpTests
             admin.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
             var dashboard = new AdminDashboardController(db);
             var users = new AdminUsersController(db);
+            users.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Role, UserRoles.Admin)], "test"))
+                }
+            };
             return Task.FromResult(new SandboxHarness(db, clock, vpnProvider, bot, orchestrator, subscriptionService, provisioningService, admin, dashboard, users));
         }
 

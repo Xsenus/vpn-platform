@@ -252,7 +252,7 @@
   box-shadow: inset 3px 0 0 var(--primary);
 }
 
-.admin-main > [hidden] {
+[hidden] {
   display: none !important;
 }
 

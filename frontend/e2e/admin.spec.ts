@@ -8,6 +8,18 @@ const corsHeaders = {
 }
 
 const now = '2026-06-13T07:00:00Z'
+const fullAdminCapabilities = {
+  adminRead: true,
+  adminWrite: true,
+  financeRead: true,
+  financeWrite: true,
+  supportRead: true,
+  supportWrite: true,
+  provisioningManage: true,
+  vpnManage: true,
+  botManage: true,
+  settingsManage: true
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return { status, headers: corsHeaders, body: JSON.stringify(body) }
@@ -207,6 +219,15 @@ async function mockAdminApi(page: Page) {
         })
         return
       }
+      if (loginEmail === 'finance-e2e@example.test') {
+        await fulfillJson(route, {
+          accessToken: 'finance-e2e-token',
+          refreshToken: 'finance-e2e-refresh',
+          email: loginEmail,
+          displayName: 'Finance E2E'
+        })
+        return
+      }
       await fulfillJson(route, {
         accessToken: 'admin-e2e-token',
         refreshToken: 'admin-e2e-refresh',
@@ -231,12 +252,26 @@ async function mockAdminApi(page: Page) {
       return
     }
 
-    if (method === 'GET' && path === '/api/admin/dashboard/summary') {
+    if (method === 'GET' && path === '/api/admin/session') {
       if (request.headers().authorization === 'Bearer user-e2e-token' || dashboardShouldDeny) {
         dashboardShouldDeny = false
         await fulfillJson(route, { error: 'forbidden' }, 403)
         return
       }
+      const financeSession = request.headers().authorization === 'Bearer finance-e2e-token'
+      await fulfillJson(route, {
+        userId: financeSession ? 'finance-user' : 'admin-user',
+        email: financeSession ? 'finance-e2e@example.test' : 'admin-e2e@example.test',
+        displayName: financeSession ? 'Finance E2E' : 'Admin E2E',
+        roles: [financeSession ? 'FinanceManager' : 'Admin'],
+        capabilities: financeSession
+          ? { ...fullAdminCapabilities, adminWrite: false, supportRead: false, supportWrite: false, provisioningManage: false, vpnManage: false, botManage: false, settingsManage: false }
+          : fullAdminCapabilities
+      })
+      return
+    }
+
+    if (method === 'GET' && path === '/api/admin/dashboard/summary') {
       await fulfillJson(route, {
         totalUsers: 4,
         telegramUsers: 2,
@@ -562,7 +597,7 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
     refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
   }))).toEqual({ access: null, refresh: null })
 
-  const expectedDeniedResponse = failedResponses.findIndex((item) => item.includes('403') && item.includes('/api/admin/dashboard/summary'))
+  const expectedDeniedResponse = failedResponses.findIndex((item) => item.includes('403') && item.includes('/api/admin/session'))
   expect(expectedDeniedResponse).toBeGreaterThanOrEqual(0)
   failedResponses.splice(expectedDeniedResponse, 1)
   const expectedDeniedConsoleError = consoleErrors.findIndex((item) => item.includes('403'))
@@ -701,7 +736,7 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
     refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
   }))).toEqual({ access: null, refresh: null })
 
-  const expectedRefreshDeniedResponse = failedResponses.findIndex((item) => item.includes('403') && item.includes('/api/admin/dashboard/summary'))
+  const expectedRefreshDeniedResponse = failedResponses.findIndex((item) => item.includes('403') && item.includes('/api/admin/session'))
   expect(expectedRefreshDeniedResponse).toBeGreaterThanOrEqual(0)
   failedResponses.splice(expectedRefreshDeniedResponse, 1)
   const expectedRefreshDeniedConsoleError = consoleErrors.findIndex((item) => item.includes('403'))
@@ -729,4 +764,35 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   }
 
   expect(consoleErrors).toEqual([])
+})
+
+test('finance role loads only permitted data and keeps common sections read-only', async ({ page }) => {
+  const failedResponses: string[] = []
+  page.on('response', (response) => {
+    if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`)
+  })
+  const api = await mockAdminApi(page)
+
+  await page.goto('http://127.0.0.1:5295/')
+  await page.locator('.admin-login-form input[type="email"]').fill('finance-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('FinancePassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect(page.locator('.admin-section-select option[value="payments"]')).toHaveCount(1)
+  await expect(page.locator('.admin-section-select option[value="support"]')).toHaveCount(0)
+  await expect(page.locator('.admin-section-select option[value="bot"]')).toHaveCount(0)
+  expect(api.getLastRequest('/api/admin/payments', 'GET')).toBeTruthy()
+  expect(api.getLastRequest('/api/admin/support/conversations', 'GET')).toBeUndefined()
+  expect(api.getLastRequest('/api/admin/telegram-bot/settings', 'GET')).toBeUndefined()
+
+  await openAdminSection(page, 'Тарифы', 'tariffs')
+  await expect(page.getByText('Только просмотр')).toBeVisible()
+  await expect(page.locator('#tariffs form').first()).toBeHidden()
+  await expect(page.locator('#tariffs').getByRole('button', { name: 'Редактировать' })).toHaveCount(0)
+
+  await openAdminSection(page, 'Оплаты', 'payments')
+  await expect(page.locator('#payments form').first()).toBeVisible()
+  await expect(page.getByText('Только просмотр')).toHaveCount(0)
+  expect(failedResponses).toEqual([])
 })

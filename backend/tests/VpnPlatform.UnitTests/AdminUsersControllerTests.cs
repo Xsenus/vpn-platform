@@ -1,5 +1,7 @@
 using System.Text.Json;
+using System.Security.Claims;
 using Microsoft.Data.Sqlite;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
@@ -313,7 +315,7 @@ public class AdminUsersControllerTests
         savedSubscription.CurrentAccessId = accessId;
         await db.SaveChangesAsync();
 
-        var result = await new AdminUsersController(db).GetOverview(userId, CancellationToken.None);
+        var result = await CreateController(db, UserRoles.Admin).GetOverview(userId, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var json = JsonSerializer.Serialize(ok.Value);
@@ -330,7 +332,32 @@ public class AdminUsersControllerTests
         Assert.True(root.GetProperty("Subscriptions")[0].GetProperty("AutoRenewFlag").GetBoolean());
         Assert.Equal("vless://client-1", root.GetProperty("AccessCredentials")[0].GetProperty("QrCodePath").GetString());
         Assert.Equal("VIP", root.GetProperty("SupportConversations")[0].GetProperty("InternalNote").GetString());
+
+        using var financeDocument = ToJson(await CreateController(db, UserRoles.FinanceManager).GetOverview(userId, CancellationToken.None));
+        Assert.Equal(1, financeDocument.RootElement.GetProperty("Orders").GetArrayLength());
+        Assert.Equal(1, financeDocument.RootElement.GetProperty("Payments").GetArrayLength());
+        Assert.Equal(0, financeDocument.RootElement.GetProperty("SupportConversations").GetArrayLength());
+
+        using var supportDocument = ToJson(await CreateController(db, UserRoles.SupportAgent).GetOverview(userId, CancellationToken.None));
+        Assert.Equal(0, supportDocument.RootElement.GetProperty("Orders").GetArrayLength());
+        Assert.Equal(0, supportDocument.RootElement.GetProperty("Payments").GetArrayLength());
+        Assert.Equal(1, supportDocument.RootElement.GetProperty("SupportConversations").GetArrayLength());
     }
+
+    private static AdminUsersController CreateController(ApplicationDbContext db, string role)
+    {
+        var identity = new ClaimsIdentity([new Claim(ClaimTypes.Role, role)], "test");
+        return new AdminUsersController(db)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+            }
+        };
+    }
+
+    private static JsonDocument ToJson(IActionResult result)
+        => JsonDocument.Parse(JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(result).Value));
 
     private static ApplicationDbContext CreateDbContext()
     {

@@ -209,9 +209,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `989/989` unit tests;
+- backend на .NET 9: `996/996` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `72/72`;
+- frontend unit tests: `77/77`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят; responsive matrix проверяет ширины `305..1920` px;
@@ -244,7 +244,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет не предлагает повторную оплату истёкшего заказа и ведёт пользователя к новому оформлению;
 - public web сохраняет и ротирует refresh session, вызывает backend logout и очищает browser tokens даже при недоступности revoke-запроса;
 - cabinet logout гарантированно удаляет локальные токены и пользовательские/VPN-данные при success или failure backend revoke;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-admin-rbac-admission`, версия `0.493.0`;
-- roadmap progress: `505/525` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- admin-panel получает capability matrix из защищенной административной сессии, скрывает недоступные разделы и команды, не вызывает запрещенные доменные API, а user overview не раскрывает finance/support данные без соответствующего read-policy;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-admin-capability-aware-ui`, версия `0.494.0`;
+- roadmap progress: `506/526` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
