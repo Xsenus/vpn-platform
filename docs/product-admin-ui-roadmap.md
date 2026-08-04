@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `472/492` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `473/493` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -81,7 +81,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `809/809`.
+- [x] Backend full suite: `811/811`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -97,7 +97,7 @@
 - [x] Mobile admin navigation uses the compact section selector; desktop counters and previous/next order match the grouped menu.
 - [x] Subscription commands fail closed on VPN provider errors; node deletion preserves health/migration history and reports all linked records in the admin UI.
 - [x] Frontend dependency audit: `0 vulnerabilities` on React 19.2.8, React Router 8.3.0 and Node.js 22.22.0.
-- [x] Latest "Что нового": `2026-08-04-x3ui-failure-compensation-hardening`, версия `0.460.0`.
+- [x] Latest "Что нового": `2026-08-04-x3ui-sync-atomicity-hardening`, версия `0.461.0`.
 
 ## Как вести дальше
 

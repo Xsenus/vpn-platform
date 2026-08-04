@@ -10752,5 +10752,28 @@
         "text": "Roadmap progress is 472/492 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-x3ui-sync-atomicity-hardening",
+    "version": "0.461.0",
+    "releasedAt": "2026-08-04T16:26:00+07:00",
+    "title": "Синхронизация 3x-ui стала атомарной",
+    "summary": "Отмена или ошибка синхронизации панели больше не сохраняет часть inbound-ов и промежуточные события изменений.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "При ошибке синхронизации измененные inbound-ы возвращаются к исходному состоянию, а новые записи не сохраняются."
+      },
+      {
+        "type": "fixed",
+        "text": "Отмененная синхронизация удаляет промежуточные события и сохраняет только завершенный Failed run с диагностическим аудитом."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 473/493 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

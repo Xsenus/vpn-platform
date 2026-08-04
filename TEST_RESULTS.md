@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: 3x-ui sync atomicity hardening
+
+Scope:
+- Смоделированы caller cancellation и обычное исключение после обработки первого remote inbound, но до завершения panel sync.
+- Проверены rollback измененного существующего inbound, удаление нового inbound, очистка sync events/success audit и сохранение прежнего `LastSyncAt`.
+
+Result:
+- Mid-sync cancellation не импортирует новый inbound и пробрасывает `OperationCanceledException` после сохранения `Failed` run.
+- Mid-sync exception восстанавливает все поля исходного inbound; частичные event records не попадают в базу.
+- Failure/cancellation path сохраняет только соответствующий redacted audit и не использует уже отмененный token для финализации.
+- Roadmap progress: `473/493` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-x3ui-sync-atomicity-hardening`, version `0.461.0`.
+
+Validation:
+- Backend full suite: OK, `811/811`; targeted 3x-ui suite: OK, `43/43`.
+- Targeted docs/release/encoding suite: OK, `51/51`.
+- API Release build with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-x3ui-sync-atomicity-hardening`.
+- Secret scan: OK, `560` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: 3x-ui failure compensation hardening
 
 Scope:

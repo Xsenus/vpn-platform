@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.461.0 - 2026-08-04
+
+Release entry: `2026-08-04-x3ui-sync-atomicity-hardening`.
+
+### Fixed
+- Panel sync теперь восстанавливает измененные inbound-ы и удаляет добавленные inbound-ы, если операция отменена или завершилась исключением до финального сохранения.
+- Частичные sync events и предварительный success audit текущего run не сохраняются вместе с `Failed`; прежний `LastSyncAt` остается неизменным.
+- Failure/cancellation finalization использует независимый cancellation token и сохраняет только диагностический статус и redacted audit отказа.
+
+### Notes
+- Validation: backend full suite `811/811`, targeted 3x-ui suite `43/43`, API Release build `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `51/51` keep current evidence synchronized.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `560` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `473/493` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.460.0 - 2026-08-04
 
 Release entry: `2026-08-04-x3ui-failure-compensation-hardening`.

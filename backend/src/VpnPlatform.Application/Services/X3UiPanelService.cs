@@ -297,6 +297,12 @@ public class X3UiPanelService
         }
 
         var before = PanelAuditSnapshot(panel);
+        var inboundSnapshots = panel.Inbounds.ToDictionary(x => x.Id, VpnInboundSyncSnapshot.Create);
+        var previousLastSyncAt = panel.LastSyncAt;
+        var initialSyncAuditIds = _db.AuditLogs.Local
+            .Where(x => x.EntityType == "VpnPanel" && x.EntityId == panel.Id.ToString() && x.Action.StartsWith("vpn_panel.sync", StringComparison.Ordinal))
+            .Select(x => x.Id)
+            .ToHashSet();
         var run = new PanelSyncRun
         {
             VpnPanelId = panel.Id,
@@ -397,6 +403,7 @@ public class X3UiPanelService
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            RestorePendingSyncChanges(panel, run, inboundSnapshots, previousLastSyncAt, initialSyncAuditIds);
             run.Status = PanelSyncRunStatus.Failed;
             run.FinishedAt = _clock.UtcNow;
             run.ErrorMessage = "Panel sync was cancelled.";
@@ -407,14 +414,49 @@ public class X3UiPanelService
         }
         catch (Exception ex)
         {
+            RestorePendingSyncChanges(panel, run, inboundSnapshots, previousLastSyncAt, initialSyncAuditIds);
             run.Status = PanelSyncRunStatus.Failed;
             run.FinishedAt = _clock.UtcNow;
             run.ErrorMessage = ex.Message;
             panel.LastError = ex.Message;
             AddAudit("vpn_panel.sync.failed", "VpnPanel", panel.Id, actorUserId, before, SyncAuditSnapshot(run));
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(CancellationToken.None);
             return Result<PanelSyncRunDto>.Failure(ex.Message);
         }
+    }
+
+    private void RestorePendingSyncChanges(
+        VpnPanel panel,
+        PanelSyncRun run,
+        IReadOnlyDictionary<Guid, VpnInboundSyncSnapshot> inboundSnapshots,
+        DateTimeOffset? previousLastSyncAt,
+        IReadOnlySet<Guid> initialSyncAuditIds)
+    {
+        foreach (var inbound in _db.VpnInbounds.Local.Where(x => x.VpnPanelId == panel.Id).ToList())
+        {
+            if (inboundSnapshots.TryGetValue(inbound.Id, out var snapshot))
+            {
+                snapshot.Restore(inbound);
+            }
+            else
+            {
+                _db.VpnInbounds.Remove(inbound);
+            }
+        }
+
+        var pendingEvents = _db.PanelSyncEvents.Local.Where(x => x.PanelSyncRunId == run.Id).ToList();
+        _db.PanelSyncEvents.RemoveRange(pendingEvents);
+
+        var pendingSuccessAudits = _db.AuditLogs.Local
+            .Where(x => x.EntityType == "VpnPanel"
+                && x.EntityId == panel.Id.ToString()
+                && x.Action.StartsWith("vpn_panel.sync", StringComparison.Ordinal)
+                && !initialSyncAuditIds.Contains(x.Id))
+            .ToList();
+        _db.AuditLogs.RemoveRange(pendingSuccessAudits);
+
+        panel.LastSyncAt = previousLastSyncAt;
+        run.SummaryJson = "{}";
     }
 
     public Task<Result<VpnInboundDto>> CreateInboundAsync(Guid panelId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
@@ -1210,6 +1252,55 @@ public class X3UiPanelService
             run.FinishedAt,
             hasError = !string.IsNullOrWhiteSpace(run.ErrorMessage)
         };
+
+    private sealed record VpnInboundSyncSnapshot(
+        string ExternalInboundId,
+        string Name,
+        string Protocol,
+        int Port,
+        string Listen,
+        string SettingsJson,
+        string StreamSettingsJson,
+        string SniffingJson,
+        bool IsDefault,
+        bool IsActive,
+        int Capacity,
+        int UsedCapacity,
+        DateTimeOffset UpdatedAt)
+    {
+        public static VpnInboundSyncSnapshot Create(VpnInbound inbound)
+            => new(
+                inbound.ExternalInboundId,
+                inbound.Name,
+                inbound.Protocol,
+                inbound.Port,
+                inbound.Listen,
+                inbound.SettingsJson,
+                inbound.StreamSettingsJson,
+                inbound.SniffingJson,
+                inbound.IsDefault,
+                inbound.IsActive,
+                inbound.Capacity,
+                inbound.UsedCapacity,
+                inbound.UpdatedAt);
+
+        public void Restore(VpnInbound inbound)
+        {
+            inbound.ExternalInboundId = ExternalInboundId;
+            inbound.Name = Name;
+            inbound.Protocol = Protocol;
+            inbound.Port = Port;
+            inbound.Listen = Listen;
+            inbound.SettingsJson = SettingsJson;
+            inbound.StreamSettingsJson = StreamSettingsJson;
+            inbound.SniffingJson = SniffingJson;
+            inbound.IsDefault = IsDefault;
+            inbound.IsActive = IsActive;
+            inbound.Capacity = Capacity;
+            inbound.UsedCapacity = UsedCapacity;
+            inbound.UpdatedAt = UpdatedAt;
+        }
+    }
 
     private bool IsSandboxMode() => string.Equals(_configuration?["Vpn:X3Ui:Mode"], "Sandbox", StringComparison.OrdinalIgnoreCase);
 

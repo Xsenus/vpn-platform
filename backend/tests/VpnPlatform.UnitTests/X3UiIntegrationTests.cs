@@ -309,6 +309,63 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Sync_Cancellation_After_First_Inbound_Should_Not_Save_Partial_State()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        using var cancellation = new CancellationTokenSource();
+        var remote = new FakeX3UiClient(clock.UtcNow)
+        {
+            Inbounds = new FailAfterFirstOnSecondEnumerationCollection(
+                [AdditionalInbound(), ChangedInbound()],
+                () =>
+                {
+                    cancellation.Cancel();
+                    throw new OperationCanceledException(cancellation.Token);
+                })
+        };
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.SyncPanelAsync(ids.PanelId, cancellation.Token));
+
+        db.ChangeTracker.Clear();
+        var inbound = await db.VpnInbounds.SingleAsync(x => x.VpnPanelId == ids.PanelId);
+        Assert.Equal("vless", inbound.Name);
+        Assert.Equal(443, inbound.Port);
+        Assert.Empty(await db.PanelSyncEvents.ToListAsync());
+        var run = await db.PanelSyncRuns.SingleAsync(x => x.VpnPanelId == ids.PanelId);
+        Assert.Equal(PanelSyncRunStatus.Failed, run.Status);
+    }
+
+    [Fact]
+    public async Task Panel_Sync_Failure_After_First_Inbound_Should_Not_Save_Partial_State()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var remote = new FakeX3UiClient(clock.UtcNow)
+        {
+            Inbounds = new FailAfterFirstOnSecondEnumerationCollection(
+                [ChangedInbound(), AdditionalInbound()],
+                () => throw new InvalidOperationException("mid-sync failure"))
+        };
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.SyncPanelAsync(ids.PanelId, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        db.ChangeTracker.Clear();
+        var inbound = await db.VpnInbounds.SingleAsync(x => x.VpnPanelId == ids.PanelId);
+        Assert.Equal("vless", inbound.Name);
+        Assert.Equal(443, inbound.Port);
+        Assert.Empty(await db.PanelSyncEvents.ToListAsync());
+        var run = await db.PanelSyncRuns.SingleAsync(x => x.VpnPanelId == ids.PanelId);
+        Assert.Equal(PanelSyncRunStatus.Failed, run.Status);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.sync.failed");
+    }
+
+    [Fact]
     public async Task Panel_Update_Should_Edit_Settings_And_Preserve_Empty_Password()
     {
         await using var db = CreateDbContext();
@@ -958,6 +1015,7 @@ public class X3UiIntegrationTests
         private readonly DateTimeOffset _now;
         public FakeX3UiClient(DateTimeOffset now) => _now = now;
         public bool ReturnNoInbounds { get; set; }
+        public IReadOnlyCollection<X3UiInboundDto>? Inbounds { get; set; }
         public CancellationTokenSource? CancelGetInboundsWith { get; set; }
         public HashSet<string> FailingDeleteInboundIds { get; } = new(StringComparer.Ordinal);
         public List<string> DeleteInboundIds { get; } = [];
@@ -980,7 +1038,7 @@ public class X3UiIntegrationTests
                 return Task.FromCanceled<IReadOnlyCollection<X3UiInboundDto>>(CancelGetInboundsWith.Token);
             }
 
-            return Task.FromResult<IReadOnlyCollection<X3UiInboundDto>>(ReturnNoInbounds ? Array.Empty<X3UiInboundDto>() : new[] { DefaultInbound() });
+            return Task.FromResult(Inbounds ?? (ReturnNoInbounds ? Array.Empty<X3UiInboundDto>() : new[] { DefaultInbound() }));
         }
 
         public Task<X3UiInboundDto> CreateInboundAsync(VpnPanel panel, string password, X3UiCreateInboundRequest request, CancellationToken cancellationToken)
@@ -1033,5 +1091,40 @@ public class X3UiIntegrationTests
                 "{\"network\":\"tcp\",\"security\":\"tls\"}",
                 "{}",
                 true);
+    }
+
+    private static X3UiInboundDto ChangedInbound()
+        => new("1", "mutated-vless", "vless", 9443, string.Empty, "{\"clients\":[]}", "{\"network\":\"tcp\",\"security\":\"tls\"}", "{}", true);
+
+    private static X3UiInboundDto AdditionalInbound()
+        => new("2", "additional-vless", "vless", 8443, string.Empty, "{\"clients\":[]}", "{\"network\":\"tcp\",\"security\":\"tls\"}", "{}", true);
+
+    private sealed class FailAfterFirstOnSecondEnumerationCollection : IReadOnlyCollection<X3UiInboundDto>
+    {
+        private readonly IReadOnlyList<X3UiInboundDto> _items;
+        private readonly Action _fail;
+        private int _enumerationCount;
+
+        public FailAfterFirstOnSecondEnumerationCollection(IReadOnlyList<X3UiInboundDto> items, Action fail)
+        {
+            _items = items;
+            _fail = fail;
+        }
+
+        public int Count => _items.Count;
+
+        public IEnumerator<X3UiInboundDto> GetEnumerator()
+        {
+            _enumerationCount += 1;
+            return _enumerationCount == 1 ? _items.GetEnumerator() : EnumerateUntilFailure().GetEnumerator();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+
+        private IEnumerable<X3UiInboundDto> EnumerateUntilFailure()
+        {
+            yield return _items[0];
+            _fail();
+        }
     }
 }
