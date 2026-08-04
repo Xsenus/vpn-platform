@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AccessCredentialDto,
   AdminAuditLogDto,
@@ -51,6 +51,7 @@ import { canCancelProvisioningRun, canRetryProvisioningRun } from './provisionin
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
+const REFRESH_TOKEN_STORAGE_KEY = 'vpn-platform-admin-refresh-token'
 const ADMIN_EMAIL_STORAGE_KEY = 'vpn-platform-admin-email'
 const yookassaAllowedIps = '185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32'
 const paymentProviderOptions: PaymentProvider[] = ['YooKassa', 'RoboKassa', 'YooMoney', 'TelegramStars', 'CloudPayments', 'TBankAcquiring', 'Prodamus', 'Stripe', 'PayPal']
@@ -921,6 +922,8 @@ async function copyToClipboard(text: string, setNotice: (value: string) => void)
 
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
+  const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
+  const loadedToken = useRef('')
   const adminDisabledTitle = token ? undefined : adminAuthRequiredMessage
   const [email, setEmail] = useState(readSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY) ?? '')
   const [password, setPassword] = useState('')
@@ -1178,6 +1181,8 @@ export function App() {
   }
 
   useEffect(() => {
+    if (!token || loadedToken.current === token) return
+    loadedToken.current = token
     void loadAll(token)
   }, [token])
 
@@ -1292,7 +1297,10 @@ export function App() {
 
   const clearAdminSession = () => {
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
+    removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
+    loadedToken.current = ''
     setToken('')
+    setRefreshToken('')
     setPassword('')
     setUsers([])
     setSelectedUserId('')
@@ -1353,9 +1361,7 @@ export function App() {
     setBotSettingsForm({})
     setBotSettingsCheck(null)
     setLoadErrors([])
-    setError('')
     setActionBusyId('')
-    setNotice('Сессия администратора завершена. Данные панели очищены.')
   }
 
   const handleLogin = async () => {
@@ -1372,18 +1378,66 @@ export function App() {
       const normalizedEmail = email.trim()
       const response = await api.login(normalizedEmail, password)
       writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+      writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
       if (rememberAdminEmail) {
         writeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY, normalizedEmail)
       } else {
         removeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY)
       }
+      loadedToken.current = response.accessToken
       setToken(response.accessToken)
+      setRefreshToken(response.refreshToken)
       setPassword('')
-      setNotice('Сессия администратора открыта. Токен сохранён в sessionStorage и не показывается в UI.')
+      setNotice('Сессия администратора открыта. Токены сохранены в sessionStorage и не показываются в UI.')
       await loadAll(response.accessToken)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось получить admin token')
     } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRefreshSession = async () => {
+    if (!refreshToken) {
+      setError('Сессия не найдена. Войдите заново.')
+      return
+    }
+
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const response = await api.refresh(refreshToken)
+      writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+      writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
+      loadedToken.current = response.accessToken
+      setToken(response.accessToken)
+      setRefreshToken(response.refreshToken)
+      await loadAll(response.accessToken)
+      setNotice('Сессия администратора обновлена.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось обновить сессию администратора')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    setBusy(true)
+    setError('')
+    setNotice('')
+    let logoutFailed = false
+    try {
+      await api.logout(token || null, refreshToken || null)
+    } catch {
+      logoutFailed = true
+    } finally {
+      clearAdminSession()
+      if (logoutFailed) {
+        setError('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')
+      } else {
+        setNotice('Сессия администратора завершена. Данные панели очищены.')
+      }
       setBusy(false)
     }
   }
@@ -2370,7 +2424,7 @@ export function App() {
 
             <div id="admin-login-help" className="admin-login-checklist" aria-label="Проверка перед входом">
               <span>Пароль не показывается и не сохраняется.</span>
-              <span>Токен хранится только в sessionStorage браузера.</span>
+              <span>Токены хранятся только в sessionStorage браузера.</span>
               <span>Опасные действия в админке требуют подтверждения.</span>
             </div>
 
@@ -2443,7 +2497,8 @@ export function App() {
           <PrimaryButton type="button" className="button-ghost" disabled={!nextAdminSection} onClick={() => nextAdminSection && goToAdminSection(nextAdminSection)}>Следующий</PrimaryButton>
           <ValidationModeBadge label="Внешние Telegram, оплаты, 3x-ui и VPS отключены" />
           <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={() => void loadAll(token)}>Обновить данные</PrimaryButton>
-          <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={clearAdminSession}>Завершить сессию</PrimaryButton>
+          <PrimaryButton type="button" disabled={!refreshToken || busy} aria-busy={busy} className="button-secondary" onClick={() => void handleRefreshSession()}>Обновить сессию</PrimaryButton>
+          <PrimaryButton type="button" disabled={busy} aria-busy={busy} className="button-secondary" onClick={() => void handleLogout()}>Завершить сессию</PrimaryButton>
         </div>
       </div>
 

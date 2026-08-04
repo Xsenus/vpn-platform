@@ -162,7 +162,8 @@ function vpnPanel(overrides: Record<string, unknown> = {}) {
 }
 
 async function mockAdminApi(page: Page) {
-  const requests: Array<{ method: string; path: string; body: unknown }> = []
+  const requests: Array<{ method: string; path: string; body: unknown; authorization: string }> = []
+  let logoutShouldFail = false
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const releases = [release()]
@@ -187,7 +188,12 @@ async function mockAdminApi(page: Page) {
     }
 
     const body = method === 'GET' ? null : request.postDataJSON()
-    requests.push({ method, path, body })
+    requests.push({
+      method,
+      path,
+      body,
+      authorization: request.headers().authorization ?? ''
+    })
 
     if (method === 'POST' && path === '/api/auth/login') {
       await fulfillJson(route, {
@@ -196,6 +202,21 @@ async function mockAdminApi(page: Page) {
         email: 'admin-e2e@example.test',
         displayName: 'Admin E2E'
       })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/auth/refresh') {
+      await fulfillJson(route, {
+        accessToken: 'admin-e2e-token-rotated',
+        refreshToken: 'admin-e2e-refresh-rotated',
+        email: 'admin-e2e@example.test',
+        displayName: 'Admin E2E'
+      })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/auth/logout') {
+      await fulfillJson(route, logoutShouldFail ? { error: 'logout unavailable' } : { status: 'ok' }, logoutShouldFail ? 503 : 200)
       return
     }
 
@@ -481,7 +502,8 @@ async function mockAdminApi(page: Page) {
 
   return {
     getLastRequest: (path: string, method = 'POST') =>
-      requests.findLast((item) => item.method === method && item.path === path)
+      requests.findLast((item) => item.method === method && item.path === path),
+    failLogout: () => { logoutShouldFail = true }
   }
 }
 
@@ -496,6 +518,7 @@ async function openAdminSection(page: Page, name: string, id: string) {
 }
 
 test('admin panel covers login, payments, tariffs, VPN panels, scenarios and releases', async ({ page }, testInfo) => {
+  test.setTimeout(60_000)
   const consoleErrors: string[] = []
   const failedResponses: string[] = []
   page.on('console', (message) => {
@@ -607,6 +630,45 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   expect(api.getLastRequest('/api/admin/work-scenarios')).toBeTruthy()
   expect(api.getLastRequest('/api/app-version/admin/releases')).toBeTruthy()
+
+  expect(await page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).toEqual({ access: 'admin-e2e-token', refresh: 'admin-e2e-refresh' })
+
+  await page.getByRole('button', { name: 'Обновить сессию' }).click()
+  await expect(page.getByText('Сессия администратора обновлена.')).toBeVisible()
+  expect(api.getLastRequest('/api/auth/refresh')?.body).toEqual({ refreshToken: 'admin-e2e-refresh' })
+  expect(await page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).toEqual({ access: 'admin-e2e-token-rotated', refresh: 'admin-e2e-refresh-rotated' })
+
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  expect(api.getLastRequest('/api/auth/logout')?.body).toEqual({ refreshToken: 'admin-e2e-refresh-rotated' })
+  expect(api.getLastRequest('/api/auth/logout')?.authorization).toBe('Bearer admin-e2e-token-rotated')
+  expect(await page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  api.failLogout()
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await expect(page.getByText('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')).toBeVisible()
+  expect(await page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+
+  const expectedLogoutFailure = failedResponses.findIndex((item) => item.includes('503') && item.includes('/api/auth/logout'))
+  expect(expectedLogoutFailure).toBeGreaterThanOrEqual(0)
+  failedResponses.splice(expectedLogoutFailure, 1)
+  const expectedLogoutConsoleError = consoleErrors.findIndex((item) => item.includes('503'))
+  if (expectedLogoutConsoleError >= 0) consoleErrors.splice(expectedLogoutConsoleError, 1)
   expect(failedResponses).toEqual([])
   if (testInfo.project.name.startsWith('mobile-')) {
     await page.screenshot({ path: testInfo.outputPath('admin-mobile.png'), fullPage: true })

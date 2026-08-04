@@ -84,7 +84,7 @@ git diff --check
 - Subscription activation compensates remote access after local credential save failure and preserves a `SyncRequired` reconciliation marker when cleanup fails: OK.
 - Telegram `update_id` is durably claimed before side effects; concurrent/fresh/stale/cancelled processing paths are fail-closed and retryable: OK.
 - Outbox payload is validated fail-closed; delivery errors are redacted and terminal failures are separated from pending health metrics: OK.
-- Latest local release: `2026-08-05-cabinet-logout-failure-cleanup`, версия `0.491.0`.
+- Latest local release: `2026-08-05-admin-session-lifecycle`, версия `0.492.0`.
 - Frontend tests: 71/71.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

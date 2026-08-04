@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.492.0 - 2026-08-05
+
+Release entry: `2026-08-05-admin-session-lifecycle`.
+
+### Исправлено
+
+- Admin-panel теперь сохраняет access/refresh пару и не теряет серверную сессию после входа или перезагрузки вкладки.
+- Кнопка обновления сессии ротирует refresh token, сохраняет новую пару и повторно загружает административные данные.
+- Logout отправляет bearer и актуальный refresh token backend, а локальные токены и данные панели очищаются даже при controlled `503` revoke failure.
+
+### Проверено
+
+- Backend full suite `989/989`; targeted auth session SQLite `1/1` подтверждает rotation, revoke и запрет refresh после logout.
+- Frontend `71/71`, typecheck/build OK; admin desktop/mobile `2/2` покрывает token storage, rotation, logout payload, success cleanup и controlled `503` cleanup, Playwright desktop/mobile/all-screens responsive suite `12/12` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `504/524` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остаётся `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.491.0 - 2026-08-05
 
 Release entry: `2026-08-05-cabinet-logout-failure-cleanup`.

@@ -244,7 +244,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет не предлагает повторную оплату истёкшего заказа и ведёт пользователя к новому оформлению;
 - public web сохраняет и ротирует refresh session, вызывает backend logout и очищает browser tokens даже при недоступности revoke-запроса;
 - cabinet logout гарантированно удаляет локальные токены и пользовательские/VPN-данные при success или failure backend revoke;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-cabinet-logout-failure-cleanup`, версия `0.491.0`;
-- roadmap progress: `503/523` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-admin-session-lifecycle`, версия `0.492.0`;
+- roadmap progress: `504/524` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

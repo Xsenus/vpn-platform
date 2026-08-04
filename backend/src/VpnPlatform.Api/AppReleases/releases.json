@@ -11465,5 +11465,28 @@
         "text": "Roadmap progress is 503/523 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-admin-session-lifecycle",
+    "version": "0.492.0",
+    "releasedAt": "2026-08-05T04:08:00+07:00",
+    "title": "Админка управляет полным жизненным циклом сессии",
+    "summary": "Refresh rotation и server-side logout больше не теряются между admin login и локальной очисткой.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin-panel сохраняет access/refresh пару, ротирует её по команде оператора и повторно загружает административные данные."
+      },
+      {
+        "type": "fixed",
+        "text": "Logout отправляет bearer и актуальный refresh token backend, а local session/admin state очищается при success или controlled failure."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 504/524 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

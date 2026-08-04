@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: admin session lifecycle
+
+Scope:
+- Проверено, что admin-panel сохраняет и ротирует access/refresh сессию, отзывает её через backend и гарантированно очищает локальные административные данные при ошибке revoke.
+
+Results:
+- Roadmap progress: `504/524` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-admin-session-lifecycle`, version `0.492.0`.
+- Backend full suite: OK, `989/989`; targeted auth session SQLite: OK, `1/1`.
+- SQLite подтверждает refresh rotation, отзыв текущей session и отказ повторного refresh после logout.
+- Admin-panel хранит оба токена, обновляет пару через refresh, отправляет bearer/refresh на logout и очищает все session/admin данные в `finally`.
+- Frontend tests: OK, `71/71`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Admin desktop/mobile regression: OK, `2/2`; rotation, successful revoke и controlled `503` cleanup/warning подтверждены.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `12/12`, без неожиданных console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `610` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: cabinet logout failure cleanup
 
 Scope:
