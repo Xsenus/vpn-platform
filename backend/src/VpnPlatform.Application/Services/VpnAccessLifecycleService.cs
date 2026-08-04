@@ -301,6 +301,10 @@ public class VpnAccessLifecycleService
     {
         var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == accessId, cancellationToken);
         if (access is null) return Result<AdminAccessActionResult>.Failure("VPN access not found.");
+        if (access.Status == AccessCredentialStatus.Revoked)
+        {
+            return Result<AdminAccessActionResult>.Failure("Revoked VPN access traffic cannot be reset.");
+        }
 
         var now = _clock.UtcNow;
         var before = Snapshot(access);

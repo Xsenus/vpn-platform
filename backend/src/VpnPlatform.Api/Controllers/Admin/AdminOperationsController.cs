@@ -552,15 +552,20 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminRead)]
     public async Task<IActionResult> GetAccessCredentialQr(Guid id, CancellationToken cancellationToken)
     {
-        if (_qrCodeGenerator is null)
-        {
-            return BadRequest(new { error = "QR code generator is not configured." });
-        }
-
         var access = await _db.AccessCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (access is null)
         {
             return NotFound(new { error = "VPN access not found." });
+        }
+
+        if (access.Status == AccessCredentialStatus.Revoked)
+        {
+            return BadRequest(new { error = "Revoked VPN access QR code is not available." });
+        }
+
+        if (_qrCodeGenerator is null)
+        {
+            return BadRequest(new { error = "QR code generator is not configured." });
         }
 
         if (string.IsNullOrWhiteSpace(access.AccessUri))

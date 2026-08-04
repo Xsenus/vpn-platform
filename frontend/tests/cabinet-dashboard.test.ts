@@ -96,6 +96,10 @@ test('cabinet dashboard exposes renewal only for backend-supported subscription 
 
 test('cabinet dashboard enables QR only after the access URI is issued', () => {
   assert.deepEqual(getAccessQrAvailability(access({ accessUri: ' vless://issued ' })), { canGenerate: true, reason: null })
+  assert.deepEqual(getAccessQrAvailability(access({ status: 'Revoked', accessUri: 'vless://revoked' })), {
+    canGenerate: false,
+    reason: 'Доступ отозван. Ссылка подключения и QR-код больше недоступны.'
+  })
   assert.deepEqual(getAccessQrAvailability(access({ accessUri: '' })), {
     canGenerate: false,
     reason: 'QR-код появится после выдачи ссылки подключения.'
@@ -104,4 +108,9 @@ test('cabinet dashboard enables QR only after the access URI is issued', () => {
     canGenerate: false,
     reason: 'QR-код появится после выдачи ссылки подключения.'
   })
+
+  const revoked = access({ id: 'access-revoked', status: 'Revoked', accessUri: 'vless://revoked-secret' })
+  const staleSubscription = subscription({ currentAccessId: revoked.id, accessUri: 'vless://revoked-secret' })
+  assert.equal(findAccessForSubscription(staleSubscription, [revoked]), null)
+  assert.equal(buildCabinetSummary([staleSubscription], [revoked]).hasConnectionLink, false)
 })

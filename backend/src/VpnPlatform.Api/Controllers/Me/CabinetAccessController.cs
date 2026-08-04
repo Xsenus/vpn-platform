@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Controllers.Me;
 
@@ -31,6 +32,11 @@ public class CabinetAccessController : ControllerBase
         if (access is null)
         {
             return NotFound(new { error = "VPN access not found." });
+        }
+
+        if (access.Status == AccessCredentialStatus.Revoked)
+        {
+            return BadRequest(new { error = "Revoked VPN access QR code is not available." });
         }
 
         if (string.IsNullOrWhiteSpace(access.AccessUri))

@@ -185,6 +185,37 @@ public class VpnAccessAutomationMvpTests
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.reset_traffic.failed");
     }
 
+    [Fact]
+    public async Task Revoked_Access_Should_Reject_Traffic_Reset_Without_Calling_Provider()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var provider = new TrackingVpnProvider();
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var nodeId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+        var accessId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = "revoked-reset@example.test", DisplayName = "Client", Status = UserStatus.Active });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Premium", Slug = "premium-revoked-reset", DurationDays = 30, Price = 490, Currency = "RUB" });
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1", Capacity = 100, UsedCapacity = 0 });
+        db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Cancelled, StartAt = clock.UtcNow.AddDays(-30), EndAt = clock.UtcNow, CancelledAt = clock.UtcNow });
+        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = "client-revoked", ServerId = nodeId, AccessUri = "vless://revoked-secret", Status = AccessCredentialStatus.Revoked });
+        await db.SaveChangesAsync();
+
+        var result = await service.ResetTrafficAsync(accessId, "test", null, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("revoked", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.ResetCalls);
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

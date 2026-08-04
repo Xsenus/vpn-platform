@@ -58,7 +58,7 @@ const cancelledSubscription = {
   id: 'sub-cancelled',
   tariffName: 'Отменённый тариф',
   status: 'Cancelled',
-  currentAccessId: null,
+  currentAccessId: 'access-revoked',
   lastPaymentId: null,
   accessUri: null,
   qrCodePath: null,
@@ -177,6 +177,20 @@ const pendingAccess = {
   revision: 1
 }
 
+const revokedAccess = {
+  ...access,
+  id: 'access-revoked',
+  subscriptionId: cancelledSubscription.id,
+  providerAccessId: 'x3ui-client-revoked',
+  serverName: 'Отозванный доступ',
+  accessUri: 'vless://revoked-cabinet-secret@example.test',
+  qrCodePayload: 'vless://revoked-cabinet-secret@example.test',
+  qrCodePath: 'qr://revoked-cabinet-secret',
+  configPath: 'config://revoked-cabinet-secret',
+  status: 'Revoked',
+  revision: 2
+}
+
 const provider = {
   provider: 'YooKassa',
   publicName: 'YooKassa sandbox',
@@ -292,7 +306,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/accesses') {
-      await fulfillJson(route, [access, pendingAccess])
+      await fulfillJson(route, [access, pendingAccess, revokedAccess])
       return
     }
 
@@ -461,6 +475,13 @@ test('cabinet covers register, login, payments, subscription access and support'
   const pendingAccessCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Ожидает выдачи' }) })
   await expect(pendingAccessCard.getByText('Ссылка ещё не выдана')).toBeVisible()
   await expect(pendingAccessCard.getByRole('button', { name: 'Показать QR-код' })).toBeDisabled()
+
+  const revokedAccessCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отозванный доступ' }) })
+  await expect(revokedAccessCard.getByText('Доступ отозван. Ключ и QR-код больше недоступны.')).toBeVisible()
+  await expect(revokedAccessCard.getByRole('button', { name: 'Показать QR-код' })).toHaveCount(0)
+  await expect(revokedAccessCard.getByRole('button', { name: 'Скопировать ссылку' })).toHaveCount(0)
+  await expect(page.getByText('vless://revoked-cabinet-secret@example.test')).toHaveCount(0)
+  expect(api.getLastRequest('/api/cabinet/access/access-revoked/qr', 'GET')).toBeUndefined()
 
   await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
   await expect(page.locator('.qr-preview').first()).toContainText('qr-e2e')

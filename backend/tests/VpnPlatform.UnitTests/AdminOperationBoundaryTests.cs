@@ -10,6 +10,7 @@ using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
+using VpnPlatform.Infrastructure.Vpn;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
@@ -169,8 +170,59 @@ public class AdminOperationBoundaryTests
         Assert.Equal(5, await db.AuditLogs.CountAsync());
     }
 
-    private static AdminOperationsController CreateController(ApplicationDbContext db, Guid adminId, IClock clock)
-        => new(db, new ProvisioningService(db, clock), null!, null!, clock: clock)
+    [Fact]
+    public async Task Revoked_Access_Should_Reject_Admin_Qr_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var now = new DateTimeOffset(2026, 8, 5, 8, 0, 0, TimeSpan.Zero);
+        var user = User(Guid.NewGuid());
+        var tariff = new Tariff { Name = "Revoked", Slug = "revoked-admin-qr", DurationDays = 30, Price = 500m, Currency = "RUB", IsActive = true };
+        var node = Node("revoked-qr", NodeStatus.Ready, true);
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var subscription = new Subscription
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Cancelled,
+            StartAt = now.AddDays(-30),
+            EndAt = now,
+            CancelledAt = now
+        };
+        db.Subscriptions.Add(subscription);
+        await db.SaveChangesAsync();
+
+        var access = new AccessCredential
+        {
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "revoked-admin-secret",
+            AccessUri = "vless://revoked-admin-secret@example.test",
+            Status = AccessCredentialStatus.Revoked,
+            IssuedAt = now.AddDays(-30)
+        };
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(now), new SvgQrCodeGenerator(new FixedClock(now)));
+
+        Assert.IsType<BadRequestObjectResult>(await controller.GetAccessCredentialQr(access.Id, CancellationToken.None));
+    }
+
+    private static AdminOperationsController CreateController(
+        ApplicationDbContext db,
+        Guid adminId,
+        IClock clock,
+        IQrCodeGenerator? qrCodeGenerator = null)
+        => new(db, new ProvisioningService(db, clock), null!, null!, qrCodeGenerator: qrCodeGenerator, clock: clock)
         {
             ControllerContext = new ControllerContext
             {

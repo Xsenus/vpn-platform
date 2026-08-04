@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.498.0 - 2026-08-05
+
+Release entry: `2026-08-05-revoked-vpn-access-terminal-guard`.
+
+### Исправлено
+
+- `Revoked` VPN access теперь является терминальным во всех пользовательских API: URI, QR payload/path, config path и provider access ID редактируются, оба QR route возвращают controlled `400`.
+- Admin QR и reset traffic отклоняют отозванный credential до генератора/provider call; кабинет и админка скрывают URI, copy/QR и provider-команды, а stale QR/current summary больше не восстанавливают отозванный секрет.
+- Backend, frontend и browser regression используют SQLite и намеренно переданные revoked secrets, проверяя отсутствие утечки и сетевых команд.
+
+### Проверено
+
+- Backend full suite `1011/1011`; targeted lifecycle/cabinet/admin SQLite `23/23`.
+- Frontend `77/77`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `615` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `510/530` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.497.0 - 2026-08-05
 
 Release entry: `2026-08-05-vpn-access-cancellation-reconciliation`.

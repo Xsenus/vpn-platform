@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: revoked VPN access terminal guard
+
+Scope:
+- Проверено, что `Revoked` credential является терминальным для пользовательской выдачи секретов, QR routes, admin provider-команд и stale-cache UI.
+
+Results:
+- Roadmap progress: `510/530` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-revoked-vpn-access-terminal-guard`, version `0.498.0`.
+- Backend full suite: OK, `1011/1011`; targeted lifecycle/cabinet/admin SQLite: OK, `23/23`.
+- `/api/me/subscriptions` и `/api/me/accesses` редактируют terminal URI/QR/config/provider ID; user/admin QR routes и reset traffic отклоняют `Revoked` до генератора/provider call.
+- Frontend tests: OK, `77/77`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`; намеренно переданные revoked secrets не отображаются, copy/QR/provider buttons отсутствуют, неожиданных console errors/overflow нет.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `615` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: VPN access cancellation and reconciliation
 
 Scope:

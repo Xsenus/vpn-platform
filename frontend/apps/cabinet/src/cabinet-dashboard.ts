@@ -22,7 +22,14 @@ export function getSubscriptionRenewalAvailability(subscription: SubscriptionDto
   return { canRenew: true, reason: null }
 }
 
-export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'accessUri'> | null | undefined) {
+export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'accessUri' | 'status'> | null | undefined) {
+  if (access?.status === 'Revoked') {
+    return {
+      canGenerate: false,
+      reason: 'Доступ отозван. Ссылка подключения и QR-код больше недоступны.'
+    }
+  }
+
   const canGenerate = Boolean(access?.accessUri?.trim())
   return {
     canGenerate,
@@ -45,11 +52,11 @@ export function findAccessForSubscription(subscription: SubscriptionDto | null, 
 
   if (subscription.currentAccessId) {
     const linked = accesses.find((access) => access.id === subscription.currentAccessId)
-    if (linked) return linked
+    if (linked) return linked.status === 'Revoked' ? null : linked
   }
 
   return accesses.find((access) => access.subscriptionId === subscription.id && access.status === 'Active')
-    ?? accesses.find((access) => access.subscriptionId === subscription.id)
+    ?? accesses.find((access) => access.subscriptionId === subscription.id && access.status !== 'Revoked')
     ?? null
 }
 
@@ -63,6 +70,9 @@ export function daysUntil(dateValue?: string | null, now = new Date()) {
 export function buildCabinetSummary(subscriptions: SubscriptionDto[], accesses: AccessCredentialDto[], now = new Date()) {
   const currentSubscription = selectCurrentSubscription(subscriptions)
   const currentAccess = findAccessForSubscription(currentSubscription, accesses)
+  const linkedCurrentAccess = currentSubscription?.currentAccessId
+    ? accesses.find((access) => access.id === currentSubscription.currentAccessId)
+    : null
   const daysLeft = daysUntil(currentSubscription?.endAt, now)
 
   return {
@@ -70,6 +80,6 @@ export function buildCabinetSummary(subscriptions: SubscriptionDto[], accesses: 
     currentAccess,
     daysLeft,
     hasActiveSubscription: currentSubscription ? isCurrentSubscription(currentSubscription) : false,
-    hasConnectionLink: Boolean(currentAccess?.accessUri || currentSubscription?.accessUri)
+    hasConnectionLink: linkedCurrentAccess?.status !== 'Revoked' && Boolean(currentAccess?.accessUri || currentSubscription?.accessUri)
   }
 }

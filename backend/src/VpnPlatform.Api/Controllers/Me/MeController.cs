@@ -76,9 +76,9 @@ public class MeController : ControllerBase
                 x.Status.ToString(),
                 x.StartAt,
                 x.EndAt,
-                x.CurrentAccess != null ? x.CurrentAccess.AccessUri : null,
-                x.CurrentAccess != null ? x.CurrentAccess.QrCodePath : null,
-                x.CurrentAccess != null ? x.CurrentAccess.ConfigPath : null,
+                x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.AccessUri : null,
+                x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.QrCodePath : null,
+                x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.ConfigPath : null,
                 x.CurrentServer != null ? x.CurrentServer.Name : null,
                 x.Tariff != null ? x.Tariff.Name : null,
                 x.GracePeriodEndAt,
@@ -498,13 +498,13 @@ public class MeController : ControllerBase
                 x.SubscriptionId,
                 UserId = x.Subscription != null ? x.Subscription.UserId : (Guid?)null,
                 x.ProviderType,
-                x.ProviderAccessId,
+                ProviderAccessId = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.ProviderAccessId,
                 x.ServerId,
                 ServerName = x.Server != null ? x.Server.Name : null,
-                x.AccessUri,
-                QrCodePayload = x.QrCodePath,
-                x.QrCodePath,
-                x.ConfigPath,
+                AccessUri = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.AccessUri,
+                QrCodePayload = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.QrCodePath,
+                QrCodePath = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.QrCodePath,
+                ConfigPath = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.ConfigPath,
                 Status = x.Status.ToString(),
                 x.IssuedAt,
                 ExpiryDate = x.Subscription != null ? x.Subscription.EndAt : (DateTimeOffset?)null,
@@ -530,6 +530,11 @@ public class MeController : ControllerBase
         if (access is null)
         {
             return NotFound(new { error = "VPN access not found." });
+        }
+
+        if (access.Status == AccessCredentialStatus.Revoked)
+        {
+            return BadRequest(new { error = "Revoked VPN access QR code is not available." });
         }
 
         if (string.IsNullOrWhiteSpace(access.AccessUri))

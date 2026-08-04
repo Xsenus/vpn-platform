@@ -2085,6 +2085,11 @@ export function App() {
   }
 
   const handleAccessAction = async (access: AccessCredentialDto, enable: boolean) => {
+    if (access.status === 'Revoked') {
+      setError('Отозванный VPN-доступ нельзя включить или отключить.')
+      return
+    }
+
     await runAction(`${enable ? 'enable' : 'disable'}-${access.id}`, async () => {
       if (enable) await api.enableAdminAccess(token, access.id, 'manual_admin_action')
       else await api.disableAdminAccess(token, access.id, 'manual_admin_action')
@@ -2094,6 +2099,11 @@ export function App() {
   }
 
   const handleAccessSync = async (access: AccessCredentialDto) => {
+    if (access.status === 'Revoked') {
+      setError('Отозванный VPN-доступ нельзя синхронизировать.')
+      return
+    }
+
     await runAction(`sync-${access.id}`, async () => {
       await api.syncAdminAccess(token, access.id, 'manual_admin_sync')
       setNotice('VPN-доступ синхронизирован.')
@@ -2102,6 +2112,11 @@ export function App() {
   }
 
   const handleAccessResetTraffic = async (access: AccessCredentialDto) => {
+    if (access.status === 'Revoked') {
+      setError('Для отозванного VPN-доступа нельзя сбросить трафик.')
+      return
+    }
+
     await runAction(`reset-${access.id}`, async () => {
       try {
         await api.resetAdminAccessTraffic(token, access.id, 'manual_admin_reset_traffic')
@@ -2114,6 +2129,11 @@ export function App() {
 
 
   const handleAdminAccessQr = async (access: AccessCredentialDto) => {
+    if (access.status === 'Revoked') {
+      setError('QR-код отозванного VPN-доступа недоступен.')
+      return
+    }
+
     await runAction(`qr-${access.id}`, async () => {
       const svg = await api.getAdminAccessQrSvg(token, access.id)
       setAdminQrSvgs((current) => ({ ...current, [access.id]: svg }))
@@ -3176,7 +3196,33 @@ export function App() {
           <h3>VPN-доступы</h3>
           <div className="list-stack">
             {accessCredentials.length === 0 && <EmptyState title="VPN-доступы пока не созданы" description="После оплаты здесь появится ссылка подключения, статус и история синхронизаций." />}
-            {accessCredentials.slice(0, 12).map((access) => <div key={access.id} className="list-item-vertical"><div className="item-head"><strong>{access.providerType} · {access.providerAccessId || shortId(access.id)}</strong><StatusBadge value={access.status} /></div><div className="muted">Пользователь: {shortId(access.userId)} · подписка: {shortId(access.subscriptionId)} · сервер: {access.serverName || shortId(access.serverId)} · до: {formatDate(access.expiryDate)}</div><div className="muted">Последняя синхронизация: {formatDate(access.lastSyncedAt)} · версия: {access.revision ?? 0} · клиент провайдера: {access.providerAccessId || '—'}</div>{access.accessUri && <CodeBlock>{access.accessUri}</CodeBlock>}{access.history && access.history.length > 0 && <div className="muted">История: {access.history.slice(0, 3).map((h) => `${h.eventType} ${formatDate(h.createdAt)}`).join(' · ')}</div>}{adminQrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: adminQrSvgs[access.id] }} />}<div className="toolbar"><CopyButton value={access.accessUri} label="Скопировать URI" disabled={!access.accessUri} /><PrimaryButton disabled={!access.accessUri || actionBusyId === `qr-${access.id}`} onClick={() => void handleAdminAccessQr(access)}>Показать QR</PrimaryButton>{canWriteSection('vpn') && <>{access.status === 'Disabled' ? <PrimaryButton disabled={actionBusyId.includes(access.id)} className="button-secondary" onClick={() => void handleAccessAction(access, true)}>Включить</PrimaryButton> : <ConfirmButton disabled={actionBusyId.includes(access.id)} className="button-secondary" message="Отключить VPN-доступ? Пользователь потеряет возможность подключаться." onConfirm={() => void handleAccessAction(access, false)}>Отключить</ConfirmButton>}<PrimaryButton disabled={actionBusyId === `sync-${access.id}`} onClick={() => void handleAccessSync(access)}>Синхронизировать</PrimaryButton><ConfirmButton disabled={actionBusyId === `reset-${access.id}`} message="Необратимо обнулить счётчики трафика у VPN-провайдера? При сетевой неопределённости доступ получит статус SyncRequired для ручной сверки." onConfirm={() => void handleAccessResetTraffic(access)}>Сбросить трафик</ConfirmButton></>}</div></div>)}
+            {accessCredentials.slice(0, 12).map((access) => {
+              const isRevoked = access.status === 'Revoked'
+              return <div key={access.id} className="list-item-vertical">
+                <div className="item-head">
+                  <strong>{access.providerType} · {access.providerAccessId || shortId(access.id)}</strong>
+                  <StatusBadge value={access.status} />
+                </div>
+                <div className="muted">Пользователь: {shortId(access.userId)} · подписка: {shortId(access.subscriptionId)} · сервер: {access.serverName || shortId(access.serverId)} · до: {formatDate(access.expiryDate)}</div>
+                <div className="muted">Последняя синхронизация: {formatDate(access.lastSyncedAt)} · версия: {access.revision ?? 0} · клиент провайдера: {access.providerAccessId || '—'}</div>
+                {isRevoked
+                  ? <p className="safe-note" role="status">Доступ отозван. Ключ и provider-команды скрыты; доступна только история.</p>
+                  : access.accessUri && <CodeBlock>{access.accessUri}</CodeBlock>}
+                {access.history && access.history.length > 0 && <div className="muted">История: {access.history.slice(0, 3).map((h) => `${h.eventType} ${formatDate(h.createdAt)}`).join(' · ')}</div>}
+                {!isRevoked && adminQrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: adminQrSvgs[access.id] }} />}
+                {!isRevoked && <div className="toolbar">
+                  <CopyButton value={access.accessUri} label="Скопировать URI" disabled={!access.accessUri} />
+                  <PrimaryButton disabled={!access.accessUri || actionBusyId === `qr-${access.id}`} onClick={() => void handleAdminAccessQr(access)}>Показать QR</PrimaryButton>
+                  {canWriteSection('vpn') && <>
+                    {access.status === 'Disabled'
+                      ? <PrimaryButton disabled={actionBusyId.includes(access.id)} className="button-secondary" onClick={() => void handleAccessAction(access, true)}>Включить</PrimaryButton>
+                      : <ConfirmButton disabled={actionBusyId.includes(access.id)} className="button-secondary" message="Отключить VPN-доступ? Пользователь потеряет возможность подключаться." onConfirm={() => void handleAccessAction(access, false)}>Отключить</ConfirmButton>}
+                    <PrimaryButton disabled={actionBusyId === `sync-${access.id}`} onClick={() => void handleAccessSync(access)}>Синхронизировать</PrimaryButton>
+                    <ConfirmButton disabled={actionBusyId === `reset-${access.id}`} message="Необратимо обнулить счётчики трафика у VPN-провайдера? При сетевой неопределённости доступ получит статус SyncRequired для ручной сверки." onConfirm={() => void handleAccessResetTraffic(access)}>Сбросить трафик</ConfirmButton>
+                  </>}
+                </div>}
+              </div>
+            })}
           </div>
         </Card>
       </div>

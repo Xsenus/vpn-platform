@@ -11603,5 +11603,28 @@
         "text": "Roadmap progress is 509/529 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-revoked-vpn-access-terminal-guard",
+    "version": "0.498.0",
+    "releasedAt": "2026-08-05T06:35:00+07:00",
+    "title": "Отозванный VPN-доступ закрыт во всех интерфейсах",
+    "summary": "Revoked credential больше не раскрывает пользовательские ключи и QR, не принимает provider-команды и безопасно отображается только как история.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Пользовательские API редактируют URI, QR, config и provider ID; пользовательские и административный QR routes отклоняют отозванный доступ."
+      },
+      {
+        "type": "fixed",
+        "text": "Reset traffic блокируется до provider call, а кабинет и админка скрывают copy, QR, provider-команды и stale QR для terminal credential."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 510/530 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

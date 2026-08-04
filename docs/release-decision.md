@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1008/1008`.
+- Backend full suite: `1011/1011`.
 - API Release build: OK.
 - Frontend unit tests: `77/77`.
 - Frontend typecheck/build: OK.
@@ -50,8 +50,8 @@ Production-ready решение заблокировано следующими 
 - VPN access enable/sync/reset preserves caller cancellation semantics and durable history/audit; enable/reset uncertainty is represented by `SyncRequired` instead of a false confirmed state.
 - Terminal subscription cancellation атомарно отзывает доступ, удаляет provider-клиента и освобождает capacity; rollback и provider uncertainty проверены fault-injection тестами.
 - X3Ui client migration резервирует target capacity до remote add и компенсирует remote/local failure; last-slot concurrency проверена на независимых SQLite-контекстах.
-- Latest "Что нового": `2026-08-05-vpn-access-cancellation-reconciliation`, версия `0.497.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `509/529` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-revoked-vpn-access-terminal-guard`, версия `0.498.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `510/530` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

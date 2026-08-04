@@ -9,6 +9,7 @@ using VpnPlatform.Api.Controllers.Me;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
+using VpnPlatform.Infrastructure.Vpn;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
@@ -158,6 +159,71 @@ public class MeCabinetControllerTests
         var result = await CreateController(db, userId).GetAccessQr(access.Id, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Cabinet_Should_Redact_Revoked_Access_And_Reject_All_Qr_Routes_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Revoked", Slug = "revoked-access", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var node = new VpnNode { Id = Guid.NewGuid(), Name = "revoked-node", Host = "revoked.example.test", IpAddress = "192.0.2.30", Provider = "x3ui", Region = "eu", Country = "NL" };
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Cancelled,
+            StartAt = DateTimeOffset.UtcNow.AddDays(-30),
+            EndAt = DateTimeOffset.UtcNow,
+            CancelledAt = DateTimeOffset.UtcNow
+        };
+        var access = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "revoked-provider-secret",
+            AccessUri = "vless://revoked-secret@example.test",
+            QrCodePath = "vless://revoked-qr-secret@example.test",
+            ConfigPath = "/configs/revoked-secret.json",
+            Status = AccessCredentialStatus.Revoked
+        };
+        db.Users.Add(User(userId, "revoked-access@example.test"));
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+        subscription.CurrentAccessId = access.Id;
+        await db.SaveChangesAsync();
+
+        var meController = CreateController(db, userId);
+        var subscriptions = AssertOkList(await meController.GetSubscriptions(CancellationToken.None));
+        var accesses = AssertOkList(await meController.GetAccesses(CancellationToken.None));
+        var subscriptionDto = Assert.Single(subscriptions);
+        var accessDto = Assert.Single(accesses);
+
+        Assert.Null(subscriptionDto.GetType().GetProperty("AccessUri")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath")!.GetValue(subscriptionDto));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePayload"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePath"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "ConfigPath"));
+        Assert.IsType<BadRequestObjectResult>(await meController.GetAccessQr(access.Id, CancellationToken.None));
+
+        var cabinetController = new CabinetAccessController(db, new SvgQrCodeGenerator(new TestClock()))
+        {
+            ControllerContext = new ControllerContext { HttpContext = HttpContextForUser(userId) }
+        };
+        Assert.IsType<BadRequestObjectResult>(await cabinetController.GetAccessQr(access.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -359,6 +425,19 @@ public class MeCabinetControllerTests
                 }
             }
         };
+    }
+
+    private static DefaultHttpContext HttpContextForUser(Guid userId)
+        => new()
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
+                "unit-test"))
+        };
+
+    private sealed class TestClock : VpnPlatform.Application.Abstractions.IClock
+    {
+        public DateTimeOffset UtcNow => new(2026, 8, 5, 6, 20, 0, TimeSpan.FromHours(7));
     }
 
     private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
