@@ -11258,5 +11258,28 @@
         "text": "Caller cancellation не записывает ложный Unhealthy result. Roadmap progress is 494/514 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-payment-provider-default-uniqueness",
+    "version": "0.483.0",
+    "releasedAt": "2026-08-05T02:03:00+07:00",
+    "title": "У платежного провайдера остается один default-аккаунт",
+    "summary": "Concurrent account updates сериализованы, а partial unique index и cleanup migration защищают единственный default между API-инстансами.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Provider/account gates согласуют create, update, check и enable/disable payment accounts."
+      },
+      {
+        "type": "fixed",
+        "text": "Migration снимает старые default-дубли до partial unique index; переключение default выполняется в одной транзакции."
+      },
+      {
+        "type": "important",
+        "text": "Unique conflicts возвращают controlled failure, остальные DB errors не маскируются. Roadmap progress is 495/515 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

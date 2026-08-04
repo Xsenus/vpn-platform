@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.483.0 - 2026-08-05
+
+Release entry: `2026-08-05-payment-provider-default-uniqueness`.
+
+### Исправлено
+
+- Параллельный create/update payment provider account сериализован по provider; readiness и enable/disable сериализованы по account.
+- Partial unique index гарантирует не более одного `IsDefault=true` на провайдера между API-инстансами; migration детерминированно снимает старые дубли до создания индекса.
+- Переключение default выполняется двухфазно в одной транзакции, duplicate name/default возвращает управляемый conflict вместо HTTP 500, а неуникальные persistence failures не маскируются.
+- Валидация и защита новых секретов выполняются на prospective entity до изменения tracked account; смена типа провайдера остается поддержанной.
+
+### Проверено
+
+- Backend full suite `981/981`; targeted payment/account suite `56/56`, default-account concurrency/migration regression `7/7`, включая два независимых SQLite-контекста, migration SQL и failure classification; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; EF pending model changes отсутствуют, fresh local SQLite smoke latest release OK; secret scan `610` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `495/515` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.482.0 - 2026-08-05
 
 Release entry: `2026-08-05-vpn-node-state-consistency`.

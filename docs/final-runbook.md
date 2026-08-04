@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-04 локально подтверждено:
 
-- backend full suite: 974/974;
+- backend full suite: 981/981;
 - frontend tests: 68/68;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -196,8 +196,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Subscription lifecycle consistency: expiration сначала отключает VPN-доступ, затем меняет статус; provider failure сохраняет `GracePeriod`, lease/backoff и retry diagnostics, а batch workers изолируют ошибки отдельных записей.
 - Panel sync consistency: частичный unique index сериализует `Running` между инстансами, stale lease и worker snapshot восстанавливаются, health/sync diagnostics сохраняются redacted.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-vpn-node-state-consistency`, версия `0.482.0`.
-- roadmap progress: `494/514` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-payment-provider-default-uniqueness`, версия `0.483.0`.
+- roadmap progress: `495/515` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

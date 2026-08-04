@@ -1,3 +1,5 @@
+using VpnPlatform.Domain.Enums;
+
 namespace VpnPlatform.Application.Common;
 
 public static class PaymentProcessingGate
@@ -7,6 +9,12 @@ public static class PaymentProcessingGate
 
     public static async ValueTask<IAsyncDisposable> AcquireOrderAsync(Guid orderId, CancellationToken cancellationToken)
         => await AcquireAsync($"order:{orderId:N}", cancellationToken);
+
+    public static async ValueTask<IAsyncDisposable> AcquirePaymentProviderConfigurationAsync(PaymentProvider provider, CancellationToken cancellationToken)
+        => await AcquireAsync($"payment-provider-config:{(int)provider}", cancellationToken);
+
+    public static async ValueTask<IAsyncDisposable> AcquirePaymentProviderAccountAsync(Guid accountId, CancellationToken cancellationToken)
+        => await AcquireAsync($"payment-provider-account:{accountId:N}", cancellationToken);
 
     public static async ValueTask<IAsyncDisposable> AcquireWebhookAsync(string provider, string externalEventId, string providerPaymentId, CancellationToken cancellationToken)
         => await AcquireAsync($"webhook:{provider}:{externalEventId}:{providerPaymentId}", cancellationToken);

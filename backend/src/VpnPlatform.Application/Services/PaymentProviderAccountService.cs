@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
@@ -58,6 +59,10 @@ public class PaymentProviderAccountService
 
     public async Task<Result<PaymentProviderAccountDto>> UpsertAsync(Guid? id, UpsertPaymentProviderAccountCommand command, CancellationToken cancellationToken = default)
     {
+        await using var accountGate = id.HasValue
+            ? await PaymentProcessingGate.AcquirePaymentProviderAccountAsync(id.Value, cancellationToken)
+            : null;
+        await using var providerGate = await PaymentProcessingGate.AcquirePaymentProviderConfigurationAsync(command.Provider, cancellationToken);
         var shopId = Normalize(command.ShopId);
         var apiBaseUrl = Normalize(command.ApiBaseUrl);
         var returnUrl = Normalize(command.ReturnUrl);
@@ -71,42 +76,6 @@ public class PaymentProviderAccountService
             return Result<PaymentProviderAccountDto>.Failure("ShopId is required for production provider account.");
         }
 
-        PaymentProviderAccount account;
-        if (id.HasValue)
-        {
-            var existing = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id.Value, cancellationToken);
-            if (existing is null)
-            {
-                return Result<PaymentProviderAccountDto>.Failure("Payment provider account not found.");
-            }
-
-            account = existing;
-        }
-        else
-        {
-            account = new PaymentProviderAccount { Provider = command.Provider, CreatedAt = _clock.UtcNow };
-            _db.PaymentProviderAccounts.Add(account);
-
-            if (command.Provider != PaymentProvider.TelegramStars
-                && command.Mode == PaymentProviderMode.Production
-                && string.IsNullOrWhiteSpace(command.SecretKey))
-            {
-                return Result<PaymentProviderAccountDto>.Failure("SecretKey is required when creating a production provider account.");
-            }
-        }
-
-        account.Provider = command.Provider;
-        account.Mode = command.Mode;
-        account.Name = string.IsNullOrWhiteSpace(command.Name) ? command.Provider.ToString() : command.Name.Trim();
-        account.PublicName = string.IsNullOrWhiteSpace(command.PublicName) ? account.Name : command.PublicName.Trim();
-        account.IsEnabled = command.IsEnabled;
-        account.IsDefault = command.IsDefault;
-        account.ShopId = shopId;
-        account.ApiBaseUrl = string.IsNullOrWhiteSpace(apiBaseUrl) ? DefaultApiBaseUrl(command.Provider) : apiBaseUrl.TrimEnd('/');
-        account.ReturnUrl = returnUrl;
-        account.WebhookUrl = webhookUrl;
-        account.UseWebhookIpAllowList = command.UseWebhookIpAllowList;
-        account.AllowedWebhookIpRangesCsv = allowedWebhookIpRangesCsv;
         if (replaceExtraSettings)
         {
             var extraSettingsValidationError = ValidateExtraSettingsJson(extraSettingsJson);
@@ -114,45 +83,174 @@ public class PaymentProviderAccountService
             {
                 return Result<PaymentProviderAccountDto>.Failure(extraSettingsValidationError);
             }
-
-            account.ExtraSettingsJson = extraSettingsJson;
         }
-        account.UpdatedAt = _clock.UtcNow;
 
-        if (!string.IsNullOrWhiteSpace(command.SecretKey))
+        PaymentProviderAccount? existing = null;
+        if (id.HasValue)
         {
-            account.SecretKeyProtected = _secretProtector.Protect(command.SecretKey.Trim());
-        }
+            existing = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id.Value, cancellationToken);
+            if (existing is null)
+            {
+                return Result<PaymentProviderAccountDto>.Failure("Payment provider account not found.");
+            }
 
-        if (!string.IsNullOrWhiteSpace(command.WebhookSecret))
+        }
+        else if (command.Provider != PaymentProvider.TelegramStars
+                 && command.Mode == PaymentProviderMode.Production
+                 && string.IsNullOrWhiteSpace(command.SecretKey))
         {
-            account.WebhookSecretProtected = _secretProtector.Protect(command.WebhookSecret.Trim());
+            return Result<PaymentProviderAccountDto>.Failure("SecretKey is required when creating a production provider account.");
         }
 
-        var credentialValidationError = ValidateProviderCredentials(account);
+        var name = string.IsNullOrWhiteSpace(command.Name) ? command.Provider.ToString() : command.Name.Trim();
+        if (await _db.PaymentProviderAccounts.AnyAsync(
+                x => x.Id != (id ?? Guid.Empty)
+                     && x.Provider == command.Provider
+                     && x.Mode == command.Mode
+                     && x.Name == name,
+                cancellationToken))
+        {
+            return Result<PaymentProviderAccountDto>.Failure("Payment provider account conflicts with an existing provider/mode/name.");
+        }
+
+        var proposed = new PaymentProviderAccount
+        {
+            Id = existing?.Id ?? Guid.NewGuid(),
+            Provider = command.Provider,
+            Mode = command.Mode,
+            Name = name,
+            PublicName = string.IsNullOrWhiteSpace(command.PublicName) ? name : command.PublicName.Trim(),
+            IsEnabled = command.IsEnabled,
+            IsDefault = command.IsDefault,
+            ShopId = shopId,
+            ApiBaseUrl = string.IsNullOrWhiteSpace(apiBaseUrl) ? DefaultApiBaseUrl(command.Provider) : apiBaseUrl.TrimEnd('/'),
+            ReturnUrl = returnUrl,
+            WebhookUrl = webhookUrl,
+            UseWebhookIpAllowList = command.UseWebhookIpAllowList,
+            AllowedWebhookIpRangesCsv = allowedWebhookIpRangesCsv,
+            ExtraSettingsJson = replaceExtraSettings ? extraSettingsJson : existing?.ExtraSettingsJson ?? "{}",
+            SecretKeyProtected = string.IsNullOrWhiteSpace(command.SecretKey)
+                ? existing?.SecretKeyProtected ?? string.Empty
+                : _secretProtector.Protect(command.SecretKey.Trim()),
+            WebhookSecretProtected = string.IsNullOrWhiteSpace(command.WebhookSecret)
+                ? existing?.WebhookSecretProtected ?? string.Empty
+                : _secretProtector.Protect(command.WebhookSecret.Trim()),
+            LastHealthCheckAt = existing?.LastHealthCheckAt,
+            HealthStatus = existing?.HealthStatus ?? HealthStatus.Unknown,
+            CreatedAt = existing?.CreatedAt ?? _clock.UtcNow,
+            UpdatedAt = _clock.UtcNow
+        };
+
+        var credentialValidationError = ValidateProviderCredentials(proposed);
         if (!string.IsNullOrWhiteSpace(credentialValidationError))
         {
             return Result<PaymentProviderAccountDto>.Failure(credentialValidationError);
         }
 
-        if (account.IsDefault)
+        var oldDefaults = proposed.IsDefault
+            ? await _db.PaymentProviderAccounts
+                .Where(x => x.Provider == proposed.Provider && x.Id != proposed.Id && x.IsDefault)
+                .ToListAsync(cancellationToken)
+            : [];
+        var dbContext = _db as DbContext;
+        await using var transaction = dbContext is not null && dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+        try
         {
-            var others = await _db.PaymentProviderAccounts
-                .Where(x => x.Provider == account.Provider && x.Id != account.Id)
-                .ToListAsync(cancellationToken);
-            foreach (var other in others)
+            foreach (var other in oldDefaults)
             {
                 other.IsDefault = false;
                 other.UpdatedAt = _clock.UtcNow;
             }
+
+            if (transaction is not null && oldDefaults.Count > 0)
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+
+            var account = existing ?? new PaymentProviderAccount();
+            ApplyProposedAccount(account, proposed);
+            if (existing is null)
+            {
+                _db.PaymentProviderAccounts.Add(account);
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            return Result<PaymentProviderAccountDto>.Success(MapToDto(account));
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+
+            return Result<PaymentProviderAccountDto>.Failure(
+                "Payment provider account conflicts with an existing provider/mode/name or default account. Reload and retry.");
+        }
+    }
+
+    private static void ApplyProposedAccount(PaymentProviderAccount account, PaymentProviderAccount proposed)
+    {
+        account.Id = proposed.Id;
+        account.Provider = proposed.Provider;
+        account.Mode = proposed.Mode;
+        account.Name = proposed.Name;
+        account.PublicName = proposed.PublicName;
+        account.IsEnabled = proposed.IsEnabled;
+        account.IsDefault = proposed.IsDefault;
+        account.ShopId = proposed.ShopId;
+        account.ApiBaseUrl = proposed.ApiBaseUrl;
+        account.ReturnUrl = proposed.ReturnUrl;
+        account.WebhookUrl = proposed.WebhookUrl;
+        account.SecretKeyProtected = proposed.SecretKeyProtected;
+        account.WebhookSecretProtected = proposed.WebhookSecretProtected;
+        account.UseWebhookIpAllowList = proposed.UseWebhookIpAllowList;
+        account.AllowedWebhookIpRangesCsv = proposed.AllowedWebhookIpRangesCsv;
+        account.ExtraSettingsJson = proposed.ExtraSettingsJson;
+        account.LastHealthCheckAt = proposed.LastHealthCheckAt;
+        account.HealthStatus = proposed.HealthStatus;
+        account.CreatedAt = proposed.CreatedAt;
+        account.UpdatedAt = proposed.UpdatedAt;
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is DbException databaseException
+                && string.Equals(databaseException.SqlState, "23505", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (current is DbException sqliteException
+                && sqliteException.ErrorCode == 19
+                && sqliteException.GetType().GetProperty("SqliteExtendedErrorCode")?.GetValue(sqliteException) is int extendedCode
+                && extendedCode is 1555 or 2067)
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("UNIQUE constraint", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        return Result<PaymentProviderAccountDto>.Success(MapToDto(account));
+        return false;
     }
 
     public async Task<Result<PaymentProviderAccountCheckResultDto>> CheckAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquirePaymentProviderAccountAsync(id, cancellationToken);
         var account = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (account is null)
         {
@@ -244,6 +342,7 @@ public class PaymentProviderAccountService
 
     public async Task<Result<PaymentProviderAccountDto>> SetEnabledAsync(Guid id, bool enabled, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquirePaymentProviderAccountAsync(id, cancellationToken);
         var account = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (account is null)
         {

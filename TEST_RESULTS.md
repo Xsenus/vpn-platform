@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: payment provider default uniqueness
+
+Scope:
+- Проверены create/update/check/enable payment provider accounts: concurrent default selection, durable DB invariant, upgrade cleanup, transactional default switch и conflict classification.
+
+Results:
+- Roadmap progress: `495/515` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-payment-provider-default-uniqueness`, version `0.483.0`.
+- Backend full suite: OK, `981/981`; targeted payment/account suite: OK, `56/56`; default-account concurrency/migration regression: OK, `7/7`.
+- File-backed SQLite concurrency: два независимых create default завершаются с одним подтвержденным default account.
+- DB invariant: partial unique index запрещает два default одного provider; migration cleanup сохраняет последний `UpdatedAt/CreatedAt/Id` и снимает остальные до index creation.
+- Default switch: старый default снимается перед новым в одной транзакции; duplicate name/default возвращает controlled failure, прочие DB failures пробрасываются.
+- EF schema: migration `PaymentProviderDefaultUniqueness`; pending model changes: none; generated PostgreSQL migration SQL содержит cleanup CTE и unique index.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-05-payment-provider-default-uniqueness`.
+- Secret scan: OK, `610` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: VPN node state consistency
 
 Scope:

@@ -87,6 +87,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PromoCode>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<CheckoutSession>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PaymentProviderAccount>().HasIndex(x => new { x.Provider, x.Mode, x.Name }).IsUnique();
+        modelBuilder.Entity<PaymentProviderAccount>()
+            .HasIndex(x => x.Provider)
+            .HasFilter("\"IsDefault\" = true")
+            .IsUnique();
         modelBuilder.Entity<PaymentProviderSetting>().HasIndex(x => new { x.PaymentProviderAccountId, x.Key }).IsUnique();
         modelBuilder.Entity<PaymentAttempt>().HasIndex(x => new { x.Provider, x.ProviderPaymentId }).IsUnique();
         modelBuilder.Entity<PaymentAttempt>().HasIndex(x => x.IdempotencyKey).IsUnique();

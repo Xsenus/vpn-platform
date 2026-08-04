@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("974/974", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-vpn-node-state-consistency", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("981/981", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-payment-provider-default-uniqueness", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "974/974",
-                     "2026-08-05-vpn-node-state-consistency",
-                     "0.482.0",
+                     "981/981",
+                     "2026-08-05-payment-provider-default-uniqueness",
+                     "0.483.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-vpn-node-state-consistency",
-                     "0.482.0",
-                     "494/514",
+                     "2026-08-05-payment-provider-default-uniqueness",
+                     "0.483.0",
+                     "495/515",
                      "96.1%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `974/974`",
+                     "Backend full suite: OK, `981/981`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `603` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-vpn-node-state-consistency",
-                     "0.482.0",
-                     "494/514",
+                     "2026-08-05-payment-provider-default-uniqueness",
+                     "0.483.0",
+                     "495/515",
                      "96.1%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `974/974`",
+                     "backend full suite `981/981`",
                      "PostgreSQL SQL",
                      "secret scan: `603` files, `0` findings"
                  })
