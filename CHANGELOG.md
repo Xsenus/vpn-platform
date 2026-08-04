@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.488.0 - 2026-08-05
+
+Release entry: `2026-08-05-cabinet-qr-availability`.
+
+### Исправлено
+
+- Кабинет больше не предлагает заведомо нерабочую генерацию QR-кода для VPN-доступа, у которого ещё не выдан `accessUri`.
+- Все карточки текущего доступа, подписок и выданных ключей используют единое правило готовности QR; disabled-состояние объясняет, что ссылка подключения ещё формируется.
+- Handler повторно проверяет доступ перед запросом API, поэтому программный обход кнопки также не вызывает гарантированный backend `400`.
+
+### Проверено
+
+- Backend full suite `987/987`; targeted cabinet SQLite suite `9/9`, включая provisioning-доступ без URI и ответ `400`.
+- Frontend `70/70`, typecheck/build OK; cabinet desktop/mobile `2/2`, Playwright desktop/mobile/all-screens responsive suite `12/12` без overflow/console errors.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `500/520` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остаётся `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.487.0 - 2026-08-05
 
 Release entry: `2026-08-05-cabinet-renewal-status-guard`.

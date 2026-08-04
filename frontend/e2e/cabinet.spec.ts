@@ -149,6 +149,20 @@ const access = {
   updatedAt: now
 }
 
+const pendingAccess = {
+  ...access,
+  id: 'access-pending',
+  subscriptionId: blockedSubscription.id,
+  providerAccessId: 'x3ui-client-pending',
+  serverName: 'Ожидает выдачи',
+  accessUri: '',
+  qrCodePayload: null,
+  qrCodePath: '',
+  configPath: '',
+  status: 'Provisioning',
+  revision: 1
+}
+
 const provider = {
   provider: 'YooKassa',
   publicName: 'YooKassa sandbox',
@@ -262,7 +276,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/accesses') {
-      await fulfillJson(route, [access])
+      await fulfillJson(route, [access, pendingAccess])
       return
     }
 
@@ -420,6 +434,10 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(cancelledCard.getByText('Отменённую подписку нельзя продлить. Оформите новый тариф.')).toBeVisible()
   await expect(blockedCard.getByRole('button', { name: 'Продлить' })).toHaveCount(0)
   await expect(cancelledCard.getByRole('button', { name: 'Продлить' })).toHaveCount(0)
+
+  const pendingAccessCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Ожидает выдачи' }) })
+  await expect(pendingAccessCard.getByText('Ссылка ещё не выдана')).toBeVisible()
+  await expect(pendingAccessCard.getByRole('button', { name: 'Показать QR-код' })).toBeDisabled()
 
   await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
   await expect(page.locator('.qr-preview').first()).toContainText('qr-e2e')

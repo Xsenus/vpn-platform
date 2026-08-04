@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { AccessCredentialDto, SubscriptionDto } from '../packages/api-client/src/index.ts'
-import { buildCabinetSummary, daysUntil, findAccessForSubscription, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
+import { buildCabinetSummary, daysUntil, findAccessForSubscription, getAccessQrAvailability, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
 
 function subscription(overrides: Partial<SubscriptionDto>): SubscriptionDto {
   return {
@@ -91,5 +91,17 @@ test('cabinet dashboard exposes renewal only for backend-supported subscription 
   assert.deepEqual(getSubscriptionRenewalAvailability(subscription({ status: 'Cancelled' })), {
     canRenew: false,
     reason: 'Отменённую подписку нельзя продлить. Оформите новый тариф.'
+  })
+})
+
+test('cabinet dashboard enables QR only after the access URI is issued', () => {
+  assert.deepEqual(getAccessQrAvailability(access({ accessUri: ' vless://issued ' })), { canGenerate: true, reason: null })
+  assert.deepEqual(getAccessQrAvailability(access({ accessUri: '' })), {
+    canGenerate: false,
+    reason: 'QR-код появится после выдачи ссылки подключения.'
+  })
+  assert.deepEqual(getAccessQrAvailability(null), {
+    canGenerate: false,
+    reason: 'QR-код появится после выдачи ссылки подключения.'
   })
 })

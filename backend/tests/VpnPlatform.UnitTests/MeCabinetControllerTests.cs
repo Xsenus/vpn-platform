@@ -108,6 +108,59 @@ public class MeCabinetControllerTests
     }
 
     [Fact]
+    public async Task Cabinet_Should_Reject_Qr_Request_Until_Access_Uri_Is_Issued_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Pending QR", Slug = "pending-qr", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.PendingActivation,
+            StartAt = DateTimeOffset.UtcNow,
+            EndAt = DateTimeOffset.UtcNow.AddDays(30)
+        };
+        var node = new VpnNode
+        {
+            Id = Guid.NewGuid(),
+            Name = "pending-qr-node",
+            Host = "pending-qr.example.test",
+            IpAddress = "192.0.2.20",
+            Provider = "x3ui",
+            Region = "eu-west",
+            Country = "NL",
+            Status = NodeStatus.Ready,
+            HealthStatus = HealthStatus.Healthy
+        };
+        var access = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "pending-client",
+            AccessUri = string.Empty,
+            Status = AccessCredentialStatus.Provisioning
+        };
+        db.Users.Add(User(userId, "pending-qr@example.test"));
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+
+        var result = await CreateController(db, userId).GetAccessQr(access.Id, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
     public async Task Cabinet_Should_Return_Empty_Subscriptions_And_Accesses_For_User_Without_Subscription_On_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

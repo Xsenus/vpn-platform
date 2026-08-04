@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: cabinet QR availability
+
+Scope:
+- Проверено соответствие всех QR-команд кабинета backend-правилу: QR создаётся только после выдачи непустого `accessUri`.
+
+Results:
+- Roadmap progress: `500/520` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-cabinet-qr-availability`, version `0.488.0`.
+- Backend full suite: OK, `987/987`; targeted cabinet SQLite suite: OK, `9/9`.
+- Backend возвращает `400` для provisioning-доступа без URI; SQLite regression подтверждает контракт на реальной relational-схеме.
+- Все QR-кнопки используют единый helper, показывают причину disabled-состояния до выдачи ссылки, а handler имеет независимый guard без вызова API.
+- Frontend tests: OK, `70/70`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Cabinet desktop/mobile regression: OK, `2/2`; Playwright desktop/mobile/all-screens responsive suite: OK, `12/12`, без overflow/console errors.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `610` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: cabinet renewal status guard
 
 Scope:

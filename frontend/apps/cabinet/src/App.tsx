@@ -23,7 +23,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
-import { buildCabinetSummary, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
+import { buildCabinetSummary, getAccessQrAvailability, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { buildOrderExportText, canRetryOrderPayment, formatPaymentMoney, getLatestPaymentForOrder, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -143,6 +143,7 @@ export function App() {
   )
   const currentConnectionLink = cabinetSummary.currentAccess?.accessUri ?? cabinetSummary.currentSubscription?.accessUri ?? ''
   const currentAccessId = cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
+  const currentQrAvailability = getAccessQrAvailability(cabinetSummary.currentAccess)
 
   const clearSession = () => {
     setToken('')
@@ -371,6 +372,11 @@ export function App() {
 
   const handleLoadQr = async (accessId: string) => {
     if (!token) return
+    const qrAvailability = getAccessQrAvailability(accesses.find((access) => access.id === accessId))
+    if (!qrAvailability.canGenerate) {
+      setError(qrAvailability.reason ?? 'QR-код пока недоступен.')
+      return
+    }
     setBusy(true)
     setError('')
     setNotice('')
@@ -619,7 +625,7 @@ export function App() {
                       <CodeBlock>{currentConnectionLink}</CodeBlock>
                       <div className="toolbar mt-12">
                         <CopyButton value={currentConnectionLink} label="Скопировать ссылку" />
-                        {currentAccessId && <PrimaryButton disabled={busy} aria-busy={busy} onClick={() => void handleLoadQr(currentAccessId)}>Показать QR-код</PrimaryButton>}
+                        {currentAccessId && <PrimaryButton disabled={busy || !currentQrAvailability.canGenerate} title={currentQrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(currentAccessId)}>Показать QR-код</PrimaryButton>}
                         <PrimaryButton disabled={busy || !provider} aria-busy={busy} className="button-secondary" onClick={() => void handleRenew(cabinetSummary.currentSubscription!)}>Продлить</PrimaryButton>
                       </div>
                       {currentAccessId && qrSvgs[currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[currentAccessId] }} />}
@@ -809,6 +815,7 @@ export function App() {
         <div className="card-list">
           {subscriptions.map((subscription) => {
             const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
+            const qrAvailability = getAccessQrAvailability(accesses.find((access) => access.id === subscription.currentAccessId))
             return <div className="card" key={subscription.id}>
               <div className="card-head">
                 <div>
@@ -823,7 +830,7 @@ export function App() {
                   <CodeBlock>{subscription.accessUri}</CodeBlock>
                   <div className="toolbar">
                     <CopyButton value={subscription.accessUri} label="Скопировать ссылку" />
-                    {subscription.currentAccessId && <PrimaryButton onClick={() => void handleLoadQr(subscription.currentAccessId ?? '')}>Показать QR-код</PrimaryButton>}
+                    {subscription.currentAccessId && <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(subscription.currentAccessId ?? '')}>Показать QR-код</PrimaryButton>}
                   </div>
                 </>
               )}
@@ -847,8 +854,9 @@ export function App() {
         <h2>VPN-ключи</h2>
         {accesses.length === 0 && <EmptyState title="VPN-ключей пока нет" description="После успешной оплаты здесь появятся ссылка, QR-код и срок действия." />}
         <div className="card-list">
-          {accesses.map((access) => (
-            <Card key={access.id}>
+          {accesses.map((access) => {
+            const qrAvailability = getAccessQrAvailability(access)
+            return <Card key={access.id}>
               <div className="card-head">
                 <div>
                   <h3>{access.serverName || access.providerType}</h3>
@@ -859,12 +867,12 @@ export function App() {
               {access.accessUri ? <CodeBlock>{access.accessUri}</CodeBlock> : <EmptyState title="Ссылка ещё не выдана" description="Если оплата прошла, обратитесь в поддержку." />}
               <div className="toolbar mt-12">
                 <CopyButton value={access.accessUri} label="Скопировать ссылку" />
-                <PrimaryButton disabled={busy || !access.id} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
+                <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
               </div>
               {qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
               <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый Xray/VLESS клиент. Никому не пересылайте ключ.</p>
             </Card>
-          ))}
+          })}
         </div>
       </div>
 
@@ -1061,8 +1069,9 @@ export function App() {
           <h3>Выданные доступы</h3>
           <div className="list-stack">
             {accesses.length === 0 && <EmptyState title="Доступы не выдавались" description="Когда подписка будет активирована, здесь появятся ключи и QR-коды." />}
-            {accesses.map((access) => (
-              <div key={access.id} className="list-item-vertical">
+            {accesses.map((access) => {
+              const qrAvailability = getAccessQrAvailability(access)
+              return <div key={access.id} className="list-item-vertical">
                 <div className="card-head">
                   <div>
                     <strong>{access.providerType}</strong>
@@ -1074,12 +1083,12 @@ export function App() {
                 {access.qrCodePath && <CodeBlock>QR-содержимое: {access.qrCodePath}</CodeBlock>}
                 <div className="toolbar">
                   <CopyButton value={access.accessUri} label="Скопировать ссылку" />
-                  <PrimaryButton disabled={busy || !access.accessUri} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
+                  <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
                 </div>
                 {qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
                 <p className="muted">Подключение: импортируйте строку выше в VLESS/Xray клиент или используйте QR-код.</p>
               </div>
-            ))}
+            })}
           </div>
         </Card>
 

@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `499/519` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `500/520` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -81,8 +81,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `986/986`.
-- [x] Frontend unit tests: `69/69`.
+- [x] Backend full suite: `987/987`.
+- [x] Frontend unit tests: `70/70`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -103,7 +103,8 @@
 - [x] Frontend dependency audit: `0 vulnerabilities` on React 19.2.8, React Router 8.3.0 and Node.js 22.22.0.
 - [x] Payment provider account check различает локальную готовность настроек и реальный health внешнего кабинета; configuration-only результат не создает ложный `Healthy`.
 - [x] Cabinet renewal action скрыта для `Blocked/Cancelled`; вместо нерабочей команды показано допустимое следующее действие.
-- [x] Latest "Что нового": `2026-08-05-cabinet-renewal-status-guard`, версия `0.487.0`.
+- [x] Cabinet QR action доступна только после выдачи VPN URI; provisioning-карточки объясняют ожидание и не вызывают заведомый `400`.
+- [x] Latest "Что нового": `2026-08-05-cabinet-qr-availability`, версия `0.488.0`.
 
 ## Как вести дальше
 

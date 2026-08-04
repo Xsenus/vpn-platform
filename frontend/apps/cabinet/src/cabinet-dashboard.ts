@@ -22,6 +22,14 @@ export function getSubscriptionRenewalAvailability(subscription: SubscriptionDto
   return { canRenew: true, reason: null }
 }
 
+export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'accessUri'> | null | undefined) {
+  const canGenerate = Boolean(access?.accessUri?.trim())
+  return {
+    canGenerate,
+    reason: canGenerate ? null : 'QR-код появится после выдачи ссылки подключения.'
+  }
+}
+
 export function selectCurrentSubscription(subscriptions: SubscriptionDto[]) {
   const sorted = subscriptions.filter(isCurrentSubscription).sort((left, right) => {
     const leftEndAt = new Date(left.endAt).getTime()

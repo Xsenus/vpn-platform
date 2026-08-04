@@ -11373,5 +11373,28 @@
         "text": "Roadmap progress is 499/519 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-cabinet-qr-availability",
+    "version": "0.488.0",
+    "releasedAt": "2026-08-05T03:18:00+07:00",
+    "title": "QR-код доступен после выдачи VPN-ссылки",
+    "summary": "Кабинет больше не предлагает QR-команду, которую backend гарантированно отклонит до завершения выдачи доступа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Все карточки доступа используют единое правило: QR активен только при непустом accessUri, а до этого показывается понятное ожидание выдачи ссылки."
+      },
+      {
+        "type": "fixed",
+        "text": "Handler повторно проверяет готовность доступа; SQLite и desktop/mobile regressions подтверждают backend 400 без URI и рабочий QR после выдачи."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 500/520 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
