@@ -1024,6 +1024,8 @@ export function App() {
   const nextAdminSection = activeSectionIndex < availableAdminSections.length - 1 ? availableAdminSections[activeSectionIndex + 1][0] : null
   const canWriteSection = (section: AdminSectionId) => adminSession ? canWriteAdminSection(adminSession.capabilities, section) : false
   const canWriteActiveSection = canWriteSection(activeSection)
+  const canReadFinance = adminSession?.capabilities.financeRead === true
+  const canReadSupport = adminSession?.capabilities.supportRead === true
   const adminLoginErrors = useMemo(() => validateAdminLogin(email, password), [email, password])
   const showAdminLoginErrors = adminLoginErrors.length > 0 && Boolean(email || password)
 
@@ -1046,6 +1048,9 @@ export function App() {
     openSupportConversations: summary?.openSupportConversations ?? supportConversations.filter((item) => item.status === 'open' || item.status === 'pending').length,
     provisioningErrors: summary?.provisioningErrors ?? provisioningRuns.filter((item) => item.status === 'Failed').length
   }), [summary, users, subscriptions, accessCredentials, orders, payments, servers, provisioningRuns, supportConversations, vpnPanels])
+  const dashboardFailedPayments = canReadFinance ? payments.filter((item) => item.status === 'Failed' || item.status === 'Cancelled').slice(0, 3) : []
+  const dashboardFailedProvisioningRuns = provisioningRuns.filter((run) => ['Failed', 'PrecheckFailed'].includes(run.status)).slice(0, 3)
+  const dashboardOpenSupportConversations = canReadSupport ? supportConversations.filter((conversation) => conversation.status !== 'closed').slice(0, 3) : []
   const userOverviewStats = useMemo(() => buildAdminUserOverviewStats(userOverview), [userOverview])
   const filteredOrders = useMemo(() => {
     const searchText = orderSearch.trim().toLowerCase()
@@ -2585,26 +2590,30 @@ export function App() {
         <StatTile label="Telegram-пользователи" value={derivedSummary.telegramUsers} />
         <StatTile label="Активные подписки" value={derivedSummary.activeSubscriptions} />
         <StatTile label="Скоро истекают" value={derivedSummary.expiringSubscriptions} />
-        <StatTile label="Оплачено / ожидает" value={`${derivedSummary.paidOrders} / ${derivedSummary.pendingOrders}`} />
-        <StatTile label="Неуспешные платежи" value={derivedSummary.failedPayments} />
-        <StatTile label="Свежие платежи / заказы" value={`${derivedSummary.recentPayments} / ${derivedSummary.recentOrders}`} />
+        {canReadFinance && <StatTile label="Оплачено / ожидает" value={`${derivedSummary.paidOrders} / ${derivedSummary.pendingOrders}`} />}
+        {canReadFinance && <StatTile label="Неуспешные платежи" value={derivedSummary.failedPayments} />}
+        {canReadFinance && <StatTile label="Свежие платежи / заказы" value={`${derivedSummary.recentPayments} / ${derivedSummary.recentOrders}`} />}
         <StatTile label="VPN-доступы" value={derivedSummary.vpnAccessesCount} />
         <StatTile label="VPN-серверы" value={`${derivedSummary.healthyVpnNodes}/${derivedSummary.vpnNodesCount} OK`} />
         <StatTile label="3x-ui панели" value={`${derivedSummary.healthyVpnPanels}/${derivedSummary.vpnPanelsCount} OK`} />
-        <StatTile label="Очередь поддержки" value={`${derivedSummary.openSupportConversations}/${derivedSummary.supportConversationsCount}`} />
+        {canReadSupport && <StatTile label="Очередь поддержки" value={`${derivedSummary.openSupportConversations}/${derivedSummary.supportConversationsCount}`} />}
         <StatTile label="Ошибки подготовки" value={derivedSummary.provisioningErrors} />
       </div>
 
       {summary?.productionReadiness && (
         <div className="section" hidden={activeSection !== 'dashboard'}>
           <SectionCard
-            title="Готовность к live-продажам"
-            description="Проверка показывает, можно ли принимать production-платежи и автоматически выдавать реальный VPN-доступ через 3x-ui."
+            title={canReadFinance ? 'Готовность к live-продажам' : 'Готовность инфраструктуры'}
+            description={canReadFinance
+              ? 'Проверка показывает, можно ли принимать production-платежи и автоматически выдавать реальный VPN-доступ через 3x-ui.'
+              : 'Показаны только инфраструктурные проверки, доступные текущей административной роли.'}
             actions={<StatusBadge value={summary.productionReadiness.status} />}
           >
             <div className="list-stack">
-              {summary.productionReadiness.checks.map((check) => (
-                <div key={check.key} className="list-item">
+              {summary.productionReadiness.checks.map((check) => {
+                const actionSection = adminSectionFromHref(check.actionHref)
+                const canOpenAction = !actionSection || availableAdminSectionIds.has(actionSection)
+                return <div key={check.key} className="list-item">
                   <div>
                     <div className="item-heading">
                       <strong>{check.label}</strong>
@@ -2613,7 +2622,7 @@ export function App() {
                     <div className="muted">{check.message}</div>
                   </div>
                   <div className="row-actions">
-                    {check.actionHref && (
+                    {check.actionHref && canOpenAction && (
                       <a
                         className="button button-secondary"
                         href={check.actionHref}
@@ -2628,26 +2637,26 @@ export function App() {
                     <StatusBadge value={check.status} />
                   </div>
                 </div>
-              ))}
+              })}
             </div>
           </SectionCard>
         </div>
       )}
 
       <div className="section card-list-two" hidden={activeSection !== 'dashboard'}>
-        <SectionCard title="Последние заказы" description="Последние заказы с оплатой и связанной подпиской.">
+        {canReadFinance && <SectionCard title="Последние заказы" description="Последние заказы с оплатой и связанной подпиской.">
           {orders.length === 0 ? <EmptyState title="Заказов пока нет" description="После покупок на сайте или в Telegram здесь появятся заказы." /> : (
             <div className="list-stack">
               {orders.slice(0, 5).map((order) => <div key={order.id} className="list-item"><div><strong>{order.tariffName || shortId(order.tariffId)}</strong><div className="muted">{order.userEmail || shortId(order.userId)} · {order.amount} {order.currency} · {formatDate(order.createdAt || order.expiresAt)}</div></div><StatusBadge value={order.status} /></div>)}
             </div>
           )}
-        </SectionCard>
+        </SectionCard>}
         <SectionCard title="Требует внимания" description="Быстрый список очередей, которые требуют реакции.">
           <div className="list-stack">
-            {payments.filter((item) => item.status === 'Failed' || item.status === 'Cancelled').slice(0, 3).map((payment) => <div key={payment.id} className="list-item"><span>Платеж {shortId(payment.id)} · {payment.provider}</span><StatusBadge value={payment.status} /></div>)}
-            {provisioningRuns.filter((run) => ['Failed', 'PrecheckFailed'].includes(run.status)).slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.targetHost || run.nodeName || shortId(run.id)} · {run.errorSummary || run.currentStep || 'нужна проверка'}</span><StatusBadge value={run.status} /></div>)}
-            {supportConversations.filter((conversation) => conversation.status !== 'closed').slice(0, 3).map((conversation) => <div key={conversation.id} className="list-item"><span>{conversation.subject || 'Support'} · tg:{conversation.telegramUserId ?? '—'}</span><StatusBadge value={conversation.status} /></div>)}
-            {payments.filter((item) => item.status === 'Failed' || item.status === 'Cancelled').length === 0 && provisioningRuns.filter((run) => ['Failed', 'PrecheckFailed'].includes(run.status)).length === 0 && supportConversations.filter((conversation) => conversation.status !== 'closed').length === 0 && <EmptyState title="Нет срочных проблем" description="Ошибок оплат, подготовки серверов и открытых обращений сейчас нет." />}
+            {dashboardFailedPayments.map((payment) => <div key={payment.id} className="list-item"><span>Платеж {shortId(payment.id)} · {payment.provider}</span><StatusBadge value={payment.status} /></div>)}
+            {dashboardFailedProvisioningRuns.map((run) => <div key={run.id} className="list-item"><span>{run.targetHost || run.nodeName || shortId(run.id)} · {run.errorSummary || run.currentStep || 'нужна проверка'}</span><StatusBadge value={run.status} /></div>)}
+            {dashboardOpenSupportConversations.map((conversation) => <div key={conversation.id} className="list-item"><span>{conversation.subject || 'Support'} · tg:{conversation.telegramUserId ?? '—'}</span><StatusBadge value={conversation.status} /></div>)}
+            {dashboardFailedPayments.length === 0 && dashboardFailedProvisioningRuns.length === 0 && dashboardOpenSupportConversations.length === 0 && <EmptyState title="Нет срочных проблем" description="В доступных очередях сейчас нет ошибок, требующих реакции." />}
           </div>
         </SectionCard>
       </div>

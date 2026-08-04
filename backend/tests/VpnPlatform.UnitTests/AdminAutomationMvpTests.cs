@@ -1,10 +1,12 @@
 using System.Text.Json;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -46,7 +48,7 @@ public class AdminAutomationMvpTests
             secret: "payment-secret-must-not-leak"));
         await db.SaveChangesAsync();
 
-        var result = await new AdminDashboardController(db).GetSummary(CancellationToken.None);
+        var result = await CreateDashboardController(db, UserRoles.Admin).GetSummary(CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var json = JsonSerializer.Serialize(ok.Value);
@@ -91,7 +93,7 @@ public class AdminAutomationMvpTests
         });
         await db.SaveChangesAsync();
 
-        var blocked = Assert.IsType<OkObjectResult>(await new AdminDashboardController(db).GetSummary(CancellationToken.None));
+        var blocked = Assert.IsType<OkObjectResult>(await CreateDashboardController(db, UserRoles.Admin).GetSummary(CancellationToken.None));
         var blockedSummary = Assert.IsType<AdminDashboardSummaryDto>(blocked.Value);
         Assert.False(blockedSummary.ProductionReadiness.IsReady);
         Assert.Contains(blockedSummary.ProductionReadiness.Checks, x => x.Key == "vpn-node" && x.Status == "Blocked");
@@ -139,7 +141,7 @@ public class AdminAutomationMvpTests
         });
         await db.SaveChangesAsync();
 
-        var ready = Assert.IsType<OkObjectResult>(await new AdminDashboardController(db).GetSummary(CancellationToken.None));
+        var ready = Assert.IsType<OkObjectResult>(await CreateDashboardController(db, UserRoles.Admin).GetSummary(CancellationToken.None));
         var readySummary = Assert.IsType<AdminDashboardSummaryDto>(ready.Value);
         Assert.True(readySummary.ProductionReadiness.IsReady);
         Assert.All(readySummary.ProductionReadiness.Checks, check => Assert.Equal("Ready", check.Status));
@@ -687,6 +689,21 @@ public class AdminAutomationMvpTests
             paymentOrchestrator: null!,
             paymentProviderAccounts: new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock()));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        return controller;
+    }
+
+    private static AdminDashboardController CreateDashboardController(ApplicationDbContext db, string role)
+    {
+        var controller = new AdminDashboardController(db);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    new[] { new Claim(ClaimTypes.Role, role) },
+                    "test"))
+            }
+        };
         return controller;
     }
 

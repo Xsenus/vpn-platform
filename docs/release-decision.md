@@ -22,12 +22,12 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `996/996`.
+- Backend full suite: `999/999`.
 - API Release build: OK.
 - Frontend unit tests: `77/77`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `14/14`; responsive all-screens: `6/6`.
+- Browser console smoke: `16/16`; responsive all-screens: `6/6`.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -45,10 +45,11 @@ Production-ready решение заблокировано следующими 
 - Subscription expiration disables remote access before `Expired`, persists lease/backoff retry state on provider failure and isolates lifecycle/panel worker failures per item.
 - Panel sync uses a cross-instance unique claim, stale lease/snapshot recovery and redacted persisted diagnostics; legacy raw panel errors are cleared by the upgrade path.
 - Admin session returns a backend-owned capability matrix; partial roles only load permitted sections and user overview redacts finance/support domains without their read policies.
+- Dashboard summary avoids finance/support queries without matching read policies, filters payment/Telegram readiness checks and keeps partial-role UI free of hidden-domain metrics and actions.
 - Terminal subscription cancellation атомарно отзывает доступ, удаляет provider-клиента и освобождает capacity; rollback и provider uncertainty проверены fault-injection тестами.
 - X3Ui client migration резервирует target capacity до remote add и компенсирует remote/local failure; last-slot concurrency проверена на независимых SQLite-контекстах.
-- Latest "Что нового": `2026-08-05-admin-capability-aware-ui`, версия `0.494.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `506/526` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-admin-dashboard-domain-redaction`, версия `0.495.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `507/527` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

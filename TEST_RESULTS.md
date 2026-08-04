@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: admin dashboard domain redaction
+
+Scope:
+- Проверено, что dashboard не раскрывает finance/support/Telegram aggregates и readiness partial roles без соответствующих backend policies, а frontend не показывает скрытые доменные блоки и переходы.
+
+Results:
+- Roadmap progress: `507/527` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-admin-dashboard-domain-redaction`, version `0.495.0`.
+- Backend full suite: OK, `999/999`; targeted dashboard/automation/sandbox: OK, `29/29`; SQLite Support/Finance/Admin matrix: OK, `3/3`.
+- Dashboard пропускает недоступные finance/support/Telegram queries, обнуляет скрытые агрегаты и фильтрует payment/Telegram readiness checks.
+- Frontend tests: OK, `77/77`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Support desktop/mobile regression: OK, `2/2`; finance metrics, последние заказы, payment readiness actions и finance API calls отсутствуют, support queue видима, horizontal overflow отсутствует.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, без неожиданных console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа, latest release `2026-08-05-admin-dashboard-domain-redaction`.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `615` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: admin capability-aware UI
 
 Scope:

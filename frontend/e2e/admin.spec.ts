@@ -228,6 +228,15 @@ async function mockAdminApi(page: Page) {
         })
         return
       }
+      if (loginEmail === 'support-e2e@example.test') {
+        await fulfillJson(route, {
+          accessToken: 'support-e2e-token',
+          refreshToken: 'support-e2e-refresh',
+          email: loginEmail,
+          displayName: 'Support E2E'
+        })
+        return
+      }
       await fulfillJson(route, {
         accessToken: 'admin-e2e-token',
         refreshToken: 'admin-e2e-refresh',
@@ -259,42 +268,47 @@ async function mockAdminApi(page: Page) {
         return
       }
       const financeSession = request.headers().authorization === 'Bearer finance-e2e-token'
+      const supportSession = request.headers().authorization === 'Bearer support-e2e-token'
       await fulfillJson(route, {
-        userId: financeSession ? 'finance-user' : 'admin-user',
-        email: financeSession ? 'finance-e2e@example.test' : 'admin-e2e@example.test',
-        displayName: financeSession ? 'Finance E2E' : 'Admin E2E',
-        roles: [financeSession ? 'FinanceManager' : 'Admin'],
+        userId: financeSession ? 'finance-user' : supportSession ? 'support-user' : 'admin-user',
+        email: financeSession ? 'finance-e2e@example.test' : supportSession ? 'support-e2e@example.test' : 'admin-e2e@example.test',
+        displayName: financeSession ? 'Finance E2E' : supportSession ? 'Support E2E' : 'Admin E2E',
+        roles: [financeSession ? 'FinanceManager' : supportSession ? 'SupportAgent' : 'Admin'],
         capabilities: financeSession
           ? { ...fullAdminCapabilities, adminWrite: false, supportRead: false, supportWrite: false, provisioningManage: false, vpnManage: false, botManage: false, settingsManage: false }
+          : supportSession
+            ? { ...fullAdminCapabilities, adminWrite: false, financeRead: false, financeWrite: false, provisioningManage: false, vpnManage: false, botManage: false, settingsManage: false }
           : fullAdminCapabilities
       })
       return
     }
 
     if (method === 'GET' && path === '/api/admin/dashboard/summary') {
+      const financeVisible = request.headers().authorization !== 'Bearer support-e2e-token'
+      const supportVisible = request.headers().authorization !== 'Bearer finance-e2e-token'
       await fulfillJson(route, {
         totalUsers: 4,
         telegramUsers: 2,
         activeSubscriptions: 3,
         expiringSubscriptions: 1,
-        paidOrders: 5,
-        pendingOrders: 1,
-        failedPayments: 1,
-        recentPayments: 2,
-        recentOrders: 3,
+        paidOrders: financeVisible ? 5 : 0,
+        pendingOrders: financeVisible ? 1 : 0,
+        failedPayments: financeVisible ? 1 : 0,
+        recentPayments: financeVisible ? 2 : 0,
+        recentOrders: financeVisible ? 3 : 0,
         vpnAccessesCount: 3,
         vpnNodesCount: 1,
         healthyVpnNodes: 1,
         vpnPanelsCount: panels.length,
         healthyVpnPanels: panels.filter((item) => item.healthStatus === 'Healthy').length,
-        supportConversationsCount: 1,
-        openSupportConversations: 1,
+        supportConversationsCount: supportVisible ? 1 : 0,
+        openSupportConversations: supportVisible ? 1 : 0,
         provisioningErrors: 0,
         productionReadiness: {
           isReady: true,
           status: 'Ready',
           checks: [
-            { key: 'payments', label: 'Платежи', status: 'Ready', message: 'Sandbox провайдер готов.', category: 'Sales', actionHref: '#payments', actionLabel: 'Открыть оплаты' },
+            ...(financeVisible ? [{ key: 'payments', label: 'Платежи', status: 'Ready', message: 'Sandbox провайдер готов.', category: 'Sales', actionHref: '#payments', actionLabel: 'Открыть оплаты' }] : []),
             { key: 'vpn', label: 'VPN', status: 'Ready', message: 'Панель и inbound доступны.', category: 'VPN', actionHref: '#panels', actionLabel: 'Открыть панели' }
           ]
         },
@@ -794,5 +808,35 @@ test('finance role loads only permitted data and keeps common sections read-only
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.locator('#payments form').first()).toBeVisible()
   await expect(page.getByText('Только просмотр')).toHaveCount(0)
+  expect(failedResponses).toEqual([])
+})
+
+test('support role dashboard hides finance data and keeps support queue visible', async ({ page }) => {
+  const failedResponses: string[] = []
+  page.on('response', (response) => {
+    if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`)
+  })
+  const api = await mockAdminApi(page)
+
+  await page.goto('http://127.0.0.1:5295/')
+  await page.locator('.admin-login-form input[type="email"]').fill('support-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('SupportPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect(page.locator('.admin-section-select option[value="support"]')).toHaveCount(1)
+  await expect(page.locator('.admin-section-select option[value="payments"]')).toHaveCount(0)
+  await expect(page.getByText('Оплачено / ожидает')).toHaveCount(0)
+  await expect(page.getByText('Неуспешные платежи')).toHaveCount(0)
+  await expect(page.getByText('Свежие платежи / заказы')).toHaveCount(0)
+  await expect(page.getByText('Последние заказы')).toHaveCount(0)
+  await expect(page.getByText('Очередь поддержки')).toBeVisible()
+  await expect(page.getByText('Готовность инфраструктуры')).toBeVisible()
+  await expect(page.getByText('Проверка доступа · tg:—', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть оплаты' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(api.getLastRequest('/api/admin/payments', 'GET')).toBeUndefined()
+  expect(api.getLastRequest('/api/admin/orders', 'GET')).toBeUndefined()
+  expect(api.getLastRequest('/api/admin/support/conversations', 'GET')).toBeTruthy()
   expect(failedResponses).toEqual([])
 })

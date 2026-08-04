@@ -11534,5 +11534,28 @@
         "text": "Roadmap progress is 506/526 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-admin-dashboard-domain-redaction",
+    "version": "0.495.0",
+    "releasedAt": "2026-08-05T05:30:00+07:00",
+    "title": "Дашборд учитывает доменные права роли",
+    "summary": "Финансовые, support и Telegram показатели больше не раскрываются административным ролям без соответствующих возможностей.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Dashboard summary не выполняет недоступные finance/support/Telegram запросы, обнуляет скрытые агрегаты и фильтрует readiness checks по backend policy matrix."
+      },
+      {
+        "type": "fixed",
+        "text": "Admin-panel скрывает финансовые показатели, последние заказы и недоступные readiness actions; Support видит только разрешенную очередь и инфраструктурные проверки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 507/527 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

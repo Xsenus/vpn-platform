@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -32,28 +33,36 @@ public class AdminDashboardController : ControllerBase
         var now = DateTimeOffset.UtcNow;
         var expiringAt = now.AddDays(7);
         var recentSince = now.AddDays(-7);
+        var roles = User?.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray() ?? [];
+        var canReadFinance = AdminPolicies.HasAccess(roles, AdminPolicies.FinanceRead);
+        var canReadSupport = AdminPolicies.HasAccess(roles, AdminPolicies.SupportRead);
+        var canManageBot = AdminPolicies.HasAccess(roles, AdminPolicies.BotManage);
         var activeSubscriptionEndDates = await _db.Subscriptions
             .AsNoTracking()
             .Where(x => x.Status == SubscriptionStatus.Active)
             .Select(x => x.EndAt)
             .ToListAsync(cancellationToken);
-        var recentPaymentDates = await _db.Payments
+        var recentPaymentDates = canReadFinance
+            ? await _db.Payments
             .AsNoTracking()
             .Select(x => x.CreatedAt)
-            .ToListAsync(cancellationToken);
-        var recentOrderDates = await _db.Orders
+            .ToListAsync(cancellationToken)
+            : [];
+        var recentOrderDates = canReadFinance
+            ? await _db.Orders
             .AsNoTracking()
             .Select(x => x.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            : [];
 
         var summary = new AdminDashboardSummaryDto(
             await _db.Users.AsNoTracking().CountAsync(cancellationToken),
             await _db.TelegramAccounts.AsNoTracking().CountAsync(cancellationToken),
             activeSubscriptionEndDates.Count,
             activeSubscriptionEndDates.Count(x => x <= expiringAt),
-            await _db.Orders.AsNoTracking().CountAsync(x => x.Status == OrderStatus.PaymentReceived || x.Status == OrderStatus.Completed, cancellationToken),
-            await _db.Orders.AsNoTracking().CountAsync(x => x.Status == OrderStatus.PendingPayment || x.Status == OrderStatus.Draft, cancellationToken),
-            await _db.Payments.AsNoTracking().CountAsync(x => x.Status == PaymentStatus.Failed || x.Status == PaymentStatus.Cancelled, cancellationToken),
+            canReadFinance ? await _db.Orders.AsNoTracking().CountAsync(x => x.Status == OrderStatus.PaymentReceived || x.Status == OrderStatus.Completed, cancellationToken) : 0,
+            canReadFinance ? await _db.Orders.AsNoTracking().CountAsync(x => x.Status == OrderStatus.PendingPayment || x.Status == OrderStatus.Draft, cancellationToken) : 0,
+            canReadFinance ? await _db.Payments.AsNoTracking().CountAsync(x => x.Status == PaymentStatus.Failed || x.Status == PaymentStatus.Cancelled, cancellationToken) : 0,
             recentPaymentDates.Count(x => x >= recentSince),
             recentOrderDates.Count(x => x >= recentSince),
             await _db.AccessCredentials.AsNoTracking().CountAsync(cancellationToken),
@@ -61,21 +70,26 @@ public class AdminDashboardController : ControllerBase
             await _db.VpnNodes.AsNoTracking().CountAsync(x => x.HealthStatus == HealthStatus.Healthy, cancellationToken),
             await _db.VpnPanels.AsNoTracking().CountAsync(cancellationToken),
             await _db.VpnPanels.AsNoTracking().CountAsync(x => x.HealthStatus == HealthStatus.Healthy, cancellationToken),
-            await _db.SupportConversations.AsNoTracking().CountAsync(cancellationToken),
-            await _db.SupportConversations.AsNoTracking().CountAsync(x => x.Status == "open" || x.Status == "pending", cancellationToken),
+            canReadSupport ? await _db.SupportConversations.AsNoTracking().CountAsync(cancellationToken) : 0,
+            canReadSupport ? await _db.SupportConversations.AsNoTracking().CountAsync(x => x.Status == "open" || x.Status == "pending", cancellationToken) : 0,
             await _db.ProvisioningRuns.AsNoTracking().CountAsync(x => x.Status == ProvisioningRunStatus.Failed, cancellationToken),
-            await BuildProductionReadinessAsync(cancellationToken),
+            await BuildProductionReadinessAsync(canReadFinance, canManageBot, cancellationToken),
             now);
 
         return Ok(summary);
     }
 
-    private async Task<AdminProductionReadinessDto> BuildProductionReadinessAsync(CancellationToken cancellationToken)
+    private async Task<AdminProductionReadinessDto> BuildProductionReadinessAsync(
+        bool canReadFinance,
+        bool canManageBot,
+        CancellationToken cancellationToken)
     {
-        var productionPaymentAccounts = await _db.PaymentProviderAccounts
+        var productionPaymentAccounts = canReadFinance
+            ? await _db.PaymentProviderAccounts
             .AsNoTracking()
             .Where(x => x.IsEnabled && x.Mode == PaymentProviderMode.Production && x.Provider != PaymentProvider.TelegramStars)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            : [];
         var livePaymentProviders = productionPaymentAccounts.Count(x =>
             x.SecretKeyProtected != string.Empty &&
             (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal));
@@ -126,7 +140,9 @@ public class AdminDashboardController : ControllerBase
                 !x.TagsCsv.ToLower().Contains("sandbox"),
                 cancellationToken);
 
-        var telegramState = await BuildTelegramReadinessStateAsync(cancellationToken);
+        var telegramState = canManageBot
+            ? await BuildTelegramReadinessStateAsync(cancellationToken)
+            : (IsReady: false, Message: string.Empty);
         var failedProvisioningRuns = await _db.ProvisioningRuns
             .AsNoTracking()
             .CountAsync(x => x.Status == ProvisioningRunStatus.Failed || x.Status == ProvisioningRunStatus.PrecheckFailed, cancellationToken);
@@ -143,7 +159,10 @@ public class AdminDashboardController : ControllerBase
             Check("telegram-bot", "Telegram-бот", telegramState.IsReady, telegramState.Message, "Telegram", "warning", "Открыть Telegram", "#bot"),
             Check("vps-provisioning", "Очередь VPS provisioning", failedProvisioningRuns == 0, failedProvisioningRuns == 0 ? "Готово: нет упавших precheck/deploy запусков." : $"Есть упавшие provisioning-запуски: {failedProvisioningRuns}.", "VPS", "warning", "Открыть VPS", "#provisioning"),
             Check("ci-cd", "CI/CD workflow", ciCdReady, ciCdReady ? "Готово: найдены workflow для CI и VPS deploy." : "Не найдены workflow ci.yml и deploy-vps.yml в .github/workflows.", "CI/CD", "warning", "Открыть деплой", "#provisioning")
-        };
+        }
+        .Where(check => canReadFinance || check.Key is not ("payment-provider" or "payment-webhook"))
+        .Where(check => canManageBot || check.Key != "telegram-bot")
+        .ToArray();
 
         var isReady = checks.All(x => x.Status == "Ready");
         return new AdminProductionReadinessDto(isReady, isReady ? "Ready" : "Blocked", checks);

@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("996/996", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-admin-capability-aware-ui", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("999/999", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-admin-dashboard-domain-redaction", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "996/996",
-                     "2026-08-05-admin-capability-aware-ui",
-                     "0.494.0",
+                     "999/999",
+                     "2026-08-05-admin-dashboard-domain-redaction",
+                     "0.495.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,17 +104,17 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-admin-capability-aware-ui",
-                     "0.494.0",
-                     "506/526",
+                     "2026-08-05-admin-dashboard-domain-redaction",
+                     "0.495.0",
+                     "507/527",
                      "96.2%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `996/996`",
+                     "Backend full suite: OK, `999/999`",
                      "Local SQLite smoke: OK",
-                     "Secret scan: OK, `614` files, `0` findings",
+                     "Secret scan: OK, `615` files, `0` findings",
                      "Artifact cleanup: OK",
                      "external evidence remains open",
                      "real VPS/staging/live evidence remains open"
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-admin-capability-aware-ui",
-                     "0.494.0",
-                     "506/526",
+                     "2026-08-05-admin-dashboard-domain-redaction",
+                     "0.495.0",
+                     "507/527",
                      "96.2%",
                      "20",
                      "19",
@@ -166,9 +166,9 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `996/996`",
+                     "backend full suite `999/999`",
                      "PostgreSQL SQL",
-                     "secret scan `614` files, `0` findings"
+                     "secret scan `615` files, `0` findings"
                  })
         {
             Assert.Contains(expected, changelog, StringComparison.OrdinalIgnoreCase);

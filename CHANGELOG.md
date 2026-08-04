@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.495.0 - 2026-08-05
+
+Release entry: `2026-08-05-admin-dashboard-domain-redaction`.
+
+### Исправлено
+
+- Dashboard summary теперь вычисляет finance/support aggregates только при `FinanceRead`/`SupportRead`, поэтому partial roles не получают данные соседнего домена.
+- Production readiness не запрашивает и не возвращает payment checks без `FinanceRead` и Telegram check без `BotManage`.
+- Admin-panel скрывает финансовые tiles, последние заказы, недоступные attention items и readiness actions; Support получает отдельное инфраструктурное описание dashboard.
+- Readiness action дополнительно не отображается, если target section отсутствует в capability-filtered navigation.
+
+### Проверено
+
+- Backend full suite `999/999`; targeted dashboard/automation/sandbox `29/29`, включая SQLite role matrix Support/Finance/Admin `3/3`.
+- Frontend `77/77`, typecheck/build OK; Support desktop/mobile `2/2` подтверждает отсутствие finance metrics/orders/payment actions/API calls, видимую support queue и отсутствие overflow.
+- Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow; fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `615` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `507/527` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.494.0 - 2026-08-05
 
 Release entry: `2026-08-05-admin-capability-aware-ui`.
