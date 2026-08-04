@@ -1,5 +1,9 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Api.Controllers.Public;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
@@ -10,6 +14,55 @@ namespace VpnPlatform.UnitTests;
 
 public class CheckoutSessionTests
 {
+    [Fact]
+    public async Task Public_Checkout_Controller_Should_Cover_Create_Get_Claimed_Status_And_Legacy_Gone_Response()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock(new DateTimeOffset(2026, 4, 29, 8, 0, 0, TimeSpan.Zero));
+        var tariff = await SeedTariffAsync(db);
+        var user = await SeedUserAsync(db, "controller-buyer@example.test");
+        var orderService = new OrderService(db, clock);
+        var checkoutService = new CheckoutSessionService(db, clock, orderService);
+        var controller = new OrdersController(checkoutService, orderService);
+
+        var createdResult = await controller.CreateCheckoutSession(
+            new CreateCheckoutSessionHttpRequest(tariff.Id, "NewSubscription", "Web", "YooKassa", null, true, user.Email, "https://example.test/return"),
+            CancellationToken.None);
+        var created = Assert.IsType<CheckoutSessionDto>(Assert.IsType<OkObjectResult>(createdResult).Value);
+
+        var getResult = await controller.GetCheckoutSession(created.Token, CancellationToken.None);
+        Assert.IsType<CheckoutSessionDto>(Assert.IsType<OkObjectResult>(getResult).Value);
+
+        var claimed = await checkoutService.ClaimAsync(new ClaimCheckoutSessionCommand(created.Token, user.Id));
+        Assert.True(claimed.IsSuccess, claimed.Error);
+        var statusResult = await controller.GetStatus(claimed.Value!.Id, CancellationToken.None);
+        Assert.IsType<OkObjectResult>(statusResult);
+
+        var legacyResult = Assert.IsType<ObjectResult>(controller.CreateAnonymousOrder());
+        Assert.Equal(StatusCodes.Status410Gone, legacyResult.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("invalid", "Web", "YooKassa")]
+    [InlineData("NewSubscription", "invalid", "YooKassa")]
+    [InlineData("NewSubscription", "Web", "invalid")]
+    [InlineData("999", "Web", "YooKassa")]
+    public async Task Public_Checkout_Controller_Should_Return_BadRequest_For_Invalid_Enum_Values(string type, string channel, string provider)
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock(new DateTimeOffset(2026, 4, 29, 8, 0, 0, TimeSpan.Zero));
+        var tariff = await SeedTariffAsync(db);
+        var orderService = new OrderService(db, clock);
+        var controller = new OrdersController(new CheckoutSessionService(db, clock, orderService), orderService);
+
+        var result = await controller.CreateCheckoutSession(
+            new CreateCheckoutSessionHttpRequest(tariff.Id, type, channel, provider, null, false, null, null),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.CheckoutSessions.ToListAsync());
+    }
+
     [Fact]
     public async Task CheckoutSession_Should_Store_Only_Token_Hash_And_Create_User_Bound_Order_On_Claim()
     {

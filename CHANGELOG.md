@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.456.0 - 2026-08-04
+
+Release entry: `2026-08-04-operation-boundary-quality-audit`.
+
+### Fixed
+- Public checkout, cabinet payment initialization and admin user/tariff/referral updates now return 400 for malformed or undefined enum/JSON values instead of throwing or partially mutating tracked entities.
+- VPN provisioning remains fail-closed when a production node or active inbound is unavailable; no local client, remote client call or inbound capacity change is left behind.
+- Payment webhook dispatch now depends on `IPaymentWebhookProcessor`, and controller tests cover routing and response contracts for all 8 providers.
+
+### Improved
+- All public, cabinet and 16 admin screens now pass a browser quality gate for `main` landmarks, duplicate IDs, image alt text and accessible control names.
+- Direct controller coverage was added for checkout sessions, payment webhooks, VPN panels, release history, unsupported channels and administrative writes.
+- A diagnostic coverage run measured 51.9% line, 51.8% branch and 79.9% controller line coverage; it is a local gap-finding metric, not production evidence.
+
+### Notes
+- Validation: backend full suite `775/775`, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `48/48` keep current evidence synchronized.
+- Secret scan: `558` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `468/488` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.455.0 - 2026-08-04
 
 Release entry: `2026-08-04-full-project-quality-audit`.

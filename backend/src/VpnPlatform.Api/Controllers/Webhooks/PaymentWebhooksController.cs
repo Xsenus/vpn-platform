@@ -3,7 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using VpnPlatform.Api.Security;
-using VpnPlatform.Application.Services;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Controllers.Webhooks;
@@ -13,11 +13,11 @@ namespace VpnPlatform.Api.Controllers.Webhooks;
 [EnableRateLimiting(ApiRateLimitPolicies.Webhook)]
 public class PaymentWebhooksController : ControllerBase
 {
-    private readonly PaymentOrchestrator _paymentOrchestrator;
+    private readonly IPaymentWebhookProcessor _paymentWebhookProcessor;
 
-    public PaymentWebhooksController(PaymentOrchestrator paymentOrchestrator)
+    public PaymentWebhooksController(IPaymentWebhookProcessor paymentWebhookProcessor)
     {
-        _paymentOrchestrator = paymentOrchestrator;
+        _paymentWebhookProcessor = paymentWebhookProcessor;
     }
 
     [HttpPost("yoomoney")]
@@ -57,7 +57,7 @@ public class PaymentWebhooksController : ControllerBase
         {
             headers["X-CloudPayments-Event"] = eventType;
         }
-        var result = await _paymentOrchestrator.HandleWebhookAsync(providerType, rawBody, headers, cancellationToken);
+        var result = await _paymentWebhookProcessor.ProcessAsync(providerType, rawBody, headers, cancellationToken);
         if (providerType == PaymentProvider.RoboKassa && result.IsSuccess)
         {
             return Content($"OK{ReadFormValue(rawBody, "InvId")}", "text/plain", Encoding.UTF8);

@@ -218,8 +218,12 @@ public class SubscriptionScenarioProvisioningTests
         Assert.Contains(NodeAllocationService.NoAvailableNodeError, result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Null(provider.LastRequest);
         Assert.Empty(await db.AccessCredentials.ToListAsync());
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Equal(OrderStatus.PartiallyProcessed, order.Status);
         var subscription = await db.Subscriptions.SingleAsync();
         Assert.Equal(SubscriptionStatus.PendingActivation, subscription.Status);
+        Assert.Contains(NodeAllocationService.NoAvailableNodeError, subscription.BlockReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_access.provisioning_failed" && x.EntityId == subscription.Id.ToString());
     }
 
     [Fact]

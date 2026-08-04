@@ -110,6 +110,49 @@ public class AdminUsersControllerTests
         Assert.Equal(UserStatus.Suspended, updated.Status);
     }
 
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("{\"status\":\"999\"}")]
+    [InlineData("{\"status\":999}")]
+    [InlineData("{\"isBlocked\":\"true\"}")]
+    [InlineData("{\"displayName\":123}")]
+    public async Task Patch_Should_Reject_Invalid_Field_Types_Without_Mutating_User(string rawPayload)
+    {
+        await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = userId,
+            Email = "validation@example.test",
+            DisplayName = "Before",
+            PasswordHash = "secret-hash",
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            IsBlocked = false,
+            ReferralCode = "REF4"
+        });
+        await db.SaveChangesAsync();
+        using var payload = JsonDocument.Parse(rawPayload);
+
+        var result = await new AdminUsersController(db).Patch(userId, payload.RootElement, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == userId);
+        Assert.Equal("Before", user.DisplayName);
+        Assert.False(user.IsBlocked);
+        Assert.Equal(UserStatus.Active, user.Status);
+    }
+
+    [Fact]
+    public async Task GetList_Should_Reject_Undefined_Numeric_Status_Filter()
+    {
+        await using var db = CreateDbContext();
+
+        var result = await new AdminUsersController(db).GetList(null, "999", null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
     [Fact]
     public async Task GetOverview_Should_Return_Full_User_Profile_On_Sqlite()
     {

@@ -176,15 +176,17 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-06-14 локально подтверждено:
 
-- backend full suite: 737/737;
+- backend full suite: 775/775;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
 - browser console smoke: 12/12; responsive all-screens: 6/6;
 - frontend high-severity audit: OK; остаются `2 moderate` React Router advisory вне используемых SPA SSR/RSC путей;
-- latest "Что нового": `2026-08-04-full-project-quality-audit`, версия `0.455.0`.
-- roadmap progress: `467/487` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
+- page quality gate: public, cabinet and 16 admin screens pass landmark, duplicate ID, image alt and accessible-name checks.
+- latest "Что нового": `2026-08-04-operation-boundary-quality-audit`, версия `0.456.0`.
+- roadmap progress: `468/488` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

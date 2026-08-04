@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("737/737", readme, StringComparison.Ordinal);
+        Assert.Contains("775/775", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("high-severity audit: OK", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("2 moderate", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-04-full-project-quality-audit", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-operation-boundary-quality-audit", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "737/737",
-                     "2026-08-04-full-project-quality-audit",
-                     "0.455.0",
+                     "775/775",
+                     "2026-08-04-operation-boundary-quality-audit",
+                     "0.456.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

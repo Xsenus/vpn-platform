@@ -35,8 +35,13 @@ public class AdminUsersController : ControllerBase
                 || x.ReferralCode.ToLower().Contains(normalized));
         }
 
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<UserStatus>(status, true, out var parsedStatus))
+        if (!string.IsNullOrWhiteSpace(status))
         {
+            if (!Enum.TryParse<UserStatus>(status, true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
+            {
+                return BadRequest(new { error = "Invalid user status." });
+            }
+
             query = query.Where(x => x.Status == parsedStatus);
         }
 
@@ -239,9 +244,49 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (user is null) return NotFound();
 
-        if (payload.TryGetProperty("displayName", out var displayName)) user.DisplayName = displayName.GetString() ?? user.DisplayName;
-        if (payload.TryGetProperty("isBlocked", out var isBlocked)) user.IsBlocked = isBlocked.GetBoolean();
-        if (payload.TryGetProperty("status", out var status) && Enum.TryParse<UserStatus>(status.GetString(), true, out var parsed)) user.Status = parsed;
+        if (payload.ValueKind != JsonValueKind.Object)
+        {
+            return BadRequest(new { error = "User patch must be a JSON object." });
+        }
+
+        string? nextDisplayName = null;
+        if (payload.TryGetProperty("displayName", out var displayName))
+        {
+            if (displayName.ValueKind != JsonValueKind.String)
+            {
+                return BadRequest(new { error = "Display name must be a string." });
+            }
+
+            nextDisplayName = displayName.GetString();
+        }
+
+        bool? nextIsBlocked = null;
+        if (payload.TryGetProperty("isBlocked", out var isBlocked))
+        {
+            if (isBlocked.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            {
+                return BadRequest(new { error = "isBlocked must be a boolean." });
+            }
+
+            nextIsBlocked = isBlocked.GetBoolean();
+        }
+
+        UserStatus? nextStatus = null;
+        if (payload.TryGetProperty("status", out var status))
+        {
+            if (status.ValueKind != JsonValueKind.String
+                || !Enum.TryParse<UserStatus>(status.GetString(), true, out var parsed)
+                || !Enum.IsDefined(parsed))
+            {
+                return BadRequest(new { error = "Invalid user status." });
+            }
+
+            nextStatus = parsed;
+        }
+
+        if (nextDisplayName is not null) user.DisplayName = nextDisplayName;
+        if (nextIsBlocked.HasValue) user.IsBlocked = nextIsBlocked.Value;
+        if (nextStatus.HasValue) user.Status = nextStatus.Value;
 
         user.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);

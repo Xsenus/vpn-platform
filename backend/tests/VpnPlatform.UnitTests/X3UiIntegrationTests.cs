@@ -1,7 +1,9 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
@@ -103,13 +105,18 @@ public class X3UiIntegrationTests
         var clock = new FixedClock();
         var client = new FakeX3UiClient(clock.UtcNow);
         var service = new X3UiPanelService(db, client, new TestSecretProtector(), clock);
+        var controller = new AdminVpnPanelsController(service);
         var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
 
-        var health = await service.CheckHealthAsync(ids.PanelId, CancellationToken.None);
-        var sync = await service.SyncPanelAsync(ids.PanelId, CancellationToken.None);
+        var health = Assert.IsType<PanelHealthCheckDto>(Assert.IsType<OkObjectResult>(await controller.TestConnection(ids.PanelId, CancellationToken.None)).Value);
+        Assert.IsType<OkObjectResult>(await controller.HealthCheck(ids.PanelId, CancellationToken.None));
+        var sync = Assert.IsType<PanelSyncRunDto>(Assert.IsType<OkObjectResult>(await controller.Sync(ids.PanelId, CancellationToken.None)).Value);
 
-        Assert.True(health.IsSuccess, health.Error);
-        Assert.True(sync.IsSuccess, sync.Error);
+        Assert.Equal("Healthy", health.Status);
+        Assert.Equal("Succeeded", sync.Status);
+        Assert.IsType<OkObjectResult>(await controller.GetSyncRuns(ids.PanelId, CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.GetSyncEvents(sync.Id, CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.GetHealthChecks(ids.PanelId, CancellationToken.None));
         Assert.Equal(HealthStatus.Healthy, (await db.VpnPanels.SingleAsync()).HealthStatus);
         Assert.True(await db.PanelHealthChecks.AnyAsync(x => x.Status == HealthStatus.Healthy));
         Assert.True(await db.PanelSyncEvents.AnyAsync(x => x.EventType == "orphan_client"));
@@ -122,8 +129,9 @@ public class X3UiIntegrationTests
         await using var db = CreateDbContext();
         var clock = new FixedClock();
         var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+        var controller = new AdminVpnPanelsController(service);
 
-        var created = await service.CreatePanelAsync(new CreateVpnPanelCommand(
+        var created = Assert.IsType<VpnPanelDto>(Assert.IsType<OkObjectResult>(await controller.CreatePanel(new CreateVpnPanelCommand(
             "main-panel",
             "https://panel.example.test:2053/",
             "admin",
@@ -133,13 +141,15 @@ public class X3UiIntegrationTests
             "Strict",
             "X3UiOfficial",
             false,
-            "{}"), CancellationToken.None);
+            "{}"), CancellationToken.None)).Value);
 
-        Assert.True(created.IsSuccess, created.Error);
         var panel = await db.VpnPanels.SingleAsync();
+        Assert.Equal(panel.Id, created.Id);
+        Assert.IsType<OkObjectResult>(await controller.GetPanels(CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.GetPanel(panel.Id, CancellationToken.None));
         var originalPassword = panel.EncryptedPassword;
 
-        var updated = await service.UpdatePanelAsync(panel.Id, new UpdateVpnPanelCommand(
+        var updated = Assert.IsType<VpnPanelDto>(Assert.IsType<OkObjectResult>(await controller.UpdatePanel(panel.Id, new UpdateVpnPanelCommand(
             Name: "edited-panel",
             BaseUrl: "https://edited-panel.example.test:2053/",
             Login: "root-admin",
@@ -150,9 +160,8 @@ public class X3UiIntegrationTests
             ApiVariant: "ThreeXUi",
             AutoCreateInbound: true,
             DefaultInboundTemplateJson: "{\"remark\":\"auto-vless\"}",
-            Status: "Active"), CancellationToken.None);
+            Status: "Active"), CancellationToken.None)).Value);
 
-        Assert.True(updated.IsSuccess, updated.Error);
         Assert.Equal("edited-panel", panel.Name);
         Assert.Equal("https://edited-panel.example.test:2053", panel.BaseUrl);
         Assert.Equal("root-admin", panel.Login);
@@ -164,7 +173,7 @@ public class X3UiIntegrationTests
         Assert.Equal("{\"remark\":\"auto-vless\"}", panel.DefaultInboundTemplateJson);
         Assert.Equal(VpnPanelStatus.Active, panel.Status);
         Assert.Equal(originalPassword, panel.EncryptedPassword);
-        Assert.Equal("edited-panel", updated.Value!.Name);
+        Assert.Equal("edited-panel", updated.Name);
     }
 
     [Fact]
@@ -173,6 +182,7 @@ public class X3UiIntegrationTests
         await using var db = CreateDbContext();
         var clock = new FixedClock();
         var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+        var controller = new AdminVpnPanelsController(service);
         var panelId = Guid.NewGuid();
         db.VpnPanels.Add(new VpnPanel
         {
@@ -187,11 +197,10 @@ public class X3UiIntegrationTests
         });
         await db.SaveChangesAsync();
 
-        var result = await service.DeletePanelAsync(panelId, CancellationToken.None);
+        var result = Assert.IsType<DeleteVpnPanelResultDto>(Assert.IsType<OkObjectResult>(await controller.DeletePanel(panelId, CancellationToken.None)).Value);
 
-        Assert.True(result.IsSuccess, result.Error);
-        Assert.True(result.Value!.Deleted);
-        Assert.False(result.Value.Archived);
+        Assert.True(result.Deleted);
+        Assert.False(result.Archived);
         Assert.False(await db.VpnPanels.AnyAsync(x => x.Id == panelId));
     }
 
@@ -302,6 +311,7 @@ public class X3UiIntegrationTests
         var clock = new FixedClock();
         var client = new FakeX3UiClient(clock.UtcNow);
         var service = new X3UiPanelService(db, client, new TestSecretProtector(), clock);
+        var controller = new AdminVpnPanelsController(service);
         var panelId = Guid.NewGuid();
         db.VpnPanels.Add(new VpnPanel
         {
@@ -316,33 +326,30 @@ public class X3UiIntegrationTests
         });
         await db.SaveChangesAsync();
 
-        var first = await service.CreateInboundAsync(panelId, NewInboundCommand(name: "main-vless", isDefault: true), CancellationToken.None);
-        var second = await service.CreateInboundAsync(panelId, NewInboundCommand(name: "backup-vmess", protocol: "VMESS", port: 8443, isDefault: true), CancellationToken.None);
+        var first = Assert.IsType<VpnInboundDto>(Assert.IsType<OkObjectResult>(await controller.CreateInbound(panelId, NewInboundCommand(name: "main-vless", isDefault: true), CancellationToken.None)).Value);
+        var second = Assert.IsType<VpnInboundDto>(Assert.IsType<OkObjectResult>(await controller.CreateInbound(panelId, NewInboundCommand(name: "backup-vmess", protocol: "VMESS", port: 8443, isDefault: true), CancellationToken.None)).Value);
 
-        Assert.True(first.IsSuccess, first.Error);
-        Assert.True(second.IsSuccess, second.Error);
         Assert.Equal(2, client.CreateInboundCalls);
-        Assert.False((await db.VpnInbounds.SingleAsync(x => x.Id == first.Value!.Id)).IsDefault);
-        var secondInbound = await db.VpnInbounds.SingleAsync(x => x.Id == second.Value!.Id);
+        Assert.False((await db.VpnInbounds.SingleAsync(x => x.Id == first.Id)).IsDefault);
+        var secondInbound = await db.VpnInbounds.SingleAsync(x => x.Id == second.Id);
         Assert.True(secondInbound.IsDefault);
         Assert.Equal("vmess", secondInbound.Protocol);
+        Assert.IsType<OkObjectResult>(await controller.GetInbounds(panelId, CancellationToken.None));
 
-        var disabled = await service.PatchInboundAsync(secondInbound.Id, NewInboundCommand(
+        var disabled = Assert.IsType<VpnInboundDto>(Assert.IsType<OkObjectResult>(await controller.PatchInbound(secondInbound.Id, NewInboundCommand(
             name: "backup-disabled",
             protocol: "vmess",
             port: 8443,
             isDefault: false,
-            isActive: false), CancellationToken.None);
+            isActive: false), CancellationToken.None)).Value);
 
-        Assert.True(disabled.IsSuccess, disabled.Error);
-        Assert.False(disabled.Value!.IsActive);
-        Assert.False(disabled.Value.IsDefault);
+        Assert.False(disabled.IsActive);
+        Assert.False(disabled.IsDefault);
         Assert.False((await db.VpnInbounds.SingleAsync(x => x.Id == secondInbound.Id)).IsDefault);
 
-        var defaultResult = await service.SetDefaultInboundAsync(secondInbound.Id, CancellationToken.None);
+        var defaultResult = await controller.SetDefaultInbound(secondInbound.Id, CancellationToken.None);
 
-        Assert.False(defaultResult.IsSuccess);
-        Assert.Contains("Inactive", defaultResult.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<BadRequestObjectResult>(defaultResult);
     }
 
     [Fact]
@@ -352,6 +359,7 @@ public class X3UiIntegrationTests
         var clock = new FixedClock();
         var remote = new FakeX3UiClient(clock.UtcNow);
         var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var controller = new AdminVpnPanelsController(service);
         var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
         var targetInboundId = Guid.NewGuid();
         db.VpnInbounds.Add(new VpnInbound
@@ -380,30 +388,26 @@ public class X3UiIntegrationTests
         });
         await db.SaveChangesAsync();
 
-        var disabled = await service.DisableClientAsync(ids.ClientId, CancellationToken.None);
-        var enabled = await service.EnableClientAsync(ids.ClientId, CancellationToken.None);
-        var synced = await service.SyncClientAsync(ids.ClientId, CancellationToken.None);
-        var reset = await service.ResetClientTrafficAsync(ids.ClientId, CancellationToken.None);
-        var migrated = await service.MigrateClientAsync(ids.ClientId, new MigrateVpnClientCommand(targetInboundId), CancellationToken.None);
+        Assert.IsType<OkObjectResult>(await controller.GetClients(ids.PanelId, CancellationToken.None));
+        var disabled = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.DisableClient(ids.ClientId, CancellationToken.None)).Value);
+        var enabled = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.EnableClient(ids.ClientId, CancellationToken.None)).Value);
+        var synced = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.SyncClient(ids.ClientId, CancellationToken.None)).Value);
+        var reset = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.ResetClientTraffic(ids.ClientId, CancellationToken.None)).Value);
+        var migrated = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.MigrateClient(ids.ClientId, new MigrateVpnClientCommand(targetInboundId), CancellationToken.None)).Value);
 
-        Assert.True(disabled.IsSuccess, disabled.Error);
-        Assert.False(disabled.Value!.Enable);
-        Assert.True(enabled.IsSuccess, enabled.Error);
-        Assert.True(enabled.Value!.Enable);
-        Assert.True(synced.IsSuccess, synced.Error);
-        Assert.Equal("synced", synced.Value!.SyncStatus);
-        Assert.True(reset.IsSuccess, reset.Error);
-        Assert.Equal("traffic-reset", reset.Value!.SyncStatus);
-        Assert.True(migrated.IsSuccess, migrated.Error);
-        Assert.Equal(targetInboundId, migrated.Value!.VpnInboundId);
-        Assert.Contains(":8443", migrated.Value.ConfigUri);
+        Assert.False(disabled.Enable);
+        Assert.True(enabled.Enable);
+        Assert.Equal("synced", synced.SyncStatus);
+        Assert.Equal("traffic-reset", reset.SyncStatus);
+        Assert.Equal(targetInboundId, migrated.VpnInboundId);
+        Assert.Contains(":8443", migrated.ConfigUri);
         Assert.Equal(2, remote.UpdateClientCalls);
         Assert.Equal(1, remote.GetTrafficCalls);
         Assert.Equal(1, remote.ResetTrafficCalls);
         Assert.Equal(1, remote.AddClientCalls);
         Assert.Equal(1, remote.DeleteClientCalls);
         var access = await db.AccessCredentials.SingleAsync();
-        Assert.Equal(migrated.Value.ConfigUri, access.AccessUri);
+        Assert.Equal(migrated.ConfigUri, access.AccessUri);
         Assert.Equal(AccessCredentialStatus.Active, access.Status);
     }
 
@@ -489,10 +493,12 @@ public class X3UiIntegrationTests
     {
         await using var db = CreateDbContext();
         var clock = new FixedClock();
-        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, new FakeX3UiClient(clock.UtcNow) { ReturnNoInbounds = true }, new TestSecretProtector(), clock);
+        var client = new FakeX3UiClient(clock.UtcNow) { ReturnNoInbounds = true };
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, client, new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
         db.VpnPanels.Add(new VpnPanel
         {
-            Id = Guid.NewGuid(),
+            Id = panelId,
             Name = "prod-panel",
             BaseUrl = "https://vpn.example.com:2053",
             Login = "admin",
@@ -503,9 +509,26 @@ public class X3UiIntegrationTests
             Capacity = 100,
             AutoCreateInbound = false
         });
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            VpnPanelId = panelId,
+            ExternalInboundId = "disabled-inbound",
+            Name = "disabled-vless",
+            Protocol = "vless",
+            Port = 443,
+            IsDefault = true,
+            IsActive = false,
+            Capacity = 100
+        });
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.CreateAccessAsync(new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.CreateAccessAsync(new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None));
+
+        Assert.Contains("no active inbound", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, client.CreateInboundCalls);
+        Assert.Equal(0, client.AddClientCalls);
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
     }
 
     [Fact]

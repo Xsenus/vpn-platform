@@ -16,6 +16,24 @@ namespace VpnPlatform.UnitTests;
 public class AppVersionControllerTests
 {
     [Fact]
+    public async Task GetHistory_Should_Return_Only_Published_Active_Releases_In_Descending_Order()
+    {
+        await using var db = CreateDb();
+        var userId = Guid.NewGuid();
+        await SeedUserAsync(db, userId);
+        db.AppReleases.AddRange(
+            Release("older-release", "1.0.0", DateTimeOffset.UtcNow.AddDays(-2)),
+            Release("newer-release", "1.1.0", DateTimeOffset.UtcNow.AddHours(-1)),
+            Release("future-release", "2.0.0", DateTimeOffset.UtcNow.AddDays(1)),
+            Release("inactive-release", "3.0.0", DateTimeOffset.UtcNow.AddMinutes(-30), isActive: false));
+        await db.SaveChangesAsync();
+
+        var history = AssertOk<List<AppReleaseDto>>(await CreateController(db, userId).GetHistory(CancellationToken.None));
+
+        Assert.Equal(new[] { "newer-release", "older-release" }, history.Select(x => x.ReleaseId));
+    }
+
+    [Fact]
     public async Task GetLatest_Should_Return_Unseen_Latest_Published_Release()
     {
         await using var db = CreateDb();

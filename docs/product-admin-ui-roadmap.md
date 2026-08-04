@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `467/487` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `468/488` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -81,17 +81,19 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `737/737`.
+- [x] Backend full suite: `775/775`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `9/9`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `12/12`.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
-- [x] Latest "Что нового": `2026-08-04-full-project-quality-audit`, версия `0.455.0`.
+- [x] Operation boundary regression: malformed enum/JSON returns 400 without partial mutation; all 8 payment webhook routes and fail-closed VPN provisioning are covered.
+- [x] Page quality gate covers landmarks, duplicate IDs, image alt text and accessible control names on public, cabinet and all 16 admin screens.
+- [x] Latest "Что нового": `2026-08-04-operation-boundary-quality-audit`, версия `0.456.0`.
 
 ## Как вести дальше
 

@@ -134,9 +134,9 @@ public class MeController : ControllerBase
     [HttpPost("orders")]
     public async Task<IActionResult> CreateOrder([FromBody] CreateMeOrderHttpRequest request, CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<OrderType>(request.Type, true, out var orderType)
-            || !Enum.TryParse<ChannelType>(request.Channel, true, out var channel)
-            || !Enum.TryParse<PaymentProvider>(request.PaymentProvider, true, out var paymentProvider))
+        if (!TryParseDefined(request.Type, out OrderType orderType)
+            || !TryParseDefined(request.Channel, out ChannelType channel)
+            || !TryParseDefined(request.PaymentProvider, out PaymentProvider paymentProvider))
         {
             return BadRequest(new { error = "Invalid order request." });
         }
@@ -207,8 +207,13 @@ public class MeController : ControllerBase
             return NotFound(new { error = "Order not found." });
         }
 
+        if (!TryParseDefined(provider, out PaymentProvider paymentProvider))
+        {
+            return BadRequest(new { error = "Invalid payment provider." });
+        }
+
         var result = await _paymentOrchestrator.InitPaymentAsync(
-            new PaymentInitCommand(id, Enum.Parse<PaymentProvider>(provider, true), request?.ReturnUrl),
+            new PaymentInitCommand(id, paymentProvider, request?.ReturnUrl),
             cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
@@ -538,6 +543,10 @@ public class MeController : ControllerBase
 
     [HttpPost("subscriptions/{id:guid}/renew")]
     public IActionResult Renew([FromRoute] Guid id) => Ok(new { subscriptionId = id, message = "Use POST /api/me/orders + payment init to renew this subscription." });
+
+    private static bool TryParseDefined<TEnum>(string? value, out TEnum parsed)
+        where TEnum : struct, Enum
+        => Enum.TryParse(value, true, out parsed) && Enum.IsDefined(parsed);
 
     private Guid ResolveUserId()
     {

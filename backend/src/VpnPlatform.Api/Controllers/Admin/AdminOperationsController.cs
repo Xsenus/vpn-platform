@@ -1656,41 +1656,28 @@ public class AdminOperationsController : ControllerBase
         var tariff = await _db.Tariffs.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (tariff is null) return NotFound();
 
-        var before = JsonSerializer.Serialize(MapTariffDto(tariff));
-        if (payload.TryGetProperty("name", out var name)) tariff.Name = name.GetString()?.Trim() ?? tariff.Name;
-        if (payload.TryGetProperty("slug", out var slug)) tariff.Slug = slug.GetString()?.Trim() ?? tariff.Slug;
-        if (payload.TryGetProperty("description", out var description)) tariff.Description = description.GetString() ?? tariff.Description;
-        if (payload.TryGetProperty("fullDescription", out var fullDescription)) tariff.FullDescription = fullDescription.GetString() ?? tariff.FullDescription;
-        if (payload.TryGetProperty("featuresJson", out var featuresJson)) tariff.FeaturesJson = featuresJson.GetString() ?? tariff.FeaturesJson;
-        if (payload.TryGetProperty("badge", out var badge)) tariff.Badge = badge.GetString() ?? tariff.Badge;
-        if (payload.TryGetProperty("price", out var price)) tariff.Price = price.GetDecimal();
-        if (payload.TryGetProperty("currency", out var currency)) tariff.Currency = (currency.GetString() ?? tariff.Currency).Trim().ToUpperInvariant();
-        if (payload.TryGetProperty("durationDays", out var durationDays)) tariff.DurationDays = durationDays.GetInt32();
-        if (payload.TryGetProperty("maxDevices", out var maxDevices)) tariff.MaxDevices = maxDevices.GetInt32();
-        if (payload.TryGetProperty("trafficLimit", out var trafficLimit)) tariff.TrafficLimit = trafficLimit.ValueKind == JsonValueKind.Null ? null : trafficLimit.GetInt64();
-        if (payload.TryGetProperty("isTrial", out var isTrial)) tariff.IsTrial = isTrial.GetBoolean();
-        if (payload.TryGetProperty("isActive", out var isActive)) tariff.IsActive = isActive.GetBoolean();
-        if (payload.TryGetProperty("sortOrder", out var sortOrder)) tariff.SortOrder = sortOrder.GetInt32();
-        if (payload.TryGetProperty("category", out var category)) tariff.Category = category.GetString() ?? tariff.Category;
-        if (payload.TryGetProperty("allowedRegionsCsv", out var regions)) tariff.AllowedRegionsCsv = regions.GetString() ?? tariff.AllowedRegionsCsv;
-        if (payload.TryGetProperty("allowedNodeGroupsCsv", out var nodeGroups)) tariff.AllowedNodeGroupsCsv = nodeGroups.GetString() ?? tariff.AllowedNodeGroupsCsv;
-        if (payload.TryGetProperty("isReferralEligible", out var referralEligible)) tariff.IsReferralEligible = referralEligible.GetBoolean();
-        if (payload.TryGetProperty("provisioningScenario", out var provisioningScenario)) tariff.ProvisioningScenario = provisioningScenario.GetString() ?? tariff.ProvisioningScenario;
-        if (payload.TryGetProperty("afterPaymentText", out var afterPaymentText)) tariff.AfterPaymentText = afterPaymentText.GetString() ?? tariff.AfterPaymentText;
-        if (payload.TryGetProperty("visibleFrom", out var visibleFrom)) tariff.VisibleFrom = ReadNullableDate(visibleFrom);
-        if (payload.TryGetProperty("visibleTo", out var visibleTo)) tariff.VisibleTo = ReadNullableDate(visibleTo);
+        var payloadError = ValidateTariffPatchPayload(payload);
+        if (payloadError is not null)
+        {
+            return BadRequest(new { error = payloadError });
+        }
 
-        var validationError = NormalizeTariff(tariff);
+        var before = JsonSerializer.Serialize(MapTariffDto(tariff));
+        var candidate = CloneTariff(tariff);
+        ApplyTariffPatch(candidate, payload);
+
+        var validationError = NormalizeTariff(candidate);
         if (validationError is not null)
         {
             return BadRequest(new { error = validationError });
         }
 
-        if (await _db.Tariffs.AnyAsync(x => x.Id != id && x.Slug == tariff.Slug, cancellationToken))
+        if (await _db.Tariffs.AnyAsync(x => x.Id != id && x.Slug == candidate.Slug, cancellationToken))
         {
             return BadRequest(new { error = "Tariff slug already exists." });
         }
 
+        CopyTariffFields(candidate, tariff);
         tariff.UpdatedAt = _clock.UtcNow;
         AddAuditLog("tariff.update", "Tariff", id, before, JsonSerializer.Serialize(MapTariffDto(tariff)));
         await _db.SaveChangesAsync(cancellationToken);
@@ -1746,6 +1733,20 @@ public class AdminOperationsController : ControllerBase
     {
         var program = await _db.ReferralPrograms.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (program is null) return NotFound();
+
+        if (payload.ValueKind != JsonValueKind.Object)
+        {
+            return BadRequest(new { error = "Referral program patch must be a JSON object." });
+        }
+
+        foreach (var propertyName in new[] { "name", "status" })
+        {
+            if (payload.TryGetProperty(propertyName, out var value)
+                && value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+            {
+                return BadRequest(new { error = $"Referral program field '{propertyName}' must be a string." });
+            }
+        }
 
         if (payload.TryGetProperty("name", out var name)) program.Name = name.GetString() ?? program.Name;
         if (payload.TryGetProperty("status", out var status)) program.Status = status.GetString() ?? program.Status;
@@ -1828,6 +1829,146 @@ public class AdminOperationsController : ControllerBase
         }
 
         return null;
+    }
+
+    private static string? ValidateTariffPatchPayload(JsonElement payload)
+    {
+        if (payload.ValueKind != JsonValueKind.Object)
+        {
+            return "Tariff patch must be a JSON object.";
+        }
+
+        foreach (var property in payload.EnumerateObject())
+        {
+            var value = property.Value;
+            switch (property.Name)
+            {
+                case "name" or "slug" or "description" or "fullDescription" or "featuresJson" or "badge"
+                    or "currency" or "category" or "allowedRegionsCsv" or "allowedNodeGroupsCsv"
+                    or "provisioningScenario" or "afterPaymentText":
+                    if (value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+                    {
+                        return $"Tariff field '{property.Name}' must be a string.";
+                    }
+                    break;
+                case "price":
+                    if (value.ValueKind != JsonValueKind.Number || !value.TryGetDecimal(out _))
+                    {
+                        return "Tariff field 'price' must be a decimal number.";
+                    }
+                    break;
+                case "durationDays" or "maxDevices" or "sortOrder":
+                    if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out _))
+                    {
+                        return $"Tariff field '{property.Name}' must be an integer.";
+                    }
+                    break;
+                case "trafficLimit":
+                    if (value.ValueKind != JsonValueKind.Null
+                        && (value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out _)))
+                    {
+                        return "Tariff field 'trafficLimit' must be an integer or null.";
+                    }
+                    break;
+                case "isTrial" or "isActive" or "isReferralEligible":
+                    if (value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    {
+                        return $"Tariff field '{property.Name}' must be a boolean.";
+                    }
+                    break;
+                case "visibleFrom" or "visibleTo":
+                    if (value.ValueKind != JsonValueKind.Null
+                        && (value.ValueKind != JsonValueKind.String || !DateTimeOffset.TryParse(value.GetString(), out _)))
+                    {
+                        return $"Tariff field '{property.Name}' must be an ISO date-time string or null.";
+                    }
+                    break;
+            }
+        }
+
+        return null;
+    }
+
+    private static Tariff CloneTariff(Tariff source)
+        => new()
+        {
+            Id = source.Id,
+            Name = source.Name,
+            Slug = source.Slug,
+            Description = source.Description,
+            FullDescription = source.FullDescription,
+            FeaturesJson = source.FeaturesJson,
+            Badge = source.Badge,
+            DurationDays = source.DurationDays,
+            Price = source.Price,
+            Currency = source.Currency,
+            MaxDevices = source.MaxDevices,
+            TrafficLimit = source.TrafficLimit,
+            IsTrial = source.IsTrial,
+            IsActive = source.IsActive,
+            SortOrder = source.SortOrder,
+            VisibleFrom = source.VisibleFrom,
+            VisibleTo = source.VisibleTo,
+            TariffType = source.TariffType,
+            Category = source.Category,
+            AllowedRegionsCsv = source.AllowedRegionsCsv,
+            AllowedNodeGroupsCsv = source.AllowedNodeGroupsCsv,
+            IsReferralEligible = source.IsReferralEligible,
+            ProvisioningScenario = source.ProvisioningScenario,
+            AfterPaymentText = source.AfterPaymentText
+        };
+
+    private static void ApplyTariffPatch(Tariff tariff, JsonElement payload)
+    {
+        if (payload.TryGetProperty("name", out var name)) tariff.Name = name.GetString()?.Trim() ?? tariff.Name;
+        if (payload.TryGetProperty("slug", out var slug)) tariff.Slug = slug.GetString()?.Trim() ?? tariff.Slug;
+        if (payload.TryGetProperty("description", out var description)) tariff.Description = description.GetString() ?? tariff.Description;
+        if (payload.TryGetProperty("fullDescription", out var fullDescription)) tariff.FullDescription = fullDescription.GetString() ?? tariff.FullDescription;
+        if (payload.TryGetProperty("featuresJson", out var featuresJson)) tariff.FeaturesJson = featuresJson.GetString() ?? tariff.FeaturesJson;
+        if (payload.TryGetProperty("badge", out var badge)) tariff.Badge = badge.GetString() ?? tariff.Badge;
+        if (payload.TryGetProperty("price", out var price)) tariff.Price = price.GetDecimal();
+        if (payload.TryGetProperty("currency", out var currency)) tariff.Currency = (currency.GetString() ?? tariff.Currency).Trim().ToUpperInvariant();
+        if (payload.TryGetProperty("durationDays", out var durationDays)) tariff.DurationDays = durationDays.GetInt32();
+        if (payload.TryGetProperty("maxDevices", out var maxDevices)) tariff.MaxDevices = maxDevices.GetInt32();
+        if (payload.TryGetProperty("trafficLimit", out var trafficLimit)) tariff.TrafficLimit = trafficLimit.ValueKind == JsonValueKind.Null ? null : trafficLimit.GetInt64();
+        if (payload.TryGetProperty("isTrial", out var isTrial)) tariff.IsTrial = isTrial.GetBoolean();
+        if (payload.TryGetProperty("isActive", out var isActive)) tariff.IsActive = isActive.GetBoolean();
+        if (payload.TryGetProperty("sortOrder", out var sortOrder)) tariff.SortOrder = sortOrder.GetInt32();
+        if (payload.TryGetProperty("category", out var category)) tariff.Category = category.GetString() ?? tariff.Category;
+        if (payload.TryGetProperty("allowedRegionsCsv", out var regions)) tariff.AllowedRegionsCsv = regions.GetString() ?? tariff.AllowedRegionsCsv;
+        if (payload.TryGetProperty("allowedNodeGroupsCsv", out var nodeGroups)) tariff.AllowedNodeGroupsCsv = nodeGroups.GetString() ?? tariff.AllowedNodeGroupsCsv;
+        if (payload.TryGetProperty("isReferralEligible", out var referralEligible)) tariff.IsReferralEligible = referralEligible.GetBoolean();
+        if (payload.TryGetProperty("provisioningScenario", out var provisioningScenario)) tariff.ProvisioningScenario = provisioningScenario.GetString() ?? tariff.ProvisioningScenario;
+        if (payload.TryGetProperty("afterPaymentText", out var afterPaymentText)) tariff.AfterPaymentText = afterPaymentText.GetString() ?? tariff.AfterPaymentText;
+        if (payload.TryGetProperty("visibleFrom", out var visibleFrom)) tariff.VisibleFrom = ReadNullableDate(visibleFrom);
+        if (payload.TryGetProperty("visibleTo", out var visibleTo)) tariff.VisibleTo = ReadNullableDate(visibleTo);
+    }
+
+    private static void CopyTariffFields(Tariff source, Tariff target)
+    {
+        target.Name = source.Name;
+        target.Slug = source.Slug;
+        target.Description = source.Description;
+        target.FullDescription = source.FullDescription;
+        target.FeaturesJson = source.FeaturesJson;
+        target.Badge = source.Badge;
+        target.DurationDays = source.DurationDays;
+        target.Price = source.Price;
+        target.Currency = source.Currency;
+        target.MaxDevices = source.MaxDevices;
+        target.TrafficLimit = source.TrafficLimit;
+        target.IsTrial = source.IsTrial;
+        target.IsActive = source.IsActive;
+        target.SortOrder = source.SortOrder;
+        target.VisibleFrom = source.VisibleFrom;
+        target.VisibleTo = source.VisibleTo;
+        target.TariffType = source.TariffType;
+        target.Category = source.Category;
+        target.AllowedRegionsCsv = source.AllowedRegionsCsv;
+        target.AllowedNodeGroupsCsv = source.AllowedNodeGroupsCsv;
+        target.IsReferralEligible = source.IsReferralEligible;
+        target.ProvisioningScenario = source.ProvisioningScenario;
+        target.AfterPaymentText = source.AfterPaymentText;
     }
 
     private static IReadOnlyList<string> ParseTariffFeatures(string? featuresJson)

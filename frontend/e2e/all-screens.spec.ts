@@ -540,6 +540,64 @@ async function expectNonBlankPage(page: Page) {
   await expect.poll(async () => page.locator('body').innerText().then((text) => text.trim().length)).toBeGreaterThan(30)
 }
 
+async function expectPageQuality(page: Page, screenName: string) {
+  const issues = await page.evaluate(() => {
+    const problems: string[] = []
+    const isVisible = (element: HTMLElement) => {
+      const style = getComputedStyle(element)
+      const rect = element.getBoundingClientRect()
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0
+    }
+    const labelledByText = (element: HTMLElement) => (element.getAttribute('aria-labelledby') ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+      .join(' ')
+      .trim()
+    const hasAccessibleName = (element: HTMLElement) => {
+      if (element.getAttribute('aria-label')?.trim() || labelledByText(element) || element.title.trim()) return true
+      if (element instanceof HTMLInputElement && ['button', 'submit', 'reset'].includes(element.type) && element.value.trim()) return true
+      if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+        return Array.from(element.labels ?? []).some((label) => Boolean(label.textContent?.trim()))
+      }
+      if (element.textContent?.trim()) return true
+      return Boolean(element.querySelector('img[alt]:not([alt=""])'))
+    }
+
+    if (!document.documentElement.lang.trim()) problems.push('html element has no lang attribute')
+    if (!document.querySelector('main, [role="main"]')) problems.push('page has no main landmark')
+
+    const ids = new Map<string, number>()
+    for (const element of Array.from(document.querySelectorAll<HTMLElement>('[id]'))) {
+      if (!element.id) continue
+      ids.set(element.id, (ids.get(element.id) ?? 0) + 1)
+    }
+    for (const [id, count] of ids) {
+      if (count > 1) problems.push(`duplicate id: ${id} (${count})`)
+    }
+
+    for (const image of Array.from(document.querySelectorAll<HTMLImageElement>('img'))) {
+      if (isVisible(image) && !image.hasAttribute('alt')) problems.push(`image has no alt: ${image.src}`)
+    }
+
+    for (const control of Array.from(document.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea'))) {
+      if (isVisible(control) && !hasAccessibleName(control)) {
+        problems.push(`form control has no accessible name: ${control.id || control.tagName.toLowerCase()}`)
+      }
+    }
+
+    for (const action of Array.from(document.querySelectorAll<HTMLElement>('a[href], button, [role="tab"]'))) {
+      if (isVisible(action) && !hasAccessibleName(action)) {
+        problems.push(`action has no accessible name: ${action.id || action.tagName.toLowerCase()}`)
+      }
+    }
+
+    return problems
+  })
+
+  expect(issues, `${screenName} must meet the page quality baseline`).toEqual([])
+}
+
 async function expectResponsiveLayout(page: Page, screenName: string) {
   await expectNonBlankPage(page)
   const issues = await page.evaluate(() => {
@@ -575,6 +633,7 @@ test('all public routes render without blank screens or browser errors', async (
   for (const route of publicRoutes) {
     await page.goto(route)
     await expectNonBlankPage(page)
+    await expectPageQuality(page, route)
   }
 
   expect(browserErrors).toEqual([])
@@ -586,6 +645,7 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
 
   await page.goto('http://127.0.0.1:5294/')
   await expectNonBlankPage(page)
+  await expectPageQuality(page, 'cabinet auth')
 
   const authForm = page.locator('#cabinet-auth-panel')
   await authForm.locator('input[type="email"]').fill(user.email)
@@ -593,6 +653,7 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
   await authForm.locator('button[type="submit"]').click()
   await expect(page.locator('.code-block').filter({ hasText: 'vless://' }).first()).toBeVisible()
   await expectNonBlankPage(page)
+  await expectPageQuality(page, 'cabinet dashboard')
 
   expect(browserErrors).toEqual([])
 })
@@ -602,6 +663,7 @@ test('every admin section renders without blank screens or browser errors', asyn
   await installApiMock(page)
 
   await page.goto('http://127.0.0.1:5295/')
+  await expectPageQuality(page, 'admin auth')
   await page.locator('input[type="email"]').fill('admin@example.test')
   await page.locator('input[type="password"]').fill('Password123!')
   await page.locator('form').locator('button[type="submit"]').click()
@@ -611,6 +673,7 @@ test('every admin section renders without blank screens or browser errors', asyn
     await page.goto(`http://127.0.0.1:5295/#${section}`)
     await expect(page.locator('.admin-shell')).toBeVisible()
     await expectNonBlankPage(page)
+    await expectPageQuality(page, `admin ${section}`)
   }
 
   expect(browserErrors).toEqual([])

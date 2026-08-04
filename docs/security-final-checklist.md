@@ -75,7 +75,10 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 737/737.
+- Backend full suite: 775/775.
+- Payment webhook controller routes for all 8 providers: OK.
+- Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
+- Latest local release: `2026-08-04-operation-boundary-quality-audit`, версия `0.456.0`.
 - Frontend tests: 66/66.
 - Frontend typecheck/build: OK.
 - Frontend high-severity audit: OK; остаются `2 moderate` React Router advisory вне используемых SPA SSR/RSC путей.

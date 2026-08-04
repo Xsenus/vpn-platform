@@ -17,6 +17,27 @@ namespace VpnPlatform.UnitTests;
 public class ChannelWebhooksControllerTests
 {
     [Fact]
+    public async Task Unsupported_Channel_Webhooks_Should_Return_Explicit_NotImplemented_Responses()
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateController(db, new RecordingTelegramProvider(), "{}");
+
+        var results = new[]
+        {
+            (Result: controller.Discord(new { }), Error: "discord_channel_not_configured"),
+            (Result: controller.Vk(new { }), Error: "vk_channel_not_configured"),
+            (Result: controller.WhatsApp(new { }), Error: "whatsapp_channel_not_configured")
+        };
+
+        foreach (var (result, error) in results)
+        {
+            var response = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status501NotImplemented, response.StatusCode);
+            Assert.Contains(error, JsonSerializer.Serialize(response.Value), StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public async Task Telegram_Webhook_Should_Process_Update_From_Db_Settings_And_Send_Response()
     {
         await using var db = CreateDbContext();

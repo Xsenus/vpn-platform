@@ -2,6 +2,31 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: operation boundary quality audit
+
+Scope:
+- Проверены некорректные enum/JSON payload в public checkout, кабинете и административных user/tariff/referral операциях, включая отсутствие частичных изменений в SQLite.
+- Напрямую проверены маршруты webhook для 8 платежных провайдеров, действия 3x-ui controller и fail-closed сценарии без production node или active inbound.
+- All-screens browser gate дополнен проверками `main`, duplicate IDs, image alt и accessible names для public, cabinet и 16 admin экранов.
+
+Result:
+- Некорректные типы и undefined enum возвращают 400 вместо 500; tracked entities не изменяются до завершения всей валидации.
+- Inactive/missing inbound не создает VPN client, не вызывает remote add/create и не увеличивает UsedCapacity.
+- Discord, VK и WhatsApp webhook endpoints явно подтверждены как unsupported с ответом 501.
+- Diagnostic coverage: 51.9% line, 51.8% branch, controllers 79.9% line; показатель использован для поиска пробелов, а не как production acceptance.
+- Roadmap progress: `468/488` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-operation-boundary-quality-audit`, version `0.456.0`.
+
+Validation:
+- Backend full suite: OK, `775/775`.
+- Frontend tests: OK, `66/66`; typecheck/build: OK.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Local SQLite smoke: OK.
+- Secret scan: OK, `558` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: full project quality audit
 
 Scope:

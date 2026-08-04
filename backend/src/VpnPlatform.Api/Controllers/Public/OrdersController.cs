@@ -26,12 +26,27 @@ public class OrdersController : ControllerBase
     [EnableRateLimiting(ApiRateLimitPolicies.PublicCheckout)]
     public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionHttpRequest request, CancellationToken cancellationToken)
     {
+        if (!TryParseDefined(request.Type, out OrderType orderType))
+        {
+            return BadRequest(new { error = "Invalid order type." });
+        }
+
+        if (!TryParseDefined(request.Channel, out ChannelType channel))
+        {
+            return BadRequest(new { error = "Invalid sales channel." });
+        }
+
+        if (!TryParseDefined(request.PaymentProvider, out PaymentProvider paymentProvider))
+        {
+            return BadRequest(new { error = "Invalid payment provider." });
+        }
+
         var result = await _checkoutSessionService.CreateAsync(
             new CreateCheckoutSessionCommand(
                 request.TariffId,
-                Enum.Parse<OrderType>(request.Type, true),
-                Enum.Parse<ChannelType>(request.Channel, true),
-                Enum.Parse<PaymentProvider>(request.PaymentProvider, true),
+                orderType,
+                channel,
+                paymentProvider,
                 request.PromoCode,
                 request.IsFirstPurchase,
                 request.EmailHint,
@@ -63,4 +78,8 @@ public class OrdersController : ControllerBase
             error = "anonymous_public_orders_disabled",
             message = "Use POST /api/public/checkout-sessions, authenticate the user, then claim the session with POST /api/me/checkout-sessions/{token}/claim."
         });
+
+    private static bool TryParseDefined<TEnum>(string? value, out TEnum parsed)
+        where TEnum : struct, Enum
+        => Enum.TryParse(value, true, out parsed) && Enum.IsDefined(parsed);
 }

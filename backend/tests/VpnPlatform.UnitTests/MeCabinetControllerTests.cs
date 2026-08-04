@@ -15,6 +15,64 @@ namespace VpnPlatform.UnitTests;
 
 public class MeCabinetControllerTests
 {
+    [Theory]
+    [InlineData("999", "Web", "YooKassa")]
+    [InlineData("NewSubscription", "999", "YooKassa")]
+    [InlineData("NewSubscription", "Web", "999")]
+    public async Task Cabinet_Order_Actions_Should_Reject_Undefined_Enum_Values_Without_Creating_Data(string type, string channel, string provider)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Monthly", Slug = "monthly-invalid-enum", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        db.Users.Add(User(userId, "invalid-enum@example.test"));
+        db.Tariffs.Add(tariff);
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, userId);
+
+        var result = await controller.CreateOrder(new CreateMeOrderHttpRequest(tariff.Id, type, channel, provider, null, false, null), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.Orders.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Cabinet_Payment_Init_Should_Reject_Invalid_Provider_Without_Calling_Adapter()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariffId,
+            Type = OrderType.NewSubscription,
+            Channel = ChannelType.Web,
+            PaymentProvider = PaymentProvider.YooKassa,
+            Status = OrderStatus.PendingPayment,
+            Amount = 490m,
+            Currency = "RUB",
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15)
+        };
+        db.Users.Add(User(userId, "invalid-payment-provider@example.test"));
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Monthly", Slug = "monthly-payment-init", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true });
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();
+
+        var result = await CreateController(db, userId).InitOrderPayment(order.Id, "999", null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.Payments.ToListAsync());
+    }
+
     [Fact]
     public async Task Cabinet_Should_Return_Empty_Subscriptions_And_Accesses_For_User_Without_Subscription_On_Sqlite()
     {

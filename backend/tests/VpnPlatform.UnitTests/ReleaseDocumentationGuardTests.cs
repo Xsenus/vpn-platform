@@ -391,6 +391,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-175", "2026-07-02-agent-end-to-end-completion-guard"),
         new("P11-ACC-176", "2026-07-02-agent-external-evidence-boundary-guard"),
         new("P11-ACC-177", "2026-08-04-full-project-quality-audit"),
+        new("P11-ACC-178", "2026-08-04-operation-boundary-quality-audit"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")

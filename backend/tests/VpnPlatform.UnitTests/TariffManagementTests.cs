@@ -218,6 +218,50 @@ public class TariffManagementTests
         Assert.Equal("premium", premium.Slug);
     }
 
+    [Theory]
+    [InlineData("{\"price\":\"490\"}")]
+    [InlineData("{\"durationDays\":30.5}")]
+    [InlineData("{\"isActive\":\"true\"}")]
+    [InlineData("{\"visibleFrom\":\"not-a-date\"}")]
+    [InlineData("[]")]
+    public async Task AdminTariff_Patch_Should_Reject_Invalid_Types_Without_Mutating_Tracked_Entity(string rawPayload)
+    {
+        await using var db = CreateDb();
+        var tariff = Tariff("safe-patch");
+        db.Tariffs.Add(tariff);
+        await db.SaveChangesAsync();
+        using var patch = JsonDocument.Parse(rawPayload);
+
+        var result = await CreateController(db).PatchTariff(tariff.Id, patch.RootElement, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(490m, tariff.Price);
+        Assert.Equal(30, tariff.DurationDays);
+        Assert.True(tariff.IsActive);
+        Assert.Null(tariff.VisibleFrom);
+    }
+
+    [Theory]
+    [InlineData("{\"price\":-1}")]
+    [InlineData("{\"currency\":\"RUBLE\"}")]
+    [InlineData("{\"visibleFrom\":\"2026-08-05T00:00:00Z\",\"visibleTo\":\"2026-08-04T00:00:00Z\"}")]
+    public async Task AdminTariff_Patch_Should_Reject_Invalid_Business_Values_Without_Mutating_Tracked_Entity(string rawPayload)
+    {
+        await using var db = CreateDb();
+        var tariff = Tariff("safe-business-patch");
+        db.Tariffs.Add(tariff);
+        await db.SaveChangesAsync();
+        using var patch = JsonDocument.Parse(rawPayload);
+
+        var result = await CreateController(db).PatchTariff(tariff.Id, patch.RootElement, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(490m, tariff.Price);
+        Assert.Equal("RUB", tariff.Currency);
+        Assert.Null(tariff.VisibleFrom);
+        Assert.Null(tariff.VisibleTo);
+    }
+
     private static Tariff Tariff(string slug, bool isActive = true, int sortOrder = 10)
         => new()
         {
