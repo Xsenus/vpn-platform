@@ -33,6 +33,17 @@ public class X3UiHttpClientTests
     }
 
     [Fact]
+    public async Task Health_Check_Should_Propagate_Caller_Cancellation()
+    {
+        var handler = new QueueHandler(LoginResponse());
+        var client = CreateClient(handler);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.CheckHealthAsync(Panel(), "secret", cancellation.Token));
+    }
+
+    [Fact]
     public async Task GetInbounds_Should_Login_And_Parse_Common_Response_Shape()
     {
         var handler = new QueueHandler(

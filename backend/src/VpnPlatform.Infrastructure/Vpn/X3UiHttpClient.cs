@@ -63,6 +63,10 @@ public class X3UiHttpClient : IX3UiClient
             sw.Stop();
             return new X3UiHealthResult(true, version.Version, sw.ElapsedMilliseconds);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             sw.Stop();
@@ -274,6 +278,12 @@ public class X3UiHttpClient : IX3UiClient
                 {
                     return response;
                 }
+
+                response.Dispose();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch when (attempt < 3)
             {

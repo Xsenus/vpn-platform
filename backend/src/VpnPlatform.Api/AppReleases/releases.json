@@ -10725,5 +10725,32 @@
         "text": "Audit snapshots не содержат токены, пароли, тексты поддержки, VPN config URI и UUID клиентов. Roadmap progress is 471/491 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-x3ui-failure-compensation-hardening",
+    "version": "0.460.0",
+    "releasedAt": "2026-08-04T16:10:00+07:00",
+    "title": "Операции 3x-ui безопасно восстанавливаются после отказов",
+    "summary": "Конфигурация панелей проверяется до сохранения, отмененные синхронизации закрываются, а незавершенная миграция клиента удаляет созданную target-копию.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Некорректные URL, параметры SSL/API, capacity и JSON-шаблон панели отклоняются до изменения данных."
+      },
+      {
+        "type": "fixed",
+        "text": "Отмененная синхронизация больше не остается в статусе Running: задача получает Failed, время завершения и запись аудита."
+      },
+      {
+        "type": "fixed",
+        "text": "Если удаление клиента из исходного inbound не удалось, созданная копия в целевом inbound удаляется автоматически, а локальная привязка сохраняется."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 472/492 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

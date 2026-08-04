@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-04 локально подтверждено:
 
-- backend на .NET 9: `798/798` unit tests;
+- backend на .NET 9: `809/809` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `66/66`;
 - frontend typecheck и production build: OK;
@@ -223,9 +223,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - миграция подписки валидирует источник, целевой сервер и дубли; архивные серверы нельзя вернуть в работу через административные mode-actions;
 - команды `extend/activate/block/unblock/cancel` не изменяют подписку при ошибке VPN-провайдера; unhealthy/full migration target отклоняется;
 - удаление VPN-сервера сохраняет health-check и migration history через архивирование, а связанный ключ рабочего сценария нельзя переименовать;
-- административные user/content/release/referral/support/Telegram и 3x-ui операции создают redacted audit trail с admin/system actor; некорректный sync панели не остается в `Running`;
+- административные user/content/release/referral/support/Telegram и 3x-ui операции создают redacted audit trail с admin/system actor; невалидная конфигурация панели отклоняется до мутации, отмененный sync закрывается, а неудачная миграция компенсирует target-копию;
 - мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-admin-operation-audit-integrity`, версия `0.459.0`;
-- roadmap progress: `471/491` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-x3ui-failure-compensation-hardening`, версия `0.460.0`;
+- roadmap progress: `472/492` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

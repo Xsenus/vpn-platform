@@ -2,6 +2,33 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: 3x-ui failure compensation hardening
+
+Scope:
+- Проверены create/update панели с невалидными URL, password, capacity, SSL/API/status enum и JSON template до EF mutation.
+- Проверены caller cancellation в HTTP health/retry и завершение отмененного panel sync-run.
+- Проверена миграция клиента при отказе source delete после успешного создания target-копии.
+
+Result:
+- Невалидная конфигурация возвращает управляемую ошибку без panel/audit insert и без изменения tracked entity.
+- Отмена health-check пробрасывается вызывающей стороне; отмененный sync-run сохраняется как `Failed` с `FinishedAt` и audit `vpn_panel.sync.cancelled`.
+- Source delete failure запускает target delete с независимым cancellation token, сохраняет локальную source-привязку и audit `vpn_client.migrate.failed`; неудачная компенсация имеет отдельный диагностический статус и audit.
+- Roadmap progress: `472/492` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-x3ui-failure-compensation-hardening`, version `0.460.0`.
+
+Validation:
+- Backend full suite: OK, `809/809`; targeted 3x-ui suite: OK, `41/41`.
+- Targeted docs/release/encoding suite: OK, `51/51`.
+- API Release build with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-x3ui-failure-compensation-hardening`.
+- Secret scan: OK, `560` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: admin operation audit integrity
 
 Scope:
