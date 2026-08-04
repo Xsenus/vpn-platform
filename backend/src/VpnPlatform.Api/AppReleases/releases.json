@@ -10844,5 +10844,28 @@
         "text": "Уже оплаченные intermediate order states не создают новый checkout. Roadmap progress is 476/496 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-payment-webhook-recovery",
+    "version": "0.465.0",
+    "releasedAt": "2026-08-04T17:52:00+07:00",
+    "title": "Временные ошибки payment webhook восстанавливаются",
+    "summary": "Webhook больше не теряется после init race, verifier или provisioning failure: временные события повторяются, а постоянные отклонения остаются terminal.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Failed и зависшие Received/Verified события безопасно захватываются повторно без двойной активации."
+      },
+      {
+        "type": "fixed",
+        "text": "Временные webhook failures возвращают 503, а invalid signature, amount, account и status transition возвращают 400."
+      },
+      {
+        "type": "important",
+        "text": "Provisioning retry продолжает ту же подписку по LastPaymentId и восстанавливает activation marker. Roadmap progress is 477/497 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

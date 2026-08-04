@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.465.0 - 2026-08-04
+
+Release entry: `2026-08-04-payment-webhook-recovery`.
+
+### Fixed
+- Payment webhook events теперь различают terminal `Processed/Rejected` и retryable `Failed`; зависшие `Received/Verified` атомарно перехватываются после десятиминутного lease.
+- Не найденный пока payment attempt, сбой verifier, activation failure и незавершенный commit возвращают HTTP 503, а invalid signature/amount/account и запрещенный status transition остаются HTTP 400.
+- Повторный malformed payload больше не падает на unique constraint, а параллельные одинаковые события сериализуются без двойной активации.
+- Повтор после VPN provisioning failure продолжает подписку с тем же `LastPaymentId` без второй подписки или повторного продления; завершенный заказ восстанавливает потерянный activation marker.
+
+### Notes
+- Validation: backend full suite `839/839`, targeted payment webhook suite `63/63`, API Release build `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `51/51` keep current evidence synchronized.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `563` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `477/497` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.464.0 - 2026-08-04
 
 Release entry: `2026-08-04-payment-init-commit-resilience`.

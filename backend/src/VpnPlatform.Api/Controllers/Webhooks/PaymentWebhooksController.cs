@@ -63,7 +63,14 @@ public class PaymentWebhooksController : ControllerBase
             return Content($"OK{ReadFormValue(rawBody, "InvId")}", "text/plain", Encoding.UTF8);
         }
 
-        return result.IsSuccess ? Ok(new { status = result.Value }) : BadRequest(new { error = result.Error });
+        if (result.IsSuccess)
+        {
+            return Ok(new { status = result.Value });
+        }
+
+        return result.IsRetryable
+            ? StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = result.Error })
+            : BadRequest(new { error = result.Error });
     }
 
     private static string ReadFormValue(string rawBody, string key)

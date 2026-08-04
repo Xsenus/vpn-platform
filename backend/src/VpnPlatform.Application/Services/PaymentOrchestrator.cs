@@ -34,6 +34,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         RefundStatus.Unknown
     };
 
+    private static readonly TimeSpan WebhookClaimTimeout = TimeSpan.FromMinutes(10);
+
     private readonly IApplicationDbContext _db;
     private readonly IPaymentProviderFactory _paymentProviderFactory;
     private readonly IEnumerable<IPaymentWebhookVerifier> _webhookVerifiers;
@@ -276,6 +278,10 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         {
             parsed = await provider.ParseWebhookAsync(rawBody, headers, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             await SaveRejectedWebhookAsync(providerType, string.Empty, "parse_error", string.Empty, rawBody, headers, ex.Message, cancellationToken);
@@ -284,65 +290,105 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         var payloadSha = Sha256(rawBody);
         var webhookEventId = BuildWebhookEventId(parsed, payloadSha);
+        await using var webhookGate = await PaymentProcessingGate.AcquireWebhookAsync(providerType.ToString(), webhookEventId, parsed.PaymentId, cancellationToken);
+        var now = _clock.UtcNow;
         var existingEvent = await _db.PaymentWebhookEvents
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Provider == providerType && x.ExternalEventId == webhookEventId && x.ProviderPaymentId == parsed.PaymentId, cancellationToken);
+        PaymentWebhookEvent webhookEvent;
         if (existingEvent is not null)
         {
-            return Result<string>.Success("Webhook already processed.");
+            if (IsTerminalWebhookEvent(existingEvent.Status))
+            {
+                return Result<string>.Success("Webhook already processed.");
+            }
+
+            if (!await TryClaimWebhookEventAsync(existingEvent, now, cancellationToken))
+            {
+                return await ResolveUnclaimedWebhookAsync(existingEvent.Id, cancellationToken);
+            }
+
+            webhookEvent = await GetTrackedWebhookEventAsync(existingEvent.Id, cancellationToken);
         }
+        else
+        {
+            webhookEvent = new PaymentWebhookEvent
+            {
+                Provider = providerType,
+                ProviderPaymentId = parsed.PaymentId,
+                ExternalEventId = webhookEventId,
+                EventType = parsed.EventType,
+                PayloadSha256 = payloadSha,
+                RawPayload = rawBody,
+                HeadersJson = SerializeSafeHeaders(headers),
+                SignatureValidated = false,
+                Status = PaymentWebhookEventStatus.Received,
+                ReceivedAt = now
+            };
+            _db.PaymentWebhookEvents.Add(webhookEvent);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                _db.PaymentWebhookEvents.Remove(webhookEvent);
+                existingEvent = await _db.PaymentWebhookEvents
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Provider == providerType && x.ExternalEventId == webhookEventId && x.ProviderPaymentId == parsed.PaymentId, cancellationToken);
+                if (existingEvent is null)
+                {
+                    throw;
+                }
+
+                if (IsTerminalWebhookEvent(existingEvent.Status))
+                {
+                    return Result<string>.Success("Webhook already processed.");
+                }
+
+                if (!await TryClaimWebhookEventAsync(existingEvent, now, cancellationToken))
+                {
+                    return await ResolveUnclaimedWebhookAsync(existingEvent.Id, cancellationToken);
+                }
+
+                webhookEvent = await GetTrackedWebhookEventAsync(existingEvent.Id, cancellationToken);
+            }
+        }
+
+        webhookEvent.EventType = parsed.EventType;
+        webhookEvent.PayloadSha256 = payloadSha;
+        webhookEvent.RawPayload = rawBody;
+        webhookEvent.HeadersJson = SerializeSafeHeaders(headers);
+        webhookEvent.SignatureValidated = false;
+        webhookEvent.ProcessedAt = null;
+        webhookEvent.ErrorText = string.Empty;
 
         var paymentQuery = _db.Payments
             .Include(x => x.Order)
             .Include(x => x.PaymentProviderAccount)
             .Where(x => x.Provider == providerType && x.ProviderPaymentId == parsed.PaymentId);
-
         if (!string.IsNullOrWhiteSpace(parsed.ProviderAccountExternalId))
         {
             paymentQuery = paymentQuery.Where(x => x.PaymentProviderAccount != null && x.PaymentProviderAccount.ShopId == parsed.ProviderAccountExternalId);
         }
-
         var payment = await paymentQuery.FirstOrDefaultAsync(cancellationToken);
-        var webhookEvent = new PaymentWebhookEvent
-        {
-            Provider = providerType,
-            PaymentAttemptId = payment?.Id,
-            PaymentProviderAccountId = payment?.PaymentProviderAccountId,
-            ProviderPaymentId = parsed.PaymentId,
-            ExternalEventId = webhookEventId,
-            EventType = parsed.EventType,
-            PayloadSha256 = payloadSha,
-            RawPayload = rawBody,
-            HeadersJson = SerializeSafeHeaders(headers),
-            SignatureValidated = false,
-            Status = PaymentWebhookEventStatus.Received,
-            ReceivedAt = _clock.UtcNow
-        };
-        _db.PaymentWebhookEvents.Add(webhookEvent);
-        try
-        {
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            var duplicateWebhookEvent = await _db.PaymentWebhookEvents
-                .AsNoTracking()
-                .AnyAsync(x => x.Provider == providerType && x.ExternalEventId == webhookEventId && x.ProviderPaymentId == parsed.PaymentId, cancellationToken);
-            if (duplicateWebhookEvent)
-            {
-                return Result<string>.Success("Webhook already processed.");
-            }
-
-            throw;
-        }
+        webhookEvent.PaymentAttemptId = payment?.Id;
+        webhookEvent.PaymentProviderAccountId = payment?.PaymentProviderAccountId;
 
         if (payment is null || payment.Order is null || payment.PaymentProviderAccount is null)
         {
-            webhookEvent.Status = PaymentWebhookEventStatus.Rejected;
-            webhookEvent.ErrorText = "Payment attempt not found or provider account mismatch.";
+            var providerAccountMismatch = !string.IsNullOrWhiteSpace(parsed.ProviderAccountExternalId)
+                && await _db.Payments.AsNoTracking()
+                    .AnyAsync(x => x.Provider == providerType && x.ProviderPaymentId == parsed.PaymentId, cancellationToken);
+            webhookEvent.Status = providerAccountMismatch
+                ? PaymentWebhookEventStatus.Rejected
+                : PaymentWebhookEventStatus.Failed;
+            webhookEvent.ErrorText = providerAccountMismatch
+                ? "Payment provider account does not match payment attempt."
+                : "Payment attempt not found.";
             webhookEvent.ProcessedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
-            return Result<string>.Failure("Payment attempt not found.");
+            return Result<string>.Failure(webhookEvent.ErrorText, isRetryable: !providerAccountMismatch);
         }
 
         var validation = ValidateParsedWebhook(payment, parsed);
@@ -361,14 +407,31 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         var verifier = _webhookVerifiers.FirstOrDefault(x => x.Provider == providerType);
         if (verifier is null)
         {
-            webhookEvent.Status = PaymentWebhookEventStatus.Rejected;
+            webhookEvent.Status = PaymentWebhookEventStatus.Failed;
             webhookEvent.ErrorText = "Webhook verifier is not registered.";
             webhookEvent.ProcessedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
-            return Result<string>.Failure("Webhook verifier is not registered.");
+            return Result<string>.Failure("Webhook verifier is not registered.", isRetryable: true);
         }
 
-        var verification = await verifier.VerifyAsync(payment.PaymentProviderAccount, parsed, rawBody, headers, cancellationToken);
+        PaymentWebhookVerificationResult verification;
+        try
+        {
+            verification = await verifier.VerifyAsync(payment.PaymentProviderAccount, parsed, rawBody, headers, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            MarkWebhookFailed(webhookEvent, "Webhook verification was cancelled before its outcome could be confirmed.");
+            await TrySavePaymentStateAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            MarkWebhookFailed(webhookEvent, ex.Message);
+            await TrySavePaymentStateAsync();
+            return Result<string>.Failure("Webhook verification failed.", isRetryable: true);
+        }
+
         webhookEvent.SignatureValidated = verification.IsValid;
         payment.SignatureValidated = verification.IsValid;
 
@@ -385,13 +448,115 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
 
         webhookEvent.Status = PaymentWebhookEventStatus.Verified;
-        var result = await ApplyPaymentStatusAsync(payment, parsed.Status, rawBody, webhookEventId, cancellationToken);
-        webhookEvent.Status = result.IsSuccess ? PaymentWebhookEventStatus.Processed : PaymentWebhookEventStatus.Failed;
+        Result<string> result;
+        try
+        {
+            result = await ApplyPaymentStatusAsync(payment, parsed.Status, rawBody, webhookEventId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            MarkWebhookFailed(webhookEvent, "Webhook status application was cancelled before its outcome could be confirmed.");
+            await TrySavePaymentStateAsync();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            MarkWebhookFailed(webhookEvent, ex.Message);
+            await TrySavePaymentStateAsync();
+            return Result<string>.Failure("Webhook processing failed.", isRetryable: true);
+        }
+
+        webhookEvent.Status = result.IsSuccess
+            ? PaymentWebhookEventStatus.Processed
+            : result.IsRetryable
+                ? PaymentWebhookEventStatus.Failed
+                : PaymentWebhookEventStatus.Rejected;
         webhookEvent.ErrorText = result.Error ?? string.Empty;
         webhookEvent.ProcessedAt = _clock.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await TrySavePaymentStateAsync();
+            throw;
+        }
+        catch
+        {
+            if (!await TrySavePaymentStateAsync())
+            {
+                return Result<string>.Failure("Webhook outcome could not be finalized; retry the same event.", isRetryable: true);
+            }
+        }
 
-        return result.IsSuccess ? Result<string>.Success("Webhook processed.") : Result<string>.Failure(result.Error ?? "Webhook processing failed.");
+        return result.IsSuccess
+            ? Result<string>.Success("Webhook processed.")
+            : Result<string>.Failure(result.Error ?? "Webhook processing failed.", result.IsRetryable);
+    }
+
+    private async Task<bool> TryClaimWebhookEventAsync(PaymentWebhookEvent existingEvent, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var staleBefore = now - WebhookClaimTimeout;
+        IQueryable<PaymentWebhookEvent> claimable;
+        if (existingEvent.Status == PaymentWebhookEventStatus.Failed)
+        {
+            claimable = _db.PaymentWebhookEvents.Where(x => x.Id == existingEvent.Id && x.Status == PaymentWebhookEventStatus.Failed);
+        }
+        else if (existingEvent.Status is PaymentWebhookEventStatus.Received or PaymentWebhookEventStatus.Verified
+            && existingEvent.ReceivedAt <= staleBefore)
+        {
+            claimable = _db.PaymentWebhookEvents.Where(x => x.Id == existingEvent.Id
+                && x.Status == existingEvent.Status
+                && x.ReceivedAt == existingEvent.ReceivedAt);
+        }
+        else
+        {
+            return false;
+        }
+
+        var claimed = await claimable
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.Status, PaymentWebhookEventStatus.Received)
+                .SetProperty(x => x.SignatureValidated, false)
+                .SetProperty(x => x.ReceivedAt, now)
+                .SetProperty(x => x.ProcessedAt, (DateTimeOffset?)null)
+                .SetProperty(x => x.ErrorText, string.Empty)
+                .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+        return claimed == 1;
+    }
+
+    private async Task<PaymentWebhookEvent> GetTrackedWebhookEventAsync(Guid webhookEventId, CancellationToken cancellationToken)
+    {
+        var webhookEvent = _db.PaymentWebhookEvents.Local.FirstOrDefault(x => x.Id == webhookEventId)
+            ?? await _db.PaymentWebhookEvents.FirstAsync(x => x.Id == webhookEventId, cancellationToken);
+        webhookEvent.Status = PaymentWebhookEventStatus.Received;
+        webhookEvent.SignatureValidated = false;
+        webhookEvent.ReceivedAt = _clock.UtcNow;
+        webhookEvent.ProcessedAt = null;
+        webhookEvent.ErrorText = string.Empty;
+        return webhookEvent;
+    }
+
+    private async Task<Result<string>> ResolveUnclaimedWebhookAsync(Guid webhookEventId, CancellationToken cancellationToken)
+    {
+        var status = await _db.PaymentWebhookEvents.AsNoTracking()
+            .Where(x => x.Id == webhookEventId)
+            .Select(x => (PaymentWebhookEventStatus?)x.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+        return status.HasValue && IsTerminalWebhookEvent(status.Value)
+            ? Result<string>.Success("Webhook already processed.")
+            : Result<string>.Failure("Webhook processing is already in progress; retry shortly.", isRetryable: true);
+    }
+
+    private static bool IsTerminalWebhookEvent(PaymentWebhookEventStatus status)
+        => status is PaymentWebhookEventStatus.Processed or PaymentWebhookEventStatus.Rejected or PaymentWebhookEventStatus.Duplicate;
+
+    private void MarkWebhookFailed(PaymentWebhookEvent webhookEvent, string error)
+    {
+        webhookEvent.Status = PaymentWebhookEventStatus.Failed;
+        webhookEvent.ErrorText = error;
+        webhookEvent.ProcessedAt = _clock.UtcNow;
     }
 
     public async Task<Result<PaymentStatusResult>> RecheckPaymentAsync(Guid paymentId, CancellationToken cancellationToken = default)
@@ -602,6 +767,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
     private async Task<Result<string>> ApplyPaymentStatusAsync(PaymentAttempt payment, PaymentStatus status, string rawPayload, string externalEventId, CancellationToken cancellationToken)
     {
         await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(payment.OrderId, cancellationToken);
+        var now = _clock.UtcNow;
         var currentPayment = await _db.Payments
             .AsNoTracking()
             .Include(x => x.Order)
@@ -609,7 +775,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             .FirstOrDefaultAsync(x => x.Id == payment.Id, cancellationToken);
         if (currentPayment is not null)
         {
-            if (status == PaymentStatus.Succeeded && (currentPayment.IsActivationProcessed || currentPayment.Order?.Status == OrderStatus.Completed))
+            if (status == PaymentStatus.Succeeded && currentPayment.IsActivationProcessed)
             {
                 return Result<string>.Success("Payment already activated.");
             }
@@ -630,7 +796,17 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             }
         }
 
-        var now = _clock.UtcNow;
+        if (status == PaymentStatus.Succeeded
+            && currentPayment?.Status == PaymentStatus.Succeeded
+            && currentPayment.Order?.Status == OrderStatus.Completed)
+        {
+            payment.IsActivationProcessed = true;
+            payment.ActivationProcessedAt ??= now;
+            payment.PaidAt ??= currentPayment.PaidAt ?? currentPayment.Order.PaidAt ?? now;
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<string>.Success("Payment activation marker reconciled.");
+        }
+
         var previousStatus = payment.Status;
         var paymentTransition = StatusStateMachine.TrySetPaymentStatus(payment, status, now);
         if (!paymentTransition.IsSuccess)
@@ -675,7 +851,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                     StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.PartiallyProcessed, now);
                     payment.StatusReason = activation.Error ?? string.Empty;
                     await _db.SaveChangesAsync(cancellationToken);
-                    return Result<string>.Failure(activation.Error ?? "Subscription activation failed.");
+                    return Result<string>.Failure(activation.Error ?? "Subscription activation failed.", isRetryable: true);
                 }
 
                 payment.IsActivationProcessed = true;
@@ -810,6 +986,13 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 return Result<string>.Failure("Payment order is missing.");
             }
 
+            if (payment.Order.Status == OrderStatus.Completed
+                && payment.Status == PaymentStatus.Succeeded
+                && payment.PaidAt.HasValue)
+            {
+                return Result<string>.Success("Completed payment requires activation marker reconciliation.");
+            }
+
             if (payment.Order.Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Expired or OrderStatus.Refunded)
             {
                 return Result<string>.Failure($"Order is in terminal status {payment.Order.Status}.");
@@ -821,7 +1004,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
     private async Task SaveRejectedWebhookAsync(PaymentProvider provider, string providerPaymentId, string externalEventId, string eventType, string rawBody, IReadOnlyDictionary<string, string> headers, string error, CancellationToken cancellationToken)
     {
-        _db.PaymentWebhookEvents.Add(new PaymentWebhookEvent
+        var webhookEvent = new PaymentWebhookEvent
         {
             Provider = provider,
             ProviderPaymentId = providerPaymentId,
@@ -834,8 +1017,24 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             ErrorText = error,
             ReceivedAt = _clock.UtcNow,
             ProcessedAt = _clock.UtcNow
-        });
-        await _db.SaveChangesAsync(cancellationToken);
+        };
+        _db.PaymentWebhookEvents.Add(webhookEvent);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            _db.PaymentWebhookEvents.Remove(webhookEvent);
+            var duplicate = await _db.PaymentWebhookEvents.AsNoTracking()
+                .AnyAsync(x => x.Provider == provider
+                    && x.ExternalEventId == webhookEvent.ExternalEventId
+                    && x.ProviderPaymentId == providerPaymentId, cancellationToken);
+            if (!duplicate)
+            {
+                throw;
+            }
+        }
     }
 
     private async Task<string> BuildPaymentSucceededTelegramPayloadAsync(Order order, ActivationResult activation, CancellationToken cancellationToken)

@@ -2,6 +2,33 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: payment webhook recovery
+
+Scope:
+- SQLite воспроизводит init/webhook race, retryable verifier exception, зависшие `Received` events и повтор malformed payload.
+- Проверены fresh lease, atomic stale claim, HTTP 503 для временных ошибок и HTTP 400 для permanent validation/auth/state rejection.
+- VPN provisioning failure повторяется по той же подписке, а завершенный order восстанавливает потерянный payment activation marker.
+
+Result:
+- `Processed/Rejected` события terminal; `Failed` и stale `Received/Verified` безопасно подбираются повторно без второй event row или двойной активации.
+- Payment attempt, который еще не появился локально, больше не превращает provider retry в ложный success; verifier и commit failures остаются retryable.
+- Повтор new-subscription/renewal не дублирует подписку и не продлевает период второй раз, если `LastPaymentId` уже совпадает.
+- Roadmap progress: `477/497` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-payment-webhook-recovery`, version `0.465.0`.
+
+Validation:
+- Backend full suite: OK, `839/839`; targeted payment webhook suite: OK, `63/63`.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and targeted docs/release/encoding suite: OK, `51/51`.
+- API Release build with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-payment-webhook-recovery`.
+- Secret scan: OK, `563` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: payment init commit resilience
 
 Scope:

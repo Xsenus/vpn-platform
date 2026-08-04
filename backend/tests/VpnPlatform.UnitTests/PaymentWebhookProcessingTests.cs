@@ -107,7 +107,7 @@ public class PaymentWebhookProcessingTests
         Assert.Equal(PaymentStatus.Succeeded, payment.Status);
         Assert.Equal(OrderStatus.Completed, completedOrder.Status);
         Assert.Equal(1, await db.Subscriptions.CountAsync());
-        Assert.Equal(PaymentWebhookEventStatus.Failed, (await db.PaymentWebhookEvents.SingleAsync(x => x.EventType == "payment.canceled")).Status);
+        Assert.Equal(PaymentWebhookEventStatus.Rejected, (await db.PaymentWebhookEvents.SingleAsync(x => x.EventType == "payment.canceled")).Status);
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class PaymentWebhookProcessingTests
     }
 
     [Fact]
-    public async Task YooKassa_Webhook_Should_Save_Unknown_Payment_As_Rejected()
+    public async Task YooKassa_Webhook_Should_Save_Unknown_Payment_As_Retryable_Failure()
     {
         await using var db = CreateDbContext();
         var clock = new FixedClock(new DateTimeOffset(2026, 4, 29, 8, 0, 0, TimeSpan.Zero));
@@ -281,7 +281,7 @@ public class PaymentWebhookProcessingTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(0, await db.Subscriptions.CountAsync());
-        Assert.Equal(PaymentWebhookEventStatus.Rejected, (await db.PaymentWebhookEvents.SingleAsync()).Status);
+        Assert.Equal(PaymentWebhookEventStatus.Failed, (await db.PaymentWebhookEvents.SingleAsync()).Status);
     }
 
     [Fact]

@@ -56,11 +56,17 @@ public class SubscriptionService
             .Include(x => x.CurrentAccess)
             .Where(x => x.UserId == order.UserId && x.TariffId == order.TariffId && x.Status != SubscriptionStatus.Cancelled && x.Status != SubscriptionStatus.Blocked);
 
-        var existing = renewalSubscriptionId.HasValue
-            ? await existingQuery.FirstOrDefaultAsync(x => x.Id == renewalSubscriptionId.Value, cancellationToken)
-            : (await existingQuery.ToListAsync(cancellationToken))
-                .OrderByDescending(x => x.EndAt)
-                .FirstOrDefault();
+        var existingForPayment = await existingQuery
+            .FirstOrDefaultAsync(x => x.LastPaymentId == payment.Id, cancellationToken);
+        var existing = existingForPayment;
+        if (existing is null)
+        {
+            existing = renewalSubscriptionId.HasValue
+                ? await existingQuery.FirstOrDefaultAsync(x => x.Id == renewalSubscriptionId.Value, cancellationToken)
+                : (await existingQuery.ToListAsync(cancellationToken))
+                    .OrderByDescending(x => x.EndAt)
+                    .FirstOrDefault();
+        }
 
         if (order.Type == OrderType.Renewal && renewalSubscriptionId.HasValue && existing is null)
         {
@@ -69,7 +75,7 @@ public class SubscriptionService
 
         var now = _clock.UtcNow;
         Subscription subscription;
-        if (existing is null || order.Type == OrderType.NewSubscription)
+        if (existing is null || (order.Type == OrderType.NewSubscription && existingForPayment is null))
         {
             subscription = new Subscription
             {
@@ -89,14 +95,17 @@ public class SubscriptionService
         else
         {
             subscription = existing;
-            var baseDate = BusinessRules.GetRenewalBaseDate(now, subscription.EndAt);
-            subscription.EndAt = baseDate.AddDays(tariff.DurationDays);
-            subscription.GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(subscription.EndAt);
-            subscription.LastPaymentId = payment.Id;
-            subscription.RenewalCount += 1;
-            StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
-            subscription.BlockReason = null;
-            await _db.SaveChangesAsync(cancellationToken);
+            if (existingForPayment is null)
+            {
+                var baseDate = BusinessRules.GetRenewalBaseDate(now, subscription.EndAt);
+                subscription.EndAt = baseDate.AddDays(tariff.DurationDays);
+                subscription.GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(subscription.EndAt);
+                subscription.LastPaymentId = payment.Id;
+                subscription.RenewalCount += 1;
+                StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
+                subscription.BlockReason = null;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
         }
 
         var previousServerId = subscription.CurrentServerId;

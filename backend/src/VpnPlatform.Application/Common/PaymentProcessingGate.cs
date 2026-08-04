@@ -6,8 +6,13 @@ public static class PaymentProcessingGate
     private static readonly Dictionary<string, GateEntry> Gates = new(StringComparer.Ordinal);
 
     public static async ValueTask<IAsyncDisposable> AcquireOrderAsync(Guid orderId, CancellationToken cancellationToken)
+        => await AcquireAsync($"order:{orderId:N}", cancellationToken);
+
+    public static async ValueTask<IAsyncDisposable> AcquireWebhookAsync(string provider, string externalEventId, string providerPaymentId, CancellationToken cancellationToken)
+        => await AcquireAsync($"webhook:{provider}:{externalEventId}:{providerPaymentId}", cancellationToken);
+
+    private static async ValueTask<IAsyncDisposable> AcquireAsync(string key, CancellationToken cancellationToken)
     {
-        var key = $"order:{orderId:N}";
         GateEntry entry;
         lock (SyncRoot)
         {

@@ -71,6 +71,18 @@ public class PaymentWebhooksControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    [Fact]
+    public async Task Payment_Webhook_Action_Should_Return_ServiceUnavailable_For_Retryable_Failure()
+    {
+        var processor = new RecordingWebhookProcessor(Result<string>.Failure("retry later", isRetryable: true));
+        var controller = CreateController(processor, "{}");
+
+        var result = await controller.YooKassa(CancellationToken.None);
+
+        var unavailable = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+    }
+
     private static PaymentWebhooksController CreateController(RecordingWebhookProcessor processor, string body)
     {
         var context = new DefaultHttpContext();

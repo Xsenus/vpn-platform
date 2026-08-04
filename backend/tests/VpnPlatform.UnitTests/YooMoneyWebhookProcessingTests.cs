@@ -77,7 +77,7 @@ public class YooMoneyWebhookProcessingTests
     }
 
     [Fact]
-    public async Task YooMoney_Webhook_With_Wrong_Label_Should_Be_Rejected()
+    public async Task YooMoney_Webhook_With_Unknown_Label_Should_Be_Retryable()
     {
         await using var db = CreateDbContext();
         var (_, orchestrator, _, payment, account) = await ArrangeInitializedPaymentAsync(db);
@@ -87,7 +87,7 @@ public class YooMoneyWebhookProcessingTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(0, await db.Subscriptions.CountAsync());
-        Assert.Equal(PaymentWebhookEventStatus.Rejected, (await db.PaymentWebhookEvents.SingleAsync()).Status);
+        Assert.Equal(PaymentWebhookEventStatus.Failed, (await db.PaymentWebhookEvents.SingleAsync()).Status);
     }
 
     [Theory]

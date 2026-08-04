@@ -68,7 +68,7 @@ public class RoboKassaWebhookProcessingTests
     }
 
     [Fact]
-    public async Task RoboKassa_Webhook_With_Wrong_InvId_Should_Be_Rejected()
+    public async Task RoboKassa_Webhook_With_Unknown_InvId_Should_Be_Retryable()
     {
         await using var db = CreateDbContext();
         var (order, orchestrator, init, payment, account) = await ArrangeInitializedPaymentAsync(db);
@@ -78,7 +78,7 @@ public class RoboKassaWebhookProcessingTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(0, await db.Subscriptions.CountAsync());
-        Assert.Equal(PaymentWebhookEventStatus.Rejected, (await db.PaymentWebhookEvents.SingleAsync()).Status);
+        Assert.Equal(PaymentWebhookEventStatus.Failed, (await db.PaymentWebhookEvents.SingleAsync()).Status);
     }
 
     [Fact]
