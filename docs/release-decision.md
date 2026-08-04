@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `860/860`.
+- Backend full suite: `873/873`.
 - API Release build: OK.
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
@@ -40,8 +40,8 @@ Production-ready решение заблокировано следующими 
 - Payment initialization uses an order gate and durable reservation, rejects paid intermediate states and recovers successful provider outcomes after transient local commit failure.
 - Subscription activation compensates remote create after local credential save failure, persists `SyncRequired` when cleanup is uncertain and propagates cancellation after durable retry-state.
 - Telegram update processing reserves `update_id` before side effects, retries failed/stale leases and preserves long-polling offset for retryable outcomes.
-- Latest "Что нового": `2026-08-04-telegram-response-delivery-recovery`, версия `0.468.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `480/500` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-04-telegram-notification-dispatch-recovery`, версия `0.469.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `481/501` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

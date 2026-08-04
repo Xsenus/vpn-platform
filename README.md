@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-04 локально подтверждено:
 
-- backend на .NET 9: `860/860` unit tests;
+- backend на .NET 9: `873/873` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `66/66`;
 - frontend typecheck и production build: OK;
@@ -229,8 +229,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - activation компенсирует remote access после local credential save failure, сохраняет `SyncRequired` при неудачном cleanup и пробрасывает caller cancellation после durable retry-state;
 - Telegram update резервируется до side effects, защищен lease и повторяется после failed/stale processing без двойного invoice или потери long-poll offset;
 - Telegram response и pre-checkout acknowledgement сохраняются до отправки, доставляются через отдельную lease/backoff и восстанавливаются webhook/long-polling без повторной обработки update;
+- Telegram notification dispatcher атомарно захватывает pending/stale sending записи, восстанавливает их по lease/backoff и завершает blocked/invalid/max-attempt случаи без двойной отправки;
 - мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-telegram-response-delivery-recovery`, версия `0.468.0`;
-- roadmap progress: `480/500` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-telegram-notification-dispatch-recovery`, версия `0.469.0`;
+- roadmap progress: `481/501` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

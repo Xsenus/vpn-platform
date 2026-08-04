@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<PaymentOrchestrator>();
         services.AddScoped<TelegramBotService>();
         services.AddScoped<TelegramUpdateDeliveryService>();
+        services.AddScoped<TelegramNotificationDeliveryService>();
         services.AddScoped<X3UiPanelService>();
         services.AddScoped<ProvisioningService>();
         return services;

@@ -10936,5 +10936,28 @@
         "text": "Long-polling восстанавливает due deliveries после рестарта, а missing BotToken и non-2xx Telegram API больше не считаются успехом. Roadmap progress is 480/500 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-telegram-notification-dispatch-recovery",
+    "version": "0.469.0",
+    "releasedAt": "2026-08-04T19:30:00+07:00",
+    "title": "Telegram notifications восстанавливаются после сбоя worker",
+    "summary": "Очередь атомарно захватывает pending и stale sending записи, исключает параллельный send и сохраняет контролируемый retry или terminal outcome.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Conditional DB claim и минутная lease не позволяют двум dispatcher instances отправить одну notification одновременно."
+      },
+      {
+        "type": "fixed",
+        "text": "Cancellation и transient error сохраняют redacted backoff, пятая ошибка становится failed, blocked account становится cancelled."
+      },
+      {
+        "type": "important",
+        "text": "Malformed JSON/reply markup блокируется до Telegram API, legacy plain text поддержан. Roadmap progress is 481/501 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

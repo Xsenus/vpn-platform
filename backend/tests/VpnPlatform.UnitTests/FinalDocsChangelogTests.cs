@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("860/860", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-telegram-response-delivery-recovery", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("873/873", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-04-telegram-notification-dispatch-recovery", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "860/860",
-                     "2026-08-04-telegram-response-delivery-recovery",
-                     "0.468.0",
+                     "873/873",
+                     "2026-08-04-telegram-notification-dispatch-recovery",
+                     "0.469.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-telegram-response-delivery-recovery",
-                     "0.468.0",
-                     "480/500",
+                     "2026-08-04-telegram-notification-dispatch-recovery",
+                     "0.469.0",
+                     "481/501",
                      "96.0%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `860/860`",
+                     "Backend full suite: OK, `873/873`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `564` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-telegram-response-delivery-recovery",
-                     "0.468.0",
-                     "480/500",
+                     "2026-08-04-telegram-notification-dispatch-recovery",
+                     "0.469.0",
+                     "481/501",
                      "96.0%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted docs/release/encoding suite `51/51`",
-                     "backend full suite `860/860`",
+                     "backend full suite `873/873`",
                      "fresh local SQLite smoke OK",
                      "Secret scan: `564` files, `0` findings"
                  })

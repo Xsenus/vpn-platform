@@ -9,11 +9,16 @@ public class TelegramBotProcessBoundaryTests
     {
         var root = FindRepositoryRoot();
         var program = File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.TelegramBot", "Program.cs"));
+        var notificationDispatcher = File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.TelegramBot", "TelegramNotificationDispatcherService.cs"));
 
         Assert.DoesNotContain("MapPost(\"/telegram/webhook\"", program, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessUpdateAsync(rawBody", program, StringComparison.Ordinal);
         Assert.Contains("TelegramLongPollingService", program, StringComparison.Ordinal);
         Assert.Contains("TelegramNotificationDispatcherService", program, StringComparison.Ordinal);
+        Assert.Contains("TelegramNotificationDeliveryService", notificationDispatcher, StringComparison.Ordinal);
+        Assert.Contains("GetDispatchableIdsAsync", notificationDispatcher, StringComparison.Ordinal);
+        Assert.Contains("delivery.DeliverAsync", notificationDispatcher, StringComparison.Ordinal);
+        Assert.DoesNotContain("notification.Status = \"sending\"", notificationDispatcher, StringComparison.Ordinal);
         Assert.Contains("/health/live", program, StringComparison.Ordinal);
         Assert.Contains("/health/ready", program, StringComparison.Ordinal);
     }

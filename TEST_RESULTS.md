@@ -2,6 +2,31 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Telegram notification dispatch recovery
+
+Scope:
+- Проверены multi-context concurrency, fresh/stale `sending` lease, transient retry/backoff, redaction, cancellation, max attempts, blocked account и malformed/legacy payload.
+- Hosted dispatcher проверен на делегирование atomic application service вместо незащищенного изменения статусов выбранного списка.
+
+Result:
+- Notification получает process gate и conditional DB claim по status/`UpdatedAt`; stale `sending` восстанавливается после минутной lease без параллельного send.
+- Ошибка и cancellation независимо сохраняют `pending` retry state, пятая попытка становится terminal `failed`, blocked account становится `cancelled`.
+- JSON payload валидируется fail-closed, включая типы и вложенный `replyMarkupJson`; legacy plain text доставляется как раньше.
+- Roadmap progress: `481/501` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-telegram-notification-dispatch-recovery`, version `0.469.0`.
+
+Validation:
+- Backend full suite: OK, `873/873`; targeted Telegram notification suite: OK, `17/17`.
+- API and TelegramBot Release builds with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-telegram-notification-dispatch-recovery`.
+- Secret scan: OK, `571` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: Telegram response delivery recovery
 
 Scope:

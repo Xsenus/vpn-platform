@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-04",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `860/860`",
+                     "Backend full suite: `873/873`",
                      "Frontend unit tests: `66/66`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `12/12`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-04-telegram-response-delivery-recovery",
-                     "0.468.0"
+                     "2026-08-04-telegram-notification-dispatch-recovery",
+                     "0.469.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-telegram-response-delivery-recovery", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-04-telegram-response-delivery-recovery", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-telegram-notification-dispatch-recovery", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-telegram-notification-dispatch-recovery", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `860/860`",
+                     "Backend full suite: `873/873`",
                      "Frontend unit tests: `66/66`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-04-telegram-response-delivery-recovery",
-                     "0.468.0",
+                     "2026-08-04-telegram-notification-dispatch-recovery",
+                     "0.469.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

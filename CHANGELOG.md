@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.469.0 - 2026-08-04
+
+Release entry: `2026-08-04-telegram-notification-dispatch-recovery`.
+
+### Fixed
+- `TelegramBotNotification` теперь захватывается атомарным conditional DB update; два dispatcher-экземпляра не отправляют одно уведомление параллельно.
+- Зависший `sending` восстанавливается после минутной lease, transient failure и cancellation сохраняют redacted retry state с backoff, а пятая ошибка переводит запись в terminal `failed`.
+- Заблокированный Telegram account переводит notification в `cancelled` без внешнего вызова; malformed JSON/reply markup завершается fail-closed, legacy plain-text payload остается поддержан.
+- Hosted dispatcher стал тонким worker над testable application service и больше не управляет статусами неатомарно внутри выбранного списка.
+
+### Notes
+- Validation: backend full suite `873/873`, targeted Telegram notification suite `17/17`, API and TelegramBot Release builds `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `571` files, `0` findings; encoding guard and artifact cleanup: OK.
+- Roadmap progress is `481/501` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.468.0 - 2026-08-04
 
 Release entry: `2026-08-04-telegram-response-delivery-recovery`.
