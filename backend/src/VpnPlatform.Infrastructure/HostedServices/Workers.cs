@@ -62,26 +62,18 @@ public class OutboxDispatcherWorker : BackgroundService
     private async Task ProcessOutboxBatchAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var messages = await db.OutboxMessages
-            .Where(x => x.ProcessedAt == null && x.Attempts < 10)
-            .ToListAsync(cancellationToken);
-
-        foreach (var message in messages.OrderBy(x => x.CreatedAt).Take(100))
+        var delivery = scope.ServiceProvider.GetRequiredService<OutboxMessageDeliveryService>();
+        var messageIds = await delivery.GetDispatchableIdsAsync(100, cancellationToken);
+        foreach (var messageId in messageIds)
         {
-            try
+            var result = await delivery.DeliverAsync(messageId, cancellationToken);
+            if (!result.IsSuccess)
             {
-                message.Attempts += 1;
-                message.ProcessedAt = DateTimeOffset.UtcNow;
-                _logger.LogInformation("Outbox dispatched: {Type} {CorrelationId}", message.Type, message.CorrelationId);
-            }
-            catch (Exception ex)
-            {
-                message.LastError = ex.Message;
+                _logger.LogWarning(
+                    "Outbox message {MessageId} delivery deferred or failed: {Error}",
+                    messageId,
+                    result.Error);
             }
         }
-
-        await db.SaveChangesAsync(cancellationToken);
     }
 }

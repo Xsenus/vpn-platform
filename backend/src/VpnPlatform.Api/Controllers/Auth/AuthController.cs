@@ -209,18 +209,19 @@ public class AuthController : ControllerBase
         {
             var rawToken = _tokenService.CreateRefreshToken();
             validationToken = _configuration.GetValue<bool>("Auth:PasswordReset:ReturnTokenForValidation") ? rawToken : null;
-            _db.PasswordResetTokens.Add(new PasswordResetToken
+            var resetToken = new PasswordResetToken
             {
                 UserId = user.Id,
                 TokenHash = HashToken(rawToken),
                 ExpiresAt = _clock.UtcNow.AddMinutes(GetInt("Auth:PasswordReset:ExpiryMinutes", 30)),
                 RequestedByIp = ResolveIp(),
                 UserAgent = Request.Headers.UserAgent.ToString()
-            });
+            };
+            _db.PasswordResetTokens.Add(resetToken);
             _db.OutboxMessages.Add(new OutboxMessage
             {
                 Type = "password_reset_requested",
-                CorrelationId = user.Id.ToString(),
+                CorrelationId = resetToken.Id.ToString("N"),
                 PayloadJson = JsonSerializer.Serialize(new { userId = user.Id, email = user.Email, validationTokenReturned = validationToken is not null })
             });
             AddAudit("auth.password_reset_requested", "User", user.Id, null, new { email = normalizedEmail, validationTokenReturned = validationToken is not null });

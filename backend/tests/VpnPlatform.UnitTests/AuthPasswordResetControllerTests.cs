@@ -92,6 +92,11 @@ public class AuthPasswordResetControllerTests
         var secondForgot = await controller.ForgotPassword(new ForgotPasswordRequest("reset-flow@example.test"), CancellationToken.None);
         var secondToken = Assert.IsType<ForgotPasswordResponse>(Assert.IsType<OkObjectResult>(secondForgot).Value).ValidationResetToken;
         Assert.False(string.IsNullOrWhiteSpace(secondToken));
+        var resetMessages = await db.OutboxMessages
+            .Where(x => x.Type == "password_reset_requested")
+            .ToListAsync();
+        Assert.Equal(2, resetMessages.Count);
+        Assert.Equal(2, resetMessages.Select(x => x.CorrelationId).Distinct(StringComparer.Ordinal).Count());
         clock.Advance(TimeSpan.FromMinutes(31));
         AssertBadRequestError(
             await controller.ResetPassword(new ResetPasswordRequest(secondToken!, "ExpiredPassword123!"), CancellationToken.None),

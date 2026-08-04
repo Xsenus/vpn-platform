@@ -107,6 +107,7 @@ public static class DependencyInjection
         services.AddScoped<ProvisioningSecretMaterializer>();
         services.AddScoped<IProvisioningExecutor, AnsibleProvisioningExecutor>();
         services.AddScoped<AppReleaseSeedService>();
+        services.AddScoped<IOutboxMessageSink, LocalOutboxMessageSink>();
 
         if (includeHostedServices)
         {

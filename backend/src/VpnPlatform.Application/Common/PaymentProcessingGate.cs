@@ -20,6 +20,9 @@ public static class PaymentProcessingGate
     public static async ValueTask<IAsyncDisposable> AcquireTelegramNotificationAsync(Guid notificationId, CancellationToken cancellationToken)
         => await AcquireAsync($"telegram-notification:{notificationId:N}", cancellationToken);
 
+    public static async ValueTask<IAsyncDisposable> AcquireOutboxMessageAsync(Guid messageId, CancellationToken cancellationToken)
+        => await AcquireAsync($"outbox:{messageId:N}", cancellationToken);
+
     private static async ValueTask<IAsyncDisposable> AcquireAsync(string key, CancellationToken cancellationToken)
     {
         GateEntry entry;

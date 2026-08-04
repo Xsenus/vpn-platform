@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Outbox dispatch recovery
+
+Scope:
+- Проверены все producer-типы outbox, конкурентный multi-context claim, fresh/stale lease, transient retry/backoff, cancellation, max attempts, malformed/unsupported payload и повтор failed enqueue.
+- Сгенерирована EF migration `20260804131342_OutboxDispatchRecovery`; проверены model drift, PostgreSQL backfill до unique index и idempotent local SQLite schema repair.
+
+Result:
+- Worker делегирует обработку application service и ставит `ProcessedAt` только после успешного handler; ошибки сохраняются redacted, десятая попытка и permanent payload error переходят в `FailedAt`.
+- Unique `(Type, CorrelationId)` и transactional upsert исключают конкурентные дубли enqueue; password reset token и payment status формируют event-specific correlation identity.
+- `NotificationRequested` и password reset создают pending email delivery в той же DB-транзакции, malformed/unsupported payload блокируется; health report отдельно показывает pending и failed outbox.
+- Roadmap progress: `483/503` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-outbox-dispatch-recovery`, version `0.471.0`.
+
+Validation:
+- Backend full suite: OK, `901/901`; targeted outbox/auth/payment/SQLite/observability suite: OK, `37/37`.
+- EF migration list, model drift and generated PostgreSQL SQL: OK; lifecycle columns, duplicate normalization and unique index order verified.
+- API and TelegramBot Release builds with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-outbox-dispatch-recovery`.
+- Secret scan: OK, `581` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: live email provider and real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: Telegram notification enqueue deduplication
 
 Scope:

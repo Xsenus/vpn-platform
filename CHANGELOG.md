@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.471.0 - 2026-08-04
+
+Release entry: `2026-08-04-outbox-dispatch-recovery`.
+
+### Fixed
+- `OutboxDispatcherWorker` больше не подтверждает события без handler: application service выполняет atomic claim, минутную lease, retry с backoff, redacted error и terminal dead-letter после десяти попыток.
+- Enqueue защищён unique identity `(Type, CorrelationId)` и транзакционным PostgreSQL/SQLite upsert; повтор failed-события переактивируется, а повторный password reset и смена payment status получают отдельные correlation ID.
+- `NotificationRequested` и password reset материализуются в pending email delivery, malformed/unsupported payload завершается fail-closed; payment/order internal events проходят обязательную schema validation.
+- EF migration и local SQLite repair добавляют lifecycle-поля, нормализуют исторические дубли до unique index; readiness health разделяет pending и failed outbox.
+
+### Notes
+- Validation: backend full suite `901/901`, targeted outbox/auth/payment/SQLite/observability suite `37/37`, EF model drift and PostgreSQL migration SQL OK, API and TelegramBot Release builds `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `581` files, `0` findings; encoding guard and artifact cleanup: OK.
+- RoadmapCurrentStateTests and release/documentation guards keep progress at `483/503` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; live email and real VPS/staging/live payment/production-like 3x-ui evidence remain open.
+
 ## 0.470.0 - 2026-08-04
 
 Release entry: `2026-08-04-telegram-notification-enqueue-deduplication`.

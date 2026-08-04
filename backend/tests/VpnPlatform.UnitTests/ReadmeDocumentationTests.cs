@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("881/881", readme, StringComparison.Ordinal);
+        Assert.Contains("901/901", readme, StringComparison.Ordinal);
         Assert.Contains("66/66", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-04-telegram-notification-enqueue-deduplication", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-outbox-dispatch-recovery", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "881/881",
-                     "2026-08-04-telegram-notification-enqueue-deduplication",
-                     "0.470.0",
+                     "901/901",
+                     "2026-08-04-outbox-dispatch-recovery",
+                     "0.471.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

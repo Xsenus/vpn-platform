@@ -57,7 +57,9 @@ public sealed class ObservabilityHealthService
             var enabledPaymentProvidersCount = await _db.PaymentProviderAccounts.AsNoTracking()
                 .CountAsync(x => x.IsEnabled && x.Mode != PaymentProviderMode.Disabled, cancellationToken);
             var pendingOutboxCount = await _db.OutboxMessages.AsNoTracking()
-                .CountAsync(x => x.ProcessedAt == null, cancellationToken);
+                .CountAsync(x => x.ProcessedAt == null && x.FailedAt == null, cancellationToken);
+            var failedOutboxCount = await _db.OutboxMessages.AsNoTracking()
+                .CountAsync(x => x.FailedAt != null, cancellationToken);
             var failedProvisioningCount = await _db.ProvisioningRuns.AsNoTracking()
                 .CountAsync(x => x.Status == ProvisioningRunStatus.Failed || x.Status == ProvisioningRunStatus.PrecheckFailed, cancellationToken);
             var unhealthyNodesCount = await _db.VpnNodes.AsNoTracking()
@@ -73,6 +75,7 @@ public sealed class ObservabilityHealthService
                     ["activeTariffs"] = activeTariffsCount,
                     ["enabledPaymentProviders"] = enabledPaymentProvidersCount,
                     ["pendingOutbox"] = pendingOutboxCount,
+                    ["failedOutbox"] = failedOutboxCount,
                     ["failedProvisioning"] = failedProvisioningCount,
                     ["unhealthyNodes"] = unhealthyNodesCount
                 }));

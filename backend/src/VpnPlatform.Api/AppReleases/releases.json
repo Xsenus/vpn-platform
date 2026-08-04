@@ -10982,5 +10982,28 @@
         "text": "PostgreSQL migration и local SQLite repair нормализуют историю до unique index. Roadmap progress is 482/502 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-outbox-dispatch-recovery",
+    "version": "0.471.0",
+    "releasedAt": "2026-08-04T20:30:00+07:00",
+    "title": "Outbox события доставляются с восстановлением и контролем ошибок",
+    "summary": "Атомарный claim, lease, retry и dead-letter заменили ложное подтверждение событий без обработки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Несколько worker instances не обрабатывают одно событие параллельно; stale processing восстанавливается, а временные ошибки получают redacted backoff."
+      },
+      {
+        "type": "fixed",
+        "text": "NotificationRequested и password reset создают pending email delivery; malformed и unsupported payload завершается fail-closed вместо ложного ProcessedAt."
+      },
+      {
+        "type": "important",
+        "text": "EF migration и local SQLite repair добавляют lifecycle-поля и unique event identity. Roadmap progress is 483/503 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Live email and real VPS/staging/payment/3x-ui evidence are still required before production-ready acceptance."
+      }
+    ]
   }
 ]

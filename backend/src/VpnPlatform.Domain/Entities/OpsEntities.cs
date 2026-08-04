@@ -64,7 +64,10 @@ public class OutboxMessage : AuditableEntity
     public string PayloadJson { get; set; } = "{}";
     public string CorrelationId { get; set; } = string.Empty;
     public int Attempts { get; set; }
+    public DateTimeOffset? ProcessingStartedAt { get; set; }
+    public DateTimeOffset? NextAttemptAt { get; set; }
     public DateTimeOffset? ProcessedAt { get; set; }
+    public DateTimeOffset? FailedAt { get; set; }
     public string? LastError { get; set; }
 }
 

@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-04 локально подтверждено:
 
-- backend full suite: 881/881;
+- backend full suite: 901/901;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -191,8 +191,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - payment init consistency: order gate, pre-provider reservation, concurrent duplicate, paid intermediate states и remote outcome recovery покрыты SQLite/fault-injection regression.
 - subscription activation consistency: remote create компенсируется после local credential save failure; cleanup uncertainty сохраняет `SyncRequired`, cancellation пробрасывается после durable retry-state.
 - Telegram ingress consistency: update reservation предшествует side effects; fresh lease возвращает retryable 503, failed/stale update восстанавливается, long-polling не теряет offset.
-- latest "Что нового": `2026-08-04-telegram-notification-enqueue-deduplication`, версия `0.470.0`.
-- roadmap progress: `482/502` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Outbox consistency: enqueue дедуплицируется по event identity, dispatcher использует conditional claim, stale lease, backoff/dead-letter и не подтверждает malformed/unsupported payload как успешный.
+- latest "Что нового": `2026-08-04-outbox-dispatch-recovery`, версия `0.471.0`.
+- roadmap progress: `483/503` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

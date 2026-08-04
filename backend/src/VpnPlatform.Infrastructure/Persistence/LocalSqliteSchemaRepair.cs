@@ -43,6 +43,37 @@ public static class LocalSqliteSchemaRepair
             }
         }
 
+        if (await TableExistsAsync(db, "OutboxMessages", cancellationToken))
+        {
+            foreach (var (column, sql) in new[]
+                     {
+                         ("ProcessingStartedAt", """ALTER TABLE "OutboxMessages" ADD COLUMN "ProcessingStartedAt" TEXT NULL;"""),
+                         ("NextAttemptAt", """ALTER TABLE "OutboxMessages" ADD COLUMN "NextAttemptAt" TEXT NULL;"""),
+                         ("FailedAt", """ALTER TABLE "OutboxMessages" ADD COLUMN "FailedAt" TEXT NULL;""")
+                     })
+            {
+                if (await ColumnExistsAsync(db, "OutboxMessages", column, cancellationToken))
+                {
+                    continue;
+                }
+
+                await db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+                repaired++;
+            }
+
+            if (!await IndexIsUniqueAsync(db, "IX_OutboxMessages_Type_CorrelationId", cancellationToken))
+            {
+                await BackfillOutboxDuplicateCorrelationsAsync(db, cancellationToken);
+                await db.Database.ExecuteSqlRawAsync(
+                    """DROP INDEX IF EXISTS "IX_OutboxMessages_Type_CorrelationId";""",
+                    cancellationToken);
+                await db.Database.ExecuteSqlRawAsync(
+                    """CREATE UNIQUE INDEX "IX_OutboxMessages_Type_CorrelationId" ON "OutboxMessages" ("Type", "CorrelationId");""",
+                    cancellationToken);
+                repaired++;
+            }
+        }
+
         return repaired;
     }
 
@@ -90,6 +121,33 @@ public static class LocalSqliteSchemaRepair
             _ => 2
         };
 
+    private static async Task BackfillOutboxDuplicateCorrelationsAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var messages = await db.OutboxMessages.ToListAsync(cancellationToken);
+        foreach (var group in messages.GroupBy(x => (x.Type, x.CorrelationId)).Where(x => x.Count() > 1))
+        {
+            var ordered = group
+                .OrderBy(x => x.ProcessedAt.HasValue ? 0 : 1)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .ToList();
+            foreach (var duplicate in ordered.Skip(1))
+            {
+                duplicate.CorrelationId = $"legacy:{duplicate.Id:N}";
+                if (!duplicate.ProcessedAt.HasValue
+                    && duplicate.Type is not ("password_reset_requested" or "PaymentStatusChanged"))
+                {
+                    duplicate.FailedAt = DateTimeOffset.UtcNow;
+                    duplicate.LastError = "Duplicate outbox message cancelled during local schema repair.";
+                }
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     private static async Task<bool> TableExistsAsync(ApplicationDbContext db, string tableName, CancellationToken cancellationToken)
     {
         await using var command = db.Database.GetDbConnection().CreateCommand();
@@ -128,6 +186,26 @@ public static class LocalSqliteSchemaRepair
         await EnsureOpenAsync(db, cancellationToken);
         var result = await command.ExecuteScalarAsync(cancellationToken);
         return Convert.ToInt32(result) > 0;
+    }
+
+    private static async Task<bool> IndexIsUniqueAsync(
+        ApplicationDbContext db,
+        string indexName,
+        CancellationToken cancellationToken)
+    {
+        await using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "PRAGMA index_list(\"OutboxMessages\")";
+        await EnsureOpenAsync(db, cancellationToken);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            if (string.Equals(reader["name"]?.ToString(), indexName, StringComparison.OrdinalIgnoreCase))
+            {
+                return Convert.ToInt32(reader["unique"]) == 1;
+            }
+        }
+
+        return false;
     }
 
     private static async Task EnsureOpenAsync(ApplicationDbContext db, CancellationToken cancellationToken)

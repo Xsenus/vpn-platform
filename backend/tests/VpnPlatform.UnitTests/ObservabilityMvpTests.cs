@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using VpnPlatform.Api.Middleware;
 using VpnPlatform.Api.Observability;
+using VpnPlatform.Domain.Entities;
 using VpnPlatform.Infrastructure.Persistence;
 using Xunit;
 
@@ -74,6 +75,10 @@ public class ObservabilityMvpTests
         await connection.OpenAsync();
         await using var db = CreateDbContext(connection);
         await db.Database.EnsureCreatedAsync();
+        db.OutboxMessages.AddRange(
+            new OutboxMessage { Type = "OrderTimelineEvent", CorrelationId = "pending", PayloadJson = "{}" },
+            new OutboxMessage { Type = "OrderTimelineEvent", CorrelationId = "failed", PayloadJson = "{}", FailedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
 
         var metrics = new ApiObservabilityMetrics();
         metrics.OnRequestStarted();
@@ -99,6 +104,9 @@ public class ObservabilityMvpTests
         Assert.Equal(1, report.RequestsCompleted);
         Assert.Contains(report.Checks, x => x.Name == "database" && x.Status == HealthStatuses.Ready);
         Assert.Contains(report.Checks, x => x.Name == "runtime" && x.Status == HealthStatuses.Ready);
+        var database = Assert.Single(report.Checks, x => x.Name == "database");
+        Assert.Equal(1, database.Data!["pendingOutbox"]);
+        Assert.Equal(1, database.Data["failedOutbox"]);
     }
 
     private static ApplicationDbContext CreateDbContext(SqliteConnection connection)

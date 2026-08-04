@@ -334,6 +334,7 @@ public sealed record TelegramLinkTokenDto(string Token, string DeepLinkUrl, Date
 public sealed record TelegramBotProcessResult(bool Processed, string ResponseText, long? ChatId = null, string? ReplyMarkupJson = null, string? PreCheckoutQueryId = null, bool? PreCheckoutOk = null, string? PreCheckoutError = null, long? UpdateId = null);
 public sealed record TelegramUpdateDeliveryResult(long UpdateId, bool Delivered, bool HadPendingDelivery);
 public sealed record TelegramNotificationDeliveryResult(Guid NotificationId, bool Delivered, string Status);
+public sealed record OutboxMessageDeliveryResult(Guid MessageId, bool Delivered, string Status);
 public sealed record CreateTelegramUserResultDto(Guid UserId, bool Created, string Email, string DisplayName);
 public sealed record TelegramInvoiceRequest(Guid OrderId, Guid PaymentAttemptId, long TelegramUserId, string Title, string Description, string Payload, string Currency, int TotalAmountMinor);
 public sealed record TelegramInvoiceResult(string Payload, string RawResponse);

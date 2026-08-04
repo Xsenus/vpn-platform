@@ -917,7 +917,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             _db.OutboxMessages.Add(new OutboxMessage
             {
                 Type = "PaymentStatusChanged",
-                CorrelationId = payment.ProviderPaymentId,
+                CorrelationId = $"{payment.Id:N}:{payment.Status}",
                 PayloadJson = $$"""
                 {
                   "paymentId": "{{payment.Id}}",

@@ -91,6 +91,11 @@ public interface IProvisioningExecutor
     Task<ProvisioningExecutionResult> ExecuteAsync(VpnNode node, ProvisioningRun run, CancellationToken cancellationToken);
 }
 
+public interface IOutboxMessageSink
+{
+    Task DispatchAsync(Guid messageId, string type, string correlationId, string payloadJson, CancellationToken cancellationToken);
+}
+
 
 public interface ITelegramInvoiceProvider
 {

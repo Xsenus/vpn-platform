@@ -115,6 +115,54 @@ public class LocalSqliteSchemaRepairTests
         Assert.True(await IndexExistsAsync(connection, "IX_TelegramBotNotifications_DeduplicationKey"));
     }
 
+    [Fact]
+    public async Task ApplyAsync_Should_Upgrade_Outbox_And_Quarantine_Duplicate_Pending_Message()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "OutboxMessages" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "Type" TEXT NOT NULL,
+                "PayloadJson" TEXT NOT NULL,
+                "CorrelationId" TEXT NOT NULL,
+                "Attempts" INTEGER NOT NULL,
+                "ProcessedAt" TEXT NULL,
+                "LastError" TEXT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
+            );
+            CREATE INDEX "IX_OutboxMessages_Type_CorrelationId"
+                ON "OutboxMessages" ("Type", "CorrelationId");
+            """);
+        var first = OutboxMessage("duplicate-event");
+        var duplicate = OutboxMessage("duplicate-event");
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "OutboxMessages"
+                ("Id", "Type", "PayloadJson", "CorrelationId", "Attempts", "ProcessedAt", "LastError", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({first.Id}, {first.Type}, {first.PayloadJson}, {first.CorrelationId}, 0, NULL, NULL, {first.CreatedAt}, {first.UpdatedAt}),
+                ({duplicate.Id}, {duplicate.Type}, {duplicate.PayloadJson}, {duplicate.CorrelationId}, 0, NULL, NULL, {duplicate.CreatedAt}, {duplicate.UpdatedAt});
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(4, repaired);
+        Assert.True(await ColumnExistsAsync(connection, "OutboxMessages", "ProcessingStartedAt"));
+        Assert.True(await ColumnExistsAsync(connection, "OutboxMessages", "NextAttemptAt"));
+        Assert.True(await ColumnExistsAsync(connection, "OutboxMessages", "FailedAt"));
+        Assert.True(await IndexIsUniqueAsync(connection, "IX_OutboxMessages_Type_CorrelationId"));
+        var stored = await db.OutboxMessages.AsNoTracking().OrderBy(x => x.Id).ToListAsync();
+        Assert.Equal(2, stored.Select(x => x.CorrelationId).Distinct(StringComparer.Ordinal).Count());
+        Assert.Single(stored, x => x.FailedAt == null);
+        Assert.Single(stored, x => x.FailedAt != null);
+    }
+
     private static TelegramBotNotification Notification()
         => new()
         {
@@ -123,6 +171,16 @@ public class LocalSqliteSchemaRepairTests
             PayloadJson = "{\"text\":\"Renew\"}",
             Status = "pending",
             NextAttemptAt = new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero)
+        };
+
+    private static OutboxMessage OutboxMessage(string correlationId)
+        => new()
+        {
+            Type = "NotificationRequested",
+            CorrelationId = correlationId,
+            PayloadJson = "{}",
+            CreatedAt = new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero),
+            UpdatedAt = new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero)
         };
 
     private static async Task<bool> ColumnExistsAsync(SqliteConnection connection, string tableName, string columnName)
@@ -147,5 +205,21 @@ public class LocalSqliteSchemaRepairTests
         command.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type = 'index' AND name = $indexName";
         command.Parameters.AddWithValue("$indexName", indexName);
         return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+    }
+
+    private static async Task<bool> IndexIsUniqueAsync(SqliteConnection connection, string indexName)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA index_list(\"OutboxMessages\")";
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            if (string.Equals(reader["name"]?.ToString(), indexName, StringComparison.OrdinalIgnoreCase))
+            {
+                return Convert.ToInt32(reader["unique"]) == 1;
+            }
+        }
+
+        return false;
     }
 }

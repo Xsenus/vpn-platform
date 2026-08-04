@@ -115,7 +115,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PanelHealthCheck>().HasIndex(x => new { x.VpnPanelId, x.CheckedAt });
         modelBuilder.Entity<AccessCredentialHistory>().HasIndex(x => new { x.AccessCredentialId, x.CreatedAt });
         modelBuilder.Entity<InboxMessage>().HasIndex(x => new { x.Source, x.ExternalKey }).IsUnique();
-        modelBuilder.Entity<OutboxMessage>().HasIndex(x => new { x.Type, x.CorrelationId });
+        modelBuilder.Entity<OutboxMessage>().HasIndex(x => new { x.Type, x.CorrelationId }).IsUnique();
         modelBuilder.Entity<AppRelease>().HasIndex(x => x.ReleaseId).IsUnique();
         modelBuilder.Entity<AppRelease>().HasIndex(x => new { x.IsActive, x.ReleasedAt });
         modelBuilder.Entity<AppReleaseItem>().HasIndex(x => new { x.AppReleaseId, x.SortOrder });
@@ -471,9 +471,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         var notifications = ExtractAddedTelegramNotifications();
-        if (notifications.Count == 0 || !Database.IsRelational())
+        var outboxMessages = ExtractAddedOutboxMessages();
+        if ((notifications.Count == 0 && outboxMessages.Count == 0) || !Database.IsRelational())
         {
             PrepareNonRelationalNotifications(notifications);
+            PrepareNonRelationalOutboxMessages(outboxMessages);
             return base.SaveChanges(acceptAllChangesOnSuccess);
         }
 
@@ -482,6 +484,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             var affected = base.SaveChanges(acceptAllChangesOnSuccess: false);
             affected += UpsertTelegramNotifications(notifications);
+            affected += UpsertOutboxMessages(outboxMessages);
             transaction?.Commit();
             if (acceptAllChangesOnSuccess)
             {
@@ -494,6 +497,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             transaction?.Rollback();
             RestoreTelegramNotifications(notifications);
+            RestoreOutboxMessages(outboxMessages);
             throw;
         }
     }
@@ -501,9 +505,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         var notifications = ExtractAddedTelegramNotifications();
-        if (notifications.Count == 0 || !Database.IsRelational())
+        var outboxMessages = ExtractAddedOutboxMessages();
+        if ((notifications.Count == 0 && outboxMessages.Count == 0) || !Database.IsRelational())
         {
             PrepareNonRelationalNotifications(notifications);
+            PrepareNonRelationalOutboxMessages(outboxMessages);
             return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
@@ -512,6 +518,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             var affected = await base.SaveChangesAsync(acceptAllChangesOnSuccess: false, cancellationToken);
             affected += await UpsertTelegramNotificationsAsync(notifications, cancellationToken);
+            affected += await UpsertOutboxMessagesAsync(outboxMessages, cancellationToken);
             if (transaction is not null)
             {
                 await transaction.CommitAsync(cancellationToken);
@@ -532,6 +539,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             }
 
             RestoreTelegramNotifications(notifications);
+            RestoreOutboxMessages(outboxMessages);
             throw;
         }
     }
@@ -571,6 +579,43 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         return unique;
     }
 
+    private List<OutboxMessage> ExtractAddedOutboxMessages()
+    {
+        var messages = ChangeTracker.Entries<OutboxMessage>()
+            .Where(x => x.State == EntityState.Added)
+            .Select(x => x.Entity)
+            .ToList();
+        foreach (var message in messages)
+        {
+            message.Type = message.Type.Trim();
+            message.CorrelationId = message.CorrelationId.Trim();
+            if (message.Type.Length == 0 || message.CorrelationId.Length == 0)
+            {
+                throw new InvalidOperationException("Outbox Type and CorrelationId are required.");
+            }
+        }
+
+        var unique = new List<OutboxMessage>(messages.Count);
+        foreach (var group in messages.GroupBy(x => (x.Type, x.CorrelationId)))
+        {
+            unique.Add(group.First());
+            foreach (var duplicate in group.Skip(1))
+            {
+                Entry(duplicate).State = EntityState.Detached;
+            }
+        }
+
+        if (Database.IsRelational())
+        {
+            foreach (var message in unique)
+            {
+                Entry(message).State = EntityState.Detached;
+            }
+        }
+
+        return unique;
+    }
+
     private void PrepareNonRelationalNotifications(IReadOnlyCollection<TelegramBotNotification> notifications)
     {
         foreach (var notification in notifications)
@@ -593,6 +638,30 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         }
     }
 
+    private void PrepareNonRelationalOutboxMessages(IReadOnlyCollection<OutboxMessage> messages)
+    {
+        foreach (var message in messages)
+        {
+            var existing = OutboxMessages.Local.FirstOrDefault(x =>
+                !ReferenceEquals(x, message)
+                && string.Equals(x.Type, message.Type, StringComparison.Ordinal)
+                && string.Equals(x.CorrelationId, message.CorrelationId, StringComparison.Ordinal));
+            if (existing is null)
+            {
+                existing = OutboxMessages.FirstOrDefault(x =>
+                    x.Type == message.Type && x.CorrelationId == message.CorrelationId);
+            }
+
+            if (existing is null)
+            {
+                continue;
+            }
+
+            Entry(message).State = EntityState.Detached;
+            ReviveFailedOutboxMessage(existing, message);
+        }
+    }
+
     private void RestoreTelegramNotifications(IEnumerable<TelegramBotNotification> notifications)
     {
         foreach (var notification in notifications)
@@ -600,6 +669,17 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             if (Entry(notification).State == EntityState.Detached)
             {
                 TelegramBotNotifications.Add(notification);
+            }
+        }
+    }
+
+    private void RestoreOutboxMessages(IEnumerable<OutboxMessage> messages)
+    {
+        foreach (var message in messages)
+        {
+            if (Entry(message).State == EntityState.Detached)
+            {
+                OutboxMessages.Add(message);
             }
         }
     }
@@ -623,6 +703,22 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         foreach (var notification in notifications)
         {
             affected += await UpsertTelegramNotificationAsync(notification, cancellationToken);
+        }
+
+        return affected;
+    }
+
+    private int UpsertOutboxMessages(IEnumerable<OutboxMessage> messages)
+        => messages.Sum(UpsertOutboxMessage);
+
+    private async Task<int> UpsertOutboxMessagesAsync(
+        IEnumerable<OutboxMessage> messages,
+        CancellationToken cancellationToken)
+    {
+        var affected = 0;
+        foreach (var message in messages)
+        {
+            affected += await UpsertOutboxMessageAsync(message, cancellationToken);
         }
 
         return affected;
@@ -662,6 +758,42 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             WHERE "Status" IN ('failed', 'cancelled');
             """, cancellationToken);
 
+    private int UpsertOutboxMessage(OutboxMessage message)
+        => Database.ExecuteSqlInterpolated($"""
+            INSERT INTO "OutboxMessages"
+                ("Id", "Type", "PayloadJson", "CorrelationId", "Attempts", "ProcessingStartedAt", "NextAttemptAt", "ProcessedAt", "FailedAt", "LastError", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({message.Id}, {message.Type}, {message.PayloadJson}, {message.CorrelationId}, {message.Attempts}, {message.ProcessingStartedAt}, {message.NextAttemptAt}, {message.ProcessedAt}, {message.FailedAt}, {message.LastError}, {message.CreatedAt}, {message.UpdatedAt})
+            ON CONFLICT ("Type", "CorrelationId") DO UPDATE SET
+                "PayloadJson" = excluded."PayloadJson",
+                "Attempts" = 0,
+                "ProcessingStartedAt" = NULL,
+                "NextAttemptAt" = excluded."NextAttemptAt",
+                "ProcessedAt" = NULL,
+                "FailedAt" = NULL,
+                "LastError" = NULL,
+                "UpdatedAt" = excluded."UpdatedAt"
+            WHERE "FailedAt" IS NOT NULL;
+            """);
+
+    private Task<int> UpsertOutboxMessageAsync(OutboxMessage message, CancellationToken cancellationToken)
+        => Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "OutboxMessages"
+                ("Id", "Type", "PayloadJson", "CorrelationId", "Attempts", "ProcessingStartedAt", "NextAttemptAt", "ProcessedAt", "FailedAt", "LastError", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({message.Id}, {message.Type}, {message.PayloadJson}, {message.CorrelationId}, {message.Attempts}, {message.ProcessingStartedAt}, {message.NextAttemptAt}, {message.ProcessedAt}, {message.FailedAt}, {message.LastError}, {message.CreatedAt}, {message.UpdatedAt})
+            ON CONFLICT ("Type", "CorrelationId") DO UPDATE SET
+                "PayloadJson" = excluded."PayloadJson",
+                "Attempts" = 0,
+                "ProcessingStartedAt" = NULL,
+                "NextAttemptAt" = excluded."NextAttemptAt",
+                "ProcessedAt" = NULL,
+                "FailedAt" = NULL,
+                "LastError" = NULL,
+                "UpdatedAt" = excluded."UpdatedAt"
+            WHERE "FailedAt" IS NOT NULL;
+            """, cancellationToken);
+
     private void ReviveTerminalNotification(TelegramBotNotification existing, TelegramBotNotification replacement)
     {
         if (existing.Status is not ("failed" or "cancelled"))
@@ -674,6 +806,23 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         existing.NextAttemptAt = replacement.NextAttemptAt;
         existing.SentAt = null;
         existing.ErrorText = string.Empty;
+        existing.UpdatedAt = replacement.UpdatedAt;
+    }
+
+    private static void ReviveFailedOutboxMessage(OutboxMessage existing, OutboxMessage replacement)
+    {
+        if (!existing.FailedAt.HasValue)
+        {
+            return;
+        }
+
+        existing.PayloadJson = replacement.PayloadJson;
+        existing.Attempts = 0;
+        existing.ProcessingStartedAt = null;
+        existing.NextAttemptAt = replacement.NextAttemptAt;
+        existing.ProcessedAt = null;
+        existing.FailedAt = null;
+        existing.LastError = null;
         existing.UpdatedAt = replacement.UpdatedAt;
     }
 }
