@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -727,6 +728,149 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Client_Migration_Should_Reject_Full_Target_Inbound_Before_Remote_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var sourcePanel = await db.VpnPanels.SingleAsync();
+        var sourceInbound = await db.VpnInbounds.SingleAsync();
+        sourcePanel.UsedCapacity = 1;
+        sourceInbound.UsedCapacity = 1;
+        var target = CreateMigrationInbound(ids.PanelId, "2", "full-target", capacity: 1, usedCapacity: 1);
+        db.VpnInbounds.Add(target);
+        await db.SaveChangesAsync();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.MigrateClientAsync(ids.ClientId, new MigrateVpnClientCommand(target.Id), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("capacity", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, remote.AddClientCalls);
+        Assert.Equal(ids.InboundId, (await db.VpnClients.SingleAsync()).VpnInboundId);
+        Assert.Equal(1, (await db.VpnInbounds.SingleAsync(x => x.Id == target.Id)).UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Client_Migration_Should_Reject_Full_Target_Panel_Before_Remote_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var sourcePanel = await db.VpnPanels.SingleAsync();
+        var sourceInbound = await db.VpnInbounds.SingleAsync();
+        sourcePanel.UsedCapacity = 1;
+        sourceInbound.UsedCapacity = 1;
+        var targetPanel = new VpnPanel
+        {
+            Name = "full-panel",
+            BaseUrl = "https://full-panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            HealthStatus = HealthStatus.Healthy,
+            Capacity = 1,
+            UsedCapacity = 1
+        };
+        var target = CreateMigrationInbound(targetPanel.Id, "2", "target-on-full-panel", capacity: 10);
+        db.VpnPanels.Add(targetPanel);
+        db.VpnInbounds.Add(target);
+        await db.SaveChangesAsync();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.MigrateClientAsync(ids.ClientId, new MigrateVpnClientCommand(target.Id), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("capacity", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, remote.AddClientCalls);
+        Assert.Equal(ids.InboundId, (await db.VpnClients.SingleAsync()).VpnInboundId);
+        Assert.Equal(1, (await db.VpnPanels.SingleAsync(x => x.Id == targetPanel.Id)).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync(x => x.Id == target.Id)).UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Concurrent_Client_Migrations_Should_Reserve_Last_Target_Inbound_Once()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-migration-capacity-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = SqliteOptions(databasePath);
+            var clock = new FixedClock();
+            var seed = await SeedRelationalMigrationAsync(options, clock.UtcNow);
+            var addStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var releaseAdd = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var remote = new FakeX3UiClient(clock.UtcNow) { AddClientStarted = addStarted, ReleaseAddClient = releaseAdd };
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var firstService = new X3UiPanelService(firstDb, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+            var secondService = new X3UiPanelService(secondDb, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+            var first = Task.Run(() => CaptureMigrationAsync(() => firstService.MigrateClientAsync(seed.ClientIds[0], new MigrateVpnClientCommand(seed.TargetInboundId), CancellationToken.None)));
+            await addStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var second = Task.Run(() => CaptureMigrationAsync(() => secondService.MigrateClientAsync(seed.ClientIds[1], new MigrateVpnClientCommand(seed.TargetInboundId), CancellationToken.None)));
+            await Task.Delay(250);
+            var secondCompletedBeforeRelease = second.IsCompleted;
+            releaseAdd.TrySetResult(true);
+            var attempts = await Task.WhenAll(first, second);
+
+            Assert.True(secondCompletedBeforeRelease);
+            Assert.Equal(1, attempts.Count(x => x.Result?.IsSuccess == true));
+            Assert.Equal(1, attempts.Count(x => x.Result?.IsSuccess == false));
+            Assert.DoesNotContain(attempts, x => x.Error is not null);
+            Assert.Equal(1, remote.AddClientCalls);
+            Assert.Equal(1, remote.DeleteClientCalls);
+            await using var verify = new ApplicationDbContext(options);
+            Assert.Equal(1, (await verify.VpnInbounds.SingleAsync(x => x.Id == seed.TargetInboundId)).UsedCapacity);
+            Assert.Equal(2, (await verify.VpnPanels.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, await verify.VpnInbounds.CountAsync(x => x.Id != seed.TargetInboundId && x.UsedCapacity == 1));
+            Assert.Equal(1, await verify.VpnInbounds.CountAsync(x => x.Id != seed.TargetInboundId && x.UsedCapacity == 0));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task Client_Migration_Should_Restore_Remote_Source_And_Capacity_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var panel = await db.VpnPanels.SingleAsync();
+        var sourceInbound = await db.VpnInbounds.SingleAsync();
+        panel.UsedCapacity = 1;
+        sourceInbound.UsedCapacity = 1;
+        var target = CreateMigrationInbound(ids.PanelId, "2", "target-vless", capacity: 1);
+        db.VpnInbounds.Add(target);
+        await db.SaveChangesAsync();
+        var remote = new FakeX3UiClient(clock.UtcNow)
+        {
+            AfterDeleteClient = inboundId =>
+            {
+                if (inboundId == "1") db.FailNextSave = true;
+            }
+        };
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.MigrateClientAsync(ids.ClientId, new MigrateVpnClientCommand(target.Id), CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(ids.InboundId, (await db.VpnClients.SingleAsync()).VpnInboundId);
+        Assert.Equal(1, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(1, (await db.VpnInbounds.SingleAsync(x => x.Id == ids.InboundId)).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync(x => x.Id == target.Id)).UsedCapacity);
+        Assert.Equal(2, remote.AddClientCalls);
+        Assert.Equal(2, remote.DeleteClientCalls);
+        Assert.Equal(new[] { "1", "2" }, remote.DeleteInboundIds);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.migrate.failed" && x.AfterJson.Contains("remote_rolled_back"));
+    }
+
+    [Fact]
     public async Task Client_Migration_Should_Remove_Target_Copy_When_Source_Delete_Fails()
     {
         await using var db = CreateDbContext();
@@ -756,7 +900,7 @@ public class X3UiIntegrationTests
         db.ChangeTracker.Clear();
         var client = await db.VpnClients.SingleAsync(x => x.Id == ids.ClientId);
         Assert.Equal(ids.InboundId, client.VpnInboundId);
-        Assert.Equal(1, remote.AddClientCalls);
+        Assert.Equal(2, remote.AddClientCalls);
         Assert.Equal(new[] { "1", "2" }, remote.DeleteInboundIds);
         var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_client.migrate.failed");
         Assert.Contains("compensated", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
@@ -798,6 +942,69 @@ public class X3UiIntegrationTests
         Assert.Equal(new[] { "1", "2" }, remote.DeleteInboundIds);
         var audit = await db.AuditLogs.SingleAsync(x => x.Action == "vpn_client.migrate.compensation_failed");
         Assert.Contains("false", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Client_Migration_Should_Remove_Ambiguous_Target_Copy_And_Release_Reservation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var panel = await db.VpnPanels.SingleAsync();
+        var source = await db.VpnInbounds.SingleAsync();
+        panel.UsedCapacity = 1;
+        source.UsedCapacity = 1;
+        var target = CreateMigrationInbound(ids.PanelId, "2", "ambiguous-target", capacity: 1);
+        db.VpnInbounds.Add(target);
+        await db.SaveChangesAsync();
+        var remote = new FakeX3UiClient(clock.UtcNow) { FailAddClientAfterSideEffect = true };
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<TimeoutException>(() => service.MigrateClientAsync(ids.ClientId, new MigrateVpnClientCommand(target.Id), CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(ids.InboundId, (await db.VpnClients.SingleAsync()).VpnInboundId);
+        Assert.Equal(1, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(1, (await db.VpnInbounds.SingleAsync(x => x.Id == ids.InboundId)).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync(x => x.Id == target.Id)).UsedCapacity);
+        Assert.Equal(1, remote.AddClientCalls);
+        Assert.Equal(new[] { "2" }, remote.DeleteInboundIds);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.migrate.failed" && x.AfterJson.Contains("target_removed"));
+    }
+
+    [Fact]
+    public async Task Client_Migration_Cancellation_After_Source_Delete_Should_Restore_Source_And_Release_Reservation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var panel = await db.VpnPanels.SingleAsync();
+        var source = await db.VpnInbounds.SingleAsync();
+        panel.UsedCapacity = 1;
+        source.UsedCapacity = 1;
+        var target = CreateMigrationInbound(ids.PanelId, "2", "cancel-target", capacity: 1);
+        db.VpnInbounds.Add(target);
+        await db.SaveChangesAsync();
+        using var cancellation = new CancellationTokenSource();
+        var remote = new FakeX3UiClient(clock.UtcNow)
+        {
+            AfterDeleteClient = inboundId =>
+            {
+                if (inboundId == "1") cancellation.Cancel();
+            }
+        };
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.MigrateClientAsync(ids.ClientId, new MigrateVpnClientCommand(target.Id), cancellation.Token));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(ids.InboundId, (await db.VpnClients.SingleAsync()).VpnInboundId);
+        Assert.Equal(1, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(1, (await db.VpnInbounds.SingleAsync(x => x.Id == ids.InboundId)).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync(x => x.Id == target.Id)).UsedCapacity);
+        Assert.Equal(2, remote.AddClientCalls);
+        Assert.Equal(new[] { "1", "2" }, remote.DeleteInboundIds);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_client.migrate.failed" && x.AfterJson.Contains("source_restored_and_target_removed"));
     }
 
     [Fact]
@@ -1525,6 +1732,41 @@ public class X3UiIntegrationTests
         return (userId, tariffId, subscriptions.Select(x => x.Id).ToArray());
     }
 
+    private static async Task<(Guid[] ClientIds, Guid TargetInboundId)> SeedRelationalMigrationAsync(
+        DbContextOptions<ApplicationDbContext> options,
+        DateTimeOffset now)
+    {
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var user = new User { Email = $"migration-{Guid.NewGuid():N}@example.test", DisplayName = "Migration test", ReferralCode = $"MIG{Guid.NewGuid():N}" };
+        var tariff = new Tariff { Name = "Migration", Slug = $"migration-{Guid.NewGuid():N}", Description = "Migration", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true };
+        var panel = new VpnPanel { Name = $"migration-panel-{Guid.NewGuid():N}", BaseUrl = $"https://migration-{Guid.NewGuid():N}.example.test:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 3, UsedCapacity = 2 };
+        var sources = Enumerable.Range(1, 2).Select(index => CreateMigrationInbound(panel.Id, index.ToString(), $"source-{index}", capacity: 1, usedCapacity: 1, port: 443 + index)).ToArray();
+        var target = CreateMigrationInbound(panel.Id, "3", "target", capacity: 1);
+        var subscriptions = Enumerable.Range(0, 2).Select(_ => new Subscription { UserId = user.Id, TariffId = tariff.Id, Status = SubscriptionStatus.Active, StartAt = now, EndAt = now.AddDays(30) }).ToArray();
+        var clients = subscriptions.Select((subscription, index) => new VpnClient
+        {
+            UserId = user.Id,
+            SubscriptionId = subscription.Id,
+            VpnPanelId = panel.Id,
+            VpnInboundId = sources[index].Id,
+            ExternalClientId = $"migration-client-{index + 1}",
+            Email = $"migration-{index + 1}@example.test",
+            Uuid = $"migration-client-{index + 1}",
+            ExpiryTime = now.AddDays(30),
+            Enable = true
+        }).ToArray();
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.Subscriptions.AddRange(subscriptions);
+        db.VpnPanels.Add(panel);
+        db.VpnInbounds.AddRange(sources);
+        db.VpnInbounds.Add(target);
+        db.VpnClients.AddRange(clients);
+        await db.SaveChangesAsync();
+        return (clients.Select(x => x.Id).ToArray(), target.Id);
+    }
+
     private static async Task<Exception?> CaptureAsync(Func<Task<VpnProvisionResult>> action)
     {
         try
@@ -1535,6 +1777,18 @@ public class X3UiIntegrationTests
         catch (Exception ex)
         {
             return ex;
+        }
+    }
+
+    private static async Task<(Result<VpnClientDto>? Result, Exception? Error)> CaptureMigrationAsync(Func<Task<Result<VpnClientDto>>> action)
+    {
+        try
+        {
+            return (await action(), null);
+        }
+        catch (Exception ex)
+        {
+            return (null, ex);
         }
     }
 
@@ -1568,6 +1822,21 @@ public class X3UiIntegrationTests
         int capacity = 100,
         bool isActive = true)
         => new(name, protocol, port, string.Empty, settingsJson, streamSettingsJson, sniffingJson, isDefault, capacity, isActive);
+
+    private static VpnInbound CreateMigrationInbound(Guid panelId, string externalId, string name, int capacity, int usedCapacity = 0, int port = 8443)
+        => new()
+        {
+            VpnPanelId = panelId,
+            ExternalInboundId = externalId,
+            Name = name,
+            Protocol = "vless",
+            Port = port,
+            StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}",
+            SettingsJson = "{\"clients\":[]}",
+            IsActive = true,
+            Capacity = capacity,
+            UsedCapacity = usedCapacity
+        };
 
     private static async Task<(Guid PanelId, Guid InboundId, Guid ClientId, Guid SubscriptionId, Guid UserId, Guid TariffId)> SeedPanelWithLocalClientAsync(ApplicationDbContext db, DateTimeOffset now)
     {
@@ -1644,6 +1913,7 @@ public class X3UiIntegrationTests
         public bool FailAddClientAfterSideEffect { get; init; }
         public TaskCompletionSource<bool>? AddClientStarted { get; init; }
         public TaskCompletionSource<bool>? ReleaseAddClient { get; init; }
+        public Action<string>? AfterDeleteClient { get; init; }
         public List<X3UiUpdateClientRequest> UpdateRequests { get; } = [];
 
         public Task<X3UiSession> LoginAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiSession("session=test", _now));
@@ -1707,6 +1977,8 @@ public class X3UiIntegrationTests
         {
             DeleteClientCalls += 1;
             DeleteInboundIds.Add(inboundId);
+            AfterDeleteClient?.Invoke(inboundId);
+            cancellationToken.ThrowIfCancellationRequested();
             if (FailingDeleteInboundIds.Contains(inboundId))
             {
                 throw new InvalidOperationException($"delete failed for inbound {inboundId}");

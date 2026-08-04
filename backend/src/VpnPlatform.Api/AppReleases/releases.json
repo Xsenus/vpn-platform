@@ -11143,5 +11143,28 @@
         "text": "Админка явно предупреждает о необратимом отзыве. Roadmap progress is 489/509 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-x3ui-client-migration-atomicity",
+    "version": "0.478.0",
+    "releasedAt": "2026-08-04T23:58:00+07:00",
+    "title": "Перенос 3x-ui клиента защищён от переполнения и частичных сбоев",
+    "summary": "Target capacity резервируется до remote add, а ошибки и отмена восстанавливают source-клиента и освобождают временные slots.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Два параллельных переноса больше не могут занять один последний slot panel/inbound; заполненная цель отклоняется до обращения к 3x-ui."
+      },
+      {
+        "type": "fixed",
+        "text": "Ambiguous add, source delete, cancellation и local save failure получают обратный remote move; неопределённая компенсация остаётся видимой для ручной reconciliation."
+      },
+      {
+        "type": "important",
+        "text": "Админка показывает occupancy доступных целей и подтверждает временную add-before-delete резервацию. Roadmap progress is 490/510 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

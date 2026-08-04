@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: X3Ui client migration atomicity
+
+Scope:
+- Проверены target panel/inbound capacity, last-slot concurrency, add-before-delete, remote rollback при target/source/cancellation/local-save failure, audit/manual cleanup и desktop/mobile admin migration flow.
+
+Results:
+- Roadmap progress: `490/510` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-x3ui-client-migration-atomicity`, version `0.478.0`.
+- Backend full suite: OK, `954/954`; X3Ui integration suite: OK, `56/56`; targeted migration regression: OK, `9/9`.
+- Concurrent file-backed SQLite regression: два независимых контекста конкурируют за последний target slot; только один выполняет remote add/delete и commit.
+- Capacity regression: full/unhealthy panel и full/inactive inbound отклоняются до provider mutation; panel/inbound reservation освобождается симметрично.
+- Fault/cancellation regression: ambiguous target add очищается; source delete uncertainty восстанавливает source перед target cleanup; local save failure выполняет полный remote rollback.
+- EF schema: no changes; pending model changes: none.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`; migration selector/dialog/result verified on desktop and mobile without horizontal overflow.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-x3ui-client-migration-atomicity`.
+- Secret scan: OK, `607` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-04: Terminal subscription cancellation
 
 Scope:

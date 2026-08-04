@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
@@ -935,13 +936,20 @@ public class X3UiPanelService
 
     public async Task<Result<VpnClientDto>> MigrateClientAsync(Guid clientId, MigrateVpnClientCommand command, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
+        var observedClient = await LoadClientForActionAsync(clientId, cancellationToken);
+        if (observedClient?.VpnPanel is null || observedClient.VpnInbound is null)
+        {
+            return Result<VpnClientDto>.Failure("VPN client not found.");
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireVpnSubscriptionAsync(observedClient.SubscriptionId, cancellationToken);
+        ClearTracker();
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
         {
             return Result<VpnClientDto>.Failure("VPN client not found.");
         }
 
-        var before = ClientAuditSnapshot(client);
         var targetInbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == command.TargetInboundId, cancellationToken);
         if (targetInbound?.VpnPanel is null)
         {
@@ -951,91 +959,184 @@ public class X3UiPanelService
         {
             return Result<VpnClientDto>.Failure("Target inbound is inactive.");
         }
+        if (targetInbound.VpnPanel.Status != VpnPanelStatus.Active || targetInbound.VpnPanel.HealthStatus == HealthStatus.Unhealthy)
+        {
+            return Result<VpnClientDto>.Failure("Target panel is not active and healthy.");
+        }
         if (!string.Equals(targetInbound.Protocol, client.VpnInbound.Protocol, StringComparison.OrdinalIgnoreCase))
         {
             return Result<VpnClientDto>.Failure("Target inbound protocol must match the client protocol.");
         }
         if (targetInbound.Id == client.VpnInboundId)
         {
+            var sameTargetBefore = ClientAuditSnapshot(client);
             client.SyncStatus = "already-on-target";
             client.LastSyncedAt = _clock.UtcNow;
             client.UpdatedAt = _clock.UtcNow;
-            AddAudit("vpn_client.migrate", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
+            AddAudit("vpn_client.migrate", "VpnClient", client.Id, actorUserId, sameTargetBefore, ClientAuditSnapshot(client));
             await _db.SaveChangesAsync(cancellationToken);
             return Result<VpnClientDto>.Success(MapClient(client));
         }
 
-        var sourceInbound = client.VpnInbound;
-        var sourcePanel = client.VpnPanel;
-        X3UiClientDto? remote = null;
+        string? sourcePassword = null;
+        string? targetPassword = null;
         if (!IsSandboxMode())
         {
-            var sourceConfigurationError = ValidatePanelCredentials(sourcePanel);
+            var sourceConfigurationError = ValidatePanelCredentials(client.VpnPanel);
             var targetConfigurationError = ValidatePanelCredentials(targetInbound.VpnPanel);
             if (sourceConfigurationError is not null) return Result<VpnClientDto>.Failure(sourceConfigurationError);
             if (targetConfigurationError is not null) return Result<VpnClientDto>.Failure(targetConfigurationError);
+            sourcePassword = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
+            targetPassword = _secretProtector.Unprotect(targetInbound.VpnPanel.EncryptedPassword);
+        }
 
-            var targetPassword = _secretProtector.Unprotect(targetInbound.VpnPanel.EncryptedPassword);
-            remote = await _client.AddClientAsync(targetInbound.VpnPanel, targetPassword, new X3UiAddClientRequest(targetInbound.ExternalInboundId, client.Email, client.Uuid, client.Flow, client.LimitIp, client.TotalGb, client.ExpiryTime, client.Enable), cancellationToken);
-            var sourcePassword = _secretProtector.Unprotect(sourcePanel.EncryptedPassword);
+        var capacityResult = await TryReserveMigrationTargetCapacityAsync(targetInbound, cancellationToken);
+        if (!capacityResult.IsSuccess)
+        {
+            return Result<VpnClientDto>.Failure(capacityResult.Error ?? "Target VPN capacity is unavailable.");
+        }
+
+        ClearTracker();
+        client = await LoadClientForActionAsync(clientId, cancellationToken);
+        targetInbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == command.TargetInboundId, cancellationToken);
+        if (client?.VpnPanel is null || client.VpnInbound is null || targetInbound?.VpnPanel is null)
+        {
+            await ReleaseMigrationTargetCapacityAsync(command.TargetInboundId, cancellationToken);
+            return Result<VpnClientDto>.Failure("VPN client or target inbound disappeared during migration.");
+        }
+
+        var before = ClientAuditSnapshot(client);
+        var sourceInbound = client.VpnInbound;
+        var sourcePanel = client.VpnPanel;
+        var sourceRequest = new X3UiAddClientRequest(
+            sourceInbound.ExternalInboundId,
+            client.Email,
+            client.Uuid,
+            client.Flow,
+            client.LimitIp,
+            client.TotalGb,
+            client.ExpiryTime,
+            client.Enable);
+        var targetRequest = sourceRequest with { InboundId = targetInbound.ExternalInboundId };
+        X3UiClientDto? remote = null;
+        if (!IsSandboxMode())
+        {
             try
             {
-                await _client.DeleteClientAsync(sourcePanel, sourcePassword, sourceInbound.ExternalInboundId, client.Uuid, cancellationToken);
+                remote = await _client.AddClientAsync(targetInbound.VpnPanel, targetPassword!, targetRequest, cancellationToken);
+            }
+            catch (Exception targetCreateError)
+            {
+                await HandleTargetOnlyMigrationFailureAsync(
+                    client.Id,
+                    sourceInbound.Id,
+                    targetInbound,
+                    targetPassword!,
+                    client.Uuid,
+                    actorUserId,
+                    before,
+                    targetCreateError);
+                throw;
+            }
+
+            try
+            {
+                await _client.DeleteClientAsync(sourcePanel, sourcePassword!, sourceInbound.ExternalInboundId, client.Uuid, cancellationToken);
             }
             catch (Exception sourceDeleteError)
             {
                 try
                 {
-                    await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword, targetInbound.ExternalInboundId, client.Uuid, CancellationToken.None);
+                    await _client.AddClientAsync(sourcePanel, sourcePassword!, sourceRequest, CancellationToken.None);
+                    await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, CancellationToken.None);
+                    ClearTracker();
+                    await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, CancellationToken.None);
                 }
                 catch (Exception compensationError)
                 {
-                    client.SyncStatus = "migration-compensation-failed";
-                    client.LastSyncedAt = _clock.UtcNow;
-                    client.UpdatedAt = _clock.UtcNow;
-                    AddAudit("vpn_client.migrate.compensation_failed", "VpnClient", client.Id, actorUserId, before, new
-                    {
-                        sourceInboundId = sourceInbound.Id,
-                        targetInboundId = targetInbound.Id,
-                        compensated = false
-                    });
-                    await _db.SaveChangesAsync(CancellationToken.None);
+                    await PersistMigrationManualCleanupAsync(client.Id, sourceInbound.Id, targetInbound.Id, actorUserId, before, sourceDeleteError, compensationError, "target_cleanup_failed");
                     throw new InvalidOperationException(
                         "VPN client migration failed and the target copy could not be removed; manual provider cleanup is required.",
                         new AggregateException(sourceDeleteError, compensationError));
                 }
 
-                AddAudit("vpn_client.migrate.failed", "VpnClient", client.Id, actorUserId, before, new
-                {
-                    sourceInboundId = sourceInbound.Id,
-                    targetInboundId = targetInbound.Id,
-                    compensated = true
-                });
-                await _db.SaveChangesAsync(CancellationToken.None);
+                await PersistMigrationFailureAsync(client.Id, sourceInbound.Id, targetInbound.Id, actorUserId, before, sourceDeleteError, "source_restored_and_target_removed", compensated: true);
                 throw;
             }
         }
 
-        if (sourceInbound.UsedCapacity > 0) sourceInbound.UsedCapacity -= 1;
-        targetInbound.UsedCapacity += 1;
-        if (sourcePanel.Id != targetInbound.VpnPanelId)
+        IDbContextTransaction? localTransaction = null;
+        var commitAttempted = false;
+        try
         {
             if (sourcePanel.UsedCapacity > 0) sourcePanel.UsedCapacity -= 1;
-            targetInbound.VpnPanel.UsedCapacity += 1;
-        }
+            if (sourceInbound.UsedCapacity > 0) sourceInbound.UsedCapacity -= 1;
 
-        client.VpnPanelId = targetInbound.VpnPanelId;
-        client.VpnInboundId = targetInbound.Id;
-        client.ExternalClientId = string.IsNullOrWhiteSpace(remote?.Id) ? client.ExternalClientId : remote.Id;
-        client.ConfigUri = BuildClientConfigUri(targetInbound.VpnPanel, targetInbound, client);
-        client.QrCodePayload = string.IsNullOrWhiteSpace(client.ConfigUri) ? string.Empty : client.ConfigUri;
-        client.SyncStatus = IsSandboxMode() ? "sandbox-migrated" : "migrated";
-        client.LastSyncedAt = _clock.UtcNow;
-        client.UpdatedAt = _clock.UtcNow;
-        await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
-        AddAudit("vpn_client.migrate", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Result<VpnClientDto>.Success(MapClient(client));
+            if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+            {
+                localTransaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            }
+
+            client.VpnPanelId = targetInbound.VpnPanelId;
+            client.VpnInboundId = targetInbound.Id;
+            client.ExternalClientId = string.IsNullOrWhiteSpace(remote?.Id) ? client.ExternalClientId : remote.Id;
+            client.ConfigUri = BuildClientConfigUri(targetInbound.VpnPanel, targetInbound, client);
+            client.QrCodePayload = string.IsNullOrWhiteSpace(client.ConfigUri) ? string.Empty : client.ConfigUri;
+            client.SyncStatus = IsSandboxMode() ? "sandbox-migrated" : "migrated";
+            client.LastSyncedAt = _clock.UtcNow;
+            client.UpdatedAt = _clock.UtcNow;
+            await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+            AddAudit("vpn_client.migrate", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
+            await _db.SaveChangesAsync(cancellationToken);
+            if (localTransaction is not null)
+            {
+                commitAttempted = true;
+                await localTransaction.CommitAsync(cancellationToken);
+            }
+
+            return Result<VpnClientDto>.Success(MapClient(client));
+        }
+        catch (Exception localError)
+        {
+            if (localTransaction is not null)
+            {
+                try { await localTransaction.RollbackAsync(CancellationToken.None); } catch { }
+            }
+            ClearTracker();
+
+            if (commitAttempted)
+            {
+                await PersistMigrationManualCleanupAsync(clientId, sourceInbound.Id, targetInbound.Id, actorUserId, before, localError, null, "database_commit_unknown");
+                throw new InvalidOperationException("VPN client migration database commit is uncertain; manual provider reconciliation is required.", localError);
+            }
+
+            try
+            {
+                if (!IsSandboxMode())
+                {
+                    await _client.AddClientAsync(sourcePanel, sourcePassword!, sourceRequest, CancellationToken.None);
+                    await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, CancellationToken.None);
+                }
+                await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, CancellationToken.None);
+            }
+            catch (Exception compensationError)
+            {
+                await PersistMigrationManualCleanupAsync(clientId, sourceInbound.Id, targetInbound.Id, actorUserId, before, localError, compensationError, "local_save_compensation_failed");
+                throw new InvalidOperationException(
+                    "VPN client migration local persistence failed and remote rollback is uncertain; manual provider reconciliation is required.",
+                    new AggregateException(localError, compensationError));
+            }
+
+            await PersistMigrationFailureAsync(clientId, sourceInbound.Id, targetInbound.Id, actorUserId, before, localError, "remote_rolled_back", compensated: true);
+            throw;
+        }
+        finally
+        {
+            if (localTransaction is not null)
+            {
+                await localTransaction.DisposeAsync();
+            }
+        }
     }
 
     public async Task<IReadOnlyCollection<PanelSyncRunDto>> GetSyncRunsAsync(Guid panelId, CancellationToken cancellationToken = default)
@@ -1087,6 +1188,192 @@ public class X3UiPanelService
         AddAudit(enabled ? "vpn_client.enable" : "vpn_client.disable", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnClientDto>.Success(MapClient(client));
+    }
+
+    private async Task<Result<bool>> TryReserveMigrationTargetCapacityAsync(VpnInbound targetInbound, CancellationToken cancellationToken)
+    {
+        if (targetInbound.VpnPanel is null)
+        {
+            return Result<bool>.Failure("Target panel not found.");
+        }
+
+        if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            var panelReserved = await _db.VpnPanels
+                .Where(x => x.Id == targetInbound.VpnPanelId
+                    && x.Status == VpnPanelStatus.Active
+                    && x.HealthStatus != HealthStatus.Unhealthy
+                    && x.UsedCapacity < x.Capacity)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCapacity, x => x.UsedCapacity + 1), cancellationToken);
+            if (panelReserved != 1)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                return Result<bool>.Failure("Target panel capacity is exhausted or unavailable.");
+            }
+
+            var inboundReserved = await _db.VpnInbounds
+                .Where(x => x.Id == targetInbound.Id && x.IsActive && x.UsedCapacity < x.Capacity)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCapacity, x => x.UsedCapacity + 1), cancellationToken);
+            if (inboundReserved != 1)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                return Result<bool>.Failure("Target inbound capacity is exhausted or unavailable.");
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return Result<bool>.Success(true);
+        }
+
+        if (targetInbound.VpnPanel.Status != VpnPanelStatus.Active
+            || targetInbound.VpnPanel.HealthStatus == HealthStatus.Unhealthy
+            || targetInbound.VpnPanel.UsedCapacity >= targetInbound.VpnPanel.Capacity)
+        {
+            return Result<bool>.Failure("Target panel capacity is exhausted or unavailable.");
+        }
+        if (!targetInbound.IsActive || targetInbound.UsedCapacity >= targetInbound.Capacity)
+        {
+            return Result<bool>.Failure("Target inbound capacity is exhausted or unavailable.");
+        }
+
+        targetInbound.VpnPanel.UsedCapacity += 1;
+        targetInbound.UsedCapacity += 1;
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<bool>.Success(true);
+        }
+        catch
+        {
+            targetInbound.VpnPanel.UsedCapacity -= 1;
+            targetInbound.UsedCapacity -= 1;
+            throw;
+        }
+    }
+
+    private async Task ReleaseMigrationTargetCapacityAsync(Guid targetInboundId, CancellationToken cancellationToken)
+    {
+        if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            var targetPanelId = await _db.VpnInbounds.AsNoTracking()
+                .Where(x => x.Id == targetInboundId)
+                .Select(x => (Guid?)x.VpnPanelId)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new InvalidOperationException("Target inbound disappeared while releasing migration capacity.");
+            var inboundReleased = await _db.VpnInbounds
+                .Where(x => x.Id == targetInboundId && x.UsedCapacity > 0)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1), cancellationToken);
+            var panelReleased = await _db.VpnPanels
+                .Where(x => x.Id == targetPanelId && x.UsedCapacity > 0)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1), cancellationToken);
+            if (inboundReleased != 1 || panelReleased != 1)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                throw new InvalidOperationException("Reserved migration capacity could not be released consistently.");
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return;
+        }
+
+        var inbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == targetInboundId, cancellationToken)
+            ?? throw new InvalidOperationException("Target inbound disappeared while releasing migration capacity.");
+        if (inbound.VpnPanel is null || inbound.UsedCapacity <= 0 || inbound.VpnPanel.UsedCapacity <= 0)
+        {
+            throw new InvalidOperationException("Reserved migration capacity could not be released consistently.");
+        }
+
+        inbound.UsedCapacity -= 1;
+        inbound.VpnPanel.UsedCapacity -= 1;
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task HandleTargetOnlyMigrationFailureAsync(
+        Guid clientId,
+        Guid sourceInboundId,
+        VpnInbound targetInbound,
+        string targetPassword,
+        string clientUuid,
+        Guid? actorUserId,
+        object before,
+        Exception migrationError)
+    {
+        try
+        {
+            await _client.DeleteClientAsync(targetInbound.VpnPanel!, targetPassword, targetInbound.ExternalInboundId, clientUuid, CancellationToken.None);
+            ClearTracker();
+            await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, CancellationToken.None);
+        }
+        catch (Exception compensationError)
+        {
+            await PersistMigrationManualCleanupAsync(clientId, sourceInboundId, targetInbound.Id, actorUserId, before, migrationError, compensationError, "target_create_cleanup_failed");
+            throw new InvalidOperationException(
+                "VPN client target creation is uncertain and cleanup failed; manual provider reconciliation is required.",
+                new AggregateException(migrationError, compensationError));
+        }
+
+        await PersistMigrationFailureAsync(clientId, sourceInboundId, targetInbound.Id, actorUserId, before, migrationError, "target_removed", compensated: true);
+    }
+
+    private async Task PersistMigrationFailureAsync(
+        Guid clientId,
+        Guid sourceInboundId,
+        Guid targetInboundId,
+        Guid? actorUserId,
+        object before,
+        Exception error,
+        string outcome,
+        bool compensated)
+    {
+        ClearTracker();
+        AddAudit("vpn_client.migrate.failed", "VpnClient", clientId, actorUserId, before, new
+        {
+            sourceInboundId,
+            targetInboundId,
+            compensated,
+            outcome,
+            error = SafeError(error.Message)
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private async Task PersistMigrationManualCleanupAsync(
+        Guid clientId,
+        Guid sourceInboundId,
+        Guid targetInboundId,
+        Guid? actorUserId,
+        object before,
+        Exception error,
+        Exception? compensationError,
+        string outcome)
+    {
+        ClearTracker();
+        var persistedClient = await _db.VpnClients.FirstOrDefaultAsync(x => x.Id == clientId, CancellationToken.None);
+        if (persistedClient is not null)
+        {
+            persistedClient.SyncStatus = "migration-compensation-failed";
+            persistedClient.LastSyncedAt = _clock.UtcNow;
+            persistedClient.UpdatedAt = _clock.UtcNow;
+        }
+        AddAudit("vpn_client.migrate.compensation_failed", "VpnClient", clientId, actorUserId, before, new
+        {
+            sourceInboundId,
+            targetInboundId,
+            compensated = false,
+            outcome,
+            error = SafeError(error.Message),
+            compensationError = SafeError(compensationError?.Message)
+        });
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private void ClearTracker()
+    {
+        if (_db is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
     }
 
     private Task<VpnClient?> LoadClientForActionAsync(Guid clientId, CancellationToken cancellationToken)

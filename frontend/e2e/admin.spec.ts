@@ -169,6 +169,11 @@ async function mockAdminApi(page: Page) {
   const scenarios = [workScenario()]
   const panels = [vpnPanel()]
   const subscriptions: Array<Record<string, unknown>> = [{ id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }]
+  const inbounds: Array<Record<string, unknown>> = [
+    { id: 'inbound-default', vpnPanelId: 'panel-eu', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 1000, usedCapacity: 12 },
+    { id: 'inbound-backup', vpnPanelId: 'panel-eu', externalInboundId: '2', name: 'backup-vless', protocol: 'vless', port: 8443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: false, isActive: true, capacity: 20, usedCapacity: 3 }
+  ]
+  const clients: Array<Record<string, unknown>> = [{ id: 'client-e2e', userId: 'user-e2e', subscriptionId: 'sub-e2e', vpnPanelId: 'panel-eu', vpnInboundId: 'inbound-default', externalClientId: 'client-e2e', email: 'client@example.test', uuid: '00000000-0000-4000-8000-000000000001', flow: 'xtls-rprx-vision', limitIp: 3, totalGb: null, expiryTime: '2026-07-13T07:00:00Z', enable: true, configUri: 'vless://client@example.test', qrCodePayload: 'vless://client@example.test', syncStatus: 'Synced', lastSyncedAt: now }]
 
   await page.route('**/api/**', async (route) => {
     const request = route.request()
@@ -430,12 +435,27 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/inbounds') {
-      await fulfillJson(route, [{ id: 'inbound-default', vpnPanelId: 'panel-eu', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 1000, usedCapacity: 12 }])
+      await fulfillJson(route, inbounds)
       return
     }
 
     if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/clients') {
-      await fulfillJson(route, [{ id: 'client-e2e', userId: 'user-e2e', subscriptionId: 'sub-e2e', vpnPanelId: 'panel-eu', vpnInboundId: 'inbound-default', externalClientId: 'client-e2e', email: 'client@example.test', uuid: '00000000-0000-4000-8000-000000000001', flow: 'xtls-rprx-vision', limitIp: 3, totalGb: null, expiryTime: '2026-07-13T07:00:00Z', enable: true, configUri: 'vless://client@example.test', qrCodePayload: 'vless://client@example.test', syncStatus: 'Synced', lastSyncedAt: now }])
+      await fulfillJson(route, clients)
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/vpn-clients/client-e2e/migrate') {
+      const body = request.postDataJSON() as { targetInboundId?: string }
+      const target = inbounds.find((item) => item.id === body.targetInboundId)
+      if (!target) {
+        await fulfillJson(route, { error: 'Target inbound not found.' }, 400)
+        return
+      }
+      const source = inbounds.find((item) => item.id === clients[0].vpnInboundId)
+      if (source) source.usedCapacity = Number(source.usedCapacity) - 1
+      target.usedCapacity = Number(target.usedCapacity) + 1
+      clients[0] = { ...clients[0], vpnInboundId: target.id, syncStatus: 'migrated', configUri: 'vless://client@backup.example.test:8443', qrCodePayload: 'vless://client@backup.example.test:8443', lastSyncedAt: now }
+      await fulfillJson(route, clients[0])
       return
     }
 
@@ -544,6 +564,14 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(page.locator('#panels strong').filter({ hasText: 'client@example.test' })).toBeVisible()
   await expect(page.getByText('Последняя ошибка: Panel sync lease expired before completion.')).toBeVisible()
   await expect(page.getByText('Remote panel sync failed.')).toBeVisible()
+  await page.getByLabel('Целевой inbound для client@example.test').selectOption('inbound-backup')
+  await page.locator('#panels').getByRole('button', { name: 'Перенести' }).click()
+  await expect(page.locator('#panels').getByRole('dialog')).toContainText('временному slot панели и target inbound')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await page.locator('#panels').getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('VPN-клиент client@example.test перенесен на выбранный inbound.')).toBeVisible()
+  await expect(page.locator('#panels').getByText('inbound backup-vless')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-clients/client-e2e/migrate')).toBeTruthy()
   await page.locator('#panels').getByRole('button', { name: 'Проверить' }).click()
   await expect(page.getByText('Проверка панели: Healthy (2.4.9)')).toBeVisible()
   await page.locator('#panels').getByRole('button', { name: 'Синхронизировать' }).first().click()

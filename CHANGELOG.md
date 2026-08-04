@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.478.0 - 2026-08-04
+
+Release entry: `2026-08-04-x3ui-client-migration-atomicity`.
+
+### Исправлено
+
+- Ручной перенос 3x-ui клиента атомарно резервирует временные slots target panel и inbound до remote add; заполненная или недоступная цель отклоняется без внешних изменений.
+- Параллельные переносы через независимые SQLite-контексты не могут занять один последний slot: проигравший запрос завершается до remote call.
+- Ошибка target add, source delete, cancellation или local save выполняет обратный remote move и освобождает reservation; неопределённая компенсация сохраняет capacity и `migration-compensation-failed` для ручной reconciliation.
+- Админка скрывает заполненные цели, показывает occupancy в selector и подтверждает add-before-delete; desktop/mobile flow проверен без overflow.
+
+### Проверено
+
+- Backend full suite `954/954`; X3Ui integration suite `56/56`, targeted migration regression `9/9`, включая file-backed SQLite concurrency, ambiguous side effects и local-save fault injection; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; EF model drift отсутствует, fresh local SQLite smoke latest release OK; secret scan `607` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `490/510` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.477.0 - 2026-08-04
 
 Release entry: `2026-08-04-terminal-subscription-cancellation`.
