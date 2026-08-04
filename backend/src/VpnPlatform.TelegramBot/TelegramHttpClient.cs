@@ -60,7 +60,7 @@ public class TelegramHttpClient : ITelegramInvoiceProvider
     {
         if (!IsEnabledAndConfigured)
         {
-            return;
+            throw new InvalidOperationException("Telegram BotToken is required to send message.");
         }
 
         var payload = new Dictionary<string, object?>
@@ -79,6 +79,7 @@ public class TelegramHttpClient : ITelegramInvoiceProvider
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Telegram sendMessage to chat {ChatId} failed with status {StatusCode}", chatId, response.StatusCode);
+            throw new InvalidOperationException($"Telegram sendMessage failed with HTTP {(int)response.StatusCode}.");
         }
     }
 
@@ -87,7 +88,7 @@ public class TelegramHttpClient : ITelegramInvoiceProvider
     {
         if (!IsEnabledAndConfigured)
         {
-            return;
+            throw new InvalidOperationException("Telegram BotToken is required to answer pre-checkout query.");
         }
 
         var payload = new Dictionary<string, object?>
@@ -104,6 +105,7 @@ public class TelegramHttpClient : ITelegramInvoiceProvider
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Telegram answerPreCheckoutQuery failed with status {StatusCode}", response.StatusCode);
+            throw new InvalidOperationException($"Telegram answerPreCheckoutQuery failed with HTTP {(int)response.StatusCode}.");
         }
     }
 

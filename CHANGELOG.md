@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.468.0 - 2026-08-04
+
+Release entry: `2026-08-04-telegram-response-delivery-recovery`.
+
+### Fixed
+- Ответ Telegram и pre-checkout acknowledgement сохраняются в `TelegramBotUpdate` вместе с результатом обработки, поэтому повторный webhook доставляет pending response без повторной маршрутизации команды.
+- Отдельная delivery lease, conditional DB claim и exponential backoff исключают параллельную отправку; partial progress не отвечает на уже подтвержденный pre-checkout повторно после сбоя следующего сообщения.
+- Long-polling восстанавливает due deliveries из БД перед чтением новых updates, а cancellation освобождает lease и независимо сохраняет retry state.
+- Telegram HTTP clients теперь выбрасывают retryable ошибку при missing BotToken и non-2xx `sendMessage`/`answerPreCheckoutQuery` вместо ложной фиксации успешной доставки.
+
+### Notes
+- Validation: backend full suite `860/860`, targeted Telegram delivery suite `17/17`, EF migration list and generated PostgreSQL SQL OK, API and TelegramBot Release builds `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `569` files, `0` findings; encoding guard and artifact cleanup: OK.
+- Roadmap progress is `480/500` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.467.0 - 2026-08-04
 
 Release entry: `2026-08-04-telegram-update-recovery`.

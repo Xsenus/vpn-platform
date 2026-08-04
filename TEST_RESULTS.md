@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Telegram response delivery recovery
+
+Scope:
+- Проверены durable message/pre-checkout payload, duplicate webhook retry без повторной маршрутизации, partial delivery, concurrent sender, cancellation, backoff recovery scan, missing BotToken и non-2xx Telegram API responses.
+- Сгенерирована EF migration `20260804115811_TelegramUpdateDeliveryRecovery`; проверены migration list и PostgreSQL SQL для всех 12 колонок delivery state.
+
+Result:
+- Обработанный update сохраняет ответ до transport call; message и pre-checkout имеют независимые completion timestamps, поэтому partial failure повторяет только недоставленную часть.
+- Delivery использует process gate, условный DB claim, минутную lease и exponential backoff; webhook возвращает 503, а duplicate доставляет pending response без повторных business side effects.
+- Long-polling сканирует due pending deliveries после рестарта; `sendMessage` и `answerPreCheckoutQuery` считают missing BotToken и non-2xx ошибкой.
+- Roadmap progress: `480/500` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-telegram-response-delivery-recovery`, version `0.468.0`.
+
+Validation:
+- Backend full suite: OK, `860/860`; targeted Telegram delivery suite: OK, `17/17`.
+- EF migrations list and generated PostgreSQL SQL: OK; 12 delivery columns verified.
+- API and TelegramBot Release builds with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-telegram-response-delivery-recovery`.
+- Secret scan: OK, `569` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: Telegram update recovery
 
 Scope:

@@ -331,7 +331,8 @@ public sealed record QrCodeImageResult(string Payload, string MediaType, string 
 
 public sealed record TelegramStatusDto(bool IsLinked, long? TelegramUserId, string? Username, DateTimeOffset? LinkedAt);
 public sealed record TelegramLinkTokenDto(string Token, string DeepLinkUrl, DateTimeOffset ExpiresAt);
-public sealed record TelegramBotProcessResult(bool Processed, string ResponseText, long? ChatId = null, string? ReplyMarkupJson = null, string? PreCheckoutQueryId = null, bool? PreCheckoutOk = null, string? PreCheckoutError = null);
+public sealed record TelegramBotProcessResult(bool Processed, string ResponseText, long? ChatId = null, string? ReplyMarkupJson = null, string? PreCheckoutQueryId = null, bool? PreCheckoutOk = null, string? PreCheckoutError = null, long? UpdateId = null);
+public sealed record TelegramUpdateDeliveryResult(long UpdateId, bool Delivered, bool HadPendingDelivery);
 public sealed record CreateTelegramUserResultDto(Guid UserId, bool Created, string Email, string DisplayName);
 public sealed record TelegramInvoiceRequest(Guid OrderId, Guid PaymentAttemptId, long TelegramUserId, string Title, string Description, string Payload, string Currency, int TotalAmountMinor);
 public sealed record TelegramInvoiceResult(string Payload, string RawResponse);

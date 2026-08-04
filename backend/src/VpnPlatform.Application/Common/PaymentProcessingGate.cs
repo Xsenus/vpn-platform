@@ -14,6 +14,9 @@ public static class PaymentProcessingGate
     public static async ValueTask<IAsyncDisposable> AcquireTelegramUpdateAsync(long updateId, CancellationToken cancellationToken)
         => await AcquireAsync($"telegram-update:{updateId}", cancellationToken);
 
+    public static async ValueTask<IAsyncDisposable> AcquireTelegramDeliveryAsync(long updateId, CancellationToken cancellationToken)
+        => await AcquireAsync($"telegram-delivery:{updateId}", cancellationToken);
+
     private static async ValueTask<IAsyncDisposable> AcquireAsync(string key, CancellationToken cancellationToken)
     {
         GateEntry entry;

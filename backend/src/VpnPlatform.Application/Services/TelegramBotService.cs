@@ -178,7 +178,7 @@ public class TelegramBotService
         var claim = await ClaimTelegramUpdateAsync(updateId, parsed, sanitizedRawBody, rawBody, now, cancellationToken);
         if (claim.IsProcessed)
         {
-            return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(false, string.Empty, null, null));
+            return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(false, string.Empty, UpdateId: updateId));
         }
 
         if (claim.IsInProgress || claim.Update is null)
@@ -191,11 +191,14 @@ public class TelegramBotService
         {
             if (!parsed.TelegramUserId.HasValue)
             {
+                var responseText = HelpText();
+                var replyMarkupJson = LinkedMenuReplyMarkupJson();
                 update.IsProcessed = true;
                 update.ProcessedAt = now;
+                StoreTelegramDelivery(update, responseText, parsed.ChatId, replyMarkupJson, null, null, null);
                 update.UpdatedAt = NextTelegramUpdateVersion(update.UpdatedAt, now);
                 await _db.SaveChangesAsync(cancellationToken);
-                return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(true, HelpText(), parsed.ChatId, LinkedMenuReplyMarkupJson()));
+                return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(true, responseText, parsed.ChatId, replyMarkupJson, UpdateId: updateId));
             }
 
             var account = await UpsertTelegramAccountAsync(parsed, cancellationToken);
@@ -205,16 +208,26 @@ public class TelegramBotService
             update.IsProcessed = true;
             update.ProcessedAt = now;
             update.ErrorText = string.Empty;
+            var responseChatId = route.ChatId ?? parsed.ChatId ?? parsed.TelegramUserId;
+            StoreTelegramDelivery(
+                update,
+                route.ResponseText,
+                responseChatId,
+                route.ReplyMarkupJson,
+                route.PreCheckoutQueryId,
+                route.PreCheckoutOk,
+                route.PreCheckoutError);
             update.UpdatedAt = NextTelegramUpdateVersion(update.UpdatedAt, now);
             await _db.SaveChangesAsync(cancellationToken);
             return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(
                 true,
                 route.ResponseText,
-                route.ChatId ?? parsed.ChatId ?? parsed.TelegramUserId,
+                responseChatId,
                 route.ReplyMarkupJson,
                 route.PreCheckoutQueryId,
                 route.PreCheckoutOk,
-                route.PreCheckoutError));
+                route.PreCheckoutError,
+                updateId));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -327,13 +340,41 @@ public class TelegramBotService
         update.IsProcessed = false;
         update.ProcessedAt = null;
         update.ErrorText = string.Empty;
+        ClearTelegramDelivery(update);
         update.UpdatedAt = claimVersion;
     }
+
+    private static void StoreTelegramDelivery(
+        TelegramBotUpdate update,
+        string responseText,
+        long? responseChatId,
+        string? replyMarkupJson,
+        string? preCheckoutQueryId,
+        bool? preCheckoutOk,
+        string? preCheckoutError)
+    {
+        update.ResponseText = responseText;
+        update.ResponseChatId = !string.IsNullOrWhiteSpace(responseText) ? responseChatId : null;
+        update.ResponseReplyMarkupJson = replyMarkupJson ?? string.Empty;
+        update.ResponseSentAt = null;
+        update.PreCheckoutQueryId = preCheckoutQueryId ?? string.Empty;
+        update.PreCheckoutOk = preCheckoutOk;
+        update.PreCheckoutError = preCheckoutError ?? string.Empty;
+        update.PreCheckoutAnsweredAt = null;
+        update.DeliveryClaimedAt = null;
+        update.DeliveryNextAttemptAt = null;
+        update.DeliveryAttemptCount = 0;
+        update.DeliveryErrorText = string.Empty;
+    }
+
+    private static void ClearTelegramDelivery(TelegramBotUpdate update)
+        => StoreTelegramDelivery(update, string.Empty, null, null, null, null, null);
 
     private async Task MarkTelegramUpdateFailedAsync(TelegramBotUpdate update, string error)
     {
         update.IsProcessed = false;
         update.ProcessedAt = null;
+        ClearTelegramDelivery(update);
         update.ErrorText = SensitiveDataRedactor.Redact(error, maxLength: 500);
         update.UpdatedAt = NextTelegramUpdateVersion(update.UpdatedAt, _clock.UtcNow);
         await _db.SaveChangesAsync(CancellationToken.None);

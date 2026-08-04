@@ -10913,5 +10913,28 @@
         "text": "Cancellation сохраняет retry marker, long-polling не теряет offset. Roadmap progress is 479/499 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-telegram-response-delivery-recovery",
+    "version": "0.468.0",
+    "releasedAt": "2026-08-04T19:07:00+07:00",
+    "title": "Ответы Telegram восстанавливаются после сбоя доставки",
+    "summary": "Message и pre-checkout payload сохраняются до transport call, повторяются через отдельную delivery lease и не запускают бизнес-команду второй раз.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Duplicate webhook доставляет pending response из TelegramBotUpdate без повторного RouteAsync и side effects."
+      },
+      {
+        "type": "fixed",
+        "text": "Partial progress, conditional claim и backoff исключают параллельную отправку и повтор уже подтвержденного pre-checkout."
+      },
+      {
+        "type": "important",
+        "text": "Long-polling восстанавливает due deliveries после рестарта, а missing BotToken и non-2xx Telegram API больше не считаются успехом. Roadmap progress is 480/500 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

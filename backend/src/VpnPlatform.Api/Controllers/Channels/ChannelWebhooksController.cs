@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using VpnPlatform.Api.Security;
-using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Services;
 
 namespace VpnPlatform.Api.Controllers.Channels;
@@ -13,16 +12,16 @@ public class ChannelWebhooksController : ControllerBase
 {
     private readonly TelegramBotService _telegramBotService;
     private readonly TelegramBotRuntimeSettingsService _telegramSettings;
-    private readonly ITelegramInvoiceProvider _telegramProvider;
+    private readonly TelegramUpdateDeliveryService _telegramDelivery;
 
     public ChannelWebhooksController(
         TelegramBotService telegramBotService,
         TelegramBotRuntimeSettingsService telegramSettings,
-        ITelegramInvoiceProvider telegramProvider)
+        TelegramUpdateDeliveryService telegramDelivery)
     {
         _telegramBotService = telegramBotService;
         _telegramSettings = telegramSettings;
-        _telegramProvider = telegramProvider;
+        _telegramDelivery = telegramDelivery;
     }
 
     [HttpPost("telegram/webhook")]
@@ -50,22 +49,17 @@ public class ChannelWebhooksController : ControllerBase
                 : BadRequest(new { error = result.Error });
         }
 
-        if (!string.IsNullOrWhiteSpace(result.Value.PreCheckoutQueryId) && result.Value.PreCheckoutOk.HasValue)
+        if (!result.Value.UpdateId.HasValue)
         {
-            await _telegramProvider.AnswerPreCheckoutQueryAsync(
-                result.Value.PreCheckoutQueryId,
-                result.Value.PreCheckoutOk.Value,
-                result.Value.PreCheckoutError,
-                cancellationToken);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "telegram_update_id_missing" });
         }
 
-        if (result.Value.Processed && result.Value.ChatId.HasValue && !string.IsNullOrWhiteSpace(result.Value.ResponseText))
+        var delivery = await _telegramDelivery.DeliverAsync(result.Value.UpdateId.Value, cancellationToken);
+        if (!delivery.IsSuccess)
         {
-            await _telegramProvider.SendMessageAsync(
-                result.Value.ChatId.Value,
-                result.Value.ResponseText,
-                result.Value.ReplyMarkupJson,
-                cancellationToken);
+            return delivery.IsRetryable
+                ? StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = delivery.Error })
+                : BadRequest(new { error = delivery.Error });
         }
 
         return Ok(new { status = result.Value.Processed ? "processed" : "duplicate" });

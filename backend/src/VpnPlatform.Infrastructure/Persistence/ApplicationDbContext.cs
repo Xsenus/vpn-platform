@@ -392,6 +392,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PaymentReceipt>().Property(x => x.RawPayload).HasColumnType("text");
         modelBuilder.Entity<TelegramBotUpdate>().Property(x => x.RawPayload).HasColumnType("text");
         modelBuilder.Entity<TelegramBotUpdate>().Property(x => x.ErrorText).HasColumnType("text");
+        modelBuilder.Entity<TelegramBotUpdate>().Property(x => x.ResponseText).HasColumnType("text");
+        modelBuilder.Entity<TelegramBotUpdate>().Property(x => x.ResponseReplyMarkupJson).HasColumnType("text");
+        modelBuilder.Entity<TelegramBotUpdate>().Property(x => x.PreCheckoutError).HasColumnType("text");
+        modelBuilder.Entity<TelegramBotUpdate>().Property(x => x.DeliveryErrorText).HasColumnType("text");
         modelBuilder.Entity<TelegramBotSession>().Property(x => x.PayloadJson).HasColumnType("text");
         modelBuilder.Entity<TelegramBotCommandLog>().Property(x => x.Payload).HasColumnType("text");
         modelBuilder.Entity<TelegramBotMessage>().Property(x => x.Text).HasColumnType("text");

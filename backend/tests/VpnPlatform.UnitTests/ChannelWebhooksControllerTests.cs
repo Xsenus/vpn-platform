@@ -114,13 +114,57 @@ public class ChannelWebhooksControllerTests
         Assert.Contains("in progress", JsonSerializer.Serialize(unavailable.Value), StringComparison.OrdinalIgnoreCase);
     }
 
-    private static ChannelWebhooksController CreateController(ApplicationDbContext db, RecordingTelegramProvider telegramProvider, string rawBody)
+    [Fact]
+    public async Task Telegram_Webhook_Should_Retry_Failed_Response_Without_Reprocessing_Update()
+    {
+        await using var db = CreateDbContext();
+        db.SiteContentBlocks.AddRange(
+            Setting(TelegramBotRuntimeSettingsService.EnabledKey, "true"),
+            Setting(TelegramBotRuntimeSettingsService.ModeKey, "Webhook"),
+            Setting(TelegramBotRuntimeSettingsService.SecretTokenProtectedKey, "protected:webhook-secret"),
+            Setting(TelegramBotRuntimeSettingsService.BotTokenProtectedKey, "protected:bot-token"));
+        await db.SaveChangesAsync();
+        var clock = new MutableClock(new FixedClock().UtcNow);
+        var telegramProvider = new FailFirstMessageTelegramProvider();
+        var rawUpdate = Update(9004, "/start");
+
+        var controller = CreateController(db, telegramProvider, rawUpdate, clock);
+        controller.Request.Headers["X-Telegram-Bot-Api-Secret-Token"] = "webhook-secret";
+        var first = await controller.Telegram(CancellationToken.None);
+
+        var unavailable = Assert.IsType<ObjectResult>(first);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+        var pending = await db.TelegramBotUpdates.SingleAsync(x => x.UpdateId == 9004);
+        Assert.True(pending.IsProcessed);
+        Assert.Null(pending.ResponseSentAt);
+        Assert.Equal(1, pending.DeliveryAttemptCount);
+        Assert.NotEmpty(pending.DeliveryErrorText);
+        Assert.Equal(1, await db.TelegramBotMessages.CountAsync(x => x.Direction == "inbound"));
+
+        clock.Advance(TimeSpan.FromSeconds(11));
+        controller = CreateController(db, telegramProvider, rawUpdate, clock);
+        controller.Request.Headers["X-Telegram-Bot-Api-Secret-Token"] = "webhook-secret";
+        var retry = await controller.Telegram(CancellationToken.None);
+
+        Assert.Equal("duplicate", ReadStatus(retry));
+        Assert.Equal(2, telegramProvider.SendAttempts);
+        Assert.NotNull((await db.TelegramBotUpdates.SingleAsync(x => x.UpdateId == 9004)).ResponseSentAt);
+        Assert.Equal(1, await db.TelegramBotMessages.CountAsync(x => x.Direction == "inbound"));
+    }
+
+    private static ChannelWebhooksController CreateController(
+        ApplicationDbContext db,
+        ITelegramInvoiceProvider telegramProvider,
+        string rawBody,
+        IClock? clock = null)
     {
         var configuration = new ConfigurationBuilder().Build();
         var secretProtector = new TestSecretProtector();
         var settings = new TelegramBotRuntimeSettingsService(db, configuration, secretProtector);
-        var bot = new TelegramBotService(db, new FixedClock());
-        var controller = new ChannelWebhooksController(bot, settings, telegramProvider);
+        clock ??= new FixedClock();
+        var bot = new TelegramBotService(db, clock);
+        var delivery = new TelegramUpdateDeliveryService(db, clock, telegramProvider);
+        var controller = new ChannelWebhooksController(bot, settings, delivery);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -191,6 +235,25 @@ public class ChannelWebhooksControllerTests
         }
     }
 
+    private sealed class FailFirstMessageTelegramProvider : ITelegramInvoiceProvider
+    {
+        public int SendAttempts { get; private set; }
+
+        public Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
+            => Task.FromResult(new TelegramInvoiceResult(request.Payload, "{}"));
+
+        public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+
+        public Task SendMessageAsync(long chatId, string text, string? replyMarkupJson, CancellationToken cancellationToken)
+        {
+            SendAttempts++;
+            return SendAttempts == 1
+                ? Task.FromException(new InvalidOperationException("temporary Telegram failure"))
+                : Task.CompletedTask;
+        }
+    }
+
     private sealed class TestSecretProtector : ISecretProtector
     {
         public string Protect(string plaintext) => "protected:" + plaintext;
@@ -206,5 +269,12 @@ public class ChannelWebhooksControllerTests
     private sealed class FixedClock : IClock
     {
         public DateTimeOffset UtcNow { get; } = new(2026, 6, 14, 17, 30, 0, TimeSpan.Zero);
+    }
+
+    private sealed class MutableClock(DateTimeOffset now) : IClock
+    {
+        public DateTimeOffset UtcNow { get; private set; } = now;
+
+        public void Advance(TimeSpan duration) => UtcNow = UtcNow.Add(duration);
     }
 }

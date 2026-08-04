@@ -59,7 +59,7 @@ public sealed class TelegramBotHttpClient : ITelegramInvoiceProvider
         var settings = await _settings.LoadAsync(cancellationToken);
         if (!IsEnabledAndConfigured(settings))
         {
-            return;
+            throw new InvalidOperationException("Telegram BotToken is required to answer pre-checkout query.");
         }
 
         var payload = new Dictionary<string, object?>
@@ -76,6 +76,7 @@ public sealed class TelegramBotHttpClient : ITelegramInvoiceProvider
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Telegram answerPreCheckoutQuery failed with status {StatusCode}", response.StatusCode);
+            throw new InvalidOperationException($"Telegram answerPreCheckoutQuery failed with HTTP {(int)response.StatusCode}.");
         }
     }
 
@@ -84,7 +85,7 @@ public sealed class TelegramBotHttpClient : ITelegramInvoiceProvider
         var settings = await _settings.LoadAsync(cancellationToken);
         if (!IsEnabledAndConfigured(settings))
         {
-            return;
+            throw new InvalidOperationException("Telegram BotToken is required to send message.");
         }
 
         var payload = new Dictionary<string, object?>
@@ -103,6 +104,7 @@ public sealed class TelegramBotHttpClient : ITelegramInvoiceProvider
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Telegram sendMessage to chat {ChatId} failed with status {StatusCode}", chatId, response.StatusCode);
+            throw new InvalidOperationException($"Telegram sendMessage failed with HTTP {(int)response.StatusCode}.");
         }
     }
 

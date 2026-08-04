@@ -313,6 +313,18 @@ public class TelegramBotUpdate : AuditableEntity
     public bool IsProcessed { get; set; }
     public DateTimeOffset? ProcessedAt { get; set; }
     public string ErrorText { get; set; } = string.Empty;
+    public long? ResponseChatId { get; set; }
+    public string ResponseText { get; set; } = string.Empty;
+    public string ResponseReplyMarkupJson { get; set; } = string.Empty;
+    public DateTimeOffset? ResponseSentAt { get; set; }
+    public string PreCheckoutQueryId { get; set; } = string.Empty;
+    public bool? PreCheckoutOk { get; set; }
+    public string PreCheckoutError { get; set; } = string.Empty;
+    public DateTimeOffset? PreCheckoutAnsweredAt { get; set; }
+    public DateTimeOffset? DeliveryClaimedAt { get; set; }
+    public DateTimeOffset? DeliveryNextAttemptAt { get; set; }
+    public int DeliveryAttemptCount { get; set; }
+    public string DeliveryErrorText { get; set; } = string.Empty;
 }
 
 public class TelegramBotSession : AuditableEntity

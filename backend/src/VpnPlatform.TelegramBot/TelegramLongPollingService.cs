@@ -44,23 +44,24 @@ public class TelegramLongPollingService : BackgroundService
         {
             try
             {
+                await RecoverPendingDeliveriesAsync(stoppingToken);
                 var updates = await _client.GetUpdatesAsync(offset, stoppingToken);
                 foreach (var raw in updates)
                 {
                     var updateId = ExtractUpdateId(raw);
                     using var scope = _scopeFactory.CreateScope();
                     var processor = scope.ServiceProvider.GetRequiredService<TelegramBotService>();
+                    var delivery = scope.ServiceProvider.GetRequiredService<TelegramUpdateDeliveryService>();
                     var result = await processor.ProcessUpdateAsync(raw, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), null, stoppingToken);
-                    if (result.IsSuccess && result.Value is { } processed)
+                    if (result.IsSuccess && result.Value is { UpdateId: { } processedUpdateId })
                     {
-                        if (!string.IsNullOrWhiteSpace(processed.PreCheckoutQueryId) && processed.PreCheckoutOk.HasValue)
+                        var deliveryResult = await delivery.DeliverAsync(processedUpdateId, stoppingToken);
+                        if (!deliveryResult.IsSuccess)
                         {
-                            await _client.AnswerPreCheckoutQueryAsync(processed.PreCheckoutQueryId, processed.PreCheckoutOk.Value, processed.PreCheckoutError, stoppingToken);
-                        }
-
-                        if (processed.Processed && processed.ChatId.HasValue && !string.IsNullOrWhiteSpace(processed.ResponseText))
-                        {
-                            await _client.SendMessageAsync(processed.ChatId.Value, processed.ResponseText, processed.ReplyMarkupJson, stoppingToken);
+                            _logger.LogWarning(
+                                "Telegram update {UpdateId} response delivery deferred: {Error}",
+                                processedUpdateId,
+                                deliveryResult.Error);
                         }
                     }
                     else if (result.IsRetryable)
@@ -82,6 +83,21 @@ public class TelegramLongPollingService : BackgroundService
             {
                 _logger.LogError(ex, "Telegram long polling iteration failed");
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            }
+        }
+    }
+
+    private async Task RecoverPendingDeliveriesAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var delivery = scope.ServiceProvider.GetRequiredService<TelegramUpdateDeliveryService>();
+        var updateIds = await delivery.GetPendingUpdateIdsAsync(20, cancellationToken);
+        foreach (var updateId in updateIds)
+        {
+            var result = await delivery.DeliverAsync(updateId, cancellationToken);
+            if (!result.IsSuccess)
+            {
+                _logger.LogWarning("Pending Telegram response {UpdateId} remains deferred: {Error}", updateId, result.Error);
             }
         }
     }

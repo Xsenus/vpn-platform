@@ -48,6 +48,20 @@ public class TelegramBotProcessBoundaryTests
         Assert.Contains("Telegram update requires retry", program, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Telegram_Long_Polling_Should_Recover_Persisted_Response_Delivery()
+    {
+        var root = FindRepositoryRoot();
+        var polling = File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.TelegramBot", "TelegramLongPollingService.cs"));
+        var client = File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.TelegramBot", "TelegramHttpClient.cs"));
+
+        Assert.Contains("RecoverPendingDeliveriesAsync", polling, StringComparison.Ordinal);
+        Assert.Contains("GetPendingUpdateIdsAsync", polling, StringComparison.Ordinal);
+        Assert.Contains("delivery.DeliverAsync", polling, StringComparison.Ordinal);
+        Assert.Contains("Telegram sendMessage failed with HTTP", client, StringComparison.Ordinal);
+        Assert.Contains("Telegram answerPreCheckoutQuery failed with HTTP", client, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
