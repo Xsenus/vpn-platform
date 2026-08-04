@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("989/989", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-cabinet-expired-order-payment-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-public-session-lifecycle", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "989/989",
-                     "2026-08-05-cabinet-expired-order-payment-guard",
-                     "0.489.0",
+                     "2026-08-05-public-session-lifecycle",
+                     "0.490.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,9 +104,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cabinet-expired-order-payment-guard",
-                     "0.489.0",
-                     "501/521",
+                     "2026-08-05-public-session-lifecycle",
+                     "0.490.0",
+                     "502/522",
                      "96.2%",
                      "20",
                      "19",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cabinet-expired-order-payment-guard",
-                     "0.489.0",
-                     "501/521",
+                     "2026-08-05-public-session-lifecycle",
+                     "0.490.0",
+                     "502/522",
                      "96.2%",
                      "20",
                      "19",

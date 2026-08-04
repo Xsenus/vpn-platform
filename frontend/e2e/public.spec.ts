@@ -87,6 +87,11 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
 
 async function mockPublicApi(page: Page) {
   let checkoutPayload: unknown = null
+  let logoutPayload: unknown = null
+  let logoutAuthorization = ''
+  let logoutShouldFail = false
+  let refreshPayload: unknown = null
+  let rejectNextProfileRequest = true
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -123,8 +128,101 @@ async function mockPublicApi(page: Page) {
     })
   })
 
+  await page.route('**/api/auth/register', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: corsHeaders })
+      return
+    }
+    await fulfillJson(route, {
+      accessToken: 'public-access-token',
+      refreshToken: 'public-refresh-token',
+      expiresAt: '2026-06-13T08:00:00Z',
+      userId: 'public-user',
+      email: 'public@example.test',
+      displayName: 'Public E2E'
+    })
+  })
+
+  await page.route('**/api/auth/login', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: corsHeaders })
+      return
+    }
+    await fulfillJson(route, {
+      accessToken: 'public-access-token-2',
+      refreshToken: 'public-refresh-token-2',
+      expiresAt: '2026-06-13T08:00:00Z',
+      userId: 'public-user',
+      email: 'public@example.test',
+      displayName: 'Public E2E'
+    })
+  })
+
+  await page.route('**/api/auth/refresh', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: corsHeaders })
+      return
+    }
+    refreshPayload = route.request().postDataJSON()
+    await fulfillJson(route, {
+      accessToken: 'public-refreshed-access-token',
+      refreshToken: 'public-refreshed-refresh-token',
+      expiresAt: '2026-06-13T09:00:00Z',
+      userId: 'public-user',
+      email: 'public@example.test',
+      displayName: 'Public E2E'
+    })
+  })
+
+  await page.route('**/api/me', async (route) => {
+    if (rejectNextProfileRequest) {
+      rejectNextProfileRequest = false
+      await fulfillJson(route, { error: 'expired access token' }, 401)
+      return
+    }
+    await fulfillJson(route, {
+      id: 'public-user',
+      email: 'public@example.test',
+      displayName: 'Public E2E',
+      preferredLanguage: 'ru',
+      referralCode: 'PUBLIC-E2E',
+      status: 'Active'
+    })
+  })
+
+  await page.route('**/api/me/checkout-sessions/public-checkout-token/claim', async (route) => {
+    await fulfillJson(route, {
+      id: 'public-order',
+      userId: 'public-user',
+      tariffId: 'tariff-start',
+      tariffName: 'Start 30 дней',
+      amount: 299,
+      currency: 'RUB',
+      status: 'PendingPayment',
+      expiresAt: '2026-06-14T00:00:00Z'
+    })
+  })
+
+  await page.route('**/api/me/orders/public-order/payments/YooKassa/init', async (route) => {
+    await fulfillJson(route, { paymentId: 'public-payment', redirectUrl: 'https://pay.example.test/public' })
+  })
+
+  await page.route('**/api/auth/logout', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: corsHeaders })
+      return
+    }
+    logoutPayload = route.request().postDataJSON()
+    logoutAuthorization = route.request().headers().authorization ?? ''
+    await fulfillJson(route, logoutShouldFail ? { error: 'logout unavailable' } : { status: 'ok' }, logoutShouldFail ? 503 : 200)
+  })
+
   return {
-    getCheckoutPayload: () => checkoutPayload
+    getCheckoutPayload: () => checkoutPayload,
+    getLogoutPayload: () => logoutPayload,
+    getLogoutAuthorization: () => logoutAuthorization,
+    getRefreshPayload: () => refreshPayload,
+    failLogout: () => { logoutShouldFail = true }
   }
 }
 
@@ -168,6 +266,42 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   await page.getByLabel('Поиск по FAQ').fill('подключение')
   await expect(page.getByText('Когда появится подключение?')).toBeVisible()
   await expect(page.getByText('Как оплатить VPN?')).not.toBeVisible()
+
+  await page.getByRole('link', { name: 'Аккаунт' }).click()
+  await page.getByRole('tab', { name: 'Регистрация' }).click()
+  const authPanel = page.locator('#public-auth-panel')
+  await authPanel.getByLabel('Имя').fill('Public E2E')
+  await authPanel.getByLabel('Email').fill('public@example.test')
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByText('Public E2E').first()).toBeVisible()
+  expect(api.getRefreshPayload()).toEqual({ refreshToken: 'public-refresh-token' })
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-public-refresh-token'))).toBe('public-refreshed-refresh-token')
+  const expectedRefreshLogs = consoleErrors.filter((message) => message.includes('401 (Unauthorized)'))
+  expect(expectedRefreshLogs.length).toBeGreaterThan(0)
+  for (const message of expectedRefreshLogs) consoleErrors.splice(consoleErrors.indexOf(message), 1)
+
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByRole('tab', { name: 'Вход' })).toBeVisible()
+  expect(api.getLogoutPayload()).toEqual({ refreshToken: 'public-refreshed-refresh-token' })
+  expect(api.getLogoutAuthorization()).toBe('Bearer public-refreshed-access-token')
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-public-token'),
+    refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+
+  await page.getByRole('tab', { name: 'Вход' }).click()
+  await authPanel.getByLabel('Email').fill('public@example.test')
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByText('Public E2E').first()).toBeVisible()
+  api.failLogout()
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByText('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')).toBeVisible()
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-public-refresh-token'))).toBeNull()
+  const expectedLogoutFailureLogs = consoleErrors.filter((message) => message.includes('503 (Service Unavailable)'))
+  expect(expectedLogoutFailureLogs.length).toBeGreaterThan(0)
+  for (const message of expectedLogoutFailureLogs) consoleErrors.splice(consoleErrors.indexOf(message), 1)
 
   if (testInfo.project.name.startsWith('mobile-')) {
     await page.screenshot({ path: testInfo.outputPath('public-mobile.png'), fullPage: true })

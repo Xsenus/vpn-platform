@@ -242,7 +242,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - ручной перенос 3x-ui клиента резервирует target panel/inbound capacity до remote add и полностью компенсирует source/target при failure/cancellation/local-save ошибке;
 - кабинет не предлагает QR до выдачи VPN URI; все карточки и handler используют единое правило готовности доступа;
 - кабинет не предлагает повторную оплату истёкшего заказа и ведёт пользователя к новому оформлению;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-cabinet-expired-order-payment-guard`, версия `0.489.0`;
-- roadmap progress: `501/521` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- public web сохраняет и ротирует refresh session, вызывает backend logout и очищает browser tokens даже при недоступности revoke-запроса;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-public-session-lifecycle`, версия `0.490.0`;
+- roadmap progress: `502/522` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

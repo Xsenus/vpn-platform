@@ -23,6 +23,7 @@ import { canStartCheckout, getCheckoutUnavailableReason, getPublicListState, get
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-public-token'
+const REFRESH_TOKEN_STORAGE_KEY = 'vpn-platform-public-refresh-token'
 const PENDING_CHECKOUT_STORAGE_KEY = 'vpn-platform-pending-checkout'
 
 type CheckoutState = {
@@ -673,6 +674,8 @@ function AccountPage({
   profile,
   onAuthenticated,
   onLogout,
+  logoutBusy,
+  sessionError,
   lastCheckout,
   pendingCheckout,
   checkoutError,
@@ -683,7 +686,9 @@ function AccountPage({
   token: string
   profile: UserProfileDto | null
   onAuthenticated: (response: AuthResponse) => void
-  onLogout: () => void
+  onLogout: () => Promise<void>
+  logoutBusy: boolean
+  sessionError: string
   lastCheckout: CheckoutState
   pendingCheckout: PendingCheckout | null
   checkoutError: string
@@ -763,6 +768,8 @@ function AccountPage({
         <StatTile label="Рефералы" value={profile?.referralCode ?? 'будет после входа'} />
       </div>
 
+      {sessionError && <div className="section"><ErrorBlock message={sessionError} /></div>}
+
       {checkoutError && (
         <div className="section">
           <Card>
@@ -787,7 +794,7 @@ function AccountPage({
             <p>Реферальный код: <strong>{profile.referralCode}</strong></p>
             <StatusBadge value={profile.status} />
             <div className="mt-12">
-              <PrimaryButton className="button-secondary" onClick={onLogout}>Выйти</PrimaryButton>
+              <PrimaryButton className="button-secondary" disabled={logoutBusy} aria-busy={logoutBusy} onClick={() => void onLogout()}>{logoutBusy ? 'Завершаем сессию...' : 'Выйти'}</PrimaryButton>
             </div>
           </Card>
 
@@ -972,12 +979,23 @@ function UserHelpPage() {
 
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
+  const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
   const [profile, setProfile] = useState<UserProfileDto | null>(null)
   const [lastCheckout, setLastCheckout] = useState<CheckoutState>(null)
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(readPendingCheckout())
   const [checkoutError, setCheckoutError] = useState('')
   const [claimBusy, setClaimBusy] = useState(false)
   const [claimAttempt, setClaimAttempt] = useState(0)
+  const [logoutBusy, setLogoutBusy] = useState(false)
+  const [sessionError, setSessionError] = useState('')
+
+  const clearSession = () => {
+    removeSessionStorageItem(TOKEN_STORAGE_KEY)
+    removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
+    setToken('')
+    setRefreshToken('')
+    setProfile(null)
+  }
 
   useEffect(() => {
     if (!token) {
@@ -985,11 +1003,31 @@ export function App() {
       return
     }
 
-    api.getMe(token).then(setProfile).catch(() => {
-      setToken('')
-      removeSessionStorageItem(TOKEN_STORAGE_KEY)
+    let cancelled = false
+    api.getMe(token).then((nextProfile) => {
+      if (!cancelled) setProfile(nextProfile)
+    }).catch(async () => {
+      if (!refreshToken) {
+        if (!cancelled) clearSession()
+        return
+      }
+
+      try {
+        const response = await api.refresh(refreshToken)
+        const nextProfile = await api.getMe(response.accessToken)
+        if (cancelled) return
+        writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+        writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
+        setToken(response.accessToken)
+        setRefreshToken(response.refreshToken)
+        setProfile(nextProfile)
+      } catch {
+        if (!cancelled) clearSession()
+      }
     })
-  }, [token])
+
+    return () => { cancelled = true }
+  }, [token, refreshToken])
 
   const retryPendingCheckout = () => {
     setCheckoutError('')
@@ -1023,13 +1061,23 @@ export function App() {
 
   const handleAuthenticated = (response: AuthResponse) => {
     writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+    writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
     setToken(response.accessToken)
+    setRefreshToken(response.refreshToken)
+    setSessionError('')
   }
 
-  const handleLogout = () => {
-    removeSessionStorageItem(TOKEN_STORAGE_KEY)
-    setToken('')
-    setProfile(null)
+  const handleLogout = async () => {
+    setLogoutBusy(true)
+    setSessionError('')
+    try {
+      await api.logout(token || null, refreshToken || null)
+    } catch {
+      setSessionError('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')
+    } finally {
+      clearSession()
+      setLogoutBusy(false)
+    }
   }
 
   return (
@@ -1068,6 +1116,8 @@ export function App() {
               profile={profile}
               onAuthenticated={handleAuthenticated}
               onLogout={handleLogout}
+              logoutBusy={logoutBusy}
+              sessionError={sessionError}
               lastCheckout={lastCheckout}
               pendingCheckout={pendingCheckout}
               checkoutError={checkoutError}

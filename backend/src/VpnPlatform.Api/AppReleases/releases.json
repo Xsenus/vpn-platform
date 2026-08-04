@@ -11419,5 +11419,28 @@
         "text": "Roadmap progress is 501/521 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-public-session-lifecycle",
+    "version": "0.490.0",
+    "releasedAt": "2026-08-05T03:43:00+07:00",
+    "title": "Публичный выход отзывает серверную сессию",
+    "summary": "Public web сохраняет и ротирует refresh token, вызывает backend logout и гарантированно очищает локальную сессию.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Access/refresh пара сохраняется после входа и регистрации; отклонённый access token заменяется через refresh rotation с повторной проверкой профиля."
+      },
+      {
+        "type": "fixed",
+        "text": "Logout отправляет текущий refresh token backend и очищает browser storage при success или failure, предупреждая о неподтверждённом server revoke."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 502/522 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

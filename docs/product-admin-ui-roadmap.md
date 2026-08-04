@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `501/521` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `502/522` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -105,7 +105,8 @@
 - [x] Cabinet renewal action скрыта для `Blocked/Cancelled`; вместо нерабочей команды показано допустимое следующее действие.
 - [x] Cabinet QR action доступна только после выдачи VPN URI; provisioning-карточки объясняют ожидание и не вызывают заведомый `400`.
 - [x] Cabinet payment retry учитывает `expiresAt`: истёкший заказ не вызывает заведомый backend отказ и ведёт к созданию нового заказа.
-- [x] Latest "Что нового": `2026-08-05-cabinet-expired-order-payment-guard`, версия `0.489.0`.
+- [x] Public access/refresh session ротируется после `401`, а logout отзывает backend refresh session и очищает browser storage при success/failure.
+- [x] Latest "Что нового": `2026-08-05-public-session-lifecycle`, версия `0.490.0`.
 
 ## Как вести дальше
 
