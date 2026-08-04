@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-04 локально подтверждено:
 
-- backend на .NET 9: `942/942` unit tests;
+- backend на .NET 9: `948/948` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `68/68`;
 - frontend typecheck и production build: OK;
@@ -236,7 +236,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - синхронизация 3x-ui использует межинстансный claim, восстанавливает stale `Running`, отклоняет устаревший worker snapshot и сохраняет только redacted health/sync diagnostics;
 - выдача 3x-ui сериализована по подписке, capacity защищена optimistic concurrency, продление сохраняет назначенный inbound, а remote create/update/delete/enable/disable компенсируются при локальном отказе;
 - мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-vpn-node-capacity-reservation`, версия `0.476.0`;
-- roadmap progress: `488/508` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- terminal cancel подписки атомарно отзывает VPN-доступ, удаляет provider-клиента и освобождает node/panel/inbound capacity; rollback и reconciliation покрыты SQLite fault-injection;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-terminal-subscription-cancellation`, версия `0.477.0`;
+- roadmap progress: `489/509` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

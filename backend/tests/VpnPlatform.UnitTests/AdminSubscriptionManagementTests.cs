@@ -125,7 +125,11 @@ public class AdminSubscriptionManagementTests
 
         var initialEndAt = subscription.EndAt;
         var initialBlockReason = subscription.BlockReason;
-        var provider = new TrackingVpnProvider(clock.UtcNow, failEnable: failEnable, failDisable: !failEnable);
+        var provider = new TrackingVpnProvider(
+            clock.UtcNow,
+            failEnable: failEnable,
+            failDisable: command == "block",
+            failDelete: command == "cancel");
         var controller = CreateController(db, provider, clock);
 
         var result = command switch
@@ -146,9 +150,16 @@ public class AdminSubscriptionManagementTests
         Assert.Equal(initialEndAt, persistedSubscription.EndAt);
         Assert.Equal(initialBlockReason, persistedSubscription.BlockReason);
         Assert.Null(persistedSubscription.CancelledAt);
-        Assert.Equal(AccessCredentialStatus.Error, persistedAccess.Status);
+        Assert.Equal(command == "cancel" ? AccessCredentialStatus.SyncRequired : AccessCredentialStatus.Error, persistedAccess.Status);
         Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == $"subscription.{command}");
-        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (failEnable ? "access.enable.failed" : "access.disable.failed"));
+        var expectedAccessAudit = failEnable
+            ? "access.enable.failed"
+            : command == "cancel" ? "access.revoke.failed" : "access.disable.failed";
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == expectedAccessAudit);
+        if (command == "cancel")
+        {
+            Assert.Equal(1, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+        }
     }
 
     [Fact]
@@ -233,7 +244,7 @@ public class AdminSubscriptionManagementTests
     [InlineData("extend", SubscriptionStatus.Expired, AccessCredentialStatus.Disabled, SubscriptionStatus.Active, AccessCredentialStatus.Active)]
     [InlineData("block", SubscriptionStatus.Active, AccessCredentialStatus.Active, SubscriptionStatus.Blocked, AccessCredentialStatus.Disabled)]
     [InlineData("unblock", SubscriptionStatus.Blocked, AccessCredentialStatus.Disabled, SubscriptionStatus.Active, AccessCredentialStatus.Active)]
-    [InlineData("cancel", SubscriptionStatus.Active, AccessCredentialStatus.Active, SubscriptionStatus.Cancelled, AccessCredentialStatus.Disabled)]
+    [InlineData("cancel", SubscriptionStatus.Active, AccessCredentialStatus.Active, SubscriptionStatus.Cancelled, AccessCredentialStatus.Revoked)]
     public async Task Subscription_Command_Should_Update_Subscription_After_Vpn_Provider_Succeeds(
         string command,
         SubscriptionStatus initialSubscriptionStatus,
@@ -275,9 +286,167 @@ public class AdminSubscriptionManagementTests
         Assert.Equal(expectedSubscriptionStatus, persistedSubscription.Status);
         Assert.Equal(expectedAccessStatus, persistedAccess.Status);
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == $"subscription.{command}");
-        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (expectedAccessStatus == AccessCredentialStatus.Active ? "access.enable" : "access.disable"));
+        var expectedAccessAudit = expectedAccessStatus switch
+        {
+            AccessCredentialStatus.Active => "access.enable",
+            AccessCredentialStatus.Revoked => "access.revoke",
+            _ => "access.disable"
+        };
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == expectedAccessAudit);
         if (command == "extend") Assert.Equal(clock.UtcNow.AddDays(30), persistedSubscription.EndAt);
-        if (command == "cancel") Assert.Equal(clock.UtcNow, persistedSubscription.CancelledAt);
+        if (command == "cancel")
+        {
+            Assert.Equal(clock.UtcNow, persistedSubscription.CancelledAt);
+            Assert.Null(persistedSubscription.CurrentAccessId);
+            Assert.Null(persistedSubscription.CurrentServerId);
+            Assert.Equal(0, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, provider.DeleteCalls);
+        }
+    }
+
+    [Fact]
+    public async Task Cancel_Subscription_Local_Save_Failure_Should_Roll_Back_And_Mark_Access_For_Reconciliation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 12, 30, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        subscription.Status = SubscriptionStatus.Active;
+        access.Status = AccessCredentialStatus.Active;
+        access.DisabledAt = null;
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider(clock.UtcNow)
+        {
+            AfterDelete = () => db.FailNextSave = true
+        };
+        var controller = CreateController(db, provider, clock);
+
+        var result = await controller.CancelSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator action"), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persistedSubscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var persistedAccess = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        Assert.Equal(SubscriptionStatus.Active, persistedSubscription.Status);
+        Assert.Equal(ids.AccessId, persistedSubscription.CurrentAccessId);
+        Assert.NotNull(persistedSubscription.CurrentServerId);
+        Assert.Null(persistedSubscription.CancelledAt);
+        Assert.Equal(AccessCredentialStatus.SyncRequired, persistedAccess.Status);
+        Assert.Equal(1, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+        Assert.Equal(1, provider.DeleteCalls);
+        Assert.Contains(await db.AccessCredentialHistories.ToListAsync(), x => x.EventType == "AccessRevokeUncertainOnSubscriptionCancel");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.revoke.failed");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "subscription.cancel.failed");
+    }
+
+    [Fact]
+    public async Task Cancel_Subscription_Cancellation_After_Provider_Delete_Should_Roll_Back_And_Mark_Access_For_Reconciliation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.Include(x => x.CurrentAccess).SingleAsync();
+        var access = subscription.CurrentAccess!;
+        subscription.Status = SubscriptionStatus.Active;
+        access.Status = AccessCredentialStatus.Active;
+        access.DisabledAt = null;
+        await db.SaveChangesAsync();
+        using var cancellation = new CancellationTokenSource();
+        var provider = new TrackingVpnProvider(clock.UtcNow)
+        {
+            AfterDelete = cancellation.Cancel
+        };
+        var controller = CreateController(db, provider, clock);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => controller.CancelSubscription(
+            ids.SubscriptionId,
+            new AdminAccessActionHttpRequest("operator action"),
+            cancellation.Token));
+
+        db.ChangeTracker.Clear();
+        var persistedSubscription = await db.Subscriptions.SingleAsync();
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(SubscriptionStatus.Active, persistedSubscription.Status);
+        Assert.Equal(ids.AccessId, persistedSubscription.CurrentAccessId);
+        Assert.NotNull(persistedSubscription.CurrentServerId);
+        Assert.Null(persistedSubscription.CancelledAt);
+        Assert.Equal(AccessCredentialStatus.SyncRequired, persistedAccess.Status);
+        Assert.Equal(1, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+        Assert.Equal(1, provider.DeleteCalls);
+        Assert.Contains(await db.AccessCredentialHistories.ToListAsync(), x => x.EventType == "AccessRevokeUncertainOnSubscriptionCancel");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.revoke.cancelled");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "subscription.cancel.failed");
+    }
+
+    [Fact]
+    public async Task Cancel_Subscription_PreCancelled_Request_Should_Roll_Back_Without_Marking_Provider_State_Uncertain()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.Include(x => x.CurrentAccess).SingleAsync();
+        subscription.Status = SubscriptionStatus.Active;
+        subscription.CurrentAccess!.Status = AccessCredentialStatus.Active;
+        subscription.CurrentAccess.DisabledAt = null;
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var lifecycle = new VpnAccessLifecycleService(db, new TestVpnProviderFactory(provider), clock);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => lifecycle.CancelSubscriptionAsync(
+            subscription,
+            "operator action",
+            null,
+            cancellation.Token));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(SubscriptionStatus.Active, (await db.Subscriptions.SingleAsync()).Status);
+        Assert.Equal(AccessCredentialStatus.Active, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Equal(1, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+        Assert.Equal(0, provider.DeleteCalls);
+        Assert.DoesNotContain(await db.AccessCredentialHistories.ToListAsync(), x => x.EventType == "AccessRevokeUncertainOnSubscriptionCancel");
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == "access.revoke.cancelled");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "subscription.cancel.failed" && x.AfterJson.Contains("rolled_back_before_provider_mutation"));
+    }
+
+    [Fact]
+    public async Task Repeated_Cancel_Should_Not_Delete_Access_Or_Release_Node_Twice()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        subscription.Status = SubscriptionStatus.Active;
+        access.Status = AccessCredentialStatus.Active;
+        access.DisabledAt = null;
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var controller = CreateController(db, provider, clock);
+
+        Assert.IsType<OkObjectResult>(await controller.CancelSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("first"), CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.CancelSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("second"), CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(SubscriptionStatus.Cancelled, (await db.Subscriptions.SingleAsync()).Status);
+        Assert.Equal(AccessCredentialStatus.Revoked, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Equal(0, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+        Assert.Equal(1, provider.DeleteCalls);
     }
 
     private static async Task<(Guid SubscriptionId, Guid AccessId)> SeedSubscriptionWithDisabledAccessAsync(ApplicationDbContext db, DateTimeOffset now)
@@ -290,7 +459,7 @@ public class AdminSubscriptionManagementTests
 
         db.Users.Add(new User { Id = userId, Email = "client@example.test", DisplayName = "Client", Status = UserStatus.Active });
         db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Premium", Slug = "premium", DurationDays = 30, Price = 490, Currency = "RUB" });
-        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1" });
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1", Capacity = 100, UsedCapacity = 1 });
         db.Subscriptions.Add(new Subscription
         {
             Id = subscriptionId,
@@ -369,12 +538,14 @@ public class AdminSubscriptionManagementTests
         public IVpnProvider Get(string providerName) => provider;
     }
 
-    private sealed class TrackingVpnProvider(DateTimeOffset now, bool failEnable = false, bool failDisable = false) : IVpnProvider
+    private sealed class TrackingVpnProvider(DateTimeOffset now, bool failEnable = false, bool failDisable = false, bool failDelete = false) : IVpnProvider
     {
         public string Name => "x3ui";
         public int EnableCalls { get; private set; }
         public int DisableCalls { get; private set; }
+        public int DeleteCalls { get; private set; }
         public int SyncCalls { get; private set; }
+        public Action? AfterDelete { get; set; }
 
         public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new VpnProvisionResult("client-1", "vless://client-1", "vless://client-1", "/configs/client-1.json"));
@@ -404,8 +575,32 @@ public class AdminSubscriptionManagementTests
             return Task.FromResult(new VpnUsageSnapshot(providerAccessId, 2048, 2, now));
         }
 
-        public Task DeleteAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DeleteAccessAsync(string providerAccessId, CancellationToken cancellationToken)
+        {
+            DeleteCalls += 1;
+            AfterDelete?.Invoke();
+            cancellationToken.ThrowIfCancellationRequested();
+            return failDelete
+                ? Task.FromException(new InvalidOperationException("simulated provider delete failure"))
+                : Task.CompletedTask;
+        }
         public Task<VpnUsageSnapshot> GetUsageAsync(string providerAccessId, CancellationToken cancellationToken) => Task.FromResult(new VpnUsageSnapshot(providerAccessId, 2048, 2, now));
         public Task<HealthStatus> GetNodeHealthAsync(VpnNode node, CancellationToken cancellationToken) => Task.FromResult(HealthStatus.Healthy);
+    }
+
+    private sealed class FailingSaveApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : ApplicationDbContext(options)
+    {
+        public bool FailNextSave { get; set; }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (FailNextSave)
+            {
+                FailNextSave = false;
+                throw new DbUpdateException("Injected cancellation persistence failure.");
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
+        }
     }
 }

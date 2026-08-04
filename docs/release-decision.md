@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `942/942`.
+- Backend full suite: `948/948`.
 - API Release build: OK.
 - Frontend unit tests: `68/68`.
 - Frontend typecheck/build: OK.
@@ -44,8 +44,9 @@ Production-ready решение заблокировано следующими 
 - Provisioning runs use atomic claim and bounded lease; stale execution is quarantined without automatic external replay, runner timeout kills the process tree, and unsafe active retry/cancel is blocked.
 - Subscription expiration disables remote access before `Expired`, persists lease/backoff retry state on provider failure and isolates lifecycle/panel worker failures per item.
 - Panel sync uses a cross-instance unique claim, stale lease/snapshot recovery and redacted persisted diagnostics; legacy raw panel errors are cleared by the upgrade path.
-- Latest "Что нового": `2026-08-04-vpn-node-capacity-reservation`, версия `0.476.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `488/508` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Terminal subscription cancellation атомарно отзывает доступ, удаляет provider-клиента и освобождает capacity; rollback и provider uncertainty проверены fault-injection тестами.
+- Latest "Что нового": `2026-08-04-terminal-subscription-cancellation`, версия `0.477.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `489/509` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

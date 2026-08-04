@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-04",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `942/942`",
+                     "Backend full suite: `948/948`",
                      "Frontend unit tests: `68/68`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `12/12`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-04-vpn-node-capacity-reservation",
-                     "0.476.0"
+                     "2026-08-04-terminal-subscription-cancellation",
+                     "0.477.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-vpn-node-capacity-reservation", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-04-vpn-node-capacity-reservation", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-terminal-subscription-cancellation", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-terminal-subscription-cancellation", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `942/942`",
+                     "Backend full suite: `948/948`",
                      "Frontend unit tests: `68/68`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-04-vpn-node-capacity-reservation",
-                     "0.476.0",
+                     "2026-08-04-terminal-subscription-cancellation",
+                     "0.477.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

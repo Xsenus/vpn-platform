@@ -460,38 +460,26 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
-        var now = _clock.UtcNow;
-        var before = JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt });
         if (!StatusStateMachine.CanTransition(subscription.Status, SubscriptionStatus.Cancelled))
         {
             return BadRequest(new { error = $"Subscription status transition {subscription.Status} -> {SubscriptionStatus.Cancelled} is not allowed." });
         }
 
-        if (subscription.CurrentAccess is not null)
+        if (_vpnAccessLifecycleService is null)
         {
-            if (_vpnAccessLifecycleService is null)
-            {
-                return BadRequest(new { error = "VPN access lifecycle service is not configured." });
-            }
-
-            var accessResult = await _vpnAccessLifecycleService.DisableAccessAsync(
-                subscription.CurrentAccess.Id,
-                "AccessDisabledOnSubscriptionCancel",
-                request?.Reason ?? "manual_subscription_cancel",
-                ResolveUserId(),
-                cancellationToken);
-            if (!accessResult.IsSuccess)
-            {
-                return BadRequest(new { error = accessResult.Error });
-            }
+            return BadRequest(new { error = "VPN access lifecycle service is not configured." });
         }
 
-        StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Cancelled, now);
-        ResetSubscriptionLifecycleState(subscription);
-        subscription.CancelledAt = now;
-        subscription.BlockReason = string.IsNullOrWhiteSpace(request?.Reason) ? subscription.BlockReason : request!.Reason!.Trim();
-        AddAuditLog("subscription.cancel", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt, request?.Reason }));
-        await _db.SaveChangesAsync(cancellationToken);
+        var result = await _vpnAccessLifecycleService.CancelSubscriptionAsync(
+            subscription,
+            request?.Reason,
+            ResolveUserId(),
+            cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
         return Ok(new { subscription.Id, Status = subscription.Status.ToString(), subscription.CancelledAt });
     }
 

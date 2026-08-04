@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Terminal subscription cancellation
+
+Scope:
+- Проверены terminal cancel подписки, remote revoke/delete, атомарное освобождение node/panel/inbound capacity, rollback при provider/local failure, cancellation boundaries, идемпотентность и destructive admin UI.
+
+Results:
+- Roadmap progress: `489/509` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-terminal-subscription-cancellation`, version `0.477.0`.
+- Backend full suite: OK, `948/948`; targeted subscription cancellation/X3Ui/SQLite regression: OK, `23/23`.
+- Real X3Ui adapter SQLite regression: success revokes credential, deletes `VpnClient` and releases node/panel/inbound; injected local save failure restores all records/counters and compensates remote delete.
+- Cancellation regression: provider-side uncertainty persists `SyncRequired`; cancellation before provider mutation rolls back without a false reconciliation marker.
+- Repeated cancellation: provider delete and capacity release execute once.
+- EF schema: no changes; pending model changes: none.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`; desktop/mobile admin cancel dialog and success state verified without horizontal overflow.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-terminal-subscription-cancellation`.
+- Secret scan: OK, `607` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-04: VPN node capacity reservation
 
 Scope:

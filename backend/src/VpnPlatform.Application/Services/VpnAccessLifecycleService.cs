@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
@@ -12,13 +13,147 @@ public class VpnAccessLifecycleService
 {
     private readonly IApplicationDbContext _db;
     private readonly IVpnProviderFactory _vpnProviderFactory;
+    private readonly VpnNodeCapacityService _vpnNodeCapacityService;
     private readonly IClock _clock;
 
     public VpnAccessLifecycleService(IApplicationDbContext db, IVpnProviderFactory vpnProviderFactory, IClock clock)
     {
         _db = db;
         _vpnProviderFactory = vpnProviderFactory;
+        _vpnNodeCapacityService = new VpnNodeCapacityService(db);
         _clock = clock;
+    }
+
+    public async Task<Result<string>> CancelSubscriptionAsync(
+        Subscription subscription,
+        string? reason,
+        Guid? actorUserId,
+        CancellationToken cancellationToken)
+    {
+        var now = _clock.UtcNow;
+        if (!StatusStateMachine.CanTransition(subscription.Status, SubscriptionStatus.Cancelled))
+        {
+            return Result<string>.Failure($"Subscription status transition {subscription.Status} -> {SubscriptionStatus.Cancelled} is not allowed.");
+        }
+
+        var access = subscription.CurrentAccess;
+        if (access is not null && !StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.Revoked))
+        {
+            return Result<string>.Failure($"VPN access status transition {access.Status} -> {AccessCredentialStatus.Revoked} is not allowed.");
+        }
+
+        var normalizedReason = string.IsNullOrWhiteSpace(reason) ? "manual_subscription_cancel" : reason.Trim();
+        var subscriptionBefore = new
+        {
+            subscription.Status,
+            subscription.CurrentAccessId,
+            subscription.CurrentServerId,
+            subscription.CancelledAt,
+            subscription.BlockReason
+        };
+        var accessBefore = access is null ? null : Snapshot(access);
+        IDbContextTransaction? transaction = null;
+        var providerDeletionAttempted = false;
+
+        try
+        {
+            if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+            {
+                transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            }
+
+            var nodeCapacityReleased = await ReleaseNodeCapacityAsync(subscription.CurrentServerId, cancellationToken);
+
+            if (access is not null)
+            {
+                StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Revoked, now);
+                access.DisabledAt = now;
+                access.Revision += 1;
+                AddHistory(access, "AccessRevokedOnSubscriptionCancel", accessBefore!, new
+                {
+                    access.Status,
+                    access.DisabledAt,
+                    reason = normalizedReason
+                });
+                AddAudit("access.revoke", access, accessBefore!, new
+                {
+                    access.Status,
+                    access.DisabledAt,
+                    reason = normalizedReason
+                }, actorUserId);
+            }
+
+            StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Cancelled, now);
+            ResetSubscriptionLifecycleState(subscription);
+            subscription.CancelledAt ??= now;
+            subscription.BlockReason = normalizedReason;
+            subscription.CurrentAccessId = null;
+            subscription.CurrentAccess = null;
+            subscription.CurrentServerId = null;
+            subscription.CurrentServer = null;
+            AddSubscriptionAudit("subscription.cancel", subscription, subscriptionBefore, new
+            {
+                subscription.Status,
+                subscription.CancelledAt,
+                subscription.CurrentAccessId,
+                subscription.CurrentServerId,
+                nodeCapacityReleased,
+                reason = normalizedReason
+            }, actorUserId);
+
+            if (access is not null)
+            {
+                var provider = _vpnProviderFactory.Get(access.ProviderType);
+                providerDeletionAttempted = true;
+                await provider.DeleteAccessAsync(access.ProviderAccessId, cancellationToken);
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            return Result<string>.Success("Subscription cancelled and VPN access revoked.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await RollbackAndDisposeAsync(transaction);
+            transaction = null;
+            await MarkCancellationUncertainAsync(
+                subscription.Id,
+                access?.Id,
+                accessBefore,
+                normalizedReason,
+                "VPN access revocation was cancelled while provider state may be unknown.",
+                "access.revoke.cancelled",
+                actorUserId,
+                providerDeletionAttempted);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await RollbackAndDisposeAsync(transaction);
+            transaction = null;
+            var safeError = SafeError(ex.Message);
+            await MarkCancellationUncertainAsync(
+                subscription.Id,
+                access?.Id,
+                accessBefore,
+                normalizedReason,
+                safeError,
+                "access.revoke.failed",
+                actorUserId,
+                providerDeletionAttempted);
+            return Result<string>.Failure($"VPN access revocation failed: {safeError}", isRetryable: true);
+        }
+        finally
+        {
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+            }
+        }
     }
 
     public async Task<Result<AdminAccessActionResult>> DisableAccessAsync(Guid accessId, string? eventType, string? reason, Guid? actorUserId, CancellationToken cancellationToken)
@@ -210,6 +345,131 @@ public class VpnAccessLifecycleService
             AfterJson = SensitiveDataRedactor.Redact(JsonSerializer.Serialize(newValue)),
             CreatedAt = _clock.UtcNow
         });
+    }
+
+    private async Task<bool> ReleaseNodeCapacityAsync(Guid? nodeId, CancellationToken cancellationToken)
+    {
+        if (!nodeId.HasValue)
+        {
+            return false;
+        }
+
+        if (_db is DbContext dbContext && !dbContext.Database.IsRelational())
+        {
+            var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId.Value, cancellationToken);
+            if (node is null || node.UsedCapacity <= 0)
+            {
+                return false;
+            }
+
+            node.UsedCapacity -= 1;
+            return true;
+        }
+
+        return await _vpnNodeCapacityService.ReleaseAsync(nodeId.Value, cancellationToken);
+    }
+
+    private async Task MarkCancellationUncertainAsync(
+        Guid subscriptionId,
+        Guid? accessId,
+        object? accessBefore,
+        string reason,
+        string error,
+        string auditAction,
+        Guid? actorUserId,
+        bool providerStateUnknown)
+    {
+        if (_db is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
+
+        var now = _clock.UtcNow;
+        var safeError = SafeError(error);
+        if (providerStateUnknown && accessId.HasValue)
+        {
+            var persistedAccess = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == accessId.Value, CancellationToken.None);
+            if (persistedAccess is not null && StatusStateMachine.CanTransition(persistedAccess.Status, AccessCredentialStatus.SyncRequired))
+            {
+                StatusStateMachine.SetAccessStatus(persistedAccess, AccessCredentialStatus.SyncRequired, now);
+                persistedAccess.Revision += 1;
+                AddHistory(persistedAccess, "AccessRevokeUncertainOnSubscriptionCancel", accessBefore ?? Snapshot(persistedAccess), new
+                {
+                    persistedAccess.Status,
+                    reason,
+                    error = safeError,
+                    outcome = "provider_state_unknown"
+                });
+                AddAudit(auditAction, persistedAccess, accessBefore ?? Snapshot(persistedAccess), new
+                {
+                    persistedAccess.Status,
+                    reason,
+                    error = safeError,
+                    outcome = "provider_state_unknown"
+                }, actorUserId);
+            }
+        }
+
+        var outcome = providerStateUnknown ? "provider_state_unknown" : "rolled_back_before_provider_mutation";
+        var persistedSubscription = await _db.Subscriptions.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == subscriptionId, CancellationToken.None);
+        if (persistedSubscription is not null && persistedSubscription.Status != SubscriptionStatus.Cancelled)
+        {
+            AddSubscriptionAudit("subscription.cancel.failed", persistedSubscription, new { persistedSubscription.Status }, new
+            {
+                persistedSubscription.Status,
+                reason,
+                error = safeError,
+                outcome
+            }, actorUserId);
+        }
+
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private void AddSubscriptionAudit(string action, Subscription subscription, object oldValue, object newValue, Guid? actorUserId)
+    {
+        _db.AuditLogs.Add(new AuditLog
+        {
+            ActorType = actorUserId.HasValue ? "admin" : "system",
+            ActorId = actorUserId?.ToString() ?? "system",
+            Action = action,
+            EntityType = "Subscription",
+            EntityId = subscription.Id.ToString(),
+            BeforeJson = SensitiveDataRedactor.Redact(JsonSerializer.Serialize(oldValue)),
+            AfterJson = SensitiveDataRedactor.Redact(JsonSerializer.Serialize(newValue)),
+            CreatedAt = _clock.UtcNow
+        });
+    }
+
+    private static void ResetSubscriptionLifecycleState(Subscription subscription)
+    {
+        subscription.LifecycleAttemptCount = 0;
+        subscription.LifecycleProcessingStartedAt = null;
+        subscription.LifecycleLeaseExpiresAt = null;
+        subscription.LifecycleNextAttemptAt = null;
+        subscription.LifecycleLastError = null;
+    }
+
+    private static async Task RollbackAndDisposeAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // The failure marker below records that provider and database state require reconciliation.
+        }
+        finally
+        {
+            await transaction.DisposeAsync();
+        }
     }
 
     private static string SafeError(string? value)

@@ -11120,5 +11120,28 @@
         "text": "Roadmap progress is 488/508 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-terminal-subscription-cancellation",
+    "version": "0.477.0",
+    "releasedAt": "2026-08-04T23:50:00+07:00",
+    "title": "Отмена подписки полностью отзывает VPN-доступ",
+    "summary": "Terminal cancellation удаляет provider-клиента, освобождает всю занятую ёмкость и откатывается без частичного состояния при сбое.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Отменённая подписка больше не оставляет VPN-клиента и занятые slots node, panel и inbound: доступ получает terminal статус Revoked, а связи подписки очищаются."
+      },
+      {
+        "type": "fixed",
+        "text": "Ошибка удаления или локального сохранения откатывает подписку и capacity; неопределённое состояние провайдера помечается для reconciliation без ложного marker до provider mutation."
+      },
+      {
+        "type": "important",
+        "text": "Админка явно предупреждает о необратимом отзыве. Roadmap progress is 489/509 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

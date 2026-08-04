@@ -1946,7 +1946,9 @@ export function App() {
     }
     await runAction(`${action}-${subscription.id}`, async () => {
       await map[action]()
-      setNotice(`Подписка обновлена: ${shortId(subscription.id)}`)
+      setNotice(action === 'cancel'
+        ? 'Подписка отменена, VPN-доступ отозван и удален с сервера.'
+        : `Подписка обновлена: ${shortId(subscription.id)}`)
       await loadAll(token)
     })
   }
@@ -3014,7 +3016,7 @@ export function App() {
                     <PrimaryButton disabled={isActionBusy} onClick={() => void handleSubscriptionAction(subscription, 'extend')}>Продлить</PrimaryButton>
                     <PrimaryButton className="button-secondary" disabled={isActionBusy || !subscription.currentAccessId} title={subscription.currentAccessId ? undefined : 'У подписки нет текущего VPN-доступа'} onClick={() => void handleSubscriptionAction(subscription, 'sync')}>Синхронизировать доступ</PrimaryButton>
                     <ConfirmButton className="button-secondary" disabled={isActionBusy} message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => void handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton>
-                    <ConfirmButton className="button-danger" disabled={isActionBusy || subscription.status === 'Cancelled'} message="Отменить подписку? Пользователь может потерять доступ после обработки." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton>
+                    <ConfirmButton className="button-danger" disabled={isActionBusy || subscription.status === 'Cancelled'} message="Отменить подписку без возможности восстановления? VPN-доступ будет отозван и удален с сервера, а занятый слот освободится." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton>
                   </div>
                 </div>
               )

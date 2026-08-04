@@ -168,6 +168,7 @@ async function mockAdminApi(page: Page) {
   const releases = [release()]
   const scenarios = [workScenario()]
   const panels = [vpnPanel()]
+  const subscriptions: Array<Record<string, unknown>> = [{ id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }]
 
   await page.route('**/api/**', async (route) => {
     const request = route.request()
@@ -259,7 +260,13 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/subscriptions') {
-      await fulfillJson(route, [{ id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }])
+      await fulfillJson(route, subscriptions)
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/cancel') {
+      subscriptions[0] = { ...subscriptions[0], status: 'Cancelled', currentServerId: null, currentAccessId: null, updatedAt: now }
+      await fulfillJson(route, { id: 'sub-e2e', status: 'Cancelled', cancelledAt: now })
       return
     }
 
@@ -513,6 +520,15 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   await openAdminSection(page, 'VPN-доступы', 'vpn')
   await expect(page.getByText('vless://admin-e2e@example.test')).toBeVisible()
+
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+  const subscriptionsPanel = page.locator('#subscriptions')
+  await subscriptionsPanel.getByRole('button', { name: 'Отменить' }).click()
+  await expect(subscriptionsPanel.getByRole('dialog')).toContainText('VPN-доступ будет отозван и удален с сервера')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Подписка отменена, VPN-доступ отозван и удален с сервера.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/subscriptions/sub-e2e/cancel')).toBeTruthy()
 
   await openAdminSection(page, 'Серверы', 'nodes')
   const nodesPanel = page.locator('#nodes')

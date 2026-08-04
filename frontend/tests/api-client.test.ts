@@ -1087,6 +1087,8 @@ test('admin UI source keeps secret fields write-only and validation mode visible
   assert.match(source, /режим проверки|Проверочный режим/i)
   assert.doesNotMatch(source, /panel-password-must-not-leak/i)
   assert.doesNotMatch(source, /ssh-password-must-not-leak/i)
+  assert.match(source, /VPN-доступ будет отозван и удален с сервера, а занятый слот освободится/)
+  assert.match(source, /Подписка отменена, VPN-доступ отозван и удален с сервера/)
 })
 
 

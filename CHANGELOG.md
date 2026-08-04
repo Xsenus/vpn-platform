@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.477.0 - 2026-08-04
+
+Release entry: `2026-08-04-terminal-subscription-cancellation`.
+
+### Исправлено
+
+- Ручная отмена подписки теперь завершает VPN lifecycle: доступ переводится в `Revoked`, provider-клиент удаляется, ссылки подписки очищаются, а ёмкость node/panel/inbound освобождается в одной локальной транзакции.
+- Ошибка provider delete или локального commit откатывает подписку и все capacity counters; после фактической попытки удаления доступ получает `SyncRequired` и audit/history для reconciliation.
+- Отмена запроса до обращения к провайдеру больше не создаёт ложный `SyncRequired`; повторная отмена не удаляет клиента и не освобождает slot второй раз.
+- Админка явно предупреждает о необратимом отзыве и удалении доступа; destructive-flow проверен на desktop и mobile без overflow.
+
+### Проверено
+
+- Backend full suite `948/948`; targeted subscription cancellation/X3Ui/SQLite regression `23/23`, включая real provider adapter, local-save fault injection и cancellation boundaries; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; EF model drift отсутствует, fresh local SQLite smoke latest release OK; secret scan `607` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `489/509` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.476.0 - 2026-08-04
 
 Release entry: `2026-08-04-vpn-node-capacity-reservation`.

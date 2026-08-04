@@ -1177,6 +1177,167 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Cancel_Subscription_Should_Atomically_Revoke_X3Ui_Client_And_Release_All_Capacity()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-cancel-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = SqliteOptions(databasePath);
+            var clock = new FixedClock();
+            var remote = new FakeX3UiClient(clock.UtcNow);
+            var seed = await SeedRelationalProvisioningAsync(options, clock.UtcNow, capacity: 1, subscriptionCount: 1);
+            await using var db = new ApplicationDbContext(options);
+            var panel = await db.VpnPanels.SingleAsync();
+            var node = new VpnNode
+            {
+                Name = "cancel-node",
+                Host = "vpn.example.test",
+                IpAddress = "127.0.0.1",
+                Provider = "x3ui",
+                Region = "eu",
+                Status = NodeStatus.Ready,
+                Capacity = 1,
+                UsedCapacity = 1,
+                HealthStatus = HealthStatus.Healthy,
+                IsAvailableForNewUsers = true,
+                SupportedProtocolsCsv = "vless",
+                PanelBaseUrl = panel.BaseUrl
+            };
+            db.VpnNodes.Add(node);
+            await db.SaveChangesAsync();
+            var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+            var provisioned = await provider.CreateAccessAsync(new VpnProvisionRequest(
+                seed.SubscriptionIds[0],
+                seed.UserId,
+                seed.TariffId,
+                node.Id,
+                clock.UtcNow.AddDays(30),
+                3), CancellationToken.None);
+            var access = new AccessCredential
+            {
+                SubscriptionId = seed.SubscriptionIds[0],
+                ProviderType = provider.Name,
+                ProviderAccessId = provisioned.ProviderAccessId,
+                ServerId = node.Id,
+                AccessUri = provisioned.AccessUri,
+                Status = AccessCredentialStatus.Active,
+                IssuedAt = clock.UtcNow,
+                Revision = 1
+            };
+            db.AccessCredentials.Add(access);
+            var subscription = await db.Subscriptions.SingleAsync();
+            subscription.CurrentAccessId = access.Id;
+            subscription.CurrentServerId = node.Id;
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+            subscription = await db.Subscriptions.Include(x => x.CurrentAccess).SingleAsync();
+            var lifecycle = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+
+            var result = await lifecycle.CancelSubscriptionAsync(subscription, "terminal cancellation", null, CancellationToken.None);
+
+            Assert.True(result.IsSuccess, result.Error);
+            db.ChangeTracker.Clear();
+            var persistedSubscription = await db.Subscriptions.SingleAsync();
+            Assert.Equal(SubscriptionStatus.Cancelled, persistedSubscription.Status);
+            Assert.Null(persistedSubscription.CurrentAccessId);
+            Assert.Null(persistedSubscription.CurrentServerId);
+            Assert.Equal(AccessCredentialStatus.Revoked, (await db.AccessCredentials.SingleAsync()).Status);
+            Assert.Empty(await db.VpnClients.ToListAsync());
+            Assert.Equal(0, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+            Assert.Equal(0, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+            Assert.Equal(0, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, remote.DeleteClientCalls);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task Cancel_Subscription_Should_Roll_Back_All_Capacity_When_X3Ui_Local_Save_Fails()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-cancel-failure-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = SqliteOptions(databasePath);
+            var clock = new FixedClock();
+            var remote = new FakeX3UiClient(clock.UtcNow);
+            var seed = await SeedRelationalProvisioningAsync(options, clock.UtcNow, capacity: 1, subscriptionCount: 1);
+            await using var db = new FailingSaveApplicationDbContext(options);
+            var panel = await db.VpnPanels.SingleAsync();
+            var node = new VpnNode
+            {
+                Name = "cancel-failure-node",
+                Host = "vpn.example.test",
+                IpAddress = "127.0.0.1",
+                Provider = "x3ui",
+                Region = "eu",
+                Status = NodeStatus.Ready,
+                Capacity = 1,
+                UsedCapacity = 1,
+                HealthStatus = HealthStatus.Healthy,
+                IsAvailableForNewUsers = true,
+                SupportedProtocolsCsv = "vless",
+                PanelBaseUrl = panel.BaseUrl
+            };
+            db.VpnNodes.Add(node);
+            await db.SaveChangesAsync();
+            var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+            var provisioned = await provider.CreateAccessAsync(new VpnProvisionRequest(
+                seed.SubscriptionIds[0],
+                seed.UserId,
+                seed.TariffId,
+                node.Id,
+                clock.UtcNow.AddDays(30),
+                3), CancellationToken.None);
+            var access = new AccessCredential
+            {
+                SubscriptionId = seed.SubscriptionIds[0],
+                ProviderType = provider.Name,
+                ProviderAccessId = provisioned.ProviderAccessId,
+                ServerId = node.Id,
+                AccessUri = provisioned.AccessUri,
+                Status = AccessCredentialStatus.Active,
+                IssuedAt = clock.UtcNow,
+                Revision = 1
+            };
+            db.AccessCredentials.Add(access);
+            var subscription = await db.Subscriptions.SingleAsync();
+            subscription.CurrentAccessId = access.Id;
+            subscription.CurrentServerId = node.Id;
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+            subscription = await db.Subscriptions.Include(x => x.CurrentAccess).SingleAsync();
+            var lifecycle = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+            db.FailNextSave = true;
+
+            var result = await lifecycle.CancelSubscriptionAsync(subscription, "terminal cancellation", null, CancellationToken.None);
+
+            Assert.False(result.IsSuccess);
+            Assert.True(result.IsRetryable);
+            db.ChangeTracker.Clear();
+            var persistedSubscription = await db.Subscriptions.SingleAsync();
+            Assert.Equal(SubscriptionStatus.Active, persistedSubscription.Status);
+            Assert.Equal(access.Id, persistedSubscription.CurrentAccessId);
+            Assert.Equal(node.Id, persistedSubscription.CurrentServerId);
+            Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+            Assert.Single(await db.VpnClients.ToListAsync());
+            Assert.Equal(1, (await db.VpnNodes.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, remote.DeleteClientCalls);
+            Assert.Equal(2, remote.AddClientCalls);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task Concurrent_Create_For_Same_Subscription_Should_Be_Idempotent()
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-x3ui-{Guid.NewGuid():N}.db");
@@ -1452,6 +1613,11 @@ public class X3UiIntegrationTests
         public string Protect(string plaintext) => plaintext;
         public string Unprotect(string protectedValue) => protectedValue;
         public string Mask(string? value, int visibleTail = 4) => string.IsNullOrEmpty(value) ? string.Empty : new string('*', Math.Max(0, value.Length - visibleTail)) + value[^Math.Min(visibleTail, value.Length)..];
+    }
+
+    private sealed class SingleVpnProviderFactory(IVpnProvider provider) : IVpnProviderFactory
+    {
+        public IVpnProvider Get(string providerName) => provider;
     }
 
     private sealed class FakeX3UiClient : IX3UiClient
