@@ -53,14 +53,14 @@ public static class StatusStateMachine
         [ProvisioningRunStatus.AwaitingCredentials] = [ProvisioningRunStatus.AwaitingConfirmation, ProvisioningRunStatus.PrecheckQueued, ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Failed],
         [ProvisioningRunStatus.AwaitingConfirmation] = [ProvisioningRunStatus.PrecheckQueued, ProvisioningRunStatus.DeployQueued, ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Failed],
         [ProvisioningRunStatus.PrecheckQueued] = [ProvisioningRunStatus.Prechecking, ProvisioningRunStatus.Retrying, ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Failed],
-        [ProvisioningRunStatus.Prechecking] = [ProvisioningRunStatus.ReadyToDeploy, ProvisioningRunStatus.PrecheckFailed, ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Failed],
+        [ProvisioningRunStatus.Prechecking] = [ProvisioningRunStatus.ReadyToDeploy, ProvisioningRunStatus.PrecheckFailed, ProvisioningRunStatus.Failed],
         [ProvisioningRunStatus.PrecheckFailed] = [ProvisioningRunStatus.Retrying],
         [ProvisioningRunStatus.ReadyToDeploy] = [ProvisioningRunStatus.DeployQueued, ProvisioningRunStatus.Deploying, ProvisioningRunStatus.Cancelled],
         [ProvisioningRunStatus.DeployQueued] = [ProvisioningRunStatus.Deploying, ProvisioningRunStatus.Retrying, ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Failed],
-        [ProvisioningRunStatus.Deploying] = [ProvisioningRunStatus.Deployed, ProvisioningRunStatus.Succeeded, ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Failed],
+        [ProvisioningRunStatus.Deploying] = [ProvisioningRunStatus.Deployed, ProvisioningRunStatus.Succeeded, ProvisioningRunStatus.Failed],
         [ProvisioningRunStatus.Deployed] = [ProvisioningRunStatus.Succeeded],
         [ProvisioningRunStatus.Retrying] = [ProvisioningRunStatus.Running, ProvisioningRunStatus.PrecheckQueued, ProvisioningRunStatus.Prechecking, ProvisioningRunStatus.DeployQueued, ProvisioningRunStatus.Deploying, ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Failed],
-        [ProvisioningRunStatus.Running] = [ProvisioningRunStatus.Succeeded, ProvisioningRunStatus.Failed, ProvisioningRunStatus.Cancelled]
+        [ProvisioningRunStatus.Running] = [ProvisioningRunStatus.Succeeded, ProvisioningRunStatus.Failed]
     };
 
     public static bool CanTransition(OrderStatus from, OrderStatus to) => CanTransitionCore(OrderTransitions, from, to);

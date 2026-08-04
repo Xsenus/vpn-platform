@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.472.0 - 2026-08-04
+
+Release entry: `2026-08-04-provisioning-worker-recovery`.
+
+### Fixed
+- `ProvisioningRunCoordinator` атомарно захватывает queued run, ведёт attempt/lease и не допускает двойной deploy несколькими worker instances.
+- Просроченный `Prechecking`/`Deploying` переводится в redacted failure для явной проверки оператором без автоматического replay потенциально частичного внешнего deploy.
+- Для одного node действует process gate и partial unique index; migration и local SQLite repair карантинируют исторические активные дубли до создания индекса.
+- Ansible runner читает stdout/stderr параллельно, ограничен `ExecutionTimeoutSeconds`, завершает process tree при timeout/cancellation и всегда удаляет временный `extra-vars.json`.
+- Админский API/UI показывает attempt/lease и разрешает retry/cancel только для безопасных статусов; исполняющийся run нельзя локально отменить поверх внешнего процесса.
+
+### Notes
+- Validation: backend full suite `918/918`, targeted provisioning/state/SQLite suite `98/98`, migration `20260804134818_ProvisioningWorkerRecovery` and PostgreSQL SQL OK, API and TelegramBot Release builds `0` warnings/`0` errors, fresh local SQLite smoke OK, frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console suite `12/12`, responsive all-screens `6/6`, secret scan `588` files/`0` findings.
+- RoadmapCurrentStateTests and release/documentation guards keep progress at `484/504` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.471.0 - 2026-08-04
 
 Release entry: `2026-08-04-outbox-dispatch-recovery`.

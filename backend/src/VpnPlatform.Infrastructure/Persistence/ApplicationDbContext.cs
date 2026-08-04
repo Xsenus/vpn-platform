@@ -114,6 +114,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PanelSyncEvent>().HasIndex(x => new { x.PanelSyncRunId, x.EventType });
         modelBuilder.Entity<PanelHealthCheck>().HasIndex(x => new { x.VpnPanelId, x.CheckedAt });
         modelBuilder.Entity<AccessCredentialHistory>().HasIndex(x => new { x.AccessCredentialId, x.CreatedAt });
+        modelBuilder.Entity<ProvisioningRun>()
+            .HasIndex(x => x.NodeId)
+            .HasDatabaseName("IX_ProvisioningRuns_Active_NodeId")
+            .HasFilter("\"Status\" IN (0, 1, 8, 9, 12, 13, 15)")
+            .IsUnique();
         modelBuilder.Entity<InboxMessage>().HasIndex(x => new { x.Source, x.ExternalKey }).IsUnique();
         modelBuilder.Entity<OutboxMessage>().HasIndex(x => new { x.Type, x.CorrelationId }).IsUnique();
         modelBuilder.Entity<AppRelease>().HasIndex(x => x.ReleaseId).IsUnique();

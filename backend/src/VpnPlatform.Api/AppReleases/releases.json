@@ -11005,5 +11005,28 @@
         "text": "EF migration и local SQLite repair добавляют lifecycle-поля и unique event identity. Roadmap progress is 483/503 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Live email and real VPS/staging/payment/3x-ui evidence are still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-provisioning-worker-recovery",
+    "version": "0.472.0",
+    "releasedAt": "2026-08-04T21:05:00+07:00",
+    "title": "Подготовка VPS защищена от двойного запуска и зависаний",
+    "summary": "Provisioning worker получил атомарный claim, lease recovery и ограничение времени runner без опасного автоматического повтора deploy.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Несколько worker instances больше не выполняют один deploy параллельно; для одного сервера разрешён только один активный запуск."
+      },
+      {
+        "type": "fixed",
+        "text": "Зависший запуск переводится в ошибку для проверки оператором без автоматического повтора, а runner завершается по timeout вместе с дочерними процессами."
+      },
+      {
+        "type": "important",
+        "text": "Повтор и отмена доступны только в безопасных статусах. Roadmap progress is 484/504 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

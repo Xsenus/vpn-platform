@@ -106,6 +106,7 @@ public static class DependencyInjection
         services.AddScoped<IVpnProviderFactory, VpnProviderFactory>();
         services.AddScoped<ProvisioningSecretMaterializer>();
         services.AddScoped<IProvisioningExecutor, AnsibleProvisioningExecutor>();
+        services.AddScoped<ProvisioningRunCoordinator>();
         services.AddScoped<AppReleaseSeedService>();
         services.AddScoped<IOutboxMessageSink, LocalOutboxMessageSink>();
 

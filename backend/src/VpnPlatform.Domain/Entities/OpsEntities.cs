@@ -100,8 +100,12 @@ public class ProvisioningRun : AuditableEntity
     public ProvisioningRunStatus Status { get; set; } = ProvisioningRunStatus.Pending;
     public Guid? RequestedByUserId { get; set; }
     public bool DryRun { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTimeOffset? ProcessingStartedAt { get; set; }
+    public DateTimeOffset? LeaseExpiresAt { get; set; }
     public DateTimeOffset StartedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? FinishedAt { get; set; }
+    public string? LastError { get; set; }
     public string ExecutionLog { get; set; } = string.Empty;
 
     public ICollection<ProvisioningStepRun> Steps { get; set; } = new List<ProvisioningStepRun>();

@@ -209,9 +209,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-04 локально подтверждено:
 
-- backend на .NET 9: `901/901` unit tests;
+- backend на .NET 9: `918/918` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `66/66`;
+- frontend unit tests: `68/68`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят; responsive matrix проверяет ширины `305..1920` px;
@@ -231,8 +231,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - Telegram response и pre-checkout acknowledgement сохраняются до отправки, доставляются через отдельную lease/backoff и восстанавливаются webhook/long-polling без повторной обработки update;
 - Telegram notification dispatcher атомарно захватывает pending/stale sending записи, восстанавливает их по lease/backoff и завершает blocked/invalid/max-attempt случаи без двойной отправки;
 - outbox dispatcher атомарно захватывает события, восстанавливает stale lease, применяет redacted retry/dead-letter и материализует локальную email-очередь без ложного `ProcessedAt` до handler;
+- provisioning worker атомарно захватывает запуск, ограничивает runner timeout, восстанавливает stale lease без автоматического replay и блокирует небезопасные retry/cancel;
 - мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-outbox-dispatch-recovery`, версия `0.471.0`;
-- roadmap progress: `483/503` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-provisioning-worker-recovery`, версия `0.472.0`;
+- roadmap progress: `484/504` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

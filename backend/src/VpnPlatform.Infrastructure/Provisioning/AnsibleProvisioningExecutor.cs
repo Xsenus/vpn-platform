@@ -72,6 +72,7 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         }
 
         MaterializedProvisioningSecret? materializedSshKey = null;
+        string? extraVarsPath = null;
         try
         {
             try
@@ -146,7 +147,7 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
                 ["install_xui"] = !run.DryRun
             };
 
-            var extraVarsPath = Path.Combine(workDirectory, "extra-vars.json");
+            extraVarsPath = Path.Combine(workDirectory, "extra-vars.json");
             await File.WriteAllTextAsync(extraVarsPath, JsonSerializer.Serialize(extraVars, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
             arguments.Add("--extra-vars-file");
             arguments.Add(Quote(extraVarsPath));
@@ -165,15 +166,47 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
             _logger.LogInformation("Starting provisioning run {RunId} for node {NodeId} with playbook {PlaybookPath}", run.Id, node.Id, playbookPath);
 
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start provisioning runner process.");
-            var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            var timeoutSeconds = Math.Clamp(_options.ExecutionTimeoutSeconds, 1, 86_400);
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+            using var executionCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            try
+            {
+                await process.WaitForExitAsync(executionCts.Token);
+            }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                var stopped = await TryStopProcessTreeAsync(process);
+                var timeoutSecrets = BuildKnownSecretsForRedaction(node, materializedSshKey);
+                var timedOutStdout = stopped ? RedactRunnerOutput(await stdoutTask, timeoutSecrets) : string.Empty;
+                var timedOutStderr = stopped
+                    ? RedactRunnerOutput(await stderrTask, timeoutSecrets)
+                    : "Runner process did not exit after termination requests.";
+                var timeoutError = $"Provisioning runner timed out after {timeoutSeconds} seconds.";
+                return new ProvisioningExecutionResult(
+                    false,
+                    timeoutError,
+                    new[] { new ProvisioningStepResult("runner timeout", false, timedOutStdout, timedOutStderr) },
+                    workDirectory,
+                    timeoutError);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                if (await TryStopProcessTreeAsync(process))
+                {
+                    await Task.WhenAll(stdoutTask, stderrTask);
+                }
+                throw;
+            }
+
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
 
             var knownSecrets = BuildKnownSecretsForRedaction(node, materializedSshKey);
-            var redactedStdout = SecretRedactor.Redact(stdout, knownSecrets);
-            var redactedStderr = SecretRedactor.Redact(stderr, knownSecrets);
-
-            TryDeleteSensitiveFile(extraVarsPath);
+            var redactedStdout = RedactRunnerOutput(stdout, knownSecrets);
+            var redactedStderr = RedactRunnerOutput(stderr, knownSecrets);
 
             if (!string.IsNullOrWhiteSpace(redactedStderr))
             {
@@ -200,14 +233,14 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
                 .Select(x => new ProvisioningStepResult(
                     x.StepName ?? "ansible",
                     x.Success,
-                    SecretRedactor.Redact(x.Output, knownSecrets),
-                    SecretRedactor.Redact(x.ErrorText, knownSecrets)))
+                    RedactRunnerOutput(x.Output, knownSecrets),
+                    RedactRunnerOutput(x.ErrorText, knownSecrets)))
                 .ToArray()
                 ?? Array.Empty<ProvisioningStepResult>();
 
             var success = response.Success && process.ExitCode == 0;
-            var summaryLog = SecretRedactor.Redact(response.SummaryLog, knownSecrets);
-            var errorText = SecretRedactor.Redact(response.ErrorText ?? stderr, knownSecrets);
+            var summaryLog = RedactRunnerOutput(response.SummaryLog, knownSecrets);
+            var errorText = RedactRunnerOutput(response.ErrorText ?? stderr, knownSecrets);
 
             return run.DryRun
                 ? BuildPrecheckExecutionResult(node, run, success, summaryLog, steps, response.WorkDirectory ?? workDirectory, errorText)
@@ -220,6 +253,11 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         }
         finally
         {
+            if (extraVarsPath is not null)
+            {
+                TryDeleteSensitiveFile(extraVarsPath);
+            }
+
             materializedSshKey?.Dispose();
         }
     }
@@ -243,6 +281,12 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         }
 
         return secrets;
+    }
+
+    private static string RedactRunnerOutput(string? value, IReadOnlyCollection<string?> knownSecrets)
+    {
+        var redacted = SecretRedactor.Redact(value, knownSecrets);
+        return redacted.Length <= 4000 ? redacted : redacted[..4000];
     }
 
 
@@ -305,6 +349,42 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
         catch
         {
             // Best-effort cleanup. The redacted runner logs are still safe for persistence.
+        }
+    }
+
+    private static async Task<bool> TryStopProcessTreeAsync(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        try
+        {
+            using var waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await process.WaitForExitAsync(waitCts.Token);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return process.HasExited;
         }
     }
 

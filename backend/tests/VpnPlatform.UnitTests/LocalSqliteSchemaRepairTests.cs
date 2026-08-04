@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
 using Xunit;
 
@@ -163,6 +164,57 @@ public class LocalSqliteSchemaRepairTests
         Assert.Single(stored, x => x.FailedAt != null);
     }
 
+    [Fact]
+    public async Task ApplyAsync_Should_Upgrade_ProvisioningRuns_And_Quarantine_Duplicate_Active_Run()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "ProvisioningRuns" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL,
+                "NodeId" TEXT NOT NULL,
+                "Status" INTEGER NOT NULL,
+                "RequestedByUserId" TEXT NULL,
+                "DryRun" INTEGER NOT NULL,
+                "StartedAt" TEXT NOT NULL,
+                "FinishedAt" TEXT NULL,
+                "ExecutionLog" TEXT NOT NULL
+            );
+            """);
+        var nodeId = Guid.NewGuid();
+        var processingId = Guid.NewGuid();
+        var duplicateId = Guid.NewGuid();
+        var createdAt = new DateTimeOffset(2026, 8, 4, 12, 0, 0, TimeSpan.Zero);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "ProvisioningRuns"
+                ("Id", "CreatedAt", "UpdatedAt", "NodeId", "Status", "RequestedByUserId", "DryRun", "StartedAt", "FinishedAt", "ExecutionLog")
+            VALUES
+                ({processingId}, {createdAt}, {createdAt}, {nodeId}, 9, NULL, 1, {createdAt}, NULL, 'processing'),
+                ({duplicateId}, {createdAt.AddMinutes(1)}, {createdAt.AddMinutes(1)}, {nodeId}, 8, NULL, 1, {createdAt.AddMinutes(1)}, NULL, 'queued');
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(5, repaired);
+        Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "AttemptCount"));
+        Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "ProcessingStartedAt"));
+        Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "LeaseExpiresAt"));
+        Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "LastError"));
+        Assert.True(await IndexIsUniqueAsync(connection, "ProvisioningRuns", "IX_ProvisioningRuns_Active_NodeId"));
+        var stored = (await db.ProvisioningRuns.AsNoTracking().ToListAsync()).OrderBy(x => x.CreatedAt).ToList();
+        Assert.Equal(ProvisioningRunStatus.Prechecking, stored[0].Status);
+        Assert.Equal(ProvisioningRunStatus.PrecheckFailed, stored[1].Status);
+        Assert.Contains("quarantined", stored[1].LastError, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(stored[1].FinishedAt);
+    }
+
     private static TelegramBotNotification Notification()
         => new()
         {
@@ -207,10 +259,13 @@ public class LocalSqliteSchemaRepairTests
         return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
     }
 
-    private static async Task<bool> IndexIsUniqueAsync(SqliteConnection connection, string indexName)
+    private static Task<bool> IndexIsUniqueAsync(SqliteConnection connection, string indexName)
+        => IndexIsUniqueAsync(connection, "OutboxMessages", indexName);
+
+    private static async Task<bool> IndexIsUniqueAsync(SqliteConnection connection, string tableName, string indexName)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA index_list(\"OutboxMessages\")";
+        command.CommandText = $"PRAGMA index_list(\"{tableName}\")";
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {

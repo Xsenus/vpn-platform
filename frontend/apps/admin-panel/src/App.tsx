@@ -47,6 +47,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
+import { canCancelProvisioningRun, canRetryProvisioningRun } from './provisioning-state'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -3621,13 +3622,14 @@ export function App() {
                 <div className="muted">Режим запуска: {run.modeTitle || provisioningDeployModeLabel(run.mode)} · риск {provisioningRiskLabel(run.riskLevel)} · live deploy {run.liveDeployAllowed ? 'разрешён' : 'закрыт'} · {run.nextAction || 'проверьте результат перед следующим действием'}</div>
                 <div className="muted">Следующий deploy: {run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)} · риск {provisioningRiskLabel(run.deployRiskLevel)} · {run.deployNextAction || 'сначала выполните precheck'}</div>
                 <div className="muted">{run.dryRun ? 'проверка без изменений' : 'развертывание'} · старт {formatDate(run.startedAt)} · финиш {formatDate(run.finishedAt)}</div>
+                {(run.attemptCount ?? 0) > 0 && <div className="muted">Попытка {run.attemptCount} · обработка {formatDate(run.processingStartedAt)} · lease до {formatDate(run.leaseExpiresAt)}</div>}
                 {run.operatorWarning && <div className="safe-note">{run.operatorWarning}</div>}
                 {run.precheckReportPreview && <pre className="safe-note">{run.precheckReportPreview}</pre>}
-                <div className="muted">{run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
+                <div className="muted">{run.lastError || run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
                 <div className="toolbar">
-                  <PrimaryButton disabled={!token || actionBusyId === `retry-${run.id}`} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton>
+                  <PrimaryButton disabled={!token || actionBusyId === `retry-${run.id}` || !canRetryProvisioningRun(run.status)} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton>
                   <ConfirmButton disabled={!token || actionBusyId === `deploy-run-${run.id}` || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В live-режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => void handleDeployProvisioningRun(run.id)}>Развернуть</ConfirmButton>
-                  <ConfirmButton disabled={!token || actionBusyId === `cancel-run-${run.id}` || ['Failed', 'PrecheckFailed', 'Deployed', 'Succeeded', 'Cancelled'].includes(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => void handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton>
+                  <ConfirmButton disabled={!token || actionBusyId === `cancel-run-${run.id}` || !canCancelProvisioningRun(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => void handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton>
                   <PrimaryButton disabled={!token || actionBusyId === `support-run-${run.id}`} onClick={() => void handleProvisioningSupportNeeded(run.id)}>Нужна поддержка</PrimaryButton>
                 </div>
               </div>

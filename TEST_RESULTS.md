@@ -2,6 +2,28 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Provisioning worker recovery
+
+Scope:
+- Проверены concurrent worker claim и queue, fresh/expired lease, operator retry/cancel boundaries, runner timeout/process cleanup, migration backfill и upgrade старой SQLite-схемы.
+
+Result:
+- Один queued run может быть захвачен только одним worker; active run одного node защищён partial unique index и process gate.
+- Просроченный внешний deploy не повторяется автоматически: run и node переходят в redacted failure для явного operator review.
+- Runner ограничен timeout, читает оба pipe параллельно, завершает process tree и очищает временный `extra-vars.json`.
+- Roadmap progress: `484/504` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-provisioning-worker-recovery`, version `0.472.0`.
+
+Validation:
+- Backend full suite: OK, `918/918`; targeted provisioning/state/SQLite suite: OK, `98/98`.
+- EF migration `20260804134818_ProvisioningWorkerRecovery` and local SQLite schema repair: OK.
+- PostgreSQL migration SQL and API/TelegramBot Release builds: OK, `0` warnings/`0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build and dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-provisioning-worker-recovery`.
+- Secret scan: OK, `588` files, `0` findings.
+- External evidence remains open: real VPS/staging/live deploy, live payment and production-like 3x-ui checks were unavailable and are not closed by local validation.
+
 ## Check 2026-08-04: Outbox dispatch recovery
 
 Scope:

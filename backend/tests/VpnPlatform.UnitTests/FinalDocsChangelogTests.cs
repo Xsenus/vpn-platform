@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("901/901", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-outbox-dispatch-recovery", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("918/918", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-04-provisioning-worker-recovery", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "901/901",
-                     "2026-08-04-outbox-dispatch-recovery",
-                     "0.471.0",
+                     "918/918",
+                     "2026-08-04-provisioning-worker-recovery",
+                     "0.472.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-outbox-dispatch-recovery",
-                     "0.471.0",
-                     "483/503",
+                     "2026-08-04-provisioning-worker-recovery",
+                     "0.472.0",
+                     "484/504",
                      "96.0%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `901/901`",
+                     "Backend full suite: OK, `918/918`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `581` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-04-outbox-dispatch-recovery",
-                     "0.471.0",
-                     "483/503",
+                     "2026-08-04-provisioning-worker-recovery",
+                     "0.472.0",
+                     "484/504",
                      "96.0%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted outbox/auth/payment/SQLite/observability suite `37/37`",
-                     "backend full suite `901/901`",
+                     "backend full suite `918/918`",
                      "fresh local SQLite smoke OK",
                      "secret scan: `581` files, `0` findings"
                  })

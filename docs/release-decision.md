@@ -22,9 +22,9 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `901/901`.
+- Backend full suite: `918/918`.
 - API Release build: OK.
-- Frontend unit tests: `66/66`.
+- Frontend unit tests: `68/68`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `12/12`; responsive all-screens: `6/6`.
@@ -41,8 +41,9 @@ Production-ready решение заблокировано следующими 
 - Subscription activation compensates remote create after local credential save failure, persists `SyncRequired` when cleanup is uncertain and propagates cancellation after durable retry-state.
 - Telegram update processing reserves `update_id` before side effects, retries failed/stale leases and preserves long-polling offset for retryable outcomes.
 - Outbox events use unique event identity, atomic conditional claim, stale lease recovery, redacted retry/dead-letter and fail-closed payload validation; local email queue materialization is covered by SQLite tests.
-- Latest "Что нового": `2026-08-04-outbox-dispatch-recovery`, версия `0.471.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `483/503` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Provisioning runs use atomic claim and bounded lease; stale execution is quarantined without automatic external replay, runner timeout kills the process tree, and unsafe active retry/cancel is blocked.
+- Latest "Что нового": `2026-08-04-provisioning-worker-recovery`, версия `0.472.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `484/504` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

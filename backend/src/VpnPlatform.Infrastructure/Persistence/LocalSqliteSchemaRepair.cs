@@ -61,7 +61,7 @@ public static class LocalSqliteSchemaRepair
                 repaired++;
             }
 
-            if (!await IndexIsUniqueAsync(db, "IX_OutboxMessages_Type_CorrelationId", cancellationToken))
+            if (!await IndexIsUniqueAsync(db, "OutboxMessages", "IX_OutboxMessages_Type_CorrelationId", cancellationToken))
             {
                 await BackfillOutboxDuplicateCorrelationsAsync(db, cancellationToken);
                 await db.Database.ExecuteSqlRawAsync(
@@ -74,7 +74,79 @@ public static class LocalSqliteSchemaRepair
             }
         }
 
+        if (await TableExistsAsync(db, "ProvisioningRuns", cancellationToken))
+        {
+            foreach (var (column, sql) in new[]
+                     {
+                         ("AttemptCount", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "AttemptCount" INTEGER NOT NULL DEFAULT 0;"""),
+                         ("ProcessingStartedAt", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "ProcessingStartedAt" TEXT NULL;"""),
+                         ("LeaseExpiresAt", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "LeaseExpiresAt" TEXT NULL;"""),
+                         ("LastError", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "LastError" TEXT NULL;""")
+                     })
+            {
+                if (await ColumnExistsAsync(db, "ProvisioningRuns", column, cancellationToken))
+                {
+                    continue;
+                }
+
+                await db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+                repaired++;
+            }
+
+            if (!await IndexIsUniqueAsync(db, "ProvisioningRuns", "IX_ProvisioningRuns_Active_NodeId", cancellationToken))
+            {
+                await BackfillDuplicateActiveProvisioningRunsAsync(db, cancellationToken);
+                await db.Database.ExecuteSqlRawAsync(
+                    """DROP INDEX IF EXISTS "IX_ProvisioningRuns_Active_NodeId";""",
+                    cancellationToken);
+                await db.Database.ExecuteSqlRawAsync(
+                    """CREATE UNIQUE INDEX "IX_ProvisioningRuns_Active_NodeId" ON "ProvisioningRuns" ("NodeId") WHERE "Status" IN (0, 1, 8, 9, 12, 13, 15);""",
+                    cancellationToken);
+                repaired++;
+            }
+        }
+
         return repaired;
+    }
+
+    private static async Task BackfillDuplicateActiveProvisioningRunsAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TEMP TABLE "__DuplicateActiveProvisioningRuns" AS
+            SELECT "Id" FROM (
+                SELECT
+                    "Id",
+                    row_number() OVER (
+                        PARTITION BY "NodeId"
+                        ORDER BY
+                            CASE WHEN "Status" IN (1, 9, 13) THEN 0 ELSE 1 END,
+                            "CreatedAt",
+                            "Id") AS active_rank
+                FROM "ProvisioningRuns"
+                WHERE "Status" IN (0, 1, 8, 9, 12, 13, 15)
+            ) AS ranked
+            WHERE active_rank > 1;
+
+            UPDATE "ProvisioningRuns"
+            SET
+                "Status" = CASE WHEN "DryRun" THEN 10 ELSE 3 END,
+                "ProcessingStartedAt" = NULL,
+                "LeaseExpiresAt" = NULL,
+                "FinishedAt" = CURRENT_TIMESTAMP,
+                "LastError" = 'Duplicate active provisioning run quarantined during local schema repair.',
+                "ExecutionLog" = substr(CASE
+                    WHEN "ExecutionLog" = '' THEN 'Duplicate active provisioning run quarantined during local schema repair.'
+                    ELSE "ExecutionLog" || char(10) || 'Duplicate active provisioning run quarantined during local schema repair.'
+                END, 1, 4000),
+                "UpdatedAt" = CURRENT_TIMESTAMP
+            WHERE "Id" IN (SELECT "Id" FROM "__DuplicateActiveProvisioningRuns");
+
+            DROP TABLE "__DuplicateActiveProvisioningRuns";
+            """,
+            cancellationToken);
     }
 
     private static async Task BackfillTelegramNotificationDeduplicationKeysAsync(
@@ -190,11 +262,12 @@ public static class LocalSqliteSchemaRepair
 
     private static async Task<bool> IndexIsUniqueAsync(
         ApplicationDbContext db,
+        string tableName,
         string indexName,
         CancellationToken cancellationToken)
     {
         await using var command = db.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "PRAGMA index_list(\"OutboxMessages\")";
+        command.CommandText = $"PRAGMA index_list(\"{tableName.Replace("\"", "\"\"", StringComparison.Ordinal)}\")";
         await EnsureOpenAsync(db, cancellationToken);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))

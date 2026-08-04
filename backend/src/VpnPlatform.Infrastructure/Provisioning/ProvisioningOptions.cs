@@ -9,6 +9,7 @@ public sealed class ProvisioningOptions
     public string PrecheckPlaybookPath { get; set; } = "../infra/ansible/playbooks/precheck-node.yml";
     public string WorkingDirectory { get; set; } = "/tmp/vpnplatform-provisioning";
     public string KnownHostsPath { get; set; } = string.Empty;
+    public int ExecutionTimeoutSeconds { get; set; } = 3600;
 
     // Safe by default: validation/staging smoke must never SSH to a real VPS unless both flags are explicitly enabled.
     public bool LiveExecutionEnabled { get; set; } = false;

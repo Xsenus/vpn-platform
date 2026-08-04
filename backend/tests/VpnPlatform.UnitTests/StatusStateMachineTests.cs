@@ -82,6 +82,9 @@ public class StatusStateMachineTests
     [InlineData(ProvisioningRunStatus.Deployed, ProvisioningRunStatus.Deploying)]
     [InlineData(ProvisioningRunStatus.Cancelled, ProvisioningRunStatus.Running)]
     [InlineData(ProvisioningRunStatus.Failed, ProvisioningRunStatus.Succeeded)]
+    [InlineData(ProvisioningRunStatus.Running, ProvisioningRunStatus.Cancelled)]
+    [InlineData(ProvisioningRunStatus.Prechecking, ProvisioningRunStatus.Cancelled)]
+    [InlineData(ProvisioningRunStatus.Deploying, ProvisioningRunStatus.Cancelled)]
     public void Provisioning_State_Machine_Should_Block_Impossible_Transitions(ProvisioningRunStatus from, ProvisioningRunStatus to)
         => Assert.False(StatusStateMachine.CanTransition(from, to));
 }

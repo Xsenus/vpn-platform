@@ -30,30 +30,20 @@ public sealed class ProvisioningWorker : BackgroundService
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                var executor = scope.ServiceProvider.GetRequiredService<IProvisioningExecutor>();
-                var secretProtector = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
-                var vpnProviderFactory = scope.ServiceProvider.GetRequiredService<IVpnProviderFactory>();
-                var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-
-                var runCandidates = await db.ProvisioningRuns
-                    .Where(x => x.Status == ProvisioningRunStatus.Pending
-                        || x.Status == ProvisioningRunStatus.PrecheckQueued
-                        || x.Status == ProvisioningRunStatus.DeployQueued
-                        || x.Status == ProvisioningRunStatus.Retrying)
-                    .ToListAsync(stoppingToken);
-                var run = runCandidates
-                    .OrderBy(x => x.CreatedAt)
-                    .FirstOrDefault();
-
-                if (run is null)
+                using (var recoveryScope = _serviceProvider.CreateScope())
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
-                    continue;
+                    var coordinator = recoveryScope.ServiceProvider.GetRequiredService<ProvisioningRunCoordinator>();
+                    var recovered = await coordinator.RecoverExpiredClaimsAsync(stoppingToken);
+                    if (recovered > 0)
+                    {
+                        _logger.LogWarning("Provisioning worker recovered {RecoveredCount} expired claims for operator review.", recovered);
+                    }
                 }
 
-                await ProcessRunAsync(db, executor, secretProtector, vpnProviderFactory, clock, run, stoppingToken);
+                if (!await ProcessNextRunAsync(stoppingToken))
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -65,6 +55,57 @@ public sealed class ProvisioningWorker : BackgroundService
                 await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
             }
         }
+    }
+
+    private async Task<bool> ProcessNextRunAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var coordinator = scope.ServiceProvider.GetRequiredService<ProvisioningRunCoordinator>();
+        var runIds = await coordinator.GetClaimableIdsAsync(10, cancellationToken);
+        foreach (var runId in runIds)
+        {
+            if (!await coordinator.TryClaimAsync(runId, cancellationToken))
+            {
+                continue;
+            }
+
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var run = await db.ProvisioningRuns.FirstAsync(x => x.Id == runId, cancellationToken);
+            try
+            {
+                await ProcessRunAsync(
+                    db,
+                    scope.ServiceProvider.GetRequiredService<IProvisioningExecutor>(),
+                    scope.ServiceProvider.GetRequiredService<ISecretProtector>(),
+                    scope.ServiceProvider.GetRequiredService<IVpnProviderFactory>(),
+                    scope.ServiceProvider.GetRequiredService<IClock>(),
+                    run,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await FailClaimedRunWithFreshScopeAsync(
+                    runId,
+                    "Provisioning worker was interrupted during execution. Automatic replay is blocked because external changes may have partially completed.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                await FailClaimedRunWithFreshScopeAsync(runId, ex.Message);
+                _logger.LogError(ex, "Provisioning run {RunId} failed outside the controlled executor result.", runId);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task FailClaimedRunWithFreshScopeAsync(Guid runId, string error)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var coordinator = scope.ServiceProvider.GetRequiredService<ProvisioningRunCoordinator>();
+        await coordinator.FailClaimedRunAsync(runId, error, CancellationToken.None);
     }
 
     private async Task ProcessRunAsync(
@@ -81,6 +122,9 @@ public sealed class ProvisioningWorker : BackgroundService
         {
             StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Failed, clock.UtcNow);
             run.FinishedAt = clock.UtcNow;
+            run.ProcessingStartedAt = null;
+            run.LeaseExpiresAt = null;
+            run.LastError = "Provisioning failed: node not found.";
             run.ExecutionLog = "Provisioning failed: node not found.";
             await db.SaveChangesAsync(cancellationToken);
             return;
@@ -109,6 +153,10 @@ public sealed class ProvisioningWorker : BackgroundService
         {
             result = await executor.ExecuteAsync(node, run, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             result = new ProvisioningExecutionResult(false, "Provisioning executor failed with a controlled error.", new[]
@@ -131,6 +179,12 @@ public sealed class ProvisioningWorker : BackgroundService
         {
             await CompleteDeployAsync(db, secretProtector, vpnProviderFactory, node, run, result, deployRollbackSnapshot, clock, cancellationToken);
         }
+
+        run.ProcessingStartedAt = null;
+        run.LeaseExpiresAt = null;
+        run.LastError = result.Success
+            ? null
+            : ProvisioningService.RedactSensitiveText(result.ErrorText ?? result.SummaryLog, 1000);
 
         await db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Provisioning run {RunId} completed for node {NodeId} with status {Status}", run.Id, node.Id, run.Status);

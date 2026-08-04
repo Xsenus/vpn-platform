@@ -50,6 +50,7 @@ public class ProvisioningService
 
     public async Task<Result<ProvisioningRun>> QueueAsync(Guid nodeId, bool dryRun, Guid? requestedByUserId, CancellationToken cancellationToken = default)
     {
+        await using var gate = await PaymentProcessingGate.AcquireProvisioningNodeAsync(nodeId, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId, cancellationToken);
         if (node is null)
         {
@@ -134,8 +135,28 @@ public class ProvisioningService
         }
 
         AddAudit("provisioning.queue", "ProvisioningRun", run.Id, requestedByUserId, "{}", JsonSerializer.Serialize(new { nodeId, dryRun, status = status.ToString(), validationMode = IsValidationNode(node), mode = mode.Mode, riskLevel = mode.RiskLevel, mode.LiveDeployAllowed }));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsActiveProvisioningConflict(ex))
+        {
+            return Result<ProvisioningRun>.Failure("Provisioning already queued for this node.", isRetryable: true);
+        }
         return Result<ProvisioningRun>.Success(run);
+    }
+
+    private static bool IsActiveProvisioningConflict(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current.Message.Contains("IX_ProvisioningRuns_Active_NodeId", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task<Result<ProvisioningRun>> CreateOwnVpsRequestAsync(OwnVpsProvisioningCommand command, CancellationToken cancellationToken = default)
@@ -254,6 +275,11 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("Provisioning run not found.");
         }
 
+        if (original.Status is not (ProvisioningRunStatus.Failed or ProvisioningRunStatus.PrecheckFailed or ProvisioningRunStatus.Cancelled))
+        {
+            return Result<ProvisioningRun>.Failure("Only failed or cancelled provisioning runs can be retried.");
+        }
+
         var queued = await QueueAsync(original.NodeId, original.DryRun, requestedByUserId, cancellationToken);
         if (queued.IsSuccess && queued.Value is not null)
         {
@@ -272,9 +298,14 @@ public class ProvisioningService
             return Result<string>.Failure("Provisioning run not found.");
         }
 
-        if (run.Status is ProvisioningRunStatus.Deployed or ProvisioningRunStatus.Succeeded or ProvisioningRunStatus.Failed or ProvisioningRunStatus.PrecheckFailed)
+        if (run.Status is ProvisioningRunStatus.Prechecking or ProvisioningRunStatus.Deploying or ProvisioningRunStatus.Running)
         {
-            return Result<string>.Failure("Only pending/running provisioning runs can be cancelled.");
+            return Result<string>.Failure("Provisioning is already executing and cannot be cancelled safely. Wait for completion or lease recovery.");
+        }
+
+        if (run.Status is ProvisioningRunStatus.Deployed or ProvisioningRunStatus.Succeeded or ProvisioningRunStatus.Failed or ProvisioningRunStatus.PrecheckFailed or ProvisioningRunStatus.Cancelled)
+        {
+            return Result<string>.Failure("Only queued provisioning runs can be cancelled.");
         }
 
         var now = _clock.UtcNow;

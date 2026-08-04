@@ -560,6 +560,10 @@ export type ProvisioningRunDto = {
   currentStep?: string | null
   requestedByUserId?: string | null
   dryRun: boolean
+  attemptCount?: number
+  processingStartedAt?: string | null
+  leaseExpiresAt?: string | null
+  lastError?: string | null
   startedAt: string
   finishedAt?: string | null
   errorSummary?: string | null

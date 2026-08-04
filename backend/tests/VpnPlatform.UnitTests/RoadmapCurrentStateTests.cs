@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-04-outbox-dispatch-recovery";
-    private const string CurrentVersion = "0.471.0";
+    private const string CurrentReleaseId = "2026-08-04-provisioning-worker-recovery";
+    private const string CurrentVersion = "0.472.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,9 +18,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-08-04", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("901/901", roadmap, StringComparison.Ordinal);
+        Assert.Contains("918/918", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("66/66", roadmap, StringComparison.Ordinal);
+        Assert.Contains("68/68", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(CurrentVersion, roadmap, StringComparison.Ordinal);
@@ -220,9 +220,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("901/901", readme, StringComparison.Ordinal);
-        Assert.Contains("901/901", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("901/901", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("918/918", readme, StringComparison.Ordinal);
+        Assert.Contains("918/918", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("918/918", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

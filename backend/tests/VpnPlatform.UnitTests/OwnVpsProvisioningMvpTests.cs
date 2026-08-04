@@ -85,6 +85,12 @@ public class OwnVpsProvisioningMvpTests
         var service = new ProvisioningService(db, new TestClock(), new TestSecretProtector());
         var result = await service.CreateOwnVpsRequestAsync(new OwnVpsProvisioningCommand(Guid.NewGuid(), 77, "203.0.113.10", 22, "root", "password", "ssh-password-must-not-leak", "Customer VPS", "EU", "telegram"));
         Assert.True(result.IsSuccess, result.Error);
+        var run = await db.ProvisioningRuns.SingleAsync();
+        run.AttemptCount = 2;
+        run.ProcessingStartedAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+        run.LeaseExpiresAt = DateTimeOffset.UtcNow.AddMinutes(10);
+        run.LastError = "token:api-secret-must-not-leak";
+        await db.SaveChangesAsync();
 
         var controller = CreateOperationsController(db, service);
         var servers = await controller.GetServers(CancellationToken.None);
@@ -104,9 +110,12 @@ public class OwnVpsProvisioningMvpTests
         Assert.Contains("DeployMode", json, StringComparison.Ordinal);
         Assert.Contains("RiskLevel", json, StringComparison.Ordinal);
         Assert.Contains("LiveDeployAllowed", json, StringComparison.Ordinal);
+        Assert.Contains("AttemptCount", json, StringComparison.Ordinal);
+        Assert.Contains("LeaseExpiresAt", json, StringComparison.Ordinal);
         Assert.Contains("dry-run", json, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("validation-deploy", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ssh-password-must-not-leak", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("api-secret-must-not-leak", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("SshPrivateKeyPath", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("v1:", json, StringComparison.OrdinalIgnoreCase);
     }
@@ -316,6 +325,46 @@ public class OwnVpsProvisioningMvpTests
         var run = await db.ProvisioningRuns.SingleAsync(x => x.Id == runId);
         Assert.Equal(ProvisioningRunStatus.Cancelled, run.Status);
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.cancel" && x.EntityId == runId.ToString());
+    }
+
+    [Theory]
+    [InlineData(ProvisioningRunStatus.Running)]
+    [InlineData(ProvisioningRunStatus.Prechecking)]
+    [InlineData(ProvisioningRunStatus.Deploying)]
+    public async Task Cancel_Should_Reject_Actively_Executing_Provisioning(ProvisioningRunStatus status)
+    {
+        await using var db = CreateDbContext();
+        var node = new VpnNode { Name = "Node", Host = "vps.example.test", SshUser = "root", SshPort = 22, Status = NodeStatus.Provisioning, TagsCsv = "validation-mode:true" };
+        var run = new ProvisioningRun { NodeId = node.Id, Status = status, DryRun = status == ProvisioningRunStatus.Prechecking };
+        db.AddRange(node, run);
+        await db.SaveChangesAsync();
+
+        var result = await new ProvisioningService(db, new TestClock(), new TestSecretProtector()).CancelAsync(run.Id, Guid.NewGuid());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("cannot be cancelled safely", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(status, (await db.ProvisioningRuns.SingleAsync()).Status);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(ProvisioningRunStatus.Succeeded)]
+    [InlineData(ProvisioningRunStatus.Deployed)]
+    [InlineData(ProvisioningRunStatus.Prechecking)]
+    [InlineData(ProvisioningRunStatus.Deploying)]
+    public async Task Retry_Should_Reject_Successful_Or_Active_Provisioning(ProvisioningRunStatus status)
+    {
+        await using var db = CreateDbContext();
+        var node = new VpnNode { Name = "Node", Host = "vps.example.test", SshUser = "root", SshPort = 22, TagsCsv = "validation-mode:true" };
+        var run = new ProvisioningRun { NodeId = node.Id, Status = status, DryRun = true };
+        db.AddRange(node, run);
+        await db.SaveChangesAsync();
+
+        var result = await new ProvisioningService(db, new TestClock(), new TestSecretProtector()).RetryAsync(run.Id, Guid.NewGuid());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Only failed or cancelled", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, await db.ProvisioningRuns.CountAsync());
     }
 
     private static AdminOperationsController CreateOperationsController(ApplicationDbContext db, ProvisioningService provisioningService)
