@@ -48,6 +48,7 @@ public class AdminWorkScenariosController : ControllerBase
         }
 
         _db.WorkScenarios.Add(scenario);
+        AdminAuditLogWriter.Add(_db, this, "work_scenario.create", "WorkScenario", scenario.Id, null, Map(scenario));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(Map(scenario));
     }
@@ -74,8 +75,10 @@ public class AdminWorkScenariosController : ControllerBase
             return BadRequest(new { error = "Scenario key cannot be changed while the scenario is selected in tariffs." });
         }
 
+        var before = Map(scenario);
         Copy(candidate, scenario);
         scenario.UpdatedAt = DateTimeOffset.UtcNow;
+        AdminAuditLogWriter.Add(_db, this, "work_scenario.update", "WorkScenario", scenario.Id, before, Map(scenario));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(Map(scenario));
     }
@@ -93,7 +96,9 @@ public class AdminWorkScenariosController : ControllerBase
             return BadRequest(new { error = "Нельзя удалить сценарий, который выбран в тарифах. Сначала смените сценарий у связанных тарифов." });
         }
 
+        var before = Map(scenario);
         _db.WorkScenarios.Remove(scenario);
+        AdminAuditLogWriter.Add(_db, this, "work_scenario.delete", "WorkScenario", scenario.Id, before, null);
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { id, deleted = true });
     }

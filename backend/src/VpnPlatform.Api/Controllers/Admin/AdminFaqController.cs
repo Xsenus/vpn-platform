@@ -98,6 +98,7 @@ public sealed class AdminFaqController : ControllerBase
         }
 
         _db.FaqEntries.Add(entry);
+        AdminAuditLogWriter.Add(_db, this, "faq.create", "FaqEntry", entry.Id, null, MapFaq(entry));
         await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(MapFaq(entry));
@@ -119,13 +120,17 @@ public sealed class AdminFaqController : ControllerBase
             return NotFound();
         }
 
-        Apply(entry, request);
-        if (await HasDuplicateQuestionAsync(entry.Question, entry.Category, id, cancellationToken))
+        var candidate = new FaqEntry();
+        Apply(candidate, request);
+        if (await HasDuplicateQuestionAsync(candidate.Question, candidate.Category, id, cancellationToken))
         {
             return BadRequest(new { error = "FAQ question already exists in this category." });
         }
 
+        var before = MapFaq(entry);
+        Copy(candidate, entry);
         entry.UpdatedAt = DateTimeOffset.UtcNow;
+        AdminAuditLogWriter.Add(_db, this, "faq.update", "FaqEntry", entry.Id, before, MapFaq(entry));
         await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(MapFaq(entry));
@@ -141,7 +146,9 @@ public sealed class AdminFaqController : ControllerBase
             return NotFound();
         }
 
+        var before = MapFaq(entry);
         _db.FaqEntries.Remove(entry);
+        AdminAuditLogWriter.Add(_db, this, "faq.delete", "FaqEntry", entry.Id, before, null);
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { id, deleted = true });
     }
@@ -155,6 +162,17 @@ public sealed class AdminFaqController : ControllerBase
         entry.ShowOnHome = request.ShowOnHome;
         entry.ShowOnFaqPage = request.ShowOnFaqPage;
         entry.SortOrder = request.SortOrder;
+    }
+
+    private static void Copy(FaqEntry source, FaqEntry target)
+    {
+        target.Question = source.Question;
+        target.Answer = source.Answer;
+        target.Category = source.Category;
+        target.IsActive = source.IsActive;
+        target.ShowOnHome = source.ShowOnHome;
+        target.ShowOnFaqPage = source.ShowOnFaqPage;
+        target.SortOrder = source.SortOrder;
     }
 
     private static string? Validate(FaqEntryUpsertRequest request)

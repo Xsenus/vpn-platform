@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnPlatform.Application.Common;
@@ -26,7 +27,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> CreatePanel([FromBody] CreateVpnPanelCommand request, CancellationToken cancellationToken)
     {
-        var result = await _panels.CreatePanelAsync(request, cancellationToken);
+        var result = await _panels.CreatePanelAsync(request, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -41,7 +42,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> UpdatePanel(Guid id, [FromBody] UpdateVpnPanelCommand request, CancellationToken cancellationToken)
     {
-        var result = await _panels.UpdatePanelAsync(id, request, cancellationToken);
+        var result = await _panels.UpdatePanelAsync(id, request, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -49,7 +50,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> DeletePanel(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.DeletePanelAsync(id, cancellationToken);
+        var result = await _panels.DeletePanelAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -57,7 +58,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> TestConnection(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.CheckHealthAsync(id, cancellationToken);
+        var result = await _panels.CheckHealthAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -65,7 +66,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> HealthCheck(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.CheckHealthAsync(id, cancellationToken);
+        var result = await _panels.CheckHealthAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -73,7 +74,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> Sync(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.SyncPanelAsync(id, cancellationToken);
+        var result = await _panels.SyncPanelAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -85,7 +86,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> CreateInbound(Guid id, [FromBody] CreateVpnInboundCommand request, CancellationToken cancellationToken)
     {
-        var result = await _panels.CreateInboundAsync(id, request, cancellationToken);
+        var result = await _panels.CreateInboundAsync(id, request, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -93,7 +94,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> PatchInbound(Guid id, [FromBody] CreateVpnInboundCommand request, CancellationToken cancellationToken)
     {
-        var result = await _panels.PatchInboundAsync(id, request, cancellationToken);
+        var result = await _panels.PatchInboundAsync(id, request, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -101,7 +102,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> SetDefaultInbound(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.SetDefaultInboundAsync(id, cancellationToken);
+        var result = await _panels.SetDefaultInboundAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -113,7 +114,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> EnableClient(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.EnableClientAsync(id, cancellationToken);
+        var result = await _panels.EnableClientAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -121,7 +122,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> DisableClient(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.DisableClientAsync(id, cancellationToken);
+        var result = await _panels.DisableClientAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -129,7 +130,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> SyncClient(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.SyncClientAsync(id, cancellationToken);
+        var result = await _panels.SyncClientAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -137,7 +138,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> ResetClientTraffic(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _panels.ResetClientTrafficAsync(id, cancellationToken);
+        var result = await _panels.ResetClientTrafficAsync(id, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -145,7 +146,7 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> MigrateClient(Guid id, [FromBody] MigrateVpnClientCommand request, CancellationToken cancellationToken)
     {
-        var result = await _panels.MigrateClientAsync(id, request, cancellationToken);
+        var result = await _panels.MigrateClientAsync(id, request, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
@@ -160,4 +161,11 @@ public class AdminVpnPanelsController : ControllerBase
     [HttpGet("vpn-panels/{id:guid}/health-checks")]
     public async Task<IActionResult> GetHealthChecks(Guid id, CancellationToken cancellationToken)
         => Ok(await _panels.GetHealthChecksAsync(id, cancellationToken));
+
+    private Guid? ResolveUserId()
+    {
+        var principal = HttpContext?.User;
+        var raw = principal?.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal?.FindFirstValue("sub");
+        return Guid.TryParse(raw, out var userId) ? userId : null;
+    }
 }

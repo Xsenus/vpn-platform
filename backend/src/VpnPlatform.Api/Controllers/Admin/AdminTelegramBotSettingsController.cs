@@ -93,6 +93,14 @@ public class AdminTelegramBotSettingsController : ControllerBase
         await UpsertTemplateAsync(RenewalKey, "Renewal text", request.RenewalTextTemplate, cancellationToken);
         await UpsertTemplateAsync(PaymentFailedKey, "Payment failed text", request.PaymentFailedTextTemplate, cancellationToken);
         await UpsertTemplateAsync(SubscriptionExpiredKey, "Subscription expired text", request.SubscriptionExpiredTextTemplate, cancellationToken);
+        AdminAuditLogWriter.Add(
+            _db,
+            this,
+            "telegram_bot.settings.update",
+            "TelegramBotSettings",
+            Guid.Empty,
+            ToAuditSnapshot(current),
+            ToAuditSnapshot(request));
         AddSecretRotationAudit(request);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetSettings(cancellationToken);
@@ -340,6 +348,43 @@ public class AdminTelegramBotSettingsController : ControllerBase
             UserAgent = HttpContext?.Request.Headers.UserAgent.ToString() ?? string.Empty
         });
     }
+
+    private static object ToAuditSnapshot(TelegramBotSettingsState state)
+        => new
+        {
+            state.Enabled,
+            state.Mode,
+            state.PublicBotUsername,
+            botTokenConfigured = !string.IsNullOrWhiteSpace(state.BotToken),
+            webhookConfigured = !string.IsNullOrWhiteSpace(state.WebhookUrl),
+            secretTokenConfigured = !string.IsNullOrWhiteSpace(state.SecretToken),
+            adminChatConfigured = !string.IsNullOrWhiteSpace(state.AdminChatId),
+            webAppConfigured = !string.IsNullOrWhiteSpace(state.WebAppUrl),
+            activeTemplateCount = state.Templates.Count(x => x.IsActive)
+        };
+
+    private static object ToAuditSnapshot(UpdateTelegramBotSettingsCommand request)
+        => new
+        {
+            request.Enabled,
+            mode = NormalizeMode(request.Mode),
+            publicBotUsername = NormalizeUsername(request.PublicBotUsername),
+            botTokenRotated = !string.IsNullOrWhiteSpace(request.BotToken),
+            webhookConfigured = !string.IsNullOrWhiteSpace(request.WebhookUrl),
+            secretTokenRotated = !string.IsNullOrWhiteSpace(request.SecretToken),
+            adminChatConfigured = !string.IsNullOrWhiteSpace(request.AdminChatId),
+            webAppConfigured = !string.IsNullOrWhiteSpace(request.WebAppUrl),
+            templatesSubmitted = new[]
+            {
+                request.WelcomeText,
+                request.InstructionText,
+                request.SupportText,
+                request.AfterPaymentTextTemplate,
+                request.RenewalTextTemplate,
+                request.PaymentFailedTextTemplate,
+                request.SubscriptionExpiredTextTemplate
+            }.Count(x => x is not null)
+        };
 
     private Guid? ResolveUserId()
     {

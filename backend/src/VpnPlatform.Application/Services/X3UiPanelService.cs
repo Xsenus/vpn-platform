@@ -40,7 +40,10 @@ public class X3UiPanelService
         return panel is null ? Result<VpnPanelDto>.Failure("VPN panel not found.") : Result<VpnPanelDto>.Success(MapPanel(panel));
     }
 
-    public async Task<Result<VpnPanelDto>> CreatePanelAsync(CreateVpnPanelCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<VpnPanelDto>> CreatePanelAsync(CreateVpnPanelCommand command, CancellationToken cancellationToken = default)
+        => CreatePanelAsync(command, null, cancellationToken);
+
+    public async Task<Result<VpnPanelDto>> CreatePanelAsync(CreateVpnPanelCommand command, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(command.Name) || string.IsNullOrWhiteSpace(command.BaseUrl) || string.IsNullOrWhiteSpace(command.Login))
         {
@@ -74,19 +77,23 @@ public class X3UiPanelService
         };
 
         _db.VpnPanels.Add(panel);
+        AddAudit("vpn_panel.create", "VpnPanel", panel.Id, actorUserId, null, PanelAuditSnapshot(panel));
         await _db.SaveChangesAsync(cancellationToken);
 
-        var health = await CheckHealthAsync(panel.Id, cancellationToken);
+        var health = await CheckHealthAsync(panel.Id, actorUserId, cancellationToken);
         if (health.IsSuccess)
         {
-            await SyncPanelAsync(panel.Id, cancellationToken);
+            await SyncPanelAsync(panel.Id, actorUserId, cancellationToken);
         }
 
         var saved = await _db.VpnPanels.AsNoTracking().FirstAsync(x => x.Id == panel.Id, cancellationToken);
         return Result<VpnPanelDto>.Success(MapPanel(saved));
     }
 
-    public async Task<Result<VpnPanelDto>> UpdatePanelAsync(Guid id, UpdateVpnPanelCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<VpnPanelDto>> UpdatePanelAsync(Guid id, UpdateVpnPanelCommand command, CancellationToken cancellationToken = default)
+        => UpdatePanelAsync(id, command, null, cancellationToken);
+
+    public async Task<Result<VpnPanelDto>> UpdatePanelAsync(Guid id, UpdateVpnPanelCommand command, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (panel is null)
@@ -94,6 +101,7 @@ public class X3UiPanelService
             return Result<VpnPanelDto>.Failure("VPN panel not found.");
         }
 
+        var before = PanelAuditSnapshot(panel);
         if (!string.IsNullOrWhiteSpace(command.Name)) panel.Name = command.Name.Trim();
         if (!string.IsNullOrWhiteSpace(command.BaseUrl)) panel.BaseUrl = NormalizeBaseUrl(command.BaseUrl);
         if (!string.IsNullOrWhiteSpace(command.Login)) panel.Login = command.Login.Trim();
@@ -106,11 +114,15 @@ public class X3UiPanelService
         if (!string.IsNullOrWhiteSpace(command.DefaultInboundTemplateJson)) panel.DefaultInboundTemplateJson = command.DefaultInboundTemplateJson.Trim();
         if (!string.IsNullOrWhiteSpace(command.Status) && Enum.TryParse<VpnPanelStatus>(command.Status, true, out var status)) panel.Status = status;
         panel.UpdatedAt = _clock.UtcNow;
+        AddAudit("vpn_panel.update", "VpnPanel", panel.Id, actorUserId, before, PanelAuditSnapshot(panel));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnPanelDto>.Success(MapPanel(panel));
     }
 
-    public async Task<Result<DeleteVpnPanelResultDto>> DeletePanelAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<Result<DeleteVpnPanelResultDto>> DeletePanelAsync(Guid id, CancellationToken cancellationToken = default)
+        => DeletePanelAsync(id, null, cancellationToken);
+
+    public async Task<Result<DeleteVpnPanelResultDto>> DeletePanelAsync(Guid id, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (panel is null)
@@ -122,6 +134,7 @@ public class X3UiPanelService
         var linkedClients = await _db.VpnClients.CountAsync(x => x.VpnPanelId == id, cancellationToken);
         var linkedSyncRuns = await _db.PanelSyncRuns.CountAsync(x => x.VpnPanelId == id, cancellationToken);
         var linkedHealthChecks = await _db.PanelHealthChecks.CountAsync(x => x.VpnPanelId == id, cancellationToken);
+        var before = PanelAuditSnapshot(panel);
 
         if (linkedInbounds > 0 || linkedClients > 0 || linkedSyncRuns > 0 || linkedHealthChecks > 0)
         {
@@ -129,16 +142,21 @@ public class X3UiPanelService
             panel.HealthStatus = HealthStatus.Unknown;
             panel.LastError = "Panel disabled by admin delete action because operational history is linked.";
             panel.UpdatedAt = _clock.UtcNow;
+            AddAudit("vpn_panel.archive", "VpnPanel", panel.Id, actorUserId, before, new { panel.Status, linkedInbounds, linkedClients, linkedSyncRuns, linkedHealthChecks });
             await _db.SaveChangesAsync(cancellationToken);
             return Result<DeleteVpnPanelResultDto>.Success(new DeleteVpnPanelResultDto(id, Deleted: false, Archived: true, linkedInbounds, linkedClients, linkedSyncRuns, linkedHealthChecks));
         }
 
         _db.VpnPanels.Remove(panel);
+        AddAudit("vpn_panel.delete", "VpnPanel", panel.Id, actorUserId, before, null);
         await _db.SaveChangesAsync(cancellationToken);
         return Result<DeleteVpnPanelResultDto>.Success(new DeleteVpnPanelResultDto(id, Deleted: true, Archived: false, linkedInbounds, linkedClients, linkedSyncRuns, linkedHealthChecks));
     }
 
-    public async Task<Result<PanelHealthCheckDto>> CheckHealthAsync(Guid panelId, CancellationToken cancellationToken = default)
+    public Task<Result<PanelHealthCheckDto>> CheckHealthAsync(Guid panelId, CancellationToken cancellationToken = default)
+        => CheckHealthAsync(panelId, null, cancellationToken);
+
+    public async Task<Result<PanelHealthCheckDto>> CheckHealthAsync(Guid panelId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var panel = await _db.VpnPanels.FirstOrDefaultAsync(x => x.Id == panelId, cancellationToken);
         if (panel is null)
@@ -146,6 +164,7 @@ public class X3UiPanelService
             return Result<PanelHealthCheckDto>.Failure("VPN panel not found.");
         }
 
+        var before = PanelAuditSnapshot(panel);
         if (IsSandboxMode())
         {
             var entity = new PanelHealthCheck
@@ -163,6 +182,7 @@ public class X3UiPanelService
             panel.LastError = string.Empty;
             panel.Version = "sandbox";
             if (panel.Status == VpnPanelStatus.New || panel.Status == VpnPanelStatus.Error) panel.Status = VpnPanelStatus.Active;
+            AddAudit("vpn_panel.health_check", "VpnPanel", panel.Id, actorUserId, before, HealthAuditSnapshot(entity));
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PanelHealthCheckDto>.Success(MapHealth(entity));
         }
@@ -193,6 +213,7 @@ public class X3UiPanelService
             panel.LastError = entity.ErrorMessage;
             panel.Version = entity.Version;
             panel.Status = entity.Status == HealthStatus.Healthy && panel.Status == VpnPanelStatus.New ? VpnPanelStatus.Active : panel.Status;
+            AddAudit("vpn_panel.health_check", "VpnPanel", panel.Id, actorUserId, before, HealthAuditSnapshot(entity));
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PanelHealthCheckDto>.Success(MapHealth(entity));
         }
@@ -211,12 +232,16 @@ public class X3UiPanelService
             panel.HealthStatus = HealthStatus.Unhealthy;
             panel.LastHealthCheckAt = entity.CheckedAt;
             panel.LastError = ex.Message;
+            AddAudit("vpn_panel.health_check.failed", "VpnPanel", panel.Id, actorUserId, before, HealthAuditSnapshot(entity));
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PanelHealthCheckDto>.Failure(ex.Message);
         }
     }
 
-    public async Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, CancellationToken cancellationToken = default)
+    public Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, CancellationToken cancellationToken = default)
+        => SyncPanelAsync(panelId, null, cancellationToken);
+
+    public async Task<Result<PanelSyncRunDto>> SyncPanelAsync(Guid panelId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var panel = await _db.VpnPanels.Include(x => x.Inbounds).FirstOrDefaultAsync(x => x.Id == panelId, cancellationToken);
         if (panel is null)
@@ -224,6 +249,7 @@ public class X3UiPanelService
             return Result<PanelSyncRunDto>.Failure("VPN panel not found.");
         }
 
+        var before = PanelAuditSnapshot(panel);
         var run = new PanelSyncRun
         {
             VpnPanelId = panel.Id,
@@ -249,12 +275,19 @@ public class X3UiPanelService
                 AddSyncEvent(run, "sandbox_sync", "VpnPanel", panel.Id, panel.Id.ToString(), "Sandbox sync completed without live 3x-ui network calls.", run.SummaryJson);
                 panel.LastSyncAt = run.FinishedAt;
                 panel.LastError = string.Empty;
+                AddAudit("vpn_panel.sync", "VpnPanel", panel.Id, actorUserId, before, SyncAuditSnapshot(run));
                 await _db.SaveChangesAsync(cancellationToken);
                 return Result<PanelSyncRunDto>.Success(MapSyncRun(run));
             }
 
             if (string.IsNullOrWhiteSpace(panel.BaseUrl) || string.IsNullOrWhiteSpace(panel.Login) || string.IsNullOrWhiteSpace(panel.EncryptedPassword))
             {
+                run.Status = PanelSyncRunStatus.Failed;
+                run.FinishedAt = _clock.UtcNow;
+                run.ErrorMessage = "Panel not configured: base URL, login and password are required.";
+                panel.LastError = run.ErrorMessage;
+                AddAudit("vpn_panel.sync.failed", "VpnPanel", panel.Id, actorUserId, before, SyncAuditSnapshot(run));
+                await _db.SaveChangesAsync(cancellationToken);
                 return Result<PanelSyncRunDto>.Failure("Panel not configured: base URL, login and password are required.");
             }
 
@@ -311,6 +344,7 @@ public class X3UiPanelService
             run.SummaryJson = JsonSerializer.Serialize(new { created, updated, missing = missing.Count });
             panel.LastSyncAt = run.FinishedAt;
             panel.LastError = string.Empty;
+            AddAudit("vpn_panel.sync", "VpnPanel", panel.Id, actorUserId, before, SyncAuditSnapshot(run));
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PanelSyncRunDto>.Success(MapSyncRun(run));
         }
@@ -320,12 +354,16 @@ public class X3UiPanelService
             run.FinishedAt = _clock.UtcNow;
             run.ErrorMessage = ex.Message;
             panel.LastError = ex.Message;
+            AddAudit("vpn_panel.sync.failed", "VpnPanel", panel.Id, actorUserId, before, SyncAuditSnapshot(run));
             await _db.SaveChangesAsync(cancellationToken);
             return Result<PanelSyncRunDto>.Failure(ex.Message);
         }
     }
 
-    public async Task<Result<VpnInboundDto>> CreateInboundAsync(Guid panelId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<VpnInboundDto>> CreateInboundAsync(Guid panelId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
+        => CreateInboundAsync(panelId, command, null, cancellationToken);
+
+    public async Task<Result<VpnInboundDto>> CreateInboundAsync(Guid panelId, CreateVpnInboundCommand command, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var validationError = ValidateInboundCommand(command);
         if (validationError is not null)
@@ -376,6 +414,7 @@ public class X3UiPanelService
             foreach (var item in defaults) item.IsDefault = false;
         }
         _db.VpnInbounds.Add(inbound);
+        AddAudit("vpn_inbound.create", "VpnInbound", inbound.Id, actorUserId, null, InboundAuditSnapshot(inbound));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnInboundDto>.Success(MapInbound(inbound));
     }
@@ -386,7 +425,10 @@ public class X3UiPanelService
         return inbounds.Select(MapInbound).ToList();
     }
 
-    public async Task<Result<VpnInboundDto>> PatchInboundAsync(Guid inboundId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<VpnInboundDto>> PatchInboundAsync(Guid inboundId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
+        => PatchInboundAsync(inboundId, command, null, cancellationToken);
+
+    public async Task<Result<VpnInboundDto>> PatchInboundAsync(Guid inboundId, CreateVpnInboundCommand command, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var validationError = ValidateInboundCommand(command);
         if (validationError is not null)
@@ -400,6 +442,7 @@ public class X3UiPanelService
             return Result<VpnInboundDto>.Failure("VPN inbound not found.");
         }
 
+        var before = InboundAuditSnapshot(inbound);
         X3UiInboundDto remote;
         if (IsSandboxMode())
         {
@@ -436,11 +479,15 @@ public class X3UiPanelService
             }
         }
 
+        AddAudit("vpn_inbound.update", "VpnInbound", inbound.Id, actorUserId, before, InboundAuditSnapshot(inbound));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnInboundDto>.Success(MapInbound(inbound));
     }
 
-    public async Task<Result<VpnInboundDto>> SetDefaultInboundAsync(Guid inboundId, CancellationToken cancellationToken = default)
+    public Task<Result<VpnInboundDto>> SetDefaultInboundAsync(Guid inboundId, CancellationToken cancellationToken = default)
+        => SetDefaultInboundAsync(inboundId, null, cancellationToken);
+
+    public async Task<Result<VpnInboundDto>> SetDefaultInboundAsync(Guid inboundId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var inbound = await _db.VpnInbounds.FirstOrDefaultAsync(x => x.Id == inboundId, cancellationToken);
         if (inbound is null)
@@ -452,12 +499,14 @@ public class X3UiPanelService
             return Result<VpnInboundDto>.Failure("Inactive inbound cannot be default.");
         }
 
+        var before = InboundAuditSnapshot(inbound);
         var all = await _db.VpnInbounds.Where(x => x.VpnPanelId == inbound.VpnPanelId).ToListAsync(cancellationToken);
         foreach (var item in all)
         {
             item.IsDefault = item.Id == inbound.Id;
             item.UpdatedAt = _clock.UtcNow;
         }
+        AddAudit("vpn_inbound.default.set", "VpnInbound", inbound.Id, actorUserId, before, InboundAuditSnapshot(inbound));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnInboundDto>.Success(MapInbound(inbound));
     }
@@ -532,12 +581,21 @@ public class X3UiPanelService
     }
 
     public Task<Result<VpnClientDto>> EnableClientAsync(Guid clientId, CancellationToken cancellationToken = default)
-        => SetClientEnabledAsync(clientId, true, cancellationToken);
+        => SetClientEnabledAsync(clientId, true, null, cancellationToken);
+
+    public Task<Result<VpnClientDto>> EnableClientAsync(Guid clientId, Guid? actorUserId, CancellationToken cancellationToken = default)
+        => SetClientEnabledAsync(clientId, true, actorUserId, cancellationToken);
 
     public Task<Result<VpnClientDto>> DisableClientAsync(Guid clientId, CancellationToken cancellationToken = default)
-        => SetClientEnabledAsync(clientId, false, cancellationToken);
+        => SetClientEnabledAsync(clientId, false, null, cancellationToken);
 
-    public async Task<Result<VpnClientDto>> SyncClientAsync(Guid clientId, CancellationToken cancellationToken = default)
+    public Task<Result<VpnClientDto>> DisableClientAsync(Guid clientId, Guid? actorUserId, CancellationToken cancellationToken = default)
+        => SetClientEnabledAsync(clientId, false, actorUserId, cancellationToken);
+
+    public Task<Result<VpnClientDto>> SyncClientAsync(Guid clientId, CancellationToken cancellationToken = default)
+        => SyncClientAsync(clientId, null, cancellationToken);
+
+    public async Task<Result<VpnClientDto>> SyncClientAsync(Guid clientId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
@@ -545,6 +603,7 @@ public class X3UiPanelService
             return Result<VpnClientDto>.Failure("VPN client not found.");
         }
 
+        var before = ClientAuditSnapshot(client);
         if (!IsSandboxMode())
         {
             var configurationError = ValidatePanelCredentials(client.VpnPanel);
@@ -561,11 +620,15 @@ public class X3UiPanelService
         client.LastSyncedAt = _clock.UtcNow;
         client.UpdatedAt = _clock.UtcNow;
         await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        AddAudit("vpn_client.sync", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnClientDto>.Success(MapClient(client));
     }
 
-    public async Task<Result<VpnClientDto>> ResetClientTrafficAsync(Guid clientId, CancellationToken cancellationToken = default)
+    public Task<Result<VpnClientDto>> ResetClientTrafficAsync(Guid clientId, CancellationToken cancellationToken = default)
+        => ResetClientTrafficAsync(clientId, null, cancellationToken);
+
+    public async Task<Result<VpnClientDto>> ResetClientTrafficAsync(Guid clientId, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
@@ -573,6 +636,7 @@ public class X3UiPanelService
             return Result<VpnClientDto>.Failure("VPN client not found.");
         }
 
+        var before = ClientAuditSnapshot(client);
         if (!IsSandboxMode())
         {
             var configurationError = ValidatePanelCredentials(client.VpnPanel);
@@ -589,11 +653,15 @@ public class X3UiPanelService
         client.LastSyncedAt = _clock.UtcNow;
         client.UpdatedAt = _clock.UtcNow;
         await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        AddAudit("vpn_client.traffic.reset", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnClientDto>.Success(MapClient(client));
     }
 
-    public async Task<Result<VpnClientDto>> MigrateClientAsync(Guid clientId, MigrateVpnClientCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<VpnClientDto>> MigrateClientAsync(Guid clientId, MigrateVpnClientCommand command, CancellationToken cancellationToken = default)
+        => MigrateClientAsync(clientId, command, null, cancellationToken);
+
+    public async Task<Result<VpnClientDto>> MigrateClientAsync(Guid clientId, MigrateVpnClientCommand command, Guid? actorUserId, CancellationToken cancellationToken = default)
     {
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
@@ -601,6 +669,7 @@ public class X3UiPanelService
             return Result<VpnClientDto>.Failure("VPN client not found.");
         }
 
+        var before = ClientAuditSnapshot(client);
         var targetInbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == command.TargetInboundId, cancellationToken);
         if (targetInbound?.VpnPanel is null)
         {
@@ -619,6 +688,7 @@ public class X3UiPanelService
             client.SyncStatus = "already-on-target";
             client.LastSyncedAt = _clock.UtcNow;
             client.UpdatedAt = _clock.UtcNow;
+            AddAudit("vpn_client.migrate", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
             await _db.SaveChangesAsync(cancellationToken);
             return Result<VpnClientDto>.Success(MapClient(client));
         }
@@ -656,6 +726,7 @@ public class X3UiPanelService
         client.LastSyncedAt = _clock.UtcNow;
         client.UpdatedAt = _clock.UtcNow;
         await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        AddAudit("vpn_client.migrate", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnClientDto>.Success(MapClient(client));
     }
@@ -678,7 +749,7 @@ public class X3UiPanelService
         return checks.OrderByDescending(x => x.CheckedAt).Take(50).Select(MapHealth).ToList();
     }
 
-    private async Task<Result<VpnClientDto>> SetClientEnabledAsync(Guid clientId, bool enabled, CancellationToken cancellationToken)
+    private async Task<Result<VpnClientDto>> SetClientEnabledAsync(Guid clientId, bool enabled, Guid? actorUserId, CancellationToken cancellationToken)
     {
         var client = await LoadClientForActionAsync(clientId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null)
@@ -686,6 +757,7 @@ public class X3UiPanelService
             return Result<VpnClientDto>.Failure("VPN client not found.");
         }
 
+        var before = ClientAuditSnapshot(client);
         if (!IsSandboxMode())
         {
             var configurationError = ValidatePanelCredentials(client.VpnPanel);
@@ -705,6 +777,7 @@ public class X3UiPanelService
         client.LastSyncedAt = _clock.UtcNow;
         client.UpdatedAt = _clock.UtcNow;
         await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+        AddAudit(enabled ? "vpn_client.enable" : "vpn_client.disable", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
         await _db.SaveChangesAsync(cancellationToken);
         return Result<VpnClientDto>.Success(MapClient(client));
     }
@@ -909,6 +982,89 @@ public class X3UiPanelService
             Message = message,
             PayloadJson = payloadJson
         });
+
+    private void AddAudit(string action, string entityType, Guid entityId, Guid? actorUserId, object? before, object? after)
+        => _db.AuditLogs.Add(new AuditLog
+        {
+            ActorType = actorUserId.HasValue ? "admin" : "system",
+            ActorId = actorUserId?.ToString() ?? "system",
+            Action = action,
+            EntityType = entityType,
+            EntityId = entityId.ToString(),
+            BeforeJson = SensitiveDataRedactor.Redact(SerializeAuditSnapshot(before)),
+            AfterJson = SensitiveDataRedactor.Redact(SerializeAuditSnapshot(after)),
+            CreatedAt = _clock.UtcNow,
+            UpdatedAt = _clock.UtcNow
+        });
+
+    private static string SerializeAuditSnapshot(object? snapshot)
+        => snapshot is null ? "{}" : JsonSerializer.Serialize(snapshot);
+
+    private static object PanelAuditSnapshot(VpnPanel panel)
+        => new
+        {
+            panel.Name,
+            panel.BaseUrl,
+            panel.Region,
+            panel.Status,
+            panel.HealthStatus,
+            panel.SslVerificationMode,
+            panel.ApiVariant,
+            panel.Capacity,
+            panel.UsedCapacity,
+            panel.AutoCreateInbound,
+            passwordConfigured = !string.IsNullOrWhiteSpace(panel.EncryptedPassword),
+            panel.LastHealthCheckAt,
+            panel.LastSyncAt
+        };
+
+    private static object InboundAuditSnapshot(VpnInbound inbound)
+        => new
+        {
+            inbound.VpnPanelId,
+            inbound.Name,
+            inbound.Protocol,
+            inbound.Port,
+            inbound.Listen,
+            inbound.IsDefault,
+            inbound.IsActive,
+            inbound.Capacity,
+            inbound.UsedCapacity
+        };
+
+    private static object ClientAuditSnapshot(VpnClient client)
+        => new
+        {
+            client.UserId,
+            client.SubscriptionId,
+            client.VpnPanelId,
+            client.VpnInboundId,
+            client.ExpiryTime,
+            client.Enable,
+            client.SyncStatus,
+            client.LastSyncedAt
+        };
+
+    private static object HealthAuditSnapshot(PanelHealthCheck check)
+        => new
+        {
+            check.Id,
+            check.Status,
+            check.LatencyMs,
+            check.Version,
+            hasError = !string.IsNullOrWhiteSpace(check.ErrorMessage),
+            check.CheckedAt
+        };
+
+    private static object SyncAuditSnapshot(PanelSyncRun run)
+        => new
+        {
+            run.Id,
+            run.Status,
+            run.StartedAt,
+            run.FinishedAt,
+            hasError = !string.IsNullOrWhiteSpace(run.ErrorMessage)
+        };
 
     private bool IsSandboxMode() => string.Equals(_configuration?["Vpn:X3Ui:Mode"], "Sandbox", StringComparison.OrdinalIgnoreCase);
 

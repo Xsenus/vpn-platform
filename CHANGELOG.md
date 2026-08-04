@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.459.0 - 2026-08-04
+
+Release entry: `2026-08-04-admin-operation-audit-integrity`.
+
+### Fixed
+- Administrative writes for users, FAQ, site content, work scenarios, app releases, referral programs, support and Telegram settings now create redacted audit records with actor and entity metadata.
+- 3x-ui panel, inbound and client commands now preserve the initiating admin identity in the audit trail; background health/sync calls remain explicitly attributed to the system actor.
+- App release item replacement now uses one EF Core save instead of a separate bulk delete followed by insert, preventing a failed update from leaving an empty release.
+- Rejected FAQ and site-content duplicate updates no longer mutate tracked entities, and a misconfigured 3x-ui sync closes its run as `Failed` instead of leaving it `Running`.
+
+### Security
+- Audit snapshots exclude Telegram tokens, panel passwords, support message text, VPN config URIs and client UUIDs; all serialized snapshots pass through the shared sensitive-data redactor.
+
+### Notes
+- Validation: backend full suite `798/798`, targeted SQLite/controller/service suite `73/73`, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite keep current evidence synchronized.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `560` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `471/491` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.458.0 - 2026-08-04
 
 Release entry: `2026-08-04-subscription-node-integrity-hardening`.

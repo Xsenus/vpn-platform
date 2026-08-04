@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -121,6 +123,35 @@ public class X3UiIntegrationTests
         Assert.True(await db.PanelHealthChecks.AnyAsync(x => x.Status == HealthStatus.Healthy));
         Assert.True(await db.PanelSyncEvents.AnyAsync(x => x.EventType == "orphan_client"));
         Assert.True(await db.PanelSyncEvents.AnyAsync(x => x.EventType == "expiry_mismatch"));
+        Assert.Equal(2, await db.AuditLogs.CountAsync(x => x.Action == "vpn_panel.health_check"));
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.sync");
+    }
+
+    [Fact]
+    public async Task Panel_Sync_Should_Close_Run_When_Panel_Is_Not_Configured()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "not-configured",
+            BaseUrl = "https://panel.example.test",
+            Login = string.Empty,
+            EncryptedPassword = string.Empty,
+            Status = VpnPanelStatus.New
+        };
+        db.VpnPanels.Add(panel);
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.SyncPanelAsync(panel.Id, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        var run = await db.PanelSyncRuns.SingleAsync(x => x.VpnPanelId == panel.Id);
+        Assert.Equal(PanelSyncRunStatus.Failed, run.Status);
+        Assert.NotNull(run.FinishedAt);
+        Assert.DoesNotContain(await db.PanelSyncRuns.ToListAsync(), x => x.Status == PanelSyncRunStatus.Running);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.sync.failed" && x.EntityId == panel.Id.ToString());
     }
 
     [Fact]
@@ -129,7 +160,8 @@ public class X3UiIntegrationTests
         await using var db = CreateDbContext();
         var clock = new FixedClock();
         var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
-        var controller = new AdminVpnPanelsController(service);
+        var adminId = Guid.NewGuid();
+        var controller = CreateAdminController(service, adminId);
 
         var created = Assert.IsType<VpnPanelDto>(Assert.IsType<OkObjectResult>(await controller.CreatePanel(new CreateVpnPanelCommand(
             "main-panel",
@@ -174,6 +206,10 @@ public class X3UiIntegrationTests
         Assert.Equal(VpnPanelStatus.Active, panel.Status);
         Assert.Equal(originalPassword, panel.EncryptedPassword);
         Assert.Equal("edited-panel", updated.Name);
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Contains(audits, x => x.Action == "vpn_panel.create" && x.ActorId == adminId.ToString());
+        Assert.Contains(audits, x => x.Action == "vpn_panel.update" && x.ActorId == adminId.ToString() && x.BeforeJson != x.AfterJson);
+        Assert.All(audits, x => Assert.DoesNotContain("initial-secret", $"{x.BeforeJson}{x.AfterJson}", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -202,6 +238,7 @@ public class X3UiIntegrationTests
         Assert.True(result.Deleted);
         Assert.False(result.Archived);
         Assert.False(await db.VpnPanels.AnyAsync(x => x.Id == panelId));
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.delete" && x.EntityId == panelId.ToString());
     }
 
     [Fact]
@@ -266,6 +303,7 @@ public class X3UiIntegrationTests
         Assert.Equal(VpnPanelStatus.Disabled, panel.Status);
         Assert.Equal(HealthStatus.Unknown, panel.HealthStatus);
         Assert.Contains("disabled", panel.LastError, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.archive" && x.EntityId == panelId.ToString());
     }
 
     [Theory]
@@ -350,6 +388,10 @@ public class X3UiIntegrationTests
         var defaultResult = await controller.SetDefaultInbound(secondInbound.Id, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(defaultResult);
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Equal(2, audits.Count(x => x.Action == "vpn_inbound.create"));
+        Assert.Single(audits, x => x.Action == "vpn_inbound.update");
+        Assert.DoesNotContain(audits, x => x.Action == "vpn_inbound.default.set");
     }
 
     [Fact]
@@ -409,6 +451,13 @@ public class X3UiIntegrationTests
         var access = await db.AccessCredentials.SingleAsync();
         Assert.Equal(migrated.ConfigUri, access.AccessUri);
         Assert.Equal(AccessCredentialStatus.Active, access.Status);
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Contains(audits, x => x.Action == "vpn_client.disable");
+        Assert.Contains(audits, x => x.Action == "vpn_client.enable");
+        Assert.Contains(audits, x => x.Action == "vpn_client.sync");
+        Assert.Contains(audits, x => x.Action == "vpn_client.traffic.reset");
+        Assert.Contains(audits, x => x.Action == "vpn_client.migrate");
+        Assert.All(audits, x => Assert.DoesNotContain(migrated.ConfigUri, $"{x.BeforeJson}{x.AfterJson}", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -599,6 +648,22 @@ public class X3UiIntegrationTests
 
         Assert.NotNull(usage.UsedTrafficBytes);
         Assert.NotNull((await db.VpnClients.SingleAsync()).LastSyncedAt);
+    }
+
+    private static AdminVpnPanelsController CreateAdminController(X3UiPanelService service, Guid adminId)
+    {
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, adminId.ToString())
+        }, "Test");
+
+        return new AdminVpnPanelsController(service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+            }
+        };
     }
 
     private static ApplicationDbContext CreateDbContext()

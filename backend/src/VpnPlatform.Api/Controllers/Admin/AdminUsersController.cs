@@ -284,11 +284,13 @@ public class AdminUsersController : ControllerBase
             nextStatus = parsed;
         }
 
+        var before = MapUser(user);
         if (nextDisplayName is not null) user.DisplayName = nextDisplayName;
         if (nextIsBlocked.HasValue) user.IsBlocked = nextIsBlocked.Value;
         if (nextStatus.HasValue) user.Status = nextStatus.Value;
 
         user.UpdatedAt = DateTimeOffset.UtcNow;
+        AdminAuditLogWriter.Add(_db, this, "user.update", "User", user.Id, before, MapUser(user));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapUser(user));
     }

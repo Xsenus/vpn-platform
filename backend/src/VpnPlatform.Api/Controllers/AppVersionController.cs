@@ -6,6 +6,7 @@ using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Api.Controllers.Admin;
 
 namespace VpnPlatform.Api.Controllers;
 
@@ -178,6 +179,7 @@ public sealed class AppVersionController : ControllerBase
         }
 
         _db.AppReleases.Add(release);
+        AdminAuditLogWriter.Add(_db, this, "app_release.create", "AppRelease", release.Id, null, MapRelease(release));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapRelease(release));
     }
@@ -192,7 +194,9 @@ public sealed class AppVersionController : ControllerBase
             return BadRequest(new { error = validationError });
         }
 
-        var release = await _db.AppReleases.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var release = await _db.AppReleases
+            .Include(x => x.Items)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (release is null)
         {
             return NotFound();
@@ -205,6 +209,7 @@ public sealed class AppVersionController : ControllerBase
             return BadRequest(new { error = "ReleaseId already exists." });
         }
 
+        var before = MapRelease(release);
         var actor = ResolveActor();
         release.ReleaseId = releaseId;
         release.Version = request.Version.Trim();
@@ -217,16 +222,15 @@ public sealed class AppVersionController : ControllerBase
         release.UpdatedByUserId = actor.UserId;
         release.UpdatedByUserName = actor.UserName;
 
-        await _db.AppReleaseItems
-            .Where(x => x.AppReleaseId == release.Id)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        foreach (var item in MapRequestItems(request.Items))
+        var nextItems = MapRequestItems(request.Items).ToList();
+        _db.AppReleaseItems.RemoveRange(release.Items);
+        foreach (var item in nextItems)
         {
             item.AppReleaseId = release.Id;
             _db.AppReleaseItems.Add(item);
         }
 
+        AdminAuditLogWriter.Add(_db, this, "app_release.update", "AppRelease", release.Id, before, MapRelease(release, nextItems));
         await _db.SaveChangesAsync(cancellationToken);
         var updated = await _db.AppReleases
             .AsNoTracking()
@@ -239,13 +243,17 @@ public sealed class AppVersionController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> DeleteAdminRelease(Guid id, CancellationToken cancellationToken)
     {
-        var release = await _db.AppReleases.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var release = await _db.AppReleases
+            .Include(x => x.Items)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (release is null)
         {
             return NotFound();
         }
 
+        var before = MapRelease(release);
         _db.AppReleases.Remove(release);
+        AdminAuditLogWriter.Add(_db, this, "app_release.delete", "AppRelease", release.Id, before, null);
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { id, deleted = true });
     }
@@ -303,6 +311,9 @@ public sealed class AppVersionController : ControllerBase
     }
 
     private static AppReleaseDto MapRelease(AppRelease release)
+        => MapRelease(release, release.Items);
+
+    private static AppReleaseDto MapRelease(AppRelease release, IEnumerable<AppReleaseItem> items)
         => new(
             release.Id,
             release.ReleaseId,
@@ -312,7 +323,7 @@ public sealed class AppVersionController : ControllerBase
             release.Summary,
             release.IsActive,
             release.Source,
-            release.Items
+            items
                 .OrderBy(x => x.SortOrder)
                 .Select(x => new AppReleaseItemDto(x.Id, x.Type, x.Text, x.SortOrder))
                 .ToList(),

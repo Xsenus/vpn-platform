@@ -28,6 +28,10 @@ public class ReferralProgramControllerTests
         Assert.Equal("active", patched.Status);
         Assert.Contains("rewardDays", patched.RuleDefinition, StringComparison.Ordinal);
         Assert.Single(referrals);
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Equal(2, audits.Count);
+        Assert.Contains(audits, x => x.Action == "referral_program.create" && x.EntityId == program.Id.ToString());
+        Assert.Contains(audits, x => x.Action == "referral_program.update" && x.EntityId == program.Id.ToString() && x.BeforeJson != x.AfterJson);
     }
 
     [Theory]
@@ -47,6 +51,7 @@ public class ReferralProgramControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Original", program.Name);
         Assert.Equal("draft", program.Status);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
     private static ApplicationDbContext CreateDb()

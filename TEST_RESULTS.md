@@ -2,6 +2,32 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: admin operation audit integrity
+
+Scope:
+- Инвентаризированы административные write-endpoint для пользователей, контента, релизов, referral, поддержки, Telegram и 3x-ui panel/inbound/client операций.
+- Проверены actor attribution, redaction чувствительных значений, before/after snapshots и отсутствие audit-записи при отклоненной операции.
+- Проверены атомарная замена release items, отсутствие tracked mutation после duplicate-check и завершение sync-run при неполной конфигурации панели.
+
+Result:
+- Все подтвержденные admin mutation paths создают общий audit trail; фоновые 3x-ui операции используют actor `system`, HTTP-команды сохраняют admin user id.
+- Audit snapshots не содержат Telegram token, panel password, support text, VPN config URI или client UUID.
+- Release item replacement выполняется одним `SaveChanges`; отклоненные FAQ/site-content updates не изменяют tracked entity.
+- Sync незаполненной 3x-ui панели завершается `Failed` с `FinishedAt` и audit вместо зависшего `Running`.
+- Roadmap progress: `471/491` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-admin-operation-audit-integrity`, version `0.459.0`.
+
+Validation:
+- Backend full suite: OK, `798/798`; targeted SQLite/controller/service suite: OK, `73/73`.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-admin-operation-audit-integrity`.
+- Secret scan: OK, `560` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: subscription and node integrity hardening
 
 Scope:

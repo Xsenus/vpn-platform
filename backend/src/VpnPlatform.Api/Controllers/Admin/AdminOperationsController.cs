@@ -1011,7 +1011,8 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Reply text must contain at least 2 characters." });
         }
 
-        _db.SupportMessages.Add(new SupportMessage
+        var before = SerializeSupportConversationAudit(conversation);
+        var message = new SupportMessage
         {
             SupportConversationId = id,
             UserId = ResolveUserId(),
@@ -1019,8 +1020,10 @@ public class AdminOperationsController : ControllerBase
             Direction = "outbound",
             Text = text,
             AttachmentsJson = "[]"
-        });
+        };
+        _db.SupportMessages.Add(message);
 
+        var notificationQueued = false;
         if (conversation.TelegramUserId.HasValue)
         {
             var payloadJson = JsonSerializer.Serialize(new { conversationId = id, text }, JsonOptions);
@@ -1036,12 +1039,19 @@ public class AdminOperationsController : ControllerBase
                     Status = "pending",
                     NextAttemptAt = _clock.UtcNow
                 });
+                notificationQueued = true;
             }
         }
 
         conversation.Status = conversation.Status == "closed" ? "open" : conversation.Status;
         conversation.ClosedAt = conversation.Status == "closed" ? conversation.ClosedAt : null;
         conversation.UpdatedAt = _clock.UtcNow;
+        AddAuditLog(
+            "support.reply",
+            "SupportConversation",
+            conversation.Id,
+            before,
+            JsonSerializer.Serialize(new { conversation.Status, messageId = message.Id, notificationQueued }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { conversationId = id, status = "queued" });
     }
@@ -1063,10 +1073,12 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Status must be open, pending or closed." });
         }
 
+        var before = SerializeSupportConversationAudit(conversation);
         conversation.Status = status;
         conversation.AssignedToUserId = request?.AssignedToUserId ?? conversation.AssignedToUserId;
         conversation.ClosedAt = status == "closed" ? _clock.UtcNow : null;
         conversation.UpdatedAt = _clock.UtcNow;
+        AddAuditLog("support.status.update", "SupportConversation", conversation.Id, before, SerializeSupportConversationAudit(conversation));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { conversationId = id, conversation.Status, conversation.AssignedToUserId });
     }
@@ -1087,6 +1099,7 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Note text must contain at least 2 characters." });
         }
 
+        var before = SerializeSupportConversationAudit(conversation);
         var adminUserId = ResolveUserId();
         var note = new SupportMessage
         {
@@ -1100,6 +1113,12 @@ public class AdminOperationsController : ControllerBase
         _db.SupportMessages.Add(note);
         conversation.InternalNote = text;
         conversation.UpdatedAt = _clock.UtcNow;
+        AddAuditLog(
+            "support.note.add",
+            "SupportConversation",
+            conversation.Id,
+            before,
+            JsonSerializer.Serialize(new { conversation.Status, noteId = note.Id, hasInternalNote = true }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new SupportMessageDto(note.Id, note.SupportConversationId, note.UserId, note.TelegramUserId, note.Direction, note.Text, note.AttachmentsJson, note.IsInternalNote, note.CreatedAt));
     }
@@ -1870,6 +1889,7 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> CreateReferralProgram([FromBody] ReferralProgram program, CancellationToken cancellationToken)
     {
         _db.ReferralPrograms.Add(program);
+        AddAuditLog("referral_program.create", "ReferralProgram", program.Id, "{}", SerializeReferralProgramAudit(program));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(program);
     }
@@ -1895,11 +1915,13 @@ public class AdminOperationsController : ControllerBase
             }
         }
 
+        var before = SerializeReferralProgramAudit(program);
         if (payload.TryGetProperty("name", out var name)) program.Name = name.GetString() ?? program.Name;
         if (payload.TryGetProperty("status", out var status)) program.Status = status.GetString() ?? program.Status;
         if (payload.TryGetProperty("ruleDefinition", out var ruleDefinition)) program.RuleDefinition = ruleDefinition.GetRawText();
 
         program.UpdatedAt = _clock.UtcNow;
+        AddAuditLog("referral_program.update", "ReferralProgram", program.Id, before, SerializeReferralProgramAudit(program));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(program);
     }
@@ -2353,19 +2375,29 @@ public class AdminOperationsController : ControllerBase
 
     private void AddAuditLog(string action, string entityType, Guid entityId, string beforeJson, string afterJson)
     {
-        _db.AuditLogs.Add(new AuditLog
-        {
-            ActorType = "admin",
-            ActorId = ResolveUserId()?.ToString() ?? "unknown",
-            Action = action,
-            EntityType = entityType,
-            EntityId = entityId.ToString(),
-            BeforeJson = SensitiveDataRedactor.Redact(beforeJson),
-            AfterJson = SensitiveDataRedactor.Redact(afterJson),
-            Ip = HttpContext?.Connection.RemoteIpAddress?.ToString() ?? string.Empty,
-            UserAgent = HttpContext?.Request.Headers.UserAgent.ToString() ?? string.Empty
-        });
+        AdminAuditLogWriter.Add(_db, this, action, entityType, entityId, beforeJson, afterJson);
     }
+
+    private static string SerializeReferralProgramAudit(ReferralProgram program)
+        => JsonSerializer.Serialize(new
+        {
+            program.Name,
+            program.Status,
+            program.StartAt,
+            program.EndAt,
+            program.RuleDefinition,
+            program.RewardDefinition,
+            program.AntiFraudSettings
+        });
+
+    private static string SerializeSupportConversationAudit(SupportConversation conversation)
+        => JsonSerializer.Serialize(new
+        {
+            conversation.Status,
+            conversation.AssignedToUserId,
+            hasInternalNote = !string.IsNullOrWhiteSpace(conversation.InternalNote),
+            conversation.ClosedAt
+        });
 
     private void AddPaymentProviderSecretRotationAudit(PaymentProviderAccountDto account, UpsertPaymentProviderAccountCommand request)
     {

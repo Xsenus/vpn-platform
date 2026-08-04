@@ -168,6 +168,12 @@ public class AppVersionControllerTests
         Assert.Equal("fixed", updated.Items[0].Type);
         Assert.IsType<OkObjectResult>(deleted);
         Assert.Empty(await db.AppReleases.ToListAsync());
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Equal(3, audits.Count);
+        Assert.Contains(audits, x => x.Action == "app_release.create" && x.EntityId == created.Id.ToString() && x.ActorId == adminId.ToString());
+        Assert.Contains(audits, x => x.Action == "app_release.update" && x.EntityId == created.Id.ToString() && x.BeforeJson != x.AfterJson);
+        Assert.Contains(audits, x => x.Action == "app_release.delete" && x.EntityId == created.Id.ToString() && x.AfterJson == "{}");
+        Assert.Empty(await db.AppReleaseItems.ToListAsync());
     }
 
     [Fact]

@@ -144,6 +144,14 @@ public class AdminSiteContentController : ControllerBase
             }
         }
 
+        AdminAuditLogWriter.Add(
+            _db,
+            this,
+            "site_content.home_defaults.restore",
+            "SiteContentDefaults",
+            Guid.Empty,
+            null,
+            new { created, restored });
         await _db.SaveChangesAsync(cancellationToken);
         var nextBlocks = await _db.SiteContentBlocks.AsNoTracking()
             .Where(x => x.Group == "home" || x.Key.StartsWith("home."))
@@ -164,6 +172,7 @@ public class AdminSiteContentController : ControllerBase
         }
 
         _db.SiteContentBlocks.Add(block);
+        AdminAuditLogWriter.Add(_db, this, "site_content.create", "SiteContentBlock", block.Id, null, Map(block));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(Map(block));
     }
@@ -175,14 +184,18 @@ public class AdminSiteContentController : ControllerBase
         var block = await _db.SiteContentBlocks.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (block is null) return NotFound();
 
-        var error = Apply(block, request);
+        var candidate = new SiteContentBlock();
+        var error = Apply(candidate, request);
         if (error is not null) return BadRequest(new { error });
-        if (await _db.SiteContentBlocks.AsNoTracking().AnyAsync(x => x.Id != id && x.Key == block.Key, cancellationToken))
+        if (await _db.SiteContentBlocks.AsNoTracking().AnyAsync(x => x.Id != id && x.Key == candidate.Key, cancellationToken))
         {
             return BadRequest(new { error = "Content key already exists." });
         }
 
+        var before = Map(block);
+        Copy(candidate, block);
         block.UpdatedAt = DateTimeOffset.UtcNow;
+        AdminAuditLogWriter.Add(_db, this, "site_content.update", "SiteContentBlock", block.Id, before, Map(block));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(Map(block));
     }
@@ -194,7 +207,9 @@ public class AdminSiteContentController : ControllerBase
         var block = await _db.SiteContentBlocks.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (block is null) return NotFound();
 
+        var before = Map(block);
         _db.SiteContentBlocks.Remove(block);
+        AdminAuditLogWriter.Add(_db, this, "site_content.delete", "SiteContentBlock", block.Id, before, null);
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { id, deleted = true });
     }
@@ -213,6 +228,18 @@ public class AdminSiteContentController : ControllerBase
         block.IsActive = request.IsActive;
         block.SortOrder = request.SortOrder;
         return null;
+    }
+
+    private static void Copy(SiteContentBlock source, SiteContentBlock target)
+    {
+        target.Key = source.Key;
+        target.Value = source.Value;
+        target.Group = source.Group;
+        target.Label = source.Label;
+        target.Description = source.Description;
+        target.InputType = source.InputType;
+        target.IsActive = source.IsActive;
+        target.SortOrder = source.SortOrder;
     }
 
     private static SiteContentBlockDto Map(SiteContentBlock block)

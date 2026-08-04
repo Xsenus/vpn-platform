@@ -56,6 +56,11 @@ public class AdminTelegramBotSettingsControllerTests
         Assert.DoesNotContain("telegram-secret", auditJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("webhook-secret", auditJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("protected:", auditJson, StringComparison.OrdinalIgnoreCase);
+        var settingsAudit = await db.AuditLogs.SingleAsync(x => x.Action == "telegram_bot.settings.update");
+        var settingsAuditJson = $"{settingsAudit.BeforeJson}\n{settingsAudit.AfterJson}";
+        Assert.Contains("botTokenRotated", settingsAuditJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("telegram-secret", settingsAuditJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("webhook-secret", settingsAuditJson, StringComparison.OrdinalIgnoreCase);
 
         var check = await controller.TestSettings(CancellationToken.None);
         var checkDto = Assert.IsType<AdminTelegramBotConnectionCheckDto>(Assert.IsType<OkObjectResult>(check).Value);

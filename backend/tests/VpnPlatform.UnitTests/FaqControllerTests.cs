@@ -67,6 +67,12 @@ public class FaqControllerTests
         Assert.Equal(5, updated.SortOrder);
         Assert.IsType<OkObjectResult>(deleted);
         Assert.Empty(await db.FaqEntries.ToListAsync());
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Equal(3, audits.Count);
+        Assert.Contains(audits, x => x.Action == "faq.create" && x.EntityId == created.Id.ToString() && x.BeforeJson == "{}");
+        Assert.Contains(audits, x => x.Action == "faq.update" && x.EntityId == created.Id.ToString() && x.BeforeJson != x.AfterJson);
+        Assert.Contains(audits, x => x.Action == "faq.delete" && x.EntityId == created.Id.ToString() && x.AfterJson == "{}");
+        Assert.All(audits, x => Assert.NotEqual("unknown", x.ActorId));
     }
 
     [Fact]
@@ -140,6 +146,10 @@ public class FaqControllerTests
 
         Assert.IsType<BadRequestObjectResult>(duplicateCreate);
         Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
+        var persisted = await db.FaqEntries.SingleAsync(x => x.Id == created.Id);
+        Assert.Equal(created.Question, persisted.Question);
+        Assert.Equal(created.Category, persisted.Category);
+        Assert.Single(await db.AuditLogs.ToListAsync(), x => x.Action == "faq.create");
     }
 
     private static FaqEntry Entry(

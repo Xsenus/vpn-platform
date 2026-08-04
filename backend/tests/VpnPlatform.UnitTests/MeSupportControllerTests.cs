@@ -53,6 +53,14 @@ public class MeSupportControllerTests
         var noteResult = await admin.AddSupportInternalNote(conversationDto.Id, new AdminSupportNoteHttpRequest("Проверить повторно после webhook."), CancellationToken.None);
         Assert.IsType<OkObjectResult>(noteResult);
 
+        var statusResult = await admin.UpdateSupportConversationStatus(conversationDto.Id, new AdminSupportStatusHttpRequest("pending", adminId), CancellationToken.None);
+        Assert.IsType<OkObjectResult>(statusResult);
+        var adminAudits = await db.AuditLogs.Where(x => x.EntityId == conversationDto.Id.ToString()).ToListAsync();
+        Assert.Contains(adminAudits, x => x.Action == "support.reply");
+        Assert.Contains(adminAudits, x => x.Action == "support.note.add");
+        Assert.Contains(adminAudits, x => x.Action == "support.status.update");
+        Assert.All(adminAudits, x => Assert.DoesNotContain("webhook", x.AfterJson, StringComparison.OrdinalIgnoreCase));
+
         var messagesResult = await cabinet.GetSupportMessages(conversationDto.Id, CancellationToken.None);
         var messagesOk = Assert.IsType<OkObjectResult>(messagesResult);
         var messages = Assert.IsAssignableFrom<IReadOnlyCollection<SupportMessageDto>>(messagesOk.Value);

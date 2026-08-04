@@ -49,6 +49,9 @@ public class TelegramSupportAdminControllerTests
         Assert.Equal(777001, notification.TelegramUserId);
         Assert.Equal("support_reply", notification.Type);
         Assert.Equal("pending", notification.Status);
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "support.reply");
+        Assert.Equal(conversation.Id.ToString(), audit.EntityId);
+        Assert.DoesNotContain(message.Text, audit.AfterJson, StringComparison.Ordinal);
         Assert.Contains("Ответ администратора", notification.PayloadJson);
     }
 

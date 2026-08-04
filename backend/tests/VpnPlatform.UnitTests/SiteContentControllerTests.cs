@@ -55,6 +55,11 @@ public class SiteContentControllerTests
         Assert.Equal("textarea", updated.InputType);
         Assert.IsType<OkObjectResult>(deleted);
         Assert.Empty(await db.SiteContentBlocks.ToListAsync());
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Equal(3, audits.Count);
+        Assert.Contains(audits, x => x.Action == "site_content.create" && x.EntityId == created.Id.ToString() && x.BeforeJson == "{}");
+        Assert.Contains(audits, x => x.Action == "site_content.update" && x.EntityId == created.Id.ToString() && x.BeforeJson != x.AfterJson);
+        Assert.Contains(audits, x => x.Action == "site_content.delete" && x.EntityId == created.Id.ToString() && x.AfterJson == "{}");
     }
 
     [Fact]
@@ -103,6 +108,7 @@ public class SiteContentControllerTests
         Assert.Contains(publicBlocks, x => x.Key == "home.seo.title");
         Assert.Contains(publicBlocks, x => x.Key == "home.features.item1");
         Assert.Contains(publicBlocks, x => x.Key == "home.finalCta.title");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "site_content.home_defaults.restore");
     }
 
     [Fact]
@@ -126,6 +132,10 @@ public class SiteContentControllerTests
 
         Assert.IsType<BadRequestObjectResult>(duplicateCreate);
         Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
+        var persisted = await db.SiteContentBlocks.SingleAsync(x => x.Id == created.Id);
+        Assert.Equal(created.Key, persisted.Key);
+        Assert.Equal(created.Value, persisted.Value);
+        Assert.Single(await db.AuditLogs.ToListAsync(), x => x.Action == "site_content.create");
     }
 
     private static SiteContentBlock Block(string key, string value, string group = "home", bool isActive = true, int sortOrder = 100)

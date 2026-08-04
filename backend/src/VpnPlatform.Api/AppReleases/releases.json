@@ -10698,5 +10698,32 @@
         "text": "Roadmap progress is 470/490 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-admin-operation-audit-integrity",
+    "version": "0.459.0",
+    "releasedAt": "2026-08-04T15:55:00+07:00",
+    "title": "Административные операции получили полный аудит",
+    "summary": "Изменения пользователей, контента, релизов, поддержки, Telegram и 3x-ui теперь фиксируются безопасно и с указанием инициатора, а частичные операции закрыты дополнительными проверками.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Административные операции с пользователями, FAQ, контентом, сценариями, релизами, referral, поддержкой и Telegram-настройками создают единый журнал аудита."
+      },
+      {
+        "type": "improved",
+        "text": "Команды 3x-ui для панелей, inbound-ов и клиентов сохраняют администратора или явно помечают фоновый системный запуск."
+      },
+      {
+        "type": "fixed",
+        "text": "Обновление пунктов релиза выполняется атомарно, отклоненные duplicate updates не меняют данные, а незаполненная панель больше не оставляет sync-задачу в статусе Running."
+      },
+      {
+        "type": "important",
+        "text": "Audit snapshots не содержат токены, пароли, тексты поддержки, VPN config URI и UUID клиентов. Roadmap progress is 471/491 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

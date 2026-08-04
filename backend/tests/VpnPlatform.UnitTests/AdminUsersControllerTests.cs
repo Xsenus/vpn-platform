@@ -108,6 +108,10 @@ public class AdminUsersControllerTests
         Assert.Equal("After", updated.DisplayName);
         Assert.True(updated.IsBlocked);
         Assert.Equal(UserStatus.Suspended, updated.Status);
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "user.update");
+        Assert.Equal(userId.ToString(), audit.EntityId);
+        Assert.NotEqual(audit.BeforeJson, audit.AfterJson);
+        Assert.DoesNotContain("secret-hash", audit.BeforeJson, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -141,6 +145,7 @@ public class AdminUsersControllerTests
         Assert.Equal("Before", user.DisplayName);
         Assert.False(user.IsBlocked);
         Assert.Equal(UserStatus.Active, user.Status);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
     [Fact]

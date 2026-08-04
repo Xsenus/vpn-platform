@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-04 локально подтверждено:
 
-- backend full suite: 797/797;
+- backend full suite: 798/798;
 - frontend tests: 66/66;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -187,8 +187,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - page quality gate: public, cabinet and 16 admin screens pass landmark, duplicate ID, image alt and accessible-name checks.
 - subscription migration and archived-node boundaries: source/target/duplicate validation, migration item/audit persistence and fail-closed archived mode-actions are covered by SQLite tests.
 - subscription/VPN consistency: provider failures leave subscription status and dates unchanged; server deletion preserves health/migration history; scenario key renames are guarded.
-- latest "Что нового": `2026-08-04-subscription-node-integrity-hardening`, версия `0.458.0`.
-- roadmap progress: `470/490` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-04-admin-operation-audit-integrity`, версия `0.459.0`.
+- roadmap progress: `471/491` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -32,6 +32,11 @@ public class WorkScenarioControllerTests
         Assert.False(updated.GenerateQrCode);
         Assert.IsType<OkObjectResult>(deleted);
         Assert.Empty(await db.WorkScenarios.ToListAsync());
+        var audits = await db.AuditLogs.ToListAsync();
+        Assert.Equal(3, audits.Count);
+        Assert.Contains(audits, x => x.Action == "work_scenario.create" && x.EntityId == created.Id.ToString() && x.BeforeJson == "{}");
+        Assert.Contains(audits, x => x.Action == "work_scenario.update" && x.EntityId == created.Id.ToString() && x.BeforeJson != x.AfterJson);
+        Assert.Contains(audits, x => x.Action == "work_scenario.delete" && x.EntityId == created.Id.ToString() && x.AfterJson == "{}");
     }
 
     [Fact]
@@ -50,6 +55,7 @@ public class WorkScenarioControllerTests
         Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
         await db.Entry(premium).ReloadAsync();
         Assert.Equal("premium-auto", premium.Key);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
     [Fact]
