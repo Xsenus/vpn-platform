@@ -46,8 +46,8 @@ Production-ready решение заблокировано следующими 
 - Panel sync uses a cross-instance unique claim, stale lease/snapshot recovery and redacted persisted diagnostics; legacy raw panel errors are cleared by the upgrade path.
 - Terminal subscription cancellation атомарно отзывает доступ, удаляет provider-клиента и освобождает capacity; rollback и provider uncertainty проверены fault-injection тестами.
 - X3Ui client migration резервирует target capacity до remote add и компенсирует remote/local failure; last-slot concurrency проверена на независимых SQLite-контекстах.
-- Latest "Что нового": `2026-08-05-public-session-lifecycle`, версия `0.490.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `502/522` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-cabinet-logout-failure-cleanup`, версия `0.491.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `503/523` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

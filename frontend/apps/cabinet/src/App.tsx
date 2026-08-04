@@ -322,10 +322,10 @@ export function App() {
     setNotice('')
     try {
       await api.logout(token || null, refreshToken || null)
-      clearSession()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось выйти')
+    } catch {
+      setError('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')
     } finally {
+      clearSession()
       setBusy(false)
     }
   }

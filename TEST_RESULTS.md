@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: cabinet logout failure cleanup
+
+Scope:
+- Проверено, что cabinet logout завершает локальную сессию и удаляет пользовательские данные независимо от результата backend revoke.
+
+Results:
+- Roadmap progress: `503/523` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-cabinet-logout-failure-cleanup`, version `0.491.0`.
+- Backend full suite: OK, `989/989`; targeted auth session SQLite: OK, `1/1`.
+- SQLite подтверждает отзыв refresh session и отказ повторного refresh после logout.
+- Cabinet отправляет bearer/refresh на logout и очищает токены, профиль, подписки, платежи, VPN, support и Telegram state в `finally`.
+- Frontend tests: OK, `71/71`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Cabinet desktop/mobile regression: OK, `2/2`; successful revoke и controlled `503` cleanup/warning подтверждены.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `12/12`, без неожиданных console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `610` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: public session lifecycle
 
 Scope:

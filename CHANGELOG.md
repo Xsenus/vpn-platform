@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.491.0 - 2026-08-05
+
+Release entry: `2026-08-05-cabinet-logout-failure-cleanup`.
+
+### Исправлено
+
+- Cabinet logout теперь всегда очищает access/refresh токены, профиль, подписки, платежи, VPN-доступы, support и Telegram state.
+- Backend по-прежнему получает bearer и текущий refresh token для отзыва серверной сессии.
+- При недоступном logout API локальный выход завершается, а пользователь видит предупреждение о неподтверждённом revoke и безопасное следующее действие.
+
+### Проверено
+
+- Backend full suite `989/989`; targeted auth session SQLite `1/1` подтверждает revoke и запрет refresh после logout.
+- Frontend `71/71`, typecheck/build OK; cabinet desktop/mobile `2/2` покрывает logout payload, success cleanup и controlled `503` cleanup, Playwright desktop/mobile/all-screens responsive suite `12/12` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`, secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `503/523` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остаётся `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.490.0 - 2026-08-05
 
 Release entry: `2026-08-05-public-session-lifecycle`.

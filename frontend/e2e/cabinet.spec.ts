@@ -210,9 +210,10 @@ async function fulfillOptions(route: Route) {
 }
 
 async function mockCabinetApi(page: Page) {
-  const requests: Array<{ method: string; url: string; body: unknown }> = []
+  const requests: Array<{ method: string; url: string; body: unknown; authorization: string }> = []
   let supportConversations: unknown[] = []
   let supportMessages: unknown[] = []
+  let logoutShouldFail = false
   let renewalOrder = {
     ...paidOrder,
     id: 'order-renewal',
@@ -236,7 +237,8 @@ async function mockCabinetApi(page: Page) {
       requests.push({
         method: request.method(),
         url: request.url(),
-        body: request.postData() ? request.postDataJSON() : null
+        body: request.postData() ? request.postDataJSON() : null,
+        authorization: request.headers().authorization ?? ''
       })
     }
   }
@@ -265,7 +267,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/auth/logout') {
-      await fulfillJson(route, { status: 'ok' })
+      await fulfillJson(route, logoutShouldFail ? { error: 'logout unavailable' } : { status: 'ok' }, logoutShouldFail ? 503 : 200)
       return
     }
 
@@ -412,6 +414,7 @@ async function mockCabinetApi(page: Page) {
 
   return {
     requests,
+    failLogout: () => { logoutShouldFail = true },
     getLastRequest: (path: string, method = 'POST') =>
       requests.findLast((item) => item.method === method && new URL(item.url).pathname === path)
   }
@@ -491,6 +494,12 @@ test('cabinet covers register, login, payments, subscription access and support'
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.getByRole('tab', { name: 'Вход' }).click()
   await expect(page.getByRole('tabpanel', { name: 'Вход' })).toBeVisible()
+  expect(api.getLastRequest('/api/auth/logout')?.body).toEqual({ refreshToken: `refresh-token-${user.email}` })
+  expect(api.getLastRequest('/api/auth/logout')?.authorization).toBe(`Bearer access-token-${user.email}`)
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
 
   const loginPanel = page.locator('#cabinet-auth-panel')
   await loginPanel.getByLabel('Email').fill(user.email)
@@ -498,6 +507,18 @@ test('cabinet covers register, login, payments, subscription access and support'
   await loginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText('Вход выполнен.')).toBeVisible()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  api.failLogout()
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByText('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')).toBeVisible()
+  await expect(page.getByRole('tabpanel', { name: 'Вход' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+  const expectedLogoutFailureLogs = consoleErrors.filter((message) => message.includes('503 (Service Unavailable)'))
+  expect(expectedLogoutFailureLogs.length).toBeGreaterThan(0)
+  for (const message of expectedLogoutFailureLogs) consoleErrors.splice(consoleErrors.indexOf(message), 1)
 
   expect(api.getLastRequest('/api/auth/register')?.body).toMatchObject({
     email: user.email,
