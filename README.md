@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-04 локально подтверждено:
 
-- backend на .NET 9: `930/930` unit tests;
+- backend на .NET 9: `939/939` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `68/68`;
 - frontend typecheck и production build: OK;
@@ -234,8 +234,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - provisioning worker атомарно захватывает запуск, ограничивает runner timeout, восстанавливает stale lease без автоматического replay и блокирует небезопасные retry/cancel;
 - истечение подписки отключает VPN-доступ до перевода в `Expired`, сохраняет lease/backoff и диагностируемый retry-state; lifecycle, panel health и panel sync workers изолируют ошибки отдельных записей;
 - синхронизация 3x-ui использует межинстансный claim, восстанавливает stale `Running`, отклоняет устаревший worker snapshot и сохраняет только redacted health/sync diagnostics;
+- выдача 3x-ui сериализована по подписке, capacity защищена optimistic concurrency, продление сохраняет назначенный inbound, а remote create/update/delete/enable/disable компенсируются при локальном отказе;
 - мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-panel-sync-recovery`, версия `0.474.0`;
-- roadmap progress: `486/506` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-vpn-access-provisioning-consistency`, версия `0.475.0`;
+- roadmap progress: `487/507` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: VPN access provisioning consistency
+
+Scope:
+- Проверены параллельная выдача одной и разных подписок, последний свободный inbound slot, продление на назначенной панели, удаление capacity и компенсация неоднозначных remote операций 3x-ui.
+
+Results:
+- Roadmap progress: `487/507` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-vpn-access-provisioning-consistency`, version `0.475.0`.
+- Backend full suite: OK, `939/939`; X3Ui suite: OK, `48/48`.
+- Concurrent file-backed SQLite regression: one subscription is idempotent; two subscriptions cannot commit into one capacity slot; losing remote create is compensated.
+- EF migration `20260804155901_VpnCapacityConcurrency`: OK; PostgreSQL history SQL generated; concurrency metadata and model snapshot synchronized; pending model changes: none.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-vpn-access-provisioning-consistency`.
+- Secret scan: OK, `605` files, `0` findings.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-04: Panel sync recovery
 
 Scope:

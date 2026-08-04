@@ -105,8 +105,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<SupportConversation>().HasIndex(x => new { x.TelegramUserId, x.Status });
         modelBuilder.Entity<VpnPanel>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<VpnPanel>().HasIndex(x => x.BaseUrl).IsUnique();
+        modelBuilder.Entity<VpnPanel>().Property(x => x.UsedCapacity).IsConcurrencyToken();
         modelBuilder.Entity<VpnInbound>().HasIndex(x => new { x.VpnPanelId, x.ExternalInboundId }).IsUnique();
         modelBuilder.Entity<VpnInbound>().HasIndex(x => new { x.VpnPanelId, x.IsDefault });
+        modelBuilder.Entity<VpnInbound>().Property(x => x.UsedCapacity).IsConcurrencyToken();
         modelBuilder.Entity<VpnClient>().HasIndex(x => x.SubscriptionId).IsUnique();
         modelBuilder.Entity<VpnClient>().HasIndex(x => new { x.VpnPanelId, x.VpnInboundId, x.Uuid }).IsUnique();
         modelBuilder.Entity<VpnClient>().HasIndex(x => new { x.VpnPanelId, x.ExternalClientId }).IsUnique();

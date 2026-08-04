@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-04",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `930/930`",
+                     "Backend full suite: `939/939`",
                      "Frontend unit tests: `68/68`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `12/12`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-04-panel-sync-recovery",
-                     "0.474.0"
+                     "2026-08-04-vpn-access-provisioning-consistency",
+                     "0.475.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-04-panel-sync-recovery", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-04-panel-sync-recovery", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-vpn-access-provisioning-consistency", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-vpn-access-provisioning-consistency", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `930/930`",
+                     "Backend full suite: `939/939`",
                      "Frontend unit tests: `68/68`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-04-panel-sync-recovery",
-                     "0.474.0",
+                     "2026-08-04-vpn-access-provisioning-consistency",
+                     "0.475.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

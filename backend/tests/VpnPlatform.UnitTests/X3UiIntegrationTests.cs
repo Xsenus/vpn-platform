@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
@@ -922,6 +923,114 @@ public class X3UiIntegrationTests
         Assert.Equal(0, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
     }
 
+    [Fact]
+    public async Task Real_Vpn_Provider_Should_Cleanup_Ambiguous_Remote_Create_Failure()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow) { FailAddClientAfterSideEffect = true };
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var panelId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Monthly", Slug = "monthly-ambiguous-create", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true });
+        db.VpnPanels.Add(new VpnPanel { Id = panelId, Name = "prod-panel", BaseUrl = "https://vpn.example.com:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100 });
+        db.VpnInbounds.Add(new VpnInbound { Id = Guid.NewGuid(), VpnPanelId = panelId, ExternalInboundId = "1", Name = "vless", Protocol = "vless", Port = 443, SettingsJson = "{\"clients\":[]}", StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}", IsDefault = true, IsActive = true, Capacity = 100 });
+        await db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<TimeoutException>(() => provider.CreateAccessAsync(new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), tariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None));
+
+        Assert.Equal(1, remote.AddClientCalls);
+        Assert.Equal(1, remote.DeleteClientCalls);
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Equal(0, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Renewal_Should_Roll_Back_Remote_Client_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var originalExpiry = (await db.VpnClients.SingleAsync()).ExpiryTime;
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.UpdateAccessAsync(new VpnProvisionRequest(ids.SubscriptionId, ids.UserId, ids.TariffId, Guid.NewGuid(), clock.UtcNow.AddDays(60), 5), CancellationToken.None));
+
+        Assert.Equal(2, remote.UpdateClientCalls);
+        var rollback = remote.UpdateRequests[1];
+        Assert.Equal("1", rollback.InboundId);
+        Assert.Equal("client-1", rollback.ClientId);
+        Assert.Equal(originalExpiry, rollback.ExpiryTime);
+        db.ChangeTracker.Clear();
+        Assert.Equal(originalExpiry, (await db.VpnClients.SingleAsync()).ExpiryTime);
+    }
+
+    [Fact]
+    public async Task Delete_Should_Restore_Remote_Client_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        (await db.VpnPanels.SingleAsync()).UsedCapacity = 1;
+        (await db.VpnInbounds.SingleAsync()).UsedCapacity = 1;
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.DeleteAccessAsync(ids.ClientId.ToString(), CancellationToken.None));
+
+        Assert.Equal(1, remote.DeleteClientCalls);
+        Assert.Equal(1, remote.AddClientCalls);
+        db.ChangeTracker.Clear();
+        Assert.Single(await db.VpnClients.ToListAsync());
+        Assert.Equal(1, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(1, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Disable_Should_Reenable_Remote_Client_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.DisableAccessAsync(ids.ClientId.ToString(), CancellationToken.None));
+
+        Assert.Equal(1, remote.DisableClientCalls);
+        Assert.Equal(1, remote.EnableClientCalls);
+        db.ChangeTracker.Clear();
+        Assert.True((await db.VpnClients.SingleAsync()).Enable);
+    }
+
+    [Fact]
+    public async Task Enable_Should_Redisable_Remote_Client_When_Local_Save_Fails()
+    {
+        await using var db = CreateFailingDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, remote, new TestSecretProtector(), clock);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var existing = await db.VpnClients.SingleAsync();
+        existing.Enable = false;
+        existing.SyncStatus = "disabled";
+        await db.SaveChangesAsync();
+        db.FailNextSave = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.EnableAccessAsync(ids.ClientId.ToString(), CancellationToken.None));
+
+        Assert.Equal(1, remote.EnableClientCalls);
+        Assert.Equal(1, remote.DisableClientCalls);
+        db.ChangeTracker.Clear();
+        Assert.False((await db.VpnClients.SingleAsync()).Enable);
+    }
+
     [Theory]
     [InlineData("trojan", "trojan://")]
     [InlineData("vmess", "vmess://")]
@@ -1021,6 +1130,135 @@ public class X3UiIntegrationTests
         Assert.Equal(clock.UtcNow.AddDays(60), (await db.VpnClients.SingleAsync()).ExpiryTime);
     }
 
+    [Fact]
+    public async Task Renewal_Should_Keep_Assigned_Panel_When_Its_Capacity_Is_Full()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var client = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, client, new TestSecretProtector(), clock);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var assignedPanel = await db.VpnPanels.SingleAsync(x => x.Id == ids.PanelId);
+        var assignedInbound = await db.VpnInbounds.SingleAsync(x => x.Id == ids.InboundId);
+        assignedPanel.Capacity = 1;
+        assignedPanel.UsedCapacity = 1;
+        assignedInbound.Capacity = 1;
+        assignedInbound.UsedCapacity = 1;
+        var sparePanelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel { Id = sparePanelId, Name = "spare", BaseUrl = "https://spare.example.com:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100 });
+        db.VpnInbounds.Add(new VpnInbound { Id = Guid.NewGuid(), VpnPanelId = sparePanelId, ExternalInboundId = "2", Name = "spare-vless", Protocol = "vless", Port = 8443, StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}", SettingsJson = "{\"clients\":[]}", IsDefault = true, IsActive = true, Capacity = 100 });
+        await db.SaveChangesAsync();
+
+        await provider.UpdateAccessAsync(new VpnProvisionRequest(ids.SubscriptionId, ids.UserId, ids.TariffId, Guid.NewGuid(), clock.UtcNow.AddDays(60), 3), CancellationToken.None);
+
+        var renewed = await db.VpnClients.SingleAsync();
+        Assert.Equal(ids.PanelId, renewed.VpnPanelId);
+        Assert.Equal(ids.InboundId, renewed.VpnInboundId);
+        Assert.Equal("1", Assert.Single(client.UpdateRequests).InboundId);
+    }
+
+    [Fact]
+    public async Task Delete_Access_Should_Release_Panel_And_Inbound_Capacity()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var client = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(ProductionConfiguration(), db, client, new TestSecretProtector(), clock);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        (await db.VpnPanels.SingleAsync()).UsedCapacity = 1;
+        (await db.VpnInbounds.SingleAsync()).UsedCapacity = 1;
+        await db.SaveChangesAsync();
+
+        await provider.DeleteAccessAsync(ids.ClientId.ToString(), CancellationToken.None);
+
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Equal(0, (await db.VpnPanels.SingleAsync()).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync()).UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Concurrent_Create_For_Same_Subscription_Should_Be_Idempotent()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-x3ui-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = SqliteOptions(databasePath);
+            var clock = new FixedClock();
+            var addStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var releaseAdd = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var remote = new FakeX3UiClient(clock.UtcNow) { AddClientStarted = addStarted, ReleaseAddClient = releaseAdd };
+            var ids = await SeedRelationalProvisioningAsync(options, clock.UtcNow, capacity: 2, subscriptionCount: 1);
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var firstProvider = new X3UiVpnProvider(ProductionConfiguration(), firstDb, remote, new TestSecretProtector(), clock);
+            var secondProvider = new X3UiVpnProvider(ProductionConfiguration(), secondDb, remote, new TestSecretProtector(), clock);
+            var request = new VpnProvisionRequest(ids.SubscriptionIds[0], ids.UserId, ids.TariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3);
+
+            var first = Task.Run(() => firstProvider.CreateAccessAsync(request, CancellationToken.None));
+            await addStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var secondStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var second = Task.Run(async () =>
+            {
+                secondStarted.SetResult(true);
+                return await secondProvider.CreateAccessAsync(request, CancellationToken.None);
+            });
+            await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await Task.Delay(100);
+            Assert.Equal(1, remote.AddClientCalls);
+            releaseAdd.SetResult(true);
+            var results = await Task.WhenAll(first, second);
+
+            await using var verify = new ApplicationDbContext(options);
+            Assert.Equal(results[0].ProviderAccessId, results[1].ProviderAccessId);
+            Assert.Equal(1, remote.AddClientCalls);
+            Assert.Equal(1, remote.UpdateClientCalls);
+            Assert.Equal(1, await verify.VpnClients.CountAsync());
+            Assert.Equal(1, (await verify.VpnPanels.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, (await verify.VpnInbounds.SingleAsync()).UsedCapacity);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task Concurrent_Create_Should_Not_Oversubscribe_Last_Inbound_Slot()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-x3ui-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = SqliteOptions(databasePath);
+            var clock = new FixedClock();
+            using var addBarrier = new Barrier(2);
+            var remote = new FakeX3UiClient(clock.UtcNow) { AddClientBarrier = addBarrier };
+            var ids = await SeedRelationalProvisioningAsync(options, clock.UtcNow, capacity: 1, subscriptionCount: 2);
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var firstProvider = new X3UiVpnProvider(ProductionConfiguration(), firstDb, remote, new TestSecretProtector(), clock);
+            var secondProvider = new X3UiVpnProvider(ProductionConfiguration(), secondDb, remote, new TestSecretProtector(), clock);
+
+            var attempts = await Task.WhenAll(
+                Task.Run(() => CaptureAsync(() => firstProvider.CreateAccessAsync(new VpnProvisionRequest(ids.SubscriptionIds[0], ids.UserId, ids.TariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None))),
+                Task.Run(() => CaptureAsync(() => secondProvider.CreateAccessAsync(new VpnProvisionRequest(ids.SubscriptionIds[1], ids.UserId, ids.TariffId, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3), CancellationToken.None))));
+
+            await using var verify = new ApplicationDbContext(options);
+            Assert.Equal(1, attempts.Count(x => x is null));
+            Assert.Equal(1, attempts.Count(x => x is not null));
+            Assert.Equal(2, remote.AddClientCalls);
+            Assert.Equal(1, remote.DeleteClientCalls);
+            Assert.Equal(1, await verify.VpnClients.CountAsync());
+            Assert.Equal(1, (await verify.VpnPanels.SingleAsync()).UsedCapacity);
+            Assert.Equal(1, (await verify.VpnInbounds.SingleAsync()).UsedCapacity);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(databasePath);
+        }
+    }
+
 
     [Fact]
     public async Task Sandbox_Vpn_Provider_Should_Create_Deterministic_Client_Without_Network_Calls()
@@ -1096,6 +1334,47 @@ public class X3UiIntegrationTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private static DbContextOptions<ApplicationDbContext> SqliteOptions(string databasePath)
+        => new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"Data Source={databasePath};Default Timeout=10")
+            .Options;
+
+    private static async Task<(Guid UserId, Guid TariffId, Guid[] SubscriptionIds)> SeedRelationalProvisioningAsync(
+        DbContextOptions<ApplicationDbContext> options,
+        DateTimeOffset now,
+        int capacity,
+        int subscriptionCount)
+    {
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var panelId = Guid.NewGuid();
+        var subscriptions = Enumerable.Range(0, subscriptionCount)
+            .Select(_ => new Subscription { UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = now, EndAt = now.AddDays(30) })
+            .ToArray();
+        db.Users.Add(new User { Id = userId, Email = $"x3ui-{userId:N}@example.test", DisplayName = "X3Ui test", ReferralCode = $"X3UI{userId:N}" });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Monthly", Slug = $"monthly-{tariffId:N}", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true });
+        db.Subscriptions.AddRange(subscriptions);
+        db.VpnPanels.Add(new VpnPanel { Id = panelId, Name = $"panel-{panelId:N}", BaseUrl = $"https://{panelId:N}.example.test:2053", Login = "admin", EncryptedPassword = "secret", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = capacity });
+        db.VpnInbounds.Add(new VpnInbound { Id = Guid.NewGuid(), VpnPanelId = panelId, ExternalInboundId = "1", Name = "vless", Protocol = "vless", Port = 443, SettingsJson = "{\"clients\":[]}", StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}", IsDefault = true, IsActive = true, Capacity = capacity });
+        await db.SaveChangesAsync();
+        return (userId, tariffId, subscriptions.Select(x => x.Id).ToArray());
+    }
+
+    private static async Task<Exception?> CaptureAsync(Func<Task<VpnProvisionResult>> action)
+    {
+        try
+        {
+            await action();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     private static FailingSaveApplicationDbContext CreateFailingDbContext()
@@ -1178,6 +1457,7 @@ public class X3UiIntegrationTests
     private sealed class FakeX3UiClient : IX3UiClient
     {
         private readonly DateTimeOffset _now;
+        private int _addClientCalls;
         public FakeX3UiClient(DateTimeOffset now) => _now = now;
         public bool ReturnNoInbounds { get; set; }
         public IReadOnlyCollection<X3UiInboundDto>? Inbounds { get; set; }
@@ -1187,11 +1467,18 @@ public class X3UiIntegrationTests
         public List<string> DeleteInboundIds { get; } = [];
         public List<string> DeletedInboundIds { get; } = [];
         public int CreateInboundCalls { get; private set; }
-        public int AddClientCalls { get; private set; }
+        public int AddClientCalls => _addClientCalls;
         public int UpdateClientCalls { get; private set; }
         public int DeleteClientCalls { get; private set; }
         public int ResetTrafficCalls { get; private set; }
         public int GetTrafficCalls { get; private set; }
+        public int EnableClientCalls { get; private set; }
+        public int DisableClientCalls { get; private set; }
+        public Barrier? AddClientBarrier { get; init; }
+        public bool FailAddClientAfterSideEffect { get; init; }
+        public TaskCompletionSource<bool>? AddClientStarted { get; init; }
+        public TaskCompletionSource<bool>? ReleaseAddClient { get; init; }
+        public List<X3UiUpdateClientRequest> UpdateRequests { get; } = [];
 
         public Task<X3UiSession> LoginAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiSession("session=test", _now));
         public Task<X3UiHealthResult> CheckHealthAsync(VpnPanel panel, string password, CancellationToken cancellationToken) => Task.FromResult(new X3UiHealthResult(true, "2.4.12", 12));
@@ -1227,15 +1514,26 @@ public class X3UiIntegrationTests
         public Task<X3UiInboundDto> UpdateInboundAsync(VpnPanel panel, string password, X3UiUpdateInboundRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new X3UiInboundDto(request.Id, request.Remark, request.Protocol, request.Port, request.Listen, request.SettingsJson, request.StreamSettingsJson, request.SniffingJson, request.Enable));
 
-        public Task<X3UiClientDto> AddClientAsync(VpnPanel panel, string password, X3UiAddClientRequest request, CancellationToken cancellationToken)
+        public async Task<X3UiClientDto> AddClientAsync(VpnPanel panel, string password, X3UiAddClientRequest request, CancellationToken cancellationToken)
         {
-            AddClientCalls += 1;
-            return Task.FromResult(new X3UiClientDto(request.Uuid, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null));
+            Interlocked.Increment(ref _addClientCalls);
+            AddClientStarted?.TrySetResult(true);
+            AddClientBarrier?.SignalAndWait(TimeSpan.FromSeconds(10));
+            if (ReleaseAddClient is not null)
+            {
+                await ReleaseAddClient.Task.WaitAsync(cancellationToken);
+            }
+            if (FailAddClientAfterSideEffect)
+            {
+                throw new TimeoutException("simulated ambiguous add timeout");
+            }
+            return new X3UiClientDto(request.Uuid, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null);
         }
 
         public Task<X3UiClientDto> UpdateClientAsync(VpnPanel panel, string password, X3UiUpdateClientRequest request, CancellationToken cancellationToken)
         {
             UpdateClientCalls += 1;
+            UpdateRequests.Add(request);
             return Task.FromResult(new X3UiClientDto(request.ClientId, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null));
         }
 
@@ -1249,8 +1547,16 @@ public class X3UiIntegrationTests
             }
             return Task.CompletedTask;
         }
-        public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        {
+            EnableClientCalls += 1;
+            return Task.CompletedTask;
+        }
+        public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        {
+            DisableClientCalls += 1;
+            return Task.CompletedTask;
+        }
         public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
         {
             ResetTrafficCalls += 1;

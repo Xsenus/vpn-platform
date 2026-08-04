@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.475.0 - 2026-08-04
+
+Release entry: `2026-08-04-vpn-access-provisioning-consistency`.
+
+### Исправлено
+
+- Создание VPN-клиента сериализовано по подписке, а optimistic concurrency счётчиков panel/inbound не допускает локальный oversubscription последнего слота; проигравший remote create компенсируется delete.
+- Продление обновляет клиента на уже назначенных panel/inbound даже при заполненной ёмкости и больше не создаёт скрытую копию на другой панели; смена протокола требует явной миграции.
+- Удаление доступа освобождает ёмкость panel/inbound. При сбое локального commit после remote update/delete/enable/disable выполняется обратная операция с исходными параметрами; неоднозначный timeout после add также очищается.
+- Выбор panel/inbound стал совместим с SQLite: SQL-сортировка больше не использует неподдерживаемые `decimal` и `DateTimeOffset` выражения.
+
+### Проверено
+
+- Backend full suite `939/939`; X3Ui suite `48/48`, включая concurrent SQLite, oversubscription и fault-injection; migration `20260804155901_VpnCapacityConcurrency`, PostgreSQL history SQL и EF model snapshot синхронизированы; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; fresh local SQLite smoke latest release OK; secret scan `605` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `487/507` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.474.0 - 2026-08-04
 
 Release entry: `2026-08-04-panel-sync-recovery`.

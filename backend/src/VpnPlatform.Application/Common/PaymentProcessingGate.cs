@@ -35,6 +35,9 @@ public static class PaymentProcessingGate
     public static async ValueTask<IAsyncDisposable> AcquirePanelSyncAsync(Guid panelId, CancellationToken cancellationToken)
         => await AcquireAsync($"panel-sync:{panelId:N}", cancellationToken);
 
+    public static async ValueTask<IAsyncDisposable> AcquireVpnSubscriptionAsync(Guid subscriptionId, CancellationToken cancellationToken)
+        => await AcquireAsync($"vpn-subscription:{subscriptionId:N}", cancellationToken);
+
     private static async ValueTask<IAsyncDisposable> AcquireAsync(string key, CancellationToken cancellationToken)
     {
         GateEntry entry;

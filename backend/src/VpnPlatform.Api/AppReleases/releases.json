@@ -11074,5 +11074,28 @@
         "text": "Админка показывает время health-check и фактическую ошибку failed sync. Roadmap progress is 486/506 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-vpn-access-provisioning-consistency",
+    "version": "0.475.0",
+    "releasedAt": "2026-08-04T22:46:00+07:00",
+    "title": "Выдача VPN-доступа защищена от гонок и частичных отказов",
+    "summary": "Параллельная 3x-ui выдача учитывает последний свободный slot, а remote операции компенсируются при локальном отказе.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Одна подписка не создаёт два remote-клиента, а optimistic concurrency panel/inbound capacity исключает локальный oversubscription при параллельной выдаче."
+      },
+      {
+        "type": "fixed",
+        "text": "Продление сохраняет назначенный inbound, удаление освобождает capacity, а update/delete/enable/disable и неоднозначный add получают обратную операцию при сбое local commit."
+      },
+      {
+        "type": "important",
+        "text": "SQLite selection теперь использует поддерживаемую сортировку. Roadmap progress is 487/507 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
