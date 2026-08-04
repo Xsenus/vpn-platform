@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: VPN node capacity reservation
+
+Scope:
+- Проверены атомарная резервация последнего слота `VpnNode`, компенсация при failure/cancellation и сохранение назначенной ноды при продлении существующего доступа.
+
+Results:
+- Roadmap progress: `488/508` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-vpn-node-capacity-reservation`, version `0.476.0`.
+- Backend full suite: OK, `942/942`; targeted VPN/payment/SQLite regression: OK, `100/100`.
+- Concurrent file-backed SQLite regression: из двух независимых контекстов только один резервирует последний slot; release делает slot доступным повторно.
+- Activation fault/cancellation regression: reserved node capacity возвращается до retry; provider не вызывается после неуспешной резервации.
+- Renewal regression: существующий доступ на maintenance node сохраняет `CurrentServerId`, `AccessCredential.ServerId` и оба node capacity counters.
+- EF schema: без изменений; conditional `ExecuteUpdate` проверен на SQLite, migration не требуется.
+- API and TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright console/responsive suite: OK, `12/12`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-vpn-node-capacity-reservation`.
+- Secret scan: OK, `607` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-04: VPN access provisioning consistency
 
 Scope:

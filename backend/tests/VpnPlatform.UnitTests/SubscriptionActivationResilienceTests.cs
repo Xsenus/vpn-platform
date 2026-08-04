@@ -33,6 +33,7 @@ public class SubscriptionActivationResilienceTests
         Assert.True(first.IsRetryable);
         Assert.Equal(1, provider.DeleteCalls);
         Assert.Empty(await db.AccessCredentials.AsNoTracking().ToListAsync());
+        Assert.Equal(0, (await db.VpnNodes.AsNoTracking().SingleAsync()).UsedCapacity);
         Assert.Equal(OrderStatus.PartiallyProcessed, fixture.Order.Status);
         Assert.Equal(SubscriptionStatus.PendingActivation, (await db.Subscriptions.AsNoTracking().SingleAsync()).Status);
 
@@ -66,6 +67,7 @@ public class SubscriptionActivationResilienceTests
 
         Assert.Equal(1, provider.DeleteCalls);
         Assert.Empty(await db.AccessCredentials.AsNoTracking().ToListAsync());
+        Assert.Equal(0, (await db.VpnNodes.AsNoTracking().SingleAsync()).UsedCapacity);
         Assert.Equal(OrderStatus.PartiallyProcessed, (await db.Orders.AsNoTracking().SingleAsync()).Status);
         Assert.Equal(SubscriptionStatus.PendingActivation, (await db.Subscriptions.AsNoTracking().SingleAsync()).Status);
         Assert.Contains(await db.AuditLogs.AsNoTracking().ToListAsync(), x => x.Action == "vpn_access.provisioning_cancelled");
@@ -128,6 +130,35 @@ public class SubscriptionActivationResilienceTests
         Assert.Equal(fixture.OriginalEndAt.AddDays(30), subscription.EndAt);
         Assert.Equal(1, subscription.RenewalCount);
         Assert.Equal(2, provider.UpdateCalls);
+    }
+
+    [Fact]
+    public async Task Renewal_On_Maintenance_Node_Should_Keep_Assignment_And_Capacity()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var fixture = await SeedRenewalOrderAsync(db);
+        var assignedNode = await db.VpnNodes.SingleAsync();
+        assignedNode.Status = NodeStatus.Maintenance;
+        assignedNode.UsedCapacity = 1;
+        var alternateNode = Node(Guid.NewGuid());
+        db.VpnNodes.Add(alternateNode);
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider();
+        var service = CreateService(db, provider, fixture.Now);
+
+        var result = await service.ActivateOrRenewFromOrderAsync(fixture.Order, fixture.Payment);
+
+        Assert.True(result.IsSuccess, result.Error);
+        db.ChangeTracker.Clear();
+        var subscription = await db.Subscriptions.AsNoTracking().SingleAsync();
+        var access = await db.AccessCredentials.AsNoTracking().SingleAsync();
+        Assert.Equal(assignedNode.Id, subscription.CurrentServerId);
+        Assert.Equal(assignedNode.Id, access.ServerId);
+        Assert.Equal(1, (await db.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == assignedNode.Id)).UsedCapacity);
+        Assert.Equal(0, (await db.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == alternateNode.Id)).UsedCapacity);
     }
 
     private static SubscriptionService CreateService(ApplicationDbContext db, IVpnProvider provider, DateTimeOffset now)

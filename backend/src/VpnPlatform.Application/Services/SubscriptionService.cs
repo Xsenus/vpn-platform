@@ -15,6 +15,7 @@ public class SubscriptionService
     private readonly IApplicationDbContext _db;
     private readonly IClock _clock;
     private readonly NodeAllocationService _nodeAllocationService;
+    private readonly VpnNodeCapacityService _vpnNodeCapacityService;
     private readonly IVpnProviderFactory _vpnProviderFactory;
     private readonly VpnAccessLifecycleService? _vpnAccessLifecycleService;
 
@@ -28,6 +29,7 @@ public class SubscriptionService
         _db = db;
         _clock = clock;
         _nodeAllocationService = nodeAllocationService;
+        _vpnNodeCapacityService = new VpnNodeCapacityService(db);
         _vpnProviderFactory = vpnProviderFactory;
         _vpnAccessLifecycleService = vpnAccessLifecycleService;
     }
@@ -111,15 +113,24 @@ public class SubscriptionService
         }
 
         var previousServerId = subscription.CurrentServerId;
+        Guid? reservedNodeId = null;
         string? provisioningFailureOverride = null;
 
         try
         {
+            var access = subscription.CurrentAccess ?? await _db.AccessCredentials.FirstOrDefaultAsync(x => x.SubscriptionId == subscription.Id, cancellationToken);
             var node = subscription.CurrentServerId.HasValue
                 ? await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == subscription.CurrentServerId.Value, cancellationToken)
                 : null;
 
-            if (node is null
+            if (access is not null && subscription.CurrentServerId.HasValue)
+            {
+                if (node is null || (!useSandboxProvisioning && NodeAllocationService.IsSandboxNode(node)))
+                {
+                    throw new InvalidOperationException("Assigned VPN node is unavailable. Explicit access migration is required.");
+                }
+            }
+            else if (node is null
                 || node.Status is NodeStatus.Maintenance or NodeStatus.Draining or NodeStatus.Disabled or NodeStatus.Archived
                 || !node.IsAvailableForNewUsers
                 || (!useSandboxProvisioning && NodeAllocationService.IsSandboxNode(node)))
@@ -129,7 +140,17 @@ public class SubscriptionService
                     : await _nodeAllocationService.SelectNodeAsync(tariff, scenario, cancellationToken);
             }
 
-            var access = subscription.CurrentAccess ?? await _db.AccessCredentials.FirstOrDefaultAsync(x => x.SubscriptionId == subscription.Id, cancellationToken);
+            if ((previousServerId != node.Id || existing is null)
+                && !await _vpnNodeCapacityService.TryReserveAsync(node.Id, cancellationToken))
+            {
+                throw new InvalidOperationException(NodeAllocationService.NoAvailableNodeError);
+            }
+
+            if (previousServerId != node.Id || existing is null)
+            {
+                reservedNodeId = node.Id;
+            }
+
             var provider = _vpnProviderFactory.Get(string.IsNullOrWhiteSpace(access?.ProviderType) ? "x3ui" : access.ProviderType);
             var request = new VpnProvisionRequest(subscription.Id, subscription.UserId, tariff.Id, node.Id, subscription.EndAt, maxDevices, protocol, trafficLimit, generateQrCode, scenarioKey, inboundSelectionRule, useSandboxProvisioning);
 
@@ -237,11 +258,6 @@ public class SubscriptionService
             StatusStateMachine.SetOrderStatus(order, OrderStatus.Completed, now);
             order.PaidAt = payment.PaidAt ?? now;
 
-            if (previousServerId != node.Id || existing is null)
-            {
-                node.UsedCapacity = Math.Min(node.Capacity, node.UsedCapacity + 1);
-            }
-
             _db.OutboxMessages.Add(new OutboxMessage
             {
                 Type = "NotificationRequested",
@@ -260,17 +276,20 @@ public class SubscriptionService
             });
 
             await _db.SaveChangesAsync(cancellationToken);
+            reservedNodeId = null;
             return Result<ActivationResult>.Success(new ActivationResult(subscription.Id, access.Id, scenarioKey, scenario?.CabinetText ?? string.Empty, scenario?.TelegramText ?? string.Empty));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            var safeError = provisioningFailureOverride ?? "VPN access provisioning was cancelled.";
+            var capacityCleanupError = await TryReleaseNodeCapacityAsync(reservedNodeId);
+            var safeError = AppendCapacityCleanupError(provisioningFailureOverride ?? "VPN access provisioning was cancelled.", capacityCleanupError);
             await RecordProvisioningFailureAsync(subscription, order, tariff, scenarioKey, safeError, "vpn_access.provisioning_cancelled", now);
             throw;
         }
         catch (Exception ex)
         {
-            var safeError = provisioningFailureOverride ?? SafeError(ex.Message);
+            var capacityCleanupError = await TryReleaseNodeCapacityAsync(reservedNodeId);
+            var safeError = AppendCapacityCleanupError(provisioningFailureOverride ?? SafeError(ex.Message), capacityCleanupError);
             await RecordProvisioningFailureAsync(subscription, order, tariff, scenarioKey, safeError, "vpn_access.provisioning_failed", now);
             return Result<ActivationResult>.Failure(safeError, isRetryable: true);
         }
@@ -505,6 +524,30 @@ public class SubscriptionService
     private bool IsInMemoryProvider()
         => _db is DbContext dbContext
             && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+
+    private async Task<string?> TryReleaseNodeCapacityAsync(Guid? nodeId)
+    {
+        if (!nodeId.HasValue)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await _vpnNodeCapacityService.ReleaseAsync(nodeId.Value, CancellationToken.None)
+                ? null
+                : "reserved VPN node capacity could not be released";
+        }
+        catch (Exception ex)
+        {
+            return SafeError(ex.Message);
+        }
+    }
+
+    private static string AppendCapacityCleanupError(string error, string? capacityCleanupError)
+        => capacityCleanupError is null
+            ? error
+            : $"{error} VPN node capacity cleanup failed ({capacityCleanupError}); manual reconciliation is required.";
 
     private async Task QueueLifecycleNotificationAsync(Subscription subscription, string templateKey, string eventType, DateTimeOffset now, CancellationToken cancellationToken)
     {

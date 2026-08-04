@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.476.0 - 2026-08-04
+
+Release entry: `2026-08-04-vpn-node-capacity-reservation`.
+
+### Исправлено
+
+- Последний свободный слот `VpnNode` резервируется атомарным условным update до обращения к VPN-провайдеру; два параллельных заказа больше не могут одновременно занять одну ёмкость, а `Math.Min` не скрывает oversubscription.
+- Ошибка или cancellation выдачи освобождает резерв ноды; ошибка компенсации возвращается как явное требование ручной reconciliation.
+- Продление существующего доступа на `Maintenance/Draining` ноде сохраняет назначение и capacity. Отсутствующая или недопустимая sandbox-привязка не заменяется скрыто и требует явной миграции.
+
+### Проверено
+
+- Backend full suite `942/942`; целевой VPN/payment/SQLite regression `100/100`, включая два независимых file-backed SQLite контекста на последнем слоте и fault/cancellation cleanup; API/TelegramBot Release builds без предупреждений.
+- Frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright console/responsive suite `12/12`; fresh local SQLite smoke latest release OK; secret scan `607` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `488/508` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.475.0 - 2026-08-04
 
 Release entry: `2026-08-04-vpn-access-provisioning-consistency`.

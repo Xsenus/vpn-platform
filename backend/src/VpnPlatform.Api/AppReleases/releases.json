@@ -11097,5 +11097,28 @@
         "text": "SQLite selection теперь использует поддерживаемую сортировку. Roadmap progress is 487/507 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-vpn-node-capacity-reservation",
+    "version": "0.476.0",
+    "releasedAt": "2026-08-04T23:20:00+07:00",
+    "title": "Ёмкость VPN-ноды защищена от параллельных заказов",
+    "summary": "Последний slot ноды резервируется атомарно, освобождается при незавершённой выдаче и сохраняется при продлении назначенного доступа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Два параллельных заказа больше не могут занять один последний slot VPN-ноды; проверка и увеличение счётчика выполняются одной условной операцией базы данных."
+      },
+      {
+        "type": "fixed",
+        "text": "Ошибка или отмена выдачи возвращает резерв, а продление на maintenance/draining ноде сохраняет текущее назначение вместо скрытой локальной миграции."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 488/508 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("939/939", readme, StringComparison.Ordinal);
+        Assert.Contains("942/942", readme, StringComparison.Ordinal);
         Assert.Contains("68/68", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-04-vpn-access-provisioning-consistency", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-04-vpn-node-capacity-reservation", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "939/939",
-                     "2026-08-04-vpn-access-provisioning-consistency",
-                     "0.475.0",
+                     "942/942",
+                     "2026-08-04-vpn-node-capacity-reservation",
+                     "0.476.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",
