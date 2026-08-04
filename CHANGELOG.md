@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.485.0 - 2026-08-05
+
+Release entry: `2026-08-05-payment-recheck-cancellation`.
+
+### Исправлено
+
+- Manual payment recheck больше не поглощает отмену запроса внутри provider status call.
+- `OperationCanceledException` с отмененным caller token пробрасывается вызывающему коду; business и `NotSupported` ошибки по-прежнему возвращаются как управляемый failure.
+- При отмененном recheck статус платежа, audit и outbox остаются неизменными.
+
+### Проверено
+
+- Backend full suite `984/984`; targeted audit/payment/concurrency suite `14/14`, cancellation regression `1/1`.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright desktop/mobile/all-screens responsive suite `12/12`; secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `497/517` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.484.0 - 2026-08-05
 
 Release entry: `2026-08-05-payment-checkout-account-selection`.

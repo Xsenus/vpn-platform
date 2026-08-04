@@ -577,6 +577,10 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             var apply = await ApplyPaymentStatusAsync(payment, statusResult.Status, statusResult.RawResponse, $"manual-recheck:{payment.Id}:{statusResult.Status}", cancellationToken);
             return apply.IsSuccess ? Result<PaymentStatusResult>.Success(statusResult) : Result<PaymentStatusResult>.Failure(apply.Error ?? "Status recheck failed.");
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (NotSupportedException ex)
         {
             return Result<PaymentStatusResult>.Failure(ex.Message);

@@ -99,19 +99,44 @@ public class AuditLogMvpTests
         Assert.DoesNotContain("raw-secret", audit.AfterJson, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Payment_Status_Recheck_Should_Propagate_Provider_Cancellation_Without_State_Changes()
+    {
+        await using var db = CreateDbContext();
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 5, 2, 30, 0, TimeSpan.Zero);
+        var clock = new FixedClock(now);
+        using var cancellation = new CancellationTokenSource();
+        var paymentProvider = new CancellingStatusPaymentProvider("pay-cancelled-recheck", cancellation);
+        var orchestrator = CreateOrchestrator(db, clock, paymentProvider);
+        var paymentId = await SeedPaymentGraphAsync(db, now, paymentProvider.PaymentId);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            orchestrator.RecheckPaymentAsync(paymentId, cancellation.Token));
+
+        db.ChangeTracker.Clear();
+        var payment = await db.Payments.SingleAsync(x => x.Id == paymentId);
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        Assert.Empty(await db.OutboxMessages.ToListAsync());
+    }
+
     private static AdminOperationsController CreateAdminController(ApplicationDbContext db, FixedClock clock)
     {
         var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
         return new AdminOperationsController(db, null!, null!, providerAccounts, secretProtector: new TestSecretProtector());
     }
 
-    private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, FixedClock clock, TestPaymentProvider paymentProvider)
+    private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, FixedClock clock, IPaymentProvider paymentProvider)
     {
         var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
         var paymentProviderFactory = new PaymentProviderFactory(new IPaymentProvider[] { paymentProvider });
         var nodeAllocation = new NodeAllocationService(db);
         var subscriptionService = new SubscriptionService(db, clock, nodeAllocation, new TestVpnProviderFactory(new TestVpnProvider()));
-        return new PaymentOrchestrator(db, paymentProviderFactory, new IPaymentWebhookVerifier[] { paymentProvider }, providerAccounts, subscriptionService, clock);
+        var webhookVerifiers = paymentProvider is IPaymentWebhookVerifier verifier
+            ? new[] { verifier }
+            : Array.Empty<IPaymentWebhookVerifier>();
+        return new PaymentOrchestrator(db, paymentProviderFactory, webhookVerifiers, providerAccounts, subscriptionService, clock);
     }
 
     private static async Task<Guid> SeedPaymentGraphAsync(ApplicationDbContext db, DateTimeOffset now, string providerPaymentId)
@@ -170,6 +195,24 @@ public class AuditLogMvpTests
         public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken) => Task.FromResult(new PaymentStatusResult(payment.ProviderPaymentId, PaymentStatus.Succeeded, "{}"));
         public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken) => Task.FromResult(new PaymentRefundResult($"refund-{Guid.NewGuid():N}", RefundStatus.Succeeded, "{}"));
         public Task<PaymentWebhookVerificationResult> VerifyAsync(PaymentProviderAccount account, PaymentWebhookParseResult parsed, string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken) => Task.FromResult(new PaymentWebhookVerificationResult(true, "test", null));
+    }
+
+    private sealed class CancellingStatusPaymentProvider(string paymentId, CancellationTokenSource cancellation) : IPaymentProvider
+    {
+        public PaymentProvider Provider => PaymentProvider.YooKassa;
+        public string PaymentId { get; } = paymentId;
+
+        public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
+        {
+            cancellation.Cancel();
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new InvalidOperationException("Cancellation was not propagated.");
+        }
+
+        public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private sealed class TestVpnProviderFactory : IVpnProviderFactory
