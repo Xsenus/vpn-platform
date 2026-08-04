@@ -161,6 +161,145 @@ public class TelegramBotPurchaseFlowTests
     }
 
     [Fact]
+    public async Task Same_Telegram_Update_In_Parallel_Should_Call_Invoice_Provider_Once()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"vpn-platform-telegram-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={dbPath};Cache=Shared;Default Timeout=10";
+        const long updateId = 397;
+        Guid orderId;
+
+        try
+        {
+            await using (var seedDb = CreateSqliteDbContext(connectionString))
+            {
+                await seedDb.Database.EnsureCreatedAsync();
+                var tariff = await SeedCatalogAndProvidersAsync(seedDb);
+                await EnableTelegramStarsAsync(seedDb);
+                var user = new User { Id = Guid.NewGuid(), Email = "telegram-concurrency@example.test", DisplayName = "Telegram concurrency", PasswordHash = "hash", ReferralCode = $"tg-{Guid.NewGuid():N}" };
+                seedDb.Users.Add(user);
+                seedDb.TelegramAccounts.Add(new TelegramAccount { TelegramUserId = 777777, UserId = user.Id, Username = "ivan", FirstName = "Ivan", LinkedAt = new FixedClock().UtcNow });
+                var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Telegram, PaymentProvider = PaymentProvider.TelegramStars, Status = OrderStatus.PendingPayment, Amount = 490m, Currency = "XTR", ExpiresAt = new FixedClock().UtcNow.AddMinutes(15) };
+                seedDb.Orders.Add(order);
+                await seedDb.SaveChangesAsync();
+                orderId = order.Id;
+            }
+
+            var invoiceProvider = new BlockingInvoiceProvider();
+            await using var firstDb = CreateSqliteDbContext(connectionString);
+            await using var secondDb = CreateSqliteDbContext(connectionString);
+            var firstBot = new TelegramBotService(firstDb, new FixedClock(), invoiceProvider: invoiceProvider);
+            var secondBot = new TelegramBotService(secondDb, new FixedClock(), invoiceProvider: invoiceProvider);
+            var rawUpdate = CallbackUpdate(updateId, $"pay:{orderId}:TelegramStars");
+
+            var firstTask = firstBot.ProcessUpdateAsync(rawUpdate, new Dictionary<string, string>(), null, CancellationToken.None);
+            await invoiceProvider.FirstCallStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            await using (var inspectDb = CreateSqliteDbContext(connectionString))
+            {
+                var reservation = await inspectDb.TelegramBotUpdates.AsNoTracking().SingleAsync(x => x.UpdateId == updateId);
+                Assert.False(reservation.IsProcessed);
+            }
+
+            var secondTask = secondBot.ProcessUpdateAsync(rawUpdate, new Dictionary<string, string>(), null, CancellationToken.None);
+            await Task.WhenAny(invoiceProvider.SecondCallStarted.Task, Task.Delay(500));
+            var callsBeforeRelease = invoiceProvider.CreateCalls;
+            invoiceProvider.Release();
+
+            var error = await Record.ExceptionAsync(async () => await Task.WhenAll(firstTask, secondTask));
+
+            Assert.Null(error);
+            Assert.Equal(1, callsBeforeRelease);
+            Assert.Equal(1, invoiceProvider.CreateCalls);
+            Assert.Equal(1, await firstDb.TelegramBotUpdates.AsNoTracking().CountAsync(x => x.UpdateId == updateId && x.IsProcessed));
+            Assert.Equal(1, await firstDb.Payments.AsNoTracking().CountAsync(x => x.OrderId == orderId && x.Provider == PaymentProvider.TelegramStars));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(dbPath))
+            {
+                File.Delete(dbPath);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Fresh_Unprocessed_Telegram_Update_Should_Return_Retryable_Without_Routing()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var (order, provider) = await SeedTelegramInvoiceUpdateAsync(db, updateId: 398, errorText: string.Empty, age: TimeSpan.Zero);
+        var bot = new TelegramBotService(db, new FixedClock(), invoiceProvider: provider);
+
+        var result = await bot.ProcessUpdateAsync(CallbackUpdate(398, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.True(result.IsRetryable);
+        Assert.Equal(0, provider.CreateCalls);
+        Assert.Empty(await db.Payments.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
+    public async Task Failed_Telegram_Update_Should_Be_Claimed_And_Retried_Immediately()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var (order, provider) = await SeedTelegramInvoiceUpdateAsync(db, updateId: 399, errorText: "temporary failure", age: TimeSpan.Zero);
+        var bot = new TelegramBotService(db, new FixedClock(), invoiceProvider: provider);
+
+        var result = await bot.ProcessUpdateAsync(CallbackUpdate(399, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(1, provider.CreateCalls);
+        var update = await db.TelegramBotUpdates.AsNoTracking().SingleAsync(x => x.UpdateId == 399);
+        Assert.True(update.IsProcessed);
+        Assert.Empty(update.ErrorText);
+    }
+
+    [Fact]
+    public async Task Stale_Telegram_Update_Lease_Should_Be_Claimed_And_Processed()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var (order, provider) = await SeedTelegramInvoiceUpdateAsync(db, updateId: 400, errorText: string.Empty, age: TimeSpan.FromMinutes(11));
+        var bot = new TelegramBotService(db, new FixedClock(), invoiceProvider: provider);
+
+        var result = await bot.ProcessUpdateAsync(CallbackUpdate(400, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(1, provider.CreateCalls);
+        Assert.True((await db.TelegramBotUpdates.AsNoTracking().SingleAsync(x => x.UpdateId == 400)).IsProcessed);
+    }
+
+    [Fact]
+    public async Task Telegram_Update_Cancellation_Should_Persist_Retry_Marker_And_Propagate()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var (order, _) = await SeedTelegramInvoiceUpdateAsync(db, updateId: 401, errorText: "previous failure", age: TimeSpan.Zero);
+        using var cancellation = new CancellationTokenSource();
+        var bot = new TelegramBotService(db, new FixedClock(), invoiceProvider: new CancellingInvoiceProvider(cancellation));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => bot.ProcessUpdateAsync(
+            CallbackUpdate(401, $"pay:{order.Id}:TelegramStars"),
+            new Dictionary<string, string>(),
+            null,
+            cancellation.Token));
+
+        var update = await db.TelegramBotUpdates.AsNoTracking().SingleAsync(x => x.UpdateId == 401);
+        Assert.False(update.IsProcessed);
+        Assert.Contains("cancel", update.ErrorText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Telegram_Stars_PreCheckout_Should_Reject_Wrong_Currency()
     {
         await using var db = CreateDbContext();
@@ -622,6 +761,44 @@ public class TelegramBotPurchaseFlowTests
         return new ApplicationDbContext(options);
     }
 
+    private static ApplicationDbContext CreateSqliteDbContext(string connectionString)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private static async Task<(Order Order, RecordingInvoiceProvider Provider)> SeedTelegramInvoiceUpdateAsync(
+        ApplicationDbContext db,
+        long updateId,
+        string errorText,
+        TimeSpan age)
+    {
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var now = new FixedClock().UtcNow;
+        var user = new User { Id = Guid.NewGuid(), Email = $"telegram-lease-{updateId}@example.test", DisplayName = "Telegram lease", PasswordHash = "hash", ReferralCode = $"tg-{Guid.NewGuid():N}" };
+        db.Users.Add(user);
+        db.TelegramAccounts.Add(new TelegramAccount { TelegramUserId = 777777, UserId = user.Id, Username = "ivan", FirstName = "Ivan", LinkedAt = now });
+        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Telegram, PaymentProvider = PaymentProvider.TelegramStars, Status = OrderStatus.PendingPayment, Amount = 490m, Currency = "XTR", ExpiresAt = now.AddMinutes(15) };
+        db.Orders.Add(order);
+        db.TelegramBotUpdates.Add(new TelegramBotUpdate
+        {
+            UpdateId = updateId,
+            TelegramUserId = 777777,
+            UpdateType = "callback_query",
+            RawPayload = "{}",
+            PayloadSha256 = "existing",
+            IsProcessed = false,
+            ErrorText = errorText,
+            CreatedAt = now.Subtract(age),
+            UpdatedAt = now.Subtract(age)
+        });
+        await db.SaveChangesAsync();
+        return (order, new RecordingInvoiceProvider());
+    }
+
     private static async Task<Tariff> SeedCatalogAndProvidersAsync(ApplicationDbContext db)
     {
         var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Monthly", Slug = "monthly", Description = "VPN monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true };
@@ -763,6 +940,59 @@ public class TelegramBotPurchaseFlowTests
         public string Protect(string plaintext) => plaintext;
         public string Unprotect(string protectedValue) => protectedValue;
         public string Mask(string? value, int visibleTail = 4) => string.IsNullOrEmpty(value) ? string.Empty : new string('*', Math.Max(0, value.Length - visibleTail)) + value[^Math.Min(visibleTail, value.Length)..];
+    }
+
+    private sealed class RecordingInvoiceProvider : ITelegramInvoiceProvider
+    {
+        public int CreateCalls { get; private set; }
+
+        public Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
+        {
+            CreateCalls++;
+            return Task.FromResult(new TelegramInvoiceResult(request.Payload, "{}"));
+        }
+
+        public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task SendMessageAsync(long chatId, string text, string? replyMarkupJson, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class BlockingInvoiceProvider : ITelegramInvoiceProvider
+    {
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _createCalls;
+        public TaskCompletionSource FirstCallStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource SecondCallStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int CreateCalls => Volatile.Read(ref _createCalls);
+
+        public async Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
+        {
+            var call = Interlocked.Increment(ref _createCalls);
+            FirstCallStarted.TrySetResult();
+            if (call > 1)
+            {
+                SecondCallStarted.TrySetResult();
+            }
+
+            await _release.Task.WaitAsync(cancellationToken);
+            return new TelegramInvoiceResult(request.Payload, "{}");
+        }
+
+        public void Release() => _release.TrySetResult();
+
+        public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task SendMessageAsync(long chatId, string text, string? replyMarkupJson, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class CancellingInvoiceProvider(CancellationTokenSource cancellation) : ITelegramInvoiceProvider
+    {
+        public Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
+        {
+            cancellation.Cancel();
+            throw new OperationCanceledException(cancellation.Token);
+        }
+
+        public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task SendMessageAsync(long chatId, string text, string? replyMarkupJson, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakePaymentProvider : IPaymentProvider

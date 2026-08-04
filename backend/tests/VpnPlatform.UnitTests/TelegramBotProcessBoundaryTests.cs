@@ -38,6 +38,16 @@ public class TelegramBotProcessBoundaryTests
         Assert.Contains("webhook", readme, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Telegram_Long_Polling_Should_Not_Advance_Offset_For_Retryable_Update()
+    {
+        var root = FindRepositoryRoot();
+        var program = File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.TelegramBot", "TelegramLongPollingService.cs"));
+
+        Assert.Contains("result.IsRetryable", program, StringComparison.Ordinal);
+        Assert.Contains("Telegram update requires retry", program, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

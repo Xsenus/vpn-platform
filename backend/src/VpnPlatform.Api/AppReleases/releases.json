@@ -10890,5 +10890,28 @@
         "text": "Cancellation пробрасывается после фиксации retry-состояния, а renewal по тому же LastPaymentId не продлевается дважды. Roadmap progress is 478/498 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-telegram-update-recovery",
+    "version": "0.467.0",
+    "releasedAt": "2026-08-04T18:34:00+07:00",
+    "title": "Telegram updates защищены от двойной обработки",
+    "summary": "Update резервируется до side effects, concurrent delivery дедуплицируется, а failed и stale processing безопасно повторяется.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Одинаковый update_id вызывает invoice, provisioning и внутренний маршрут только один раз."
+      },
+      {
+        "type": "fixed",
+        "text": "Fresh lease возвращает 503 без side effects, а failed и stale update захватывается повторно."
+      },
+      {
+        "type": "important",
+        "text": "Cancellation сохраняет retry marker, long-polling не теряет offset. Roadmap progress is 479/499 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

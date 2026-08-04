@@ -45,7 +45,9 @@ public class ChannelWebhooksController : ControllerBase
         var result = await _telegramBotService.ProcessUpdateAsync(rawBody, headers, settings.SecretToken, cancellationToken);
         if (!result.IsSuccess || result.Value is null)
         {
-            return BadRequest(new { error = result.Error });
+            return result.IsRetryable
+                ? StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = result.Error })
+                : BadRequest(new { error = result.Error });
         }
 
         if (!string.IsNullOrWhiteSpace(result.Value.PreCheckoutQueryId) && result.Value.PreCheckoutOk.HasValue)

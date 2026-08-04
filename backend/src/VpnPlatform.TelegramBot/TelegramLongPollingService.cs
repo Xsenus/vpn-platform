@@ -63,6 +63,10 @@ public class TelegramLongPollingService : BackgroundService
                             await _client.SendMessageAsync(processed.ChatId.Value, processed.ResponseText, processed.ReplyMarkupJson, stoppingToken);
                         }
                     }
+                    else if (result.IsRetryable)
+                    {
+                        throw new InvalidOperationException($"Telegram update requires retry: {result.Error}");
+                    }
 
                     if (updateId.HasValue)
                     {

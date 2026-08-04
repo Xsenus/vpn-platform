@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.467.0 - 2026-08-04
+
+Release entry: `2026-08-04-telegram-update-recovery`.
+
+### Fixed
+- Telegram `update_id` резервируется в БД до маршрутизации: одинаковые concurrent delivery больше не вызывают invoice/provisioning или другие side effects дважды.
+- Fresh незавершенный update защищен десятиминутным lease и возвращает retryable 503; failed и stale updates захватываются повторно условным DB update.
+- Caller cancellation независимо сохраняет unprocessed retry marker с redacted error и пробрасывается вызывающему коду.
+- Long-polling не сдвигает offset при retryable update result, поэтому временно занятый update не теряется.
+
+### Notes
+- Validation: backend full suite `850/850`, targeted Telegram suite `69/69`, API and TelegramBot Release builds `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `564` files, `0` findings; encoding guard and artifact cleanup: OK.
+- Roadmap progress is `479/499` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.466.0 - 2026-08-04
 
 Release entry: `2026-08-04-subscription-activation-compensation`.

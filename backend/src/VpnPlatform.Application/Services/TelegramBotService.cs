@@ -15,6 +15,7 @@ namespace VpnPlatform.Application.Services;
 
 public class TelegramBotService
 {
+    private static readonly TimeSpan TelegramUpdateLease = TimeSpan.FromMinutes(10);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -173,41 +174,26 @@ public class TelegramBotService
         var parsed = ParseUpdate(root);
         var sanitizedRawBody = await RedactSensitiveTelegramRawBodyAsync(parsed.TelegramUserId, rawBody, cancellationToken);
         var now = _clock.UtcNow;
-        var update = await _db.TelegramBotUpdates.FirstOrDefaultAsync(x => x.UpdateId == updateId, cancellationToken);
-        if (update?.IsProcessed == true)
+        await using var updateGate = await PaymentProcessingGate.AcquireTelegramUpdateAsync(updateId, cancellationToken);
+        var claim = await ClaimTelegramUpdateAsync(updateId, parsed, sanitizedRawBody, rawBody, now, cancellationToken);
+        if (claim.IsProcessed)
         {
             return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(false, string.Empty, null, null));
         }
 
-        if (update is null)
+        if (claim.IsInProgress || claim.Update is null)
         {
-            update = new TelegramBotUpdate
-            {
-                UpdateId = updateId,
-                TelegramUserId = parsed.TelegramUserId,
-                UpdateType = parsed.UpdateType,
-                RawPayload = sanitizedRawBody,
-                PayloadSha256 = HashRawPayload(rawBody),
-                IsProcessed = false
-            };
-            _db.TelegramBotUpdates.Add(update);
-        }
-        else
-        {
-            update.TelegramUserId = parsed.TelegramUserId;
-            update.UpdateType = parsed.UpdateType;
-            update.RawPayload = sanitizedRawBody;
-            update.PayloadSha256 = HashRawPayload(rawBody);
-            update.ErrorText = string.Empty;
-            update.UpdatedAt = now;
+            return Result<TelegramBotProcessResult>.Failure("Telegram update processing is already in progress; retry shortly.", isRetryable: true);
         }
 
+        var update = claim.Update;
         try
         {
             if (!parsed.TelegramUserId.HasValue)
             {
                 update.IsProcessed = true;
                 update.ProcessedAt = now;
+                update.UpdatedAt = NextTelegramUpdateVersion(update.UpdatedAt, now);
                 await _db.SaveChangesAsync(cancellationToken);
                 return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(true, HelpText(), parsed.ChatId, LinkedMenuReplyMarkupJson()));
             }
@@ -218,6 +204,8 @@ public class TelegramBotService
 
             update.IsProcessed = true;
             update.ProcessedAt = now;
+            update.ErrorText = string.Empty;
+            update.UpdatedAt = NextTelegramUpdateVersion(update.UpdatedAt, now);
             await _db.SaveChangesAsync(cancellationToken);
             return Result<TelegramBotProcessResult>.Success(new TelegramBotProcessResult(
                 true,
@@ -228,13 +216,131 @@ public class TelegramBotService
                 route.PreCheckoutOk,
                 route.PreCheckoutError));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await MarkTelegramUpdateFailedAsync(update, "Telegram update processing was cancelled.");
+            throw;
+        }
         catch (Exception ex)
         {
-            update.ErrorText = ex.Message;
-            await _db.SaveChangesAsync(cancellationToken);
+            await MarkTelegramUpdateFailedAsync(update, ex.Message);
             throw;
         }
     }
+
+    private async Task<TelegramUpdateClaim> ClaimTelegramUpdateAsync(
+        long updateId,
+        ParsedTelegramUpdate parsed,
+        string sanitizedRawBody,
+        string rawBody,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var payloadSha256 = HashRawPayload(rawBody);
+        var update = await _db.TelegramBotUpdates.FirstOrDefaultAsync(x => x.UpdateId == updateId, cancellationToken);
+        if (update?.IsProcessed == true)
+        {
+            return TelegramUpdateClaim.Processed;
+        }
+
+        if (update is null)
+        {
+            update = new TelegramBotUpdate
+            {
+                UpdateId = updateId,
+                TelegramUserId = parsed.TelegramUserId,
+                UpdateType = parsed.UpdateType,
+                RawPayload = sanitizedRawBody,
+                PayloadSha256 = payloadSha256,
+                IsProcessed = false,
+                ErrorText = string.Empty,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            _db.TelegramBotUpdates.Add(update);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+                return TelegramUpdateClaim.Claimed(update);
+            }
+            catch (DbUpdateException)
+            {
+                _db.TelegramBotUpdates.Remove(update);
+                var concurrent = await _db.TelegramBotUpdates.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.UpdateId == updateId, cancellationToken);
+                if (concurrent is null)
+                {
+                    throw;
+                }
+
+                return concurrent.IsProcessed ? TelegramUpdateClaim.Processed : TelegramUpdateClaim.InProgress;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(update.ErrorText) && update.UpdatedAt > now.Subtract(TelegramUpdateLease))
+        {
+            return TelegramUpdateClaim.InProgress;
+        }
+
+        var expectedVersion = update.UpdatedAt;
+        var claimVersion = NextTelegramUpdateVersion(expectedVersion, now);
+        if (_db is DbContext dbContext
+            && !string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal))
+        {
+            var claimed = await _db.TelegramBotUpdates
+                .Where(x => x.Id == update.Id && !x.IsProcessed && x.UpdatedAt == expectedVersion)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.TelegramUserId, parsed.TelegramUserId)
+                    .SetProperty(x => x.UpdateType, parsed.UpdateType)
+                    .SetProperty(x => x.RawPayload, sanitizedRawBody)
+                    .SetProperty(x => x.PayloadSha256, payloadSha256)
+                    .SetProperty(x => x.ProcessedAt, (DateTimeOffset?)null)
+                    .SetProperty(x => x.ErrorText, string.Empty)
+                    .SetProperty(x => x.UpdatedAt, claimVersion), cancellationToken);
+            if (claimed == 0)
+            {
+                return TelegramUpdateClaim.InProgress;
+            }
+        }
+        else
+        {
+            ApplyTelegramUpdateClaim(update, parsed, sanitizedRawBody, payloadSha256, claimVersion);
+            await _db.SaveChangesAsync(cancellationToken);
+            return TelegramUpdateClaim.Claimed(update);
+        }
+
+        ApplyTelegramUpdateClaim(update, parsed, sanitizedRawBody, payloadSha256, claimVersion);
+        return TelegramUpdateClaim.Claimed(update);
+    }
+
+    private static void ApplyTelegramUpdateClaim(
+        TelegramBotUpdate update,
+        ParsedTelegramUpdate parsed,
+        string sanitizedRawBody,
+        string payloadSha256,
+        DateTimeOffset claimVersion)
+    {
+        update.TelegramUserId = parsed.TelegramUserId;
+        update.UpdateType = parsed.UpdateType;
+        update.RawPayload = sanitizedRawBody;
+        update.PayloadSha256 = payloadSha256;
+        update.IsProcessed = false;
+        update.ProcessedAt = null;
+        update.ErrorText = string.Empty;
+        update.UpdatedAt = claimVersion;
+    }
+
+    private async Task MarkTelegramUpdateFailedAsync(TelegramBotUpdate update, string error)
+    {
+        update.IsProcessed = false;
+        update.ProcessedAt = null;
+        update.ErrorText = SensitiveDataRedactor.Redact(error, maxLength: 500);
+        update.UpdatedAt = NextTelegramUpdateVersion(update.UpdatedAt, _clock.UtcNow);
+        await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private static DateTimeOffset NextTelegramUpdateVersion(DateTimeOffset current, DateTimeOffset now)
+        => now > current ? now : current.AddTicks(1);
 
     public string MainMenuText() => "Главное меню VPN Platform:\n• Купить VPN — выбрать тариф и оплату\n• Мои подписки — срок и статус\n• Мои ключи — VPN URI и QR payload\n• Продлить доступ\n• Инструкция\n• Поддержка\n• Профиль\n• VPN на мой VPS — safe dry-run/precheck";
 
@@ -2029,6 +2135,13 @@ public class TelegramBotService
         string? PreCheckoutQueryId = null,
         bool? PreCheckoutOk = null,
         string? PreCheckoutError = null);
+
+    private sealed record TelegramUpdateClaim(TelegramBotUpdate? Update, bool IsProcessed, bool IsInProgress)
+    {
+        public static TelegramUpdateClaim Processed { get; } = new(null, true, false);
+        public static TelegramUpdateClaim InProgress { get; } = new(null, false, true);
+        public static TelegramUpdateClaim Claimed(TelegramBotUpdate update) => new(update, false, false);
+    }
 
     private sealed record ParsedTelegramUpdate(
         long UpdateId,

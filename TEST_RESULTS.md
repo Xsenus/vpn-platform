@@ -2,6 +2,31 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Telegram update recovery
+
+Scope:
+- SQLite concurrency запускает один и тот же Telegram `update_id` из двух DbContext, пока первый delivery заблокирован внутри invoice provider.
+- Проверены fresh, failed и stale update lease, caller cancellation, webhook HTTP mapping и long-polling offset boundary.
+
+Result:
+- Update reservation сохраняется до `RouteAsync`; process-local gate и unique DB row исключают двойной invoice/provider call.
+- Fresh lease возвращает retryable result без side effects, failed update повторяется сразу, stale lease захватывается условным DB update.
+- Cancellation оставляет durable unprocessed marker с redacted error и пробрасывается; webhook возвращает 503, long-polling сохраняет offset для повтора.
+- Roadmap progress: `479/499` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-telegram-update-recovery`, version `0.467.0`.
+
+Validation:
+- Backend full suite: OK, `850/850`; targeted Telegram suite: OK, `69/69`.
+- API and TelegramBot Release builds with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-telegram-update-recovery`.
+- Secret scan: OK, `564` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: subscription activation compensation
 
 Scope:

@@ -11,6 +11,9 @@ public static class PaymentProcessingGate
     public static async ValueTask<IAsyncDisposable> AcquireWebhookAsync(string provider, string externalEventId, string providerPaymentId, CancellationToken cancellationToken)
         => await AcquireAsync($"webhook:{provider}:{externalEventId}:{providerPaymentId}", cancellationToken);
 
+    public static async ValueTask<IAsyncDisposable> AcquireTelegramUpdateAsync(long updateId, CancellationToken cancellationToken)
+        => await AcquireAsync($"telegram-update:{updateId}", cancellationToken);
+
     private static async ValueTask<IAsyncDisposable> AcquireAsync(string key, CancellationToken cancellationToken)
     {
         GateEntry entry;

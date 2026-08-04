@@ -82,6 +82,38 @@ public class ChannelWebhooksControllerTests
         Assert.Equal(0, await db.TelegramBotUpdates.CountAsync());
     }
 
+    [Fact]
+    public async Task Telegram_Webhook_Should_Return_ServiceUnavailable_For_Fresh_Update_Lease()
+    {
+        await using var db = CreateDbContext();
+        db.SiteContentBlocks.AddRange(
+            Setting(TelegramBotRuntimeSettingsService.EnabledKey, "true"),
+            Setting(TelegramBotRuntimeSettingsService.ModeKey, "Webhook"),
+            Setting(TelegramBotRuntimeSettingsService.SecretTokenProtectedKey, "protected:webhook-secret"),
+            Setting(TelegramBotRuntimeSettingsService.BotTokenProtectedKey, "protected:bot-token"));
+        db.TelegramBotUpdates.Add(new TelegramBotUpdate
+        {
+            UpdateId = 9003,
+            TelegramUserId = 777001,
+            UpdateType = "message",
+            RawPayload = "{}",
+            PayloadSha256 = "reserved",
+            IsProcessed = false,
+            ErrorText = string.Empty,
+            CreatedAt = new FixedClock().UtcNow,
+            UpdatedAt = new FixedClock().UtcNow
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, new RecordingTelegramProvider(), Update(9003, "/start"));
+        controller.Request.Headers["X-Telegram-Bot-Api-Secret-Token"] = "webhook-secret";
+
+        var result = await controller.Telegram(CancellationToken.None);
+
+        var unavailable = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+        Assert.Contains("in progress", JsonSerializer.Serialize(unavailable.Value), StringComparison.OrdinalIgnoreCase);
+    }
+
     private static ChannelWebhooksController CreateController(ApplicationDbContext db, RecordingTelegramProvider telegramProvider, string rawBody)
     {
         var configuration = new ConfigurationBuilder().Build();
