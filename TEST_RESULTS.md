@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: payment provider configuration-only check
+
+Scope:
+- Проверено, что локальная валидация payment provider account не представляется как live-проверка внешнего кабинета.
+
+Results:
+- Roadmap progress: `498/518` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-payment-provider-configuration-check`, version `0.486.0`.
+- Backend full suite: OK, `984/984`; targeted payment provider/public API suite: OK, `20/20`.
+- Configuration-only result явно содержит `checkScope=ConfigurationOnly`, `configurationStatus=Ready|NeedsConfiguration` и `healthStatus=Unknown`.
+- Старые синтетические `Healthy/LastHealthCheckAt` очищаются; публичный API не выдает локальную готовность за реальное здоровье кабинета.
+- Админка различает готовность настроек и live health; desktop/mobile browser flow показывает, что внешний кабинет провайдера не запрашивался.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- Frontend tests: OK, `68/68`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `12/12`.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `610` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment-provider/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: payment recheck cancellation propagation
 
 Scope:

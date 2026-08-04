@@ -191,6 +191,8 @@ public sealed record PaymentProviderAccountCheckResultDto(
     PaymentProvider Provider,
     PaymentProviderMode Mode,
     bool IsReady,
+    string CheckScope,
+    string ConfigurationStatus,
     string HealthStatus,
     string Message,
     IReadOnlyCollection<string> Details,

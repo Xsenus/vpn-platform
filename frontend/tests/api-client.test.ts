@@ -756,7 +756,7 @@ test('ApiClient admin payment providers can create, update and toggle accounts',
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     const body = { id: 'account-1', provider: 'Stripe', mode: 'Sandbox', name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/stripe', hasSecretKey: true, hasWebhookSecret: true, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }
-    return new Response(JSON.stringify(String(url).endsWith('/check') ? { accountId: 'account-1', provider: 'Stripe', mode: 'Sandbox', isReady: true, healthStatus: 'Healthy', message: 'Payment provider account check passed.', details: ['Checkout configuration is ready.'], checkedAt: new Date().toISOString(), account: body } : body), {
+    return new Response(JSON.stringify(String(url).endsWith('/check') ? { accountId: 'account-1', provider: 'Stripe', mode: 'Sandbox', isReady: true, checkScope: 'ConfigurationOnly', configurationStatus: 'Ready', healthStatus: 'Unknown', message: 'Configuration is ready. External provider account was not requested.', details: ['Checkout configuration is ready.'], checkedAt: new Date().toISOString(), account: body } : body), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1355,6 +1355,8 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /checkAdminPaymentProviderAccount/)
   assert.match(adminSource, /providerCheckResultClass/)
   assert.match(adminSource, /provider-check-result/)
+  assert.match(adminSource, /Проверить настройки/)
+  assert.match(adminSource, /configurationStatus/)
   assert.match(adminSource, /role="status"/)
   assert.match(adminSource, /URL webhook/)
   assert.match(adminSource, /provider-extra-settings/)

@@ -319,9 +319,13 @@ public class PaymentProviderAccountService
         var distinctDetails = details.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var hasBlockingIssue = blockingIssues.Distinct(StringComparer.OrdinalIgnoreCase).Any();
 
-        account.LastHealthCheckAt = _clock.UtcNow;
-        account.HealthStatus = hasBlockingIssue ? HealthStatus.Unhealthy : HealthStatus.Healthy;
-        account.UpdatedAt = _clock.UtcNow;
+        var checkedAt = _clock.UtcNow;
+        if (account.HealthStatus != HealthStatus.Unknown || account.LastHealthCheckAt.HasValue)
+        {
+            account.HealthStatus = HealthStatus.Unknown;
+            account.LastHealthCheckAt = null;
+            account.UpdatedAt = checkedAt;
+        }
         await _db.SaveChangesAsync(cancellationToken);
 
         var dto = MapToDto(account);
@@ -330,10 +334,14 @@ public class PaymentProviderAccountService
             account.Provider,
             account.Mode,
             !hasBlockingIssue,
-            account.HealthStatus.ToString(),
-            hasBlockingIssue ? "Проверка подключения нашла проблемы." : "Проверка подключения прошла.",
+            "ConfigurationOnly",
+            hasBlockingIssue ? "NeedsConfiguration" : "Ready",
+            HealthStatus.Unknown.ToString(),
+            hasBlockingIssue
+                ? "Проверка конфигурации нашла проблемы. Внешний кабинет провайдера не запрашивался."
+                : "Конфигурация готова. Внешний кабинет провайдера не запрашивался.",
             distinctDetails,
-            account.LastHealthCheckAt.Value,
+            checkedAt,
             dto));
     }
 
@@ -376,7 +384,7 @@ public class PaymentProviderAccountService
             account.UseWebhookIpAllowList,
             account.AllowedWebhookIpRangesCsv,
             MaskExtraSettings(account.ExtraSettingsJson),
-            account.HealthStatus.ToString(),
+            HealthStatus.Unknown.ToString(),
             PaymentProviderConfigurationRules.IsCheckoutConfigured(account),
             PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account),
             PaymentProviderConfigurationRules.GetCapabilitiesJson(account.Provider),

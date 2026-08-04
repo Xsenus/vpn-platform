@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-05-payment-recheck-cancellation";
-    private const string CurrentVersion = "0.485.0";
+    private const string CurrentReleaseId = "2026-08-05-payment-provider-configuration-check";
+    private const string CurrentVersion = "0.486.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

@@ -351,6 +351,8 @@ export type PaymentProviderAccountCheckResultDto = {
   provider: PaymentProvider
   mode: PaymentProviderMode
   isReady: boolean
+  checkScope: 'ConfigurationOnly'
+  configurationStatus: 'Ready' | 'NeedsConfiguration'
   healthStatus: string
   message: string
   details: string[]

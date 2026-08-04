@@ -11327,5 +11327,28 @@
         "text": "Roadmap progress is 497/517 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-payment-provider-configuration-check",
+    "version": "0.486.0",
+    "releasedAt": "2026-08-05T02:50:00+07:00",
+    "title": "Проверка настроек не выдается за live-подключение",
+    "summary": "Готовность конфигурации платежного аккаунта отделена от реального health внешнего кабинета провайдера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Configuration-only проверка возвращает отдельный статус Ready или NeedsConfiguration, а реальный provider health остается Unknown."
+      },
+      {
+        "type": "fixed",
+        "text": "Админка явно сообщает, что проверены настройки и внешний кабинет провайдера не запрашивался; старые синтетические health-маркеры очищаются."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 498/518 closed, readiness 96.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

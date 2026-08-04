@@ -296,15 +296,17 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/payment-providers/accounts/provider-yookassa/check') {
-      const account = paymentProviderAccount({ healthStatus: 'Healthy', updatedAt: '2026-06-13T07:05:00Z' })
+      const account = paymentProviderAccount({ healthStatus: 'Unknown', updatedAt: '2026-06-13T07:05:00Z' })
       providers[0] = account
       await fulfillJson(route, {
         accountId: account.id,
         provider: account.provider,
         mode: account.mode,
         isReady: true,
-        healthStatus: 'Healthy',
-        message: 'Sandbox подключение готово',
+        checkScope: 'ConfigurationOnly',
+        configurationStatus: 'Ready',
+        healthStatus: 'Unknown',
+        message: 'Конфигурация готова. Внешний кабинет провайдера не запрашивался.',
         details: ['Shop ID заполнен', 'Секреты заданы', 'Webhook URL задан'],
         checkedAt: '2026-06-13T07:05:00Z',
         account
@@ -518,8 +520,9 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.getByText('YooKassa sandbox')).toBeVisible()
-  await page.locator('#payments').getByRole('button', { name: 'Проверить' }).click()
-  await expect(page.getByText('Sandbox подключение готово')).toBeVisible()
+  await page.locator('#payments').getByRole('button', { name: 'Проверить настройки' }).click()
+  await expect(page.getByText('Настройки готовы', { exact: true })).toBeVisible()
+  await expect(page.getByText('Конфигурация готова. Внешний кабинет провайдера не запрашивался.')).toBeVisible()
   expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-yookassa/check')).toBeTruthy()
 
   await openAdminSection(page, 'Тарифы', 'tariffs')

@@ -60,5 +60,5 @@ public class PaymentsController : ControllerBase
             account.Provider.ToString(),
             string.IsNullOrWhiteSpace(account.PublicName) ? account.Provider.ToString() : account.PublicName,
             account.Mode.ToString(),
-            account.HealthStatus.ToString());
+            HealthStatus.Unknown.ToString());
 }

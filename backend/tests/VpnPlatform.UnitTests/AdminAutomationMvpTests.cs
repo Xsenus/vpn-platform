@@ -366,12 +366,16 @@ public class AdminAutomationMvpTests
     }
 
     [Fact]
-    public async Task Provider_Account_Check_Should_Update_Health_And_Return_Details()
+    public async Task Provider_Account_Check_Should_Validate_Configuration_Without_Claiming_Live_Health()
     {
         await using var db = CreateDbContext();
         var account = PaymentAccount(PaymentProvider.YooKassa, PaymentProviderMode.Sandbox, isEnabled: true, shopId: "shop-ok", secret: "protected-secret");
+        account.HealthStatus = HealthStatus.Healthy;
+        account.LastHealthCheckAt = DateTimeOffset.UtcNow.AddHours(-1);
         db.PaymentProviderAccounts.Add(account);
         await db.SaveChangesAsync();
+
+        Assert.Equal("Unknown", PaymentProviderAccountService.MapToDto(account).HealthStatus);
 
         var controller = CreateOperationsController(db);
         var result = await controller.CheckPaymentProviderAccount(account.Id, CancellationToken.None);
@@ -379,15 +383,17 @@ public class AdminAutomationMvpTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
         Assert.True(check.IsReady, string.Join(Environment.NewLine, check.Details));
-        Assert.Equal("Healthy", check.HealthStatus);
-        Assert.Equal("Проверка подключения прошла.", check.Message);
+        Assert.Equal("ConfigurationOnly", check.CheckScope);
+        Assert.Equal("Ready", check.ConfigurationStatus);
+        Assert.Equal("Unknown", check.HealthStatus);
+        Assert.Equal("Конфигурация готова. Внешний кабинет провайдера не запрашивался.", check.Message);
         Assert.Contains(check.Details, x => x.Contains("Готово", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(check.Details, x => x.Contains("YooKassa", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("https://api.example.test/webhooks/payments", check.Account.WebhookUrl);
 
         var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
-        Assert.Equal(HealthStatus.Healthy, saved.HealthStatus);
-        Assert.NotNull(saved.LastHealthCheckAt);
+        Assert.Equal(HealthStatus.Unknown, saved.HealthStatus);
+        Assert.Null(saved.LastHealthCheckAt);
     }
 
     [Fact]
@@ -418,7 +424,10 @@ public class AdminAutomationMvpTests
             var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
 
             Assert.True(check.IsReady, $"{account.Provider}: {string.Join(Environment.NewLine, check.Details)}");
-            Assert.Equal("Healthy", check.HealthStatus);
+            Assert.Equal("ConfigurationOnly", check.CheckScope);
+            Assert.Equal("Ready", check.ConfigurationStatus);
+            Assert.Equal("Unknown", check.HealthStatus);
+            Assert.Contains("Внешний кабинет провайдера не запрашивался", check.Message, StringComparison.Ordinal);
             Assert.Contains(check.Details, x => x.Contains("Готово", StringComparison.OrdinalIgnoreCase));
             var providerLabel = account.Provider == PaymentProvider.TBankAcquiring ? "TBank" : account.Provider.ToString();
             Assert.Contains(check.Details, x => x.Contains(providerLabel, StringComparison.OrdinalIgnoreCase));
@@ -441,13 +450,16 @@ public class AdminAutomationMvpTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
         Assert.False(check.IsReady);
-        Assert.Equal("Unhealthy", check.HealthStatus);
-        Assert.Equal("Проверка подключения нашла проблемы.", check.Message);
+        Assert.Equal("ConfigurationOnly", check.CheckScope);
+        Assert.Equal("NeedsConfiguration", check.ConfigurationStatus);
+        Assert.Equal("Unknown", check.HealthStatus);
+        Assert.Equal("Проверка конфигурации нашла проблемы. Внешний кабинет провайдера не запрашивался.", check.Message);
         Assert.Contains(check.Details, x => x.Contains("hostedCheckoutUrl", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(check.Details, x => x.Contains("CloudPayments", StringComparison.OrdinalIgnoreCase));
 
         var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
-        Assert.Equal(HealthStatus.Unhealthy, saved.HealthStatus);
+        Assert.Equal(HealthStatus.Unknown, saved.HealthStatus);
+        Assert.Null(saved.LastHealthCheckAt);
     }
 
     [Fact]
@@ -466,7 +478,9 @@ public class AdminAutomationMvpTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
         Assert.False(check.IsReady);
-        Assert.Equal("Unhealthy", check.HealthStatus);
+        Assert.Equal("ConfigurationOnly", check.CheckScope);
+        Assert.Equal("NeedsConfiguration", check.ConfigurationStatus);
+        Assert.Equal("Unknown", check.HealthStatus);
         Assert.Contains(check.Details, x => x.Contains("Telegram invoice flow", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(check.Details, x => x.Contains("invoice-flow", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(check.Details, x => x.Contains("web checkout", StringComparison.OrdinalIgnoreCase));
@@ -489,13 +503,16 @@ public class AdminAutomationMvpTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var check = Assert.IsType<PaymentProviderAccountCheckResultDto>(ok.Value);
         Assert.True(check.IsReady);
-        Assert.Equal("Healthy", check.HealthStatus);
+        Assert.Equal("ConfigurationOnly", check.CheckScope);
+        Assert.Equal("Ready", check.ConfigurationStatus);
+        Assert.Equal("Unknown", check.HealthStatus);
         Assert.Contains(check.Account.RequiredFields, x => x.Key == "telegramBotFlow" && x.Required && x.Configured);
         Assert.Contains(check.Account.RequiredFields, x => x.Key == "shopId" && x.Required && x.Configured);
         Assert.Empty(check.Account.ReadinessBlockers);
 
         var saved = await db.PaymentProviderAccounts.SingleAsync(x => x.Id == account.Id);
-        Assert.Equal(HealthStatus.Healthy, saved.HealthStatus);
+        Assert.Equal(HealthStatus.Unknown, saved.HealthStatus);
+        Assert.Null(saved.LastHealthCheckAt);
     }
 
     [Fact]

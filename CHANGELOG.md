@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.486.0 - 2026-08-05
+
+Release entry: `2026-08-05-payment-provider-configuration-check`.
+
+### Исправлено
+
+- Проверка payment provider account больше не выдает локальную валидацию полей за live-проверку внешнего кабинета.
+- API разделяет `ConfigurationStatus` и реальный `HealthStatus`: configuration-only проверка возвращает `Ready`/`NeedsConfiguration`, сохраняет health как `Unknown` и очищает прежние синтетические health-маркеры.
+- Админка показывает «Проверить настройки» и явно сообщает, что внешний кабинет провайдера не запрашивался; публичный API не раскрывает синтетический health.
+
+### Проверено
+
+- Backend full suite `984/984`; targeted payment provider/public API suite `20/20`.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; frontend `68/68`, typecheck/build OK, dependency audit `0 vulnerabilities`, Playwright desktop/mobile/all-screens responsive suite `12/12`; secret scan `610` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `498/518` closed, readiness `96.1%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment-provider/3x-ui evidence все еще требуется.
+
 ## 0.485.0 - 2026-08-05
 
 Release entry: `2026-08-05-payment-recheck-cancellation`.

@@ -1495,7 +1495,7 @@ export function App() {
       const result = await api.checkAdminPaymentProviderAccount(token, account.id)
       setProviderCheckResults((current) => ({ ...current, [account.id]: result }))
       setPaymentProviderAccounts((current) => current.map((item) => item.id === account.id ? result.account : item))
-      setNotice(`${account.name}: ${result.isReady ? 'проверка пройдена' : 'проверка нашла проблемы'}.`)
+      setNotice(`${account.name}: ${result.isReady ? 'настройки готовы' : 'в настройках найдены проблемы'}.`)
     })
   }
 
@@ -2805,8 +2805,8 @@ export function App() {
                     {providerCheckResults[account.id] && (
                       <div className={providerCheckResultClass(providerCheckResults[account.id])} role="status" aria-live="polite">
                         <div className="provider-check-result-head">
-                          <strong>{providerCheckResults[account.id].isReady ? 'Подключение готово' : 'Нужно исправить настройки'}</strong>
-                          <StatusBadge value={providerCheckResults[account.id].healthStatus} />
+                          <strong>{providerCheckResults[account.id].isReady ? 'Настройки готовы' : 'Нужно исправить настройки'}</strong>
+                          <StatusBadge value={providerCheckResults[account.id].configurationStatus} />
                         </div>
                         <div className="muted">{providerCheckResults[account.id].message} · проверено {formatDate(providerCheckResults[account.id].checkedAt)}</div>
                         <ul className="provider-check-result-list">
@@ -2824,7 +2824,7 @@ export function App() {
                 <div className="muted">{providerIssue(account)}</div>
                 <div className="toolbar">
                   <PrimaryButton className="button-secondary" onClick={() => editProviderAccount(account)}>Редактировать</PrimaryButton>
-                  <PrimaryButton className="button-secondary" disabled={actionBusyId === `provider-check-${account.id}`} onClick={() => void handleCheckProviderAccount(account)}>Проверить</PrimaryButton>
+                  <PrimaryButton className="button-secondary" disabled={actionBusyId === `provider-check-${account.id}`} onClick={() => void handleCheckProviderAccount(account)}>Проверить настройки</PrimaryButton>
                   {account.isEnabled ? <ConfirmButton className="button-danger" disabled={actionBusyId === account.id} message={`Отключить способ оплаты "${account.publicName}"? Пользователи больше не увидят его при оплате.`} onConfirm={() => void handleSetProviderEnabled(account, false)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === account.id} onClick={() => void handleSetProviderEnabled(account, true)}>Включить</PrimaryButton>}
                 </div>
               </div>

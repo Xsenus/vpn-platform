@@ -978,7 +978,7 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = result.Error });
         }
 
-        AddAuditLog("payment_provider.check", "PaymentProviderAccount", id, "{}", JsonSerializer.Serialize(new { result.Value!.Provider, result.Value.Mode, result.Value.IsReady, result.Value.HealthStatus, result.Value.Message }, JsonOptions));
+        AddAuditLog("payment_provider.check", "PaymentProviderAccount", id, "{}", JsonSerializer.Serialize(new { result.Value!.Provider, result.Value.Mode, result.Value.IsReady, result.Value.CheckScope, result.Value.ConfigurationStatus, result.Value.HealthStatus, result.Value.Message }, JsonOptions));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(result.Value);
     }
