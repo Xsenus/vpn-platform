@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-05",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1004/1004`",
+                     "Backend full suite: `1008/1008`",
                      "Frontend unit tests: `77/77`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `16/16`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-05-admin-audit-domain-scope",
-                     "0.496.0"
+                     "2026-08-05-vpn-access-cancellation-reconciliation",
+                     "0.497.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-admin-audit-domain-scope", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-admin-audit-domain-scope", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-vpn-access-cancellation-reconciliation", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-vpn-access-cancellation-reconciliation", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1004/1004`",
+                     "Backend full suite: `1008/1008`",
                      "Frontend unit tests: `77/77`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-05-admin-audit-domain-scope",
-                     "0.496.0",
+                     "2026-08-05-vpn-access-cancellation-reconciliation",
+                     "0.497.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

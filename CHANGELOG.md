@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.497.0 - 2026-08-05
+
+Release entry: `2026-08-05-vpn-access-cancellation-reconciliation`.
+
+### Исправлено
+
+- Enable, sync и reset traffic VPN-доступа больше не поглощают caller cancellation общим обработчиком ошибок: операция сохраняет безопасный diagnostic-state и повторно выбрасывает `OperationCanceledException`.
+- Отмена enable/reset переводит `AccessCredential` в `SyncRequired`, а отмена read-only sync сохраняет исходный статус; все три пути создают отдельные history/audit события через независимый persistence token.
+- Неопределенный результат reset traffic теперь действительно переводит доступ в `SyncRequired`, как обещает административный UI, и оставляет явный `provider_state_unknown` для ручной сверки.
+
+### Проверено
+
+- Backend full suite `1008/1008`; targeted access lifecycle SQLite `8/8`, включая cancellation enable/sync/reset и reset failure; расширенный X3Ui/admin/subscription suite `117/117`.
+- Frontend `77/77`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `615` files, `0` findings, UTF-8 guard `14/14`.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `509/529` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.496.0 - 2026-08-05
 
 Release entry: `2026-08-05-admin-audit-domain-scope`.

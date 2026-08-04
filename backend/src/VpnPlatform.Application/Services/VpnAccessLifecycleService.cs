@@ -195,10 +195,7 @@ public class VpnAccessLifecycleService
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            if (StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.SyncRequired))
-            {
-                StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.SyncRequired, now);
-            }
+            MarkSyncRequired(access, now);
             AddHistory(access, $"{eventType ?? "AccessDisable"}Cancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
             AddAudit("access.disable.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
             await _db.SaveChangesAsync(CancellationToken.None);
@@ -240,6 +237,14 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access enabled."));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            MarkSyncRequired(access, now);
+            AddHistory(access, "AccessEnableCancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
+            AddAudit("access.enable.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);
@@ -274,6 +279,13 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access synced.", usage.UsedTrafficBytes));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            AddHistory(access, "AccessSyncCancelled", before, new { access.Status, reason, outcome = "cancelled" });
+            AddAudit("access.sync.cancelled", access, before, new { access.Status, reason, outcome = "cancelled" }, actorUserId);
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);
@@ -303,11 +315,20 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access traffic reset."));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            MarkSyncRequired(access, now);
+            AddHistory(access, "AccessTrafficResetCancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
+            AddAudit("access.reset_traffic.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);
-            AddHistory(access, "AccessTrafficResetFailed", before, new { access.Status, error = safeError, reason });
-            AddAudit("access.reset_traffic.failed", access, before, new { access.Status, error = safeError, reason }, actorUserId);
+            MarkSyncRequired(access, now);
+            AddHistory(access, "AccessTrafficResetFailed", before, new { access.Status, error = safeError, reason, outcome = "provider_state_unknown" });
+            AddAudit("access.reset_traffic.failed", access, before, new { access.Status, error = safeError, reason, outcome = "provider_state_unknown" }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Failure($"VPN access traffic reset failed: {safeError}");
         }
@@ -318,6 +339,14 @@ public class VpnAccessLifecycleService
 
     private static object Snapshot(AccessCredential access)
         => new { access.Status, access.ProviderAccessId, access.DisabledAt, access.LastSyncedAt, access.Revision };
+
+    private static void MarkSyncRequired(AccessCredential access, DateTimeOffset now)
+    {
+        if (StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.SyncRequired))
+        {
+            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.SyncRequired, now);
+        }
+    }
 
     private void AddHistory(AccessCredential access, string eventType, object oldValue, object newValue)
     {

@@ -11580,5 +11580,28 @@
         "text": "Roadmap progress is 508/528 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-vpn-access-cancellation-reconciliation",
+    "version": "0.497.0",
+    "releasedAt": "2026-08-05T06:05:00+07:00",
+    "title": "VPN-операции сохраняют состояние при отмене",
+    "summary": "Enable, sync и reset traffic корректно пробрасывают отмену, а неопределенный результат enable/reset оставляет доступ для ручной сверки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Caller cancellation для enable, sync и reset traffic сохраняет отдельные history/audit события через независимый persistence token и повторно выбрасывается вызывающему коду."
+      },
+      {
+        "type": "fixed",
+        "text": "Enable/reset uncertainty переводит VPN-доступ в SyncRequired; read-only sync cancellation сохраняет исходный статус, а reset failure больше не оставляет ложный Active."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 509/529 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

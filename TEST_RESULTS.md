@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: VPN access cancellation and reconciliation
+
+Scope:
+- Проверено, что enable/sync/reset traffic VPN-доступа корректно обрабатывают caller cancellation, сохраняют durable audit/history и не оставляют ложный `Active` после неопределенного reset.
+
+Results:
+- Roadmap progress: `509/529` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-vpn-access-cancellation-reconciliation`, version `0.497.0`.
+- Backend full suite: OK, `1008/1008`; targeted access lifecycle SQLite: OK, `8/8`; расширенный X3Ui/admin/subscription regression: OK, `117/117`.
+- Enable/reset cancellation сохраняют `SyncRequired`, sync cancellation сохраняет исходный статус; `OperationCanceledException` пробрасывается после history/audit commit через `CancellationToken.None`.
+- Reset failure сохраняет `SyncRequired` и `provider_state_unknown`, поэтому UI и backend используют единый reconciliation contract.
+- Frontend tests: OK, `77/77`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, без неожиданных console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа, latest release `2026-08-05-vpn-access-cancellation-reconciliation`.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `615` files, `0` findings; UTF-8/encoding guard: OK, `14/14`.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-05: admin audit domain scope
 
 Scope:

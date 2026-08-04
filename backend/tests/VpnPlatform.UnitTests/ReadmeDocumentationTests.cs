@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1004/1004", readme, StringComparison.Ordinal);
+        Assert.Contains("1008/1008", readme, StringComparison.Ordinal);
         Assert.Contains("77/77", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-admin-audit-domain-scope", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-vpn-access-cancellation-reconciliation", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "1004/1004",
-                     "2026-08-05-admin-audit-domain-scope",
-                     "0.496.0",
+                     "1008/1008",
+                     "2026-08-05-vpn-access-cancellation-reconciliation",
+                     "0.497.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",
