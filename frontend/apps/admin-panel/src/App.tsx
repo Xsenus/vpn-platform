@@ -382,20 +382,20 @@ function validateAdminLogin(email: string, password: string) {
 const adminSections = [
   ['dashboard', 'Дашборд'],
   ['users', 'Пользователи'],
+  ['support', 'Поддержка'],
+  ['audit', 'Аудит'],
   ['payments', 'Оплаты'],
   ['tariffs', 'Тарифы'],
   ['subscriptions', 'Подписки'],
   ['vpn', 'VPN-доступы'],
   ['nodes', 'Серверы'],
   ['panels', '3x-ui панели'],
-  ['support', 'Поддержка'],
-  ['audit', 'Аудит'],
+  ['provisioning', 'Подготовка VPS'],
   ['bot', 'Telegram-бот'],
   ['releases', 'Что нового'],
   ['faq', 'FAQ'],
   ['content', 'Контент сайта'],
-  ['scenarios', 'Сценарии'],
-  ['provisioning', 'Подготовка VPS']
+  ['scenarios', 'Сценарии']
 ] as const
 
 type AdminSectionId = typeof adminSections[number][0]
@@ -3054,12 +3054,12 @@ export function App() {
                 <div className="toolbar">
                   <PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton>
                   <PrimaryButton disabled={actionBusyId === `health-server-${server.id}`} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton>
-                  <PrimaryButton onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton>
+                  <PrimaryButton disabled={server.status === 'Archived'} onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton>
                   <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server)} message={`Запустить подготовку сервера "${server.name}"? Режим: ${server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте precheck перед запуском.'}`} onConfirm={() => void handleQueueProvision(server.id)}>Подготовить</ConfirmButton>
-                  <ConfirmButton className="button-secondary" message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>
-                  <PrimaryButton className="button-secondary" onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
-                  <ConfirmButton className="button-secondary" message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
-                  <ConfirmButton className="button-secondary" disabled={server.status === 'Disabled'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton>
+                  <ConfirmButton className="button-secondary" disabled={server.status === 'Archived'} message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => void handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>
+                  <PrimaryButton className="button-secondary" disabled={server.status === 'Archived'} onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
+                  <ConfirmButton className="button-secondary" disabled={server.status === 'Archived'} message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => void handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
+                  <ConfirmButton className="button-secondary" disabled={server.status === 'Disabled' || server.status === 'Archived'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => void handleServerMode(server, 'disable')}>Отключить</ConfirmButton>
                   <ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? Если у него есть подписки, VPN-доступы или запуски подготовки, он будет архивирован.`} onConfirm={() => void handleDeleteServer(server)}>Удалить</ConfirmButton>
                 </div>
               </div>

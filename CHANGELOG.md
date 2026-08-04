@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.457.0 - 2026-08-04
+
+Release entry: `2026-08-04-migration-node-and-frontend-hardening`.
+
+### Fixed
+- Subscription migration now validates the source subscription/server, target readiness and allocation, rejects the current server and duplicate planned/running jobs, and persists a complete migration item plus audit record.
+- Archived VPN servers can no longer be returned to maintenance/ready/allocation states or disabled again through admin operations; matching UI actions are disabled.
+- Mobile admin navigation no longer places the full 16-item tablist before page content; the compact section selector remains available and E2E uses it on narrow viewports.
+- Admin section counters and previous/next navigation now follow the same grouped order shown in the sidebar.
+
+### Security
+- React and React DOM were upgraded to `19.2.8`, React Router to `8.3.0`, TypeScript uses bundler resolution, and the frontend enforces Node.js `>=22.22.0`.
+- `npm audit --audit-level=moderate` reports `0 vulnerabilities`; the two previously documented React Router advisories are removed.
+
+### Notes
+- Validation: backend full suite `778/778`, targeted SQLite boundaries `3/3`, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `51/51` keep current evidence synchronized.
+- Secret scan: `559` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `469/489` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.456.0 - 2026-08-04
 
 Release entry: `2026-08-04-operation-boundary-quality-audit`.

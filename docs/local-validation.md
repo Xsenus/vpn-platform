@@ -7,7 +7,7 @@
 Требования:
 
 - .NET SDK 9.
-- Node.js 22+ и npm.
+- Node.js 22.22+ и npm.
 - PowerShell.
 
 Команды из корня репозитория:

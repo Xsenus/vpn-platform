@@ -1,6 +1,9 @@
 {
   "name": "vpn-platform-frontend",
   "private": true,
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

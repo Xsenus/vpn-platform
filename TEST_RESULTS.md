@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: migration, archived node and frontend hardening
+
+Scope:
+- Проверены все границы ручной миграции подписки: отсутствующая подписка/source node, совпадающий target, неготовый или закрытый target и дубли Planned/Running.
+- Проверены mode-actions архивного VPN-сервера и UI-блокировка действий, которые могли вернуть архивную ноду в рабочее состояние.
+- Визуально просмотрены public routes, зарегистрированный кабинет и все 16 admin sections; на 320 px длинный tablist заменен компактным selector.
+- Проверены dependency advisories и переход React/Router на поддерживаемые исправленные версии.
+
+Result:
+- Успешная миграция создает полный `MigrationJob`, `MigrationItem` со старым access и audit `subscription.migration.plan`; некорректные запросы не изменяют SQLite.
+- Archived node возвращает conflict для maintenance/ready/allocation/disable и не создает audit/mutation.
+- Admin section counter и previous/next совпадают с grouped menu; на 320 px content начинается сразу после компактной навигации, horizontal overflow отсутствует.
+- React/React DOM `19.2.8`, React Router `8.3.0`, Node.js contract `>=22.22.0`; dependency audit: `0 vulnerabilities`.
+- Roadmap progress: `469/489` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-migration-node-and-frontend-hardening`, version `0.457.0`.
+
+Validation:
+- Backend full suite: OK, `778/778`; targeted SQLite boundaries: OK, `3/3`.
+- Targeted docs/release/encoding suite: OK, `51/51`.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK.
+- Secret scan: OK, `559` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: operation boundary quality audit
 
 Scope:

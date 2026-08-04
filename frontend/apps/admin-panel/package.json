@@ -10,13 +10,13 @@
   "dependencies": {
     "@vpn-platform/api-client": "file:../../packages/api-client",
     "@vpn-platform/ui": "file:../../packages/ui",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router": "^8.3.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.2",
     "typescript": "^5.5.4",
     "vite": "^8.0.14"

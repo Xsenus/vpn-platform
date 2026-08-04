@@ -452,7 +452,12 @@ async function mockAdminApi(page: Page) {
 }
 
 async function openAdminSection(page: Page, name: string, id: string) {
-  await page.getByRole('tab', { name }).click()
+  const tab = page.getByRole('tab', { name })
+  if (await tab.isVisible()) {
+    await tab.click()
+  } else {
+    await page.getByRole('combobox', { name: 'Раздел' }).selectOption(id)
+  }
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
 

@@ -56,6 +56,11 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("Node not found.");
         }
 
+        if (node.Status == NodeStatus.Archived)
+        {
+            return Result<ProvisioningRun>.Failure("Archived node cannot be provisioned.");
+        }
+
         var mode = DescribeProvisioningMode(node, dryRun);
         if (mode.Mode == "live-deploy-blocked")
         {

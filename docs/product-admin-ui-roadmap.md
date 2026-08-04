@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `468/488` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `469/489` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -81,7 +81,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `775/775`.
+- [x] Backend full suite: `778/778`.
 - [x] Frontend unit tests: `66/66`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -93,7 +93,10 @@
 - [x] Secret scan: OK.
 - [x] Operation boundary regression: malformed enum/JSON returns 400 without partial mutation; all 8 payment webhook routes and fail-closed VPN provisioning are covered.
 - [x] Page quality gate covers landmarks, duplicate IDs, image alt text and accessible control names on public, cabinet and all 16 admin screens.
-- [x] Latest "Что нового": `2026-08-04-operation-boundary-quality-audit`, версия `0.456.0`.
+- [x] Subscription migration and archived-node mode actions are fail-closed and covered by SQLite regression.
+- [x] Mobile admin navigation uses the compact section selector; desktop counters and previous/next order match the grouped menu.
+- [x] Frontend dependency audit: `0 vulnerabilities` on React 19.2.8, React Router 8.3.0 and Node.js 22.22.0.
+- [x] Latest "Что нового": `2026-08-04-migration-node-and-frontend-hardening`, версия `0.457.0`.
 
 ## Как вести дальше
 

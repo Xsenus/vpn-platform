@@ -46,7 +46,7 @@ Admin bootstrap/reset: [docs/admin-bootstrap.md](docs/admin-bootstrap.md).
 Требования:
 
 - .NET SDK 9.
-- Node.js 22+ и npm.
+- Node.js 22.22+ и npm.
 - PowerShell.
 
 Первый запуск из корня репозитория:
@@ -209,18 +209,20 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-06-14 локально подтверждено:
 
-- backend на .NET 9: `775/775` unit tests;
+- backend на .NET 9: `778/778` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `66/66`;
 - frontend typecheck и production build: OK;
-- frontend high-severity audit: OK; остаются `2 moderate` React Router advisory вне используемых SPA SSR/RSC путей;
+- frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят; responsive matrix проверяет ширины `305..1920` px;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
 - checkout, кабинет и административные PATCH/API-операции отклоняют некорректные enum/JSON-значения ответом 400 без частичного изменения данных;
 - browser gate дополнительно проверяет landmark, уникальные ID, alt-тексты и доступные имена контролов на public, cabinet и 16 admin экранах;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-operation-boundary-quality-audit`, версия `0.456.0`;
-- roadmap progress: `468/488` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- миграция подписки валидирует источник, целевой сервер и дубли; архивные серверы нельзя вернуть в работу через административные mode-actions;
+- мобильная админка использует компактный селектор раздела, а счетчик и переходы следуют фактическому порядку меню;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-migration-node-and-frontend-hardening`, версия `0.457.0`;
+- roadmap progress: `469/489` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

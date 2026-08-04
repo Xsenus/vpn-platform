@@ -40,9 +40,10 @@ test('frontend validation gates run install, typecheck, build, tests and audit',
 })
 
 test('frontend package and CI keep the same mandatory commands', () => {
-  const packageJson = JSON.parse(readRepoFile('frontend', 'package.json')) as { scripts: Record<string, string> }
+  const packageJson = JSON.parse(readRepoFile('frontend', 'package.json')) as { engines: Record<string, string>, scripts: Record<string, string> }
   const ciWorkflow = readRepoFile('.github', 'workflows', 'ci.yml')
 
+  assert.equal(packageJson.engines.node, '>=22.22.0')
   assert.match(packageJson.scripts.test, /tsx@4\.19\.2 --test/)
   assert.match(packageJson.scripts.typecheck, /apps\/public-web/)
   assert.match(packageJson.scripts.typecheck, /apps\/cabinet/)
@@ -78,6 +79,14 @@ test('frontend package and CI keep the same mandatory commands', () => {
   assert.match(ciWorkflow, /npm run e2e:all-screens/)
   assert.match(ciWorkflow, /frontend\/playwright-report\/e2e/)
   assert.match(ciWorkflow, /npm audit --audit-level=high/)
+
+  for (const app of ['public-web', 'cabinet', 'admin-panel']) {
+    const appPackageJson = JSON.parse(readRepoFile('frontend', 'apps', app, 'package.json')) as { dependencies: Record<string, string> }
+    assert.equal(appPackageJson.dependencies.react, '^19.2.8')
+    assert.equal(appPackageJson.dependencies['react-dom'], '^19.2.8')
+    assert.equal(appPackageJson.dependencies['react-router'], '^8.3.0')
+    assert.equal(appPackageJson.dependencies['react-router-dom'], undefined)
+  }
 })
 
 test('playwright webserver helper supports hoisted Vite workspaces', () => {

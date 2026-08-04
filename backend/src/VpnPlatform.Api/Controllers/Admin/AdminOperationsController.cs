@@ -533,17 +533,77 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> MigrateSubscription(Guid id, [FromBody] Guid? targetNodeId, CancellationToken cancellationToken)
     {
-        _db.MigrationJobs.Add(new MigrationJob
+        var subscription = await _db.Subscriptions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (subscription is null)
         {
-            SourceNodeId = Guid.Empty,
+            return NotFound(new { error = "Subscription not found." });
+        }
+
+        if (!subscription.CurrentServerId.HasValue)
+        {
+            return BadRequest(new { error = "Subscription does not have a source VPN server." });
+        }
+
+        if (targetNodeId == subscription.CurrentServerId)
+        {
+            return BadRequest(new { error = "Target VPN server must differ from the source server." });
+        }
+
+        if (targetNodeId.HasValue)
+        {
+            var targetNode = await _db.VpnNodes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == targetNodeId.Value, cancellationToken);
+            if (targetNode is null)
+            {
+                return NotFound(new { error = "Target VPN server not found." });
+            }
+
+            if (targetNode.Status != NodeStatus.Ready || !targetNode.IsAvailableForNewUsers)
+            {
+                return BadRequest(new { error = "Target VPN server is not ready for allocation." });
+            }
+        }
+
+        var hasActiveMigration = await _db.MigrationItems
+            .AsNoTracking()
+            .AnyAsync(item => item.SubscriptionId == id
+                && _db.MigrationJobs.Any(job => job.Id == item.MigrationJobId
+                    && (job.Status == MigrationJobStatus.Planned || job.Status == MigrationJobStatus.Running)), cancellationToken);
+        if (hasActiveMigration)
+        {
+            return Conflict(new { error = "Subscription already has an active migration." });
+        }
+
+        var migrationJob = new MigrationJob
+        {
+            SourceNodeId = subscription.CurrentServerId.Value,
             TargetNodeId = targetNodeId,
             Status = MigrationJobStatus.Planned,
             Type = "single-subscription",
+            RequestedByUserId = ResolveUserId(),
+            RequestedAt = _clock.UtcNow,
             Notes = $"Migration requested for subscription {id}"
+        };
+        migrationJob.Items.Add(new MigrationItem
+        {
+            SubscriptionId = subscription.Id,
+            OldAccessId = subscription.CurrentAccessId,
+            Status = MigrationJobStatus.Planned
         });
 
+        _db.MigrationJobs.Add(migrationJob);
+        AddAuditLog(
+            "subscription.migration.plan",
+            "Subscription",
+            subscription.Id,
+            JsonSerializer.Serialize(new { subscription.CurrentServerId, subscription.CurrentAccessId }),
+            JsonSerializer.Serialize(new { MigrationJobId = migrationJob.Id, migrationJob.TargetNodeId, migrationJob.Status }));
+
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new { subscriptionId = id, targetNodeId, status = "planned" });
+        return Ok(new { migrationJobId = migrationJob.Id, subscriptionId = id, sourceNodeId = migrationJob.SourceNodeId, targetNodeId, status = "planned" });
     }
 
     [HttpGet("orders")]
@@ -1225,6 +1285,7 @@ public class AdminOperationsController : ControllerBase
     {
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
+        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
 
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Disabled;
@@ -1560,6 +1621,7 @@ public class AdminOperationsController : ControllerBase
     {
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
+        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
 
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Maintenance;
@@ -1576,6 +1638,7 @@ public class AdminOperationsController : ControllerBase
     {
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
+        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
 
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Ready;
@@ -1592,6 +1655,7 @@ public class AdminOperationsController : ControllerBase
     {
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
+        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
 
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.IsAvailableForNewUsers = false;
@@ -1608,6 +1672,7 @@ public class AdminOperationsController : ControllerBase
     {
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
+        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
 
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.IsAvailableForNewUsers = true;

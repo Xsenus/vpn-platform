@@ -10636,5 +10636,36 @@
         "text": "Roadmap progress is 468/488 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-migration-node-and-frontend-hardening",
+    "version": "0.457.0",
+    "releasedAt": "2026-08-04T14:50:00+07:00",
+    "title": "Усилены миграции, серверы и мобильная админка",
+    "summary": "Миграции подписок и архивные VPN-серверы получили fail-closed границы, мобильная админка стала компактнее, а frontend-зависимости обновлены без известных уязвимостей.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Миграция подписки проверяет исходный и целевой серверы, не создает дубли и сохраняет полную задачу миграции с audit-записью."
+      },
+      {
+        "type": "fixed",
+        "text": "Архивный VPN-сервер нельзя вернуть в работу через maintenance, allocation или disable actions; недоступные операции также заблокированы в интерфейсе."
+      },
+      {
+        "type": "improved",
+        "text": "На мобильных экранах админка использует компактный выбор раздела, а счетчик и переходы следуют порядку меню."
+      },
+      {
+        "type": "improved",
+        "text": "React, React Router и Node.js baseline обновлены; frontend dependency audit сообщает 0 известных уязвимостей."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 469/489 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

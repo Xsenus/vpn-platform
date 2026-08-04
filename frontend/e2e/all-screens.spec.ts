@@ -13,20 +13,20 @@ const publicRoutes = ['/', '/tariffs', '/faq', '/help', '/account']
 const adminSections = [
   'dashboard',
   'users',
+  'support',
+  'audit',
   'payments',
   'tariffs',
   'subscriptions',
   'vpn',
   'nodes',
   'panels',
-  'support',
-  'audit',
+  'provisioning',
   'bot',
   'releases',
   'faq',
   'content',
-  'scenarios',
-  'provisioning'
+  'scenarios'
 ]
 
 const responsiveViewports = [

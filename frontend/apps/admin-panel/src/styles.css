@@ -565,8 +565,7 @@
   }
 
   .admin-section-tabs {
-    max-height: none;
-    overflow: visible;
+    display: none;
   }
 
   .release-item-editor {
