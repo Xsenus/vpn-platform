@@ -2996,6 +2996,7 @@ export function App() {
                       <div className="muted">Пользователь: {shortId(subscription.userId)} · источник: {subscription.sourceChannel ?? '—'} · период {formatDate(subscription.startAt)} - {formatDate(subscription.endAt)}</div>
                       <div className="muted">Доступ: {shortId(subscription.currentAccessId)} · сервер: {shortId(subscription.currentServerId)} · платеж: {shortId(subscription.lastPaymentId)} · продлений: {subscription.renewalCount ?? 0}</div>
                       <div className="muted">Льготный период до: {formatDate(subscription.gracePeriodEndAt)} · причина ограничения: {subscription.blockReason || '—'}</div>
+                      {subscription.lifecycleLastError && <div className="error-text">Ошибка отключения: {subscription.lifecycleLastError} · попытка {subscription.lifecycleAttemptCount ?? 0} · повтор {formatDate(subscription.lifecycleNextAttemptAt)}</div>}
                     </div>
                     <div className="item-status">
                       <StatusBadge value={subscription.status} />

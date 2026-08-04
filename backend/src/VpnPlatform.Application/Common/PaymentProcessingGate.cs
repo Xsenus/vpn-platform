@@ -26,6 +26,15 @@ public static class PaymentProcessingGate
     public static async ValueTask<IAsyncDisposable> AcquireProvisioningNodeAsync(Guid nodeId, CancellationToken cancellationToken)
         => await AcquireAsync($"provisioning-node:{nodeId:N}", cancellationToken);
 
+    public static async ValueTask<IAsyncDisposable> AcquireSubscriptionLifecycleAsync(Guid subscriptionId, CancellationToken cancellationToken)
+        => await AcquireAsync($"subscription-lifecycle:{subscriptionId:N}", cancellationToken);
+
+    public static async ValueTask<IAsyncDisposable> AcquirePanelHealthAsync(Guid panelId, CancellationToken cancellationToken)
+        => await AcquireAsync($"panel-health:{panelId:N}", cancellationToken);
+
+    public static async ValueTask<IAsyncDisposable> AcquirePanelSyncAsync(Guid panelId, CancellationToken cancellationToken)
+        => await AcquireAsync($"panel-sync:{panelId:N}", cancellationToken);
+
     private static async ValueTask<IAsyncDisposable> AcquireAsync(string key, CancellationToken cancellationToken)
     {
         GateEntry entry;

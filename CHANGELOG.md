@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.473.0 - 2026-08-04
+
+Release entry: `2026-08-04-subscription-lifecycle-recovery`.
+
+### Исправлено
+
+- Истечение подписки больше не подтверждается до успешного отключения VPN-доступа: ошибка провайдера оставляет `GracePeriod`, сохраняет redacted diagnostic, lease и backoff для восстановления после рестарта.
+- Конкурентные lifecycle workers используют conditional claim и не отключают один доступ дважды; stale lease восстанавливается, а ручные admin-команды сериализованы с фоновым lifecycle.
+- Cancellation отключения фиксирует `SyncRequired` и audit/history до повторного выброса исключения; успешные активация и продление очищают retry-state.
+- Subscription lifecycle, order expiry, panel health и panel sync обрабатываются изолированно по batch/item, поэтому сбой одной записи не останавливает остальные.
+- Админка показывает lifecycle error, номер попытки и время следующего повтора; локальная SQLite repair и EF migration добавляют durable lifecycle-поля.
+
+### Проверено
+
+- Backend full suite `926/926`; targeted lifecycle/panel/SQLite suite `36/36`; EF migration `20260804143027_SubscriptionLifecycleRecovery` без model drift; fresh local SQLite smoke OK; frontend `68/68`, typecheck/build OK; Playwright console suite `12/12`; ручной local SQLite admin smoke на desktop и `390x844` без overflow/console errors; secret scan: `600` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `485/505` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: live email, real VPS/staging/payment и production-like 3x-ui evidence остаются открытыми.
+
 ## 0.472.0 - 2026-08-04
 
 Release entry: `2026-08-04-provisioning-worker-recovery`.

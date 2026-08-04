@@ -169,10 +169,16 @@ public class SandboxE2EScenariosMvpTests
 
         var processed = await harness.SubscriptionService.ProcessLifecycleAsync(CancellationToken.None);
 
-        Assert.Equal(1, processed);
+        Assert.Equal(0, processed);
         Assert.Equal(1, harness.VpnProvider.DisableCalls);
+        var subscription = await harness.Db.Subscriptions.SingleAsync(x => x.Id == seeded.SubscriptionId);
         var access = await harness.Db.AccessCredentials.SingleAsync(x => x.Id == seeded.AccessId);
+        Assert.Equal(SubscriptionStatus.GracePeriod, subscription.Status);
+        Assert.Equal(1, subscription.LifecycleAttemptCount);
+        Assert.NotNull(subscription.LifecycleNextAttemptAt);
+        Assert.False(string.IsNullOrWhiteSpace(subscription.LifecycleLastError));
         Assert.Equal(AccessCredentialStatus.Error, access.Status);
+        Assert.False(await harness.Db.OutboxMessages.AnyAsync(x => x.CorrelationId.StartsWith("subscription_expired:")));
         var historyJson = JsonSerializer.Serialize(await harness.Db.AccessCredentialHistories.ToListAsync());
         var auditJson = JsonSerializer.Serialize(await harness.Db.AuditLogs.ToListAsync());
         Assert.Contains("AccessDisabledOnExpiryFailed", historyJson, StringComparison.OrdinalIgnoreCase);

@@ -11028,5 +11028,28 @@
         "text": "Повтор и отмена доступны только в безопасных статусах. Roadmap progress is 484/504 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-subscription-lifecycle-recovery",
+    "version": "0.473.0",
+    "releasedAt": "2026-08-04T21:50:00+07:00",
+    "title": "Истечение подписки восстанавливается без ложного отключения",
+    "summary": "Lifecycle сначала отключает VPN-доступ, сохраняет lease и backoff при ошибке и изолирует сбои отдельных worker-записей.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Подписка переходит в Expired только после подтвержденного отключения доступа; ошибка провайдера оставляет GracePeriod и планирует диагностируемый повтор."
+      },
+      {
+        "type": "fixed",
+        "text": "Concurrent lifecycle workers не обрабатывают одну подписку дважды, stale lease восстанавливается, а cancellation сохраняет SyncRequired и audit trail."
+      },
+      {
+        "type": "important",
+        "text": "Lifecycle, order expiry, panel health и panel sync изолируют ошибки отдельных записей. Roadmap progress is 485/505 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Live email and real VPS/staging/payment/3x-ui evidence are still required before production-ready acceptance."
+      }
+    ]
   }
 ]

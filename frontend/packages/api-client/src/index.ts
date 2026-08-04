@@ -234,6 +234,11 @@ export type SubscriptionDto = {
   blockReason?: string | null
   suspendedAt?: string | null
   cancelledAt?: string | null
+  lifecycleAttemptCount?: number
+  lifecycleProcessingStartedAt?: string | null
+  lifecycleLeaseExpiresAt?: string | null
+  lifecycleNextAttemptAt?: string | null
+  lifecycleLastError?: string | null
   accessUri?: string | null
   qrCodePath?: string | null
   configPath?: string | null

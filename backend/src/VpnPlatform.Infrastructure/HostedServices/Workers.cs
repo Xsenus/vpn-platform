@@ -1,9 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VpnPlatform.Application.Services;
-using VpnPlatform.Infrastructure.Persistence;
 
 namespace VpnPlatform.Infrastructure.HostedServices;
 
@@ -22,19 +20,56 @@ public class SubscriptionLifecycleWorker : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var scope = _serviceProvider.CreateScope();
-            var orders = scope.ServiceProvider.GetRequiredService<OrderService>();
-            var subscriptions = scope.ServiceProvider.GetRequiredService<SubscriptionService>();
-
-            var expiredOrders = await orders.ExpirePendingOrdersAsync(stoppingToken);
-            var processedSubscriptions = await subscriptions.ProcessLifecycleAsync(stoppingToken);
-
-            if (expiredOrders > 0 || processedSubscriptions > 0)
+            try
             {
-                _logger.LogInformation("Lifecycle worker updated orders={ExpiredOrders}, subscriptions={ProcessedSubscriptions}", expiredOrders, processedSubscriptions);
+                await ProcessIterationAsync(stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+        }
+    }
 
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+    internal async Task ProcessIterationAsync(CancellationToken cancellationToken)
+    {
+        var expiredOrders = 0;
+        var processedSubscriptions = 0;
+
+        try
+        {
+            using var orderScope = _serviceProvider.CreateScope();
+            var orders = orderScope.ServiceProvider.GetRequiredService<OrderService>();
+            expiredOrders = await orders.ExpirePendingOrdersAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Pending order expiry iteration failed");
+        }
+
+        try
+        {
+            using var subscriptionScope = _serviceProvider.CreateScope();
+            var subscriptions = subscriptionScope.ServiceProvider.GetRequiredService<SubscriptionService>();
+            processedSubscriptions = await subscriptions.ProcessLifecycleAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Subscription lifecycle iteration failed");
+        }
+
+        if (expiredOrders > 0 || processedSubscriptions > 0)
+        {
+            _logger.LogInformation("Lifecycle worker updated orders={ExpiredOrders}, subscriptions={ProcessedSubscriptions}", expiredOrders, processedSubscriptions);
         }
     }
 }

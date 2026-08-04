@@ -583,6 +583,11 @@ public class Subscription : AuditableEntity
     public string? BlockReason { get; set; }
     public DateTimeOffset? SuspendedAt { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
+    public int LifecycleAttemptCount { get; set; }
+    public DateTimeOffset? LifecycleProcessingStartedAt { get; set; }
+    public DateTimeOffset? LifecycleLeaseExpiresAt { get; set; }
+    public DateTimeOffset? LifecycleNextAttemptAt { get; set; }
+    public string? LifecycleLastError { get; set; }
 
     [JsonIgnore]
     public User? User { get; set; }

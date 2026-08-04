@@ -78,6 +78,15 @@ public class AdminOperationsController : ControllerBase
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
+    private static void ResetSubscriptionLifecycleState(Subscription subscription)
+    {
+        subscription.LifecycleAttemptCount = 0;
+        subscription.LifecycleProcessingStartedAt = null;
+        subscription.LifecycleLeaseExpiresAt = null;
+        subscription.LifecycleNextAttemptAt = null;
+        subscription.LifecycleLastError = null;
+    }
+
     private readonly IApplicationDbContext _db;
     private readonly ProvisioningService _provisioningService;
     private readonly PaymentOrchestrator _paymentOrchestrator;
@@ -200,6 +209,11 @@ public class AdminOperationsController : ControllerBase
                 x.BlockReason,
                 x.SuspendedAt,
                 x.CancelledAt,
+                x.LifecycleAttemptCount,
+                x.LifecycleProcessingStartedAt,
+                x.LifecycleLeaseExpiresAt,
+                x.LifecycleNextAttemptAt,
+                x.LifecycleLastError,
                 x.CreatedAt,
                 x.UpdatedAt
             })
@@ -258,6 +272,7 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Extension days must be between 1 and 3650." });
         }
 
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
@@ -290,6 +305,7 @@ public class AdminOperationsController : ControllerBase
         subscription.EndAt = baseDate.AddDays(request.Days);
         subscription.GracePeriodEndAt = subscription.EndAt.AddDays(3);
         StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
+        ResetSubscriptionLifecycleState(subscription);
         subscription.BlockReason = null;
         AddAuditLog("subscription.extend", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.EndAt, request.Days, request.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -300,6 +316,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> ActivateSubscription(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
@@ -337,6 +354,7 @@ public class AdminOperationsController : ControllerBase
         }
 
         StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
+        ResetSubscriptionLifecycleState(subscription);
         subscription.BlockReason = null;
         subscription.SuspendedAt = null;
         subscription.CancelledAt = null;
@@ -351,6 +369,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> BlockSubscription(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
@@ -382,6 +401,7 @@ public class AdminOperationsController : ControllerBase
         }
 
         StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Blocked, now);
+        ResetSubscriptionLifecycleState(subscription);
         subscription.BlockReason = blockReason;
         AddAuditLog("subscription.block", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -392,6 +412,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> UnblockSubscription(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
@@ -424,6 +445,7 @@ public class AdminOperationsController : ControllerBase
         }
 
         StatusStateMachine.SetSubscriptionStatus(subscription, nextStatus, now);
+        ResetSubscriptionLifecycleState(subscription);
         subscription.BlockReason = null;
         AddAuditLog("subscription.unblock", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -434,6 +456,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> CancelSubscription(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
@@ -464,6 +487,7 @@ public class AdminOperationsController : ControllerBase
         }
 
         StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Cancelled, now);
+        ResetSubscriptionLifecycleState(subscription);
         subscription.CancelledAt = now;
         subscription.BlockReason = string.IsNullOrWhiteSpace(request?.Reason) ? subscription.BlockReason : request!.Reason!.Trim();
         AddAuditLog("subscription.cancel", "Subscription", id, before, JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt, request?.Reason }));

@@ -58,6 +58,17 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access disabled."));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.SyncRequired))
+            {
+                StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.SyncRequired, now);
+            }
+            AddHistory(access, $"{eventType ?? "AccessDisable"}Cancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
+            AddAudit("access.disable.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
         catch (Exception ex)
         {
             var safeError = SafeError(ex.Message);

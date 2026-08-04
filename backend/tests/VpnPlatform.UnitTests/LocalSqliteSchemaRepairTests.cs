@@ -215,6 +215,36 @@ public class LocalSqliteSchemaRepairTests
         Assert.NotNull(stored[1].FinishedAt);
     }
 
+    [Fact]
+    public async Task ApplyAsync_Should_Add_Subscription_Lifecycle_Recovery_Columns()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "Subscriptions" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "Status" INTEGER NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
+            );
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(5, repaired);
+        Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleAttemptCount"));
+        Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleProcessingStartedAt"));
+        Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleLeaseExpiresAt"));
+        Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleNextAttemptAt"));
+        Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleLastError"));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+    }
+
     private static TelegramBotNotification Notification()
         => new()
         {

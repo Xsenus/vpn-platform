@@ -29,6 +29,13 @@ public class AdminSubscriptionManagementTests
         var provider = new TrackingVpnProvider(clock.UtcNow);
         var controller = CreateController(db, provider, clock);
         var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var pendingLifecycle = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        pendingLifecycle.LifecycleAttemptCount = 3;
+        pendingLifecycle.LifecycleProcessingStartedAt = clock.UtcNow.AddMinutes(-1);
+        pendingLifecycle.LifecycleLeaseExpiresAt = clock.UtcNow.AddMinutes(4);
+        pendingLifecycle.LifecycleNextAttemptAt = clock.UtcNow.AddMinutes(10);
+        pendingLifecycle.LifecycleLastError = "previous provider failure";
+        await db.SaveChangesAsync();
 
         var activated = await controller.ActivateSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("manual activation"), CancellationToken.None);
         var synced = await controller.SyncSubscriptionAccess(ids.SubscriptionId, new AdminAccessActionHttpRequest("operator sync"), CancellationToken.None);
@@ -43,6 +50,11 @@ public class AdminSubscriptionManagementTests
         Assert.Equal(SubscriptionStatus.Active, subscription.Status);
         Assert.Null(subscription.BlockReason);
         Assert.Null(subscription.CancelledAt);
+        Assert.Equal(0, subscription.LifecycleAttemptCount);
+        Assert.Null(subscription.LifecycleProcessingStartedAt);
+        Assert.Null(subscription.LifecycleLeaseExpiresAt);
+        Assert.Null(subscription.LifecycleNextAttemptAt);
+        Assert.Null(subscription.LifecycleLastError);
         Assert.Equal(AccessCredentialStatus.Active, access.Status);
         Assert.Null(access.DisabledAt);
         Assert.Equal(clock.UtcNow, access.LastSyncedAt);

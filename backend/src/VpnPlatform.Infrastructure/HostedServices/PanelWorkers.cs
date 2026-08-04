@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Enums;
 
@@ -25,21 +26,7 @@ public class PanelHealthWorker : BackgroundService
         {
             try
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-                var service = scope.ServiceProvider.GetRequiredService<X3UiPanelService>();
-                var panelCandidates = await db.VpnPanels.AsNoTracking()
-                    .Where(x => x.Status == VpnPanelStatus.Active || x.Status == VpnPanelStatus.New)
-                    .ToListAsync(stoppingToken);
-                var panels = panelCandidates
-                    .OrderBy(x => x.LastHealthCheckAt ?? DateTimeOffset.MinValue)
-                    .Take(10)
-                    .Select(x => x.Id)
-                    .ToList();
-                foreach (var id in panels)
-                {
-                    await service.CheckHealthAsync(id, stoppingToken);
-                }
+                await ProcessIterationAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -51,6 +38,58 @@ public class PanelHealthWorker : BackgroundService
             }
 
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        }
+    }
+
+    internal async Task ProcessIterationAsync(CancellationToken cancellationToken)
+    {
+        List<(Guid Id, DateTimeOffset? LastHealthCheckAt)> panels;
+        using (var selectionScope = _scopeFactory.CreateScope())
+        {
+            var db = selectionScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            panels = (await db.VpnPanels.AsNoTracking()
+                    .Where(x => x.Status == VpnPanelStatus.Active || x.Status == VpnPanelStatus.New)
+                    .OrderBy(x => x.LastHealthCheckAt ?? DateTimeOffset.MinValue)
+                    .Take(10)
+                    .Select(x => new { x.Id, x.LastHealthCheckAt })
+                    .ToListAsync(cancellationToken))
+                .Select(x => (x.Id, x.LastHealthCheckAt))
+                .ToList();
+        }
+
+        foreach (var panel in panels)
+        {
+            try
+            {
+                await using var gate = await PaymentProcessingGate.AcquirePanelHealthAsync(panel.Id, cancellationToken);
+                using var panelScope = _scopeFactory.CreateScope();
+                var db = panelScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+                var current = await db.VpnPanels.AsNoTracking()
+                    .Where(x => x.Id == panel.Id)
+                    .Select(x => new { x.Status, x.LastHealthCheckAt })
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (current is null
+                    || current.Status is not (VpnPanelStatus.Active or VpnPanelStatus.New)
+                    || current.LastHealthCheckAt != panel.LastHealthCheckAt)
+                {
+                    continue;
+                }
+
+                var service = panelScope.ServiceProvider.GetRequiredService<X3UiPanelService>();
+                var result = await service.CheckHealthAsync(panel.Id, cancellationToken);
+                if (!result.IsSuccess)
+                {
+                    _logger.LogWarning("Panel {PanelId} health check failed: {Error}", panel.Id, result.Error);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Panel {PanelId} health check iteration failed", panel.Id);
+            }
         }
     }
 }
@@ -72,21 +111,7 @@ public class PanelSyncWorker : BackgroundService
         {
             try
             {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-                var service = scope.ServiceProvider.GetRequiredService<X3UiPanelService>();
-                var panelCandidates = await db.VpnPanels.AsNoTracking()
-                    .Where(x => x.Status == VpnPanelStatus.Active)
-                    .ToListAsync(stoppingToken);
-                var panels = panelCandidates
-                    .OrderBy(x => x.LastSyncAt ?? DateTimeOffset.MinValue)
-                    .Take(5)
-                    .Select(x => x.Id)
-                    .ToList();
-                foreach (var id in panels)
-                {
-                    await service.SyncPanelAsync(id, stoppingToken);
-                }
+                await ProcessIterationAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -98,6 +123,58 @@ public class PanelSyncWorker : BackgroundService
             }
 
             await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
+        }
+    }
+
+    internal async Task ProcessIterationAsync(CancellationToken cancellationToken)
+    {
+        List<(Guid Id, DateTimeOffset? LastSyncAt)> panels;
+        using (var selectionScope = _scopeFactory.CreateScope())
+        {
+            var db = selectionScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+            panels = (await db.VpnPanels.AsNoTracking()
+                    .Where(x => x.Status == VpnPanelStatus.Active)
+                    .OrderBy(x => x.LastSyncAt ?? DateTimeOffset.MinValue)
+                    .Take(5)
+                    .Select(x => new { x.Id, x.LastSyncAt })
+                    .ToListAsync(cancellationToken))
+                .Select(x => (x.Id, x.LastSyncAt))
+                .ToList();
+        }
+
+        foreach (var panel in panels)
+        {
+            try
+            {
+                await using var gate = await PaymentProcessingGate.AcquirePanelSyncAsync(panel.Id, cancellationToken);
+                using var panelScope = _scopeFactory.CreateScope();
+                var db = panelScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+                var current = await db.VpnPanels.AsNoTracking()
+                    .Where(x => x.Id == panel.Id)
+                    .Select(x => new { x.Status, x.LastSyncAt })
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (current is null
+                    || current.Status != VpnPanelStatus.Active
+                    || current.LastSyncAt != panel.LastSyncAt)
+                {
+                    continue;
+                }
+
+                var service = panelScope.ServiceProvider.GetRequiredService<X3UiPanelService>();
+                var result = await service.SyncPanelAsync(panel.Id, cancellationToken);
+                if (!result.IsSuccess)
+                {
+                    _logger.LogWarning("Panel {PanelId} sync failed: {Error}", panel.Id, result.Error);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Panel {PanelId} sync iteration failed", panel.Id);
+            }
         }
     }
 }

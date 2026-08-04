@@ -106,6 +106,27 @@ public static class LocalSqliteSchemaRepair
             }
         }
 
+        if (await TableExistsAsync(db, "Subscriptions", cancellationToken))
+        {
+            foreach (var (column, sql) in new[]
+                     {
+                         ("LifecycleAttemptCount", """ALTER TABLE "Subscriptions" ADD COLUMN "LifecycleAttemptCount" INTEGER NOT NULL DEFAULT 0;"""),
+                         ("LifecycleProcessingStartedAt", """ALTER TABLE "Subscriptions" ADD COLUMN "LifecycleProcessingStartedAt" TEXT NULL;"""),
+                         ("LifecycleLeaseExpiresAt", """ALTER TABLE "Subscriptions" ADD COLUMN "LifecycleLeaseExpiresAt" TEXT NULL;"""),
+                         ("LifecycleNextAttemptAt", """ALTER TABLE "Subscriptions" ADD COLUMN "LifecycleNextAttemptAt" TEXT NULL;"""),
+                         ("LifecycleLastError", """ALTER TABLE "Subscriptions" ADD COLUMN "LifecycleLastError" TEXT NULL;""")
+                     })
+            {
+                if (await ColumnExistsAsync(db, "Subscriptions", column, cancellationToken))
+                {
+                    continue;
+                }
+
+                await db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+                repaired++;
+            }
+        }
+
         return repaired;
     }
 

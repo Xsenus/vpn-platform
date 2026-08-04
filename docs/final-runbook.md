@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-04 локально подтверждено:
 
-- backend full suite: 918/918;
+- backend full suite: 926/926;
 - frontend tests: 68/68;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -193,9 +193,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Telegram ingress consistency: update reservation предшествует side effects; fresh lease возвращает retryable 503, failed/stale update восстанавливается, long-polling не теряет offset.
 - Outbox consistency: enqueue дедуплицируется по event identity, dispatcher использует conditional claim, stale lease, backoff/dead-letter и не подтверждает malformed/unsupported payload как успешный.
 - Provisioning consistency: worker использует conditional claim и lease, stale execution требует явного operator retry, runner ограничен timeout, active run нельзя отменить или повторить поверх внешнего deploy.
+- Subscription lifecycle consistency: expiration сначала отключает VPN-доступ, затем меняет статус; provider failure сохраняет `GracePeriod`, lease/backoff и retry diagnostics, а batch workers изолируют ошибки отдельных записей.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-04-provisioning-worker-recovery`, версия `0.472.0`.
-- roadmap progress: `484/504` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-04-subscription-lifecycle-recovery`, версия `0.473.0`.
+- roadmap progress: `485/505` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

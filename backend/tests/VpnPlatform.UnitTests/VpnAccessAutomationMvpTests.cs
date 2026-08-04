@@ -85,6 +85,27 @@ public class VpnAccessAutomationMvpTests
         Assert.True(await db.AccessCredentialHistories.AnyAsync(x => x.EventType.Contains("Failed")));
     }
 
+    [Fact]
+    public async Task Provider_Disable_Cancellation_Should_Persist_Unknown_State_And_Rethrow()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        using var cancellation = new CancellationTokenSource();
+        var provider = new TrackingVpnProvider { CancelDisable = cancellation.Cancel };
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var subscriptionId = Guid.NewGuid();
+        var accessId = Guid.NewGuid();
+        db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = Guid.NewGuid(), TariffId = Guid.NewGuid(), Status = SubscriptionStatus.GracePeriod, StartAt = clock.UtcNow.AddDays(-30), EndAt = clock.UtcNow.AddDays(-1) });
+        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = "client-cancelled", ServerId = Guid.NewGuid(), AccessUri = "vless://client", Status = AccessCredentialStatus.Active });
+        await db.SaveChangesAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.DisableAccessAsync(accessId, "expiry", "test", null, cancellation.Token));
+
+        Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Contains(await db.AccessCredentialHistories.ToListAsync(), x => x.EventType.EndsWith("Cancelled", StringComparison.Ordinal));
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.disable.cancelled");
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -113,6 +134,7 @@ public class VpnAccessAutomationMvpTests
         public int SyncCalls { get; private set; }
         public int ResetCalls { get; private set; }
         public bool ThrowOnDisable { get; init; }
+        public Action? CancelDisable { get; init; }
 
         public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new VpnProvisionResult($"client-{request.SubscriptionId:N}", "vless://client", "vless://client", "/config.json"));
@@ -123,6 +145,8 @@ public class VpnAccessAutomationMvpTests
         public Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken)
         {
             DisableCalls += 1;
+            CancelDisable?.Invoke();
+            cancellationToken.ThrowIfCancellationRequested();
             if (ThrowOnDisable) throw new InvalidOperationException("provider disabled with secret token value");
             return Task.CompletedTask;
         }

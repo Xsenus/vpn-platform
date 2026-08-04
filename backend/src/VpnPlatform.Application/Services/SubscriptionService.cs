@@ -10,6 +10,8 @@ namespace VpnPlatform.Application.Services;
 
 public class SubscriptionService
 {
+    private static readonly TimeSpan LifecycleLeaseDuration = TimeSpan.FromMinutes(5);
+
     private readonly IApplicationDbContext _db;
     private readonly IClock _clock;
     private readonly NodeAllocationService _nodeAllocationService;
@@ -229,6 +231,7 @@ public class SubscriptionService
             }
 
             StatusStateMachine.SetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
+            ResetLifecycleState(subscription);
             subscription.CurrentServerId = node.Id;
             subscription.CurrentAccessId = access.Id;
             StatusStateMachine.SetOrderStatus(order, OrderStatus.Completed, now);
@@ -276,75 +279,232 @@ public class SubscriptionService
     public async Task<int> ProcessLifecycleAsync(CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
-
-        var subscriptions = await _db.Subscriptions
-            .Include(x => x.CurrentAccess)
-            .Include(x => x.Tariff)
+        var activeCandidates = await _db.Subscriptions.AsNoTracking()
+            .Where(x => x.Status == SubscriptionStatus.Active)
             .ToListAsync(cancellationToken);
+        var expirationCandidates = await _db.Subscriptions.AsNoTracking()
+            .Where(x => x.Status == SubscriptionStatus.GracePeriod)
+            .ToListAsync(cancellationToken);
+        var processed = 0;
 
-        var moveToGrace = subscriptions
-            .Where(x => x.Status == SubscriptionStatus.Active && x.EndAt <= now)
-            .ToList();
-
-        foreach (var item in moveToGrace)
+        foreach (var candidate in activeCandidates.Where(x => x.EndAt <= now).OrderBy(x => x.EndAt).ThenBy(x => x.Id))
         {
-            StatusStateMachine.SetSubscriptionStatus(item, SubscriptionStatus.GracePeriod, now);
-            await QueueLifecycleNotificationAsync(item, "subscription_expiring", "subscription_expiring", now, cancellationToken);
-        }
-
-        var expire = subscriptions
-            .Where(x => x.Status == SubscriptionStatus.GracePeriod && x.GracePeriodEndAt.HasValue && x.GracePeriodEndAt <= now)
-            .ToList();
-
-        foreach (var item in expire)
-        {
-            StatusStateMachine.SetSubscriptionStatus(item, SubscriptionStatus.Expired, now);
-
-            if (item.CurrentAccess is not null)
+            await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(candidate.Id, cancellationToken);
+            var item = await _db.Subscriptions
+                .Include(x => x.Tariff)
+                .FirstOrDefaultAsync(x => x.Id == candidate.Id && x.Status == SubscriptionStatus.Active, cancellationToken);
+            if (item is null || item.EndAt > now)
             {
-                if (_vpnAccessLifecycleService is not null)
-                {
-                    await _vpnAccessLifecycleService.DisableAccessAsync(item.CurrentAccess, "AccessDisabledOnExpiry", "subscription_expired", null, cancellationToken);
-                }
-                else
-                {
-                    try
-                    {
-                        var provider = _vpnProviderFactory.Get(item.CurrentAccess.ProviderType);
-                        await provider.DisableAccessAsync(item.CurrentAccess.ProviderAccessId, cancellationToken);
-                        StatusStateMachine.SetAccessStatus(item.CurrentAccess, AccessCredentialStatus.Disabled, now);
-                        item.CurrentAccess.DisabledAt = now;
-                        _db.AccessCredentialHistories.Add(new AccessCredentialHistory
-                        {
-                            AccessCredentialId = item.CurrentAccess.Id,
-                            SubscriptionId = item.Id,
-                            EventType = "AccessDisabledOnExpiry",
-                            OldValueJson = "{}",
-                            NewValueJson = JsonSerializer.Serialize(new { item.CurrentAccess.ProviderAccessId, item.CurrentAccess.Status, disabledAt = now })
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        var safeError = SafeError(ex.Message);
-                        StatusStateMachine.SetAccessStatus(item.CurrentAccess, AccessCredentialStatus.Error, now);
-                        _db.AccessCredentialHistories.Add(new AccessCredentialHistory
-                        {
-                            AccessCredentialId = item.CurrentAccess.Id,
-                            SubscriptionId = item.Id,
-                            EventType = "AccessDisableFailedOnExpiry",
-                            OldValueJson = "{}",
-                            NewValueJson = JsonSerializer.Serialize(new { item.CurrentAccess.ProviderAccessId, error = safeError })
-                        });
-                    }
-                }
+                continue;
             }
 
-            await QueueLifecycleNotificationAsync(item, "subscription_expired", "subscription_expired", now, cancellationToken);
+            StatusStateMachine.SetSubscriptionStatus(item, SubscriptionStatus.GracePeriod, now);
+            ResetLifecycleState(item);
+            await QueueLifecycleNotificationAsync(item, "subscription_expiring", "subscription_expiring", now, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+            processed++;
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        return moveToGrace.Count + expire.Count;
+        foreach (var candidate in expirationCandidates
+                     .Where(x => x.GracePeriodEndAt.HasValue
+                         && x.GracePeriodEndAt <= now
+                         && (!x.LifecycleNextAttemptAt.HasValue || x.LifecycleNextAttemptAt <= now)
+                         && (!x.LifecycleLeaseExpiresAt.HasValue || x.LifecycleLeaseExpiresAt <= now))
+                     .OrderBy(x => x.GracePeriodEndAt)
+                     .ThenBy(x => x.Id))
+        {
+            await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(candidate.Id, cancellationToken);
+            if (!await TryClaimLifecycleAsync(candidate.Id, now, cancellationToken))
+            {
+                continue;
+            }
+
+            var item = await _db.Subscriptions
+                .Include(x => x.CurrentAccess)
+                .Include(x => x.Tariff)
+                .FirstAsync(x => x.Id == candidate.Id, cancellationToken);
+
+            try
+            {
+                var disableResult = await DisableLifecycleAccessAsync(item, now, cancellationToken);
+                if (!disableResult.IsSuccess)
+                {
+                    await ScheduleLifecycleRetryAsync(item, disableResult.Error ?? "VPN access disable failed.", now, cancellationToken);
+                    continue;
+                }
+
+                StatusStateMachine.SetSubscriptionStatus(item, SubscriptionStatus.Expired, now);
+                ClearLifecycleClaim(item);
+                item.LifecycleNextAttemptAt = null;
+                item.LifecycleLastError = null;
+                await QueueLifecycleNotificationAsync(item, "subscription_expired", "subscription_expired", now, cancellationToken);
+                await _db.SaveChangesAsync(cancellationToken);
+                processed++;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await ScheduleLifecycleRetryAsync(item, "Subscription expiry was cancelled while provider state may be unknown.", now, CancellationToken.None);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                await ScheduleLifecycleRetryAsync(item, SafeError(ex.Message), now, CancellationToken.None);
+            }
+        }
+
+        return processed;
     }
+
+    private async Task<bool> TryClaimLifecycleAsync(Guid subscriptionId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var candidate = await _db.Subscriptions.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == subscriptionId && x.Status == SubscriptionStatus.GracePeriod, cancellationToken);
+        if (candidate is null
+            || !candidate.GracePeriodEndAt.HasValue
+            || candidate.GracePeriodEndAt > now
+            || candidate.LifecycleNextAttemptAt > now
+            || candidate.LifecycleLeaseExpiresAt > now)
+        {
+            return false;
+        }
+
+        var version = now > candidate.UpdatedAt ? now : candidate.UpdatedAt.AddTicks(1);
+        if (IsInMemoryProvider())
+        {
+            var tracked = await _db.Subscriptions.FirstOrDefaultAsync(x => x.Id == subscriptionId, cancellationToken);
+            if (tracked is null || tracked.Status != candidate.Status || tracked.UpdatedAt != candidate.UpdatedAt)
+            {
+                return false;
+            }
+
+            ApplyLifecycleClaim(tracked, now, version);
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        var affected = await _db.Subscriptions
+            .Where(x => x.Id == subscriptionId && x.Status == candidate.Status && x.UpdatedAt == candidate.UpdatedAt)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.LifecycleAttemptCount, x => x.LifecycleAttemptCount + 1)
+                .SetProperty(x => x.LifecycleProcessingStartedAt, now)
+                .SetProperty(x => x.LifecycleLeaseExpiresAt, now.Add(LifecycleLeaseDuration))
+                .SetProperty(x => x.LifecycleLastError, (string?)null)
+                .SetProperty(x => x.UpdatedAt, version), cancellationToken);
+        return affected == 1;
+    }
+
+    private async Task<Result<string>> DisableLifecycleAccessAsync(Subscription subscription, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var access = subscription.CurrentAccess;
+        if (access is null)
+        {
+            return Result<string>.Success("No current VPN access.");
+        }
+
+        if (_vpnAccessLifecycleService is not null)
+        {
+            var result = await _vpnAccessLifecycleService.DisableAccessAsync(access, "AccessDisabledOnExpiry", "subscription_expired", null, cancellationToken);
+            return result.IsSuccess
+                ? Result<string>.Success(result.Value?.Message ?? "VPN access disabled.")
+                : Result<string>.Failure(result.Error ?? "VPN access disable failed.", isRetryable: true);
+        }
+
+        try
+        {
+            if (access.Status != AccessCredentialStatus.Disabled || !access.DisabledAt.HasValue)
+            {
+                var provider = _vpnProviderFactory.Get(access.ProviderType);
+                await provider.DisableAccessAsync(access.ProviderAccessId, cancellationToken);
+                StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Disabled, now);
+                access.DisabledAt = now;
+                _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+                {
+                    AccessCredentialId = access.Id,
+                    SubscriptionId = subscription.Id,
+                    EventType = "AccessDisabledOnExpiry",
+                    OldValueJson = "{}",
+                    NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, access.Status, disabledAt = now })
+                });
+            }
+
+            return Result<string>.Success("VPN access disabled.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.SyncRequired))
+            {
+                StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.SyncRequired, now);
+            }
+            throw;
+        }
+        catch (Exception ex)
+        {
+            var safeError = SafeError(ex.Message);
+            if (StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.Error))
+            {
+                StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
+            }
+            _db.AccessCredentialHistories.Add(new AccessCredentialHistory
+            {
+                AccessCredentialId = access.Id,
+                SubscriptionId = subscription.Id,
+                EventType = "AccessDisableFailedOnExpiry",
+                OldValueJson = "{}",
+                NewValueJson = JsonSerializer.Serialize(new { access.ProviderAccessId, error = safeError })
+            });
+            return Result<string>.Failure(safeError, isRetryable: true);
+        }
+    }
+
+    private async Task ScheduleLifecycleRetryAsync(Subscription subscription, string error, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var safeError = SensitiveDataRedactor.Redact(error, maxLength: 1000);
+        ClearLifecycleClaim(subscription);
+        subscription.LifecycleLastError = safeError;
+        subscription.LifecycleNextAttemptAt = now.Add(LifecycleRetryDelay(subscription.LifecycleAttemptCount));
+        _db.AuditLogs.Add(new AuditLog
+        {
+            ActorType = "system",
+            ActorId = "subscription-lifecycle-worker",
+            Action = "subscription.lifecycle_retry_scheduled",
+            EntityType = "Subscription",
+            EntityId = subscription.Id.ToString(),
+            BeforeJson = "{}",
+            AfterJson = JsonSerializer.Serialize(new { attempt = subscription.LifecycleAttemptCount, nextAttemptAt = subscription.LifecycleNextAttemptAt, error = safeError }),
+            CreatedAt = now
+        });
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static TimeSpan LifecycleRetryDelay(int attemptCount)
+        => TimeSpan.FromMinutes(Math.Min(60, 5 * Math.Pow(2, Math.Clamp(attemptCount - 1, 0, 4))));
+
+    private static void ApplyLifecycleClaim(Subscription subscription, DateTimeOffset now, DateTimeOffset version)
+    {
+        subscription.LifecycleAttemptCount++;
+        subscription.LifecycleProcessingStartedAt = now;
+        subscription.LifecycleLeaseExpiresAt = now.Add(LifecycleLeaseDuration);
+        subscription.LifecycleLastError = null;
+        subscription.UpdatedAt = version;
+    }
+
+    private static void ClearLifecycleClaim(Subscription subscription)
+    {
+        subscription.LifecycleProcessingStartedAt = null;
+        subscription.LifecycleLeaseExpiresAt = null;
+    }
+
+    private static void ResetLifecycleState(Subscription subscription)
+    {
+        subscription.LifecycleAttemptCount = 0;
+        ClearLifecycleClaim(subscription);
+        subscription.LifecycleNextAttemptAt = null;
+        subscription.LifecycleLastError = null;
+    }
+
+    private bool IsInMemoryProvider()
+        => _db is DbContext dbContext
+            && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
 
     private async Task QueueLifecycleNotificationAsync(Subscription subscription, string templateKey, string eventType, DateTimeOffset now, CancellationToken cancellationToken)
     {

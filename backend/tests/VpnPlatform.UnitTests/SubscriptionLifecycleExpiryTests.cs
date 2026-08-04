@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
@@ -39,24 +40,109 @@ public class SubscriptionLifecycleExpiryTests
     }
 
     [Fact]
-    public async Task DisableAccess_Error_Should_Not_Break_Lifecycle_And_Should_Write_Failure_History()
+    public async Task DisableAccess_Error_Should_Keep_Grace_And_Retry_Before_Expiring()
     {
         await using var db = CreateDbContext();
         var provider = new TrackingVpnProvider { ThrowOnDisable = true };
-        var service = new SubscriptionService(db, new FixedClock(), new NodeAllocationService(db), new TestVpnProviderFactory(provider));
+        var clock = new FixedClock();
+        var service = new SubscriptionService(db, clock, new NodeAllocationService(db), new TestVpnProviderFactory(provider));
         var access = await SeedExpiredGraceSubscriptionAsync(db);
 
         var processed = await service.ProcessLifecycleAsync(CancellationToken.None);
 
-        Assert.Equal(1, processed);
+        Assert.Equal(0, processed);
         var subscription = await db.Subscriptions.Include(x => x.CurrentAccess).SingleAsync();
-        Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
+        Assert.Equal(SubscriptionStatus.GracePeriod, subscription.Status);
         Assert.Equal(AccessCredentialStatus.Error, subscription.CurrentAccess!.Status);
         Assert.Null(subscription.CurrentAccess.DisabledAt);
+        Assert.Equal(1, subscription.LifecycleAttemptCount);
+        Assert.Equal(clock.UtcNow.AddMinutes(5), subscription.LifecycleNextAttemptAt);
+        Assert.Contains("disable failed", subscription.LifecycleLastError, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(subscription.LifecycleProcessingStartedAt);
+        Assert.Null(subscription.LifecycleLeaseExpiresAt);
         Assert.Equal(new[] { access.ProviderAccessId }, provider.DisabledAccessIds);
         var history = await db.AccessCredentialHistories.SingleAsync();
         Assert.Equal("AccessDisableFailedOnExpiry", history.EventType);
         Assert.Contains("disable failed", history.NewValueJson, StringComparison.OrdinalIgnoreCase);
+        Assert.False(await db.OutboxMessages.AnyAsync(x => x.CorrelationId.StartsWith("subscription_expired:")));
+
+        provider.ThrowOnDisable = false;
+        var retryClock = new FixedClock(clock.UtcNow.AddMinutes(6));
+        var retryService = new SubscriptionService(db, retryClock, new NodeAllocationService(db), new TestVpnProviderFactory(provider));
+
+        Assert.Equal(1, await retryService.ProcessLifecycleAsync(CancellationToken.None));
+        Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
+        Assert.Equal(AccessCredentialStatus.Disabled, subscription.CurrentAccess.Status);
+        Assert.Equal(2, subscription.LifecycleAttemptCount);
+        Assert.Null(subscription.LifecycleNextAttemptAt);
+        Assert.Null(subscription.LifecycleLastError);
+        Assert.Single(await db.OutboxMessages.Where(x => x.CorrelationId.StartsWith("subscription_expired:")).ToListAsync());
+    }
+
+    [Fact]
+    public async Task Expired_Lifecycle_Lease_Should_Be_Recovered()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var provider = new TrackingVpnProvider();
+        await SeedExpiredGraceSubscriptionAsync(db);
+        var subscription = await db.Subscriptions.SingleAsync();
+        subscription.LifecycleAttemptCount = 1;
+        subscription.LifecycleProcessingStartedAt = clock.UtcNow.AddMinutes(-10);
+        subscription.LifecycleLeaseExpiresAt = clock.UtcNow.AddMinutes(-5);
+        await db.SaveChangesAsync();
+        var service = new SubscriptionService(db, clock, new NodeAllocationService(db), new TestVpnProviderFactory(provider));
+
+        var processed = await service.ProcessLifecycleAsync(CancellationToken.None);
+
+        Assert.Equal(1, processed);
+        Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
+        Assert.Equal(2, subscription.LifecycleAttemptCount);
+        Assert.Null(subscription.LifecycleProcessingStartedAt);
+        Assert.Null(subscription.LifecycleLeaseExpiresAt);
+        Assert.Single(provider.DisabledAccessIds);
+    }
+
+    [Fact]
+    public async Task Concurrent_Lifecycle_Runs_Should_Disable_Access_Once()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-subscription-lifecycle-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={databasePath};Default Timeout=10;Pooling=False";
+        var provider = new TrackingVpnProvider { BlockOnDisable = true };
+        var clock = new FixedClock();
+
+        try
+        {
+            await using (var setupDb = CreateSqliteDbContext(connectionString))
+            {
+                await setupDb.Database.EnsureCreatedAsync();
+                await SeedExpiredGraceSubscriptionAsync(setupDb);
+            }
+
+            await using var firstDb = CreateSqliteDbContext(connectionString);
+            await using var secondDb = CreateSqliteDbContext(connectionString);
+            var firstService = new SubscriptionService(firstDb, clock, new NodeAllocationService(firstDb), new TestVpnProviderFactory(provider));
+            var secondService = new SubscriptionService(secondDb, clock, new NodeAllocationService(secondDb), new TestVpnProviderFactory(provider));
+
+            var firstRun = firstService.ProcessLifecycleAsync(CancellationToken.None);
+            await provider.DisableStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var secondRun = secondService.ProcessLifecycleAsync(CancellationToken.None);
+            provider.ReleaseDisable.TrySetResult();
+
+            Assert.Equal(1, await firstRun);
+            Assert.Equal(0, await secondRun);
+            Assert.Single(provider.DisabledAccessIds);
+
+            await using var assertDb = CreateSqliteDbContext(connectionString);
+            var subscription = await assertDb.Subscriptions.AsNoTracking().SingleAsync();
+            Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
+            Assert.Equal(1, subscription.LifecycleAttemptCount);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(databasePath);
+        }
     }
 
     [Fact]
@@ -165,13 +251,10 @@ public class SubscriptionLifecycleExpiryTests
             Status = AccessCredentialStatus.Active,
             IssuedAt = endAt.AddDays(-30)
         };
-        subscription.CurrentAccessId = access.Id;
-
         db.Users.Add(user);
         db.Tariffs.Add(tariff);
         db.VpnNodes.Add(node);
         db.Subscriptions.Add(subscription);
-        db.AccessCredentials.Add(access);
         if (withTelegram)
         {
             db.TelegramAccounts.Add(new TelegramAccount
@@ -182,6 +265,10 @@ public class SubscriptionLifecycleExpiryTests
                 IsBlocked = false
             });
         }
+        await db.SaveChangesAsync();
+
+        db.AccessCredentials.Add(access);
+        subscription.CurrentAccessId = access.Id;
         await db.SaveChangesAsync();
         return access;
     }
@@ -194,6 +281,9 @@ public class SubscriptionLifecycleExpiryTests
         return new ApplicationDbContext(options);
     }
 
+    private static ApplicationDbContext CreateSqliteDbContext(string connectionString)
+        => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connectionString).Options);
+
     private static string PayloadText(string payloadJson)
     {
         using var document = JsonDocument.Parse(payloadJson);
@@ -202,7 +292,8 @@ public class SubscriptionLifecycleExpiryTests
 
     private sealed class FixedClock : IClock
     {
-        public DateTimeOffset UtcNow { get; } = new(2026, 4, 30, 10, 0, 0, TimeSpan.Zero);
+        public FixedClock(DateTimeOffset? now = null) => UtcNow = now ?? new DateTimeOffset(2026, 4, 30, 10, 0, 0, TimeSpan.Zero);
+        public DateTimeOffset UtcNow { get; }
     }
 
     private sealed class TestVpnProviderFactory : IVpnProviderFactory
@@ -217,7 +308,10 @@ public class SubscriptionLifecycleExpiryTests
         private readonly List<string> _disabledAccessIds = new();
         public string Name => "x3ui";
         public bool ThrowOnDisable { get; set; }
+        public bool BlockOnDisable { get; set; }
         public IReadOnlyList<string> DisabledAccessIds => _disabledAccessIds;
+        public TaskCompletionSource DisableStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReleaseDisable { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new VpnProvisionResult($"client-{request.SubscriptionId:N}", "vless://test", "vless://test", string.Empty));
@@ -225,15 +319,18 @@ public class SubscriptionLifecycleExpiryTests
         public Task<VpnProvisionResult> UpdateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
             => CreateAccessAsync(request, cancellationToken);
 
-        public Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken)
+        public async Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken)
         {
             _disabledAccessIds.Add(providerAccessId);
+            DisableStarted.TrySetResult();
+            if (BlockOnDisable)
+            {
+                await ReleaseDisable.Task.WaitAsync(cancellationToken);
+            }
             if (ThrowOnDisable)
             {
                 throw new InvalidOperationException("disable failed");
             }
-
-            return Task.CompletedTask;
         }
 
         public Task DeleteAccessAsync(string providerAccessId, CancellationToken cancellationToken) => Task.CompletedTask;

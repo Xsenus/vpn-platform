@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: Subscription lifecycle recovery
+
+Scope:
+- Проверены durable subscription expiration, VPN disable retry/backoff и lease recovery, cancellation uncertainty, worker batch isolation, panel stale-observation suppression, admin lifecycle diagnostics и local SQLite schema repair.
+
+Results:
+- Roadmap progress: `485/505` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-subscription-lifecycle-recovery`, version `0.473.0`.
+- Backend full suite: OK, `926/926`; targeted lifecycle/panel/SQLite suite: OK, `36/36`.
+- EF migration `20260804143027_SubscriptionLifecycleRecovery`: OK; pending model changes: none.
+- Frontend tests: OK, `68/68`; typecheck: OK; production build: OK.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Local SQLite smoke: OK; admin subscriptions screen manually checked at desktop and `390x844`, no horizontal overflow or console errors.
+- Secret scan: OK, `600` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: live email and real VPS/staging/live payment/production-like 3x-ui checks were not available; real VPS/staging/live evidence remains open and no external roadmap marker was closed.
+
 ## Check 2026-08-04: Provisioning worker recovery
 
 Scope:
