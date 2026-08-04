@@ -10582,5 +10582,32 @@
         "text": "Roadmap progress is 466/486 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked; real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-full-project-quality-audit",
+    "version": "0.455.0",
+    "releasedAt": "2026-08-04T13:00:00+07:00",
+    "title": "Полная локальная проверка качества проекта",
+    "summary": "Проверены backend, frontend, SQLite-сценарии, публичные страницы, кабинет и все разделы админки на восьми ширинах экрана.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Устранен горизонтальный скролл публичной страницы на узких экранах и исправлен счетчик разделов на экране входа в админку."
+      },
+      {
+        "type": "improved",
+        "text": "All-screens smoke теперь проверяет 5 публичных маршрутов, кабинет и 16 разделов админки на ширинах от 305 до 1920 пикселей, включая переполнение и обрезанные контролы."
+      },
+      {
+        "type": "fixed",
+        "text": "Административные операции используют единый IClock, а encoding guard больше не сканирует временные runtime и Playwright-артефакты."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 467/487 closed, readiness 95.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

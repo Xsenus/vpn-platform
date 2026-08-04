@@ -75,10 +75,10 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 464/464.
+- Backend full suite: 737/737.
 - Frontend tests: 66/66.
 - Frontend typecheck/build: OK.
-- Frontend audit: OK, `0 vulnerabilities`.
+- Frontend high-severity audit: OK; остаются `2 moderate` React Router advisory вне используемых SPA SSR/RSC путей.
 
 ## Ограничения
 

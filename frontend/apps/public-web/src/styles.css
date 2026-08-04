@@ -660,6 +660,10 @@
     padding: 14px;
   }
 
+  .device-card-tertiary {
+    left: 8%;
+  }
+
   .map-point {
     width: 42px;
     height: 42px;

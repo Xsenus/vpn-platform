@@ -140,7 +140,8 @@ public class AdminSubscriptionManagementTests
             paymentProviderAccounts: new PaymentProviderAccountService(db, secretProtector, clock),
             vpnAccessLifecycleService: lifecycle,
             secretProtector: secretProtector,
-            vpnProviderFactory: new TestVpnProviderFactory(provider));
+            vpnProviderFactory: new TestVpnProviderFactory(provider),
+            clock: clock);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         return controller;
     }

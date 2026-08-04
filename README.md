@@ -213,12 +213,12 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `66/66`;
 - frontend typecheck и production build: OK;
-- frontend audit: OK, `0 vulnerabilities`;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят;
+- frontend high-severity audit: OK; остаются `2 moderate` React Router advisory вне используемых SPA SSR/RSC путей;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят; responsive matrix проверяет ширины `305..1920` px;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-07-02-agent-external-evidence-boundary-guard`, версия `0.454.0`;
-- roadmap progress: `466/486` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-04-full-project-quality-audit`, версия `0.455.0`;
+- roadmap progress: `467/487` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

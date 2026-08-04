@@ -29,6 +29,17 @@ const adminSections = [
   'provisioning'
 ]
 
+const responsiveViewports = [
+  { name: 'compact-mobile-with-scrollbar', width: 305, height: 568 },
+  { name: 'compact-mobile', width: 320, height: 568 },
+  { name: 'mobile', width: 360, height: 800 },
+  { name: 'large-mobile', width: 390, height: 844 },
+  { name: 'tablet', width: 768, height: 1024 },
+  { name: 'small-desktop', width: 1024, height: 768 },
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'wide-desktop', width: 1920, height: 1080 }
+]
+
 const user = {
   id: 'all-screens-user',
   email: 'all-screens@example.test',
@@ -529,6 +540,34 @@ async function expectNonBlankPage(page: Page) {
   await expect.poll(async () => page.locator('body').innerText().then((text) => text.trim().length)).toBeGreaterThan(30)
 }
 
+async function expectResponsiveLayout(page: Page, screenName: string) {
+  await expectNonBlankPage(page)
+  const issues = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth
+    const problems: string[] = []
+    if (document.documentElement.scrollWidth > viewportWidth + 1) {
+      problems.push(`document overflow: ${document.documentElement.scrollWidth}px > ${viewportWidth}px`)
+    }
+
+    const interactiveElements = Array.from(document.querySelectorAll<HTMLElement>(
+      'a[href], button, input, select, textarea, [role="tab"]'
+    ))
+    for (const element of interactiveElements) {
+      const style = getComputedStyle(element)
+      const rect = element.getBoundingClientRect()
+      if (style.display === 'none' || style.visibility === 'hidden' || rect.width === 0 || rect.height === 0) continue
+      if (rect.left < -1 || rect.right > viewportWidth + 1) {
+        const identity = element.getAttribute('aria-label') || element.textContent?.trim() || element.tagName.toLowerCase()
+        problems.push(`interactive element clipped: ${identity.slice(0, 80)} (${Math.round(rect.left)}..${Math.round(rect.right)})`)
+      }
+    }
+
+    return problems
+  })
+
+  expect(issues, `${screenName} must fit the viewport`).toEqual([])
+}
+
 test('all public routes render without blank screens or browser errors', async ({ page }) => {
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
@@ -572,6 +611,67 @@ test('every admin section renders without blank screens or browser errors', asyn
     await page.goto(`http://127.0.0.1:5295/#${section}`)
     await expect(page.locator('.admin-shell')).toBeVisible()
     await expectNonBlankPage(page)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('all public routes fit representative responsive viewports', async ({ page }) => {
+  test.setTimeout(120_000)
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of responsiveViewports) {
+    await page.setViewportSize(viewport)
+    for (const route of publicRoutes) {
+      await page.goto(route)
+      await expectResponsiveLayout(page, `${route} at ${viewport.name}`)
+    }
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('cabinet fits representative responsive viewports after authentication', async ({ page }) => {
+  test.setTimeout(120_000)
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of responsiveViewports) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5294/')
+    const authForm = page.locator('#cabinet-auth-panel')
+    if (await authForm.isVisible()) {
+      await authForm.locator('input[type="email"]').fill(user.email)
+      await authForm.locator('input[type="password"]').fill('Password123!')
+      await authForm.locator('button[type="submit"]').click()
+      await expect(page.locator('.code-block').filter({ hasText: 'vless://' }).first()).toBeVisible()
+    }
+    await expectResponsiveLayout(page, `cabinet at ${viewport.name}`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('every admin section fits representative responsive viewports', async ({ page }) => {
+  test.setTimeout(180_000)
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of responsiveViewports) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5295/')
+    if (await page.locator('.admin-shell').isHidden()) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+      await expect(page.locator('.admin-shell')).toBeVisible()
+    }
+
+    for (const section of adminSections) {
+      await page.goto(`http://127.0.0.1:5295/#${section}`)
+      await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
+    }
   }
 
   expect(browserErrors).toEqual([])

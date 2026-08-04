@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-07-02-agent-external-evidence-boundary-guard";
-    private const string CurrentVersion = "0.454.0";
+    private const string CurrentReleaseId = "2026-08-04-full-project-quality-audit";
+    private const string CurrentVersion = "0.455.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

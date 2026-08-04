@@ -2318,7 +2318,7 @@ export function App() {
             <h2>Единый центр управления продажей VPN</h2>
             <p>Настраивайте тарифы, платежных провайдеров, Telegram-ботов, VPN-серверы, панели 3x-ui и выдачу доступов из одной панели.</p>
             <div className="admin-login-metrics">
-              <span><strong>15</strong> разделов</span>
+              <span><strong>{adminSections.length}</strong> разделов</span>
               <span><strong>9</strong> провайдеров</span>
               <span><strong>24/7</strong> контроль</span>
             </div>

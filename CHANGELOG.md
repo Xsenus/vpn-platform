@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.455.0 - 2026-08-04
+
+Release entry: `2026-08-04-full-project-quality-audit`.
+
+### Fixed
+- Admin operations now use the registered `IClock`, removing date-dependent subscription activation failures and keeping timestamps deterministic in SQLite tests.
+- The public site no longer creates horizontal scrolling at a 320 px browser window, including the 305 px content width left by a classic vertical scrollbar.
+- The admin login metric now derives its section count from `adminSections`; the UI correctly reports 16 sections.
+- The UTF-8 guard ignores generated `data`, coverage and Playwright report directories, so concurrent artifacts cannot race source validation.
+- `postcss` was updated to `8.5.25`, removing the high-severity audit finding.
+
+### Improved
+- All-screens Playwright coverage now checks 5 public routes, the authenticated cabinet and all 16 admin sections at 305, 320, 360, 390, 768, 1024, 1440 and 1920 px.
+- The responsive gate checks document overflow, clipped controls, blank screens and browser errors.
+- A real local browser/SQLite pass confirmed registration, public login, sandbox checkout, order visibility in the cabinet and all admin sections.
+
+### Notes
+- Validation: backend `737/737`, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK.
+- `npm audit --audit-level=high` passes; 2 moderate React Router advisories remain. The affected SSR/RSC paths and user-controlled navigation are not used by these SPA clients.
+- Roadmap progress is `467/487` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready.
+
 ## 0.454.0 - 2026-07-02
 
 Release entry: `2026-07-02-agent-external-evidence-boundary-guard`.

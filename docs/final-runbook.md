@@ -181,10 +181,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 9/9;
-- frontend audit: OK, `0 vulnerabilities`;
-- latest "Что нового": `2026-07-02-agent-external-evidence-boundary-guard`, версия `0.454.0`.
-- roadmap progress: `466/486` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- browser console smoke: 12/12; responsive all-screens: 6/6;
+- frontend high-severity audit: OK; остаются `2 moderate` React Router advisory вне используемых SPA SSR/RSC путей;
+- latest "Что нового": `2026-08-04-full-project-quality-audit`, версия `0.455.0`.
+- roadmap progress: `467/487` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -27,13 +27,13 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `66/66`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `9/9`.
+- Browser console smoke: `12/12`; responsive all-screens: `6/6`.
 - Actual PowerShell secret scan: OK.
-- Frontend audit: OK, `0 vulnerabilities`.
+- Frontend high-severity audit: OK; остаются `2 moderate` React Router advisory вне используемых SPA SSR/RSC путей.
 - UTF-8/encoding guard: OK.
 - Release decision entry: `2026-06-14-release-decision`, версия `0.104.0`.
-- Latest "Что нового": `2026-07-02-agent-external-evidence-boundary-guard`, версия `0.454.0`; DocumentationEncodingTests now verifies that AGENTS.md forbids closing real VPS, staging, live payment, production-like VPN, 3x-ui/x-ui and provider-cabinet roadmap items with only local tests, mocks, dry-run or SQLite smoke. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `466/486` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-04-full-project-quality-audit`, версия `0.455.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `467/487` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

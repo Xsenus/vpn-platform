@@ -12,6 +12,7 @@ using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Admin;
 
@@ -77,6 +78,7 @@ public class AdminOperationsController : ControllerBase
     private readonly ISecretProtector? _secretProtector;
     private readonly IQrCodeGenerator? _qrCodeGenerator;
     private readonly IVpnProviderFactory? _vpnProviderFactory;
+    private readonly IClock _clock;
 
     public AdminOperationsController(
         IApplicationDbContext db,
@@ -86,7 +88,8 @@ public class AdminOperationsController : ControllerBase
         VpnAccessLifecycleService? vpnAccessLifecycleService = null,
         ISecretProtector? secretProtector = null,
         IQrCodeGenerator? qrCodeGenerator = null,
-        IVpnProviderFactory? vpnProviderFactory = null)
+        IVpnProviderFactory? vpnProviderFactory = null,
+        IClock? clock = null)
     {
         _db = db;
         _provisioningService = provisioningService;
@@ -96,6 +99,7 @@ public class AdminOperationsController : ControllerBase
         _secretProtector = secretProtector;
         _qrCodeGenerator = qrCodeGenerator;
         _vpnProviderFactory = vpnProviderFactory;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet("audit-logs")]
@@ -249,7 +253,7 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.EndAt, subscription.GracePeriodEndAt, subscription.BlockReason });
         var baseDate = subscription.EndAt > now ? subscription.EndAt : now;
         subscription.EndAt = baseDate.AddDays(request.Days);
@@ -273,13 +277,13 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
-        if (subscription.EndAt <= DateTimeOffset.UtcNow)
+        if (subscription.EndAt <= _clock.UtcNow)
         {
             return BadRequest(new { error = "Subscription period has already ended. Extend the subscription before activation." });
         }
 
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason, subscription.SuspendedAt, subscription.CancelledAt });
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Active, now);
         if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         subscription.BlockReason = null;
@@ -305,10 +309,10 @@ public class AdminOperationsController : ControllerBase
             else if (subscription.CurrentAccess.Status != AccessCredentialStatus.Active || subscription.CurrentAccess.DisabledAt.HasValue)
             {
                 var accessBefore = JsonSerializer.Serialize(new { subscription.CurrentAccess.Status, subscription.CurrentAccess.DisabledAt });
-                var accessStatusResult = StatusStateMachine.TrySetAccessStatus(subscription.CurrentAccess, AccessCredentialStatus.Active, DateTimeOffset.UtcNow);
+                var accessStatusResult = StatusStateMachine.TrySetAccessStatus(subscription.CurrentAccess, AccessCredentialStatus.Active, _clock.UtcNow);
                 if (!accessStatusResult.IsSuccess) return BadRequest(new { error = accessStatusResult.Error });
                 subscription.CurrentAccess.DisabledAt = null;
-                subscription.CurrentAccess.LastSyncedAt = DateTimeOffset.UtcNow;
+                subscription.CurrentAccess.LastSyncedAt = _clock.UtcNow;
                 subscription.CurrentAccess.Revision += 1;
                 _db.AccessCredentialHistories.Add(new AccessCredentialHistory
                 {
@@ -334,7 +338,7 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason });
         var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Blocked, now);
         if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
@@ -355,7 +359,7 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason });
         var nextStatus = subscription.EndAt >= now ? SubscriptionStatus.Active : SubscriptionStatus.Expired;
         var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, nextStatus, now);
@@ -377,7 +381,7 @@ public class AdminOperationsController : ControllerBase
         var subscription = await _db.Subscriptions.Include(x => x.CurrentAccess).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.CancelledAt });
         var statusResult = StatusStateMachine.TrySetSubscriptionStatus(subscription, SubscriptionStatus.Cancelled, now);
         if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
@@ -451,7 +455,7 @@ public class AdminOperationsController : ControllerBase
         var access = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (access is null) return NotFound();
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
         var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Disabled, now);
         if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
@@ -483,7 +487,7 @@ public class AdminOperationsController : ControllerBase
         if (access is null) return NotFound();
 
         var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
-        var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Active, DateTimeOffset.UtcNow);
+        var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Active, _clock.UtcNow);
         if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         access.DisabledAt = null;
         _db.AccessCredentialHistories.Add(new AccessCredentialHistory
@@ -892,14 +896,14 @@ public class AdminOperationsController : ControllerBase
                     Type = "support_reply",
                     PayloadJson = payloadJson,
                     Status = "pending",
-                    NextAttemptAt = DateTimeOffset.UtcNow
+                    NextAttemptAt = _clock.UtcNow
                 });
             }
         }
 
         conversation.Status = conversation.Status == "closed" ? "open" : conversation.Status;
         conversation.ClosedAt = conversation.Status == "closed" ? conversation.ClosedAt : null;
-        conversation.UpdatedAt = DateTimeOffset.UtcNow;
+        conversation.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { conversationId = id, status = "queued" });
     }
@@ -923,8 +927,8 @@ public class AdminOperationsController : ControllerBase
 
         conversation.Status = status;
         conversation.AssignedToUserId = request?.AssignedToUserId ?? conversation.AssignedToUserId;
-        conversation.ClosedAt = status == "closed" ? DateTimeOffset.UtcNow : null;
-        conversation.UpdatedAt = DateTimeOffset.UtcNow;
+        conversation.ClosedAt = status == "closed" ? _clock.UtcNow : null;
+        conversation.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { conversationId = id, conversation.Status, conversation.AssignedToUserId });
     }
@@ -957,7 +961,7 @@ public class AdminOperationsController : ControllerBase
         };
         _db.SupportMessages.Add(note);
         conversation.InternalNote = text;
-        conversation.UpdatedAt = DateTimeOffset.UtcNow;
+        conversation.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new SupportMessageDto(note.Id, note.SupportConversationId, note.UserId, note.TelegramUserId, note.Direction, note.Text, note.AttachmentsJson, note.IsInternalNote, note.CreatedAt));
     }
@@ -1162,7 +1166,7 @@ public class AdminOperationsController : ControllerBase
         node.PublicPort = request.PublicPort > 0 ? request.PublicPort : 443;
         node.NodeGroupId = request.NodeGroupId;
         node.TagsCsv = NormalizeServerTags(request.TagsCsv, owner, authMethod, ProvisioningService.CredentialsConfigured(node) ? "protected" : "missing", request.ValidationMode);
-        node.UpdatedAt = DateTimeOffset.UtcNow;
+        node.UpdatedAt = _clock.UtcNow;
 
         AddAuditLog("server.update", "VpnNode", node.Id, JsonSerializer.Serialize(oldSnapshot), JsonSerializer.Serialize(new
         {
@@ -1225,7 +1229,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Disabled;
         node.IsAvailableForNewUsers = false;
-        node.UpdatedAt = DateTimeOffset.UtcNow;
+        node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapVpnNode(node));
@@ -1259,7 +1263,7 @@ public class AdminOperationsController : ControllerBase
         {
             node.Status = NodeStatus.Archived;
             node.IsAvailableForNewUsers = false;
-            node.UpdatedAt = DateTimeOffset.UtcNow;
+            node.UpdatedAt = _clock.UtcNow;
             AddAuditLog("server.archive", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers, linkedSubscriptions, linkedAccesses, linkedRuns }));
             await _db.SaveChangesAsync(cancellationToken);
             return Ok(new DeleteServerHttpResponse(id, Deleted: false, Archived: true, linkedSubscriptions, linkedAccesses, linkedRuns));
@@ -1324,7 +1328,7 @@ public class AdminOperationsController : ControllerBase
         var check = new NodeHealthCheck
         {
             NodeId = node.Id,
-            CheckedAt = DateTimeOffset.UtcNow,
+            CheckedAt = _clock.UtcNow,
             Status = status,
             LatencyMs = Math.Max(0, stopwatch.ElapsedMilliseconds),
             MetadataJson = JsonSerializer.Serialize(new
@@ -1342,7 +1346,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.HealthStatus, node.LastHealthCheckAt }, JsonOptions);
         node.HealthStatus = status;
         node.LastHealthCheckAt = check.CheckedAt;
-        node.UpdatedAt = DateTimeOffset.UtcNow;
+        node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.health-check", "VpnNode", node.Id, before, JsonSerializer.Serialize(new { node.HealthStatus, node.LastHealthCheckAt, check.ErrorText }, JsonOptions));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapNodeHealthCheck(check));
@@ -1560,7 +1564,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Maintenance;
         node.IsAvailableForNewUsers = false;
-        node.UpdatedAt = DateTimeOffset.UtcNow;
+        node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.maintenance.enable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapVpnNode(node));
@@ -1576,7 +1580,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Ready;
         node.IsAvailableForNewUsers = true;
-        node.UpdatedAt = DateTimeOffset.UtcNow;
+        node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.maintenance.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapVpnNode(node));
@@ -1592,7 +1596,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.IsAvailableForNewUsers = false;
         node.Status = NodeStatus.Draining;
-        node.UpdatedAt = DateTimeOffset.UtcNow;
+        node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.allocation.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapVpnNode(node));
@@ -1608,7 +1612,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.IsAvailableForNewUsers = true;
         node.Status = NodeStatus.Ready;
-        node.UpdatedAt = DateTimeOffset.UtcNow;
+        node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.allocation.enable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapVpnNode(node));
@@ -1687,7 +1691,7 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Tariff slug already exists." });
         }
 
-        tariff.UpdatedAt = DateTimeOffset.UtcNow;
+        tariff.UpdatedAt = _clock.UtcNow;
         AddAuditLog("tariff.update", "Tariff", id, before, JsonSerializer.Serialize(MapTariffDto(tariff)));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapTariffDto(tariff));
@@ -1706,8 +1710,8 @@ public class AdminOperationsController : ControllerBase
         {
             var beforeArchive = JsonSerializer.Serialize(MapTariffDto(tariff));
             tariff.IsActive = false;
-            tariff.VisibleTo = DateTimeOffset.UtcNow;
-            tariff.UpdatedAt = DateTimeOffset.UtcNow;
+            tariff.VisibleTo = _clock.UtcNow;
+            tariff.UpdatedAt = _clock.UtcNow;
             AddAuditLog("tariff.archive", "Tariff", id, beforeArchive, JsonSerializer.Serialize(MapTariffDto(tariff)));
             await _db.SaveChangesAsync(cancellationToken);
             return Ok(new { id, deleted = false, archived = true });
@@ -1747,7 +1751,7 @@ public class AdminOperationsController : ControllerBase
         if (payload.TryGetProperty("status", out var status)) program.Status = status.GetString() ?? program.Status;
         if (payload.TryGetProperty("ruleDefinition", out var ruleDefinition)) program.RuleDefinition = ruleDefinition.GetRawText();
 
-        program.UpdatedAt = DateTimeOffset.UtcNow;
+        program.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(program);
     }

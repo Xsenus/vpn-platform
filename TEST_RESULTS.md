@@ -2,6 +2,30 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: full project quality audit
+
+Scope:
+- Полный локальный regression backend/frontend и реальный SQLite/browser проход публичного сайта, кабинета и админки.
+- Адаптивная матрица покрывает 5 публичных маршрутов, кабинет и 16 разделов админки на 8 ширинах от 305 до 1920 px.
+- Проверены регистрация, вход, sandbox checkout, появление заказа в кабинете, browser console и горизонтальное переполнение.
+
+Result:
+- Исправлены детерминированные часы административных операций, mobile horizontal overflow, устаревший счетчик разделов админки и race в encoding guard.
+- High-уязвимость `postcss` устранена обновлением до `8.5.25`; остаются 2 moderate advisory React Router вне используемых SPA-путей.
+- Roadmap progress: `467/487` closed, readiness `95.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- What's New: `2026-08-04-full-project-quality-audit`, version `0.455.0`.
+
+Validation:
+- Backend full suite: OK, `737/737`.
+- Frontend tests: OK, `66/66`; typecheck/build: OK.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Responsive combinations: 40 public route checks, 8 cabinet checks and 128 admin section checks.
+- Fresh local SQLite smoke: OK; registration, login, sandbox payment order, subscription and VPN access API flow confirmed.
+- Real local browser: OK; public routes, cabinet order history and all 16 admin sections have no console errors or horizontal overflow at 320 px.
+- Frontend audit high gate: OK; `0` high, `2` moderate residual advisories.
+- Encoding guard and artifact cleanup: OK.
+- External VPS/staging/live payment/production-like 3x-ui checks were not available and remain open.
+
 ## Check 2026-07-02: agent external evidence boundary guard
 
 Scope:
