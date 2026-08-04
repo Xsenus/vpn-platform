@@ -2,6 +2,34 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-04: payment refund commit resilience
+
+Scope:
+- SQLite concurrency воспроизводит два одновременных refund-запроса с одинаковым idempotency key.
+- Fault-injection DbContext отклоняет финальный commit после успешного ответа платежного провайдера.
+- Проверены `New`, `Pending`, `Unknown` readiness blockers и caller cancellation во время provider call.
+
+Result:
+- Refund reservation сохраняется до external call; одинаковые параллельные запросы вызывают провайдера один раз.
+- Актуальная refundable amount повторно читается под order gate, а незавершённый возврат fail-closed блокирует другую операцию.
+- Неоднозначный provider outcome сохраняется как `Unknown` с provider refund id/raw response, не увеличивает `RefundedAmount` и не переводит payment/order в refunded state.
+- Cancellation пробрасывается вызывающей стороне после независимого сохранения `Unknown`; неиспользуемые payment gates удаляются.
+- Roadmap progress: `475/495` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-04-payment-refund-commit-resilience`, version `0.463.0`.
+
+Validation:
+- Backend full suite: OK, `824/824`; targeted payment/refund suite: OK, `147/147`.
+- Targeted docs/release/encoding suite: OK, `51/51`.
+- API Release build with warnings as errors: OK, `0` warnings and `0` errors.
+- Frontend tests: OK, `66/66`; typecheck/build: OK on Node.js `22.22.0`.
+- Frontend dependency audit: OK, `0 vulnerabilities`.
+- Playwright console suite: OK, `12/12`; responsive all-screens: OK, `6/6`.
+- Fresh local SQLite smoke: OK; latest release `2026-08-04-payment-refund-commit-resilience`.
+- Secret scan: OK, `561` files, `0` findings.
+- Encoding guard: OK.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were unavailable; real VPS/staging/live evidence remains open.
+
 ## Check 2026-08-04: 3x-ui remote create compensation
 
 Scope:

@@ -2278,6 +2278,11 @@ public class AdminOperationsController : ControllerBase
             blockers.Add("Вся сумма платежа уже возвращена.");
         }
 
+        if (payment.Refunds.Any(x => x.Status is RefundStatus.New or RefundStatus.Pending or RefundStatus.Unknown))
+        {
+            blockers.Add("Есть незавершенный возврат: сверьте его статус у провайдера перед новой операцией.");
+        }
+
         if (string.IsNullOrWhiteSpace(payment.ProviderPaymentId))
         {
             blockers.Add("Не сохранен идентификатор платежа у провайдера.");

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.463.0 - 2026-08-04
+
+Release entry: `2026-08-04-payment-refund-commit-resilience`.
+
+### Fixed
+- Refund создаёт durable `New` reservation до вызова платежного провайдера, поэтому параллельный одинаковый запрос не выполняет возврат дважды.
+- Перед возвратом повторно читаются актуальные payment/refund state и доступная сумма под order gate; `New`, `Pending` и `Unknown` операции блокируют следующий возврат до сверки с провайдером.
+- Если provider call отменён или финальный local commit не состоялся, reservation сохраняется как `Unknown` независимым cancellation token, а сумма и статус платежа возвращаются к подтверждённому состоянию.
+- Payment processing gates освобождаются после последнего участника и больше не накапливаются по каждому обработанному заказу.
+
+### Notes
+- Validation: backend full suite `824/824`, targeted payment/refund suite `147/147`, API Release build `0` warnings and `0` errors, frontend `66/66`, Playwright console suite `12/12`, responsive all-screens `6/6`, fresh local SQLite smoke OK, typecheck/build OK on Node.js 22.22.0.
+- `RoadmapCurrentStateTests`, `FinalDocsChangelogTests` and the targeted docs/release/encoding suite `51/51` keep current evidence synchronized.
+- Frontend dependency audit: `0 vulnerabilities`; secret scan: `561` files, `0` findings; artifact cleanup: OK.
+- Roadmap progress is `475/495` closed, readiness `96.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked. The project remains `staging-ready baseline`, not production-ready; real VPS/staging/live payment/production-like 3x-ui evidence remains open.
+
 ## 0.462.0 - 2026-08-04
 
 Release entry: `2026-08-04-x3ui-remote-create-compensation`.

@@ -27,6 +27,13 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         OrderStatus.Refunded
     };
 
+    private static readonly RefundStatus[] UnresolvedRefundStatuses =
+    {
+        RefundStatus.New,
+        RefundStatus.Pending,
+        RefundStatus.Unknown
+    };
+
     private readonly IApplicationDbContext _db;
     private readonly IPaymentProviderFactory _paymentProviderFactory;
     private readonly IEnumerable<IPaymentWebhookVerifier> _webhookVerifiers;
@@ -332,6 +339,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
 
         var refundIdempotencyKey = BuildRefundIdempotencyKey(payment.Id, amount, reason);
+        await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(payment.OrderId, cancellationToken);
+
         var existing = await _db.Refunds
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.PaymentAttemptId == payment.Id && x.IdempotencyKey == refundIdempotencyKey, cancellationToken);
@@ -340,63 +349,158 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<RefundDto>.Success(MapRefund(existing));
         }
 
-        if (payment.Status != PaymentStatus.Succeeded && payment.Status != PaymentStatus.PartiallyRefunded)
+        var currentPayment = await _db.Payments
+            .AsNoTracking()
+            .Include(x => x.Order)
+            .Include(x => x.PaymentProviderAccount)
+            .FirstOrDefaultAsync(x => x.Id == paymentId, cancellationToken);
+        if (currentPayment is null || currentPayment.PaymentProviderAccount is null)
+        {
+            return Result<RefundDto>.Failure("Payment attempt not found.");
+        }
+
+        var hasUnresolvedRefund = await _db.Refunds.AsNoTracking()
+            .AnyAsync(x => x.PaymentAttemptId == payment.Id && UnresolvedRefundStatuses.Contains(x.Status), cancellationToken);
+        if (hasUnresolvedRefund)
+        {
+            return Result<RefundDto>.Failure("Payment has an unfinished refund that requires provider reconciliation before another refund.");
+        }
+
+        if (currentPayment.Status != PaymentStatus.Succeeded && currentPayment.Status != PaymentStatus.PartiallyRefunded)
         {
             return Result<RefundDto>.Failure("Only succeeded or partially refunded payments can be refunded.");
         }
 
-        if (amount <= 0 || amount > payment.Amount - payment.RefundedAmount)
+        if (amount <= 0 || amount > currentPayment.Amount - currentPayment.RefundedAmount)
         {
             return Result<RefundDto>.Failure("Refund amount is invalid.");
         }
 
+        var refund = new Refund
+        {
+            PaymentAttemptId = currentPayment.Id,
+            Provider = currentPayment.Provider,
+            ProviderRefundId = $"pending:{Guid.NewGuid():N}",
+            IdempotencyKey = refundIdempotencyKey,
+            Status = RefundStatus.New,
+            Amount = amount,
+            Currency = currentPayment.Currency,
+            Reason = reason,
+            RawRequest = JsonSerializer.Serialize(new { paymentId = currentPayment.Id, amount, currency = currentPayment.Currency, reason, idempotencyKey = refundIdempotencyKey }),
+            RawResponse = "{}"
+        };
+        _db.Refunds.Add(refund);
+
         try
         {
-            var provider = _paymentProviderFactory.Get(payment.Provider);
-            var refundResult = await provider.RefundAsync(payment, payment.PaymentProviderAccount, amount, reason, cancellationToken);
-
-            var refund = new Refund
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            _db.Refunds.Remove(refund);
+            try
             {
-                PaymentAttemptId = payment.Id,
-                Provider = payment.Provider,
-                ProviderRefundId = refundResult.RefundId,
-                IdempotencyKey = refundIdempotencyKey,
-                Status = refundResult.Status,
-                Amount = amount,
-                Currency = payment.Currency,
-                Reason = reason,
-                RawRequest = JsonSerializer.Serialize(new { paymentId = payment.Id, amount, currency = payment.Currency, reason, idempotencyKey = refundIdempotencyKey }),
-                RawResponse = refundResult.RawResponse,
-                RefundedAt = refundResult.Status == RefundStatus.Succeeded ? _clock.UtcNow : null
-            };
-            _db.Refunds.Add(refund);
-
-            if (refund.Status == RefundStatus.Succeeded)
-            {
-                payment.RefundedAmount += amount;
-                payment.RefundedAt = _clock.UtcNow;
-                var nextPaymentStatus = payment.RefundedAmount >= payment.Amount ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
-                StatusStateMachine.SetPaymentStatus(payment, nextPaymentStatus, _clock.UtcNow);
-                if (payment.Order is not null)
+                existing = await _db.Refunds
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.PaymentAttemptId == payment.Id && x.IdempotencyKey == refundIdempotencyKey, cancellationToken);
+                if (existing is not null)
                 {
-                    if (payment.Status == PaymentStatus.Refunded)
-                    {
-                        StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.Refunded, _clock.UtcNow);
-                    }
+                    return Result<RefundDto>.Success(MapRefund(existing));
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                // The provider has not been called yet, so a database read failure is still fail-closed.
+            }
 
-            payment.UpdatedAt = _clock.UtcNow;
-            await _db.SaveChangesAsync(cancellationToken);
-            return Result<RefundDto>.Success(MapRefund(refund));
+            return Result<RefundDto>.Failure("Refund reservation could not be saved; the payment provider was not called.");
         }
-        catch (NotSupportedException ex)
+
+        PaymentRefundResult refundResult;
+        try
         {
-            return Result<RefundDto>.Failure(ex.Message);
+            var provider = _paymentProviderFactory.Get(currentPayment.Provider);
+            refundResult = await provider.RefundAsync(currentPayment, currentPayment.PaymentProviderAccount, amount, reason, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
+            throw;
         }
         catch (Exception ex)
         {
-            return Result<RefundDto>.Failure(ex.Message);
+            var persisted = await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
+            var suffix = persisted ? string.Empty : " Local reconciliation also failed.";
+            return Result<RefundDto>.Failure($"Refund provider outcome is unknown and requires manual reconciliation. {ex.Message}{suffix}");
+        }
+
+        refund.ProviderRefundId = string.IsNullOrWhiteSpace(refundResult.RefundId) ? refund.ProviderRefundId : refundResult.RefundId;
+        refund.Status = refundResult.Status;
+        refund.RawResponse = refundResult.RawResponse;
+        refund.RefundedAt = refundResult.Status == RefundStatus.Succeeded ? _clock.UtcNow : null;
+
+        RestoreTrackedPayment(payment, currentPayment);
+        if (refund.Status == RefundStatus.Succeeded)
+        {
+            payment.RefundedAmount = currentPayment.RefundedAmount + amount;
+            payment.RefundedAt = _clock.UtcNow;
+            var nextPaymentStatus = payment.RefundedAmount >= payment.Amount ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
+            StatusStateMachine.SetPaymentStatus(payment, nextPaymentStatus, _clock.UtcNow);
+            if (payment.Order is not null && payment.Status == PaymentStatus.Refunded)
+            {
+                StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.Refunded, _clock.UtcNow);
+            }
+        }
+
+        payment.UpdatedAt = _clock.UtcNow;
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<RefundDto>.Success(MapRefund(refund));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            var persisted = await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
+            var suffix = persisted ? string.Empty : " The durable reservation remains in New status because local reconciliation also failed.";
+            return Result<RefundDto>.Failure($"Refund was accepted by the provider but local finalization failed; manual reconciliation is required. {ex.Message}{suffix}");
+        }
+    }
+
+    private async Task<bool> MarkRefundUnresolvedAsync(Refund refund, PaymentAttempt payment, PaymentAttempt currentPayment)
+    {
+        refund.Status = RefundStatus.Unknown;
+        refund.RefundedAt = null;
+        RestoreTrackedPayment(payment, currentPayment);
+        try
+        {
+            await _db.SaveChangesAsync(CancellationToken.None);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void RestoreTrackedPayment(PaymentAttempt payment, PaymentAttempt currentPayment)
+    {
+        payment.Status = currentPayment.Status;
+        payment.RefundedAmount = currentPayment.RefundedAmount;
+        payment.RefundedAt = currentPayment.RefundedAt;
+        payment.UpdatedAt = currentPayment.UpdatedAt;
+        if (payment.Order is not null && currentPayment.Order is not null)
+        {
+            payment.Order.Status = currentPayment.Order.Status;
+            payment.Order.UpdatedAt = currentPayment.Order.UpdatedAt;
         }
     }
 

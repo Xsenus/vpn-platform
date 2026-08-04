@@ -1,0 +1,220 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
+using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Persistence;
+using Xunit;
+
+namespace VpnPlatform.UnitTests;
+
+public class PaymentRefundResilienceTests
+{
+    [Fact]
+    public async Task Reservation_Save_Failure_Should_Not_Call_Provider()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 4, 10, 15, 0, TimeSpan.Zero);
+        var paymentId = await SeedRefundablePaymentAsync(db, now);
+        var provider = new TrackingPaymentProvider(() => { });
+        var orchestrator = CreateOrchestrator(db, provider, now);
+        db.FailNextSave = true;
+
+        var result = await orchestrator.RefundPaymentAsync(paymentId, 40m, "reservation-failure", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("provider was not called", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.RefundCalls);
+        await using var verificationDb = new ApplicationDbContext(options);
+        Assert.Empty(await verificationDb.Refunds.ToListAsync());
+        var payment = await verificationDb.Payments.SingleAsync(x => x.Id == paymentId);
+        Assert.Equal(PaymentStatus.Succeeded, payment.Status);
+        Assert.Equal(0m, payment.RefundedAmount);
+    }
+
+    [Fact]
+    public async Task Final_Save_Failure_Should_Persist_Unknown_Refund_And_Prevent_A_Second_Provider_Call()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 4, 10, 30, 0, TimeSpan.Zero);
+        var paymentId = await SeedRefundablePaymentAsync(db, now);
+        var provider = new TrackingPaymentProvider(() => db.FailNextSave = true);
+        var orchestrator = CreateOrchestrator(db, provider, now);
+
+        var first = await orchestrator.RefundPaymentAsync(paymentId, 40m, "database-failure", CancellationToken.None);
+
+        Assert.False(first.IsSuccess);
+        Assert.Equal(1, provider.RefundCalls);
+        await using (var verificationDb = new ApplicationDbContext(options))
+        {
+            var refund = await verificationDb.Refunds.SingleAsync();
+            var payment = await verificationDb.Payments.SingleAsync(x => x.Id == paymentId);
+            Assert.Equal(RefundStatus.Unknown, refund.Status);
+            Assert.NotEmpty(refund.ProviderRefundId);
+            Assert.Equal(PaymentStatus.Succeeded, payment.Status);
+            Assert.Equal(0m, payment.RefundedAmount);
+        }
+
+        await using var retryDb = new ApplicationDbContext(options);
+        var retryOrchestrator = CreateOrchestrator(retryDb, provider, now);
+        var sameRequest = await retryOrchestrator.RefundPaymentAsync(paymentId, 40m, "database-failure", CancellationToken.None);
+        var differentRequest = await retryOrchestrator.RefundPaymentAsync(paymentId, 30m, "different-request", CancellationToken.None);
+
+        Assert.True(sameRequest.IsSuccess, sameRequest.Error);
+        Assert.Equal("Unknown", sameRequest.Value!.Status);
+        Assert.False(differentRequest.IsSuccess);
+        Assert.Contains("unfinished refund", differentRequest.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, provider.RefundCalls);
+    }
+
+    [Fact]
+    public async Task Provider_Cancellation_Should_Persist_Unknown_Refund_And_Propagate_Cancellation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 4, 10, 45, 0, TimeSpan.Zero);
+        var paymentId = await SeedRefundablePaymentAsync(db, now);
+        using var cancellation = new CancellationTokenSource();
+        var provider = new CancellingPaymentProvider(cancellation);
+        var orchestrator = CreateOrchestrator(db, provider, now);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            orchestrator.RefundPaymentAsync(paymentId, 25m, "cancelled-request", cancellation.Token));
+
+        Assert.Equal(1, provider.RefundCalls);
+        await using var verificationDb = new ApplicationDbContext(options);
+        var refund = await verificationDb.Refunds.SingleAsync();
+        var payment = await verificationDb.Payments.SingleAsync(x => x.Id == paymentId);
+        Assert.Equal(RefundStatus.Unknown, refund.Status);
+        Assert.Equal(PaymentStatus.Succeeded, payment.Status);
+        Assert.Equal(0m, payment.RefundedAmount);
+    }
+
+    private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProvider provider, DateTimeOffset now)
+    {
+        var clock = new FixedClock(now);
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        return new PaymentOrchestrator(db, new TestPaymentProviderFactory(provider), Array.Empty<IPaymentWebhookVerifier>(), accounts, null!, clock);
+    }
+
+    private static async Task<Guid> SeedRefundablePaymentAsync(ApplicationDbContext db, DateTimeOffset now)
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = $"refund-{Guid.NewGuid():N}@example.test", DisplayName = "Refund User", PasswordHash = "hash" };
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Refund tariff", Slug = $"refund-{Guid.NewGuid():N}", Description = "Refund", DurationDays = 30, Price = 100m, Currency = "RUB", MaxDevices = 3, IsActive = true };
+        var account = new PaymentProviderAccount { Id = Guid.NewGuid(), Provider = PaymentProvider.YooKassa, Mode = PaymentProviderMode.Sandbox, Name = $"refund-{Guid.NewGuid():N}", PublicName = "YooKassa", IsEnabled = true, ShopId = "shop", SecretKeyProtected = "secret" };
+        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Amount = 100m, Currency = "RUB", Status = OrderStatus.Completed, ExpiresAt = now.AddMinutes(15), PaymentProvider = PaymentProvider.YooKassa };
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            PaymentProviderAccountId = account.Id,
+            Provider = PaymentProvider.YooKassa,
+            ProviderMode = PaymentProviderMode.Sandbox,
+            ProviderPaymentId = $"payment-{Guid.NewGuid():N}",
+            IdempotencyKey = $"payment-{Guid.NewGuid():N}",
+            Amount = 100m,
+            Currency = "RUB",
+            Status = PaymentStatus.Succeeded,
+            PaidAt = now
+        };
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(order);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        return payment.Id;
+    }
+
+    private sealed class FailingSaveApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : ApplicationDbContext(options)
+    {
+        public bool FailNextSave { get; set; }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (FailNextSave)
+            {
+                FailNextSave = false;
+                throw new DbUpdateException("Injected local save failure.");
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private sealed class TrackingPaymentProvider(Action beforeReturn) : IPaymentProvider
+    {
+        public PaymentProvider Provider => PaymentProvider.YooKassa;
+        public int RefundCalls { get; private set; }
+
+        public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
+        {
+            RefundCalls++;
+            beforeReturn();
+            return Task.FromResult(new PaymentRefundResult($"refund-{payment.Id:N}", RefundStatus.Succeeded, "{\"status\":\"succeeded\"}"));
+        }
+    }
+
+    private sealed class CancellingPaymentProvider(CancellationTokenSource cancellation) : IPaymentProvider
+    {
+        public PaymentProvider Provider => PaymentProvider.YooKassa;
+        public int RefundCalls { get; private set; }
+
+        public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
+        {
+            RefundCalls++;
+            cancellation.Cancel();
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new InvalidOperationException("Cancellation was not propagated.");
+        }
+    }
+
+    private sealed class FixedClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; } = utcNow;
+    }
+
+    private sealed class TestSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext) => plaintext;
+        public string Unprotect(string protectedValue) => protectedValue;
+        public string Mask(string? value, int visibleTail = 4) => "***";
+    }
+
+    private sealed class TestPaymentProviderFactory(IPaymentProvider provider) : IPaymentProviderFactory
+    {
+        public IPaymentProvider Get(PaymentProvider _) => provider;
+    }
+}

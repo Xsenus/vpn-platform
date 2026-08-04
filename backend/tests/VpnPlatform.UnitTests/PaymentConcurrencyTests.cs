@@ -99,6 +99,51 @@ public class PaymentConcurrencyTests
         }
     }
 
+    [Fact]
+    public async Task Same_Refund_In_Parallel_Should_Call_Provider_Once()
+    {
+        var dbPath = CreateDatabasePath();
+        var connectionString = CreateConnectionString(dbPath);
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.Zero));
+        var paymentProvider = new TestPaymentProvider("evt-parallel-refund");
+        var vpnProvider = new CountingVpnProvider();
+        var paymentId = await SeedGraphAsync(connectionString, clock.UtcNow, paymentProvider.PaymentId);
+
+        try
+        {
+            await using (var seedDb = CreateDbContext(connectionString))
+            {
+                var payment = await seedDb.Payments.Include(x => x.Order).SingleAsync(x => x.Id == paymentId);
+                payment.Status = PaymentStatus.Succeeded;
+                payment.PaidAt = clock.UtcNow;
+                payment.Order!.Status = OrderStatus.Completed;
+                await seedDb.SaveChangesAsync();
+            }
+
+            await using var firstDb = CreateDbContext(connectionString);
+            await using var secondDb = CreateDbContext(connectionString);
+            var first = CreateOrchestrator(firstDb, clock, paymentProvider, vpnProvider);
+            var second = CreateOrchestrator(secondDb, clock, paymentProvider, vpnProvider);
+
+            var results = await Task.WhenAll(
+                first.RefundPaymentAsync(paymentId, 490m, "same-request", CancellationToken.None),
+                second.RefundPaymentAsync(paymentId, 490m, "same-request", CancellationToken.None));
+
+            Assert.All(results, result => Assert.True(result.IsSuccess, result.Error));
+            Assert.Equal(1, paymentProvider.RefundCalls);
+
+            await using var db = CreateDbContext(connectionString);
+            Assert.Equal(1, await db.Refunds.CountAsync());
+            var paymentAfterRefund = await db.Payments.SingleAsync(x => x.Id == paymentId);
+            Assert.Equal(PaymentStatus.Refunded, paymentAfterRefund.Status);
+            Assert.Equal(490m, paymentAfterRefund.RefundedAmount);
+        }
+        finally
+        {
+            TryDeleteDatabase(dbPath);
+        }
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(
         ApplicationDbContext db,
         FixedClock clock,
@@ -208,6 +253,7 @@ public class PaymentConcurrencyTests
     private sealed class TestPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier
     {
         private readonly string _eventId;
+        private int _refundCalls;
 
         public TestPaymentProvider(string eventId)
         {
@@ -217,6 +263,7 @@ public class PaymentConcurrencyTests
 
         public PaymentProvider Provider => PaymentProvider.YooKassa;
         public string PaymentId { get; }
+        public int RefundCalls => Volatile.Read(ref _refundCalls);
 
         public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new PaymentInitResult(PaymentId, "https://example.test/pay", "{}"));
@@ -227,8 +274,12 @@ public class PaymentConcurrencyTests
         public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
             => Task.FromResult(new PaymentStatusResult(payment.ProviderPaymentId, PaymentStatus.Succeeded, "{}"));
 
-        public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
-            => Task.FromResult(new PaymentRefundResult($"refund-{Guid.NewGuid():N}", RefundStatus.Succeeded, "{}"));
+        public async Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _refundCalls);
+            await Task.Delay(50, cancellationToken);
+            return new PaymentRefundResult($"refund-{Guid.NewGuid():N}", RefundStatus.Succeeded, "{}");
+        }
 
         public Task<PaymentWebhookVerificationResult> VerifyAsync(PaymentProviderAccount account, PaymentWebhookParseResult parsed, string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
             => Task.FromResult(new PaymentWebhookVerificationResult(true, "test", null));

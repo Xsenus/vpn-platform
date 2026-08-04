@@ -114,6 +114,47 @@ public class AdminRefundManagementTests
         Assert.Single(await db.Refunds.ToListAsync());
     }
 
+    [Theory]
+    [InlineData(RefundStatus.New)]
+    [InlineData(RefundStatus.Pending)]
+    [InlineData(RefundStatus.Unknown)]
+    public async Task GetPayments_Should_Block_New_Refund_When_Previous_Refund_Is_Unresolved(RefundStatus unresolvedStatus)
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.Refunds.Add(new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = payment.Provider,
+            ProviderRefundId = $"unresolved-{Guid.NewGuid():N}",
+            IdempotencyKey = $"unresolved-{Guid.NewGuid():N}",
+            Status = unresolvedStatus,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "awaiting reconciliation"
+        });
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db);
+        var ok = Assert.IsType<OkObjectResult>(await controller.GetPayments(CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        var paymentJson = json.RootElement.EnumerateArray().Single(x => x.GetProperty("Id").GetGuid() == payment.Id);
+
+        Assert.False(paymentJson.GetProperty("CanRefund").GetBoolean());
+        Assert.Contains(
+            paymentJson.GetProperty("RefundBlockers").EnumerateArray(),
+            item => item.GetString()?.Contains("заверш", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProvider provider)
     {
         var clock = new TestClock(new DateTimeOffset(2026, 6, 11, 2, 15, 0, TimeSpan.Zero));

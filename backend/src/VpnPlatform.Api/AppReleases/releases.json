@@ -10798,5 +10798,28 @@
         "text": "При неудаче автоматической очистки операция явно требует ручного вмешательства. Roadmap progress is 474/494 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-04-payment-refund-commit-resilience",
+    "version": "0.463.0",
+    "releasedAt": "2026-08-04T17:00:00+07:00",
+    "title": "Возвраты защищены от повторов и сбоев сохранения",
+    "summary": "Refund резервируется до вызова провайдера, параллельные повторы дедуплицируются, а неоднозначный исход сохраняется для безопасной сверки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Одинаковые параллельные refund-запросы вызывают платежного провайдера только один раз."
+      },
+      {
+        "type": "fixed",
+        "text": "New, Pending или Unknown возврат блокирует новую операцию, пока администратор не сверит состояние у провайдера."
+      },
+      {
+        "type": "important",
+        "text": "При cancellation или ошибке финального commit операция остается Unknown без изменения подтвержденной refunded amount. Roadmap progress is 475/495 closed, readiness 96.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
