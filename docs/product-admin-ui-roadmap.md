@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `521/541` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `522/542` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1043/1043`.
+- [x] Backend full suite: `1048/1048`.
 - [x] Frontend unit tests: `84/84`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -123,7 +123,7 @@
 - [x] Concurrent registration email conflict возвращает `email_exists` без partial auth rows; unrelated persistence failures не маскируются.
 - [x] Password reset reissue закрывает старый code; per-user generation/revision защищает concurrent issue/reset и admin bootstrap password change.
 - [x] Refresh token optimistic revision закрывает double rotation; concurrent reuse/logout/admin deactivation fail closed без активной stale branch.
-- [x] Latest "Что нового": `2026-08-05-refresh-token-rotation-concurrency`, версия `0.508.0`.
+- [x] Latest "Что нового": `2026-08-05-telegram-link-lifecycle-concurrency`, версия `0.509.0`.
 
 ## Как вести дальше
 

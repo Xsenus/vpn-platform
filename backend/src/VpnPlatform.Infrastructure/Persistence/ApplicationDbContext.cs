@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<PasswordResetState> PasswordResetStates => Set<PasswordResetState>();
+    public DbSet<TelegramLinkState> TelegramLinkStates => Set<TelegramLinkState>();
     public DbSet<ChannelProfile> ChannelProfiles => Set<ChannelProfile>();
     public DbSet<Tariff> Tariffs => Set<Tariff>();
     public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
@@ -82,6 +83,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PasswordResetToken>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<PasswordResetState>().HasIndex(x => x.UserId).IsUnique();
         modelBuilder.Entity<PasswordResetState>().Property(x => x.Revision).IsConcurrencyToken();
+        modelBuilder.Entity<TelegramLinkState>().HasIndex(x => x.UserId).IsUnique();
+        modelBuilder.Entity<TelegramLinkState>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<ChannelProfile>().HasIndex(x => new { x.ProviderType, x.ExternalUserId }).IsUnique();
         modelBuilder.Entity<Tariff>().HasIndex(x => x.Slug).IsUnique();
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.IsActive, x.ShowOnFaqPage, x.SortOrder });
@@ -106,11 +109,16 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Refund>().HasIndex(x => x.IdempotencyKey).IsUnique();
         modelBuilder.Entity<PaymentReceipt>().HasIndex(x => new { x.Provider, x.ProviderReceiptId }).IsUnique();
         modelBuilder.Entity<TelegramAccount>().HasIndex(x => x.TelegramUserId).IsUnique();
+        modelBuilder.Entity<TelegramAccount>()
+            .HasIndex(x => x.UserId)
+            .HasFilter("\"UserId\" IS NOT NULL")
+            .IsUnique();
         modelBuilder.Entity<TelegramBotUpdate>().HasIndex(x => x.UpdateId).IsUnique();
         modelBuilder.Entity<TelegramBotSession>().HasIndex(x => x.TelegramUserId).IsUnique();
         modelBuilder.Entity<TelegramBotCallbackQuery>().HasIndex(x => x.CallbackQueryId).IsUnique();
         modelBuilder.Entity<TelegramBotPayment>().HasIndex(x => x.TelegramPaymentChargeId).IsUnique();
         modelBuilder.Entity<TelegramBotDeepLink>().HasIndex(x => x.TokenHash).IsUnique();
+        modelBuilder.Entity<TelegramBotDeepLink>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<TelegramBotNotification>().HasIndex(x => x.DeduplicationKey).IsUnique();
         modelBuilder.Entity<SupportConversation>().HasIndex(x => new { x.TelegramUserId, x.Status });
         modelBuilder.Entity<VpnPanel>().HasIndex(x => x.Name).IsUnique();
@@ -156,6 +164,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<PasswordResetState>()
+            .HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TelegramLinkState>()
             .HasOne(x => x.User)
             .WithMany()
             .HasForeignKey(x => x.UserId)

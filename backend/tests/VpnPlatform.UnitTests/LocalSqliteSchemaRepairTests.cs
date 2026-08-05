@@ -38,8 +38,9 @@ public class LocalSqliteSchemaRepairTests
 
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
-        Assert.Equal(10, repaired);
+        Assert.Equal(11, repaired);
         Assert.True(await ColumnExistsAsync(connection, "Users", "SessionVersion"));
+        Assert.True(await IndexIsUniqueAsync(connection, "TelegramLinkStates", "IX_TelegramLinkStates_UserId"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "SessionVersion"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "FamilyId"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "Revision"));
@@ -337,6 +338,95 @@ public class LocalSqliteSchemaRepairTests
         Assert.Contains("quarantined", runs[1].ErrorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("legacy-secret", runs[2].ErrorMessage, StringComparison.Ordinal);
         Assert.Contains("redacted", runs[2].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+    }
+
+    [Fact]
+    public async Task ApplyAsync_Should_Repair_Telegram_Link_Lifecycle_And_Duplicate_Accounts()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "Users" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "SessionVersion" INTEGER NOT NULL DEFAULT 0,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
+            );
+            CREATE TABLE "TelegramBotDeepLinks" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "UserId" TEXT NULL,
+                "TokenHash" TEXT NOT NULL,
+                "Purpose" TEXT NOT NULL,
+                "ExpiresAt" TEXT NOT NULL,
+                "UsedAt" TEXT NULL,
+                "UsedByTelegramUserId" INTEGER NULL,
+                "MetadataJson" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
+            );
+            CREATE TABLE "TelegramAccounts" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "UserId" TEXT NULL,
+                "TelegramUserId" INTEGER NOT NULL,
+                "LinkedAt" TEXT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
+            );
+            CREATE INDEX "IX_TelegramAccounts_UserId" ON "TelegramAccounts" ("UserId");
+            """);
+        var userId = Guid.NewGuid();
+        var oldAccountId = Guid.NewGuid();
+        var currentAccountId = Guid.NewGuid();
+        var linkId = Guid.NewGuid();
+        var now = new DateTimeOffset(2026, 8, 5, 4, 20, 0, TimeSpan.Zero);
+        var metadataJson = "{}";
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Users" ("Id", "SessionVersion", "CreatedAt", "UpdatedAt")
+            VALUES ({userId}, 0, {now}, {now});
+            INSERT INTO "TelegramBotDeepLinks"
+                ("Id", "UserId", "TokenHash", "Purpose", "ExpiresAt", "UsedAt", "UsedByTelegramUserId", "MetadataJson", "CreatedAt", "UpdatedAt")
+            VALUES ({linkId}, {userId}, 'legacy-link-hash', 'link_account', {now.AddMinutes(10)}, NULL, NULL, {metadataJson}, {now}, {now});
+            INSERT INTO "TelegramAccounts" ("Id", "UserId", "TelegramUserId", "LinkedAt", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({oldAccountId}, {userId}, 777301, {now.AddMinutes(-2)}, {now.AddMinutes(-2)}, {now.AddMinutes(-2)}),
+                ({currentAccountId}, {userId}, 777302, {now.AddMinutes(-1)}, {now.AddMinutes(-1)}, {now.AddMinutes(-1)});
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(7, repaired);
+        Assert.True(await IndexIsUniqueAsync(connection, "TelegramLinkStates", "IX_TelegramLinkStates_UserId"));
+        Assert.True(await ColumnExistsAsync(connection, "TelegramBotDeepLinks", "Generation"));
+        Assert.True(await ColumnExistsAsync(connection, "TelegramBotDeepLinks", "InvalidatedAt"));
+        Assert.True(await ColumnExistsAsync(connection, "TelegramBotDeepLinks", "InvalidationReason"));
+        Assert.True(await ColumnExistsAsync(connection, "TelegramBotDeepLinks", "Revision"));
+        Assert.True(await IndexIsUniqueAsync(connection, "TelegramAccounts", "IX_TelegramAccounts_UserId"));
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT
+                (SELECT "Generation" FROM "TelegramLinkStates" LIMIT 1),
+                (SELECT "Revision" FROM "TelegramLinkStates" LIMIT 1),
+                (SELECT "InvalidationReason" FROM "TelegramBotDeepLinks" LIMIT 1),
+                (SELECT "Revision" FROM "TelegramBotDeepLinks" LIMIT 1),
+                (SELECT COUNT(*) FROM "TelegramAccounts" WHERE "UserId" IS NOT NULL),
+                (SELECT "TelegramUserId" FROM "TelegramAccounts" WHERE "UserId" IS NOT NULL LIMIT 1);
+            """;
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal(1L, reader.GetInt64(0));
+        Assert.Equal(1L, reader.GetInt64(1));
+        Assert.Equal("telegram_link_lifecycle_migration", reader.GetString(2));
+        Assert.Equal(1L, reader.GetInt64(3));
+        Assert.Equal(1L, reader.GetInt64(4));
+        Assert.Equal(777302L, reader.GetInt64(5));
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
     }
 

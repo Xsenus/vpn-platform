@@ -80,6 +80,15 @@ public class PasswordResetState : AuditableEntity
     public User? User { get; set; }
 }
 
+public class TelegramLinkState : AuditableEntity
+{
+    public Guid UserId { get; set; }
+    public int Generation { get; set; }
+    public int Revision { get; set; }
+
+    public User? User { get; set; }
+}
+
 public class ChannelProfile : AuditableEntity
 {
     public Guid UserId { get; set; }
@@ -402,11 +411,15 @@ public class TelegramBotPayment : AuditableEntity
 public class TelegramBotDeepLink : AuditableEntity
 {
     public Guid? UserId { get; set; }
+    public int Generation { get; set; }
     public string TokenHash { get; set; } = string.Empty;
     public string Purpose { get; set; } = "link_account";
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? UsedAt { get; set; }
     public long? UsedByTelegramUserId { get; set; }
+    public DateTimeOffset? InvalidatedAt { get; set; }
+    public string InvalidationReason { get; set; } = string.Empty;
+    public int Revision { get; set; }
     public string MetadataJson { get; set; } = "{}";
 
     public User? User { get; set; }

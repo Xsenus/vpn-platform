@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.509.0 - 2026-08-05
+
+Release entry: `2026-08-05-telegram-link-lifecycle-concurrency`.
+
+### Исправлено
+
+- Повторная выдача Telegram deep link теперь немедленно инвалидирует ранее выданную неиспользованную ссылку; действителен только token последней generation.
+- Отдельный `TelegramLinkState` с optimistic `Revision` сериализует reissue, consume и unlink между API/TelegramBot-инстансами, не добавляя concurrency-конфликты в обычные операции профиля.
+- `TelegramBotDeepLink.Revision` отклоняет stale consume, а filtered unique index `TelegramAccounts.UserId` не позволяет привязать к одному пользователю два Telegram ID.
+- Unlink отзывает outstanding links даже для еще не завершенной привязки; контролируемый retry обрабатывает state insert/revision conflict без частичных строк.
+- PostgreSQL migration отзывает legacy outstanding links и отвязывает исторические дубли с сохранением самой свежей записи; local SQLite schema repair выполняет тот же idempotent переход.
+
+### Проверено
+
+- Backend full suite `1048/1048`; targeted Telegram/cabinet/admin/SQLite suite `131/131`, lifecycle/schema-repair `22/22`, включая file-backed concurrent reissue и cross-context consume.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `635` files, `0` findings.
+- Roadmap status: `522/542` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.508.0 - 2026-08-05
 
 Release entry: `2026-08-05-refresh-token-rotation-concurrency`.

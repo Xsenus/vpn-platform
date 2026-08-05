@@ -92,28 +92,89 @@ public class TelegramBotService
             return Result<TelegramLinkTokenDto>.Failure("TelegramBot:PublicBotUsername is required to create a deep link.");
         }
 
-        var existingLinked = await _db.TelegramAccounts.AsNoTracking().AnyAsync(x => x.UserId == userId, cancellationToken);
-        if (existingLinked)
+        const int maxAttempts = 3;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
-            return Result<TelegramLinkTokenDto>.Failure("User already has a linked Telegram account.");
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+            if (user is null)
+            {
+                return Result<TelegramLinkTokenDto>.Failure("User not found.");
+            }
+
+            var existingLinked = await _db.TelegramAccounts.AsNoTracking().AnyAsync(x => x.UserId == userId, cancellationToken);
+            if (existingLinked)
+            {
+                return Result<TelegramLinkTokenDto>.Failure("User already has a linked Telegram account.");
+            }
+
+            var now = _clock.UtcNow;
+            var state = await _db.TelegramLinkStates.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+            if (state is null)
+            {
+                state = new TelegramLinkState { UserId = userId, Generation = 1 };
+                _db.TelegramLinkStates.Add(state);
+            }
+            else
+            {
+                state.Generation = checked(state.Generation + 1);
+                state.Revision = checked(state.Revision + 1);
+                state.UpdatedAt = now;
+            }
+
+            var generation = state.Generation;
+
+            var supersededLinks = await _db.TelegramBotDeepLinks
+                .Where(x => x.UserId == userId
+                    && x.Purpose == "link_account"
+                    && x.UsedAt == null
+                    && x.InvalidatedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var superseded in supersededLinks)
+            {
+                superseded.InvalidatedAt = now;
+                superseded.InvalidationReason = "telegram_link_reissued";
+                superseded.Revision = checked(superseded.Revision + 1);
+                superseded.UpdatedAt = now;
+            }
+
+            var token = CreateToken();
+            var expiresAt = now.AddMinutes(10);
+            _db.TelegramBotDeepLinks.Add(new TelegramBotDeepLink
+            {
+                UserId = userId,
+                Generation = generation,
+                TokenHash = HashToken(token),
+                Purpose = "link_account",
+                ExpiresAt = expiresAt,
+                MetadataJson = "{}"
+            });
+
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+                var username = publicBotUsername.Trim().TrimStart('@');
+                var url = $"https://t.me/{username}?start=link_{token}";
+                return Result<TelegramLinkTokenDto>.Success(new TelegramLinkTokenDto(token, url, expiresAt));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ClearChangeTracker();
+                if (attempt == maxAttempts - 1)
+                {
+                    return Result<TelegramLinkTokenDto>.Failure("Telegram link changed concurrently; retry shortly.", isRetryable: true);
+                }
+            }
+            catch (DbUpdateException ex) when (IsTelegramLinkStateUniqueConstraintViolation(ex))
+            {
+                ClearChangeTracker();
+                if (attempt == maxAttempts - 1)
+                {
+                    return Result<TelegramLinkTokenDto>.Failure("Telegram link changed concurrently; retry shortly.", isRetryable: true);
+                }
+            }
         }
 
-        var token = CreateToken();
-        var expiresAt = _clock.UtcNow.AddMinutes(10);
-        _db.TelegramBotDeepLinks.Add(new TelegramBotDeepLink
-        {
-            UserId = userId,
-            TokenHash = HashToken(token),
-            Purpose = "link_account",
-            ExpiresAt = expiresAt,
-            MetadataJson = "{}"
-        });
-
-        await _db.SaveChangesAsync(cancellationToken);
-
-        var username = publicBotUsername.Trim().TrimStart('@');
-        var url = $"https://t.me/{username}?start=link_{token}";
-        return Result<TelegramLinkTokenDto>.Success(new TelegramLinkTokenDto(token, url, expiresAt));
+        return Result<TelegramLinkTokenDto>.Failure("Telegram link changed concurrently; retry shortly.", isRetryable: true);
     }
 
     public async Task<TelegramStatusDto> GetStatusAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -126,17 +187,79 @@ public class TelegramBotService
 
     public async Task<Result<TelegramStatusDto>> UnlinkAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var account = await _db.TelegramAccounts.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
-        if (account is null)
+        const int maxAttempts = 3;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
-            return Result<TelegramStatusDto>.Success(new TelegramStatusDto(false, null, null, null));
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+            if (user is null)
+            {
+                return Result<TelegramStatusDto>.Success(new TelegramStatusDto(false, null, null, null));
+            }
+
+            var account = await _db.TelegramAccounts.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+            var outstandingLinks = await _db.TelegramBotDeepLinks
+                .Where(x => x.UserId == userId
+                    && x.Purpose == "link_account"
+                    && x.UsedAt == null
+                    && x.InvalidatedAt == null)
+                .ToListAsync(cancellationToken);
+            if (account is null && outstandingLinks.Count == 0)
+            {
+                return Result<TelegramStatusDto>.Success(new TelegramStatusDto(false, null, null, null));
+            }
+
+            var now = _clock.UtcNow;
+            var state = await _db.TelegramLinkStates.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+            if (state is null)
+            {
+                state = new TelegramLinkState { UserId = userId, Generation = 1 };
+                _db.TelegramLinkStates.Add(state);
+            }
+            else
+            {
+                state.Generation = checked(state.Generation + 1);
+                state.Revision = checked(state.Revision + 1);
+                state.UpdatedAt = now;
+            }
+            foreach (var outstanding in outstandingLinks)
+            {
+                outstanding.InvalidatedAt = now;
+                outstanding.InvalidationReason = "telegram_unlinked";
+                outstanding.Revision = checked(outstanding.Revision + 1);
+                outstanding.UpdatedAt = now;
+            }
+
+            if (account is not null)
+            {
+                account.UserId = null;
+                account.LinkedAt = null;
+                account.UpdatedAt = now;
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+                return Result<TelegramStatusDto>.Success(new TelegramStatusDto(false, account?.TelegramUserId, account?.Username, null));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ClearChangeTracker();
+                if (attempt == maxAttempts - 1)
+                {
+                    return Result<TelegramStatusDto>.Failure("Telegram link changed concurrently; retry shortly.", isRetryable: true);
+                }
+            }
+            catch (DbUpdateException ex) when (IsTelegramLinkStateUniqueConstraintViolation(ex))
+            {
+                ClearChangeTracker();
+                if (attempt == maxAttempts - 1)
+                {
+                    return Result<TelegramStatusDto>.Failure("Telegram link changed concurrently; retry shortly.", isRetryable: true);
+                }
+            }
         }
 
-        account.UserId = null;
-        account.LinkedAt = null;
-        account.UpdatedAt = _clock.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
-        return Result<TelegramStatusDto>.Success(new TelegramStatusDto(false, account.TelegramUserId, account.Username, null));
+        return Result<TelegramStatusDto>.Failure("Telegram link changed concurrently; retry shortly.", isRetryable: true);
     }
 
     public async Task<Result<TelegramBotProcessResult>> ProcessUpdateAsync(
@@ -233,6 +356,16 @@ public class TelegramBotService
         {
             await MarkTelegramUpdateFailedAsync(update, "Telegram update processing was cancelled.");
             throw;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await MarkTelegramUpdateFailedAsync(update, "Telegram account state changed concurrently; retry shortly.");
+            return Result<TelegramBotProcessResult>.Failure("Telegram account state changed concurrently; retry shortly.", isRetryable: true);
+        }
+        catch (DbUpdateException ex) when (IsTelegramUserLinkUniqueConstraintViolation(ex))
+        {
+            await MarkTelegramUpdateFailedAsync(update, "Telegram account link changed concurrently; retry shortly.");
+            return Result<TelegramBotProcessResult>.Failure("Telegram account link changed concurrently; retry shortly.", isRetryable: true);
         }
         catch (Exception ex)
         {
@@ -372,12 +505,63 @@ public class TelegramBotService
 
     private async Task MarkTelegramUpdateFailedAsync(TelegramBotUpdate update, string error)
     {
+        if (_db is DbContext dbContext)
+        {
+            var updateId = update.Id;
+            dbContext.ChangeTracker.Clear();
+            update = await _db.TelegramBotUpdates.FirstAsync(x => x.Id == updateId, CancellationToken.None);
+            if (update.IsProcessed)
+            {
+                return;
+            }
+        }
+
         update.IsProcessed = false;
         update.ProcessedAt = null;
         ClearTelegramDelivery(update);
         update.ErrorText = SensitiveDataRedactor.Redact(error, maxLength: 500);
         update.UpdatedAt = NextTelegramUpdateVersion(update.UpdatedAt, _clock.UtcNow);
         await _db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private void ClearChangeTracker()
+    {
+        if (_db is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
+    }
+
+    private static bool IsTelegramUserLinkUniqueConstraintViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            var constraintName = current.GetType().GetProperty("ConstraintName")?.GetValue(current)?.ToString();
+            if (string.Equals(constraintName, "IX_TelegramAccounts_UserId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("IX_TelegramAccounts_UserId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("TelegramAccounts.UserId", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsTelegramLinkStateUniqueConstraintViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            var constraintName = current.GetType().GetProperty("ConstraintName")?.GetValue(current)?.ToString();
+            if (string.Equals(constraintName, "IX_TelegramLinkStates_UserId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("IX_TelegramLinkStates_UserId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("TelegramLinkStates.UserId", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static DateTimeOffset NextTelegramUpdateVersion(DateTimeOffset current, DateTimeOffset now)
@@ -1828,9 +2012,21 @@ public class TelegramBotService
             return "Код привязки уже использован.";
         }
 
+        if (link.InvalidatedAt.HasValue)
+        {
+            return "Код привязки недействителен. Создайте новую ссылку в личном кабинете.";
+        }
+
         if (!link.UserId.HasValue)
         {
             return "Код привязки поврежден: не указан пользователь.";
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == link.UserId.Value, cancellationToken);
+        var state = await _db.TelegramLinkStates.FirstOrDefaultAsync(x => x.UserId == link.UserId.Value, cancellationToken);
+        if (user is null || state is null || link.Generation != state.Generation)
+        {
+            return "Код привязки недействителен. Создайте новую ссылку в личном кабинете.";
         }
 
         if (account.UserId.HasValue && account.UserId.Value != link.UserId.Value)
@@ -1840,9 +2036,14 @@ public class TelegramBotService
 
         if (account.UserId.HasValue && account.UserId.Value == link.UserId.Value)
         {
-            link.UsedAt ??= _clock.UtcNow;
+            var now = _clock.UtcNow;
+            link.UsedAt ??= now;
             link.UsedByTelegramUserId ??= account.TelegramUserId;
-            link.UpdatedAt = _clock.UtcNow;
+            link.Revision = checked(link.Revision + 1);
+            link.UpdatedAt = now;
+            state.Generation = checked(state.Generation + 1);
+            state.Revision = checked(state.Revision + 1);
+            state.UpdatedAt = now;
             return "Этот Telegram уже привязан к вашему аккаунту.";
         }
 
@@ -1852,12 +2053,17 @@ public class TelegramBotService
             return "У этого аккаунта уже есть привязанный Telegram.";
         }
 
+        var linkedAt = _clock.UtcNow;
         account.UserId = link.UserId.Value;
-        account.LinkedAt = _clock.UtcNow;
-        account.UpdatedAt = _clock.UtcNow;
-        link.UsedAt = _clock.UtcNow;
+        account.LinkedAt = linkedAt;
+        account.UpdatedAt = linkedAt;
+        link.UsedAt = linkedAt;
         link.UsedByTelegramUserId = account.TelegramUserId;
-        link.UpdatedAt = _clock.UtcNow;
+        link.Revision = checked(link.Revision + 1);
+        link.UpdatedAt = linkedAt;
+        state.Generation = checked(state.Generation + 1);
+        state.Revision = checked(state.Revision + 1);
+        state.UpdatedAt = linkedAt;
         return "Telegram успешно привязан к аккаунту.\n\n" + MainMenuText();
     }
 

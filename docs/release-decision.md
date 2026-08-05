@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1043/1043`.
+- Backend full suite: `1048/1048`.
 - API Release build: OK.
 - Frontend unit tests: `84/84`.
 - Frontend typecheck/build: OK.
@@ -57,8 +57,8 @@ Production-ready решение заблокировано следующими 
 - Registration email race maps the exact unique conflict to `email_exists` without partial auth rows and preserves unrelated storage failures.
 - Password reset reissue advances a per-user generation; concurrent issue/reset conflicts fail closed and explicit bootstrap password reset invalidates outstanding codes.
 - Refresh rotation uses optimistic revision so a source token cannot create two active children; reuse/logout revoke the current family and admin deactivation retries session conflicts.
-- Latest "Что нового": `2026-08-05-refresh-token-rotation-concurrency`, версия `0.508.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `521/541` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-telegram-link-lifecycle-concurrency`, версия `0.509.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `522/542` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

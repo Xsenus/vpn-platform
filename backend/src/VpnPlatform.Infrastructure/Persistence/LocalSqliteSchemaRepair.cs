@@ -124,6 +124,88 @@ public static class LocalSqliteSchemaRepair
             repaired++;
         }
 
+        var telegramLinkLifecycleUpgraded = false;
+        if (await TableExistsAsync(db, "Users", cancellationToken)
+            && !await TableExistsAsync(db, "TelegramLinkStates", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE "TelegramLinkStates" (
+                    "Id" TEXT NOT NULL CONSTRAINT "PK_TelegramLinkStates" PRIMARY KEY,
+                    "UserId" TEXT NOT NULL,
+                    "Generation" INTEGER NOT NULL DEFAULT 0,
+                    "Revision" INTEGER NOT NULL DEFAULT 0,
+                    "CreatedAt" TEXT NOT NULL,
+                    "UpdatedAt" TEXT NOT NULL,
+                    CONSTRAINT "FK_TelegramLinkStates_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+                );
+                CREATE UNIQUE INDEX "IX_TelegramLinkStates_UserId" ON "TelegramLinkStates" ("UserId");
+                """,
+                cancellationToken);
+            telegramLinkLifecycleUpgraded = true;
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "TelegramBotDeepLinks", cancellationToken))
+        {
+            foreach (var (column, sql) in new[]
+                     {
+                         ("Generation", """ALTER TABLE "TelegramBotDeepLinks" ADD COLUMN "Generation" INTEGER NOT NULL DEFAULT 0;"""),
+                         ("InvalidatedAt", """ALTER TABLE "TelegramBotDeepLinks" ADD COLUMN "InvalidatedAt" TEXT NULL;"""),
+                         ("InvalidationReason", """ALTER TABLE "TelegramBotDeepLinks" ADD COLUMN "InvalidationReason" TEXT NOT NULL DEFAULT '';"""),
+                         ("Revision", """ALTER TABLE "TelegramBotDeepLinks" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;""")
+                     })
+            {
+                if (await ColumnExistsAsync(db, "TelegramBotDeepLinks", column, cancellationToken))
+                {
+                    continue;
+                }
+
+                await db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+                telegramLinkLifecycleUpgraded = true;
+                repaired++;
+            }
+        }
+
+        if (telegramLinkLifecycleUpgraded
+            && await TableExistsAsync(db, "Users", cancellationToken)
+            && await TableExistsAsync(db, "TelegramBotDeepLinks", cancellationToken)
+            && await TableExistsAsync(db, "TelegramLinkStates", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "TelegramBotDeepLinks"
+                SET
+                    "InvalidatedAt" = CURRENT_TIMESTAMP,
+                    "InvalidationReason" = 'telegram_link_lifecycle_migration',
+                    "Revision" = 1,
+                    "UpdatedAt" = CURRENT_TIMESTAMP
+                WHERE "Purpose" = 'link_account' AND "UsedAt" IS NULL;
+
+                INSERT OR IGNORE INTO "TelegramLinkStates"
+                    ("Id", "UserId", "Generation", "Revision", "CreatedAt", "UpdatedAt")
+                SELECT
+                    "UserId", "UserId", 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                FROM "TelegramBotDeepLinks"
+                WHERE "UserId" IS NOT NULL
+                GROUP BY "UserId";
+                """,
+                cancellationToken);
+        }
+
+        if (await TableExistsAsync(db, "TelegramAccounts", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "TelegramAccounts", "IX_TelegramAccounts_UserId", cancellationToken))
+        {
+            await BackfillDuplicateTelegramAccountLinksAsync(db, cancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                """DROP INDEX IF EXISTS "IX_TelegramAccounts_UserId";""",
+                cancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                """CREATE UNIQUE INDEX "IX_TelegramAccounts_UserId" ON "TelegramAccounts" ("UserId") WHERE "UserId" IS NOT NULL;""",
+                cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "PaymentProviderAccounts", cancellationToken)
             && !await ColumnExistsAsync(db, "PaymentProviderAccounts", "WebhookUrl", cancellationToken))
         {
@@ -252,6 +334,36 @@ public static class LocalSqliteSchemaRepair
         }
 
         return repaired;
+    }
+
+    private static async Task BackfillDuplicateTelegramAccountLinksAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TEMP TABLE "__DuplicateTelegramAccountLinks" AS
+            SELECT "Id" FROM (
+                SELECT
+                    "Id",
+                    row_number() OVER (
+                        PARTITION BY "UserId"
+                        ORDER BY ("LinkedAt" IS NULL), "LinkedAt" DESC, "UpdatedAt" DESC, "CreatedAt" DESC, "Id") AS link_rank
+                FROM "TelegramAccounts"
+                WHERE "UserId" IS NOT NULL
+            ) AS ranked
+            WHERE link_rank > 1;
+
+            UPDATE "TelegramAccounts"
+            SET
+                "UserId" = NULL,
+                "LinkedAt" = NULL,
+                "UpdatedAt" = CURRENT_TIMESTAMP
+            WHERE "Id" IN (SELECT "Id" FROM "__DuplicateTelegramAccountLinks");
+
+            DROP TABLE "__DuplicateTelegramAccountLinks";
+            """,
+            cancellationToken);
     }
 
     private static async Task BackfillDuplicateRunningPanelSyncRunsAsync(

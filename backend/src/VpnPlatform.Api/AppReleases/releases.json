@@ -11860,5 +11860,28 @@
         "text": "Roadmap progress is 521/541 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-telegram-link-lifecycle-concurrency",
+    "version": "0.509.0",
+    "releasedAt": "2026-08-05T11:43:56+07:00",
+    "title": "Действует только последняя ссылка привязки Telegram",
+    "summary": "Повторная выдача или отвязка немедленно закрывает старые Telegram deep links, а generation/revision и уникальный индекс не позволяют конкурентно привязать один аккаунт дважды.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "После перевыпуска предыдущая ссылка отвечает как недействительная; использовать можно только token последней generation."
+      },
+      {
+        "type": "improved",
+        "text": "TelegramLinkState сериализует reissue, consume и unlink между инстансами, а filtered unique index сохраняет не более одной активной Telegram-привязки на пользователя."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 522/542 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

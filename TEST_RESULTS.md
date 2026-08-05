@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: Telegram link lifecycle concurrency
+
+Scope:
+- Проверены последовательный reissue, concurrent reissue между SQLite-контекстами, конкурентное consume, unlink outstanding token, уникальность Telegram account per user, PostgreSQL migration и local SQLite repair.
+
+Results:
+- Roadmap progress: `522/542` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-telegram-link-lifecycle-concurrency`, version `0.509.0`.
+- Backend full suite: OK, `1048/1048`; targeted Telegram/cabinet/admin/SQLite suite: OK, `131/131`; lifecycle/schema-repair: OK, `22/22`.
+- Повторно выданная ссылка инвалидирует предыдущую с `telegram_link_reissued`; только текущая generation может привязать аккаунт.
+- File-backed SQLite fault injection подтверждает retry после concurrent state insert и сохранение единственного active token последней generation.
+- Cross-context consume отклоняет вторую привязку optimistic revision или unique `TelegramAccounts.UserId` без частично сохраненного Telegram account.
+- Unlink инвалидирует ожидающий token с `telegram_unlinked`; legacy outstanding links и дубли очищаются миграцией и idempotent SQLite repair.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `635` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: refresh token rotation concurrency
 
 Scope:
