@@ -13,6 +13,7 @@ namespace VpnPlatform.Application.Services;
 public class OrderService
 {
     private const string RenewalSubscriptionIdKey = "renewalSubscriptionId";
+    private const string PromoFreeDaysKey = "promoFreeDays";
     private readonly IApplicationDbContext _db;
     private readonly IClock _clock;
 
@@ -36,6 +37,79 @@ public class OrderService
             return Result<OrderDto>.Failure(renewalValidation);
         }
 
+        var promoResult = await ResolvePromoAsync(command.PromoCode, command.TariffId, command.Channel, cancellationToken);
+        if (!promoResult.IsSuccess || promoResult.Value is null)
+        {
+            return Result<OrderDto>.Failure(promoResult.Error ?? "Promo code validation failed.");
+        }
+
+        var promo = promoResult.Value.Promo;
+        if (promo is not null
+            && _db is DbContext dbContext
+            && dbContext.Database.IsRelational()
+            && dbContext.Database.CurrentTransaction is null)
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            var transactionFinished = false;
+            try
+            {
+                var result = await CreateOrderCoreAsync(command, tariff, promo, cancellationToken);
+                if (result.IsSuccess)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+                else
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
+                transactionFinished = true;
+                return result;
+            }
+            catch
+            {
+                if (!transactionFinished)
+                {
+                    await transaction.RollbackAsync(CancellationToken.None);
+                }
+
+                throw;
+            }
+        }
+
+        return await CreateOrderCoreAsync(command, tariff, promo, cancellationToken);
+    }
+
+    public async Task<Result<bool>> ValidatePromoForCheckoutAsync(
+        string? promoCode,
+        Guid tariffId,
+        ChannelType channel,
+        CancellationToken cancellationToken = default)
+    {
+        var promoResult = await ResolvePromoAsync(promoCode, tariffId, channel, cancellationToken);
+        if (!promoResult.IsSuccess || promoResult.Value is null)
+        {
+            return Result<bool>.Failure(promoResult.Error ?? "Promo code validation failed.");
+        }
+
+        var promo = promoResult.Value.Promo;
+        if (promo is null)
+        {
+            return Result<bool>.Success(true);
+        }
+
+        var limitError = await ValidatePromoLimitsAsync(promo, userId: null, cancellationToken);
+        return limitError is null
+            ? Result<bool>.Success(true)
+            : Result<bool>.Failure(limitError);
+    }
+
+    private async Task<Result<OrderDto>> CreateOrderCoreAsync(
+        CreateOrderCommand command,
+        Tariff tariff,
+        PromoCode? promo,
+        CancellationToken cancellationToken)
+    {
         var now = _clock.UtcNow;
         var pendingOrders = await _db.Orders
             .AsNoTracking()
@@ -44,6 +118,7 @@ public class OrderService
                 x.TariffId == command.TariffId &&
                 x.Type == command.Type &&
                 x.Channel == command.Channel &&
+                x.PromoCodeId == (promo == null ? null : promo.Id) &&
                 x.Status == OrderStatus.PendingPayment)
             .ToListAsync(cancellationToken);
         pendingOrders = pendingOrders
@@ -53,7 +128,10 @@ public class OrderService
 
         foreach (var expiredOrder in pendingOrders.Where(x => x.ExpiresAt <= now))
         {
-            await ExpirePendingOrderAsync(expiredOrder.Id, now, cancellationToken);
+            if (!await ExpirePendingOrderAsync(expiredOrder.Id, expiredOrder.UpdatedAt, now, cancellationToken))
+            {
+                return Result<OrderDto>.Failure("Pending order changed while it was being expired. Try again.", isRetryable: true);
+            }
         }
 
         var existingPending = pendingOrders.FirstOrDefault(x => x.Status == OrderStatus.PendingPayment && x.ExpiresAt > now);
@@ -63,18 +141,28 @@ public class OrderService
             return Result<OrderDto>.Success(MapToDto(existingPending));
         }
 
+        if (promo is not null)
+        {
+            var claimResult = await ClaimPromoAsync(promo, cancellationToken);
+            if (!claimResult.IsSuccess)
+            {
+                return Result<OrderDto>.Failure(claimResult.Error!, claimResult.IsRetryable);
+            }
+
+            var limitError = await ValidatePromoLimitsAsync(promo, command.UserId, cancellationToken);
+            if (limitError is not null)
+            {
+                return Result<OrderDto>.Failure(limitError);
+            }
+        }
+
         var expiresAt = now.AddMinutes(15);
         var amount = tariff.Price;
-
-        if (!string.IsNullOrWhiteSpace(command.PromoCode))
+        if (promo is not null)
         {
-            var promo = await _db.PromoCodes.FirstOrDefaultAsync(x => x.Code == command.PromoCode && x.IsActive, cancellationToken);
-            if (promo is not null)
-            {
-                amount = promo.DiscountType == "percent"
-                    ? Math.Max(0, amount - amount * (promo.DiscountValue / 100m))
-                    : Math.Max(0, amount - promo.DiscountValue);
-            }
+            amount = promo.DiscountType.Equals("percent", StringComparison.OrdinalIgnoreCase)
+                ? Math.Max(0, amount - amount * (promo.DiscountValue / 100m))
+                : Math.Max(0, amount - promo.DiscountValue);
         }
 
         var order = new Order
@@ -88,10 +176,11 @@ public class OrderService
             Status = OrderStatus.PendingPayment,
             Amount = amount,
             Currency = tariff.Currency,
+            PromoCodeId = promo?.Id,
             ExpiresAt = expiresAt,
             IsFirstPurchase = command.IsFirstPurchase,
-            ReferralContext = BuildReferralContext(command.RenewalSubscriptionId),
-            PendingIntentKey = BuildPendingIntentKey(command)
+            ReferralContext = BuildReferralContext(command.RenewalSubscriptionId, promo?.FreeDays),
+            PendingIntentKey = BuildPendingIntentKey(command, promo?.Id)
         };
 
         _db.Orders.Add(order);
@@ -121,30 +210,154 @@ public class OrderService
         return Result<OrderDto>.Success(MapToDto(order));
     }
 
-    private async Task ExpirePendingOrderAsync(Guid orderId, DateTimeOffset now, CancellationToken cancellationToken)
+    private async Task<Result<bool>> ClaimPromoAsync(PromoCode promo, CancellationToken cancellationToken)
+    {
+        if (_db is not DbContext dbContext || !dbContext.Database.IsRelational())
+        {
+            return Result<bool>.Success(true);
+        }
+
+        var nextVersion = NextVersion(promo.UpdatedAt, _clock.UtcNow);
+        var claimed = await _db.PromoCodes
+            .Where(x => x.Id == promo.Id && x.UpdatedAt == promo.UpdatedAt)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UpdatedAt, nextVersion), cancellationToken);
+        return claimed == 1
+            ? Result<bool>.Success(true)
+            : Result<bool>.Failure("Promo code changed while the order was being created. Try again.", isRetryable: true);
+    }
+
+    private async Task<string?> ValidatePromoLimitsAsync(PromoCode promo, Guid? userId, CancellationToken cancellationToken)
+    {
+        var now = _clock.UtcNow;
+        var countedOrders = await _db.Orders
+            .AsNoTracking()
+            .Where(x =>
+                x.PromoCodeId == promo.Id &&
+                x.Status != OrderStatus.Failed &&
+                x.Status != OrderStatus.Cancelled &&
+                x.Status != OrderStatus.Expired)
+            .ToListAsync(cancellationToken);
+        var stalePending = countedOrders
+            .Where(x => x.Status == OrderStatus.PendingPayment && x.ExpiresAt <= now)
+            .ToList();
+        var expiredOrderIds = new HashSet<Guid>();
+        foreach (var stale in stalePending)
+        {
+            if (await ExpirePendingOrderAsync(stale.Id, stale.UpdatedAt, now, cancellationToken))
+            {
+                expiredOrderIds.Add(stale.Id);
+            }
+        }
+
+        countedOrders = countedOrders.Where(x => !expiredOrderIds.Contains(x.Id)).ToList();
+
+        if (promo.MaxRedemptions.HasValue
+            && countedOrders.Count >= promo.MaxRedemptions.Value)
+        {
+            return "Promo code redemption limit has been reached.";
+        }
+
+        if (userId.HasValue
+            && promo.MaxPerUser.HasValue
+            && countedOrders.Count(x => x.UserId == userId.Value) >= promo.MaxPerUser.Value)
+        {
+            return "Promo code usage limit for this account has been reached.";
+        }
+
+        return null;
+    }
+
+    private async Task<Result<PromoResolution>> ResolvePromoAsync(
+        string? promoCode,
+        Guid tariffId,
+        ChannelType channel,
+        CancellationToken cancellationToken)
+    {
+        var normalizedCode = NormalizePromoCode(promoCode);
+        if (normalizedCode is null)
+        {
+            return Result<PromoResolution>.Success(new PromoResolution(null));
+        }
+
+        var promo = await _db.PromoCodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Code.ToUpper() == normalizedCode, cancellationToken);
+        if (promo is null)
+        {
+            return Result<PromoResolution>.Failure("Promo code not found.");
+        }
+
+        var now = _clock.UtcNow;
+        if (!promo.IsActive)
+        {
+            return Result<PromoResolution>.Failure("Promo code is inactive.");
+        }
+
+        if (promo.StartsAt.HasValue && promo.StartsAt.Value > now)
+        {
+            return Result<PromoResolution>.Failure("Promo code is not active yet.");
+        }
+
+        if (promo.EndsAt.HasValue && promo.EndsAt.Value <= now)
+        {
+            return Result<PromoResolution>.Failure("Promo code expired.");
+        }
+
+        if (!JsonArrayAllowsGuid(promo.AllowedTariffIdsJson, tariffId))
+        {
+            return Result<PromoResolution>.Failure("Promo code is not available for this tariff.");
+        }
+
+        if (!JsonArrayAllowsChannel(promo.AllowedChannelsJson, channel))
+        {
+            return Result<PromoResolution>.Failure("Promo code is not available for this channel.");
+        }
+
+        var discountType = promo.DiscountType.Trim().ToLowerInvariant();
+        if (discountType is not ("percent" or "fixed")
+            || promo.DiscountValue < 0
+            || (discountType == "percent" && promo.DiscountValue > 100)
+            || promo.FreeDays < 0
+            || promo.MaxRedemptions is < 0
+            || promo.MaxPerUser is < 0
+            || (promo.DiscountValue == 0 && promo.FreeDays == 0))
+        {
+            return Result<PromoResolution>.Failure("Promo code configuration is invalid.");
+        }
+
+        promo.DiscountType = discountType;
+        return Result<PromoResolution>.Success(new PromoResolution(promo));
+    }
+
+    private async Task<bool> ExpirePendingOrderAsync(
+        Guid orderId,
+        DateTimeOffset expectedVersion,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
         if (_db is DbContext dbContext && dbContext.Database.IsRelational())
         {
-            await _db.Orders
-                .Where(x => x.Id == orderId && x.Status == OrderStatus.PendingPayment)
+            var expired = await _db.Orders
+                .Where(x => x.Id == orderId && x.Status == OrderStatus.PendingPayment && x.UpdatedAt == expectedVersion)
                 .ExecuteUpdateAsync(
                     setters => setters
                         .SetProperty(x => x.Status, OrderStatus.Expired)
                         .SetProperty(x => x.UpdatedAt, now),
                     cancellationToken);
-            return;
+            return expired == 1;
         }
 
         var order = await _db.Orders.FirstOrDefaultAsync(
-            x => x.Id == orderId && x.Status == OrderStatus.PendingPayment,
+            x => x.Id == orderId && x.Status == OrderStatus.PendingPayment && x.UpdatedAt == expectedVersion,
             cancellationToken);
         if (order is null)
         {
-            return;
+            return false;
         }
 
         StatusStateMachine.SetOrderStatus(order, OrderStatus.Expired, now);
         await _db.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private async Task<string?> ValidateRenewalAsync(CreateOrderCommand command, CancellationToken cancellationToken)
@@ -210,15 +423,37 @@ public class OrderService
     public static Guid? GetRenewalSubscriptionId(Order order)
         => TryReadRenewalSubscriptionId(order.ReferralContext);
 
+    public static int? GetPromoFreeDays(Order order)
+        => TryReadPromoFreeDays(order.ReferralContext);
+
     public static OrderDto MapToDto(Order order)
         => new(order.Id, order.UserId, order.TariffId, order.Amount, order.Currency, order.Status.ToString(), order.ExpiresAt, GetRenewalSubscriptionId(order));
 
-    private static string BuildReferralContext(Guid? renewalSubscriptionId)
-        => renewalSubscriptionId.HasValue
-            ? JsonSerializer.Serialize(new Dictionary<string, string> { [RenewalSubscriptionIdKey] = renewalSubscriptionId.Value.ToString("D") })
-            : "{}";
+    private static string BuildReferralContext(Guid? renewalSubscriptionId, int? promoFreeDays)
+    {
+        if (!renewalSubscriptionId.HasValue && !promoFreeDays.HasValue)
+        {
+            return "{}";
+        }
 
-    private static string BuildPendingIntentKey(CreateOrderCommand command)
+        var context = new Dictionary<string, object>();
+        if (renewalSubscriptionId.HasValue)
+        {
+            context[RenewalSubscriptionIdKey] = renewalSubscriptionId.Value.ToString("D");
+        }
+
+        if (promoFreeDays.HasValue)
+        {
+            context[PromoFreeDaysKey] = promoFreeDays.Value;
+        }
+
+        return JsonSerializer.Serialize(context);
+    }
+
+    public static string? NormalizePromoCode(string? promoCode)
+        => string.IsNullOrWhiteSpace(promoCode) ? null : promoCode.Trim().ToUpperInvariant();
+
+    private static string BuildPendingIntentKey(CreateOrderCommand command, Guid? promoCodeId)
     {
         var source = string.Join(
             ':',
@@ -227,8 +462,106 @@ public class OrderService
             (int)command.Type,
             (int)command.Channel,
             command.RenewalSubscriptionId?.ToString("N") ?? string.Empty);
+        if (promoCodeId.HasValue)
+        {
+            source += $":promo:{promoCodeId.Value:N}";
+        }
+
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source)));
     }
+
+    private static bool JsonArrayAllowsGuid(string? json, Guid value)
+    {
+        if (!TryReadJsonArray(json, out var items) || items is null)
+        {
+            return false;
+        }
+
+        if (items.Value.GetArrayLength() == 0)
+        {
+            return true;
+        }
+
+        var allowed = false;
+        foreach (var item in items.Value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String || !Guid.TryParse(item.GetString(), out var parsed))
+            {
+                return false;
+            }
+
+            if (parsed == value)
+            {
+                allowed = true;
+            }
+        }
+
+        return allowed;
+    }
+
+    private static bool JsonArrayAllowsChannel(string? json, ChannelType value)
+    {
+        if (!TryReadJsonArray(json, out var items) || items is null)
+        {
+            return false;
+        }
+
+        if (items.Value.GetArrayLength() == 0)
+        {
+            return true;
+        }
+
+        var allowed = false;
+        foreach (var item in items.Value.EnumerateArray())
+        {
+            ChannelType parsed;
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                if (!Enum.TryParse(item.GetString(), ignoreCase: true, out parsed) || !Enum.IsDefined(parsed))
+                {
+                    return false;
+                }
+            }
+            else if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out var numeric) && Enum.IsDefined(typeof(ChannelType), numeric))
+            {
+                parsed = (ChannelType)numeric;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (parsed == value)
+            {
+                allowed = true;
+            }
+        }
+
+        return allowed;
+    }
+
+    private static bool TryReadJsonArray(string? json, out JsonElement? array)
+    {
+        array = null;
+        try
+        {
+            using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "[]" : json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            array = document.RootElement.Clone();
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static DateTimeOffset NextVersion(DateTimeOffset current, DateTimeOffset now)
+        => now > current ? now : current.AddTicks(1);
 
     private static bool IsPendingIntentConflict(DbUpdateException exception)
     {
@@ -268,4 +601,32 @@ public class OrderService
             return null;
         }
     }
+
+    private static int? TryReadPromoFreeDays(string? referralContext)
+    {
+        if (string.IsNullOrWhiteSpace(referralContext))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(referralContext);
+            if (document.RootElement.ValueKind != JsonValueKind.Object
+                || !document.RootElement.TryGetProperty(PromoFreeDaysKey, out var value)
+                || value.ValueKind != JsonValueKind.Number
+                || !value.TryGetInt32(out var freeDays))
+            {
+                return null;
+            }
+
+            return freeDays;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private sealed record PromoResolution(PromoCode? Promo);
 }

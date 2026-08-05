@@ -12021,5 +12021,28 @@
         "text": "Roadmap progress is 528/548 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-promo-lifecycle-integrity",
+    "version": "0.516.0",
+    "releasedAt": "2026-08-05T15:07:40+07:00",
+    "title": "Промокод применяется по проверенным правилам",
+    "summary": "Checkout проверяет срок и ограничения промокода до заказа, безопасно учитывает лимиты и сохраняет бесплатные дни для активации или продления подписки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Недействительный или недоступный для выбранного тарифа промокод больше не игнорируется: сайт показывает понятную ошибку до перехода к оплате."
+      },
+      {
+        "type": "improved",
+        "text": "Лимиты использования учитываются согласованно при параллельных покупках, а бесплатные дни применяются и к новой подписке, и к продлению."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 529/549 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

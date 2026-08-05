@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: promo lifecycle integrity
+
+Scope:
+- Проверен полный жизненный цикл промокода от анонимной checkout-сессии до заказа, конкурентных redemption limits, оплаты, новой подписки и продления.
+
+Results:
+- Roadmap progress: `529/549` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-promo-lifecycle-integrity`, version `0.516.0`.
+- Backend full suite: OK, `1081/1081`; targeted promo/checkout/order/subscription suite: OK, `40/40`.
+- Promo validation fail-closed проверяет active period, tariff/channel allow-list, discount configuration, global/per-user limits и не создает anonymous checkout для недействительного кода.
+- `PromoCodeId`, discount identity и `promoFreeDays` snapshot сохраняются в paid order contract; активация и renewal не зависят от последующего редактирования промокода.
+- Conditional promo version update сериализует последний redemption slot между API-инстансами; deterministic file-backed SQLite race сохраняет один order и возвращает проигравшему HTTP `409`.
+- Stale pending promo order атомарно истекает и освобождает limit slot; повтор того же active intent возвращает прежний заказ.
+- Некорректный итоговый срок подписки возвращает controlled failure без partial subscription.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены; EF pending model changes: none.
+- Frontend tests: OK, `85/85`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without unexpected console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Secret scan: OK, `640` files, `0` findings; artifact cleanup and strict UTF-8 guard: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: checkout claim atomicity
 
 Scope:

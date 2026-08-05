@@ -37,6 +37,29 @@ public class SubscriptionService
     public async Task<Result<ActivationResult>> ActivateOrRenewFromOrderAsync(Order order, PaymentAttempt payment, CancellationToken cancellationToken = default)
     {
         var tariff = await _db.Tariffs.FirstAsync(x => x.Id == order.TariffId, cancellationToken);
+        var promoFreeDays = OrderService.GetPromoFreeDays(order);
+        if (!promoFreeDays.HasValue && order.PromoCodeId.HasValue)
+        {
+            var promo = await _db.PromoCodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == order.PromoCodeId.Value, cancellationToken);
+            if (promo is null || promo.FreeDays < 0)
+            {
+                return Result<ActivationResult>.Failure("Order promo code duration is unavailable or invalid.");
+            }
+
+            promoFreeDays = promo.FreeDays;
+        }
+
+        if (promoFreeDays is < 0)
+        {
+            return Result<ActivationResult>.Failure("Order promo code duration is invalid.");
+        }
+
+        var durationDays = (long)tariff.DurationDays + (promoFreeDays ?? 0);
+        if (durationDays <= 0 || durationDays > int.MaxValue)
+        {
+            return Result<ActivationResult>.Failure("Subscription duration is invalid.");
+        }
+
         var scenarioResult = await ResolveScenarioAsync(tariff, cancellationToken);
         if (!scenarioResult.IsSuccess)
         {
@@ -81,14 +104,19 @@ public class SubscriptionService
         Subscription subscription;
         if (existing is null || (order.Type == OrderType.NewSubscription && existingForPayment is null))
         {
+            if (!TryAddDays(now, durationDays, out var endAt))
+            {
+                return Result<ActivationResult>.Failure("Subscription duration exceeds the supported date range.");
+            }
+
             subscription = new Subscription
             {
                 UserId = order.UserId,
                 TariffId = order.TariffId,
                 Status = SubscriptionStatus.PendingActivation,
                 StartAt = now,
-                EndAt = now.AddDays(tariff.DurationDays),
-                GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(now.AddDays(tariff.DurationDays)),
+                EndAt = endAt,
+                GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(endAt),
                 SourceChannel = order.Channel,
                 LastPaymentId = payment.Id,
                 RenewalCount = 0
@@ -102,7 +130,12 @@ public class SubscriptionService
             if (existingForPayment is null)
             {
                 var baseDate = BusinessRules.GetRenewalBaseDate(now, subscription.EndAt);
-                subscription.EndAt = baseDate.AddDays(tariff.DurationDays);
+                if (!TryAddDays(baseDate, durationDays, out var endAt))
+                {
+                    return Result<ActivationResult>.Failure("Subscription duration exceeds the supported date range.");
+                }
+
+                subscription.EndAt = endAt;
                 subscription.GracePeriodEndAt = BusinessRules.GetGracePeriodEnd(subscription.EndAt);
                 subscription.LastPaymentId = payment.Id;
                 subscription.RenewalCount += 1;
@@ -493,6 +526,20 @@ public class SubscriptionService
             CreatedAt = now
         });
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool TryAddDays(DateTimeOffset baseDate, long durationDays, out DateTimeOffset result)
+    {
+        try
+        {
+            result = baseDate.AddDays(durationDays);
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            result = default;
+            return false;
+        }
     }
 
     private static TimeSpan LifecycleRetryDelay(int attemptCount)

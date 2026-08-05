@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.516.0 - 2026-08-05
+
+Release entry: `2026-08-05-promo-lifecycle-integrity`.
+
+### Исправлено
+
+- Checkout теперь отклоняет неизвестные, неактивные, преждевременные, истекшие и не разрешенные для тарифа или канала промокоды вместо молчаливого заказа без скидки.
+- Лимиты общего и пользовательского использования сериализованы на relational БД; устаревшие pending-заказы освобождают слот, повтор того же intent остается идемпотентным, а конкурентный последний слот возвращает одному запросу HTTP `409`.
+- Заказ сохраняет `PromoCodeId` и snapshot бесплатных дней; активация и продление используют оплаченный snapshot, а выход срока за диапазон даты завершается контролируемой ошибкой.
+- Публичный сайт показывает русские сообщения ошибок промокода и позволяет исправить ввод без ухода со страницы тарифов.
+
+### Проверено
+
+- Backend full suite `1081/1081`; targeted promo/checkout/order/subscription suite `40/40`, включая deterministic file-backed SQLite race последнего redemption slot и fail-closed stale-expiration conflict.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; frontend `85/85`, typecheck/build OK.
+- Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`.
+- Secret scan `640` files/`0` findings и strict UTF-8 guard пройдены; временные SQLite/browser artifacts очищены.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `529/549` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.515.0 - 2026-08-05
 
 Release entry: `2026-08-05-checkout-claim-atomicity`.

@@ -30,6 +30,16 @@ public class CheckoutSessionService
             return Result<CheckoutSessionDto>.Failure("Tariff not found or inactive.");
         }
 
+        var promoValidation = await _orderService.ValidatePromoForCheckoutAsync(
+            command.PromoCode,
+            command.TariffId,
+            command.Channel,
+            cancellationToken);
+        if (!promoValidation.IsSuccess)
+        {
+            return Result<CheckoutSessionDto>.Failure(promoValidation.Error ?? "Promo code validation failed.");
+        }
+
         var token = CreateToken();
         var session = new CheckoutSession
         {
@@ -38,7 +48,7 @@ public class CheckoutSessionService
             Type = command.Type,
             Channel = command.Channel,
             PaymentProvider = command.PaymentProvider,
-            PromoCode = command.PromoCode,
+            PromoCode = OrderService.NormalizePromoCode(command.PromoCode),
             EmailHint = NormalizeEmail(command.EmailHint),
             IsFirstPurchase = command.IsFirstPurchase,
             ExpiresAt = _clock.UtcNow.AddMinutes(30),

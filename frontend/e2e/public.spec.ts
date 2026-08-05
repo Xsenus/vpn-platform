@@ -92,6 +92,7 @@ async function mockPublicApi(page: Page) {
   let logoutShouldFail = false
   let refreshPayload: unknown = null
   let rejectNextProfileRequest = true
+  let rejectNextCheckoutPromo = false
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -116,6 +117,12 @@ async function mockPublicApi(page: Page) {
     }
 
     checkoutPayload = route.request().postDataJSON()
+    if (rejectNextCheckoutPromo) {
+      rejectNextCheckoutPromo = false
+      await fulfillJson(route, { error: 'Promo code not found.' }, 400)
+      return
+    }
+
     await fulfillJson(route, {
       id: 'checkout-session-1',
       token: 'public-checkout-token',
@@ -234,7 +241,8 @@ async function mockPublicApi(page: Page) {
     getLogoutPayload: () => logoutPayload,
     getLogoutAuthorization: () => logoutAuthorization,
     getRefreshPayload: () => refreshPayload,
-    failLogout: () => { logoutShouldFail = true }
+    failLogout: () => { logoutShouldFail = true },
+    rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true }
   }
 }
 
@@ -260,6 +268,16 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   const providerSelect = page.getByLabel('Способ оплаты')
   await expect(providerSelect).toHaveValue('YooKassa')
   await expect(providerSelect.locator('option')).toContainText(['YooKassa sandbox · проверка'])
+
+  api.rejectCheckoutPromo()
+  await page.getByLabel('Промокод').fill('UNKNOWN')
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+  await expect(page).toHaveURL(/\/tariffs$/)
+  await expect(page.getByText('Промокод не найден. Проверьте написание.')).toBeVisible()
+  const expectedPromoFailureLogs = consoleErrors.filter((message) => message.includes('400 (Bad Request)'))
+  expect(expectedPromoFailureLogs.length).toBeGreaterThan(0)
+  for (const message of expectedPromoFailureLogs) consoleErrors.splice(consoleErrors.indexOf(message), 1)
+  await page.getByLabel('Промокод').fill('')
 
   await page.getByRole('button', { name: 'Купить' }).first().click()
   await expect(page).toHaveURL(/\/account$/)

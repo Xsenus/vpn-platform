@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `528/548` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `529/549` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1065/1065`.
-- [x] Frontend unit tests: `84/84`.
+- [x] Backend full suite: `1081/1081`.
+- [x] Frontend unit tests: `85/85`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -125,7 +125,7 @@
 - [x] Refresh token optimistic revision закрывает double rotation; concurrent reuse/logout/admin deactivation fail closed без активной stale branch.
 - [x] Support conversation revision закрывает stale reply/status/note; оба UI обновляют очередь после conflict, pending inbound thread снова становится active.
 - [x] Checkout claim атомарно связывает session/user/order; concurrent same-user получает winner, другой user не создаёт второй заказ, completed status остаётся terminal.
-- [x] Latest "Что нового": `2026-08-05-checkout-claim-atomicity`, версия `0.515.0`.
+- [x] Latest "Что нового": `2026-08-05-promo-lifecycle-integrity`, версия `0.516.0`.
 
 ## Как вести дальше
 

@@ -188,14 +188,22 @@ public class MeController : ControllerBase
                 RenewalSubscriptionId: renewalSubscriptionId),
             cancellationToken);
 
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.IsRetryable
+                ? Conflict(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("checkout-sessions/{token}/claim")]
     public async Task<IActionResult> ClaimCheckoutSession([FromRoute] string token, CancellationToken cancellationToken)
     {
         var result = await _checkoutSessionService.ClaimAsync(new ClaimCheckoutSessionCommand(token, ResolveUserId()), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.IsRetryable
+                ? Conflict(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("orders/{id:guid}/payments/{provider}/init")]

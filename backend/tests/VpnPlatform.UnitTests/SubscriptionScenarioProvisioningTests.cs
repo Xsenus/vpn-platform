@@ -285,6 +285,133 @@ public class SubscriptionScenarioProvisioningTests
         Assert.Equal(targetSubscriptionId, (await db.AccessCredentials.SingleAsync()).SubscriptionId);
     }
 
+    [Fact]
+    public async Task ActivateOrRenewFromOrderAsync_Should_Apply_Promo_Free_Days_To_New_And_Renewal_Periods()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2026, 8, 5, 17, 0, 0, TimeSpan.Zero);
+        var provider = new TrackingVpnProvider();
+        var user = new User
+        {
+            Email = "promo-duration@example.test",
+            DisplayName = "Promo duration",
+            PasswordHash = "hash",
+            ReferralCode = "promo-duration"
+        };
+        var tariff = new Tariff
+        {
+            Name = "Promo duration",
+            Slug = "promo-duration",
+            DurationDays = 30,
+            Price = 500m,
+            Currency = "RUB",
+            MaxDevices = 3,
+            IsActive = true
+        };
+        var promo = new PromoCode
+        {
+            Code = "WEEK",
+            DiscountType = "percent",
+            DiscountValue = 0,
+            FreeDays = 7,
+            IsActive = true
+        };
+        db.AddRange(user, tariff, promo, Node(Guid.NewGuid(), "promo-duration", "eu", 10, "vless"));
+        var firstOrder = new Order
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            PromoCodeId = promo.Id,
+            Type = OrderType.NewSubscription,
+            Channel = ChannelType.Web,
+            PaymentProvider = PaymentProvider.YooKassa,
+            Status = OrderStatus.PaymentReceived,
+            Amount = 500m,
+            Currency = "RUB",
+            ExpiresAt = now.AddMinutes(15),
+            ReferralContext = "{\"promoFreeDays\":7}"
+        };
+        var firstPayment = new PaymentAttempt
+        {
+            OrderId = firstOrder.Id,
+            Provider = PaymentProvider.YooKassa,
+            ProviderMode = PaymentProviderMode.Production,
+            Status = PaymentStatus.Succeeded,
+            Amount = 500m,
+            Currency = "RUB",
+            ProviderPaymentId = "promo-duration-first",
+            PaidAt = now
+        };
+        db.AddRange(firstOrder, firstPayment);
+        await db.SaveChangesAsync();
+        promo.FreeDays = 99;
+        await db.SaveChangesAsync();
+        var service = new SubscriptionService(db, new FixedClock(now), new NodeAllocationService(db), new SingleVpnProviderFactory(provider));
+
+        var first = await service.ActivateOrRenewFromOrderAsync(firstOrder, firstPayment);
+
+        Assert.True(first.IsSuccess, first.Error);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == first.Value!.SubscriptionId);
+        Assert.Equal(now.AddDays(37), subscription.EndAt);
+
+        var renewalOrder = new Order
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            PromoCodeId = promo.Id,
+            Type = OrderType.Renewal,
+            Channel = ChannelType.Web,
+            PaymentProvider = PaymentProvider.YooKassa,
+            Status = OrderStatus.PaymentReceived,
+            Amount = 500m,
+            Currency = "RUB",
+            ExpiresAt = now.AddMinutes(15),
+            ReferralContext = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["renewalSubscriptionId"] = subscription.Id.ToString("D"),
+                ["promoFreeDays"] = 7
+            })
+        };
+        var renewalPayment = new PaymentAttempt
+        {
+            OrderId = renewalOrder.Id,
+            Provider = PaymentProvider.YooKassa,
+            ProviderMode = PaymentProviderMode.Production,
+            Status = PaymentStatus.Succeeded,
+            Amount = 500m,
+            Currency = "RUB",
+            ProviderPaymentId = "promo-duration-renewal",
+            PaidAt = now
+        };
+        db.AddRange(renewalOrder, renewalPayment);
+        await db.SaveChangesAsync();
+
+        var renewal = await service.ActivateOrRenewFromOrderAsync(renewalOrder, renewalPayment);
+
+        Assert.True(renewal.IsSuccess, renewal.Error);
+        Assert.Equal(now.AddDays(74), (await db.Subscriptions.SingleAsync(x => x.Id == subscription.Id)).EndAt);
+    }
+
+    [Fact]
+    public async Task ActivateOrRenewFromOrderAsync_Should_Reject_Duration_Outside_Date_Range()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2026, 8, 5, 17, 0, 0, TimeSpan.Zero);
+        var user = new User { Email = "duration-limit@example.test", DisplayName = "Duration limit", PasswordHash = "hash", ReferralCode = "duration-limit" };
+        var tariff = new Tariff { Name = "Duration limit", Slug = "duration-limit", DurationDays = int.MaxValue, Price = 500m, Currency = "RUB", MaxDevices = 1, IsActive = true };
+        var order = new Order { UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Web, PaymentProvider = PaymentProvider.YooKassa, Status = OrderStatus.PaymentReceived, Amount = 500m, Currency = "RUB", ExpiresAt = now.AddMinutes(15) };
+        var payment = new PaymentAttempt { OrderId = order.Id, Provider = PaymentProvider.YooKassa, ProviderMode = PaymentProviderMode.Production, Status = PaymentStatus.Succeeded, Amount = 500m, Currency = "RUB", ProviderPaymentId = "duration-limit", PaidAt = now };
+        db.AddRange(user, tariff, order, payment);
+        await db.SaveChangesAsync();
+        var service = new SubscriptionService(db, new FixedClock(now), new NodeAllocationService(db), new SingleVpnProviderFactory(new TrackingVpnProvider()));
+
+        var result = await service.ActivateOrRenewFromOrderAsync(order, payment);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("date range", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.Subscriptions.ToListAsync());
+    }
+
     private static VpnNode Node(Guid id, string name, string region, int priority, string protocol)
         => new()
         {

@@ -19,7 +19,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
-import { canStartCheckout, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
+import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-public-token'
@@ -477,7 +477,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       setCheckoutState(nextState)
       onCheckoutComplete(nextState)
     } catch (e) {
-      setError(e instanceof Error ? e.message : content('home.errors.checkoutCreate'))
+      setError(getCheckoutErrorMessage(e, content('home.errors.checkoutCreate')))
     } finally {
       setPendingTariffId('')
     }
@@ -1056,7 +1056,7 @@ export function App() {
         setPendingCheckout(null)
         removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
       })
-      .catch((e: Error) => setCheckoutError(e.message))
+      .catch((e: Error) => setCheckoutError(getCheckoutErrorMessage(e, 'Не удалось привязать покупку.')))
       .finally(() => setClaimBusy(false))
   }, [token, pendingCheckout, claimAttempt])
 
