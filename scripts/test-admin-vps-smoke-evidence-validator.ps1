@@ -152,6 +152,7 @@ function New-EvidencePair {
         "users",
         "payments",
         "tariffs",
+        "referrals",
         "subscriptions",
         "vpn",
         "nodes",

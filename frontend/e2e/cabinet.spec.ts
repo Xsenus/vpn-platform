@@ -374,7 +374,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/referrals') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, [{ id: 'reward-e2e', type: 'bonus-days', status: 'Approved', value: 7, currencyOrUnit: 'days', processedAt: '2026-06-13T07:00:00Z', createdAt: '2026-06-13T07:00:00Z' }])
       return
     }
 
@@ -521,6 +521,7 @@ test('cabinet covers register, login, payments, subscription access and support'
   await authPanel.getByLabel('Имя').fill(user.displayName)
   await authPanel.getByLabel('Email').fill(user.email)
   await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByLabel('Реферальный код').fill('CABINET-REF')
   await authPanel.getByRole('button', { name: 'Зарегистрироваться' }).click()
 
   await expect(page.getByText('Аккаунт создан.')).toBeVisible()
@@ -528,6 +529,9 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
   await expect(page.getByText('yk-paid-1')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'EU Sandbox' })).toBeVisible()
+  const referralRewardRow = page.locator('.list-item').filter({ hasText: 'Бонусные дни' })
+  await expect(referralRewardRow.getByText('7 days', { exact: false })).toBeVisible()
+  await expect(referralRewardRow.getByText('Подтверждено')).toBeVisible()
 
   const staleOrderCard = page.locator('.payment-record').filter({ hasText: 'Истёкший заказ' })
   await expect(staleOrderCard.getByText('Expired')).toBeVisible()
@@ -684,7 +688,8 @@ test('cabinet covers register, login, payments, subscription access and support'
 
   expect(api.getLastRequest('/api/auth/register')?.body).toMatchObject({
     email: user.email,
-    displayName: user.displayName
+    displayName: user.displayName,
+    referralCode: 'CABINET-REF'
   })
   expect(api.getLastRequest('/api/auth/login')?.body).toMatchObject({
     email: user.email

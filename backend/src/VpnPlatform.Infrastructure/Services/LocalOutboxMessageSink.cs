@@ -11,10 +11,12 @@ namespace VpnPlatform.Infrastructure.Services;
 public sealed class LocalOutboxMessageSink : IOutboxMessageSink
 {
     private readonly ApplicationDbContext _db;
+    private readonly ReferralRewardService _referralRewards;
 
-    public LocalOutboxMessageSink(ApplicationDbContext db)
+    public LocalOutboxMessageSink(ApplicationDbContext db, ReferralRewardService referralRewards)
     {
         _db = db;
+        _referralRewards = referralRewards;
     }
 
     public async Task DispatchAsync(
@@ -41,6 +43,16 @@ public sealed class LocalOutboxMessageSink : IOutboxMessageSink
             case "OrderTimelineEvent":
                 RequireGuid(payload.RootElement, "orderId");
                 RequireString(payload.RootElement, "eventType");
+                return;
+            case "ReferralRewardRequested":
+                var rewardResult = await _referralRewards.MaterializeForOrderAsync(
+                    RequireGuid(payload.RootElement, "orderId"),
+                    messageId,
+                    cancellationToken);
+                if (!rewardResult.IsSuccess)
+                {
+                    throw new OutboxPermanentDispatchException(rewardResult.Error ?? "Referral reward request is invalid.");
+                }
                 return;
             default:
                 throw new OutboxPermanentDispatchException($"Unsupported outbox message type '{type}'.");

@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: referral reward lifecycle
+
+Scope:
+- Проверен полный локальный контур от ввода referral code при регистрации до durable начисления, redacted cabinet response и управления программой в admin UI.
+
+Results:
+- Roadmap progress: `530/550` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-referral-reward-lifecycle`, version `0.517.0`.
+- Backend full suite: OK, `1087/1087`; targeted auth/referral/outbox/subscription suite: OK, `34/34`.
+- Регистрация с действующим кодом атомарно сохраняет user/relationship/session/audit; неизвестный код не создаёт пользователя.
+- `ReferralRewardRequested` материализует deterministic ledgers для обеих ролей и не дублирует их при повторной доставке.
+- Правила учитывают first purchase, minimum amount, allowed channel, active period, referral-eligible tariff и promo stacking; некорректная active config permanent-dead-letter-ится без потери VPN activation.
+- Cabinet DTO не содержит `SourceUserId`, `ReferralProgramId` и `MetadataJson`; admin API возвращает отдельный расширенный контракт и валидирует программы до записи.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены; EF pending model changes: none.
+- Frontend tests: OK, `89/89`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without unexpected console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Secret scan: OK, `642` files, `0` findings; strict UTF-8 guard and artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: promo lifecycle integrity
 
 Scope:

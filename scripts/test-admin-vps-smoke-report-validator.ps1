@@ -97,6 +97,7 @@ $requiredSections = @(
     "users",
     "payments",
     "tariffs",
+    "referrals",
     "subscriptions",
     "vpn",
     "nodes",

@@ -3,6 +3,8 @@ import {
   AccessCredentialDto,
   AdminAuditLogDto,
   AdminDashboardSummaryDto,
+  AdminReferralProgramDto,
+  AdminRewardLedgerDto,
   AdminSessionDto,
   AdminTelegramBotConnectionCheckDto,
   AdminTelegramBotSettingsDto,
@@ -28,6 +30,7 @@ import {
   PaymentWebhookEventDto,
   ProvisioningRunDto,
   RefundDto,
+  ReferralProgramUpsertPayload,
   SiteContentBlockUpsertPayload,
   SiteContentBlockDto,
   SiteContentReadinessDto,
@@ -394,6 +397,7 @@ const adminSections = [
   ['audit', 'Аудит'],
   ['payments', 'Оплаты'],
   ['tariffs', 'Тарифы'],
+  ['referrals', 'Рефералы'],
   ['subscriptions', 'Подписки'],
   ['vpn', 'VPN-доступы'],
   ['nodes', 'Серверы'],
@@ -411,6 +415,7 @@ const adminSectionDescriptions: Record<AdminSectionId, string> = {
   users: 'Пользователи, их подписки, платежи, VPN-доступы, обращения и реферальные начисления.',
   payments: 'Платежные провайдеры, готовность аккаунтов, платежи, возвраты и webhook-события.',
   tariffs: 'Тарифы, цены, описания, сценарии после оплаты и публикация на витрине.',
+  referrals: 'Правила реферальной программы, периоды действия и журнал начислений участникам.',
   subscriptions: 'Активные и истекающие подписки, ручные продления и связь с заказами.',
   vpn: 'Выданные VPN-доступы, QR-коды и операции с пользовательскими ключами.',
   nodes: 'VPS-серверы, SSH-доступы, приоритеты, capacity и подготовка инфраструктуры.',
@@ -427,7 +432,7 @@ const adminSectionDescriptions: Record<AdminSectionId, string> = {
 
 const adminSectionGroups: Array<{ title: string; ids: AdminSectionId[] }> = [
   { title: 'Операции', ids: ['dashboard', 'users', 'support', 'audit'] },
-  { title: 'Продажи', ids: ['payments', 'tariffs', 'subscriptions'] },
+  { title: 'Продажи', ids: ['payments', 'tariffs', 'referrals', 'subscriptions'] },
   { title: 'VPN', ids: ['vpn', 'nodes', 'panels', 'provisioning'] },
   { title: 'Контент', ids: ['bot', 'releases', 'faq', 'content', 'scenarios'] }
 ]
@@ -520,6 +525,25 @@ function adminSectionFromHref(href: string | null | undefined): AdminSectionId |
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
+type ReferralProgramFormState = {
+  name: string
+  status: 'draft' | 'active' | 'paused' | 'archived'
+  startAt: string
+  endAt: string
+  firstPurchaseOnly: boolean
+  minimumOrderAmount: number
+  allowedChannels: string[]
+  referrerEnabled: boolean
+  referrerType: string
+  referrerValue: number
+  referrerUnit: string
+  referrerAutoApprove: boolean
+  referredEnabled: boolean
+  referredType: string
+  referredValue: number
+  referredUnit: string
+  referredAutoApprove: boolean
+}
 
 function readTagValue(tagsCsv: string | null | undefined, key: string): string | null {
   const normalizedKey = key.toLowerCase()
@@ -623,6 +647,81 @@ const defaultTariffForm: UpdateTariffPayload = {
   isReferralEligible: true,
   provisioningScenario: 'auto',
   afterPaymentText: ''
+}
+
+const defaultReferralProgramForm: ReferralProgramFormState = {
+  name: '',
+  status: 'draft',
+  startAt: '',
+  endAt: '',
+  firstPurchaseOnly: true,
+  minimumOrderAmount: 0,
+  allowedChannels: ['Web'],
+  referrerEnabled: true,
+  referrerType: 'bonus-days',
+  referrerValue: 7,
+  referrerUnit: 'days',
+  referrerAutoApprove: true,
+  referredEnabled: true,
+  referredType: 'bonus-days',
+  referredValue: 3,
+  referredUnit: 'days',
+  referredAutoApprove: true
+}
+
+function referralProgramToForm(program: AdminReferralProgramDto): ReferralProgramFormState {
+  let rules: Record<string, unknown> = {}
+  let rewards: Record<string, unknown> = {}
+  try { rules = JSON.parse(program.ruleDefinition) as Record<string, unknown> } catch { /* Server validation prevents this for new data. */ }
+  try { rewards = JSON.parse(program.rewardDefinition) as Record<string, unknown> } catch { /* Keep editable defaults for legacy data. */ }
+  const referrer = typeof rewards.referrer === 'object' && rewards.referrer ? rewards.referrer as Record<string, unknown> : null
+  const referred = typeof rewards.referred === 'object' && rewards.referred ? rewards.referred as Record<string, unknown> : null
+  return {
+    ...defaultReferralProgramForm,
+    name: program.name,
+    status: ['draft', 'active', 'paused', 'archived'].includes(program.status) ? program.status as ReferralProgramFormState['status'] : 'draft',
+    startAt: program.startAt ? toDateTimeLocalValue(program.startAt) : '',
+    endAt: program.endAt ? toDateTimeLocalValue(program.endAt) : '',
+    firstPurchaseOnly: rules.firstPurchaseOnly !== false,
+    minimumOrderAmount: Number(rules.minimumOrderAmount) || 0,
+    allowedChannels: Array.isArray(rules.allowedChannels) ? rules.allowedChannels.map(String) : [],
+    referrerEnabled: Boolean(referrer),
+    referrerType: String(referrer?.type ?? 'bonus-days'),
+    referrerValue: Number(referrer?.value) || 0,
+    referrerUnit: String(referrer?.unit ?? 'days'),
+    referrerAutoApprove: referrer?.autoApprove === true,
+    referredEnabled: Boolean(referred),
+    referredType: String(referred?.type ?? 'bonus-days'),
+    referredValue: Number(referred?.value) || 0,
+    referredUnit: String(referred?.unit ?? 'days'),
+    referredAutoApprove: referred?.autoApprove === true
+  }
+}
+
+function buildReferralProgramPayload(form: ReferralProgramFormState): ReferralProgramUpsertPayload {
+  const rewardDefinition: Record<string, unknown> = {}
+  if (form.referrerEnabled) rewardDefinition.referrer = { type: form.referrerType.trim(), value: form.referrerValue, unit: form.referrerUnit.trim(), autoApprove: form.referrerAutoApprove }
+  if (form.referredEnabled) rewardDefinition.referred = { type: form.referredType.trim(), value: form.referredValue, unit: form.referredUnit.trim(), autoApprove: form.referredAutoApprove }
+  return {
+    name: form.name.trim(),
+    status: form.status,
+    startAt: form.startAt ? new Date(form.startAt).toISOString() : null,
+    endAt: form.endAt ? new Date(form.endAt).toISOString() : null,
+    ruleDefinition: JSON.stringify({ firstPurchaseOnly: form.firstPurchaseOnly, minimumOrderAmount: form.minimumOrderAmount, allowedChannels: form.allowedChannels }),
+    rewardDefinition: JSON.stringify(rewardDefinition),
+    antiFraudSettings: '{}'
+  }
+}
+
+function validateReferralProgramForm(form: ReferralProgramFormState) {
+  const errors: string[] = []
+  if (!form.name.trim()) errors.push('Укажите название программы.')
+  if (form.minimumOrderAmount < 0) errors.push('Минимальная сумма заказа не может быть отрицательной.')
+  if (!form.referrerEnabled && !form.referredEnabled) errors.push('Выберите хотя бы одного получателя вознаграждения.')
+  if (form.referrerEnabled && (form.referrerValue <= 0 || !form.referrerType.trim() || !form.referrerUnit.trim())) errors.push('Заполните вознаграждение пригласившему пользователю.')
+  if (form.referredEnabled && (form.referredValue <= 0 || !form.referredType.trim() || !form.referredUnit.trim())) errors.push('Заполните вознаграждение приглашенному пользователю.')
+  if (form.startAt && form.endAt && new Date(form.endAt) <= new Date(form.startAt)) errors.push('Дата окончания должна быть позже даты начала.')
+  return errors
 }
 
 const defaultReleaseForm: AppReleaseUpsertPayload = {
@@ -966,6 +1065,10 @@ export function App() {
   const [tariffForm, setTariffForm] = useState<UpdateTariffPayload>(defaultTariffForm)
   const [tariffFeaturesText, setTariffFeaturesText] = useState('')
   const [editingTariffId, setEditingTariffId] = useState('')
+  const [referralPrograms, setReferralPrograms] = useState<AdminReferralProgramDto[]>([])
+  const [referralRewards, setReferralRewards] = useState<AdminRewardLedgerDto[]>([])
+  const [referralProgramForm, setReferralProgramForm] = useState<ReferralProgramFormState>(defaultReferralProgramForm)
+  const [editingReferralProgramId, setEditingReferralProgramId] = useState('')
   const [editingProviderAccountId, setEditingProviderAccountId] = useState('')
   const [appReleases, setAppReleases] = useState<AppReleaseDto[]>([])
   const [appReleaseOverview, setAppReleaseOverview] = useState<AppReleaseOverviewDto | null>(null)
@@ -1030,6 +1133,7 @@ export function App() {
   const canReadSupport = adminSession?.capabilities.supportRead === true
   const adminLoginErrors = useMemo(() => validateAdminLogin(email, password), [email, password])
   const showAdminLoginErrors = adminLoginErrors.length > 0 && Boolean(email || password)
+  const referralProgramFormErrors = useMemo(() => validateReferralProgramForm(referralProgramForm), [referralProgramForm])
 
   const derivedSummary = useMemo(() => ({
     totalUsers: summary?.totalUsers ?? users.length,
@@ -1114,6 +1218,8 @@ export function App() {
       nextRefunds,
       nextSupportConversations,
       nextTariffs,
+      nextReferralPrograms,
+      nextReferralRewards,
       nextAppReleases,
       nextAppReleaseOverview,
       nextFaqEntries,
@@ -1138,6 +1244,8 @@ export function App() {
       capabilities.financeRead ? safeLoad('refunds', () => api.getAdminRefunds(currentToken), [], errors) : [],
       capabilities.supportRead ? safeLoad('обращения поддержки', () => api.getAdminSupportConversations(currentToken), [], errors) : [],
       safeLoad('tariffs', () => api.getAdminTariffs(currentToken), [], errors),
+      safeLoad('реферальные программы', () => api.getAdminReferralPrograms(currentToken), [], errors),
+      safeLoad('реферальные начисления', () => api.getAdminReferralRewards(currentToken), [], errors),
       safeLoad('Что нового', () => api.getAdminAppReleases(currentToken, { visibility: releaseVisibilityFilter, source: releaseSourceFilter, search: releaseSearch }), [], errors),
       safeLoad('сводка релизов', () => api.getAdminAppReleaseOverview(currentToken), null, errors),
       safeLoad('FAQ', () => api.getAdminFaq(currentToken, { category: faqCategoryFilter, visibility: faqVisibilityFilter, search: faqSearch }), [], errors),
@@ -1163,6 +1271,8 @@ export function App() {
     setRefunds(nextRefunds)
     setSupportConversations(nextSupportConversations)
     setTariffs(nextTariffs)
+    setReferralPrograms(nextReferralPrograms)
+    setReferralRewards(nextReferralRewards)
     setAppReleases(nextAppReleases)
     setAppReleaseOverview(nextAppReleaseOverview)
     setFaqEntries(nextFaqEntries)
@@ -1398,6 +1508,10 @@ export function App() {
     setTariffForm(defaultTariffForm)
     setTariffFeaturesText('')
     setEditingTariffId('')
+    setReferralPrograms([])
+    setReferralRewards([])
+    setReferralProgramForm(defaultReferralProgramForm)
+    setEditingReferralProgramId('')
     setAppReleases([])
     setAppReleaseOverview(null)
     setReleaseVisibilityFilter('all')
@@ -1764,6 +1878,58 @@ export function App() {
       setNotice(result.archived ? `Тариф ${tariff.name} архивирован и скрыт с витрины.` : `Тариф ${tariff.name} удалён.`)
       await loadAll(token)
     })
+  }
+
+  const resetReferralProgramForm = () => {
+    setReferralProgramForm(defaultReferralProgramForm)
+    setEditingReferralProgramId('')
+  }
+
+  const editReferralProgram = (program: AdminReferralProgramDto) => {
+    setReferralProgramForm(referralProgramToForm(program))
+    setEditingReferralProgramId(program.id)
+    goToAdminSection('referrals')
+  }
+
+  const updateReferralProgramForm = <K extends keyof ReferralProgramFormState>(key: K, value: ReferralProgramFormState[K]) => {
+    setReferralProgramForm((current) => ({ ...current, [key]: value }))
+  }
+
+  const toggleReferralChannel = (channel: string) => {
+    setReferralProgramForm((current) => ({
+      ...current,
+      allowedChannels: current.allowedChannels.includes(channel)
+        ? current.allowedChannels.filter((item) => item !== channel)
+        : [...current.allowedChannels, channel]
+    }))
+  }
+
+  const handleSaveReferralProgram = async () => {
+    if (!token || !canWriteSection('referrals')) return
+    const validationErrors = validateReferralProgramForm(referralProgramForm)
+    if (validationErrors.length > 0) {
+      setError(`Реферальная программа: ${validationErrors.join(' ')}`)
+      return
+    }
+
+    setBusy(true)
+    setError('')
+    try {
+      const payload = buildReferralProgramPayload(referralProgramForm)
+      if (editingReferralProgramId) {
+        await api.updateAdminReferralProgram(token, editingReferralProgramId, payload)
+        setNotice('Реферальная программа обновлена.')
+      } else {
+        await api.createAdminReferralProgram(token, payload)
+        setNotice('Реферальная программа создана.')
+      }
+      resetReferralProgramForm()
+      await loadAll(token)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось сохранить реферальную программу')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const resetReleaseForm = () => {
@@ -3185,6 +3351,67 @@ export function App() {
           <div className="list-stack">
             {tariffs.length === 0 && <EmptyState title="Тарифов нет" description="Создайте первый тариф, чтобы он появился на странице покупки." />}
             {tariffs.map((tariff) => <div key={tariff.id} className="list-item-vertical"><div className="item-head"><div><strong>{tariff.name}</strong><div className="muted">{tariff.description || '—'}</div><div className="muted">{tariff.durationDays} дней · {tariff.maxDevices} устройств · порядок {tariff.sortOrder ?? 0} · сценарий {tariff.provisioningScenario || 'auto'}</div><div className="muted">{parseTariffFeatures(tariff).join(' · ') || 'Преимущества не заполнены'}</div></div><div className="item-status"><strong>{tariff.price} {tariff.currency}</strong>{tariff.badge && <StatusBadge value={tariff.badge} />}<StatusBadge value={tariff.isActive === false ? 'Disabled' : 'Enabled'} /></div></div><div className="toolbar" hidden={!canWriteSection('tariffs')}><PrimaryButton className="button-secondary" onClick={() => editTariff(tariff)}>Редактировать</PrimaryButton>{tariff.isActive === false ? <PrimaryButton className="button-ghost" disabled={actionBusyId === tariff.id} onClick={() => void handleToggleTariff(tariff)}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === tariff.id} message={`Выключить тариф "${tariff.name}"? Он исчезнет с публичной витрины и из Telegram.`} onConfirm={() => void handleToggleTariff(tariff)}>Выключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `delete-${tariff.id}`} message={`Удалить тариф "${tariff.name}"? Если есть заказы или подписки, тариф будет архивирован и скрыт с витрины.`} onConfirm={() => void handleDeleteTariff(tariff)}>Удалить</ConfirmButton></div></div>)}
+          </div>
+        </Card>
+      </div>
+
+      <div id="referrals" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('referrals')} hidden={activeSection !== 'referrals'}>
+        <Card>
+          <h3>{editingReferralProgramId ? 'Редактирование программы' : 'Новая реферальная программа'}</h3>
+          <form hidden={!canWriteSection('referrals')} aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveReferralProgram() }}>
+            <fieldset className="form-section">
+              <legend>Публикация</legend>
+              <div className="form-grid">
+                <label><span>Название</span><input value={referralProgramForm.name} onChange={(event) => updateReferralProgramForm('name', event.target.value)} required /></label>
+                <label><span>Статус</span><select value={referralProgramForm.status} onChange={(event) => updateReferralProgramForm('status', event.target.value as ReferralProgramFormState['status'])}><option value="draft">Черновик</option><option value="active">Активна</option><option value="paused">Приостановлена</option><option value="archived">Архив</option></select></label>
+                <label><span>Начало</span><input type="datetime-local" value={referralProgramForm.startAt} onChange={(event) => updateReferralProgramForm('startAt', event.target.value)} /></label>
+                <label><span>Окончание</span><input type="datetime-local" value={referralProgramForm.endAt} onChange={(event) => updateReferralProgramForm('endAt', event.target.value)} /></label>
+                <label><span>Минимальная сумма заказа</span><input type="number" min={0} step="1" value={referralProgramForm.minimumOrderAmount} onChange={(event) => updateReferralProgramForm('minimumOrderAmount', Number(event.target.value) || 0)} /></label>
+              </div>
+              <label className="checkbox-row"><input type="checkbox" checked={referralProgramForm.firstPurchaseOnly} onChange={(event) => updateReferralProgramForm('firstPurchaseOnly', event.target.checked)} /> Только первая покупка подписки</label>
+              <div className="checkbox-grid" role="group" aria-label="Каналы продаж">
+                {['Web', 'Telegram', 'Discord', 'Vk', 'WhatsApp', 'Email'].map((channel) => <label key={channel} className="checkbox-row"><input type="checkbox" checked={referralProgramForm.allowedChannels.includes(channel)} onChange={() => toggleReferralChannel(channel)} /> {channel}</label>)}
+              </div>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Пригласивший пользователь</legend>
+              <label className="checkbox-row"><input type="checkbox" checked={referralProgramForm.referrerEnabled} onChange={(event) => updateReferralProgramForm('referrerEnabled', event.target.checked)} /> Начислять вознаграждение</label>
+              <div className="form-grid" hidden={!referralProgramForm.referrerEnabled}>
+                <label><span>Тип</span><select value={referralProgramForm.referrerType} onChange={(event) => updateReferralProgramForm('referrerType', event.target.value)}><option value="bonus-days">Бонусные дни</option><option value="cashback">Кэшбэк</option><option value="discount">Скидка</option></select></label>
+                <label><span>Значение</span><input type="number" min={0.01} step="0.01" value={referralProgramForm.referrerValue} onChange={(event) => updateReferralProgramForm('referrerValue', Number(event.target.value) || 0)} /></label>
+                <label><span>Единица</span><input value={referralProgramForm.referrerUnit} onChange={(event) => updateReferralProgramForm('referrerUnit', event.target.value)} /></label>
+              </div>
+              <label className="checkbox-row" hidden={!referralProgramForm.referrerEnabled}><input type="checkbox" checked={referralProgramForm.referrerAutoApprove} onChange={(event) => updateReferralProgramForm('referrerAutoApprove', event.target.checked)} /> Подтверждать автоматически</label>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>Приглашенный пользователь</legend>
+              <label className="checkbox-row"><input type="checkbox" checked={referralProgramForm.referredEnabled} onChange={(event) => updateReferralProgramForm('referredEnabled', event.target.checked)} /> Начислять вознаграждение</label>
+              <div className="form-grid" hidden={!referralProgramForm.referredEnabled}>
+                <label><span>Тип</span><select value={referralProgramForm.referredType} onChange={(event) => updateReferralProgramForm('referredType', event.target.value)}><option value="bonus-days">Бонусные дни</option><option value="cashback">Кэшбэк</option><option value="discount">Скидка</option></select></label>
+                <label><span>Значение</span><input type="number" min={0.01} step="0.01" value={referralProgramForm.referredValue} onChange={(event) => updateReferralProgramForm('referredValue', Number(event.target.value) || 0)} /></label>
+                <label><span>Единица</span><input value={referralProgramForm.referredUnit} onChange={(event) => updateReferralProgramForm('referredUnit', event.target.value)} /></label>
+              </div>
+              <label className="checkbox-row" hidden={!referralProgramForm.referredEnabled}><input type="checkbox" checked={referralProgramForm.referredAutoApprove} onChange={(event) => updateReferralProgramForm('referredAutoApprove', event.target.checked)} /> Подтверждать автоматически</label>
+            </fieldset>
+            <FormValidationSummary errors={referralProgramFormErrors} />
+            <div className="form-footer">
+              <PrimaryButton type="submit" disabled={busy || referralProgramFormErrors.length > 0}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
+              {editingReferralProgramId && <PrimaryButton type="button" className="button-ghost" onClick={resetReferralProgramForm}>Отменить редактирование</PrimaryButton>}
+            </div>
+          </form>
+        </Card>
+        <Card>
+          <h3>Программы</h3>
+          <div className="list-stack">
+            {referralPrograms.length === 0 && <EmptyState title="Программ нет" description="Создайте программу и активируйте ее для начислений после первой покупки." />}
+            {referralPrograms.map((program) => <div key={program.id} className="list-item-vertical"><div className="item-head"><div><strong>{program.name}</strong><div className="muted">Период: {formatDate(program.startAt)} - {formatDate(program.endAt)}</div><div className="muted">Обновлена: {formatDate(program.updatedAt)}</div></div><StatusBadge value={program.status} /></div><div className="toolbar" hidden={!canWriteSection('referrals')}><PrimaryButton className="button-secondary" onClick={() => editReferralProgram(program)}>Редактировать</PrimaryButton></div></div>)}
+          </div>
+        </Card>
+        <Card>
+          <h3>Начисления</h3>
+          <div className="list-stack">
+            {referralRewards.length === 0 && <EmptyState title="Начислений нет" description="Начисления появятся после успешных покупок по реферальным приглашениям." />}
+            {referralRewards.slice(0, 50).map((reward) => <div key={reward.id} className="list-item"><span><strong>{reward.type === 'bonus-days' ? 'Бонусные дни' : reward.type === 'cashback' ? 'Кэшбэк' : reward.type === 'discount' ? 'Скидка' : reward.type}</strong> · {reward.value} {reward.currencyOrUnit}<span className="muted"> · получатель {shortId(reward.userId)} · программа {shortId(reward.referralProgramId)} · {formatDate(reward.createdAt)}</span></span><StatusBadge value={reward.status} /></div>)}
           </div>
         </Card>
       </div>

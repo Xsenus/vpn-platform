@@ -17,6 +17,7 @@ const adminSections = [
   'audit',
   'payments',
   'tariffs',
+  'referrals',
   'subscriptions',
   'vpn',
   'nodes',
@@ -447,6 +448,16 @@ async function installApiMock(page: Page) {
 
     if (method === 'GET' && path === '/api/admin/tariffs') {
       await fulfillJson(route, [tariff])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/admin/referral-programs') {
+      await fulfillJson(route, [{ id: 'referral-program-all-screens', name: 'Welcome', status: 'active', startAt: null, endAt: null, ruleDefinition: '{"firstPurchaseOnly":true}', rewardDefinition: '{"referrer":{"type":"bonus-days","value":7,"unit":"days","autoApprove":true}}', antiFraudSettings: '{}', createdAt: now, updatedAt: now }])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/admin/referrals') {
+      await fulfillJson(route, [{ id: 'reward-all-screens', userId: user.id, sourceUserId: 'source-user', referralProgramId: 'referral-program-all-screens', type: 'bonus-days', status: 'Approved', value: 7, currencyOrUnit: 'days', processedAt: now, createdAt: now }])
       return
     }
 

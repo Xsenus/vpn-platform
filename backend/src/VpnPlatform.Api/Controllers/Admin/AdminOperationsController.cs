@@ -65,6 +65,36 @@ public sealed record DeleteServerHttpResponse(
     int LinkedMigrationJobs);
 public sealed record NodeHealthCheckDto(Guid Id, Guid NodeId, string Status, DateTimeOffset CheckedAt, long LatencyMs, string MetadataJson, string ErrorText);
 public sealed record AdminAuditLogFilters(string? Action = null, string? EntityType = null, string? ActorType = null, string? Search = null, DateTimeOffset? From = null, DateTimeOffset? To = null, int Limit = 200);
+public sealed record ReferralProgramUpsertHttpRequest(
+    string Name,
+    string Status,
+    DateTimeOffset? StartAt,
+    DateTimeOffset? EndAt,
+    string RuleDefinition,
+    string RewardDefinition,
+    string? AntiFraudSettings = null);
+public sealed record ReferralProgramDto(
+    Guid Id,
+    string Name,
+    string Status,
+    DateTimeOffset? StartAt,
+    DateTimeOffset? EndAt,
+    string RuleDefinition,
+    string RewardDefinition,
+    string AntiFraudSettings,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+public sealed record AdminRewardLedgerDto(
+    Guid Id,
+    Guid UserId,
+    Guid? SourceUserId,
+    Guid? ReferralProgramId,
+    string Type,
+    string Status,
+    decimal Value,
+    string CurrencyOrUnit,
+    DateTimeOffset? ProcessedAt,
+    DateTimeOffset CreatedAt);
 
 [ApiController]
 [Authorize(Policy = AdminPolicies.AdminRead)]
@@ -2112,17 +2142,37 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> GetReferrals(CancellationToken cancellationToken)
     {
         var rewards = await _db.RewardLedgers.AsNoTracking().ToListAsync(cancellationToken);
-        return Ok(rewards.OrderByDescending(x => x.CreatedAt).ToList());
+        return Ok(rewards
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Select(MapAdminRewardLedgerDto)
+            .ToList());
+    }
+
+    [HttpGet("referral-programs")]
+    public async Task<IActionResult> GetReferralPrograms(CancellationToken cancellationToken)
+    {
+        var programs = await _db.ReferralPrograms.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(programs
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Select(MapReferralProgramDto)
+            .ToList());
     }
 
     [HttpPost("referral-programs")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> CreateReferralProgram([FromBody] ReferralProgram program, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateReferralProgram([FromBody] ReferralProgramUpsertHttpRequest request, CancellationToken cancellationToken)
     {
+        var validation = ValidateReferralProgram(request);
+        if (!validation.IsSuccess) return BadRequest(new { error = validation.Error });
+
+        var program = new ReferralProgram();
+        CopyReferralProgramFields(request, program);
         _db.ReferralPrograms.Add(program);
         AddAuditLog("referral_program.create", "ReferralProgram", program.Id, "{}", SerializeReferralProgramAudit(program));
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(program);
+        return Ok(MapReferralProgramDto(program));
     }
 
     [HttpPatch("referral-programs/{id:guid}")]
@@ -2137,24 +2187,20 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Referral program patch must be a JSON object." });
         }
 
-        foreach (var propertyName in new[] { "name", "status" })
+        if (!TryBuildReferralProgramPatch(payload, program, out var request, out var patchError))
         {
-            if (payload.TryGetProperty(propertyName, out var value)
-                && value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
-            {
-                return BadRequest(new { error = $"Referral program field '{propertyName}' must be a string." });
-            }
+            return BadRequest(new { error = patchError });
         }
 
-        var before = SerializeReferralProgramAudit(program);
-        if (payload.TryGetProperty("name", out var name)) program.Name = name.GetString() ?? program.Name;
-        if (payload.TryGetProperty("status", out var status)) program.Status = status.GetString() ?? program.Status;
-        if (payload.TryGetProperty("ruleDefinition", out var ruleDefinition)) program.RuleDefinition = ruleDefinition.GetRawText();
+        var validation = ValidateReferralProgram(request);
+        if (!validation.IsSuccess) return BadRequest(new { error = validation.Error });
 
+        var before = SerializeReferralProgramAudit(program);
+        CopyReferralProgramFields(request, program);
         program.UpdatedAt = _clock.UtcNow;
         AddAuditLog("referral_program.update", "ReferralProgram", program.Id, before, SerializeReferralProgramAudit(program));
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(program);
+        return Ok(MapReferralProgramDto(program));
     }
 
 
@@ -2625,6 +2671,146 @@ public class AdminOperationsController : ControllerBase
             program.RewardDefinition,
             program.AntiFraudSettings
         });
+
+    private static Result<bool> ValidateReferralProgram(ReferralProgramUpsertHttpRequest request)
+        => ReferralRewardService.ValidateProgramConfiguration(
+            request.Name,
+            request.Status,
+            request.StartAt,
+            request.EndAt,
+            request.RuleDefinition,
+            request.RewardDefinition,
+            request.AntiFraudSettings ?? "{}");
+
+    private static void CopyReferralProgramFields(ReferralProgramUpsertHttpRequest request, ReferralProgram program)
+    {
+        program.Name = request.Name.Trim();
+        program.Status = request.Status.Trim().ToLowerInvariant();
+        program.StartAt = request.StartAt;
+        program.EndAt = request.EndAt;
+        program.RuleDefinition = request.RuleDefinition.Trim();
+        program.RewardDefinition = request.RewardDefinition.Trim();
+        program.AntiFraudSettings = (request.AntiFraudSettings ?? "{}").Trim();
+    }
+
+    private static bool TryBuildReferralProgramPatch(
+        JsonElement payload,
+        ReferralProgram current,
+        out ReferralProgramUpsertHttpRequest request,
+        out string error)
+    {
+        request = default!;
+        error = string.Empty;
+        if (!TryReadReferralString(payload, "name", current.Name, out var name, out error)
+            || !TryReadReferralString(payload, "status", current.Status, out var status, out error)
+            || !TryReadReferralDate(payload, "startAt", current.StartAt, out var startAt, out error)
+            || !TryReadReferralDate(payload, "endAt", current.EndAt, out var endAt, out error)
+            || !TryReadReferralJson(payload, "ruleDefinition", current.RuleDefinition, out var rules, out error)
+            || !TryReadReferralJson(payload, "rewardDefinition", current.RewardDefinition, out var rewards, out error)
+            || !TryReadReferralJson(payload, "antiFraudSettings", current.AntiFraudSettings, out var antiFraud, out error))
+        {
+            return false;
+        }
+
+        request = new ReferralProgramUpsertHttpRequest(name, status, startAt, endAt, rules, rewards, antiFraud);
+        return true;
+    }
+
+    private static bool TryReadReferralString(
+        JsonElement payload,
+        string propertyName,
+        string fallback,
+        out string value,
+        out string error)
+    {
+        value = fallback;
+        error = string.Empty;
+        if (!payload.TryGetProperty(propertyName, out var property)) return true;
+        if (property.ValueKind != JsonValueKind.String)
+        {
+            error = $"Referral program field '{propertyName}' must be a string.";
+            return false;
+        }
+
+        value = property.GetString() ?? string.Empty;
+        return true;
+    }
+
+    private static bool TryReadReferralDate(
+        JsonElement payload,
+        string propertyName,
+        DateTimeOffset? fallback,
+        out DateTimeOffset? value,
+        out string error)
+    {
+        value = fallback;
+        error = string.Empty;
+        if (!payload.TryGetProperty(propertyName, out var property)) return true;
+        if (property.ValueKind == JsonValueKind.Null)
+        {
+            value = null;
+            return true;
+        }
+        if (property.ValueKind != JsonValueKind.String || !property.TryGetDateTimeOffset(out var parsed))
+        {
+            error = $"Referral program field '{propertyName}' must be an ISO date or null.";
+            return false;
+        }
+
+        value = parsed;
+        return true;
+    }
+
+    private static bool TryReadReferralJson(
+        JsonElement payload,
+        string propertyName,
+        string fallback,
+        out string value,
+        out string error)
+    {
+        value = fallback;
+        error = string.Empty;
+        if (!payload.TryGetProperty(propertyName, out var property)) return true;
+        if (property.ValueKind == JsonValueKind.String)
+        {
+            value = property.GetString() ?? string.Empty;
+            return true;
+        }
+        if (property.ValueKind == JsonValueKind.Object)
+        {
+            value = property.GetRawText();
+            return true;
+        }
+
+        error = $"Referral program field '{propertyName}' must be a JSON object or a serialized JSON object.";
+        return false;
+    }
+
+    private static ReferralProgramDto MapReferralProgramDto(ReferralProgram program)
+        => new(
+            program.Id,
+            program.Name,
+            program.Status,
+            program.StartAt,
+            program.EndAt,
+            program.RuleDefinition,
+            program.RewardDefinition,
+            program.AntiFraudSettings,
+            program.CreatedAt,
+            program.UpdatedAt);
+
+    private static AdminRewardLedgerDto MapAdminRewardLedgerDto(RewardLedger reward)
+        => new(
+            reward.Id,
+            reward.UserId,
+            reward.SourceUserId,
+            reward.ReferralProgramId,
+            reward.Type,
+            reward.Status.ToString(),
+            reward.Value,
+            reward.CurrencyOrUnit,
+            reward.ProcessedAt,
+            reward.CreatedAt);
 
     private static string SerializeSupportConversationAudit(SupportConversation conversation)
         => JsonSerializer.Serialize(new

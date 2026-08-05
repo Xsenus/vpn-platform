@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import type { AdminSessionCapabilitiesDto } from '../packages/api-client/src/index.ts'
 import { canWriteAdminSection, filterAdminSectionIds, type AdminSectionId } from '../apps/admin-panel/src/admin-capabilities.ts'
 
-const allSections: AdminSectionId[] = ['dashboard', 'users', 'support', 'audit', 'payments', 'tariffs', 'subscriptions', 'vpn', 'nodes', 'panels', 'provisioning', 'bot', 'releases', 'faq', 'content', 'scenarios']
+const allSections: AdminSectionId[] = ['dashboard', 'users', 'support', 'audit', 'payments', 'tariffs', 'referrals', 'subscriptions', 'vpn', 'nodes', 'panels', 'provisioning', 'bot', 'releases', 'faq', 'content', 'scenarios']
 
 function capabilities(overrides: Partial<AdminSessionCapabilitiesDto>): AdminSessionCapabilitiesDto {
   return {
@@ -31,6 +31,7 @@ test('finance role sees finance and common read sections but no support or bot',
   assert.ok(!visible.includes('bot'))
   assert.equal(canWriteAdminSection(access, 'payments'), true)
   assert.equal(canWriteAdminSection(access, 'tariffs'), false)
+  assert.equal(canWriteAdminSection(access, 'referrals'), false)
 })
 
 test('support role sees support and common read sections in read-only mode elsewhere', () => {

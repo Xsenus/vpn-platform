@@ -238,7 +238,7 @@ public class OutboxMessageDeliveryTests
         await db.SaveChangesAsync();
         var clock = new MutableClock(message.CreatedAt);
 
-        var result = await new OutboxMessageDeliveryService(db, clock, new LocalOutboxMessageSink(db)).DeliverAsync(message.Id);
+        var result = await new OutboxMessageDeliveryService(db, clock, LocalSink(db, clock)).DeliverAsync(message.Id);
 
         Assert.True(result.IsSuccess, result.Error);
         var notification = await db.NotificationDeliveries.AsNoTracking().SingleAsync();
@@ -263,10 +263,8 @@ public class OutboxMessageDeliveryTests
         db.OutboxMessages.Add(message);
         await db.SaveChangesAsync();
 
-        var result = await new OutboxMessageDeliveryService(
-            db,
-            new MutableClock(message.CreatedAt),
-            new LocalOutboxMessageSink(db)).DeliverAsync(message.Id);
+        var clock = new MutableClock(message.CreatedAt);
+        var result = await new OutboxMessageDeliveryService(db, clock, LocalSink(db, clock)).DeliverAsync(message.Id);
 
         Assert.True(result.IsSuccess, result.Error);
         var notification = await db.NotificationDeliveries.AsNoTracking().SingleAsync();
@@ -290,10 +288,8 @@ public class OutboxMessageDeliveryTests
         db.OutboxMessages.Add(message);
         await db.SaveChangesAsync();
 
-        var result = await new OutboxMessageDeliveryService(
-            db,
-            new MutableClock(now),
-            new LocalOutboxMessageSink(db)).DeliverAsync(message.Id);
+        var clock = new MutableClock(now);
+        var result = await new OutboxMessageDeliveryService(db, clock, LocalSink(db, clock)).DeliverAsync(message.Id);
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.NotNull((await db.OutboxMessages.AsNoTracking().SingleAsync()).ProcessedAt);
@@ -311,7 +307,7 @@ public class OutboxMessageDeliveryTests
         db.OutboxMessages.Add(message);
         await db.SaveChangesAsync();
 
-        var result = await new OutboxMessageDeliveryService(db, clock, new LocalOutboxMessageSink(db)).DeliverAsync(message.Id);
+        var result = await new OutboxMessageDeliveryService(db, clock, LocalSink(db, clock)).DeliverAsync(message.Id);
 
         Assert.False(result.IsSuccess);
         Assert.NotNull((await db.OutboxMessages.AsNoTracking().SingleAsync()).FailedAt);
@@ -329,7 +325,7 @@ public class OutboxMessageDeliveryTests
         db.OutboxMessages.Add(message);
         await db.SaveChangesAsync();
 
-        var result = await new OutboxMessageDeliveryService(db, clock, new LocalOutboxMessageSink(db)).DeliverAsync(message.Id);
+        var result = await new OutboxMessageDeliveryService(db, clock, LocalSink(db, clock)).DeliverAsync(message.Id);
 
         Assert.False(result.IsSuccess);
         var stored = await db.OutboxMessages.AsNoTracking().SingleAsync();
@@ -372,6 +368,9 @@ public class OutboxMessageDeliveryTests
 
     private static ApplicationDbContext CreateDbContext(SqliteConnection connection)
         => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+
+    private static LocalOutboxMessageSink LocalSink(ApplicationDbContext db, IClock clock)
+        => new(db, new ReferralRewardService(db, clock));
 
     private sealed class MutableClock(DateTimeOffset utcNow) : IClock
     {

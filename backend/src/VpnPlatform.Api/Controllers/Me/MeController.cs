@@ -526,7 +526,19 @@ public class MeController : ControllerBase
     [HttpGet("referrals")]
     public async Task<IActionResult> GetReferrals(CancellationToken cancellationToken)
     {
-        var rewards = await _db.RewardLedgers.AsNoTracking().Where(x => x.UserId == ResolveUserId()).ToListAsync(cancellationToken);
+        var rewards = await _db.RewardLedgers.AsNoTracking()
+            .Where(x => x.UserId == ResolveUserId())
+            .Select(x => new
+            {
+                x.Id,
+                x.Type,
+                Status = x.Status.ToString(),
+                x.Value,
+                x.CurrencyOrUnit,
+                x.ProcessedAt,
+                x.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
         return Ok(rewards.OrderByDescending(x => x.CreatedAt).ToList());
     }
 

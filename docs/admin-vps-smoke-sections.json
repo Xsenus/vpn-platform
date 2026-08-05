@@ -19,6 +19,10 @@
       "route": "/admin/#tariffs"
     },
     {
+      "id": "referrals",
+      "route": "/admin/#referrals"
+    },
+    {
       "id": "subscriptions",
       "route": "/admin/#subscriptions"
     },

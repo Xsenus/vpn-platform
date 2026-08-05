@@ -58,6 +58,21 @@ public class AuthController : ControllerBase
             return BadRequest(new { error = "email_exists" });
         }
 
+        User? referrer = null;
+        var normalizedReferralCode = NormalizeReferralCode(request?.ReferralCode);
+        if (normalizedReferralCode is not null)
+        {
+            referrer = await _db.Users.AsNoTracking().FirstOrDefaultAsync(
+                x => x.ReferralCode.ToUpper() == normalizedReferralCode
+                    && x.Status == UserStatus.Active
+                    && !x.IsBlocked,
+                cancellationToken);
+            if (referrer is null)
+            {
+                return BadRequest(new { error = "invalid_referral_code" });
+            }
+        }
+
         var user = new User
         {
             Email = normalizedEmail,
@@ -69,6 +84,15 @@ public class AuthController : ControllerBase
         };
 
         _db.Users.Add(user);
+        if (referrer is not null)
+        {
+            _db.ReferralRelationships.Add(new ReferralRelationship
+            {
+                ReferrerUserId = referrer.Id,
+                ReferredUserId = user.Id,
+                SourceChannel = ChannelType.Web
+            });
+        }
         AddAudit("auth.register", "User", user.Id, null, new { email = normalizedEmail });
         var response = await IssueAuthResponseAsync(user, cancellationToken);
         try
@@ -615,6 +639,9 @@ public class AuthController : ControllerBase
 
     private static string CreateReferralCode()
         => $"REF-{Convert.ToHexString(RandomNumberGenerator.GetBytes(8))}";
+
+    private static string? NormalizeReferralCode(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
 
     private static bool IsUserEmailUniqueConstraintViolation(DbUpdateException exception)
     {

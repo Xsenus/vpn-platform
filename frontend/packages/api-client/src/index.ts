@@ -483,15 +483,41 @@ export type AccessCredentialDto = {
 
 export type RewardLedgerDto = {
   id: string
-  userId: string
-  sourceUserId?: string | null
-  referralProgramId?: string | null
   type: string
   status: string
   value: number
   currencyOrUnit: string
   processedAt?: string | null
-  metadataJson: string
+  createdAt: string
+}
+
+export type AdminReferralProgramDto = {
+  id: string
+  name: string
+  status: string
+  startAt?: string | null
+  endAt?: string | null
+  ruleDefinition: string
+  rewardDefinition: string
+  antiFraudSettings: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type ReferralProgramUpsertPayload = {
+  name: string
+  status: string
+  startAt?: string | null
+  endAt?: string | null
+  ruleDefinition: string
+  rewardDefinition: string
+  antiFraudSettings?: string
+}
+
+export type AdminRewardLedgerDto = RewardLedgerDto & {
+  userId: string
+  sourceUserId?: string | null
+  referralProgramId?: string | null
 }
 
 export type VpnNodeDto = {
@@ -1084,6 +1110,7 @@ const authErrorMessages: Record<string, string> = {
   invalid_credentials: 'Неверный email или пароль.',
   invalid_registration_request: 'Проверьте email и пароль: пароль должен быть не короче 8 символов.',
   email_exists: 'Аккаунт с таким email уже зарегистрирован. Войдите или восстановите пароль.',
+  invalid_referral_code: 'Реферальный код не найден или больше недоступен.',
   invalid_refresh_token: 'Сессия не найдена. Войдите заново.',
   refresh_token_reuse_detected: 'Сессия была отозвана из-за повторного использования старого токена. Войдите заново.',
   refresh_token_expired: 'Сессия истекла. Войдите заново.',
@@ -1243,10 +1270,10 @@ export class ApiClient {
     return this.request<PublicPaymentProviderDto[]>('/api/public/payments/providers', { errorMessage: apiFallbackErrorMessage })
   }
 
-  register(email: string, password: string, displayName: string): Promise<AuthResponse> {
+  register(email: string, password: string, displayName: string, referralCode?: string | null): Promise<AuthResponse> {
     return this.request<AuthResponse>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, displayName, referralCode: referralCode?.trim() || null }),
       errorMessage: apiFallbackErrorMessage
     })
   }
@@ -1852,6 +1879,14 @@ export class ApiClient {
     return this.request<TariffDto[]>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage })
   }
 
+  getAdminReferralPrograms(token: string): Promise<AdminReferralProgramDto[]> {
+    return this.request<AdminReferralProgramDto[]>('/api/admin/referral-programs', { token, errorMessage: apiFallbackErrorMessage })
+  }
+
+  getAdminReferralRewards(token: string): Promise<AdminRewardLedgerDto[]> {
+    return this.request<AdminRewardLedgerDto[]>('/api/admin/referrals', { token, errorMessage: apiFallbackErrorMessage })
+  }
+
   getAdminAppReleases(token: string, filters: AppReleaseFilters = {}): Promise<AppReleaseDto[]> {
     const params = new URLSearchParams()
     if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
@@ -2026,6 +2061,24 @@ export class ApiClient {
     return this.request<{ id: string; deleted: boolean; archived?: boolean }>(`/api/admin/tariffs/${id}`, {
       method: 'DELETE',
       token,
+      errorMessage: apiFallbackErrorMessage
+    })
+  }
+
+  createAdminReferralProgram(token: string, payload: ReferralProgramUpsertPayload): Promise<AdminReferralProgramDto> {
+    return this.request<AdminReferralProgramDto>('/api/admin/referral-programs', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+      errorMessage: apiFallbackErrorMessage
+    })
+  }
+
+  updateAdminReferralProgram(token: string, id: string, payload: ReferralProgramUpsertPayload): Promise<AdminReferralProgramDto> {
+    return this.request<AdminReferralProgramDto>(`/api/admin/referral-programs/${id}`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
     })
   }

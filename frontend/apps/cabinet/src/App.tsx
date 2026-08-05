@@ -24,7 +24,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
-import { buildCabinetSummary, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
+import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetSessionRejected } from './cabinet-session'
 import { buildOrderExportText, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
@@ -95,6 +95,7 @@ export function App() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authDisplayName, setAuthDisplayName] = useState('')
+  const [authReferralCode, setAuthReferralCode] = useState('')
   const [renewalState, setRenewalState] = useState<RenewalState>(null)
   const [qrSvgs, setQrSvgs] = useState<Record<string, string>>({})
   const [resetEmail, setResetEmail] = useState('')
@@ -304,9 +305,10 @@ export function App() {
     try {
       const response = authMode === 'login'
         ? await api.login(authEmail.trim(), authPassword)
-        : await api.register(authEmail.trim(), authPassword, authDisplayName.trim() || authEmail.trim())
+        : await api.register(authEmail.trim(), authPassword, authDisplayName.trim() || authEmail.trim(), authReferralCode)
       if (!await storeSession(response)) return
       setAuthPassword('')
+      setAuthReferralCode('')
       setNotice(authMode === 'login' ? 'Вход выполнен.' : 'Аккаунт создан.')
     } catch (e) {
       setError(translateAuthError(e, authMode === 'login' ? 'Не удалось войти' : 'Не удалось зарегистрироваться'))
@@ -718,6 +720,13 @@ export function App() {
                   <label>
                     <span>Имя</span>
                     <input value={authDisplayName} onChange={(e) => setAuthDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" />
+                  </label>
+                )}
+                {authMode === 'register' && (
+                  <label>
+                    <span>Реферальный код</span>
+                    <input value={authReferralCode} onChange={(e) => setAuthReferralCode(e.target.value)} placeholder="Необязательно" autoComplete="off" />
+                    <small>Укажите код пользователя, который вас пригласил.</small>
                   </label>
                 )}
                 <label>
@@ -1151,8 +1160,8 @@ export function App() {
             {referrals.map((reward) => (
               <div key={reward.id} className="list-item">
                 <div>
-                  <strong>{reward.type}</strong>
-                  <div className="muted">{reward.value} {reward.currencyOrUnit}</div>
+                  <strong>{formatReferralRewardType(reward.type)}</strong>
+                  <div className="muted">{reward.value} {reward.currencyOrUnit} · {new Date(reward.createdAt).toLocaleDateString()}</div>
                 </div>
                 <StatusBadge value={reward.status} />
               </div>

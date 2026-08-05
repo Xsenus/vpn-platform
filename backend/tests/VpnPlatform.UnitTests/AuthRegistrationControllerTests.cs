@@ -65,6 +65,43 @@ public class AuthRegistrationControllerTests
     }
 
     [Fact]
+    public async Task Register_Should_Attribute_Valid_Referral_And_Reject_Unknown_Code_Without_User()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var referrer = new User
+        {
+            Email = "referrer@example.test",
+            DisplayName = "Referrer",
+            PasswordHash = "hash",
+            ReferralCode = "REF-ATTRIBUTION123",
+            Status = UserStatus.Active,
+            RolesCsv = UserRoles.User
+        };
+        db.Users.Add(referrer);
+        await db.SaveChangesAsync();
+        var controller = CreateAuthController(db);
+
+        var attributed = await controller.Register(
+            new RegisterRequest("referred@example.test", "Password123!", "Referred", " ref-attribution123 "),
+            CancellationToken.None);
+        var rejected = await controller.Register(
+            new RegisterRequest("unknown-referral@example.test", "Password123!", "Unknown", "MISSING"),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(attributed);
+        AssertBadRequestError(rejected, "invalid_referral_code");
+        var referred = await db.Users.SingleAsync(x => x.Email == "referred@example.test");
+        var relationship = await db.ReferralRelationships.SingleAsync();
+        Assert.Equal(referrer.Id, relationship.ReferrerUserId);
+        Assert.Equal(referred.Id, relationship.ReferredUserId);
+        Assert.Equal(ChannelType.Web, relationship.SourceChannel);
+        Assert.Equal(2, await db.Users.CountAsync());
+    }
+
+    [Fact]
     public async Task Concurrent_Duplicate_Email_Should_Return_Email_Exists_Without_Partial_Session()
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-auth-register-{Guid.NewGuid():N}.db");

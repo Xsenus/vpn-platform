@@ -1,6 +1,6 @@
 namespace VpnPlatform.Api.Contracts;
 
-public sealed record RegisterRequest(string Email, string Password, string DisplayName);
+public sealed record RegisterRequest(string Email, string Password, string DisplayName, string? ReferralCode = null);
 public sealed record LoginRequest(string Email, string Password);
 public sealed record AuthResponse(string AccessToken, string RefreshToken, string Email, string DisplayName);
 public sealed record RefreshTokenRequest(string RefreshToken);

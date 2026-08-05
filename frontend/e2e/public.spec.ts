@@ -303,7 +303,11 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   await authPanel.getByLabel('Имя').fill('Public E2E')
   await authPanel.getByLabel('Email').fill('public@example.test')
   await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByLabel('Реферальный код').fill('PUBLIC-REF')
+  const registrationRequestPromise = page.waitForRequest((request) => request.method() === 'POST' && new URL(request.url()).pathname === '/api/auth/register')
   await authPanel.getByRole('button', { name: 'Создать аккаунт' }).click()
+  const registrationRequest = await registrationRequestPromise
+  expect(registrationRequest.postDataJSON()).toMatchObject({ referralCode: 'PUBLIC-REF' })
   await expect(page.getByText('Public E2E').first()).toBeVisible()
   expect(api.getRefreshPayload()).toEqual({ refreshToken: 'public-refresh-token' })
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-public-refresh-token'))).toBe('public-refreshed-refresh-token')

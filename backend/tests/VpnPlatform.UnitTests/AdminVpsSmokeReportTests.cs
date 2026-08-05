@@ -11,6 +11,7 @@ public class AdminVpsSmokeReportTests
         "users",
         "payments",
         "tariffs",
+        "referrals",
         "subscriptions",
         "vpn",
         "nodes",

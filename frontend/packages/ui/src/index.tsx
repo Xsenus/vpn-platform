@@ -125,6 +125,8 @@ const statusLabels: Record<string, string> = {
   Disabled: 'Выключено',
   Unhealthy: 'Проблема',
   Pending: 'Ожидает',
+  Approved: 'Подтверждено',
+  Reverted: 'Отозвано',
   PendingPayment: 'Ожидает оплаты',
   PaymentReceived: 'Оплата получена',
   FulfillmentInProgress: 'Выдача',

@@ -12044,5 +12044,32 @@
         "text": "Roadmap progress is 529/549 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-referral-reward-lifecycle",
+    "version": "0.517.0",
+    "releasedAt": "2026-08-05T16:02:38+07:00",
+    "title": "Реферальные начисления работают от регистрации до кабинета",
+    "summary": "Реферальный код сохраняет связь пользователей, успешная первая покупка создаёт идемпотентные начисления, а администратор управляет правилами через отдельный раздел.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Регистрация принимает реферальный код и атомарно сохраняет приглашение; неизвестный или недоступный код возвращает понятную ошибку без создания аккаунта."
+      },
+      {
+        "type": "improved",
+        "text": "После завершения подходящей покупки durable outbox создаёт начисления без дублей, учитывает тариф, промокод, период, сумму и канал, а кабинет не раскрывает внутренние идентификаторы."
+      },
+      {
+        "type": "new",
+        "text": "В админ-панели появился раздел реферальных программ с периодами, условиями, вознаграждениями и журналом начислений."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 530/550 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

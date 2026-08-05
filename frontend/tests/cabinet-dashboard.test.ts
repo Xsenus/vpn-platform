@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { AccessCredentialDto, SubscriptionDto } from '../packages/api-client/src/index.ts'
-import { buildCabinetSummary, daysUntil, findAccessForSubscription, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
+import { buildCabinetSummary, daysUntil, findAccessForSubscription, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
 
 function subscription(overrides: Partial<SubscriptionDto>): SubscriptionDto {
   return {
@@ -136,4 +136,10 @@ test('cabinet treats stale active access of a cancelled subscription as terminal
   })
   assert.equal(findAccessForSubscription(cancelled, [staleAccess]), null)
   assert.equal(buildCabinetSummary([cancelled], [staleAccess]).hasConnectionLink, false)
+})
+
+test('referral reward types remain user-facing', () => {
+  assert.equal(formatReferralRewardType('bonus-days'), 'Бонусные дни')
+  assert.equal(formatReferralRewardType('cashback'), 'Кэшбэк')
+  assert.equal(formatReferralRewardType('custom-ledger-type'), 'Реферальное начисление')
 })

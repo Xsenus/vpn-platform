@@ -7,6 +7,7 @@ export type AdminSectionId =
   | 'audit'
   | 'payments'
   | 'tariffs'
+  | 'referrals'
   | 'subscriptions'
   | 'vpn'
   | 'nodes'
@@ -31,6 +32,7 @@ const sectionWriteCapability: Record<AdminSectionId, keyof AdminSessionCapabilit
   audit: null,
   payments: 'financeWrite',
   tariffs: 'adminWrite',
+  referrals: 'adminWrite',
   subscriptions: 'adminWrite',
   vpn: 'vpnManage',
   nodes: 'provisioningManage',

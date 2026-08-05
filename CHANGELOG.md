@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.517.0 - 2026-08-05
+
+Release entry: `2026-08-05-referral-reward-lifecycle`.
+
+### Исправлено
+
+- Регистрация принимает необязательный реферальный код, проверяет активного владельца и сохраняет связь пользователей атомарно с новым аккаунтом.
+- Завершение новой подписки публикует durable `ReferralRewardRequested`; обработчик идемпотентно создаёт начисления с учетом тарифа, первой покупки, промокода, периода, суммы и канала.
+- Пользовательский API больше не раскрывает source user, program id и metadata реферального начисления; SQLite-сортировка выполняется совместимо с `DateTimeOffset`.
+- Admin API валидирует полную конфигурацию программы, а панель предоставляет отдельный адаптивный раздел правил и журнала начислений без ручного JSON.
+
+### Проверено
+
+- Backend full suite `1087/1087`; targeted auth/referral/outbox/subscription suite `34/34`, включая SQLite attribution, idempotency, promo/first-purchase restrictions, dead-letter и cabinet redaction.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; frontend `89/89`, typecheck/build OK.
+- Playwright desktop/mobile/all-screens responsive suite `16/16` проверяет referral registration payload, cabinet reward и admin create flow без неожиданных console errors/overflow.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`.
+- Secret scan `642` files/`0` findings и strict UTF-8 guard пройдены; временные SQLite/browser artifacts очищены.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `530/550` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.516.0 - 2026-08-05
 
 Release entry: `2026-08-05-promo-lifecycle-integrity`.

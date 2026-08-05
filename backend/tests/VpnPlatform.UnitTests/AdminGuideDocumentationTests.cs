@@ -23,7 +23,7 @@ public class AdminGuideDocumentationTests
             })
             .ToArray();
 
-        Assert.Equal(16, sections.Length);
+        Assert.Equal(17, sections.Length);
 
         foreach (var section in sections)
         {

@@ -35,6 +35,7 @@ powershell -ExecutionPolicy Bypass -File scripts\test-admin-vps-smoke-report-gen
 - `users`
 - `payments`
 - `tariffs`
+- `referrals`
 - `subscriptions`
 - `vpn`
 - `nodes`

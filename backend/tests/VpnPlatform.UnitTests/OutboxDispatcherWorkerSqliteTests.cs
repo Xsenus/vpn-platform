@@ -41,6 +41,7 @@ public class OutboxDispatcherWorkerSqliteTests
             .AddScoped(_ => new ApplicationDbContext(options))
             .AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>())
             .AddSingleton<IClock, TestClock>()
+            .AddScoped<ReferralRewardService>()
             .AddScoped<IOutboxMessageSink, LocalOutboxMessageSink>()
             .AddScoped<OutboxMessageDeliveryService>()
             .BuildServiceProvider();

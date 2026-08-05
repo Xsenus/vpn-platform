@@ -62,6 +62,22 @@ function tariff(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function referralProgram(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'referral-program-e2e',
+    name: 'Welcome E2E',
+    status: 'active',
+    startAt: null,
+    endAt: null,
+    ruleDefinition: '{"firstPurchaseOnly":true,"minimumOrderAmount":0,"allowedChannels":["Web"]}',
+    rewardDefinition: '{"referrer":{"type":"bonus-days","value":7,"unit":"days","autoApprove":true}}',
+    antiFraudSettings: '{}',
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  }
+}
+
 function paymentProviderAccount(overrides: Record<string, unknown> = {}) {
   return {
     id: 'provider-yookassa',
@@ -179,6 +195,7 @@ async function mockAdminApi(page: Page) {
   let dashboardShouldDeny = false
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
+  const referralPrograms = [referralProgram()]
   const releases = [release()]
   const scenarios = [workScenario()]
   const panels = [vpnPanel()]
@@ -447,6 +464,23 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'GET' && path === '/api/admin/referral-programs') {
+      await fulfillJson(route, referralPrograms)
+      return
+    }
+
+    if (method === 'GET' && path === '/api/admin/referrals') {
+      await fulfillJson(route, [{ id: 'reward-e2e', userId: 'user-e2e', sourceUserId: 'source-e2e', referralProgramId: 'referral-program-e2e', type: 'bonus-days', status: 'Approved', value: 7, currencyOrUnit: 'days', processedAt: now, createdAt: now }])
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/referral-programs') {
+      const created = referralProgram({ ...(body as Record<string, unknown>), id: 'referral-program-created-e2e', createdAt: now, updatedAt: now })
+      referralPrograms.push(created)
+      await fulfillJson(route, created, 201)
+      return
+    }
+
     if (method === 'GET' && path === '/api/app-version/admin/releases') {
       await fulfillJson(route, releases)
       return
@@ -662,6 +696,17 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await createTariffRequest
   await expect(tariffsPanel.locator('.list-item-vertical strong').filter({ hasText: 'E2E Premium 45' })).toBeVisible()
   expect(api.getLastRequest('/api/admin/tariffs')).toBeTruthy()
+
+  await openAdminSection(page, 'Рефералы', 'referrals')
+  const referralsPanel = page.locator('#referrals')
+  await expect(referralsPanel.locator('.list-item').filter({ hasText: 'Бонусные дни' })).toBeVisible()
+  await referralsPanel.getByLabel('Название').fill('Referral Playwright E2E')
+  await referralsPanel.locator('form select').first().selectOption('active')
+  const createReferralRequest = page.waitForRequest((request) => request.method() === 'POST' && new URL(request.url()).pathname === '/api/admin/referral-programs')
+  await referralsPanel.getByRole('button', { name: 'Создать программу' }).click()
+  const referralRequest = await createReferralRequest
+  expect(referralRequest.postDataJSON()).toMatchObject({ name: 'Referral Playwright E2E', status: 'active' })
+  await expect(referralsPanel.locator('strong').filter({ hasText: 'Referral Playwright E2E' })).toBeVisible()
 
   await openAdminSection(page, 'VPN-доступы', 'vpn')
   await expect(page.getByText('vless://admin-e2e@example.test')).toBeVisible()

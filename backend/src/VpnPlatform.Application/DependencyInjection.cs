@@ -10,6 +10,7 @@ public static class DependencyInjection
         services.AddScoped<CatalogService>();
         services.AddScoped<OrderService>();
         services.AddScoped<CheckoutSessionService>();
+        services.AddScoped<ReferralRewardService>();
         services.AddScoped<PaymentProviderAccountService>();
         services.AddScoped<NodeAllocationService>();
         services.AddScoped<VpnAccessLifecycleService>();

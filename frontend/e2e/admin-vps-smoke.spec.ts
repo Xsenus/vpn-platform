@@ -14,6 +14,7 @@ const sectionLabels: Record<AdminSectionId, string> = {
   users: 'Пользователи',
   payments: 'Оплаты',
   tariffs: 'Тарифы',
+  referrals: 'Рефералы',
   subscriptions: 'Подписки',
   vpn: 'VPN-доступы',
   nodes: 'Серверы',

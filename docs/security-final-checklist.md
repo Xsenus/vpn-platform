@@ -76,7 +76,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 1081/1081.
+- Backend full suite: 1087/1087.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -99,8 +99,8 @@ git diff --check
 - Support conversation revision rejects stale mutations; internal messages fail closed and assignment requires active support capability: OK.
 - Checkout claim transaction prevents cross-user order duplication and preserves terminal completed state: OK.
 - Promo lifecycle validation, relational redemption limits and paid free-days snapshot fail closed across checkout, order and subscription activation: OK.
-- Latest local release: `2026-08-05-promo-lifecycle-integrity`, версия `0.516.0`.
-- Frontend tests: 85/85.
+- Latest local release: `2026-08-05-referral-reward-lifecycle`, версия `0.517.0`.
+- Frontend tests: 89/89.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 

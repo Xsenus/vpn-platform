@@ -48,6 +48,14 @@
       "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
     },
     {
+      "id": "referrals",
+      "route": "/admin/#referrals",
+      "status": "blocked",
+      "httpStatus": 0,
+      "loaded": false,
+      "evidence": "TODO: safe screenshot name or browser smoke note without secrets"
+    },
+    {
       "id": "subscriptions",
       "route": "/admin/#subscriptions",
       "status": "blocked",

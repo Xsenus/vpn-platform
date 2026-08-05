@@ -78,10 +78,26 @@ test('auth helpers validate forms and translate backend codes to Russian text', 
   assert.deepEqual(validatePasswordResetConfirm('token', 'NewPassword123!'), [])
   assert.equal(translateAuthError(new Error('invalid_credentials')), 'Неверный email или пароль.')
   assert.equal(translateAuthError(new Error('email_exists')), 'Аккаунт с таким email уже зарегистрирован. Войдите или восстановите пароль.')
+  assert.equal(translateAuthError(new Error('invalid_referral_code')), 'Реферальный код не найден или больше недоступен.')
   assert.equal(
     translateAuthMessage('If the account exists, a password reset instruction has been queued for the configured delivery channel.'),
     'Если аккаунт существует, инструкция по сбросу пароля поставлена в очередь отправки.'
   )
+})
+
+test('ApiClient.register sends normalized optional referral code', async () => {
+  let body: unknown = null
+  globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => {
+    body = JSON.parse(String(init?.body))
+    return new Response(JSON.stringify({ accessToken: 'a', refreshToken: 'r', email: 'user@example.test', displayName: 'User' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  await new ApiClient('http://localhost:8080').register('user@example.test', 'Password123!', 'User', ' REF-CODE ')
+
+  assert.deepEqual(body, { email: 'user@example.test', password: 'Password123!', displayName: 'User', referralCode: 'REF-CODE' })
 })
 
 test('ApiClient.getTariffs calls public endpoint', async () => {
@@ -266,6 +282,39 @@ test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
   assert.equal(calls[2]?.init?.method, 'PATCH')
   assert.equal(calls[3]?.init?.method, 'DELETE')
   assert.match(String(calls[1]?.init?.body), /featuresJson|afterPaymentText/)
+  assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
+test('ApiClient admin referral endpoints cover programs and rewards', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify(String(url).endsWith('/referrals') ? [] : { id: 'program-1', name: 'Welcome', status: 'active' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+
+  const payload = {
+    name: 'Welcome',
+    status: 'active',
+    startAt: null,
+    endAt: null,
+    ruleDefinition: '{"firstPurchaseOnly":true}',
+    rewardDefinition: '{"referrer":{"type":"bonus-days","value":7,"unit":"days","autoApprove":true}}',
+    antiFraudSettings: '{}'
+  }
+  const client = new ApiClient('http://localhost:8080')
+  await client.getAdminReferralPrograms('admin-token')
+  await client.getAdminReferralRewards('admin-token')
+  await client.createAdminReferralProgram('admin-token', payload)
+  await client.updateAdminReferralProgram('admin-token', 'program-1', payload)
+
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/referral-programs')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/referrals')
+  assert.equal(calls[2]?.init?.method, 'POST')
+  assert.equal(calls[3]?.init?.method, 'PATCH')
+  assert.match(String(calls[2]?.init?.body), /rewardDefinition/)
   assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
@@ -1108,6 +1157,17 @@ test('frontend sources include app version gate and admin release editor', () =>
   assert.match(adminSource, /createAdminAppRelease/)
   assert.match(adminSource, /updateAdminAppRelease/)
   assert.match(adminSource, /deleteAdminAppRelease/)
+})
+
+test('admin source includes referral program operations', () => {
+  const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
+
+  assert.match(adminSource, /id="referrals"/)
+  assert.match(adminSource, /getAdminReferralPrograms/)
+  assert.match(adminSource, /getAdminReferralRewards/)
+  assert.match(adminSource, /createAdminReferralProgram/)
+  assert.match(adminSource, /updateAdminReferralProgram/)
+  assert.match(adminSource, /Реферальная программа/)
 })
 
 test('frontend sources include managed FAQ surfaces', () => {

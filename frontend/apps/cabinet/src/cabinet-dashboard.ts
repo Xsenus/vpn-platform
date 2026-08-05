@@ -4,6 +4,15 @@ export function isCurrentSubscription(subscription: SubscriptionDto) {
   return subscription.status === 'Active' || subscription.status === 'GracePeriod'
 }
 
+export function formatReferralRewardType(type: string) {
+  const labels: Record<string, string> = {
+    'bonus-days': 'Бонусные дни',
+    cashback: 'Кэшбэк',
+    discount: 'Скидка'
+  }
+  return labels[type.trim().toLowerCase()] ?? 'Реферальное начисление'
+}
+
 export function getSubscriptionRenewalAvailability(subscription: SubscriptionDto) {
   if (subscription.status === 'Blocked') {
     return {

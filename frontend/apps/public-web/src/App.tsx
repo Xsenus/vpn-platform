@@ -701,6 +701,7 @@ function AccountPage({
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [referralCode, setReferralCode] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -877,7 +878,7 @@ function AccountPage({
                 try {
                   const response = mode === 'login'
                     ? await api.login(email, password)
-                    : await api.register(email, password, displayName.trim() || email.trim())
+                    : await api.register(email, password, displayName.trim() || email.trim(), referralCode)
                   onAuthenticated(response)
                 } catch (e) {
                   setError(translateAuthError(e, 'Ошибка авторизации'))
@@ -887,6 +888,7 @@ function AccountPage({
               }}
             >
               {mode === 'register' && <label><span>Имя</span><input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" /></label>}
+              {mode === 'register' && <label><span>Реферальный код</span><input value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder="Необязательно" autoComplete="off" /><small>Если вас пригласил другой пользователь, укажите его код.</small></label>}
               <label><span>Email</span><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /><small>Используется для входа и привязки покупок.</small></label>
               <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Минимум 8 символов" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required help="Минимум 8 символов." />
               {showAuthValidation && (

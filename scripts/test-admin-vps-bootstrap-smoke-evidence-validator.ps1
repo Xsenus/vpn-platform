@@ -196,7 +196,7 @@ function New-SmokeReport {
     )
 
     $sections = @(
-        "dashboard", "users", "payments", "tariffs", "subscriptions", "vpn",
+        "dashboard", "users", "payments", "tariffs", "referrals", "subscriptions", "vpn",
         "nodes", "panels", "support", "bot", "releases", "faq", "content",
         "scenarios", "provisioning", "audit"
     ) | ForEach-Object {

@@ -209,9 +209,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `1081/1081` unit tests;
+- backend на .NET 9: `1087/1087` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `85/85`;
+- frontend unit tests: `89/89`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят; responsive matrix проверяет ширины `305..1920` px;
@@ -258,7 +258,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - refresh rotation защищена optimistic revision: один source token не создает две ветви, concurrent reuse отзывает winning family, а logout/admin deactivation повторяются без HTTP 500;
 - обращения поддержки используют optimistic revision: stale reply/status/note получают controlled conflict, а pending Telegram/provisioning диалог возвращается в active queue после нового сообщения;
 - checkout claim резервирует session, создаёт order и публикует связь одной transaction: same-user race возвращает winner, другой user не создаёт второй заказ, completed не деградирует в expired;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-promo-lifecycle-integrity`, версия `0.516.0`;
-- roadmap progress: `529/549` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- реферальный код атомарно связывает пользователей, а завершение подходящей покупки через durable outbox создаёт идемпотентные начисления; кабинет получает redacted DTO, программы и журнал управляются в отдельном admin-разделе;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-referral-reward-lifecycle`, версия `0.517.0`;
+- roadmap progress: `530/550` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

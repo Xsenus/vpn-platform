@@ -8,7 +8,7 @@
 
 - public web routes: `/`, `/tariffs`, `/faq`, `/help`, `/account`;
 - cabinet auth screen и авторизованный dashboard;
-- все admin sections (`all admin sections`): `dashboard`, `users`, `payments`, `tariffs`, `subscriptions`, `vpn`, `nodes`, `panels`, `support`, `audit`, `bot`, `releases`, `faq`, `content`, `scenarios`, `provisioning`;
+- все admin sections (`all admin sections`): `dashboard`, `users`, `payments`, `tariffs`, `referrals`, `subscriptions`, `vpn`, `nodes`, `panels`, `support`, `audit`, `bot`, `releases`, `faq`, `content`, `scenarios`, `provisioning`;
 - отсутствие пустого `body`;
 - отсутствие `console.error`;
 - отсутствие `pageerror`.

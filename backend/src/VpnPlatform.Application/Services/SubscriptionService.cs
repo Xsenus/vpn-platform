@@ -308,6 +308,16 @@ public class SubscriptionService
                 """
             });
 
+            if (order.Type == OrderType.NewSubscription)
+            {
+                _db.OutboxMessages.Add(new OutboxMessage
+                {
+                    Type = "ReferralRewardRequested",
+                    CorrelationId = order.Id.ToString("N"),
+                    PayloadJson = JsonSerializer.Serialize(new { orderId = order.Id })
+                });
+            }
+
             await _db.SaveChangesAsync(cancellationToken);
             reservedNodeId = null;
             return Result<ActivationResult>.Success(new ActivationResult(subscription.Id, access.Id, scenarioKey, scenario?.CabinetText ?? string.Empty, scenario?.TelegramText ?? string.Empty));
