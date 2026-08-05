@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-05-api-response-size-boundary";
-    private const string CurrentVersion = "0.527.0";
+    private const string CurrentReleaseId = "2026-08-05-api-response-shape-boundary";
+    private const string CurrentVersion = "0.528.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

@@ -1193,6 +1193,7 @@ const apiEmptyResponseMessage = 'Сервер вернул пустой отве
 const apiInvalidJsonResponseMessage = 'Сервер вернул некорректный JSON-ответ. Повторите запрос позже.'
 const apiUnsupportedResponseMessage = 'Сервер вернул ответ в неподдерживаемом формате. Повторите запрос позже.'
 const apiOversizedResponseMessage = 'Ответ сервера превышает допустимый размер. Повторите запрос позже.'
+const apiUnexpectedResponseShapeMessage = 'Сервер вернул JSON-ответ неожиданной формы. Повторите запрос позже.'
 const defaultApiRequestTimeoutMs = 30_000
 const defaultJsonResponseMaxBytes = 10_000_000
 const defaultApiErrorResponseMaxBytes = 64_000
@@ -1307,7 +1308,7 @@ export class ApiClient {
     return new TextDecoder().decode(bytes)
   }
 
-  private async request<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }): Promise<T> {
+  private async request<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }, expectedShape: 'object' | 'array' = 'object'): Promise<T> {
     const { token, errorMessage, ...requestInit } = init ?? {}
     const headers = new Headers(requestInit.headers ?? {})
 
@@ -1346,9 +1347,16 @@ export class ApiClient {
       if (typeof payload !== 'object' || payload === null) {
         throw new ApiClientError(apiInvalidJsonResponseMessage, 502, null)
       }
+      if ((expectedShape === 'array') !== Array.isArray(payload)) {
+        throw new ApiClientError(apiUnexpectedResponseShapeMessage, 502, { expectedShape })
+      }
 
       return payload as T
     })
+  }
+
+  private requestArray<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }): Promise<T[]> {
+    return this.request<T[]>(path, init, 'array')
   }
 
 
@@ -1382,23 +1390,23 @@ export class ApiClient {
   }
 
   getTariffs(): Promise<TariffDto[]> {
-    return this.request<TariffDto[]>('/api/public/tariffs', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<TariffDto>('/api/public/tariffs', { errorMessage: apiFallbackErrorMessage })
   }
 
   getFaq(): Promise<FaqItem[]> {
-    return this.request<FaqItem[]>('/api/public/content/faq', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<FaqItem>('/api/public/content/faq', { errorMessage: apiFallbackErrorMessage })
   }
 
   getHomeFaq(): Promise<FaqItem[]> {
-    return this.request<FaqItem[]>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<FaqItem>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage })
   }
 
   getHomeContent(): Promise<SiteContentBlockDto[]> {
-    return this.request<SiteContentBlockDto[]>('/api/public/content/home', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SiteContentBlockDto>('/api/public/content/home', { errorMessage: apiFallbackErrorMessage })
   }
 
   getPublicPaymentProviders(): Promise<PublicPaymentProviderDto[]> {
-    return this.request<PublicPaymentProviderDto[]>('/api/public/payments/providers', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PublicPaymentProviderDto>('/api/public/payments/providers', { errorMessage: apiFallbackErrorMessage })
   }
 
   register(email: string, password: string, displayName: string, referralCode?: string | null): Promise<AuthResponse> {
@@ -1512,15 +1520,15 @@ export class ApiClient {
   }
 
   getMySubscriptions(token: string): Promise<SubscriptionDto[]> {
-    return this.request<SubscriptionDto[]>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SubscriptionDto>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyOrders(token: string): Promise<OrderDto[]> {
-    return this.request<OrderDto[]>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<OrderDto>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyPayments(token: string): Promise<PaymentAttemptDto[]> {
-    return this.request<PaymentAttemptDto[]>('/api/me/payments', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentAttemptDto>('/api/me/payments', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyPayment(token: string, paymentId: string): Promise<PaymentAttemptDto> {
@@ -1528,11 +1536,11 @@ export class ApiClient {
   }
 
   getMySupportConversations(token: string): Promise<SupportConversationDto[]> {
-    return this.request<SupportConversationDto[]>('/api/me/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportConversationDto>('/api/me/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMySupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
-    return this.request<SupportMessageDto[]>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportMessageDto>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createMySupportConversation(token: string, payload: CreateMySupportConversationPayload): Promise<SupportConversationDto> {
@@ -1590,7 +1598,7 @@ export class ApiClient {
   }
 
   getMyAccesses(token: string): Promise<AccessCredentialDto[]> {
-    return this.request<AccessCredentialDto[]>('/api/me/accesses', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AccessCredentialDto>('/api/me/accesses', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getMyAccessQrSvg(token: string, id: string): Promise<string> {
@@ -1598,7 +1606,7 @@ export class ApiClient {
   }
 
   getMyReferrals(token: string): Promise<RewardLedgerDto[]> {
-    return this.request<RewardLedgerDto[]>('/api/me/referrals', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<RewardLedgerDto>('/api/me/referrals', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getLatestAppVersion(token: string): Promise<AppVersionLatestResponse> {
@@ -1606,7 +1614,7 @@ export class ApiClient {
   }
 
   getAppVersionHistory(token: string): Promise<AppReleaseDto[]> {
-    return this.request<AppReleaseDto[]>('/api/app-version/history', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AppReleaseDto>('/api/app-version/history', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   markAppVersionSeen(token: string, releaseId: string): Promise<{ releaseId: string; seen: boolean }> {
@@ -1636,11 +1644,11 @@ export class ApiClient {
     if (filters.to) params.set('to', filters.to)
     if (filters.limit) params.set('limit', String(filters.limit))
     const query = params.toString()
-    return this.request<AdminAuditLogDto[]>(`/api/admin/audit-logs${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminAuditLogDto>(`/api/admin/audit-logs${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminNotificationDeliveries(token: string): Promise<AdminNotificationDeliveryDto[]> {
-    return this.request<AdminNotificationDeliveryDto[]>('/api/admin/notification-deliveries?limit=100', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminNotificationDeliveryDto>('/api/admin/notification-deliveries?limit=100', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   retryAdminNotificationDelivery(token: string, deliveryId: string): Promise<{ id: string; status: string; nextAttemptAt?: string | null }> {
@@ -1657,7 +1665,7 @@ export class ApiClient {
     if (filters?.status) params.set('status', filters.status)
     if (filters?.role) params.set('role', filters.role)
     const suffix = params.toString() ? `?${params.toString()}` : ''
-    return this.request<AdminUserDto[]>(`/api/admin/users${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminUserDto>(`/api/admin/users${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminUserOverview(token: string, userId: string): Promise<AdminUserOverviewDto> {
@@ -1665,7 +1673,7 @@ export class ApiClient {
   }
 
   getAdminSubscriptions(token: string): Promise<SubscriptionDto[]> {
-    return this.request<SubscriptionDto[]>('/api/admin/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SubscriptionDto>('/api/admin/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   extendAdminSubscription(token: string, id: string, days: number, reason?: string | null): Promise<{ id: string; status: string; endAt: string }> {
@@ -1708,7 +1716,7 @@ export class ApiClient {
   }
 
   getAdminAccesses(token: string): Promise<AccessCredentialDto[]> {
-    return this.request<AccessCredentialDto[]>('/api/admin/access-credentials', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AccessCredentialDto>('/api/admin/access-credentials', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminAccessQrSvg(token: string, id: string): Promise<string> {
@@ -1757,11 +1765,11 @@ export class ApiClient {
     if (filters.status) params.set('status', filters.status)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.request<OrderDto[]>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<OrderDto>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminPayments(token: string): Promise<PaymentAttemptDto[]> {
-    return this.request<PaymentAttemptDto[]>('/api/admin/payments', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentAttemptDto>('/api/admin/payments', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   recheckAdminPayment(token: string, paymentId: string): Promise<PaymentStatusResultDto> {
@@ -1792,7 +1800,7 @@ export class ApiClient {
   }
 
   getAdminPaymentProviderAccounts(token: string): Promise<PaymentProviderAccountDto[]> {
-    return this.request<PaymentProviderAccountDto[]>('/api/admin/payment-providers/accounts', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentProviderAccountDto>('/api/admin/payment-providers/accounts', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminPaymentProviderAccount(token: string, payload: UpsertPaymentProviderAccountPayload): Promise<PaymentProviderAccountDto> {
@@ -1831,20 +1839,20 @@ export class ApiClient {
   }
 
   getAdminPaymentWebhookEvents(token: string): Promise<PaymentWebhookEventDto[]> {
-    return this.request<PaymentWebhookEventDto[]>('/api/admin/payment-webhook-events', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentWebhookEventDto>('/api/admin/payment-webhook-events', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminRefunds(token: string): Promise<RefundDto[]> {
-    return this.request<RefundDto[]>('/api/admin/refunds', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<RefundDto>('/api/admin/refunds', { token, errorMessage: apiFallbackErrorMessage })
   }
 
 
   getAdminSupportConversations(token: string): Promise<SupportConversationDto[]> {
-    return this.request<SupportConversationDto[]>('/api/admin/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportConversationDto>('/api/admin/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminSupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
-    return this.request<SupportMessageDto[]>(`/api/admin/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportMessageDto>(`/api/admin/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   replyAdminSupportConversation(token: string, conversationId: string, text: string, revision: number): Promise<{ conversationId: string; status: string; revision: number }> {
@@ -1875,7 +1883,7 @@ export class ApiClient {
   }
 
   getAdminVpnPanels(token: string): Promise<VpnPanelDto[]> {
-    return this.request<VpnPanelDto[]>('/api/admin/vpn-panels', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnPanelDto>('/api/admin/vpn-panels', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminVpnPanel(token: string, payload: CreateVpnPanelPayload): Promise<VpnPanelDto> {
@@ -1923,7 +1931,7 @@ export class ApiClient {
   }
 
   getAdminVpnPanelInbounds(token: string, id: string): Promise<VpnInboundDto[]> {
-    return this.request<VpnInboundDto[]>(`/api/admin/vpn-panels/${id}/inbounds`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnInboundDto>(`/api/admin/vpn-panels/${id}/inbounds`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminVpnPanelInbound(token: string, id: string, payload: CreateVpnInboundPayload): Promise<VpnInboundDto> {
@@ -1954,7 +1962,7 @@ export class ApiClient {
   }
 
   getAdminVpnPanelClients(token: string, id: string): Promise<VpnClientDto[]> {
-    return this.request<VpnClientDto[]>(`/api/admin/vpn-panels/${id}/clients`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnClientDto>(`/api/admin/vpn-panels/${id}/clients`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   enableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
@@ -2003,27 +2011,27 @@ export class ApiClient {
   }
 
   getAdminVpnPanelSyncRuns(token: string, id: string): Promise<PanelSyncRunDto[]> {
-    return this.request<PanelSyncRunDto[]>(`/api/admin/vpn-panels/${id}/sync-runs`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PanelSyncRunDto>(`/api/admin/vpn-panels/${id}/sync-runs`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminVpnPanelSyncEvents(token: string, runId: string): Promise<PanelSyncEventDto[]> {
-    return this.request<PanelSyncEventDto[]>(`/api/admin/vpn-panel-sync-runs/${runId}/events`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PanelSyncEventDto>(`/api/admin/vpn-panel-sync-runs/${runId}/events`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminVpnPanelHealthChecks(token: string, id: string): Promise<PanelHealthCheckDto[]> {
-    return this.request<PanelHealthCheckDto[]>(`/api/admin/vpn-panels/${id}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PanelHealthCheckDto>(`/api/admin/vpn-panels/${id}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminTariffs(token: string): Promise<TariffDto[]> {
-    return this.request<TariffDto[]>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<TariffDto>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminReferralPrograms(token: string): Promise<AdminReferralProgramDto[]> {
-    return this.request<AdminReferralProgramDto[]>('/api/admin/referral-programs', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminReferralProgramDto>('/api/admin/referral-programs', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminReferralRewards(token: string): Promise<AdminRewardLedgerDto[]> {
-    return this.request<AdminRewardLedgerDto[]>('/api/admin/referrals', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminRewardLedgerDto>('/api/admin/referrals', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminAppReleases(token: string, filters: AppReleaseFilters = {}): Promise<AppReleaseDto[]> {
@@ -2032,7 +2040,7 @@ export class ApiClient {
     if (filters.source && filters.source !== 'all') params.set('source', filters.source)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.request<AppReleaseDto[]>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AppReleaseDto>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminAppReleaseOverview(token: string): Promise<AppReleaseOverviewDto> {
@@ -2045,7 +2053,7 @@ export class ApiClient {
     if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.request<FaqItem[]>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<FaqItem>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminFaqOverview(token: string): Promise<FaqOverviewDto> {
@@ -2054,7 +2062,7 @@ export class ApiClient {
 
   getAdminSiteContent(token: string, group = 'home'): Promise<SiteContentBlockDto[]> {
     const suffix = group ? `?group=${encodeURIComponent(group)}` : ''
-    return this.request<SiteContentBlockDto[]>(`/api/admin/site-content${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SiteContentBlockDto>(`/api/admin/site-content${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   getAdminHomeContentReadiness(token: string): Promise<SiteContentReadinessDto> {
@@ -2097,7 +2105,7 @@ export class ApiClient {
   }
 
   getAdminWorkScenarios(token: string): Promise<WorkScenarioDto[]> {
-    return this.request<WorkScenarioDto[]>('/api/admin/work-scenarios', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<WorkScenarioDto>('/api/admin/work-scenarios', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminWorkScenario(token: string, payload: WorkScenarioUpsertPayload): Promise<WorkScenarioDto> {
@@ -2223,7 +2231,7 @@ export class ApiClient {
   }
 
   getAdminServers(token: string): Promise<VpnNodeDto[]> {
-    return this.request<VpnNodeDto[]>('/api/admin/servers', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnNodeDto>('/api/admin/servers', { token, errorMessage: apiFallbackErrorMessage })
   }
 
   createAdminServer(token: string, payload: CreateServerPayload): Promise<VpnNodeDto> {
@@ -2266,7 +2274,7 @@ export class ApiClient {
   }
 
   getAdminServerHealthChecks(token: string, serverId: string): Promise<NodeHealthCheckDto[]> {
-    return this.request<NodeHealthCheckDto[]>(`/api/admin/servers/${serverId}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<NodeHealthCheckDto>(`/api/admin/servers/${serverId}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
   enableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
@@ -2304,7 +2312,7 @@ export class ApiClient {
   }
 
   getAdminProvisioningRuns(token: string): Promise<ProvisioningRunDto[]> {
-    return this.request<ProvisioningRunDto[]>('/api/admin/provisioning-runs', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<ProvisioningRunDto>('/api/admin/provisioning-runs', { token, errorMessage: apiFallbackErrorMessage })
   }
 
 

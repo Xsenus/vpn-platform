@@ -96,6 +96,7 @@ async function mockPublicApi(page: Page) {
   let checkoutDelayMs = 0
   let unsafePaymentLink = false
   let invalidTariffsResponse = false
+  let wrongShapeTariffsResponse = false
   let oversizedTariffsResponse = false
 
   await page.route('**/api/public/content/home', async (route) => {
@@ -113,6 +114,10 @@ async function mockPublicApi(page: Page) {
         headers: corsHeaders,
         body: JSON.stringify({ padding: 'x'.repeat(10_000_000) })
       })
+      return
+    }
+    if (wrongShapeTariffsResponse) {
+      await fulfillJson(route, {})
       return
     }
     if (invalidTariffsResponse) {
@@ -274,14 +279,19 @@ async function mockPublicApi(page: Page) {
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
     returnUnsafePaymentLink: () => { unsafePaymentLink = true },
     returnInvalidTariffsResponse: () => { invalidTariffsResponse = true },
+    returnWrongShapeTariffsResponse: () => {
+      invalidTariffsResponse = false
+      wrongShapeTariffsResponse = true
+    },
     returnOversizedTariffsResponse: () => {
       invalidTariffsResponse = false
+      wrongShapeTariffsResponse = false
       oversizedTariffsResponse = true
     }
   }
 }
 
-test('public tariffs handles invalid and oversized successful API responses without a render crash', async ({ page }) => {
+test('public tariffs handles invalid, wrong-shape and oversized API responses without a render crash', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
   const api = await mockPublicApi(page)
@@ -289,6 +299,12 @@ test('public tariffs handles invalid and oversized successful API responses with
 
   await page.goto('/tariffs')
 
+  await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')
+  await expect(page.getByText('Start 30 дней')).toHaveCount(0)
+
+  api.returnWrongShapeTariffsResponse()
+  await page.reload()
   await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
   await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')
   await expect(page.getByText('Start 30 дней')).toHaveCount(0)

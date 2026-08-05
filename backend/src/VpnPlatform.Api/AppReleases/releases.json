@@ -12341,5 +12341,32 @@
         "text": "Roadmap progress is 540/560 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-api-response-shape-boundary",
+    "version": "0.528.0",
+    "releasedAt": "2026-08-05T20:17:00+07:00",
+    "title": "API проверяет ожидаемую форму каждого ответа",
+    "summary": "Списки и одиночные DTO теперь имеют разные runtime-контракты, поэтому корректный JSON неправильной формы не доходит до рендера public, cabinet или admin.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Все 41 list endpoint принимают только array, а остальные typed endpoints только non-array object."
+      },
+      {
+        "type": "fixed",
+        "text": "Object вместо списка и array вместо DTO завершаются controlled API-client ошибкой 502 до TypeScript cast, map/filter и чтения обязательных полей."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile browser regression подтверждает видимое состояние ошибки для wrong-shape tariffs без pageerror и обрушения страницы."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 541/561 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

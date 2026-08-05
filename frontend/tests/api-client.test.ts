@@ -140,7 +140,7 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
       })
     }
 
-    if (String(url).includes('/api/public/content/faq') || String(url).includes('/api/admin/faq?') || String(url).endsWith('/api/admin/faq')) {
+    if (String(url).includes('/api/public/content/faq') || String(url).includes('/api/admin/faq?') || (String(url).endsWith('/api/admin/faq') && (init?.method ?? 'GET') === 'GET')) {
       return new Response(JSON.stringify([{ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 }]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -289,7 +289,8 @@ test('ApiClient admin referral endpoints cover programs and rewards', async () =
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify(String(url).endsWith('/referrals') ? [] : { id: 'program-1', name: 'Welcome', status: 'active' }), {
+    const isProgramList = String(url).endsWith('/referral-programs') && (init?.method ?? 'GET') === 'GET'
+    return new Response(JSON.stringify(String(url).endsWith('/referrals') ? [] : isProgramList ? [{ id: 'program-1', name: 'Welcome', status: 'active' }] : { id: 'program-1', name: 'Welcome', status: 'active' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -715,6 +716,9 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
     if (String(url).includes('/clients')) {
       return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
+    if (new URL(String(url)).pathname === '/api/admin/vpn-panels' && (init?.method ?? 'GET') === 'GET') {
+      return new Response(JSON.stringify([{ id: 'panel-1', name: 'panel', baseUrl: 'https://panel.example.test', region: 'eu', status: 'Active', healthStatus: 'Healthy', login: 'admin', sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', capacity: 5000, usedCapacity: 0, autoCreateInbound: false, defaultInboundTemplateJson: '{}', version: '2.4.12', lastError: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
     return new Response(JSON.stringify({ id: 'panel-1', name: 'panel', baseUrl: 'https://panel.example.test', region: 'eu', status: 'Active', healthStatus: 'Healthy', login: 'admin', sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', capacity: 5000, usedCapacity: 0, autoCreateInbound: false, defaultInboundTemplateJson: '{}', version: '2.4.12', lastError: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
@@ -1109,6 +1113,8 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
     new Response('', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('{"id":', { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } }),
     new Response('null', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json', 'Content-Length': '10000001' } }),
     new Response('provider failure', { status: 503, headers: { 'Content-Type': 'text/plain', 'Content-Length': '64001' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/vnd.vpn-platform+json' } })
@@ -1131,6 +1137,14 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
   await assert.rejects(
     () => client.getTariffs(),
     (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректный JSON/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /неожиданной формы/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getAdminDashboardSummary('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /неожиданной формы/i.test(error.message)
   )
   await assert.rejects(
     () => client.getTariffs(),
@@ -1206,7 +1220,7 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
         headers: { 'Content-Type': 'application/json' }
       })
     }
-    if (String(url).endsWith('/history') || String(url).includes('/admin/releases?') || String(url).endsWith('/admin/releases')) {
+    if (String(url).endsWith('/history') || String(url).includes('/admin/releases?') || (String(url).endsWith('/admin/releases') && (init?.method ?? 'GET') === 'GET')) {
       return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 

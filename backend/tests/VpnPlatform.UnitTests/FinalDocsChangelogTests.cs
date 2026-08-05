@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1112/1112", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-api-response-size-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-api-response-shape-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "1112/1112",
-                     "2026-08-05-api-response-size-boundary",
-                     "0.527.0",
+                     "2026-08-05-api-response-shape-boundary",
+                     "0.528.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,8 +104,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-api-response-size-boundary",
-                     "0.527.0",
+                     "2026-08-05-api-response-shape-boundary",
+                     "0.528.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-api-response-size-boundary",
-                     "0.527.0",
+                     "2026-08-05-api-response-shape-boundary",
+                     "0.528.0",
                      "522/542",
                      "96.3%",
                      "20",
