@@ -566,7 +566,9 @@ public class MeController : ControllerBase
     }
 
     [HttpPost("subscriptions/{id:guid}/renew")]
-    public IActionResult Renew([FromRoute] Guid id) => Ok(new { subscriptionId = id, message = "Use POST /api/me/orders + payment init to renew this subscription." });
+    public IActionResult Renew([FromRoute] Guid id) => StatusCode(
+        StatusCodes.Status410Gone,
+        new { subscriptionId = id, error = "This endpoint is no longer supported. Use POST /api/me/orders with type Renewal." });
 
     private static bool TryParseDefined<TEnum>(string? value, out TEnum parsed)
         where TEnum : struct, Enum

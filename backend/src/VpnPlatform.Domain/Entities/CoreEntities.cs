@@ -184,6 +184,7 @@ public class Order : AuditableEntity
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
     public bool IsFirstPurchase { get; set; }
+    public string? PendingIntentKey { get; set; }
 
     public User? User { get; set; }
     public Tariff? Tariff { get; set; }

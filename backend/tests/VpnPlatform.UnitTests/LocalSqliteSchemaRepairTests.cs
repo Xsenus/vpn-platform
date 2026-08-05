@@ -440,6 +440,29 @@ public class LocalSqliteSchemaRepairTests
             NextAttemptAt = new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero)
         };
 
+    [Fact]
+    public async Task ApplyAsync_Should_Add_Pending_Order_Intent_Constraint_To_Legacy_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "Orders" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "Status" INTEGER NOT NULL
+            );
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(2, repaired);
+        Assert.True(await ColumnExistsAsync(connection, "Orders", "PendingIntentKey"));
+        Assert.True(await IndexIsUniqueAsync(connection, "Orders", "IX_Orders_Pending_IntentKey"));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+    }
+
     private static OutboxMessage OutboxMessage(string correlationId)
         => new()
         {

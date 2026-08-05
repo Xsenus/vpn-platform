@@ -503,6 +503,7 @@ async function mockCabinetApi(page: Page) {
 }
 
 test('cabinet covers register, login, payments, subscription access and support', async ({ page }, testInfo) => {
+  test.slow()
   const consoleErrors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
@@ -646,10 +647,13 @@ test('cabinet covers register, login, payments, subscription access and support'
     refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
   }))).toEqual({ access: null, refresh: null })
 
+  const supportMessageLoadsBeforePasswordRelogin = api.getRequestCount('/api/me/support/conversations/support-created/messages')
   await reloginPanel.getByLabel('Email').fill(user.email)
   await reloginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('ChangedPassword123!')
   await reloginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/me/support/conversations/support-created/messages'))
+    .toBeGreaterThan(supportMessageLoadsBeforePasswordRelogin)
 
   api.rejectNextAuthorizedPath('/api/me/support/conversations/support-created/messages')
   await page.getByLabel('Тема').fill('Проверка завершения сессии')

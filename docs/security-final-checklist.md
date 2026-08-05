@@ -76,7 +76,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 1048/1048.
+- Backend full suite: 1053/1053.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -96,7 +96,7 @@ git diff --check
 - Registration email unique race returns a controlled duplicate response without partial auth state; unrelated DB failures are not masked: OK.
 - Password reset newest-generation-only boundary covers sequential reissue, concurrent issue/reset and explicit bootstrap password changes: OK.
 - Refresh token revision rejects double rotation, revokes the winning family on reuse and gives logout/admin deactivation controlled retry paths: OK.
-- Latest local release: `2026-08-05-telegram-link-lifecycle-concurrency`, версия `0.509.0`.
+- Latest local release: `2026-08-05-pending-order-intent-concurrency`, версия `0.510.0`.
 - Frontend tests: 84/84.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

@@ -11883,5 +11883,28 @@
         "text": "Roadmap progress is 522/542 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-pending-order-intent-concurrency",
+    "version": "0.510.0",
+    "releasedAt": "2026-08-05T12:07:18+07:00",
+    "title": "Повторный запрос не создает второй заказ",
+    "summary": "Продление проверяется внутри order service, а единый pending intent защищен уникальным индексом и возвращает один заказ даже при конкурентных запросах.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Renewal больше нельзя создать для отсутствующей, чужой, заблокированной, отмененной или не соответствующей тарифу подписки через внутренний service call."
+      },
+      {
+        "type": "improved",
+        "text": "Два API-инстанса используют один pending intent; просроченный заказ закрывается перед заменой, а устаревший legacy endpoint отвечает 410 Gone."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 523/543 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -110,6 +110,15 @@ public class MeCabinetControllerTests
     }
 
     [Fact]
+    public void Cabinet_Legacy_Renew_Endpoint_Should_Return_Gone_Instead_Of_False_Success()
+    {
+        using var db = CreateSqliteDbContext(new SqliteConnection("Data Source=:memory:"));
+        var result = Assert.IsType<ObjectResult>(CreateController(db, Guid.NewGuid()).Renew(Guid.NewGuid()));
+
+        Assert.Equal(StatusCodes.Status410Gone, result.StatusCode);
+    }
+
+    [Fact]
     public async Task Cabinet_Should_Reject_Qr_Request_Until_Access_Uri_Is_Issued_On_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

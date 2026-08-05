@@ -95,6 +95,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<WorkScenario>().HasIndex(x => new { x.IsActive, x.SortOrder });
         modelBuilder.Entity<PromoCode>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<CheckoutSession>().HasIndex(x => x.TokenHash).IsUnique();
+        modelBuilder.Entity<Order>()
+            .HasIndex(x => x.PendingIntentKey)
+            .HasDatabaseName("IX_Orders_Pending_IntentKey")
+            .HasFilter("\"Status\" = 1 AND \"PendingIntentKey\" IS NOT NULL")
+            .IsUnique();
         modelBuilder.Entity<PaymentProviderAccount>().HasIndex(x => new { x.Provider, x.Mode, x.Name }).IsUnique();
         modelBuilder.Entity<PaymentProviderAccount>()
             .HasIndex(x => x.Provider)
@@ -421,6 +426,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             }
         }
 
+        modelBuilder.Entity<Order>().Property(x => x.PendingIntentKey).HasMaxLength(64);
         modelBuilder.Entity<UserRefreshToken>().Property(x => x.TokenHash).HasColumnType("text");
         modelBuilder.Entity<UserRefreshToken>().Property(x => x.ReplacedByTokenHash).HasColumnType("text");
         modelBuilder.Entity<PasswordResetToken>().Property(x => x.TokenHash).HasColumnType("text");

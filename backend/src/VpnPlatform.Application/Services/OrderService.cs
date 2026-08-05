@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
@@ -28,25 +30,33 @@ public class OrderService
             return Result<OrderDto>.Failure("Tariff not found or inactive.");
         }
 
+        var renewalValidation = await ValidateRenewalAsync(command, cancellationToken);
+        if (renewalValidation is not null)
+        {
+            return Result<OrderDto>.Failure(renewalValidation);
+        }
+
         var now = _clock.UtcNow;
         var pendingOrders = await _db.Orders
             .AsNoTracking()
             .Where(x =>
                 x.UserId == command.UserId &&
-                x.TariffId == command.TariffId)
-            .ToListAsync(cancellationToken);
-        pendingOrders = pendingOrders
-            .Where(x =>
+                x.TariffId == command.TariffId &&
                 x.Type == command.Type &&
                 x.Channel == command.Channel &&
-                x.Status == OrderStatus.PendingPayment &&
-                x.ExpiresAt > now)
+                x.Status == OrderStatus.PendingPayment)
+            .ToListAsync(cancellationToken);
+        pendingOrders = pendingOrders
+            .Where(x => GetRenewalSubscriptionId(x) == command.RenewalSubscriptionId)
             .OrderByDescending(x => x.CreatedAt)
             .ToList();
 
-        var existingPending = command.Type == OrderType.Renewal && command.RenewalSubscriptionId.HasValue
-            ? pendingOrders.FirstOrDefault(x => GetRenewalSubscriptionId(x) == command.RenewalSubscriptionId.Value)
-            : pendingOrders.FirstOrDefault(x => GetRenewalSubscriptionId(x) is null);
+        foreach (var expiredOrder in pendingOrders.Where(x => x.ExpiresAt <= now))
+        {
+            await ExpirePendingOrderAsync(expiredOrder.Id, now, cancellationToken);
+        }
+
+        var existingPending = pendingOrders.FirstOrDefault(x => x.Status == OrderStatus.PendingPayment && x.ExpiresAt > now);
 
         if (existingPending is not null)
         {
@@ -80,13 +90,93 @@ public class OrderService
             Currency = tariff.Currency,
             ExpiresAt = expiresAt,
             IsFirstPurchase = command.IsFirstPurchase,
-            ReferralContext = BuildReferralContext(command.RenewalSubscriptionId)
+            ReferralContext = BuildReferralContext(command.RenewalSubscriptionId),
+            PendingIntentKey = BuildPendingIntentKey(command)
         };
 
         _db.Orders.Add(order);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsPendingIntentConflict(ex))
+        {
+            _db.Orders.Remove(order);
+            var winner = (await _db.Orders
+                .AsNoTracking()
+                .Where(x =>
+                    x.PendingIntentKey == order.PendingIntentKey &&
+                    x.Status == OrderStatus.PendingPayment)
+                .ToListAsync(cancellationToken))
+                .FirstOrDefault(x => x.ExpiresAt > now);
+
+            if (winner is not null)
+            {
+                return Result<OrderDto>.Success(MapToDto(winner));
+            }
+
+            throw;
+        }
 
         return Result<OrderDto>.Success(MapToDto(order));
+    }
+
+    private async Task ExpirePendingOrderAsync(Guid orderId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+        {
+            await _db.Orders
+                .Where(x => x.Id == orderId && x.Status == OrderStatus.PendingPayment)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(x => x.Status, OrderStatus.Expired)
+                        .SetProperty(x => x.UpdatedAt, now),
+                    cancellationToken);
+            return;
+        }
+
+        var order = await _db.Orders.FirstOrDefaultAsync(
+            x => x.Id == orderId && x.Status == OrderStatus.PendingPayment,
+            cancellationToken);
+        if (order is null)
+        {
+            return;
+        }
+
+        StatusStateMachine.SetOrderStatus(order, OrderStatus.Expired, now);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<string?> ValidateRenewalAsync(CreateOrderCommand command, CancellationToken cancellationToken)
+    {
+        if (command.Type != OrderType.Renewal)
+        {
+            return command.RenewalSubscriptionId.HasValue
+                ? "Subscription is only supported for renewal orders."
+                : null;
+        }
+
+        if (!command.RenewalSubscriptionId.HasValue)
+        {
+            return "Subscription is required for renewal orders.";
+        }
+
+        var subscription = await _db.Subscriptions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == command.RenewalSubscriptionId.Value && x.UserId == command.UserId, cancellationToken);
+        if (subscription is null)
+        {
+            return "Subscription not found.";
+        }
+
+        if (subscription.Status is SubscriptionStatus.Cancelled or SubscriptionStatus.Blocked)
+        {
+            return "Subscription is not available for renewal.";
+        }
+
+        return subscription.TariffId != command.TariffId
+            ? "Tariff does not match subscription."
+            : null;
     }
 
     public async Task<Result<OrderDto>> GetOrderStatusAsync(Guid orderId, CancellationToken cancellationToken = default)
@@ -127,6 +217,32 @@ public class OrderService
         => renewalSubscriptionId.HasValue
             ? JsonSerializer.Serialize(new Dictionary<string, string> { [RenewalSubscriptionIdKey] = renewalSubscriptionId.Value.ToString("D") })
             : "{}";
+
+    private static string BuildPendingIntentKey(CreateOrderCommand command)
+    {
+        var source = string.Join(
+            ':',
+            command.UserId.ToString("N"),
+            command.TariffId.ToString("N"),
+            (int)command.Type,
+            (int)command.Channel,
+            command.RenewalSubscriptionId?.ToString("N") ?? string.Empty);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source)));
+    }
+
+    private static bool IsPendingIntentConflict(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current.Message.Contains("IX_Orders_Pending_IntentKey", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("Orders.PendingIntentKey", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static Guid? TryReadRenewalSubscriptionId(string? referralContext)
     {

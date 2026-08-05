@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: pending order intent concurrency
+
+Scope:
+- Проверены service-level validation renewal subscription, конкурентное создание pending-заказа, замена просроченного intent, legacy renew endpoint, PostgreSQL migration и local SQLite repair.
+
+Results:
+- Roadmap progress: `523/543` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-pending-order-intent-concurrency`, version `0.510.0`.
+- Backend full suite: OK, `1053/1053`; targeted order/cabinet/Telegram/SQLite suite: OK, `74/74`.
+- Renewal order отклоняет missing, unknown, чужую, `Cancelled`/`Blocked` и tariff-mismatched подписку непосредственно в `OrderService` без сохранения order row.
+- Deterministic SQLite race после успешного pre-check подтверждает единственный active pending intent и возврат ID winning order проигравшему запросу.
+- Просроченный pending intent атомарно переводится в `Expired` перед созданием replacement; legacy renew endpoint отвечает `410 Gone` вместо ложного успеха.
+- PostgreSQL migration SQL и EF snapshot: OK; nullable `varchar(64)`, filtered unique index, pending model changes: none.
+- Local SQLite legacy schema repair: OK и idempotent; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Secret scan: OK, `637` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: Telegram link lifecycle concurrency
 
 Scope:

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.510.0 - 2026-08-05
+
+Release entry: `2026-08-05-pending-order-intent-concurrency`.
+
+### Исправлено
+
+- `OrderService` теперь сам проверяет renewal subscription: обязательный ID, владелец, допустимый статус и совпадающий тариф нельзя обойти внутренним вызовом.
+- Активный pending-заказ получает детерминированный intent key; частичный unique index не позволяет двум API-инстансам создать дубли одного оформления.
+- Проигравший конкурентный запрос возвращает уже сохраненный заказ, а просроченный intent сначала переводится в `Expired` и не блокирует новое оформление.
+- Legacy `POST /api/me/subscriptions/{id}/renew` больше не подтверждает случайный ID ложным `200`, а явно отвечает `410 Gone` и направляет на order flow.
+- PostgreSQL migration и idempotent local SQLite repair добавляют nullable intent column и filtered unique index без переписывания исторических заказов.
+
+### Проверено
+
+- Backend full suite `1053/1053`; targeted order/cabinet/Telegram/SQLite suite `74/74`, включая service-level ownership/status/tariff matrix, stale replacement и deterministic concurrent winner.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `637` files, `0` findings.
+- Roadmap status: `523/543` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.509.0 - 2026-08-05
 
 Release entry: `2026-08-05-telegram-link-lifecycle-concurrency`.

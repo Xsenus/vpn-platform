@@ -14,6 +14,25 @@ public static class LocalSqliteSchemaRepair
         }
 
         var repaired = 0;
+        if (await TableExistsAsync(db, "Orders", cancellationToken))
+        {
+            if (!await ColumnExistsAsync(db, "Orders", "PendingIntentKey", cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    """ALTER TABLE "Orders" ADD COLUMN "PendingIntentKey" TEXT NULL;""",
+                    cancellationToken);
+                repaired++;
+            }
+
+            if (!await IndexIsUniqueAsync(db, "Orders", "IX_Orders_Pending_IntentKey", cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    """CREATE UNIQUE INDEX "IX_Orders_Pending_IntentKey" ON "Orders" ("PendingIntentKey") WHERE "Status" = 1 AND "PendingIntentKey" IS NOT NULL;""",
+                    cancellationToken);
+                repaired++;
+            }
+        }
+
         if (await TableExistsAsync(db, "Users", cancellationToken)
             && !await ColumnExistsAsync(db, "Users", "SessionVersion", cancellationToken))
         {
