@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { AdminSessionCapabilitiesDto } from '../packages/api-client/src/index.ts'
-import { canWriteAdminSection, filterAdminSectionIds, type AdminSectionId } from '../apps/admin-panel/src/admin-capabilities.ts'
+import { canWriteAdminSection, filterAdminSectionIds, parseAdminSectionHref, type AdminSectionId } from '../apps/admin-panel/src/admin-capabilities.ts'
 
 const allSections: AdminSectionId[] = ['dashboard', 'users', 'support', 'audit', 'payments', 'tariffs', 'referrals', 'subscriptions', 'vpn', 'nodes', 'panels', 'provisioning', 'bot', 'releases', 'faq', 'content', 'scenarios']
 
@@ -63,4 +63,23 @@ test('operator sees bot and operational sections without finance data', () => {
   assert.ok(visible.includes('provisioning'))
   assert.ok(!visible.includes('payments'))
   assert.equal(canWriteAdminSection(access, 'panels'), true)
+})
+
+test('admin readiness href parser accepts only exact known section fragments', () => {
+  assert.equal(parseAdminSectionHref('#payments'), 'payments')
+  assert.equal(parseAdminSectionHref('#provisioning'), 'provisioning')
+
+  for (const unsafeHref of [
+    'javascript:alert(1)',
+    'data:text/html,alert(1)',
+    'https://example.test/admin',
+    '#unknown',
+    '#payments?next=javascript:alert(1)',
+    ' #payments',
+    'payments',
+    '',
+    null
+  ]) {
+    assert.equal(parseAdminSectionHref(unsafeHref), null)
+  }
 })

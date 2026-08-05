@@ -53,7 +53,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
-import { canAccessAdminSection, canWriteAdminSection, type AdminSectionId } from './admin-capabilities'
+import { canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
@@ -514,13 +514,7 @@ const orderStatusOptions = [
 function readAdminSectionFromHash(): AdminSectionId {
   if (typeof window === 'undefined') return adminSections[0][0]
 
-  const section = window.location.hash.replace('#', '')
-  return adminSections.some(([id]) => id === section) ? (section as AdminSectionId) : adminSections[0][0]
-}
-
-function adminSectionFromHref(href: string | null | undefined): AdminSectionId | null {
-  const section = (href ?? '').replace('#', '')
-  return adminSections.some(([id]) => id === section) ? (section as AdminSectionId) : null
+  return parseAdminSectionHref(window.location.hash) ?? adminSections[0][0]
 }
 
 type GenericUser = AdminUserDto
@@ -2843,8 +2837,8 @@ export function App() {
           >
             <div className="list-stack">
               {summary.productionReadiness.checks.map((check) => {
-                const actionSection = adminSectionFromHref(check.actionHref)
-                const canOpenAction = !actionSection || availableAdminSectionIds.has(actionSection)
+                const actionSection = parseAdminSectionHref(check.actionHref)
+                const canOpenAction = actionSection !== null && availableAdminSectionIds.has(actionSection)
                 return <div key={check.key} className="list-item">
                   <div>
                     <div className="item-heading">
@@ -2857,10 +2851,9 @@ export function App() {
                     {check.actionHref && canOpenAction && (
                       <a
                         className="button button-secondary"
-                        href={check.actionHref}
+                        href={`#${actionSection}`}
                         onClick={() => {
-                          const section = adminSectionFromHref(check.actionHref)
-                          if (section) setActiveSection(section)
+                          setActiveSection(actionSection)
                         }}
                       >
                         {check.actionLabel || 'Открыть'}

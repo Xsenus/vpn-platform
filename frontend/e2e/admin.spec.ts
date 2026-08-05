@@ -329,7 +329,8 @@ async function mockAdminApi(page: Page) {
           status: 'Ready',
           checks: [
             ...(financeVisible ? [{ key: 'payments', label: 'Платежи', status: 'Ready', message: 'Sandbox провайдер готов.', category: 'Sales', actionHref: '#payments', actionLabel: 'Открыть оплаты' }] : []),
-            { key: 'vpn', label: 'VPN', status: 'Ready', message: 'Панель и inbound доступны.', category: 'VPN', actionHref: '#panels', actionLabel: 'Открыть панели' }
+            { key: 'vpn', label: 'VPN', status: 'Ready', message: 'Панель и inbound доступны.', category: 'VPN', actionHref: '#panels', actionLabel: 'Открыть панели' },
+            { key: 'unsafe-action', label: 'Некорректное действие', status: 'Blocked', message: 'Ссылка должна быть отклонена.', category: 'Security', actionHref: 'javascript:window.__adminReadinessLinkExecuted=true', actionLabel: 'Опасная команда' }
           ]
         },
         generatedAt: now
@@ -701,6 +702,12 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(page.getByRole('heading', { name: 'Дашборд' })).toBeVisible()
   await expect(page.getByText('Готовность к live-продажам')).toBeVisible()
   await expect(page.getByText('Sandbox провайдер готов.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть оплаты' })).toHaveAttribute('href', '#payments')
+  const unsafeReadinessCheck = page.locator('.list-item').filter({ hasText: 'Некорректное действие' })
+  await expect(unsafeReadinessCheck).toBeVisible()
+  await expect(unsafeReadinessCheck.getByRole('link')).toHaveCount(0)
+  await expect(page.locator('a[href^="javascript:"]')).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { __adminReadinessLinkExecuted?: boolean }).__adminReadinessLinkExecuted ?? false)).toBe(false)
 
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.getByText('YooKassa sandbox')).toBeVisible()

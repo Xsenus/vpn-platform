@@ -12233,5 +12233,32 @@
         "text": "Roadmap progress is 536/556 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-admin-readiness-link-boundary",
+    "version": "0.524.0",
+    "releasedAt": "2026-08-05T19:17:58+07:00",
+    "title": "Действия готовности ведут только во внутренние разделы",
+    "summary": "Админка теперь принимает server-driven действия production readiness только как точные разрешенные fragments собственных разделов и не создает ссылку для внешнего или исполняемого адреса.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Неизвестный actionHref больше не проходит через fail-open условие и не попадает в DOM как активная ссылка."
+      },
+      {
+        "type": "fixed",
+        "text": "Exact fragment parser допускает только существующий admin section и dashboard дополнительно проверяет capability текущей роли."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile Playwright проверяет безопасную внутреннюю ссылку, отсутствие javascript href и отсутствие browser side effect."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 537/557 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -45,6 +45,15 @@ const sectionWriteCapability: Record<AdminSectionId, keyof AdminSessionCapabilit
   scenarios: 'adminWrite'
 }
 
+const adminSectionIds = new Set<AdminSectionId>(Object.keys(sectionWriteCapability) as AdminSectionId[])
+
+export function parseAdminSectionHref(href?: string | null): AdminSectionId | null {
+  if (!href || !/^#[a-z]+$/.test(href)) return null
+
+  const section = href.slice(1) as AdminSectionId
+  return adminSectionIds.has(section) ? section : null
+}
+
 export function canAccessAdminSection(capabilities: AdminSessionCapabilitiesDto, section: AdminSectionId) {
   const required = sectionReadCapability[section] ?? 'adminRead'
   return capabilities[required]

@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: admin readiness link boundary
+
+Scope:
+- Проверены server-driven `actionHref` production-readiness карточек: точный fragment, известность раздела, capability текущей роли, канонический href и отказ для внешних/исполняемых значений.
+
+Results:
+- Roadmap progress: `537/557` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-admin-readiness-link-boundary`, version `0.524.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `95/95`; typecheck и production build всех трех приложений: OK.
+- Readiness dashboard принимает только exact `#section` из admin allow-list и показывает действие только при доступности раздела текущей роли.
+- Неизвестные, внешние, `data:` и `javascript:` значения не создают ссылку; Playwright подтверждает отсутствие исполняемого href в DOM и отсутствие side effect.
+- Changed admin desktop/mobile scenarios: OK, `6/6`; full responsive/console suite: OK, `16/16`.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены.
+- Dependency audit: `0 vulnerabilities`; secret scan: `649` files, `0` findings.
+- Artifact cleanup и strict UTF-8 guard выполняются перед коммитом.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui и real SMTP не были доступны.
+
 ## Check 2026-08-05: QR SVG render boundary
 
 Scope:
