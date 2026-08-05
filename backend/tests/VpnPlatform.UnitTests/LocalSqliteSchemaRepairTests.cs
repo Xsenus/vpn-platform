@@ -10,7 +10,7 @@ namespace VpnPlatform.UnitTests;
 public class LocalSqliteSchemaRepairTests
 {
     [Fact]
-    public async Task ApplyAsync_Should_Add_Missing_User_SessionVersion_To_Existing_Local_Sqlite_Db()
+    public async Task ApplyAsync_Should_Add_Missing_User_Session_Columns_To_Existing_Local_Sqlite_Db()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -33,9 +33,11 @@ public class LocalSqliteSchemaRepairTests
 
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
-        Assert.Equal(2, repaired);
+        Assert.Equal(4, repaired);
         Assert.True(await ColumnExistsAsync(connection, "Users", "SessionVersion"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "SessionVersion"));
+        Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "FamilyId"));
+        Assert.True(await IndexExistsAsync(connection, "IX_UserRefreshTokens_UserId_SessionVersion_FamilyId"));
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
     }
 

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.504.0 - 2026-08-05
+
+Release entry: `2026-08-05-refresh-token-family-boundary`.
+
+### Исправлено
+
+- Replay revoked refresh-токена больше не отзывает все активные сессии пользователя: password-reset/logout token не может завершать новые независимые входы.
+- Каждый login создаёт собственный `FamilyId`, rotation сохраняет его, а reuse detection отзывает только active descendants той же семьи и `session_version`.
+- Legacy rotation rows с `FamilyId = NULL` безопасно связываются по `ReplacedByTokenHash`, получают общий family ID и защищены от циклической цепочки.
+- Добавлены PostgreSQL migration, составной family index и idempotent local SQLite schema repair.
+
+### Проверено
+
+- Backend full suite `1032/1032`; targeted auth/password-reset/SQLite schema suite `19/19`.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `627` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `516/536` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.503.0 - 2026-08-05
 
 Release entry: `2026-08-05-versioned-auth-sessions`.

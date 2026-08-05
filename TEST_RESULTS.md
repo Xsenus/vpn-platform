@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: refresh token family boundary
+
+Scope:
+- Проверены replay после logout/password reset, isolation независимых login-сессий, отзыв потомков rotation chain, rollout legacy rows с `FamilyId = NULL`, PostgreSQL migration и local SQLite repair/index.
+
+Results:
+- Roadmap progress: `516/536` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-refresh-token-family-boundary`, version `0.504.0`.
+- Backend full suite: OK, `1032/1032`; targeted auth/password-reset/SQLite schema suite: OK, `19/19`.
+- New login creates an independent refresh family; rotation keeps the family and replay revokes only its active descendants.
+- Replay from an older `session_version` returns `session_invalidated` and cannot revoke a session created after password reset.
+- Legacy NULL-family chains are linked through `ReplacedByTokenHash`, cycle-guarded and normalized during replay handling.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `627` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: versioned auth sessions
 
 Scope:

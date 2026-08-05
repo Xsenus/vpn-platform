@@ -97,6 +97,15 @@ public class AuthPasswordResetControllerTests
             new JwtSecurityTokenHandler().ReadJwtToken(loginAfterResetResponse.AccessToken).Claims,
             "test"));
         Assert.True(await ActiveUserAccessValidator.IsActiveAsync(newAccessPrincipal, db, CancellationToken.None));
+
+        AssertUnauthorizedError(
+            await controller.Refresh(new RefreshTokenRequest(loginBeforeResetResponse.RefreshToken), CancellationToken.None),
+            "session_invalidated");
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "auth.refresh_reuse_detected");
+        var refreshedNewSession = await controller.Refresh(
+            new RefreshTokenRequest(loginAfterResetResponse.RefreshToken),
+            CancellationToken.None);
+        Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(refreshedNewSession).Value);
         Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(loginAfterReset).Value);
 
         AssertBadRequestError(

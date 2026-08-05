@@ -32,6 +32,24 @@ public static class LocalSqliteSchemaRepair
             repaired++;
         }
 
+        if (await TableExistsAsync(db, "UserRefreshTokens", cancellationToken)
+            && !await ColumnExistsAsync(db, "UserRefreshTokens", "FamilyId", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "UserRefreshTokens" ADD COLUMN "FamilyId" TEXT NULL;""",
+                cancellationToken);
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "UserRefreshTokens", cancellationToken)
+            && !await IndexExistsAsync(db, "IX_UserRefreshTokens_UserId_SessionVersion_FamilyId", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """CREATE INDEX "IX_UserRefreshTokens_UserId_SessionVersion_FamilyId" ON "UserRefreshTokens" ("UserId", "SessionVersion", "FamilyId");""",
+                cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "PaymentProviderAccounts", cancellationToken)
             && !await ColumnExistsAsync(db, "PaymentProviderAccounts", "WebhookUrl", cancellationToken))
         {

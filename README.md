@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `1030/1030` unit tests;
+- backend на .NET 9: `1032/1032` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `84/84`;
 - frontend typecheck и production build: OK;
@@ -250,7 +250,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - журнал аудита применяет finance/support/Telegram scope до пользовательских фильтров и не возвращает partial role чужие actions, entity types или JSON payload;
 - VPN access enable/sync/reset пробрасывают caller cancellation после durable audit/history; enable/reset и неопределенный reset failure переводят доступ в `SyncRequired` для ручной сверки;
 - access JWT и refresh-токены привязаны к `session_version`; password reset, деактивация и admin bootstrap с изменением полномочий отзывают старые поколения, а public/cabinet очищают browser state после смены пароля;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-versioned-auth-sessions`, версия `0.503.0`;
-- roadmap progress: `515/535` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- refresh-token replay ограничен одной login/rotation family и не может отзывать новые входы после logout/password reset; legacy NULL-family chains связываются безопасно при первом replay;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-refresh-token-family-boundary`, версия `0.504.0`;
+- roadmap progress: `516/536` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

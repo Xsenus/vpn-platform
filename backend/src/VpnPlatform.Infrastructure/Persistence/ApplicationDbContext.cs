@@ -74,6 +74,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<User>().HasIndex(x => x.ReferralCode).IsUnique();
         modelBuilder.Entity<UserRefreshToken>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<UserRefreshToken>().HasIndex(x => new { x.UserId, x.ExpiresAt });
+        modelBuilder.Entity<UserRefreshToken>().HasIndex(x => new { x.UserId, x.SessionVersion, x.FamilyId });
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => new { x.UserId, x.ExpiresAt });
         modelBuilder.Entity<ChannelProfile>().HasIndex(x => new { x.ProviderType, x.ExternalUserId }).IsUnique();

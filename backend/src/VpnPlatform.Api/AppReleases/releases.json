@@ -11741,5 +11741,28 @@
         "text": "Roadmap progress is 515/535 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-refresh-token-family-boundary",
+    "version": "0.504.0",
+    "releasedAt": "2026-08-05T09:10:34+07:00",
+    "title": "Повтор старого токена больше не завершает другие входы",
+    "summary": "Refresh-токены разделены на независимые семейства: обнаружение повторного использования отзывает только скомпрометированную цепочку и не затрагивает новые входы или другие устройства.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Replay токена после logout или password reset больше не может бесконечно отзывать свежие независимые сессии пользователя."
+      },
+      {
+        "type": "improved",
+        "text": "Rotation сохраняет один FamilyId, новый login создаёт отдельное семейство, а legacy-цепочки с пустым FamilyId безопасно связываются через ReplacedByTokenHash при первом обнаружении replay."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 516/536 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

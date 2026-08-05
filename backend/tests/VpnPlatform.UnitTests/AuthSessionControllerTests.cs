@@ -122,6 +122,9 @@ public class AuthSessionControllerTests
         Assert.NotEqual(loginResponse.RefreshToken, refreshed.RefreshToken);
         Assert.Equal(2, await db.UserRefreshTokens.CountAsync());
         Assert.Single(await db.UserRefreshTokens.Where(x => x.RevokedAt == null).ToListAsync());
+        var rotatedFamily = await db.UserRefreshTokens.Select(x => x.FamilyId).Distinct().ToListAsync();
+        Assert.Single(rotatedFamily);
+        Assert.NotNull(rotatedFamily[0]);
 
         var oldTokenReuse = await controller.Refresh(new RefreshTokenRequest(loginResponse.RefreshToken), CancellationToken.None);
         AssertUnauthorizedError(oldTokenReuse, "refresh_token_reuse_detected");
@@ -130,6 +133,7 @@ public class AuthSessionControllerTests
         var repeatLogin = await controller.Login(new LoginRequest("session@example.test", activePassword), CancellationToken.None);
         var repeatLoginResponse = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(repeatLogin).Value);
         Assert.Single(await db.UserRefreshTokens.Where(x => x.RevokedAt == null).ToListAsync());
+        Assert.Equal(2, await db.UserRefreshTokens.Select(x => x.FamilyId).Distinct().CountAsync());
 
         var logout = await controller.Logout(new LogoutRequest(repeatLoginResponse.RefreshToken), CancellationToken.None);
         Assert.IsType<OkObjectResult>(logout);
@@ -174,6 +178,86 @@ public class AuthSessionControllerTests
         var session = await db.UserRefreshTokens.SingleAsync();
         Assert.NotNull(session.RevokedAt);
         Assert.Equal("session_version_mismatch", session.RevocationReason);
+    }
+
+    [Fact]
+    public async Task Replayed_Logged_Out_Token_Should_Not_Revoke_Independent_Login()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var password = "CorrectPassword123!";
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "independent-session@example.test",
+            DisplayName = "Independent Session",
+            PasswordHash = new PasswordService().Hash(password),
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "independent-session"
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateAuthController(db);
+        var firstLogin = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(
+            await controller.Login(new LoginRequest("independent-session@example.test", password), CancellationToken.None)).Value);
+        var secondLogin = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(
+            await controller.Login(new LoginRequest("independent-session@example.test", password), CancellationToken.None)).Value);
+
+        Assert.IsType<OkObjectResult>(await controller.Logout(new LogoutRequest(firstLogin.RefreshToken), CancellationToken.None));
+        AssertUnauthorizedError(
+            await controller.Refresh(new RefreshTokenRequest(firstLogin.RefreshToken), CancellationToken.None),
+            "refresh_token_reuse_detected");
+
+        var independentRefresh = await controller.Refresh(
+            new RefreshTokenRequest(secondLogin.RefreshToken),
+            CancellationToken.None);
+        Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(independentRefresh).Value);
+    }
+
+    [Fact]
+    public async Task Replayed_Legacy_Rotated_Token_Should_Revoke_Only_Its_Descendants()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var password = "CorrectPassword123!";
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "legacy-family@example.test",
+            DisplayName = "Legacy Family",
+            PasswordHash = new PasswordService().Hash(password),
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "legacy-family"
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateAuthController(db);
+        var familyRoot = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(
+            await controller.Login(new LoginRequest("legacy-family@example.test", password), CancellationToken.None)).Value);
+        var familyChild = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(
+            await controller.Refresh(new RefreshTokenRequest(familyRoot.RefreshToken), CancellationToken.None)).Value);
+        var legacyIds = await db.UserRefreshTokens.Select(x => x.Id).ToListAsync();
+        var independent = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(
+            await controller.Login(new LoginRequest("legacy-family@example.test", password), CancellationToken.None)).Value);
+        var legacyRows = await db.UserRefreshTokens.Where(x => legacyIds.Contains(x.Id)).ToListAsync();
+        foreach (var row in legacyRows)
+        {
+            row.FamilyId = null;
+        }
+        await db.SaveChangesAsync();
+
+        AssertUnauthorizedError(
+            await controller.Refresh(new RefreshTokenRequest(familyRoot.RefreshToken), CancellationToken.None),
+            "refresh_token_reuse_detected");
+        AssertUnauthorizedError(
+            await controller.Refresh(new RefreshTokenRequest(familyChild.RefreshToken), CancellationToken.None),
+            "refresh_token_reuse_detected");
+        Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(
+            await controller.Refresh(new RefreshTokenRequest(independent.RefreshToken), CancellationToken.None)).Value);
     }
 
     private static void AssertUnauthorizedError(IActionResult result, string expectedError)
