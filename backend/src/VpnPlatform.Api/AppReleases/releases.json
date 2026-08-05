@@ -11929,5 +11929,28 @@
         "text": "Roadmap progress is 524/544 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-provisioning-owner-actor-boundary",
+    "version": "0.512.0",
+    "releasedAt": "2026-08-05T13:22:22+07:00",
+    "title": "Доступ к своему VPS остается у владельца",
+    "summary": "Повторный запуск или deploy администратором сохраняет владельца customer VPS, а самого администратора фиксирует отдельно как инициатора операции.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin queue, deploy и retry больше не могут выдать подписку или VPN-доступ к customer VPS администратору вместо клиента."
+      },
+      {
+        "type": "improved",
+        "text": "История provisioning сохраняет customer owner через все повторные запуски, а аудит отдельно показывает фактического оператора команды."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 525/545 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: provisioning owner/actor boundary
+
+Scope:
+- Проверены admin queue/deploy/retry customer VPS, наследование owner, audit actor и worker-выдача subscription/VPN access на SQLite и sandbox E2E.
+
+Results:
+- Roadmap progress: `525/545` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-provisioning-owner-actor-boundary`, version `0.512.0`.
+- Backend full suite: OK, `1060/1060`; targeted provisioning/worker suite: OK, `33/33`.
+- Admin queue/deploy/retry customer-owned node восстанавливают owner из канонического `requested-user-id` с fallback на раннюю owner-history, включая ранее загрязненную run.
+- `ProvisioningRun.RequestedByUserId` остается customer owner, `AuditLog.ActorId` фиксирует администратора, audit payload содержит owner без SSH credentials.
+- SQLite queue/deploy/retry regression: OK; sandbox worker E2E создал subscription и VPN access только клиенту, actor subscription отсутствует.
+- Изменений EF-модели и миграции не требуется; EF pending model changes: none.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Secret scan: OK, `639` files, `0` findings; artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: support conversation concurrency
 
 Scope:

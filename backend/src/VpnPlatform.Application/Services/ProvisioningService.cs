@@ -50,6 +50,11 @@ public class ProvisioningService
 
     public async Task<Result<ProvisioningRun>> QueueAsync(Guid nodeId, bool dryRun, Guid? requestedByUserId, CancellationToken cancellationToken = default)
     {
+        return await QueueCoreAsync(nodeId, dryRun, requestedByUserId, requestedByUserId, cancellationToken);
+    }
+
+    private async Task<Result<ProvisioningRun>> QueueCoreAsync(Guid nodeId, bool dryRun, Guid? ownerUserId, Guid? actorUserId, CancellationToken cancellationToken)
+    {
         await using var gate = await PaymentProcessingGate.AcquireProvisioningNodeAsync(nodeId, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId, cancellationToken);
         if (node is null)
@@ -60,6 +65,27 @@ public class ProvisioningService
         if (node.Status == NodeStatus.Archived)
         {
             return Result<ProvisioningRun>.Failure("Archived node cannot be provisioned.");
+        }
+
+        if (IsOwnVpsNode(node))
+        {
+            if (Guid.TryParse(ExtractTag(node.TagsCsv, "requested-user-id"), out var taggedOwnerUserId))
+            {
+                ownerUserId = taggedOwnerUserId;
+            }
+            else
+            {
+                var ownerHistory = await _db.ProvisioningRuns
+                    .AsNoTracking()
+                    .Where(x => x.NodeId == nodeId && x.RequestedByUserId.HasValue)
+                    .Select(x => new { x.RequestedByUserId, x.CreatedAt })
+                    .ToListAsync(cancellationToken);
+                ownerUserId = ownerHistory
+                    .OrderBy(x => x.CreatedAt)
+                    .Select(x => x.RequestedByUserId)
+                    .FirstOrDefault()
+                    ?? ownerUserId;
+            }
         }
 
         var mode = DescribeProvisioningMode(node, dryRun);
@@ -109,7 +135,7 @@ public class ProvisioningService
         {
             NodeId = nodeId,
             Status = status,
-            RequestedByUserId = requestedByUserId,
+            RequestedByUserId = ownerUserId,
             DryRun = dryRun,
             StartedAt = now,
             ExecutionLog = dryRun ? "Precheck queued." : "Deploy queued."
@@ -134,7 +160,7 @@ public class ProvisioningService
             node.IsAvailableForNewUsers = false;
         }
 
-        AddAudit("provisioning.queue", "ProvisioningRun", run.Id, requestedByUserId, "{}", JsonSerializer.Serialize(new { nodeId, dryRun, status = status.ToString(), validationMode = IsValidationNode(node), mode = mode.Mode, riskLevel = mode.RiskLevel, mode.LiveDeployAllowed }));
+        AddAudit("provisioning.queue", "ProvisioningRun", run.Id, actorUserId, "{}", JsonSerializer.Serialize(new { nodeId, ownerUserId, dryRun, status = status.ToString(), validationMode = IsValidationNode(node), mode = mode.Mode, riskLevel = mode.RiskLevel, mode.LiveDeployAllowed }));
         try
         {
             await _db.SaveChangesAsync(cancellationToken);
@@ -264,7 +290,7 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("Provisioning run is not ready to deploy.");
         }
 
-        return await QueueAsync(original.NodeId, false, requestedByUserId, cancellationToken);
+        return await QueueCoreAsync(original.NodeId, false, original.RequestedByUserId, requestedByUserId, cancellationToken);
     }
 
     public async Task<Result<ProvisioningRun>> RetryAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)
@@ -280,7 +306,7 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("Only failed or cancelled provisioning runs can be retried.");
         }
 
-        var queued = await QueueAsync(original.NodeId, original.DryRun, requestedByUserId, cancellationToken);
+        var queued = await QueueCoreAsync(original.NodeId, original.DryRun, original.RequestedByUserId, requestedByUserId, cancellationToken);
         if (queued.IsSuccess && queued.Value is not null)
         {
             StatusStateMachine.SetProvisioningRunStatus(queued.Value, ProvisioningRunStatus.Retrying, _clock.UtcNow);

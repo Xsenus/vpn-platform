@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.512.0 - 2026-08-05
+
+Release entry: `2026-08-05-provisioning-owner-actor-boundary`.
+
+### Исправлено
+
+- Admin queue, deploy и retry customer VPS больше не заменяют владельца run идентификатором оператора; `ProvisioningRun.RequestedByUserId` наследуется как customer owner.
+- Queue/deploy/retry customer-owned node восстанавливают owner из канонического `requested-user-id` с fallback на раннюю owner-history, поэтому исправляется и ранее загрязненная run, а worker создает support context, subscription и VPN access для клиента.
+- `provisioning.queue` сохраняет фактического администратора в `AuditLog.ActorId`, а owner отдельно в безопасном audit payload; изменение схемы и миграция не потребовались.
+
+### Проверено
+
+- Backend full suite `1060/1060`; targeted provisioning/worker suite `33/33`, включая SQLite queue/deploy/retry и sandbox worker ownership E2E.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`.
+- Secret scan `639` files, `0` findings; artifact cleanup и strict UTF-8 guard пройдены.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `525/545` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.511.0 - 2026-08-05
 
 Release entry: `2026-08-05-support-conversation-concurrency`.

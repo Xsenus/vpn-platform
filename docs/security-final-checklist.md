@@ -76,7 +76,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 1059/1059.
+- Backend full suite: 1060/1060.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -97,7 +97,7 @@ git diff --check
 - Password reset newest-generation-only boundary covers sequential reissue, concurrent issue/reset and explicit bootstrap password changes: OK.
 - Refresh token revision rejects double rotation, revokes the winning family on reuse and gives logout/admin deactivation controlled retry paths: OK.
 - Support conversation revision rejects stale mutations; internal messages fail closed and assignment requires active support capability: OK.
-- Latest local release: `2026-08-05-support-conversation-concurrency`, версия `0.511.0`.
+- Latest local release: `2026-08-05-provisioning-owner-actor-boundary`, версия `0.512.0`.
 - Frontend tests: 84/84.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

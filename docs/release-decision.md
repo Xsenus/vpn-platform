@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1059/1059`.
+- Backend full suite: `1060/1060`.
 - API Release build: OK.
 - Frontend unit tests: `84/84`.
 - Frontend typecheck/build: OK.
@@ -58,8 +58,8 @@ Production-ready решение заблокировано следующими 
 - Password reset reissue advances a per-user generation; concurrent issue/reset conflicts fail closed and explicit bootstrap password reset invalidates outstanding codes.
 - Refresh rotation uses optimistic revision so a source token cannot create two active children; reuse/logout revoke the current family and admin deactivation retries session conflicts.
 - Support conversation revision rejects stale reply/status/note, reopens pending inbound threads and validates assigned support agents without closing external evidence gates.
-- Latest "Что нового": `2026-08-05-support-conversation-concurrency`, версия `0.511.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `524/544` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-provisioning-owner-actor-boundary`, версия `0.512.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `525/545` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

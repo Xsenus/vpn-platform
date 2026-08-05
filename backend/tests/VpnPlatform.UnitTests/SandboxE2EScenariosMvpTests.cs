@@ -321,14 +321,20 @@ public class SandboxE2EScenariosMvpTests
         Assert.DoesNotContain("raw-private-key-must-not-leak", redactedDetails, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("BEGIN PRIVATE KEY", redactedDetails, StringComparison.OrdinalIgnoreCase);
 
-        var retry = await harness.ProvisioningService.RetryAsync(failedRun.Id, Guid.NewGuid(), CancellationToken.None);
+        var ownerUserId = Assert.IsType<Guid>(failedRun.RequestedByUserId);
+        var actorUserId = Guid.NewGuid();
+        var retry = await harness.ProvisioningService.RetryAsync(failedRun.Id, actorUserId, CancellationToken.None);
         Assert.True(retry.IsSuccess, retry.Error);
+        Assert.Equal(ownerUserId, retry.Value!.RequestedByUserId);
         await harness.ProcessNextProvisioningRunAsync(new FakeProvisioningExecutor(success: true, phase: "retry-precheck"));
         await harness.ProcessNextProvisioningRunAsync(new FakeProvisioningExecutor(success: true, phase: "retry-deploy"));
 
         Assert.Equal(1, await harness.Db.VpnNodes.CountAsync(x => x.Provider == "customer-vps"));
         Assert.Equal(1, await harness.Db.AccessCredentials.CountAsync());
         Assert.Equal(1, await harness.Db.VpnPanels.CountAsync());
+        Assert.Single(await harness.Db.Subscriptions.Where(x => x.UserId == ownerUserId).ToListAsync());
+        Assert.Empty(await harness.Db.Subscriptions.Where(x => x.UserId == actorUserId).ToListAsync());
+        Assert.Contains(await harness.Db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.queue" && x.ActorId == actorUserId.ToString() && x.AfterJson.Contains(ownerUserId.ToString(), StringComparison.OrdinalIgnoreCase));
         Assert.Contains(await harness.Db.TelegramBotNotifications.ToListAsync(), x => x.Type == "own_vps_deployed");
     }
 

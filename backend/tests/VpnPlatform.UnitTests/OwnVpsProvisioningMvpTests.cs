@@ -309,6 +309,97 @@ public class OwnVpsProvisioningMvpTests
     }
 
     [Fact]
+    public async Task Admin_Deploy_And_Retry_Should_Preserve_Owner_And_Audit_Actor_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var ownerUserId = Guid.NewGuid();
+        var actorUserId = Guid.NewGuid();
+        var queueNode = new VpnNode
+        {
+            Name = "Customer queue VPS",
+            Host = "queue-owner.example.test",
+            Provider = "customer-vps",
+            SshUser = "root",
+            SshPort = 22,
+            ProtectedSshCredential = "v1:test",
+            TagsCsv = $"validation-mode:true,requested-user-id:{ownerUserId}"
+        };
+        var deployNode = new VpnNode
+        {
+            Name = "Customer deploy VPS",
+            Host = "deploy-owner.example.test",
+            Provider = "customer-vps",
+            SshUser = "root",
+            SshPort = 22,
+            ProtectedSshCredential = "v1:test",
+            TagsCsv = $"validation-mode:false,explicit-live-provisioning:true,requested-user-id:{ownerUserId}"
+        };
+        var retryNode = new VpnNode
+        {
+            Name = "Customer retry VPS",
+            Host = "retry-owner.example.test",
+            Provider = "customer-vps",
+            SshUser = "root",
+            SshPort = 22,
+            ProtectedSshCredential = "v1:test",
+            TagsCsv = $"validation-mode:true,requested-user-id:{ownerUserId}"
+        };
+        var readyRun = new ProvisioningRun
+        {
+            NodeId = deployNode.Id,
+            Status = ProvisioningRunStatus.ReadyToDeploy,
+            RequestedByUserId = ownerUserId,
+            DryRun = true
+        };
+        var previousQueueRun = new ProvisioningRun
+        {
+            NodeId = queueNode.Id,
+            Status = ProvisioningRunStatus.PrecheckFailed,
+            RequestedByUserId = actorUserId,
+            DryRun = true
+        };
+        var failedRun = new ProvisioningRun
+        {
+            NodeId = retryNode.Id,
+            Status = ProvisioningRunStatus.PrecheckFailed,
+            RequestedByUserId = actorUserId,
+            DryRun = true
+        };
+        db.AddRange(queueNode, deployNode, retryNode, previousQueueRun, readyRun, failedRun);
+        await db.SaveChangesAsync();
+
+        var service = new ProvisioningService(db, new TestClock(), new TestSecretProtector());
+        var queue = await service.QueueAsync(queueNode.Id, dryRun: true, actorUserId);
+        var deploy = await service.QueueDeployAsync(readyRun.Id, actorUserId);
+        var retry = await service.RetryAsync(failedRun.Id, actorUserId);
+
+        Assert.True(queue.IsSuccess, queue.Error);
+        Assert.True(deploy.IsSuccess, deploy.Error);
+        Assert.True(retry.IsSuccess, retry.Error);
+        Assert.Equal(ownerUserId, queue.Value!.RequestedByUserId);
+        Assert.Equal(ownerUserId, deploy.Value!.RequestedByUserId);
+        Assert.Equal(ownerUserId, retry.Value!.RequestedByUserId);
+        Assert.Equal(ProvisioningRunStatus.Retrying, retry.Value.Status);
+
+        var queueAudits = await db.AuditLogs
+            .Where(x => x.Action == "provisioning.queue")
+            .ToListAsync();
+        Assert.Equal(3, queueAudits.Count);
+        Assert.All(queueAudits, audit =>
+        {
+            Assert.Equal(actorUserId.ToString(), audit.ActorId);
+            Assert.Contains(ownerUserId.ToString(), audit.AfterJson, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    [Fact]
     public async Task Cancel_Should_Stop_Pending_Provisioning_And_Audit_Action()
     {
         await using var db = CreateDbContext();

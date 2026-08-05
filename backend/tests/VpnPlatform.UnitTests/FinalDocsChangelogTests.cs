@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1059/1059", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-support-conversation-concurrency", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1060/1060", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-provisioning-owner-actor-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1059/1059",
-                     "2026-08-05-support-conversation-concurrency",
-                     "0.511.0",
+                     "1060/1060",
+                     "2026-08-05-provisioning-owner-actor-boundary",
+                     "0.512.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-support-conversation-concurrency",
-                     "0.511.0",
+                     "2026-08-05-provisioning-owner-actor-boundary",
+                     "0.512.0",
                      "522/542",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1059/1059`",
+                     "Backend full suite: OK, `1060/1060`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `639` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-support-conversation-concurrency",
-                     "0.511.0",
+                     "2026-08-05-provisioning-owner-actor-boundary",
+                     "0.512.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1059/1059`",
+                     "backend full suite `1060/1060`",
                      "PostgreSQL SQL",
                      "secret scan `639` files, `0` findings"
                  })
