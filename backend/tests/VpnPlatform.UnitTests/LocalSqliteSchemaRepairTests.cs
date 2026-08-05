@@ -38,10 +38,11 @@ public class LocalSqliteSchemaRepairTests
 
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
-        Assert.Equal(9, repaired);
+        Assert.Equal(10, repaired);
         Assert.True(await ColumnExistsAsync(connection, "Users", "SessionVersion"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "SessionVersion"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "FamilyId"));
+        Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "Revision"));
         Assert.True(await IndexExistsAsync(connection, "IX_UserRefreshTokens_UserId_SessionVersion_FamilyId"));
         Assert.True(await ColumnExistsAsync(connection, "PasswordResetTokens", "InvalidatedAt"));
         Assert.True(await ColumnExistsAsync(connection, "PasswordResetTokens", "InvalidationReason"));

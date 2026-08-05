@@ -110,39 +110,50 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest? request, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
         var token = request?.RefreshToken;
         if (!string.IsNullOrWhiteSpace(token))
         {
-            var hash = HashToken(token);
-            var session = await _db.UserRefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
-            if (session is not null && session.RevokedAt is null)
-            {
-                session.RevokedAt = now;
-                session.RevokedByIp = ResolveIp();
-                session.RevocationReason = "logout";
-                AddAudit("auth.logout", "UserRefreshToken", session.Id, null, new { session.UserId });
-            }
+            return await LogoutRefreshFamilyAsync(HashToken(token), cancellationToken);
         }
-        else if (ResolveUserId() is { } userId && userId != Guid.Empty)
+
+        if (ResolveUserId() is not { } userId || userId == Guid.Empty)
         {
+            return Ok(new { status = "ok" });
+        }
+
+        const int maxAttempts = 5;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var now = _clock.UtcNow;
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+            if (user is null)
+            {
+                return Ok(new { status = "ok" });
+            }
+
+            user.SessionVersion = checked(user.SessionVersion + 1);
+            user.UpdatedAt = now;
             var activeSessions = await _db.UserRefreshTokens
-                .Where(x => x.UserId == userId && x.RevokedAt == null && x.ExpiresAt > now)
+                .Where(x => x.UserId == userId && x.RevokedAt == null)
                 .ToListAsync(cancellationToken);
             foreach (var session in activeSessions)
             {
-                session.RevokedAt = now;
-                session.RevokedByIp = ResolveIp();
-                session.RevocationReason = "logout_all_current_user";
+                RevokeRefreshSession(session, "logout_all_current_user", now);
             }
-            if (activeSessions.Count > 0)
+
+            AddAudit("auth.logout_all", "User", userId, null, new { sessionsRevoked = activeSessions.Count });
+            try
             {
-                AddAudit("auth.logout_all", "User", userId, null, new { sessionsRevoked = activeSessions.Count });
+                await _db.SaveChangesAsync(cancellationToken);
+                return Ok(new { status = "ok" });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ClearChangeTracker();
             }
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new { status = "ok" });
+        return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "logout_retry_required" });
     }
 
     [HttpPost("refresh")]
@@ -164,51 +175,28 @@ public class AuthController : ControllerBase
 
         if (session.RevokedAt is not null)
         {
-            session.ReuseDetectedAt ??= now;
-            AddAudit("auth.refresh_reuse_detected", "User", session.UserId, null, new { session.Id });
-            var currentUser = await _db.Users.FirstOrDefaultAsync(x => x.Id == session.UserId, cancellationToken);
-            if (currentUser is null || currentUser.IsBlocked || currentUser.Status != UserStatus.Active)
-            {
-                await _db.SaveChangesAsync(cancellationToken);
-                return Unauthorized(new { error = "user_not_active" });
-            }
-
-            if (session.SessionVersion != currentUser.SessionVersion)
-            {
-                await _db.SaveChangesAsync(cancellationToken);
-                return Unauthorized(new { error = "session_invalidated" });
-            }
-
-            await RevokeRefreshFamilyAsync(session, "refresh_reuse_detected", cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-            return Unauthorized(new { error = "refresh_token_reuse_detected" });
+            return await RejectRefreshReuseAsync(hash, cancellationToken);
         }
 
         if (session.ExpiresAt <= now)
         {
-            session.RevokedAt = now;
-            session.RevokedByIp = ResolveIp();
-            session.RevocationReason = "expired";
-            await _db.SaveChangesAsync(cancellationToken);
+            RevokeRefreshSession(session, "expired", now);
+            await TrySaveRefreshChangesAsync(cancellationToken);
             return Unauthorized(new { error = "refresh_token_expired" });
         }
 
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == session.UserId, cancellationToken);
         if (user is null || user.IsBlocked || user.Status != UserStatus.Active)
         {
-            session.RevokedAt = now;
-            session.RevokedByIp = ResolveIp();
-            session.RevocationReason = "user_not_active";
-            await _db.SaveChangesAsync(cancellationToken);
+            RevokeRefreshSession(session, "user_not_active", now);
+            await TrySaveRefreshChangesAsync(cancellationToken);
             return Unauthorized(new { error = "user_not_active" });
         }
 
         if (session.SessionVersion != user.SessionVersion)
         {
-            session.RevokedAt = now;
-            session.RevokedByIp = ResolveIp();
-            session.RevocationReason = "session_version_mismatch";
-            await _db.SaveChangesAsync(cancellationToken);
+            RevokeRefreshSession(session, "session_version_mismatch", now);
+            await TrySaveRefreshChangesAsync(cancellationToken);
             return Unauthorized(new { error = "session_invalidated" });
         }
 
@@ -220,10 +208,19 @@ public class AuthController : ControllerBase
         session.ReplacedByTokenHash = newHash;
         var familyId = session.FamilyId ?? session.Id;
         session.FamilyId = familyId;
+        TouchRefreshSession(session, now);
         _db.UserRefreshTokens.Add(BuildRefreshToken(user, rawRefreshToken, familyId));
         user.LastLoginAt = now;
         AddAudit("auth.refresh", "User", user.Id, null, new { sessionRotated = session.Id });
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            ClearChangeTracker();
+            return await RejectRefreshReuseAsync(hash, cancellationToken);
+        }
 
         return Ok(new AuthResponse(
             _tokenService.CreateAccessToken(user, UserRoles.Parse(user.RolesCsv)),
@@ -430,11 +427,108 @@ public class AuthController : ControllerBase
             UserAgent = Request.Headers.UserAgent.ToString()
         };
 
+    private async Task<IActionResult> LogoutRefreshFamilyAsync(string tokenHash, CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 5;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var session = await _db.UserRefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == tokenHash, cancellationToken);
+            if (session is null)
+            {
+                return Ok(new { status = "ok" });
+            }
+
+            var now = _clock.UtcNow;
+            RevokeRefreshSession(session, "logout", now);
+            await RevokeRefreshFamilyAsync(session, "logout", cancellationToken);
+            AddAudit("auth.logout", "UserRefreshToken", session.Id, null, new { session.UserId });
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+                return Ok(new { status = "ok" });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ClearChangeTracker();
+            }
+        }
+
+        return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "logout_retry_required" });
+    }
+
+    private async Task<IActionResult> RejectRefreshReuseAsync(string tokenHash, CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 5;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            ClearChangeTracker();
+            var session = await _db.UserRefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == tokenHash, cancellationToken);
+            if (session is null)
+            {
+                return Unauthorized(new { error = "invalid_refresh_token" });
+            }
+
+            var now = _clock.UtcNow;
+            if (session.ReuseDetectedAt is null)
+            {
+                session.ReuseDetectedAt = now;
+                TouchRefreshSession(session, now);
+            }
+            AddAudit("auth.refresh_reuse_detected", "User", session.UserId, null, new { session.Id });
+
+            var currentUser = await _db.Users.FirstOrDefaultAsync(x => x.Id == session.UserId, cancellationToken);
+            string error;
+            if (currentUser is null || currentUser.IsBlocked || currentUser.Status != UserStatus.Active)
+            {
+                error = "user_not_active";
+            }
+            else if (session.SessionVersion != currentUser.SessionVersion)
+            {
+                error = "session_invalidated";
+            }
+            else
+            {
+                await RevokeRefreshFamilyAsync(session, "refresh_reuse_detected", cancellationToken);
+                error = "refresh_token_reuse_detected";
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+                return Unauthorized(new { error });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ClearChangeTracker();
+            }
+        }
+
+        return Unauthorized(new { error = "refresh_token_reuse_detected" });
+    }
+
+    private async Task<bool> TrySaveRefreshChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            ClearChangeTracker();
+            return false;
+        }
+    }
+
     private async Task RevokeRefreshFamilyAsync(UserRefreshToken reusedSession, string reason, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
         var familyId = reusedSession.FamilyId ?? reusedSession.Id;
-        reusedSession.FamilyId = familyId;
+        if (reusedSession.FamilyId != familyId)
+        {
+            reusedSession.FamilyId = familyId;
+            TouchRefreshSession(reusedSession, now);
+        }
         var visited = new HashSet<Guid> { reusedSession.Id };
         var nextHash = reusedSession.ReplacedByTokenHash;
         while (!string.IsNullOrWhiteSpace(nextHash))
@@ -449,12 +543,22 @@ public class AuthController : ControllerBase
                 break;
             }
 
-            descendant.FamilyId = familyId;
+            var changed = false;
+            if (descendant.FamilyId != familyId)
+            {
+                descendant.FamilyId = familyId;
+                changed = true;
+            }
             if (descendant.RevokedAt is null)
             {
                 descendant.RevokedAt = now;
                 descendant.RevokedByIp = ResolveIp();
                 descendant.RevocationReason = reason;
+                changed = true;
+            }
+            if (changed)
+            {
+                TouchRefreshSession(descendant, now);
             }
             nextHash = descendant.ReplacedByTokenHash;
         }
@@ -463,13 +567,12 @@ public class AuthController : ControllerBase
             .Where(x => x.UserId == reusedSession.UserId
                 && x.SessionVersion == reusedSession.SessionVersion
                 && x.FamilyId == familyId
+                && !visited.Contains(x.Id)
                 && x.RevokedAt == null)
             .ToListAsync(cancellationToken);
         foreach (var session in sessions)
         {
-            session.RevokedAt = now;
-            session.RevokedByIp = ResolveIp();
-            session.RevocationReason = reason;
+            RevokeRefreshSession(session, reason, now);
         }
     }
 
@@ -481,10 +584,27 @@ public class AuthController : ControllerBase
             .ToListAsync(cancellationToken);
         foreach (var session in sessions)
         {
-            session.RevokedAt = now;
-            session.RevokedByIp = ResolveIp();
-            session.RevocationReason = reason;
+            RevokeRefreshSession(session, reason, now);
         }
+    }
+
+    private void RevokeRefreshSession(UserRefreshToken session, string reason, DateTimeOffset now)
+    {
+        if (session.RevokedAt is not null)
+        {
+            return;
+        }
+
+        session.RevokedAt = now;
+        session.RevokedByIp = ResolveIp();
+        session.RevocationReason = reason;
+        TouchRefreshSession(session, now);
+    }
+
+    private static void TouchRefreshSession(UserRefreshToken session, DateTimeOffset now)
+    {
+        session.Revision = checked(session.Revision + 1);
+        session.UpdatedAt = now;
     }
 
     private static string HashToken(string token)

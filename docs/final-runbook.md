@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-05 локально подтверждено:
 
-- backend full suite: 1039/1039;
+- backend full suite: 1043/1043;
 - frontend tests: 84/84;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -205,9 +205,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Cabinet auth hydration: login/register/refresh и восстановленная сессия выполняют ровно один `loadAll`, включая `React.StrictMode` reload.
 - Registration concurrency: unique email race возвращает `email_exists` без partial rows, а unrelated persistence failure остается видимым.
 - Password reset generation: reissue закрывает старый code, concurrent issue/reset сериализуются per-user state revision, bootstrap password reset также invalidates codes.
+- Refresh rotation concurrency: один source token не выпускает две active branches; stale rotation откатывается, reuse/logout закрывают family, admin deactivation повторяется после conflict.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-password-reset-generation-boundary`, версия `0.507.0`.
-- roadmap progress: `520/540` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-refresh-token-rotation-concurrency`, версия `0.508.0`.
+- roadmap progress: `521/541` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

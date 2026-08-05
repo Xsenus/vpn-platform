@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1039/1039", readme, StringComparison.Ordinal);
+        Assert.Contains("1043/1043", readme, StringComparison.Ordinal);
         Assert.Contains("84/84", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-password-reset-generation-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-refresh-token-rotation-concurrency", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "1039/1039",
-                     "2026-08-05-password-reset-generation-boundary",
-                     "0.507.0",
+                     "1043/1043",
+                     "2026-08-05-refresh-token-rotation-concurrency",
+                     "0.508.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

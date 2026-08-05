@@ -42,6 +42,15 @@ public static class LocalSqliteSchemaRepair
         }
 
         if (await TableExistsAsync(db, "UserRefreshTokens", cancellationToken)
+            && !await ColumnExistsAsync(db, "UserRefreshTokens", "Revision", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "UserRefreshTokens" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;""",
+                cancellationToken);
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "UserRefreshTokens", cancellationToken)
             && !await IndexExistsAsync(db, "IX_UserRefreshTokens_UserId_SessionVersion_FamilyId", cancellationToken))
         {
             await db.Database.ExecuteSqlRawAsync(

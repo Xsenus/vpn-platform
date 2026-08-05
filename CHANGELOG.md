@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.508.0 - 2026-08-05
+
+Release entry: `2026-08-05-refresh-token-rotation-concurrency`.
+
+### Исправлено
+
+- Один refresh token больше не может одновременно создать две активные дочерние сессии на разных API-инстансах.
+- `UserRefreshToken.Revision` стал optimistic concurrency boundary; проигравшая ротация откатывает child token и обрабатывается как reuse без HTTP 500.
+- Обнаруженный concurrent reuse отзывает всю выигравшую семью, поэтому ни одна из конкурирующих ветвей не остается пригодной для восстановления доступа.
+- Logout повторно читает изменившуюся семью и закрывает child, созданный конкурентной ротацией; logout-all повышает `SessionVersion`.
+- Admin deactivation повторяет локальную транзакцию после session conflict, а bootstrap и все пути отзыва повышают revision.
+- Добавлены PostgreSQL migration и idempotent local SQLite repair для refresh-token revision.
+
+### Проверено
+
+- Backend full suite `1043/1043`; targeted auth/admin/bootstrap/SQLite/PostgreSQL suite `43/43`, включая три file-backed fault-injection regression и SQLite logout-all.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `633` files, `0` findings.
+- Roadmap status: `521/541` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.507.0 - 2026-08-05
 
 Release entry: `2026-08-05-password-reset-generation-boundary`.

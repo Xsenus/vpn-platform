@@ -76,6 +76,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<UserRefreshToken>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<UserRefreshToken>().HasIndex(x => new { x.UserId, x.ExpiresAt });
         modelBuilder.Entity<UserRefreshToken>().HasIndex(x => new { x.UserId, x.SessionVersion, x.FamilyId });
+        modelBuilder.Entity<UserRefreshToken>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => new { x.UserId, x.ExpiresAt });
         modelBuilder.Entity<PasswordResetToken>().Property(x => x.Revision).IsConcurrencyToken();

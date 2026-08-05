@@ -137,6 +137,7 @@ public sealed class AdminBootstrapService
             {
                 session.RevokedAt = now;
                 session.RevocationReason = "admin_bootstrap_session_invalidated";
+                session.Revision = checked(session.Revision + 1);
                 session.UpdatedAt = now;
             }
         }

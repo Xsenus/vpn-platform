@@ -121,10 +121,76 @@ public class AdminUsersControllerTests
         var session = await db.UserRefreshTokens.SingleAsync(x => x.UserId == userId);
         Assert.NotNull(session.RevokedAt);
         Assert.Equal("admin_user_deactivated", session.RevocationReason);
+        Assert.Equal(1, session.Revision);
         var audit = await db.AuditLogs.SingleAsync(x => x.Action == "user.update");
         Assert.Equal(userId.ToString(), audit.EntityId);
         Assert.NotEqual(audit.BeforeJson, audit.AfterJson);
         Assert.DoesNotContain("secret-hash", audit.BeforeJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Patch_Should_Retry_User_Deactivation_After_Concurrent_Session_Mutation()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-admin-user-session-race-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            var userId = Guid.NewGuid();
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                seed.Users.Add(new User
+                {
+                    Id = userId,
+                    Email = "admin-session-race@example.test",
+                    DisplayName = "Admin Session Race",
+                    PasswordHash = "hash",
+                    RolesCsv = UserRoles.User,
+                    Status = UserStatus.Active,
+                    ReferralCode = "admin-session-race"
+                });
+                seed.UserRefreshTokens.Add(new UserRefreshToken
+                {
+                    UserId = userId,
+                    TokenHash = "admin-session-race-token",
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+                });
+                await seed.SaveChangesAsync();
+            }
+
+            await using var db = new BeforeFirstSaveDbContext(options, async () =>
+            {
+                await using var competitor = new ApplicationDbContext(options);
+                var session = await competitor.UserRefreshTokens.SingleAsync();
+                session.RevokedAt = DateTimeOffset.UtcNow;
+                session.RevocationReason = "concurrent_refresh_rotation";
+                session.Revision++;
+                await competitor.SaveChangesAsync();
+            });
+            using var payload = JsonDocument.Parse("{\"isBlocked\":true,\"status\":\"Suspended\"}");
+            var action = await new AdminUsersController(db).Patch(
+                userId,
+                payload.RootElement,
+                CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(action);
+            await using var verify = new ApplicationDbContext(options);
+            var user = await verify.Users.AsNoTracking().SingleAsync();
+            Assert.True(user.IsBlocked);
+            Assert.Equal(UserStatus.Suspended, user.Status);
+            Assert.Equal(1, user.SessionVersion);
+            Assert.Single(await verify.AuditLogs.AsNoTracking().Where(x => x.Action == "user.update").ToListAsync());
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
     }
 
     [Fact]
@@ -432,5 +498,24 @@ public class AdminUsersControllerTests
             .UseSqlite(connection)
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private sealed class BeforeFirstSaveDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        Func<Task> beforeFirstSave) : ApplicationDbContext(options)
+    {
+        private int _injected;
+
+        public override async Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _injected, 1) == 0)
+            {
+                await beforeFirstSave();
+            }
+
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
     }
 }

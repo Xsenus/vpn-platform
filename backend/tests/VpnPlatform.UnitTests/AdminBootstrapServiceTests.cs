@@ -107,6 +107,7 @@ public class AdminBootstrapServiceTests
         var session = await db.UserRefreshTokens.SingleAsync();
         Assert.NotNull(session.RevokedAt);
         Assert.Equal("admin_bootstrap_session_invalidated", session.RevocationReason);
+        Assert.Equal(1, session.Revision);
     }
 
     [Fact]
@@ -173,6 +174,7 @@ public class AdminBootstrapServiceTests
         var session = await db.UserRefreshTokens.SingleAsync();
         Assert.NotNull(session.RevokedAt);
         Assert.Equal("admin_bootstrap_session_invalidated", session.RevocationReason);
+        Assert.Equal(1, session.Revision);
     }
 
     [Fact]

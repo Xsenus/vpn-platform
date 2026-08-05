@@ -252,7 +252,14 @@ public class AdminUsersController : ControllerBase
 
     [HttpPatch("{id:guid}")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> Patch(Guid id, [FromBody] JsonElement payload, CancellationToken cancellationToken)
+    public Task<IActionResult> Patch(Guid id, [FromBody] JsonElement payload, CancellationToken cancellationToken)
+        => PatchCoreAsync(id, payload, 0, cancellationToken);
+
+    private async Task<IActionResult> PatchCoreAsync(
+        Guid id,
+        JsonElement payload,
+        int attempt,
+        CancellationToken cancellationToken)
     {
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (user is null) return NotFound();
@@ -321,13 +328,33 @@ public class AdminUsersController : ControllerBase
                 session.RevokedAt = now;
                 session.RevokedByIp = revokedByIp;
                 session.RevocationReason = "admin_user_deactivated";
+                session.Revision = checked(session.Revision + 1);
                 session.UpdatedAt = now;
             }
         }
 
         user.UpdatedAt = now;
         AdminAuditLogWriter.Add(_db, this, "user.update", "User", user.Id, before, MapUser(user));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException) when (attempt < 4)
+        {
+            if (_db is DbContext dbContext)
+            {
+                dbContext.ChangeTracker.Clear();
+            }
+            return await PatchCoreAsync(id, payload, attempt + 1, cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (_db is DbContext dbContext)
+            {
+                dbContext.ChangeTracker.Clear();
+            }
+            return Conflict(new { error = "User state changed concurrently. Retry the operation." });
+        }
         return Ok(MapUser(user));
     }
 

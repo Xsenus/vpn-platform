@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -260,6 +262,183 @@ public class AuthSessionControllerTests
             await controller.Refresh(new RefreshTokenRequest(independent.RefreshToken), CancellationToken.None)).Value);
     }
 
+    [Fact]
+    public async Task Concurrent_Refresh_Should_Revoke_The_Winning_Family_And_Reject_The_Stale_Commit()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-refresh-race-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            var userId = Guid.NewGuid();
+            var familyId = Guid.NewGuid();
+            const string rawRefreshToken = "concurrent-refresh-token";
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                seed.Users.Add(new User
+                {
+                    Id = userId,
+                    Email = "concurrent-refresh@example.test",
+                    DisplayName = "Concurrent Refresh",
+                    PasswordHash = new PasswordService().Hash("CorrectPassword123!"),
+                    RolesCsv = UserRoles.User,
+                    Status = UserStatus.Active,
+                    ReferralCode = "concurrent-refresh"
+                });
+                seed.UserRefreshTokens.Add(new UserRefreshToken
+                {
+                    UserId = userId,
+                    SessionVersion = 0,
+                    FamilyId = familyId,
+                    TokenHash = HashToken(rawRefreshToken),
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+                });
+                await seed.SaveChangesAsync();
+            }
+
+            await using var db = new BeforeFirstSaveDbContext(options, async () =>
+            {
+                await using var competitor = new ApplicationDbContext(options);
+                var competitorResult = await CreateAuthController(competitor).Refresh(
+                    new RefreshTokenRequest(rawRefreshToken),
+                    CancellationToken.None);
+                Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(competitorResult).Value);
+            });
+            var action = await CreateAuthController(db).Refresh(
+                new RefreshTokenRequest(rawRefreshToken),
+                CancellationToken.None);
+
+            AssertUnauthorizedError(action, "refresh_token_reuse_detected");
+            await using var verify = new ApplicationDbContext(options);
+            var sessions = await verify.UserRefreshTokens.AsNoTracking().ToListAsync();
+            Assert.Equal(2, sessions.Count);
+            Assert.All(sessions, session => Assert.NotNull(session.RevokedAt));
+            Assert.Single(sessions, session => session.ReuseDetectedAt is not null);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Logout_Should_Retry_And_Revoke_A_Child_Created_By_Concurrent_Refresh()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-logout-refresh-race-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            var userId = Guid.NewGuid();
+            const string rawRefreshToken = "logout-refresh-race-token";
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                seed.Users.Add(new User
+                {
+                    Id = userId,
+                    Email = "logout-refresh-race@example.test",
+                    DisplayName = "Logout Refresh Race",
+                    PasswordHash = new PasswordService().Hash("CorrectPassword123!"),
+                    RolesCsv = UserRoles.User,
+                    Status = UserStatus.Active,
+                    ReferralCode = "logout-refresh-race"
+                });
+                seed.UserRefreshTokens.Add(new UserRefreshToken
+                {
+                    UserId = userId,
+                    FamilyId = Guid.NewGuid(),
+                    TokenHash = HashToken(rawRefreshToken),
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+                });
+                await seed.SaveChangesAsync();
+            }
+
+            await using var db = new BeforeFirstSaveDbContext(options, async () =>
+            {
+                await using var competitor = new ApplicationDbContext(options);
+                var competitorResult = await CreateAuthController(competitor).Refresh(
+                    new RefreshTokenRequest(rawRefreshToken),
+                    CancellationToken.None);
+                Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(competitorResult).Value);
+            });
+            var action = await CreateAuthController(db).Logout(
+                new LogoutRequest(rawRefreshToken),
+                CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(action);
+            await using var verify = new ApplicationDbContext(options);
+            var sessions = await verify.UserRefreshTokens.AsNoTracking().ToListAsync();
+            Assert.Equal(2, sessions.Count);
+            Assert.All(sessions, session => Assert.NotNull(session.RevokedAt));
+            Assert.Single(sessions, session => session.RevocationReason == "rotated");
+            Assert.Single(sessions, session => session.RevocationReason == "logout");
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Logout_Without_Refresh_Token_Should_Invalidate_All_User_Sessions()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var userId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = userId,
+            Email = "logout-all@example.test",
+            DisplayName = "Logout All",
+            PasswordHash = new PasswordService().Hash("CorrectPassword123!"),
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "logout-all"
+        });
+        db.UserRefreshTokens.AddRange(
+            new UserRefreshToken
+            {
+                UserId = userId,
+                FamilyId = Guid.NewGuid(),
+                TokenHash = "logout-all-first",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+            },
+            new UserRefreshToken
+            {
+                UserId = userId,
+                FamilyId = Guid.NewGuid(),
+                TokenHash = "logout-all-second",
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+            });
+        await db.SaveChangesAsync();
+        var controller = CreateAuthController(db);
+        controller.ControllerContext.HttpContext.User = Principal(userId.ToString());
+
+        var action = await controller.Logout(null, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(action);
+        Assert.Equal(1, (await db.Users.SingleAsync()).SessionVersion);
+        var sessions = await db.UserRefreshTokens.ToListAsync();
+        Assert.All(sessions, session => Assert.NotNull(session.RevokedAt));
+        Assert.All(sessions, session => Assert.Equal("logout_all_current_user", session.RevocationReason));
+        Assert.All(sessions, session => Assert.Equal(1, session.Revision));
+        Assert.Single(await db.AuditLogs.Where(x => x.Action == "auth.logout_all").ToListAsync());
+    }
+
     private static void AssertUnauthorizedError(IActionResult result, string expectedError)
     {
         var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
@@ -293,6 +472,9 @@ public class AuthSessionControllerTests
         return new ApplicationDbContext(options);
     }
 
+    private static string HashToken(string token)
+        => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
     private static ClaimsPrincipal Principal(string subject, int sessionVersion = 0)
         => new(new ClaimsIdentity(
             [
@@ -321,5 +503,24 @@ public class AuthSessionControllerTests
     private sealed class TestClock : IClock
     {
         public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+    }
+
+    private sealed class BeforeFirstSaveDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        Func<Task> beforeFirstSave) : ApplicationDbContext(options)
+    {
+        private int _injected;
+
+        public override async Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _injected, 1) == 0)
+            {
+                await beforeFirstSave();
+            }
+
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
     }
 }

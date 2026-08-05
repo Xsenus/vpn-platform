@@ -11837,5 +11837,28 @@
         "text": "Roadmap progress is 520/540 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-refresh-token-rotation-concurrency",
+    "version": "0.508.0",
+    "releasedAt": "2026-08-05T11:01:25+07:00",
+    "title": "Refresh token нельзя ротировать дважды",
+    "summary": "Optimistic revision не позволяет двум API-инстансам выпустить две сессии из одного refresh token, а concurrent reuse и logout закрывают всю затронутую семью.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Два одновременных refresh-запроса больше не создают две активные ветви: stale commit откатывается, а winning family отзывается как reuse."
+      },
+      {
+        "type": "improved",
+        "text": "Logout и admin deactivation повторно читают конкурентно изменившиеся session rows; PostgreSQL migration и SQLite repair добавляют revision boundary."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 521/541 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
