@@ -417,6 +417,15 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'GET' && path === '/api/admin/access-credentials/access-e2e/qr') {
+      await route.fulfill({
+        status: 200,
+        headers: { ...corsHeaders, 'content-type': 'image/svg+xml; charset=utf-8' },
+        body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" /></svg>'
+      })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/orders') {
       await fulfillJson(route, [{ id: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', userEmail: 'client@example.test', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', amount: 590, currency: 'RUB', status: 'PaymentReceived', type: 'NewSubscription', channel: 'Web', paymentProvider: 'YooKassa', checkoutSessionId: null, expiresAt: '2026-06-14T07:00:00Z', paidAt: now, isFirstPurchase: true, paymentAttemptsCount: 1, lastPaymentId: 'payment-e2e', lastPaymentStatus: 'Succeeded', lastPaymentProvider: 'YooKassa', linkedSubscriptionId: 'sub-e2e', createdAt: now, updatedAt: now }])
       return
@@ -729,6 +738,10 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   await openAdminSection(page, 'VPN-доступы', 'vpn')
   await expect(page.getByText('vless://admin-e2e@example.test')).toBeVisible()
+  const activeAccessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'EU Sandbox' })
+  await activeAccessRow.getByRole('button', { name: 'Показать QR' }).click()
+  await expect(activeAccessRow.getByRole('img', { name: 'QR-код доступа access-e2e' })).toBeVisible()
+  await expect(activeAccessRow.locator('svg')).toHaveCount(0)
   const revokedAccessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'Доступ отозван.' })
   await expect(revokedAccessRow.getByText('Доступ отозван. Ключ и provider-команды скрыты; доступна только история.')).toBeVisible()
   await expect(revokedAccessRow.getByRole('button')).toHaveCount(0)

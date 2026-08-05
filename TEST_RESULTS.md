@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: QR SVG render boundary
+
+Scope:
+- Проверены QR API text boundary и все пять cabinet/admin preview: MIME, размер, пустой ответ, пассивная SVG-разметка, DOM-изоляция и responsive render.
+
+Results:
+- Roadmap progress: `536/556` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-qr-svg-render-boundary`, version `0.523.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `94/94`; typecheck и production build всех трех приложений: OK.
+- API client принимает QR только как `image/svg+xml`, отклоняет пустой и превышающий лимит ответ controlled `502` ошибкой.
+- Cabinet/admin больше не используют `dangerouslySetInnerHTML`: shared preview валидирует пассивный SVG, кодирует data image и отображает через `<img>`; активная разметка дает visible alert и не исполняется.
+- Changed cabinet/admin desktop/mobile scenarios: OK, `8/8`; full responsive/console suite: OK, `16/16`.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены.
+- Dependency audit: `0 vulnerabilities`; secret scan: `649` files, `0` findings.
+- Artifact cleanup и strict UTF-8 guard выполняются перед коммитом.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui и real SMTP не были доступны.
+
 ## Check 2026-08-05: payment link safety boundary
 
 Scope:

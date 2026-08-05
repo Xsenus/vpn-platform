@@ -22,7 +22,7 @@ import {
   validatePasswordResetConfirm,
   validatePasswordResetRequest
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetSessionRejected } from './cabinet-session'
@@ -671,7 +671,7 @@ export function App() {
                         {currentAccessId && <PrimaryButton disabled={busy || !currentQrAvailability.canGenerate} title={currentQrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(currentAccessId)}>Показать QR-код</PrimaryButton>}
                         <PrimaryButton disabled={busy || !provider} aria-busy={busy} className="button-secondary" onClick={() => void handleRenew(cabinetSummary.currentSubscription!)}>Продлить</PrimaryButton>
                       </div>
-                      {currentAccessId && qrSvgs[currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[currentAccessId] }} />}
+                      {currentAccessId && qrSvgs[currentAccessId] && <QrCodePreview svg={qrSvgs[currentAccessId]} />}
                     </>
                   ) : currentAccessTerminalReason ? (
                     <p className="safe-note" role="status">{currentAccessTerminalReason}</p>
@@ -907,7 +907,7 @@ export function App() {
               )}
               {isTerminal && <p className="safe-note" role="status">{terminalReason}</p>}
               {!isTerminal && subscription.qrCodePath && <CodeBlock>QR-содержимое: {subscription.qrCodePath}</CodeBlock>}
-              {!isTerminal && subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[subscription.currentAccessId] }} />}
+              {!isTerminal && subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <QrCodePreview svg={qrSvgs[subscription.currentAccessId]} />}
               {!isTerminal && subscription.configPath && <p>Конфигурация: {subscription.configPath}</p>}
               {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый VLESS/Xray клиент. Если доступ требует проверки, дождитесь подтверждения администратора.</p>}
               {renewalAvailability.canRenew ? (
@@ -945,7 +945,7 @@ export function App() {
                 <CopyButton value={access.accessUri} label="Скопировать ссылку" />
                 <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
               </div>}
-              {!isTerminal && qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
+              {!isTerminal && qrSvgs[access.id] && <QrCodePreview svg={qrSvgs[access.id]} />}
               {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый Xray/VLESS клиент. Никому не пересылайте ключ.</p>}
             </Card>
           })}
@@ -1170,7 +1170,7 @@ export function App() {
                   <CopyButton value={access.accessUri} label="Скопировать ссылку" />
                   <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
                 </div>}
-                {!isTerminal && qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
+                {!isTerminal && qrSvgs[access.id] && <QrCodePreview svg={qrSvgs[access.id]} />}
                 {!isTerminal && <p className="muted">Подключение: импортируйте строку выше в VLESS/Xray клиент или используйте QR-код.</p>}
               </div>
             })}

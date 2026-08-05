@@ -12206,5 +12206,32 @@
         "text": "Roadmap progress is 535/555 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-qr-svg-render-boundary",
+    "version": "0.523.0",
+    "releasedAt": "2026-08-05T18:59:00+07:00",
+    "title": "QR-коды изолированы от DOM",
+    "summary": "Кабинет и админка теперь проверяют формат и пассивность QR SVG и отображают его как изолированное изображение без вставки серверной разметки в DOM.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "QR API client принимает только непустой image/svg+xml в пределах лимита и возвращает controlled ошибку для неподдерживаемого или чрезмерного ответа."
+      },
+      {
+        "type": "fixed",
+        "text": "Все cabinet/admin QR-preview используют shared пассивный SVG validator и img data URL вместо dangerouslySetInnerHTML; активная разметка отклоняется и не исполняется."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile Playwright проверяет безопасное отображение, controlled rejection и отсутствие raw SVG DOM, console errors и responsive overflow."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 536/556 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

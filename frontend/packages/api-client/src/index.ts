@@ -1240,8 +1240,8 @@ export class ApiClient {
   }
 
 
-  private async requestText(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }): Promise<string> {
-    const { token, errorMessage, ...requestInit } = init ?? {}
+  private async requestText(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string; expectedContentType?: string; maxLength?: number }): Promise<string> {
+    const { token, errorMessage, expectedContentType, maxLength, ...requestInit } = init ?? {}
     const headers = new Headers(requestInit.headers ?? {})
 
     if (token) {
@@ -1257,6 +1257,14 @@ export class ApiClient {
     if (!response.ok) {
       const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
       throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
+    }
+
+    const contentType = response.headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() ?? ''
+    if (expectedContentType && contentType !== expectedContentType.toLowerCase()) {
+      throw new ApiClientError('QR-код пришел в неподдерживаемом формате.', 502, { contentType })
+    }
+    if (!text.trim() || (maxLength && text.length > maxLength)) {
+      throw new ApiClientError('QR-код пустой или превышает допустимый размер.', 502, null)
     }
 
     return text
@@ -1475,7 +1483,7 @@ export class ApiClient {
   }
 
   getMyAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxLength: 1_000_000 })
   }
 
   getMyReferrals(token: string): Promise<RewardLedgerDto[]> {
@@ -1593,7 +1601,7 @@ export class ApiClient {
   }
 
   getAdminAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxLength: 1_000_000 })
   }
 
   enableAdminAccess(token: string, id: string, reason?: string | null): Promise<AccessActionResultDto> {

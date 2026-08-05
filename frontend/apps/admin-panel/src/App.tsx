@@ -51,7 +51,7 @@ import {
   PanelHealthCheckDto,
   PanelSyncRunDto
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 import { canAccessAdminSection, canWriteAdminSection, type AdminSectionId } from './admin-capabilities'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './admin-accesses'
@@ -3516,7 +3516,7 @@ export function App() {
                   ? <p className="safe-note" role="status">{terminalReason}</p>
                   : access.accessUri && <CodeBlock>{access.accessUri}</CodeBlock>}
                 {access.history && access.history.length > 0 && <div className="muted">История: {access.history.slice(0, 3).map((h) => `${h.eventType} ${formatDate(h.createdAt)}`).join(' · ')}</div>}
-                {!isTerminal && adminQrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: adminQrSvgs[access.id] }} />}
+                {!isTerminal && adminQrSvgs[access.id] && <QrCodePreview svg={adminQrSvgs[access.id]} label={`QR-код доступа ${access.id}`} />}
                 {!isTerminal && <div className="toolbar">
                   <CopyButton value={access.accessUri} label="Скопировать URI" disabled={!access.accessUri} />
                   <PrimaryButton disabled={!access.accessUri || actionBusyId === `qr-${access.id}`} onClick={() => void handleAdminAccessQr(access)}>Показать QR</PrimaryButton>

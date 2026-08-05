@@ -402,6 +402,29 @@ export function ExternalLinkActions({
   )
 }
 
+export function getSafeSvgImageDataUrl(content?: string | null) {
+  const normalized = String(content ?? '').trim()
+  if (!normalized || normalized.length > 1_000_000) return null
+
+  const svgRoot = normalized.replace(/^<\?xml[^>]*>\s*/i, '')
+  if (!/^<svg(?:\s|>)/i.test(svgRoot) || !/<\/svg>\s*$/i.test(svgRoot)) return null
+  if (/<\s*(?:script|foreignObject|iframe|object|embed|image|use|animate|set|audio|video|style|link)\b/i.test(svgRoot)) return null
+  if (/(?:^|\s)on[a-z]+\s*=|(?:href|xlink:href|style)\s*=|<!doctype|<!entity/i.test(svgRoot)) return null
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(normalized)}`
+}
+
+export function QrCodePreview({ svg, label = 'QR-код VPN-доступа' }: { svg?: string | null; label?: string }) {
+  const src = getSafeSvgImageDataUrl(svg)
+  if (!src) return <p className="safe-note qr-preview-error" role="alert">QR-код отклонен: сервер вернул неподдерживаемое SVG-изображение.</p>
+
+  return (
+    <div className="qr-preview">
+      <img src={src} alt={label} width={220} height={220} decoding="async" />
+    </div>
+  )
+}
+
 export function PasswordField({
   label,
   value,

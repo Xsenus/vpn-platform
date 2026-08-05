@@ -279,6 +279,7 @@ async function mockCabinetApi(page: Page) {
   let logoutShouldFail = false
   let authorizedRequestsRejected = false
   let rejectedAuthorizedPath: string | null = null
+  let unsafeQrSvg = false
   let renewalOrder = {
     ...paidOrder,
     id: 'order-renewal',
@@ -496,7 +497,9 @@ async function mockCabinetApi(page: Page) {
           ...corsHeaders,
           'content-type': 'image/svg+xml; charset=utf-8'
         },
-        body: '<svg role="img" aria-label="qr-e2e"><text>qr-e2e</text></svg>'
+        body: unsafeQrSvg
+          ? '<svg xmlns="http://www.w3.org/2000/svg" onload="window.__cabinetQrExecuted=true"><rect width="10" height="10" /></svg>'
+          : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" /></svg>'
       })
       return
     }
@@ -519,6 +522,7 @@ async function mockCabinetApi(page: Page) {
     failLogout: () => { logoutShouldFail = true },
     rejectAuthorizedRequests: () => { authorizedRequestsRejected = true },
     allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
+    returnUnsafeQrSvg: () => { unsafeQrSvg = true },
     rejectNextAuthorizedPath: (path: string) => { rejectedAuthorizedPath = path },
     getRequestCount: (path: string, method = 'GET') =>
       requests.filter((item) => item.method === method && new URL(item.url).pathname === path).length,
@@ -627,7 +631,14 @@ test('cabinet covers register, login, payments, subscription access and support'
   expect(api.getLastRequest('/api/cabinet/access/access-cancelled-stale/qr', 'GET')).toBeUndefined()
 
   await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
-  await expect(page.locator('.qr-preview').first()).toContainText('qr-e2e')
+  const qrPreview = page.locator('.qr-preview').first()
+  await expect(qrPreview.getByRole('img', { name: 'QR-код VPN-доступа' })).toBeVisible()
+  await expect(qrPreview.locator('svg')).toHaveCount(0)
+  await expect(qrPreview.getByRole('img')).toHaveAttribute('src', /^data:image\/svg\+xml;charset=utf-8,/)
+  api.returnUnsafeQrSvg()
+  await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
+  await expect(page.getByRole('alert').filter({ hasText: 'QR-код отклонен' }).first()).toBeVisible()
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { __cabinetQrExecuted?: boolean }).__cabinetQrExecuted ?? false)).toBe(false)
 
   await page.getByRole('button', { name: 'Продлить' }).first().click()
   await expect(page.getByRole('heading', { name: 'Последнее продление' })).toBeVisible()

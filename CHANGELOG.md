@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.523.0 - 2026-08-05
+
+Release entry: `2026-08-05-qr-svg-render-boundary`.
+
+### Исправлено
+
+- QR-ответы кабинета и админки принимаются только как непустой `image/svg+xml` в пределах лимита; неподдерживаемый MIME и чрезмерный payload завершаются controlled API-client ошибкой.
+- Все пять QR-preview больше не вставляют серверный текст через `dangerouslySetInnerHTML`: shared validator отклоняет script, event handlers, ссылки и активные SVG-элементы, а допустимое изображение отображается изолированно через `<img>`.
+- Поврежденный или активный SVG дает видимое сообщение об отказе без исполнения разметки; фиксированные размеры preview сохраняют стабильную геометрию на desktop и mobile.
+
+### Проверено
+
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует.
+- Frontend `94/94`, typecheck и production build всех трех приложений.
+- Измененные cabinet/admin desktop/mobile QR-сценарии `8/8`; полный public/cabinet/admin/all-screens/mobile/console responsive suite `16/16`.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings.
+- Release/documentation/UTF-8 guards подтверждают latest `2026-08-05-qr-svg-render-boundary`, версию `0.523.0` и roadmap `536/556`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами.
+
 ## 0.522.0 - 2026-08-05
 
 Release entry: `2026-08-05-payment-link-safety-boundary`.

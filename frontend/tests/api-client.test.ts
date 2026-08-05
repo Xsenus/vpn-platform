@@ -1067,6 +1067,29 @@ test('ApiClient QR SVG endpoints return text with auth headers', async () => {
   assert.match(adminQr, /vless/)
 })
 
+test('ApiClient QR SVG endpoints reject wrong MIME, empty and oversized responses', async () => {
+  const responses = [
+    new Response('<svg></svg>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
+    new Response('   ', { status: 200, headers: { 'Content-Type': 'image/svg+xml; charset=utf-8' } }),
+    new Response(`<svg>${'x'.repeat(1_000_001)}</svg>`, { status: 200, headers: { 'Content-Type': 'image/svg+xml' } })
+  ]
+  globalThis.fetch = (async () => responses.shift()!) as typeof fetch
+  const client = new ApiClient('http://localhost:8080')
+
+  await assert.rejects(
+    () => client.getMyAccessQrSvg('user-token', 'wrong-mime'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /неподдерживаемом формате/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getMyAccessQrSvg('user-token', 'empty'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /пустой/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getAdminAccessQrSvg('admin-token', 'oversized'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /размер/i.test(error.message)
+  )
+})
+
 test('ApiClient app version endpoints are tokenized and mapped', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
@@ -1331,6 +1354,10 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(cabinetSource, /getPublicPaymentProviders/)
   assert.match(cabinetSource, /paymentProvidersLoading/)
   assert.match(cabinetSource, /getMyAccessQrSvg/)
+  assert.match(cabinetSource + adminSource, /QrCodePreview/)
+  assert.doesNotMatch(cabinetSource + adminSource, /dangerouslySetInnerHTML/)
+  assert.match(uiSource, /getSafeSvgImageDataUrl/)
+  assert.match(apiClientSource, /expectedContentType: 'image\/svg\+xml'/)
   assert.match(cabinetSource, /VITE_PUBLIC_WEB_URL/)
   assert.match(publicSource + cabinetSource + adminSource, /readSessionStorageItem/)
   assert.doesNotMatch(publicSource + cabinetSource + adminSource, /useState\(sessionStorage/)
@@ -1587,6 +1614,8 @@ test('Stage 9 UI source includes MVP polish surfaces and safety affordances', ()
   assert.match(cabinetSource, /CopyButton/)
   assert.match(cabinetSource, /Подписок пока нет/)
   assert.match(cabinetSource, /getMyAccessQrSvg/)
+  assert.match(cabinetSource + adminSource, /QrCodePreview/)
+  assert.doesNotMatch(cabinetSource + adminSource, /dangerouslySetInnerHTML/)
 
   assert.match(publicSource, /Показываем только активные тарифы/)
   assert.match(publicSource, /Нет доступных способов оплаты/)

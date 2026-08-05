@@ -12,10 +12,12 @@ import {
   ExternalLinkActions,
   FormValidationSummary,
   getSafeHttpUrl,
+  getSafeSvgImageDataUrl,
   LoadingBlock,
   PageShell,
   PasswordField,
   PrimaryButton,
+  QrCodePreview,
   SecretField,
   SectionCard,
   SegmentedTabs,
@@ -126,6 +128,34 @@ test('external link boundary exposes only absolute credential-free http URLs', (
   assert.match(rejectedHtml, /role="alert"/)
   assert.match(rejectedHtml, /Ссылка отклонена/)
   assert.doesNotMatch(rejectedHtml, /href=|javascript:|Скопировать ссылку/)
+})
+
+test('QR preview isolates validated SVG as an image and rejects active markup', () => {
+  const safeSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" /></svg>'
+  const dataUrl = getSafeSvgImageDataUrl(safeSvg)
+  assert.match(dataUrl ?? '', /^data:image\/svg\+xml;charset=utf-8,/)
+
+  const html = renderToStaticMarkup(<QrCodePreview svg={safeSvg} label="QR тест" />)
+  assert.match(html, /<img/)
+  assert.match(html, /alt="QR тест"/)
+  assert.match(html, /width="220"/)
+  assert.match(html, /height="220"/)
+  assert.doesNotMatch(html, /dangerouslySetInnerHTML|<svg/)
+
+  for (const unsafeSvg of [
+    '<svg><script>alert(1)</script></svg>',
+    '<svg onload="alert(1)"></svg>',
+    '<svg><foreignObject>html</foreignObject></svg>',
+    '<svg><use href="https://tracker.example.test/image" /></svg>',
+    '<html>not svg</html>',
+    `<svg>${'x'.repeat(1_000_001)}</svg>`
+  ]) {
+    assert.equal(getSafeSvgImageDataUrl(unsafeSvg), null)
+  }
+
+  const rejectedHtml = renderToStaticMarkup(<QrCodePreview svg="<svg onload='alert(1)'></svg>" />)
+  assert.match(rejectedHtml, /role="alert"/)
+  assert.doesNotMatch(rejectedHtml, /<img|onload|alert\(1\)/)
 })
 
 test('Design system primitives render shared tabs, states and tables', () => {
