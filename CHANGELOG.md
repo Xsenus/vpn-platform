@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.515.0 - 2026-08-05
+
+Release entry: `2026-08-05-checkout-claim-atomicity`.
+
+### Исправлено
+
+- Claim checkout-сессии резервирует владельца условным update, создаёт заказ и публикует связь `session -> order` в одной relational transaction.
+- Конкурентный запрос того же пользователя возвращает winning order, а другой пользователь получает отказ без второго или orphan-order.
+- Повторный claim уже связанной `completed`-сессии остаётся идемпотентным после истечения исходного токена и не переписывает статус на `expired`.
+
+### Проверено
+
+- Backend full suite `1065/1065`; targeted checkout/order/payment suite `21/21`, включая два deterministic file-backed SQLite claim races и rollback reservation при order failure.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; frontend `84/84`, typecheck/build OK.
+- Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`.
+- Secret scan `639` files/`0` findings и strict UTF-8 guard пройдены; временные SQLite/browser artifacts очищены.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `528/548` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остаётся `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.514.0 - 2026-08-05
 
 Release entry: `2026-08-05-provisioning-cancel-claim-boundary`.

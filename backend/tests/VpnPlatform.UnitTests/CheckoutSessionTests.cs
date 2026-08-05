@@ -1,8 +1,11 @@
+using System.Data.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Api.Controllers.Public;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -148,6 +151,157 @@ public class CheckoutSessionTests
         Assert.Equal("expired", (await db.CheckoutSessions.SingleAsync()).Status);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CheckoutSession_Claim_Should_Be_Atomic_Across_Concurrent_Users(bool sameUser)
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-checkout-{Guid.NewGuid():N}.db");
+        try
+        {
+            var clock = new FixedClock(new DateTimeOffset(2026, 8, 5, 14, 30, 0, TimeSpan.Zero));
+            Guid winnerUserId;
+            Guid loserUserId;
+            string token;
+            await using (var seedDb = CreateSqliteDbContext(databasePath))
+            {
+                await seedDb.Database.EnsureCreatedAsync();
+                var tariff = await SeedTariffAsync(seedDb);
+                var winner = await SeedUserAsync(seedDb, "checkout-winner@example.test");
+                var loser = sameUser
+                    ? winner
+                    : await SeedUserAsync(seedDb, "checkout-loser@example.test");
+                var created = await CreateService(seedDb, clock).CreateAsync(new(
+                    tariff.Id,
+                    OrderType.NewSubscription,
+                    ChannelType.Web,
+                    PaymentProvider.YooKassa,
+                    null,
+                    false,
+                    null,
+                    null));
+                Assert.True(created.IsSuccess, created.Error);
+                winnerUserId = winner.Id;
+                loserUserId = loser.Id;
+                token = created.Value!.Token;
+            }
+
+            var winnerBeforeLoserTransaction = new ClaimBeforeTransactionInterceptor(databasePath, token, winnerUserId, clock);
+            await using (var loserDb = CreateSqliteDbContext(databasePath, winnerBeforeLoserTransaction))
+            {
+                var loserResult = await CreateService(loserDb, clock).ClaimAsync(new(token, loserUserId));
+
+                Assert.NotNull(winnerBeforeLoserTransaction.WinnerResult);
+                Assert.True(winnerBeforeLoserTransaction.WinnerResult!.IsSuccess, winnerBeforeLoserTransaction.WinnerResult.Error);
+                if (sameUser)
+                {
+                    Assert.True(loserResult.IsSuccess, loserResult.Error);
+                    Assert.Equal(winnerBeforeLoserTransaction.WinnerResult.Value!.Id, loserResult.Value!.Id);
+                }
+                else
+                {
+                    Assert.False(loserResult.IsSuccess);
+                    Assert.Contains("another user", loserResult.Error, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            await using var assertDb = CreateSqliteDbContext(databasePath);
+            var order = await assertDb.Orders.AsNoTracking().SingleAsync();
+            var session = await assertDb.CheckoutSessions.AsNoTracking().SingleAsync();
+            Assert.Equal(winnerUserId, order.UserId);
+            Assert.Equal(winnerUserId, session.UserId);
+            Assert.Equal(order.Id, session.OrderId);
+            Assert.Equal("claimed", session.Status);
+        }
+        finally
+        {
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task Completed_CheckoutSession_Should_Remain_Idempotent_After_Expiry()
+    {
+        await using var db = CreateDbContext();
+        var clock = new MutableClock(new DateTimeOffset(2026, 8, 5, 15, 0, 0, TimeSpan.Zero));
+        var tariff = await SeedTariffAsync(db);
+        var user = await SeedUserAsync(db, "completed-checkout@example.test");
+        var service = CreateService(db, clock);
+        var created = await service.CreateAsync(new(
+            tariff.Id,
+            OrderType.NewSubscription,
+            ChannelType.Web,
+            PaymentProvider.YooKassa,
+            null,
+            false,
+            null,
+            null));
+        var first = await service.ClaimAsync(new(created.Value!.Token, user.Id));
+        Assert.True(first.IsSuccess, first.Error);
+        var session = await db.CheckoutSessions.SingleAsync();
+        session.Status = "completed";
+        session.CompletedAt = clock.UtcNow;
+        await db.SaveChangesAsync();
+        clock.UtcNow = clock.UtcNow.AddMinutes(31);
+
+        var repeated = await service.ClaimAsync(new(created.Value.Token, user.Id));
+
+        Assert.True(repeated.IsSuccess, repeated.Error);
+        Assert.Equal(first.Value!.Id, repeated.Value!.Id);
+        Assert.Equal("completed", (await db.CheckoutSessions.SingleAsync()).Status);
+        Assert.Equal(1, await db.Orders.CountAsync());
+    }
+
+    [Fact]
+    public async Task CheckoutSession_Claim_Should_Roll_Back_Reservation_When_Order_Creation_Fails()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-checkout-rollback-{Guid.NewGuid():N}.db");
+        try
+        {
+            var clock = new FixedClock(new DateTimeOffset(2026, 8, 5, 15, 30, 0, TimeSpan.Zero));
+            string token;
+            Guid userId;
+            await using (var db = CreateSqliteDbContext(databasePath))
+            {
+                await db.Database.EnsureCreatedAsync();
+                var tariff = await SeedTariffAsync(db);
+                var user = await SeedUserAsync(db, "checkout-rollback@example.test");
+                var service = CreateService(db, clock);
+                var created = await service.CreateAsync(new(
+                    tariff.Id,
+                    OrderType.NewSubscription,
+                    ChannelType.Web,
+                    PaymentProvider.YooKassa,
+                    null,
+                    false,
+                    null,
+                    null));
+                Assert.True(created.IsSuccess, created.Error);
+                tariff.IsActive = false;
+                await db.SaveChangesAsync();
+                token = created.Value!.Token;
+                userId = user.Id;
+
+                var claim = await service.ClaimAsync(new(token, userId));
+
+                Assert.False(claim.IsSuccess);
+                Assert.Contains("inactive", claim.Error, StringComparison.OrdinalIgnoreCase);
+            }
+
+            await using var assertDb = CreateSqliteDbContext(databasePath);
+            var session = await assertDb.CheckoutSessions.AsNoTracking().SingleAsync();
+            Assert.Equal("open", session.Status);
+            Assert.Null(session.UserId);
+            Assert.Null(session.OrderId);
+            Assert.Null(session.ClaimedAt);
+            Assert.Empty(await assertDb.Orders.AsNoTracking().ToListAsync());
+        }
+        finally
+        {
+            File.Delete(databasePath);
+        }
+    }
+
     private static CheckoutSessionService CreateService(ApplicationDbContext db, IClock clock)
         => new(db, clock, new OrderService(db, clock));
 
@@ -158,6 +312,17 @@ public class CheckoutSessionTests
             .Options;
         return new ApplicationDbContext(options);
     }
+
+    private static ApplicationDbContext CreateSqliteDbContext(string databasePath)
+        => new(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"Data Source={databasePath};Default Timeout=10;Pooling=False")
+            .Options);
+
+    private static ApplicationDbContext CreateSqliteDbContext(string databasePath, IInterceptor interceptor)
+        => new(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"Data Source={databasePath};Default Timeout=10;Pooling=False")
+            .AddInterceptors(interceptor)
+            .Options);
 
     private static async Task<Tariff> SeedTariffAsync(ApplicationDbContext db)
     {
@@ -185,5 +350,30 @@ public class CheckoutSessionTests
     {
         public MutableClock(DateTimeOffset utcNow) => UtcNow = utcNow;
         public DateTimeOffset UtcNow { get; set; }
+    }
+
+    private sealed class ClaimBeforeTransactionInterceptor(
+        string databasePath,
+        string token,
+        Guid winnerUserId,
+        IClock clock) : DbTransactionInterceptor
+    {
+        private int _intercepted;
+        public Result<OrderDto>? WinnerResult { get; private set; }
+
+        public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(
+            DbConnection connection,
+            TransactionStartingEventData eventData,
+            InterceptionResult<DbTransaction> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _intercepted, 1) == 0)
+            {
+                await using var winnerDb = CreateSqliteDbContext(databasePath);
+                WinnerResult = await CreateService(winnerDb, clock).ClaimAsync(new(token, winnerUserId), cancellationToken);
+            }
+
+            return result;
+        }
     }
 }

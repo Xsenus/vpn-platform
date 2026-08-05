@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1061/1061`.
+- Backend full suite: `1065/1065`.
 - API Release build: OK.
 - Frontend unit tests: `84/84`.
 - Frontend typecheck/build: OK.
@@ -58,8 +58,9 @@ Production-ready решение заблокировано следующими 
 - Password reset reissue advances a per-user generation; concurrent issue/reset conflicts fail closed and explicit bootstrap password reset invalidates outstanding codes.
 - Refresh rotation uses optimistic revision so a source token cannot create two active children; reuse/logout revoke the current family and admin deactivation retries session conflicts.
 - Support conversation revision rejects stale reply/status/note, reopens pending inbound threads and validates assigned support agents without closing external evidence gates.
-- Latest "Что нового": `2026-08-05-provisioning-cancel-claim-boundary`, версия `0.514.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `527/547` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Checkout claim reserves the session, creates the order and publishes the final link in one transaction; same-user retries resolve the winner and another user cannot persist a second order.
+- Latest "Что нового": `2026-08-05-checkout-claim-atomicity`, версия `0.515.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `528/548` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

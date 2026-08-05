@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: checkout claim atomicity
+
+Scope:
+- Проверены concurrent claim одной checkout-сессии разными и одинаковыми пользователями, transaction rollback, idempotent winner resolution и terminal completed state на file-backed SQLite.
+
+Results:
+- Roadmap progress: `528/548` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-checkout-claim-atomicity`, version `0.515.0`.
+- Backend full suite: OK, `1065/1065`; targeted checkout/order/payment suite: OK, `21/21`.
+- Relational claim выполняет conditional reservation по snapshot state/version, создаёт order и публикует session/order link в одной transaction; проигравший запрос не сохраняет partial state.
+- Deterministic SQLite transaction interceptor подтверждает один order: тот же user получает winning order id, другой user получает controlled rejection без orphan-order.
+- SQLite order failure откатывает session reservation полностью: статус остаётся `open`, owner/order/claimed timestamp не сохраняются.
+- Повторный claim связанной `completed`-сессии после исходного expiry возвращает прежний order и сохраняет terminal status.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены; EF pending model changes: none.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Secret scan: OK, `639` files, `0` findings; artifact cleanup and strict UTF-8 guard: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: provisioning cancel/claim boundary
 
 Scope:

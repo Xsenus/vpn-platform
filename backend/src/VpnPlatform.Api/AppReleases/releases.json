@@ -11998,5 +11998,28 @@
         "text": "Roadmap progress is 527/547 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-checkout-claim-atomicity",
+    "version": "0.515.0",
+    "releasedAt": "2026-08-05T14:21:40+07:00",
+    "title": "Одна checkout-сессия создаёт только один заказ",
+    "summary": "Привязка покупки резервирует пользователя и создаёт заказ одной атомарной операцией, поэтому параллельные запросы не оставляют второй заказ или неверного владельца.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Параллельная привязка одной checkout-сессии больше не создаёт два заказа и не перезаписывает владельца последним запросом."
+      },
+      {
+        "type": "improved",
+        "text": "Повторный запрос того же пользователя возвращает уже созданный заказ, а завершённая сессия сохраняет свой статус после истечения исходной ссылки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 528/548 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
