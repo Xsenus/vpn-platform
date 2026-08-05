@@ -458,6 +458,8 @@ export type AccessActionResultDto = {
 export type AccessCredentialDto = {
   id: string
   subscriptionId: string
+  subscriptionStatus?: string | null
+  isTerminal?: boolean
   userId?: string | null
   providerType: string
   providerAccessId: string

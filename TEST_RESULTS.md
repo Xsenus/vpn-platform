@@ -1,6 +1,25 @@
 # Результаты проверок
 
-Дата проверки: 2026-05-25.
+Дата проверки: 2026-08-05.
+
+## Check 2026-08-05: cancelled subscription access boundary
+
+Scope:
+- Проверено, что stale VPN credential отменённой подписки не раскрывает ключи и не принимает direct provider/migration/QR команды, включая гонку с lifecycle gate.
+
+Results:
+- Roadmap progress: `512/532` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-cancelled-subscription-access-boundary`, version `0.500.0`.
+- Backend full suite: OK, `1018/1018`; targeted access/admin/user SQLite suite: OK, `51/51`.
+- Enable, disable, sync и reset отклоняются до provider/history/audit; direct sync ждёт subscription gate и повторно читает `Cancelled`; QR и migration работают fail-closed.
+- Admin access list и user overview редактируют URI/provider/QR/config и возвращают parent status/terminal marker.
+- Frontend tests: OK, `82/82`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`; adversarial stale secret не отображается, terminal record не содержит кнопок, неожиданных console errors/overflow нет.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `619` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
 
 ## Check 2026-08-05: cancelled subscription terminal guard
 

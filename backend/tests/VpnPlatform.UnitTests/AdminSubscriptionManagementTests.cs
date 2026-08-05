@@ -129,6 +129,43 @@ public class AdminSubscriptionManagementTests
         Assert.Equal(AccessCredentialStatus.Active, (await db.AccessCredentials.SingleAsync()).Status);
     }
 
+    [Fact]
+    public async Task Direct_Access_Sync_Should_Wait_For_Subscription_Gate_And_Recheck_Cancelled_Status()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 5, 7, 30, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        access.Status = AccessCredentialStatus.Active;
+        access.DisabledAt = null;
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var controller = CreateController(db, provider, clock);
+        var heldGate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(ids.SubscriptionId, CancellationToken.None);
+        var syncTask = controller.SyncAccessCredential(ids.AccessId, new AdminAccessActionHttpRequest("operator sync"), CancellationToken.None);
+
+        await Task.Delay(100);
+        var waitedForGate = !syncTask.IsCompleted;
+        subscription.Status = SubscriptionStatus.Cancelled;
+        subscription.CancelledAt = clock.UtcNow;
+        await db.SaveChangesAsync();
+        await heldGate.DisposeAsync();
+
+        var result = await syncTask;
+        Assert.True(waitedForGate);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("cancelled", JsonSerializer.Serialize(badRequest.Value), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.SyncCalls);
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
     [Theory]
     [InlineData("extend", SubscriptionStatus.Expired, AccessCredentialStatus.Disabled, true)]
     [InlineData("activate", SubscriptionStatus.PendingActivation, AccessCredentialStatus.Disabled, true)]

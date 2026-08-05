@@ -166,6 +166,12 @@ public class VpnAccessLifecycleService
 
     public async Task<Result<AdminAccessActionResult>> DisableAccessAsync(AccessCredential access, string? eventType, string? reason, Guid? actorUserId, CancellationToken cancellationToken)
     {
+        var parentError = GetParentSubscriptionError(access, "disabled");
+        if (parentError is not null)
+        {
+            return Result<AdminAccessActionResult>.Failure(parentError);
+        }
+
         var now = _clock.UtcNow;
         var before = Snapshot(access);
         if (access.Status == AccessCredentialStatus.Disabled && access.DisabledAt.HasValue)
@@ -216,6 +222,11 @@ public class VpnAccessLifecycleService
     {
         var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == accessId, cancellationToken);
         if (access is null) return Result<AdminAccessActionResult>.Failure("VPN access not found.");
+        var parentError = GetParentSubscriptionError(access, "enabled");
+        if (parentError is not null)
+        {
+            return Result<AdminAccessActionResult>.Failure(parentError);
+        }
 
         var now = _clock.UtcNow;
         var before = Snapshot(access);
@@ -260,14 +271,19 @@ public class VpnAccessLifecycleService
     {
         var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == accessId, cancellationToken);
         if (access is null) return Result<AdminAccessActionResult>.Failure("VPN access not found.");
-
-        var now = _clock.UtcNow;
-        var before = Snapshot(access);
         if (access.Status == AccessCredentialStatus.Revoked)
         {
             return Result<AdminAccessActionResult>.Failure("Revoked VPN access cannot be synced.");
         }
 
+        var parentError = GetParentSubscriptionError(access, "synchronized");
+        if (parentError is not null)
+        {
+            return Result<AdminAccessActionResult>.Failure(parentError);
+        }
+
+        var now = _clock.UtcNow;
+        var before = Snapshot(access);
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
@@ -306,6 +322,11 @@ public class VpnAccessLifecycleService
             return Result<AdminAccessActionResult>.Failure("Revoked VPN access traffic cannot be reset.");
         }
 
+        var parentError = GetParentSubscriptionError(access, "reset");
+        if (parentError is not null)
+        {
+            return Result<AdminAccessActionResult>.Failure(parentError);
+        }
         var now = _clock.UtcNow;
         var before = Snapshot(access);
         try
@@ -340,6 +361,11 @@ public class VpnAccessLifecycleService
 
     private static AdminAccessActionResult ToResult(AccessCredential access, string? message = null, long? usedTrafficBytes = null)
         => new(access.Id, access.Status.ToString(), access.DisabledAt, access.LastSyncedAt, access.Revision, usedTrafficBytes, message);
+
+    private static string? GetParentSubscriptionError(AccessCredential access, string operation)
+        => access.Subscription?.Status == SubscriptionStatus.Cancelled
+            ? $"Cancelled subscription VPN access cannot be {operation}."
+            : null;
 
     private static object Snapshot(AccessCredential access)
         => new { access.Status, access.ProviderAccessId, access.DisabledAt, access.LastSyncedAt, access.Revision };

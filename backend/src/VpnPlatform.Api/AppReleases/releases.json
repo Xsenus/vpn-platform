@@ -11649,5 +11649,28 @@
         "text": "Roadmap progress is 511/531 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-cancelled-subscription-access-boundary",
+    "version": "0.500.0",
+    "releasedAt": "2026-08-05T07:17:00+07:00",
+    "title": "Доступ отменённой подписки закрыт на всех границах",
+    "summary": "Stale VPN credential отменённой подписки больше не раскрывает ключи, не принимает direct provider-команды и не создаёт migration job.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Enable, disable, sync, reset, QR и migration учитывают parent subscription, а direct endpoints повторно проверяют статус внутри lifecycle gate."
+      },
+      {
+        "type": "fixed",
+        "text": "Admin access list, user overview и desktop/mobile UI редактируют terminal URI/provider/QR/config и оставляют только историю."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 512/532 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

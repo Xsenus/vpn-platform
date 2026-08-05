@@ -50,6 +50,7 @@ import {
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 import { canAccessAdminSection, canWriteAdminSection, type AdminSectionId } from './admin-capabilities'
+import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun } from './provisioning-state'
 
@@ -2092,8 +2093,9 @@ export function App() {
   }
 
   const handleAccessAction = async (access: AccessCredentialDto, enable: boolean) => {
-    if (access.status === 'Revoked') {
-      setError('Отозванный VPN-доступ нельзя включить или отключить.')
+    const blocker = getAdminAccessCommandBlocker(access, enable ? 'enable' : 'disable')
+    if (blocker) {
+      setError(blocker)
       return
     }
 
@@ -2106,8 +2108,9 @@ export function App() {
   }
 
   const handleAccessSync = async (access: AccessCredentialDto) => {
-    if (access.status === 'Revoked') {
-      setError('Отозванный VPN-доступ нельзя синхронизировать.')
+    const blocker = getAdminAccessCommandBlocker(access, 'sync')
+    if (blocker) {
+      setError(blocker)
       return
     }
 
@@ -2119,8 +2122,9 @@ export function App() {
   }
 
   const handleAccessResetTraffic = async (access: AccessCredentialDto) => {
-    if (access.status === 'Revoked') {
-      setError('Для отозванного VPN-доступа нельзя сбросить трафик.')
+    const blocker = getAdminAccessCommandBlocker(access, 'reset')
+    if (blocker) {
+      setError(blocker)
       return
     }
 
@@ -2136,8 +2140,9 @@ export function App() {
 
 
   const handleAdminAccessQr = async (access: AccessCredentialDto) => {
-    if (access.status === 'Revoked') {
-      setError('QR-код отозванного VPN-доступа недоступен.')
+    const blocker = getAdminAccessCommandBlocker(access, 'qr')
+    if (blocker) {
+      setError(blocker)
       return
     }
 
@@ -2844,9 +2849,11 @@ export function App() {
                     <div>
                       <strong>{access.providerType} · {access.serverName || shortId(access.serverId)}</strong>
                       <div className="muted">выдан {formatDate(access.issuedAt)} · sync {formatDate(access.lastSyncedAt)} · ревизия {access.revision}</div>
-                      <div className="muted user-overview-link">{access.accessUri || 'URI не выдан'}</div>
+                      {getAdminAccessTerminalReason(access)
+                        ? <div className="muted user-overview-link">Ключ скрыт: подписка или доступ завершены.</div>
+                        : <div className="muted user-overview-link">{access.accessUri || 'URI не выдан'}</div>}
                     </div>
-                    <StatusBadge value={access.status} />
+                    <div className="item-status"><StatusBadge value={access.status} />{access.subscriptionStatus && <StatusBadge value={access.subscriptionStatus} />}</div>
                   </div>
                 ))}
               </div>
@@ -3205,20 +3212,21 @@ export function App() {
           <div className="list-stack">
             {accessCredentials.length === 0 && <EmptyState title="VPN-доступы пока не созданы" description="После оплаты здесь появится ссылка подключения, статус и история синхронизаций." />}
             {accessCredentials.slice(0, 12).map((access) => {
-              const isRevoked = access.status === 'Revoked'
+              const terminalReason = getAdminAccessTerminalReason(access)
+              const isTerminal = Boolean(terminalReason)
               return <div key={access.id} className="list-item-vertical">
                 <div className="item-head">
-                  <strong>{access.providerType} · {access.providerAccessId || shortId(access.id)}</strong>
+                  <strong>{access.providerType} · {isTerminal ? shortId(access.id) : (access.providerAccessId || shortId(access.id))}</strong>
                   <StatusBadge value={access.status} />
                 </div>
                 <div className="muted">Пользователь: {shortId(access.userId)} · подписка: {shortId(access.subscriptionId)} · сервер: {access.serverName || shortId(access.serverId)} · до: {formatDate(access.expiryDate)}</div>
-                <div className="muted">Последняя синхронизация: {formatDate(access.lastSyncedAt)} · версия: {access.revision ?? 0} · клиент провайдера: {access.providerAccessId || '—'}</div>
-                {isRevoked
-                  ? <p className="safe-note" role="status">Доступ отозван. Ключ и provider-команды скрыты; доступна только история.</p>
+                <div className="muted">Последняя синхронизация: {formatDate(access.lastSyncedAt)} · версия: {access.revision ?? 0} · клиент провайдера: {isTerminal ? 'скрыт' : (access.providerAccessId || '—')}</div>
+                {isTerminal
+                  ? <p className="safe-note" role="status">{terminalReason}</p>
                   : access.accessUri && <CodeBlock>{access.accessUri}</CodeBlock>}
                 {access.history && access.history.length > 0 && <div className="muted">История: {access.history.slice(0, 3).map((h) => `${h.eventType} ${formatDate(h.createdAt)}`).join(' · ')}</div>}
-                {!isRevoked && adminQrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: adminQrSvgs[access.id] }} />}
-                {!isRevoked && <div className="toolbar">
+                {!isTerminal && adminQrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: adminQrSvgs[access.id] }} />}
+                {!isTerminal && <div className="toolbar">
                   <CopyButton value={access.accessUri} label="Скопировать URI" disabled={!access.accessUri} />
                   <PrimaryButton disabled={!access.accessUri || actionBusyId === `qr-${access.id}`} onClick={() => void handleAdminAccessQr(access)}>Показать QR</PrimaryButton>
                   {canWriteSection('vpn') && <>

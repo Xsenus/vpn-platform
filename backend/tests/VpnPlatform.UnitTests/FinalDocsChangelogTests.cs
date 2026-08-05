@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1012/1012", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-cancelled-subscription-terminal-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1018/1018", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-cancelled-subscription-access-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1012/1012",
-                     "2026-08-05-cancelled-subscription-terminal-guard",
-                     "0.499.0",
+                     "1018/1018",
+                     "2026-08-05-cancelled-subscription-access-boundary",
+                     "0.500.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,17 +104,17 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cancelled-subscription-terminal-guard",
-                     "0.499.0",
-                     "511/531",
+                     "2026-08-05-cancelled-subscription-access-boundary",
+                     "0.500.0",
+                     "512/532",
                      "96.2%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1012/1012`",
+                     "Backend full suite: OK, `1018/1018`",
                      "Local SQLite smoke: OK",
-                     "Secret scan: OK, `617` files, `0` findings",
+                     "Secret scan: OK, `619` files, `0` findings",
                      "Artifact cleanup: OK",
                      "external evidence remains open",
                      "real VPS/staging/live evidence remains open"
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cancelled-subscription-terminal-guard",
-                     "0.499.0",
-                     "511/531",
+                     "2026-08-05-cancelled-subscription-access-boundary",
+                     "0.500.0",
+                     "512/532",
                      "96.2%",
                      "20",
                      "19",
@@ -166,9 +166,9 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1012/1012`",
+                     "backend full suite `1018/1018`",
                      "PostgreSQL SQL",
-                     "secret scan `617` files, `0` findings"
+                     "secret scan `619` files, `0` findings"
                  })
         {
             Assert.Contains(expected, changelog, StringComparison.OrdinalIgnoreCase);
@@ -248,7 +248,7 @@ public class FinalDocsChangelogTests
 
         var testResultsTopEntry = Regex.Match(
             testResults,
-            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-05-25\.\s+## Check 2026-08-05: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
+            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-08-05\.\s+## Check 2026-08-05: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
         Assert.True(testResultsTopEntry.Success, "TEST_RESULTS.md must start with the latest release check block.");
         Assert.Contains(releaseId, testResultsTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(version, testResultsTopEntry.Groups["body"].Value, StringComparison.Ordinal);

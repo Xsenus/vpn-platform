@@ -279,17 +279,19 @@ public class AdminOperationsController : ControllerBase
             .Take(300)
             .Select(x => new
             {
+                IsTerminal = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled,
                 x.Id,
                 x.SubscriptionId,
                 UserId = x.Subscription?.UserId,
+                SubscriptionStatus = x.Subscription?.Status.ToString() ?? string.Empty,
                 x.ProviderType,
-                x.ProviderAccessId,
+                ProviderAccessId = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.ProviderAccessId,
                 x.ServerId,
                 ServerName = x.Server?.Name ?? string.Empty,
-                x.AccessUri,
-                QrCodePayload = x.QrCodePath,
-                x.QrCodePath,
-                x.ConfigPath,
+                AccessUri = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.AccessUri,
+                QrCodePayload = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.QrCodePath,
+                QrCodePath = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.QrCodePath,
+                ConfigPath = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.ConfigPath,
                 Status = x.Status.ToString(),
                 x.IssuedAt,
                 ExpiryDate = x.Subscription?.EndAt,
@@ -535,6 +537,7 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "VPN access lifecycle service is not configured." });
         }
 
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
         var subscription = await _db.Subscriptions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
         if (subscription.Status == SubscriptionStatus.Cancelled)
@@ -557,10 +560,27 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminRead)]
     public async Task<IActionResult> GetAccessCredentialQr(Guid id, CancellationToken cancellationToken)
     {
-        var access = await _db.AccessCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var subscriptionId = await _db.AccessCredentials.AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => (Guid?)x.SubscriptionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!subscriptionId.HasValue)
+        {
+            return NotFound(new { error = "VPN access not found." });
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
+        var access = await _db.AccessCredentials.AsNoTracking()
+            .Include(x => x.Subscription)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (access is null)
         {
             return NotFound(new { error = "VPN access not found." });
+        }
+
+        if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
+        {
+            return BadRequest(new { error = "Cancelled subscription VPN access QR code is not available." });
         }
 
         if (access.Status == AccessCredentialStatus.Revoked)
@@ -586,14 +606,25 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> DisableAccessCredential(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        var subscriptionId = await _db.AccessCredentials.AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => (Guid?)x.SubscriptionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!subscriptionId.HasValue) return NotFound();
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
+
         if (_vpnAccessLifecycleService is not null)
         {
             var result = await _vpnAccessLifecycleService.DisableAccessAsync(id, "manual_admin_disable", request?.Reason, ResolveUserId(), cancellationToken);
             return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
         }
 
-        var access = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (access is null) return NotFound();
+        if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
+        {
+            return BadRequest(new { error = "Cancelled subscription VPN access cannot be disabled." });
+        }
 
         var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
@@ -617,14 +648,25 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> EnableAccessCredential(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        var subscriptionId = await _db.AccessCredentials.AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => (Guid?)x.SubscriptionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!subscriptionId.HasValue) return NotFound();
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
+
         if (_vpnAccessLifecycleService is not null)
         {
             var result = await _vpnAccessLifecycleService.EnableAccessAsync(id, request?.Reason, ResolveUserId(), cancellationToken);
             return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
         }
 
-        var access = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (access is null) return NotFound();
+        if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
+        {
+            return BadRequest(new { error = "Cancelled subscription VPN access cannot be enabled." });
+        }
 
         var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
         var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Active, _clock.UtcNow);
@@ -652,6 +694,13 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "VPN access lifecycle service is not configured." });
         }
 
+        var subscriptionId = await _db.AccessCredentials.AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => (Guid?)x.SubscriptionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!subscriptionId.HasValue) return NotFound();
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
+
         var result = await _vpnAccessLifecycleService.SyncAccessAsync(id, request?.Reason, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
@@ -665,6 +714,13 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "VPN access lifecycle service is not configured." });
         }
 
+        var subscriptionId = await _db.AccessCredentials.AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => (Guid?)x.SubscriptionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!subscriptionId.HasValue) return NotFound();
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
+
         var result = await _vpnAccessLifecycleService.ResetTrafficAsync(id, request?.Reason, ResolveUserId(), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
@@ -673,12 +729,18 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> MigrateSubscription(Guid id, [FromBody] Guid? targetNodeId, CancellationToken cancellationToken)
     {
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
         var subscription = await _db.Subscriptions
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null)
         {
             return NotFound(new { error = "Subscription not found." });
+        }
+
+        if (subscription.Status == SubscriptionStatus.Cancelled)
+        {
+            return BadRequest(new { error = "Cancelled subscription cannot be migrated." });
         }
 
         if (!subscription.CurrentServerId.HasValue)

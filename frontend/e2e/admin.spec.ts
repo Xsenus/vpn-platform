@@ -374,8 +374,9 @@ async function mockAdminApi(page: Page) {
 
     if (method === 'GET' && path === '/api/admin/access-credentials') {
       await fulfillJson(route, [
-        { id: 'access-e2e', subscriptionId: 'sub-e2e', userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-e2e', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://admin-e2e@example.test', qrCodePayload: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', status: 'Active', issuedAt: now, expiryDate: '2026-07-13T07:00:00Z', disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now },
-        { id: 'access-revoked', subscriptionId: 'sub-revoked', userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-revoked', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://revoked-admin-secret@example.test', qrCodePayload: 'vless://revoked-admin-secret@example.test', qrCodePath: 'qr://revoked-admin-secret', configPath: 'config://revoked-admin-secret', status: 'Revoked', issuedAt: now, expiryDate: now, disabledAt: now, lastSyncedAt: now, revision: 2, history: [{ eventType: 'AccessRevoked', createdAt: now }], createdAt: now, updatedAt: now }
+        { id: 'access-e2e', subscriptionId: 'sub-e2e', subscriptionStatus: 'Active', userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-e2e', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://admin-e2e@example.test', qrCodePayload: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', status: 'Active', issuedAt: now, expiryDate: '2026-07-13T07:00:00Z', disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now },
+        { id: 'access-revoked', subscriptionId: 'sub-revoked', subscriptionStatus: 'Expired', userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-revoked', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://revoked-admin-secret@example.test', qrCodePayload: 'vless://revoked-admin-secret@example.test', qrCodePath: 'qr://revoked-admin-secret', configPath: 'config://revoked-admin-secret', status: 'Revoked', issuedAt: now, expiryDate: now, disabledAt: now, lastSyncedAt: now, revision: 2, history: [{ eventType: 'AccessRevoked', createdAt: now }], createdAt: now, updatedAt: now },
+        { id: 'access-cancelled-stale', subscriptionId: 'sub-cancelled', subscriptionStatus: 'Cancelled', userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-cancelled-stale', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://cancelled-access-stale-secret@example.test', qrCodePayload: 'vless://cancelled-access-stale-secret@example.test', qrCodePath: 'qr://cancelled-access-stale-secret', configPath: 'config://cancelled-access-stale-secret', status: 'Active', issuedAt: now, expiryDate: now, disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now }
       ])
       return
     }
@@ -664,10 +665,16 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   await openAdminSection(page, 'VPN-доступы', 'vpn')
   await expect(page.getByText('vless://admin-e2e@example.test')).toBeVisible()
-  const revokedAccessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'client-revoked' })
+  const revokedAccessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'Доступ отозван.' })
   await expect(revokedAccessRow.getByText('Доступ отозван. Ключ и provider-команды скрыты; доступна только история.')).toBeVisible()
   await expect(revokedAccessRow.getByRole('button')).toHaveCount(0)
+  await expect(page.getByText('client-revoked')).toHaveCount(0)
   await expect(page.getByText('vless://revoked-admin-secret@example.test')).toHaveCount(0)
+  const cancelledAccessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'Родительская подписка отменена.' })
+  await expect(cancelledAccessRow.getByText('Родительская подписка отменена. Ключ и provider-команды скрыты; доступна только история.')).toBeVisible()
+  await expect(cancelledAccessRow.getByRole('button')).toHaveCount(0)
+  await expect(page.getByText('client-cancelled-stale')).toHaveCount(0)
+  await expect(page.getByText('vless://cancelled-access-stale-secret@example.test')).toHaveCount(0)
 
   await openAdminSection(page, 'Подписки', 'subscriptions')
   const subscriptionsPanel = page.locator('#subscriptions')

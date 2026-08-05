@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.500.0 - 2026-08-05
+
+Release entry: `2026-08-05-cancelled-subscription-access-boundary`.
+
+### Исправлено
+
+- Все direct VPN access-команды теперь учитывают статус родительской подписки: stale `Active`/`Disabled` credential у `Cancelled` отклоняет enable, disable, sync и reset до provider call, history и audit.
+- Direct endpoints сериализованы через subscription lifecycle gate; QR и migration повторно читают terminal-state после ожидания, поэтому одновременная отмена не обходится stale read.
+- Admin access list и user overview редактируют URI, provider ID, QR и config, возвращают parent status/terminal marker; desktop/mobile UI показывает такую запись только как историю без ключей и команд.
+
+### Проверено
+
+- Backend full suite `1018/1018`; targeted access/admin/user SQLite suite `51/51`.
+- Frontend `82/82`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `619` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `512/532` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.499.0 - 2026-08-05
 
 Release entry: `2026-08-05-cancelled-subscription-terminal-guard`.

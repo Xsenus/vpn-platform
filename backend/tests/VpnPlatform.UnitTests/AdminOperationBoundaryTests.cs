@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -215,6 +216,71 @@ public class AdminOperationBoundaryTests
         var controller = CreateController(db, Guid.NewGuid(), new FixedClock(now), new SvgQrCodeGenerator(new FixedClock(now)));
 
         Assert.IsType<BadRequestObjectResult>(await controller.GetAccessCredentialQr(access.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Cancelled_Subscription_Should_Redact_Stale_Access_And_Reject_Admin_Operations_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var now = new DateTimeOffset(2026, 8, 5, 8, 30, 0, TimeSpan.Zero);
+        var user = User(Guid.NewGuid());
+        var tariff = new Tariff { Name = "Cancelled", Slug = "cancelled-admin-boundary", DurationDays = 30, Price = 500m, Currency = "RUB", IsActive = true };
+        var source = Node("cancelled-source", NodeStatus.Ready, true);
+        var target = Node("cancelled-target", NodeStatus.Ready, true);
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.AddRange(source, target);
+        await db.SaveChangesAsync();
+
+        var accessId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Cancelled,
+            StartAt = now.AddDays(-30),
+            EndAt = now,
+            CancelledAt = now,
+            CurrentServerId = source.Id
+        };
+        var access = new AccessCredential
+        {
+            Id = accessId,
+            SubscriptionId = subscription.Id,
+            ServerId = source.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "cancelled-provider-secret",
+            AccessUri = "vless://cancelled-admin-secret@example.test",
+            QrCodePath = "vless://cancelled-admin-qr-secret@example.test",
+            ConfigPath = "/configs/cancelled-admin-secret.json",
+            Status = AccessCredentialStatus.Active,
+            IssuedAt = now.AddDays(-30)
+        };
+        db.Subscriptions.Add(subscription);
+        await db.SaveChangesAsync();
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+        subscription.CurrentAccessId = accessId;
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(now), new SvgQrCodeGenerator(new FixedClock(now)));
+
+        var accessList = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(await controller.GetAccessCredentials(CancellationToken.None)).Value);
+        Assert.Contains("Cancelled", accessList, StringComparison.Ordinal);
+        Assert.DoesNotContain("cancelled-provider-secret", accessList, StringComparison.Ordinal);
+        Assert.DoesNotContain("cancelled-admin-secret", accessList, StringComparison.Ordinal);
+        Assert.IsType<BadRequestObjectResult>(await controller.GetAccessCredentialQr(access.Id, CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.EnableAccessCredential(access.Id, new AdminAccessActionHttpRequest("test"), CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.DisableAccessCredential(access.Id, new AdminAccessActionHttpRequest("test"), CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, target.Id, CancellationToken.None));
+        Assert.Empty(await db.MigrationJobs.ToListAsync());
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        Assert.Equal(AccessCredentialStatus.Active, (await db.AccessCredentials.SingleAsync()).Status);
     }
 
     private static AdminOperationsController CreateController(

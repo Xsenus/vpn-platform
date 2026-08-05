@@ -333,6 +333,18 @@ public class AdminUsersControllerTests
         Assert.Equal("vless://client-1", root.GetProperty("AccessCredentials")[0].GetProperty("QrCodePath").GetString());
         Assert.Equal("VIP", root.GetProperty("SupportConversations")[0].GetProperty("InternalNote").GetString());
 
+        savedSubscription.Status = SubscriptionStatus.Cancelled;
+        savedSubscription.CancelledAt = now;
+        await db.SaveChangesAsync();
+        using var cancelledDocument = ToJson(await CreateController(db, UserRoles.Admin).GetOverview(userId, CancellationToken.None));
+        var cancelledAccess = cancelledDocument.RootElement.GetProperty("AccessCredentials")[0];
+        Assert.Equal("Cancelled", cancelledAccess.GetProperty("SubscriptionStatus").GetString());
+        Assert.True(cancelledAccess.GetProperty("IsTerminal").GetBoolean());
+        Assert.Equal(string.Empty, cancelledAccess.GetProperty("ProviderAccessId").GetString());
+        Assert.Equal(string.Empty, cancelledAccess.GetProperty("AccessUri").GetString());
+        Assert.Equal(string.Empty, cancelledAccess.GetProperty("QrCodePath").GetString());
+        Assert.Equal(string.Empty, cancelledAccess.GetProperty("ConfigPath").GetString());
+
         using var financeDocument = ToJson(await CreateController(db, UserRoles.FinanceManager).GetOverview(userId, CancellationToken.None));
         Assert.Equal(1, financeDocument.RootElement.GetProperty("Orders").GetArrayLength());
         Assert.Equal(1, financeDocument.RootElement.GetProperty("Payments").GetArrayLength());
