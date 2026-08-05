@@ -1090,6 +1090,36 @@ test('ApiClient QR SVG endpoints reject wrong MIME, empty and oversized response
   )
 })
 
+test('ApiClient rejects invalid successful JSON responses and accepts structured JSON media types', async () => {
+  const responses = [
+    new Response('<html>proxy login</html>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
+    new Response('', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{"id":', { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } }),
+    new Response('null', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[]', { status: 200, headers: { 'Content-Type': 'application/vnd.vpn-platform+json' } })
+  ]
+  globalThis.fetch = (async () => responses.shift()!) as typeof fetch
+  const client = new ApiClient('http://localhost:8080')
+
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /неподдерживаемом формате/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /пустой ответ/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректный JSON/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректный JSON/i.test(error.message)
+  )
+  assert.deepEqual(await client.getTariffs(), [])
+})
+
 test('ApiClient times out stalled fetches and response bodies with controlled errors', async () => {
   let abortedFetches = 0
   globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {

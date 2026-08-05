@@ -12287,5 +12287,32 @@
         "text": "Roadmap progress is 538/558 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-api-json-response-boundary",
+    "version": "0.526.0",
+    "releasedAt": "2026-08-05T19:48:00+07:00",
+    "title": "API-ответы проверяются до передачи в интерфейс",
+    "summary": "Public, cabinet и admin теперь принимают успешные typed API-ответы только как корректный структурированный JSON и показывают управляемую ошибку вместо падения рендера при ответе proxy или повреждённом body.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "HTML, пустой body, повреждённый JSON и JSON-примитив больше не приводятся к DTO и завершаются controlled API-client ошибкой 502."
+      },
+      {
+        "type": "fixed",
+        "text": "Успешный typed response требует application/json или application/*+json и непустой object/array; error responses сохраняют поддержку JSON и text сообщений."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile browser regression подтверждает видимое состояние ошибки при 200 text/html без pageerror и обрушения страницы тарифов."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 539/559 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

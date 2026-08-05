@@ -95,6 +95,7 @@ async function mockPublicApi(page: Page) {
   let rejectNextCheckoutPromo = false
   let checkoutDelayMs = 0
   let unsafePaymentLink = false
+  let invalidTariffsResponse = false
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -105,6 +106,14 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/public/tariffs', async (route) => {
+    if (invalidTariffsResponse) {
+      await route.fulfill({
+        status: 200,
+        headers: { ...corsHeaders, 'content-type': 'text/html; charset=utf-8' },
+        body: '<html><body>Proxy login</body></html>'
+      })
+      return
+    }
     await fulfillJson(route, tariffs)
   })
 
@@ -254,9 +263,24 @@ async function mockPublicApi(page: Page) {
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
-    returnUnsafePaymentLink: () => { unsafePaymentLink = true }
+    returnUnsafePaymentLink: () => { unsafePaymentLink = true },
+    returnInvalidTariffsResponse: () => { invalidTariffsResponse = true }
   }
 }
+
+test('public tariffs handles an invalid successful API response without a render crash', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  const api = await mockPublicApi(page)
+  api.returnInvalidTariffsResponse()
+
+  await page.goto('/tariffs')
+
+  await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')
+  await expect(page.getByText('Start 30 дней')).toHaveCount(0)
+  expect(pageErrors).toEqual([])
+})
 
 test('public website covers landing, tariffs, FAQ and checkout start', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []

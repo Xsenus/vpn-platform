@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: successful API JSON response boundary
+
+Scope:
+- Проверен общий typed JSON transport и UI-поведение при успешном HTTP status с HTML, отсутствующим/неподдерживаемым MIME, пустым body, malformed JSON и JSON-примитивом.
+
+Results:
+- Roadmap progress: `539/559` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-api-json-response-boundary`, version `0.526.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `98/98`; typecheck и production build всех трёх приложений: OK.
+- Успешный typed API response принимается только как непустой JSON object/array с `application/json` или `application/*+json`; нарушение контракта возвращает controlled `ApiClientError` `502` до передачи payload в UI.
+- Error HTTP responses по-прежнему поддерживают JSON и text payload для нормализации сообщения; QR SVG остаётся в отдельной MIME/size boundary.
+- Malformed `200 text/html` public regression: OK, desktop/mobile `2/2`, видимый error state, `0` page errors.
+- Browser responsive/console suite: OK, `18/18`, включая public, cabinet, admin, all-screens и mobile widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-05: frontend API request timeout boundary
 
 Scope:

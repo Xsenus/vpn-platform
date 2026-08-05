@@ -1173,17 +1173,6 @@ export function translateAuthMessage(message: string) {
   return message
 }
 
-async function readJsonOrText(response: Response) {
-  const text = await response.text()
-  if (!text) return null
-
-  try {
-    return JSON.parse(text)
-  } catch {
-    return text
-  }
-}
-
 export function normalizeApiError(payload: unknown, fallback: string): string {
   if (!payload) return fallback
   if (typeof payload === 'string') return payload
@@ -1200,7 +1189,15 @@ export function normalizeApiError(payload: unknown, fallback: string): string {
 
 const apiFallbackErrorMessage = 'Не удалось выполнить запрос. Попробуйте еще раз.'
 const apiRequestTimeoutMessage = 'Сервер не ответил вовремя. Проверьте подключение и повторите запрос.'
+const apiEmptyResponseMessage = 'Сервер вернул пустой ответ. Повторите запрос позже.'
+const apiInvalidJsonResponseMessage = 'Сервер вернул некорректный JSON-ответ. Повторите запрос позже.'
+const apiUnsupportedResponseMessage = 'Сервер вернул ответ в неподдерживаемом формате. Повторите запрос позже.'
 const defaultApiRequestTimeoutMs = 30_000
+
+function isJsonContentType(value: string | null) {
+  const mediaType = value?.split(';', 1)[0]?.trim().toLowerCase() ?? ''
+  return mediaType === 'application/json' || /^application\/[a-z0-9!#$&^_.+-]+\+json$/.test(mediaType)
+}
 
 export class ApiClientError extends Error {
   constructor(
@@ -1269,9 +1266,29 @@ export class ApiClient {
     }
 
     return this.fetchWithTimeout(path, { ...requestInit, headers }, async (response) => {
-      const payload = await readJsonOrText(response)
+      const text = await response.text()
       if (!response.ok) {
+        const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
         throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
+      }
+
+      const contentType = response.headers.get('Content-Type')
+      if (!isJsonContentType(contentType)) {
+        throw new ApiClientError(apiUnsupportedResponseMessage, 502, { contentType })
+      }
+      if (!text.trim()) {
+        throw new ApiClientError(apiEmptyResponseMessage, 502, null)
+      }
+
+      let payload: unknown
+      try {
+        payload = JSON.parse(text)
+      } catch {
+        throw new ApiClientError(apiInvalidJsonResponseMessage, 502, null)
+      }
+
+      if (typeof payload !== 'object' || payload === null) {
+        throw new ApiClientError(apiInvalidJsonResponseMessage, 502, null)
       }
 
       return payload as T
