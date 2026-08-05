@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { canCancelProvisioningRun, canRetryProvisioningRun } from '../apps/admin-panel/src/provisioning-state'
+import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from '../apps/admin-panel/src/provisioning-state'
 
 test('retry is available only for failed or cancelled provisioning runs', () => {
   for (const status of ['Failed', 'PrecheckFailed', 'Cancelled']) {
@@ -20,4 +20,8 @@ test('cancel is unavailable once provisioning execution has started', () => {
   for (const status of ['Running', 'Prechecking', 'Deploying', 'Failed', 'Succeeded', 'Cancelled']) {
     assert.equal(canCancelProvisioningRun(status), false, status)
   }
+
+  assert.equal(isProvisioningStateConflict({ status: 409 }), true)
+  assert.equal(isProvisioningStateConflict({ status: 400 }), false)
+  assert.equal(isProvisioningStateConflict(new Error('network')), false)
 })

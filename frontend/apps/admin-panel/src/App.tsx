@@ -52,7 +52,7 @@ import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } fr
 import { canAccessAdminSection, canWriteAdminSection, type AdminSectionId } from './admin-capabilities'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
-import { canCancelProvisioningRun, canRetryProvisioningRun } from './provisioning-state'
+import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -2467,7 +2467,12 @@ export function App() {
 
   const handleCancelProvisioningRun = (runId: string) => {
     return runAction(`cancel-run-${runId}`, async () => {
-      await api.cancelAdminProvisioningRun(token, runId)
+      try {
+        await api.cancelAdminProvisioningRun(token, runId)
+      } catch (error) {
+        if (isProvisioningStateConflict(error)) await loadAll(token)
+        throw error
+      }
       setNotice('Запуск подготовки сервера отменен.')
       await loadAll(token)
     })

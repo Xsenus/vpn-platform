@@ -1925,7 +1925,14 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> CancelProvisioningRun(Guid id, CancellationToken cancellationToken)
     {
         var result = await _provisioningService.CancelAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(new { runId = id, status = result.Value }) : BadRequest(new { error = result.Error });
+        if (result.IsSuccess)
+        {
+            return Ok(new { runId = id, status = result.Value });
+        }
+
+        return result.IsRetryable
+            ? Conflict(new { error = result.Error })
+            : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("provisioning-runs/{id:guid}/support-needed")]

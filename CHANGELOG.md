@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.514.0 - 2026-08-05
+
+Release entry: `2026-08-05-provisioning-cancel-claim-boundary`.
+
+### Исправлено
+
+- Cancel queued provisioning больше не может перезаписать `Prechecking`/`Deploying`, если другой worker claim-нул run после чтения API.
+- Relational cancel использует conditional `status + UpdatedAt` update внутри transaction; node и audit фиксируются в том же commit, а проигранная гонка возвращает HTTP `409` без partial mutations и обновляет runs в admin UI.
+- Concurrency version повышается монотонно при clock skew между инстансами; изменение схемы и миграция не потребовались.
+
+### Проверено
+
+- Backend full suite `1061/1061`; targeted provisioning/coordinator suite `40/40`, включая deterministic file-backed SQLite claim-before-cancel fault injection.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`.
+- Secret scan `639` files, `0` findings; artifact cleanup и strict UTF-8 guard пройдены.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `527/547` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.513.0 - 2026-08-05
 
 Release entry: `2026-08-05-provisioning-retry-atomic-queue`.

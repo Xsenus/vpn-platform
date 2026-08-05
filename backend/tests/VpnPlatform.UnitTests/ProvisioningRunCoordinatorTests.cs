@@ -1,13 +1,19 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Data.Common;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
+using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.HostedServices;
@@ -203,6 +209,45 @@ public class ProvisioningRunCoordinatorTests
         }
     }
 
+    [Fact]
+    public async Task CancelAsync_Should_Not_Overwrite_A_Concurrent_Worker_Claim()
+    {
+        var databasePath = TemporaryDatabasePath();
+        try
+        {
+            var runId = Guid.NewGuid();
+            await SeedQueuedRunAsync(databasePath, runId);
+            var clock = new FixedClock(new DateTimeOffset(2026, 8, 5, 13, 45, 0, TimeSpan.Zero));
+            var claimBeforeCancel = new ClaimBeforeCancelTransactionInterceptor(databasePath, runId, clock);
+            await using var cancelDb = CreateDb(databasePath, claimBeforeCancel);
+            var cancelService = new ProvisioningService(cancelDb, clock, new TestSecretProtector());
+            var controller = new AdminOperationsController(
+                cancelDb,
+                cancelService,
+                paymentOrchestrator: null!,
+                paymentProviderAccounts: null!,
+                vpnAccessLifecycleService: null,
+                secretProtector: new TestSecretProtector());
+            controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+            var cancel = await controller.CancelProvisioningRun(runId, CancellationToken.None);
+
+            Assert.True(claimBeforeCancel.Claimed);
+            var conflict = Assert.IsType<ConflictObjectResult>(cancel);
+            Assert.Contains("state changed", JsonSerializer.Serialize(conflict.Value), StringComparison.OrdinalIgnoreCase);
+            await using var assertDb = CreateDb(databasePath);
+            var run = await assertDb.ProvisioningRuns.AsNoTracking().SingleAsync(x => x.Id == runId);
+            var node = await assertDb.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == run.NodeId);
+            Assert.Equal(ProvisioningRunStatus.Prechecking, run.Status);
+            Assert.NotEqual(ProvisioningRunStatus.Cancelled, node.ProvisioningStatus);
+            Assert.DoesNotContain(await assertDb.AuditLogs.ToListAsync(), x => x.Action == "provisioning.cancel" && x.EntityId == runId.ToString());
+        }
+        finally
+        {
+            File.Delete(databasePath);
+        }
+    }
+
     private static ServiceProvider BuildWorkerServices(string databasePath, IProvisioningExecutor executor)
         => new ServiceCollection()
             .AddScoped(_ => CreateDb(databasePath))
@@ -249,6 +294,12 @@ public class ProvisioningRunCoordinatorTests
     private static ApplicationDbContext CreateDb(string databasePath)
         => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite($"Data Source={databasePath};Default Timeout=10;Pooling=False").Options);
 
+    private static ApplicationDbContext CreateDb(string databasePath, IInterceptor interceptor)
+        => new(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"Data Source={databasePath};Default Timeout=10;Pooling=False")
+            .AddInterceptors(interceptor)
+            .Options);
+
     private static ApplicationDbContext CreateDb(SqliteConnection connection)
         => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
 
@@ -273,6 +324,30 @@ public class ProvisioningRunCoordinatorTests
             Started.TrySetResult();
             await Release.Task.WaitAsync(cancellationToken);
             return new ProvisioningExecutionResult(true, "Precheck passed.", Array.Empty<ProvisioningStepResult>());
+        }
+    }
+
+    private sealed class ClaimBeforeCancelTransactionInterceptor(
+        string databasePath,
+        Guid runId,
+        IClock clock) : DbTransactionInterceptor
+    {
+        private int _intercepted;
+        public bool Claimed { get; private set; }
+
+        public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(
+            DbConnection connection,
+            TransactionStartingEventData eventData,
+            InterceptionResult<DbTransaction> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _intercepted, 1) == 0)
+            {
+                await using var claimDb = CreateDb(databasePath);
+                Claimed = await Coordinator(claimDb, clock).TryClaimAsync(runId, cancellationToken);
+            }
+
+            return result;
         }
     }
 

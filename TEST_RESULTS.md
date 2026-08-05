@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: provisioning cancel/claim boundary
+
+Scope:
+- Проверены cancel queued run против concurrent worker claim, transaction boundary, node/audit consistency и clock-skew-safe version на file-backed SQLite.
+
+Results:
+- Roadmap progress: `527/547` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-provisioning-cancel-claim-boundary`, version `0.514.0`.
+- Backend full suite: OK, `1061/1061`; targeted provisioning/coordinator suite: OK, `40/40`.
+- Relational cancel выполняет conditional update по snapshot `status + UpdatedAt`; node и cancel audit сохраняются в той же transaction.
+- Deterministic SQLite interceptor дает worker claim после cancel-read: controller возвращает `409`, processing status сохраняется, node не переводится в `Cancelled/New`, ложный audit отсутствует; admin UI перечитывает runs.
+- `UpdatedAt` повышается монотонно даже при clock skew; изменений EF-модели и миграции не требуется, EF pending model changes: none.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Secret scan: OK, `639` files, `0` findings; artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: provisioning retry atomic queue
 
 Scope:

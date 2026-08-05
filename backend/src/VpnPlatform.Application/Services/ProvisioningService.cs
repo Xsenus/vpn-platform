@@ -313,7 +313,7 @@ public class ProvisioningService
 
     public async Task<Result<string>> CancelAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)
     {
-        var run = await _db.ProvisioningRuns.FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
+        var run = await _db.ProvisioningRuns.AsNoTracking().FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
         if (run is null)
         {
             return Result<string>.Failure("Provisioning run not found.");
@@ -330,9 +330,41 @@ public class ProvisioningService
         }
 
         var now = _clock.UtcNow;
-        StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Cancelled, now);
-        run.FinishedAt = now;
-        run.ExecutionLog = AppendLog(run.ExecutionLog, "Provisioning run cancelled by operator.");
+        var version = now > run.UpdatedAt ? now : run.UpdatedAt.AddTicks(1);
+        var cancelledLog = AppendLog(run.ExecutionLog, "Provisioning run cancelled by operator.");
+        var dbContext = _db as DbContext;
+        await using var transaction = dbContext is not null && dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
+        var affected = 0;
+        if (transaction is not null)
+        {
+            affected = await _db.ProvisioningRuns
+                .Where(x => x.Id == run.Id && x.Status == run.Status && x.UpdatedAt == run.UpdatedAt)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Status, ProvisioningRunStatus.Cancelled)
+                    .SetProperty(x => x.FinishedAt, now)
+                    .SetProperty(x => x.ExecutionLog, cancelledLog)
+                    .SetProperty(x => x.UpdatedAt, version), cancellationToken);
+        }
+        else
+        {
+            var trackedRun = await _db.ProvisioningRuns.FirstOrDefaultAsync(x => x.Id == run.Id, cancellationToken);
+            if (trackedRun is not null && trackedRun.Status == run.Status && trackedRun.UpdatedAt == run.UpdatedAt)
+            {
+                StatusStateMachine.SetProvisioningRunStatus(trackedRun, ProvisioningRunStatus.Cancelled, version);
+                trackedRun.FinishedAt = now;
+                trackedRun.ExecutionLog = cancelledLog;
+                affected = 1;
+            }
+        }
+
+        if (affected != 1)
+        {
+            return Result<string>.Failure("Provisioning state changed before cancellation. Refresh the run and try again.", isRetryable: true);
+        }
+
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);
         if (node is not null)
         {
@@ -342,6 +374,10 @@ public class ProvisioningService
         }
         AddAudit("provisioning.cancel", "ProvisioningRun", run.Id, requestedByUserId, "{}", JsonSerializer.Serialize(new { runId }));
         await _db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
         return Result<string>.Success("cancelled");
     }
 

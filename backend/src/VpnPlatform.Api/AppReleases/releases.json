@@ -11975,5 +11975,28 @@
         "text": "Roadmap progress is 526/546 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-provisioning-cancel-claim-boundary",
+    "version": "0.514.0",
+    "releasedAt": "2026-08-05T13:52:52+07:00",
+    "title": "Запущенный provisioning нельзя отменить устаревшей командой",
+    "summary": "Отмена проверяет актуальную версию задачи в транзакции и не возвращает сервер в исходное состояние, если worker уже начал выполнение.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Устаревшая команда отмены больше не перезаписывает processing-статус и не скрывает уже начавшееся выполнение provisioning."
+      },
+      {
+        "type": "improved",
+        "text": "При конкурентном worker claim админ получает контролируемый конфликт и может обновить данные, а node и аудит остаются согласованными."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 527/547 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

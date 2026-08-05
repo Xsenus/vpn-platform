@@ -18,3 +18,10 @@ export function canRetryProvisioningRun(status: string) {
 export function canCancelProvisioningRun(status: string) {
   return cancellableProvisioningStatuses.has(status)
 }
+
+export function isProvisioningStateConflict(error: unknown) {
+  return typeof error === 'object'
+    && error !== null
+    && 'status' in error
+    && (error as { status?: unknown }).status === 409
+}
