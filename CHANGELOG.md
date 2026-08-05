@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.525.0 - 2026-08-05
+
+Release entry: `2026-08-05-api-request-timeout-boundary`.
+
+### Исправлено
+
+- Все frontend API-операции получили единый 30-секундный deadline, поэтому зависший backend или proxy больше не удерживает экраны public, cabinet и admin в бесконечном loading/busy-state.
+- Timeout охватывает не только ожидание headers, но и полное чтение JSON/SVG body; transport прерывается через `AbortController`, а UI получает controlled `408` ошибку с понятным текстом.
+- Timer и внешний abort listener всегда очищаются в `finally`, включая успешный ответ и ошибку, поэтому завершенный запрос не получает поздний abort.
+
+### Проверено
+
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует.
+- Frontend `97/97`, включая stalled fetch/body и timer cleanup `2/2`, typecheck и production build всех трех приложений.
+- Полный public/cabinet/admin/all-screens/mobile/console responsive suite `16/16`.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings.
+- Release/documentation/UTF-8 guards подтверждают latest `2026-08-05-api-request-timeout-boundary`, версию `0.525.0` и roadmap `538/558`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами.
+
 ## 0.524.0 - 2026-08-05
 
 Release entry: `2026-08-05-admin-readiness-link-boundary`.

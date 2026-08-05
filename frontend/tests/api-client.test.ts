@@ -1090,6 +1090,53 @@ test('ApiClient QR SVG endpoints reject wrong MIME, empty and oversized response
   )
 })
 
+test('ApiClient times out stalled fetches and response bodies with controlled errors', async () => {
+  let abortedFetches = 0
+  globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener('abort', () => {
+      abortedFetches += 1
+      reject(new DOMException('Aborted', 'AbortError'))
+    }, { once: true })
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080', 15)
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 408 && /не ответил вовремя/i.test(error.message)
+  )
+  assert.equal(abortedFetches, 1)
+
+  let bodySignal: AbortSignal | null = null
+  globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => {
+    bodySignal = init?.signal ?? null
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        init?.signal?.addEventListener('abort', () => controller.error(new DOMException('Aborted', 'AbortError')), { once: true })
+      }
+    })
+    return new Response(body, { status: 200, headers: { 'Content-Type': 'image/svg+xml' } })
+  }) as typeof fetch
+
+  await assert.rejects(
+    () => client.getAdminAccessQrSvg('admin-token', 'stalled-body'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 408 && /повторите запрос/i.test(error.message)
+  )
+  assert.equal(bodySignal?.aborted, true)
+})
+
+test('ApiClient clears the request deadline after a successful response', async () => {
+  let requestSignal: AbortSignal | null = null
+  globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => {
+    requestSignal = init?.signal ?? null
+    return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080', 15)
+  assert.deepEqual(await client.getTariffs(), [])
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  assert.equal(requestSignal?.aborted, false)
+})
+
 test('ApiClient app version endpoints are tokenized and mapped', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {

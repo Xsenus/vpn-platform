@@ -12260,5 +12260,32 @@
         "text": "Roadmap progress is 537/557 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-api-request-timeout-boundary",
+    "version": "0.525.0",
+    "releasedAt": "2026-08-05T19:32:40+07:00",
+    "title": "API-запросы больше не зависают бесконечно",
+    "summary": "Все интерфейсы получили общий deadline для ожидания API и чтения ответа, поэтому зависший transport завершается понятной ошибкой и освобождает loading-состояние.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "JSON и SVG API transport прерывается через AbortController, если fetch или response body не завершились за 30 секунд."
+      },
+      {
+        "type": "fixed",
+        "text": "Timeout возвращается как controlled ApiClientError 408, после чего существующие finally-блоки public, cabinet и admin снимают busy/loading-state."
+      },
+      {
+        "type": "improved",
+        "text": "Deadline timer и внешний abort listener очищаются после каждого исхода; unit regression подтверждает отсутствие позднего abort успешного запроса."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 538/558 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

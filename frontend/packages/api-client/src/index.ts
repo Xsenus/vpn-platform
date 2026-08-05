@@ -1199,6 +1199,8 @@ export function normalizeApiError(payload: unknown, fallback: string): string {
 }
 
 const apiFallbackErrorMessage = 'Не удалось выполнить запрос. Попробуйте еще раз.'
+const apiRequestTimeoutMessage = 'Сервер не ответил вовремя. Проверьте подключение и повторите запрос.'
+const defaultApiRequestTimeoutMs = 30_000
 
 export class ApiClientError extends Error {
   constructor(
@@ -1212,7 +1214,47 @@ export class ApiClientError extends Error {
 }
 
 export class ApiClient {
-  constructor(private readonly baseUrl: string) {}
+  private readonly requestTimeoutMs: number
+
+  constructor(private readonly baseUrl: string, requestTimeoutMs = defaultApiRequestTimeoutMs) {
+    this.requestTimeoutMs = Number.isFinite(requestTimeoutMs) && requestTimeoutMs > 0
+      ? requestTimeoutMs
+      : defaultApiRequestTimeoutMs
+  }
+
+  private async fetchWithTimeout<T>(path: string, init: RequestInit, readResponse: (response: Response) => Promise<T>): Promise<T> {
+    const controller = new AbortController()
+    const externalSignal = init.signal
+    let timeoutReached = false
+    const forwardExternalAbort = () => controller.abort(externalSignal?.reason)
+
+    if (externalSignal?.aborted) {
+      forwardExternalAbort()
+    } else {
+      externalSignal?.addEventListener('abort', forwardExternalAbort, { once: true })
+    }
+
+    const timeoutId = setTimeout(() => {
+      timeoutReached = true
+      controller.abort()
+    }, this.requestTimeoutMs)
+
+    try {
+      const response = await fetch(`${this.baseUrl}${path}`, {
+        ...init,
+        signal: controller.signal
+      })
+      return await readResponse(response)
+    } catch (error) {
+      if (timeoutReached) {
+        throw new ApiClientError(apiRequestTimeoutMessage, 408, null)
+      }
+      throw error
+    } finally {
+      clearTimeout(timeoutId)
+      externalSignal?.removeEventListener('abort', forwardExternalAbort)
+    }
+  }
 
   private async request<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }): Promise<T> {
     const { token, errorMessage, ...requestInit } = init ?? {}
@@ -1226,17 +1268,14 @@ export class ApiClient {
       headers.set('Content-Type', 'application/json')
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...requestInit,
-      headers
+    return this.fetchWithTimeout(path, { ...requestInit, headers }, async (response) => {
+      const payload = await readJsonOrText(response)
+      if (!response.ok) {
+        throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
+      }
+
+      return payload as T
     })
-
-    const payload = await readJsonOrText(response)
-    if (!response.ok) {
-      throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
-    }
-
-    return payload as T
   }
 
 
@@ -1248,26 +1287,23 @@ export class ApiClient {
       headers.set('Authorization', `Bearer ${token}`)
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...requestInit,
-      headers
+    return this.fetchWithTimeout(path, { ...requestInit, headers }, async (response) => {
+      const text = await response.text()
+      if (!response.ok) {
+        const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
+        throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
+      }
+
+      const contentType = response.headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() ?? ''
+      if (expectedContentType && contentType !== expectedContentType.toLowerCase()) {
+        throw new ApiClientError('QR-код пришел в неподдерживаемом формате.', 502, { contentType })
+      }
+      if (!text.trim() || (maxLength && text.length > maxLength)) {
+        throw new ApiClientError('QR-код пустой или превышает допустимый размер.', 502, null)
+      }
+
+      return text
     })
-
-    const text = await response.text()
-    if (!response.ok) {
-      const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
-      throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
-    }
-
-    const contentType = response.headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() ?? ''
-    if (expectedContentType && contentType !== expectedContentType.toLowerCase()) {
-      throw new ApiClientError('QR-код пришел в неподдерживаемом формате.', 502, { contentType })
-    }
-    if (!text.trim() || (maxLength && text.length > maxLength)) {
-      throw new ApiClientError('QR-код пустой или превышает допустимый размер.', 502, null)
-    }
-
-    return text
   }
 
   getTariffs(): Promise<TariffDto[]> {

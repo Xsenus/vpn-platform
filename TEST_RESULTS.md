@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: frontend API request timeout boundary
+
+Scope:
+- Проверены все JSON/text API operations через общий transport: зависание до headers, зависшее чтение body, controlled timeout error, AbortController и очистка deadline после успеха.
+
+Results:
+- Roadmap progress: `538/558` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-api-request-timeout-boundary`, version `0.525.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `97/97`; typecheck и production build всех трех приложений: OK.
+- Общий 30-second deadline охватывает `fetch` и полное чтение response body; timeout прерывает transport и возвращает controlled `ApiClientError` `408` с понятным сообщением.
+- Stalled fetch, stalled SVG body и successful timer cleanup regressions: OK, `2/2`; full responsive/console suite: OK, `16/16`.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены.
+- Dependency audit: `0 vulnerabilities`; secret scan: `649` files, `0` findings.
+- Artifact cleanup и strict UTF-8 guard выполняются перед коммитом.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui и real SMTP не были доступны.
+
 ## Check 2026-08-05: admin readiness link boundary
 
 Scope:

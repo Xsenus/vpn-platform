@@ -19,14 +19,14 @@ public class ProductAdminUiRoadmapSyncTests
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
                      "Backend full suite: `1112/1112`",
-                     "Frontend unit tests: `95/95`",
+                     "Frontend unit tests: `97/97`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `16/16`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-05-admin-readiness-link-boundary",
-                     "0.524.0"
+                     "2026-08-05-api-request-timeout-boundary",
+                     "0.525.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-admin-readiness-link-boundary", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-admin-readiness-link-boundary", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-api-request-timeout-boundary", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-api-request-timeout-boundary", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,11 +72,11 @@ public class ProductAdminUiRoadmapSyncTests
         foreach (var expected in new[]
                  {
                      "Backend full suite: `1112/1112`",
-                     "Frontend unit tests: `95/95`",
+                     "Frontend unit tests: `97/97`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-05-admin-readiness-link-boundary",
-                     "0.524.0",
+                     "2026-08-05-api-request-timeout-boundary",
+                     "0.525.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
