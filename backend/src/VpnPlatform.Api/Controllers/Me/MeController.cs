@@ -16,8 +16,8 @@ namespace VpnPlatform.Api.Controllers.Me;
 public sealed record CreateMeOrderHttpRequest(Guid TariffId, string Type, string Channel, string PaymentProvider, string? PromoCode, bool IsFirstPurchase, Guid? SubscriptionId);
 public sealed record InitMePaymentHttpRequest(string? ReturnUrl);
 public sealed record CreateMeSupportConversationHttpRequest(string Subject, string Text, Guid? OrderId, Guid? SubscriptionId);
-public sealed record MeSupportReplyHttpRequest(string Text);
-public sealed record MeSupportStatusHttpRequest(string Status);
+public sealed record MeSupportReplyHttpRequest(string Text, int? Revision = null);
+public sealed record MeSupportStatusHttpRequest(string Status, int? Revision = null);
 
 [ApiController]
 [Authorize]
@@ -308,7 +308,7 @@ public class MeController : ControllerBase
         var conversations = await _db.SupportConversations
             .AsNoTracking()
             .Where(x => x.UserId == userId)
-            .Select(x => new SupportConversationDto(x.Id, x.UserId, x.TelegramUserId, x.Channel, x.Status, x.Subject, x.AssignedToUserId, string.Empty, x.ClosedAt, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new SupportConversationDto(x.Id, x.UserId, x.TelegramUserId, x.Channel, x.Status, x.Subject, x.AssignedToUserId, string.Empty, x.Revision, x.ClosedAt, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(cancellationToken);
 
         return Ok(conversations.OrderByDescending(x => x.UpdatedAt).Take(100).ToList());
@@ -327,7 +327,7 @@ public class MeController : ControllerBase
 
         var messages = await _db.SupportMessages
             .AsNoTracking()
-            .Where(x => x.SupportConversationId == id && !x.IsInternalNote)
+            .Where(x => x.SupportConversationId == id && !x.IsInternalNote && x.Direction != "internal")
             .Select(x => new SupportMessageDto(x.Id, x.SupportConversationId, x.UserId, x.TelegramUserId, x.Direction, x.Text, x.AttachmentsJson, x.IsInternalNote, x.CreatedAt))
             .ToListAsync(cancellationToken);
 
@@ -390,7 +390,7 @@ public class MeController : ControllerBase
         _db.SupportMessages.Add(message);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return Ok(new SupportConversationDto(conversation.Id, conversation.UserId, conversation.TelegramUserId, conversation.Channel, conversation.Status, conversation.Subject, conversation.AssignedToUserId, string.Empty, conversation.ClosedAt, conversation.CreatedAt, conversation.UpdatedAt));
+        return Ok(new SupportConversationDto(conversation.Id, conversation.UserId, conversation.TelegramUserId, conversation.Channel, conversation.Status, conversation.Subject, conversation.AssignedToUserId, string.Empty, conversation.Revision, conversation.ClosedAt, conversation.CreatedAt, conversation.UpdatedAt));
     }
 
     [HttpPost("support/conversations/{id:guid}/reply")]
@@ -409,6 +409,17 @@ public class MeController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
+        var expectedRevision = request?.Revision;
+        if (!expectedRevision.HasValue)
+        {
+            return BadRequest(new { error = "Support conversation revision is required." });
+        }
+
+        if (expectedRevision.Value != conversation.Revision)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry.", revision = conversation.Revision });
+        }
+
         var message = new SupportMessage
         {
             SupportConversationId = conversation.Id,
@@ -421,8 +432,16 @@ public class MeController : ControllerBase
         _db.SupportMessages.Add(message);
         conversation.Status = "open";
         conversation.ClosedAt = null;
+        conversation.Revision = checked(conversation.Revision + 1);
         conversation.UpdatedAt = DateTimeOffset.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry." });
+        }
 
         return Ok(new SupportMessageDto(message.Id, message.SupportConversationId, message.UserId, message.TelegramUserId, message.Direction, message.Text, message.AttachmentsJson, message.IsInternalNote, message.CreatedAt));
     }
@@ -437,6 +456,17 @@ public class MeController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
+        var expectedRevision = request?.Revision;
+        if (!expectedRevision.HasValue)
+        {
+            return BadRequest(new { error = "Support conversation revision is required." });
+        }
+
+        if (expectedRevision.Value != conversation.Revision)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry.", revision = conversation.Revision });
+        }
+
         var status = (request?.Status ?? string.Empty).Trim().ToLowerInvariant();
         if (status is not ("open" or "closed"))
         {
@@ -445,10 +475,18 @@ public class MeController : ControllerBase
 
         conversation.Status = status;
         conversation.ClosedAt = status == "closed" ? DateTimeOffset.UtcNow : null;
+        conversation.Revision = checked(conversation.Revision + 1);
         conversation.UpdatedAt = DateTimeOffset.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry." });
+        }
 
-        return Ok(new { conversationId = conversation.Id, conversation.Status });
+        return Ok(new { conversationId = conversation.Id, conversation.Status, conversation.Revision });
     }
 
 

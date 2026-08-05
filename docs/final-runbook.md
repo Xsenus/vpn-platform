@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-05 локально подтверждено:
 
-- backend full suite: 1053/1053;
+- backend full suite: 1059/1059;
 - frontend tests: 84/84;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -206,9 +206,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Registration concurrency: unique email race возвращает `email_exists` без partial rows, а unrelated persistence failure остается видимым.
 - Password reset generation: reissue закрывает старый code, concurrent issue/reset сериализуются per-user state revision, bootstrap password reset также invalidates codes.
 - Refresh rotation concurrency: один source token не выпускает две active branches; stale rotation откатывается, reuse/logout закрывают family, admin deactivation повторяется после conflict.
+- Support conversation concurrency: stale reply/status/note возвращают controlled conflict, pending inbound message переоткрывает active thread, assignment ограничен active `SupportWrite` users.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-pending-order-intent-concurrency`, версия `0.510.0`.
-- roadmap progress: `523/543` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-support-conversation-concurrency`, версия `0.511.0`.
+- roadmap progress: `524/544` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

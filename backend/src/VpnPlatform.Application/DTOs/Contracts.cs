@@ -340,7 +340,7 @@ public sealed record OutboxMessageDeliveryResult(Guid MessageId, bool Delivered,
 public sealed record CreateTelegramUserResultDto(Guid UserId, bool Created, string Email, string DisplayName);
 public sealed record TelegramInvoiceRequest(Guid OrderId, Guid PaymentAttemptId, long TelegramUserId, string Title, string Description, string Payload, string Currency, int TotalAmountMinor);
 public sealed record TelegramInvoiceResult(string Payload, string RawResponse);
-public sealed record SupportConversationDto(Guid Id, Guid? UserId, long? TelegramUserId, string Channel, string Status, string Subject, Guid? AssignedToUserId, string InternalNote, DateTimeOffset? ClosedAt, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record SupportConversationDto(Guid Id, Guid? UserId, long? TelegramUserId, string Channel, string Status, string Subject, Guid? AssignedToUserId, string InternalNote, int Revision, DateTimeOffset? ClosedAt, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 public sealed record SupportMessageDto(Guid Id, Guid SupportConversationId, Guid? UserId, long? TelegramUserId, string Direction, string Text, string AttachmentsJson, bool IsInternalNote, DateTimeOffset CreatedAt);
 
 

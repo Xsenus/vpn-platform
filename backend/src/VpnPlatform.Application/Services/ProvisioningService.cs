@@ -540,10 +540,11 @@ public class ProvisioningService
     private async Task<SupportConversation> EnsureSupportConversationAsync(Guid? userId, long? telegramUserId, string subject, string message, CancellationToken cancellationToken)
     {
         var conversation = await _db.SupportConversations
-            .Where(x => x.UserId == userId && x.TelegramUserId == telegramUserId && x.Status == "open" && x.Subject == subject)
+            .Where(x => x.UserId == userId && x.TelegramUserId == telegramUserId && (x.Status == "open" || x.Status == "pending") && x.Subject == subject)
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var isExistingConversation = conversation is not null;
         if (conversation is null)
         {
             conversation = new SupportConversation
@@ -567,6 +568,12 @@ public class ProvisioningService
             IsInternalNote = true,
             AttachmentsJson = "[]"
         });
+        if (isExistingConversation)
+        {
+            conversation.Status = "open";
+            conversation.ClosedAt = null;
+            conversation.Revision = checked(conversation.Revision + 1);
+        }
         conversation.UpdatedAt = _clock.UtcNow;
         return conversation;
     }

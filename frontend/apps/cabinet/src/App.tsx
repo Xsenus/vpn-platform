@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AccessCredentialDto,
   ApiClient,
+  ApiClientError,
   AuthResponse,
   OrderDto,
   PaymentAttemptDto,
@@ -498,12 +499,13 @@ export function App() {
     setError('')
     setNotice('')
     try {
-      const message = await api.replyMySupportConversation(token, selectedSupportConversation.id, supportReplyText.trim())
+      const message = await api.replyMySupportConversation(token, selectedSupportConversation.id, supportReplyText.trim(), selectedSupportConversation.revision)
       setSupportMessages((current) => [...current, message])
-      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: 'open', updatedAt: new Date().toISOString(), closedAt: null } : item))
+      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: 'open', revision: item.revision + 1, updatedAt: new Date().toISOString(), closedAt: null } : item))
       setSupportReplyText('')
       setNotice('Сообщение отправлено в поддержку.')
     } catch (e) {
+      if (e instanceof ApiClientError && e.status === 409) await loadAll(token)
       handleAuthenticatedError(e, 'Не удалось отправить сообщение в поддержку')
     } finally {
       setBusy(false)
@@ -516,10 +518,11 @@ export function App() {
     setError('')
     setNotice('')
     try {
-      const result = await api.updateMySupportConversationStatus(token, selectedSupportConversation.id, status)
-      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: result.status, closedAt: result.status === 'closed' ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : item))
+      const result = await api.updateMySupportConversationStatus(token, selectedSupportConversation.id, status, selectedSupportConversation.revision)
+      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: result.status, revision: result.revision, closedAt: result.status === 'closed' ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : item))
       setNotice(result.status === 'closed' ? 'Обращение закрыто.' : 'Обращение переоткрыто.')
     } catch (e) {
+      if (e instanceof ApiClientError && e.status === 409) await loadAll(token)
       handleAuthenticatedError(e, 'Не удалось изменить статус обращения')
     } finally {
       setBusy(false)

@@ -92,6 +92,48 @@ public class ProvisioningRunCoordinatorTests
     }
 
     [Fact]
+    public async Task Worker_Support_Message_Should_Reopen_Pending_Conversation_And_Advance_Revision()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 5, 5, 30, 0, TimeSpan.Zero));
+        var node = Node();
+        node.TagsCsv = "telegram-user-id:5050";
+        var run = new ProvisioningRun { NodeId = node.Id, Status = ProvisioningRunStatus.PrecheckFailed, DryRun = true };
+        var conversation = new SupportConversation
+        {
+            TelegramUserId = 5050,
+            Channel = "telegram",
+            Status = "pending",
+            Subject = "Own VPS precheck failed",
+            Revision = 4
+        };
+        db.AddRange(node, run, conversation);
+        await db.SaveChangesAsync();
+
+        var ensureSupport = typeof(ProvisioningWorker).GetMethod("EnsureSupportConversationAsync", BindingFlags.Static | BindingFlags.NonPublic)!;
+        await (Task)ensureSupport.Invoke(null, new object[]
+        {
+            db,
+            node,
+            run,
+            "Own VPS precheck failed",
+            "precheck failed",
+            clock,
+            CancellationToken.None
+        })!;
+        await db.SaveChangesAsync();
+
+        Assert.Equal(1, await db.SupportConversations.CountAsync());
+        Assert.Equal("open", conversation.Status);
+        Assert.Null(conversation.ClosedAt);
+        Assert.Equal(5, conversation.Revision);
+        Assert.Single(await db.SupportMessages.Where(x => x.SupportConversationId == conversation.Id).ToListAsync());
+    }
+
+    [Fact]
     public async Task ProvisioningWorker_Should_Execute_A_Claimed_Run_Only_Once()
     {
         var databasePath = TemporaryDatabasePath();

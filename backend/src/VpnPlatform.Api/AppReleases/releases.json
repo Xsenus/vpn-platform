@@ -11906,5 +11906,28 @@
         "text": "Roadmap progress is 523/543 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-support-conversation-concurrency",
+    "version": "0.511.0",
+    "releasedAt": "2026-08-05T12:49:57+07:00",
+    "title": "Новые ответы поддержки больше не теряются",
+    "summary": "Версия обращения защищает переписку от устаревшего закрытия, а кабинет и админка автоматически обновляют диалог при конкурентном изменении.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Устаревший ответ, статус или внутренняя заметка получают контролируемый конфликт вместо перезаписи более нового сообщения; pending-диалог снова открывается при входящем ответе."
+      },
+      {
+        "type": "improved",
+        "text": "Ответственным можно назначить только активного сотрудника с правом работы с поддержкой, а внутренние сообщения скрываются от кабинета даже при ошибочном legacy-флаге."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 524/544 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

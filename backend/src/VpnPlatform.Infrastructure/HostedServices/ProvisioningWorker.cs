@@ -494,11 +494,12 @@ public sealed class ProvisioningWorker : BackgroundService
     {
         var telegramUserId = ProvisioningService.ExtractLongTag(node.TagsCsv, "telegram-user-id");
         var conversationCandidates = await db.SupportConversations
-            .Where(x => x.UserId == run.RequestedByUserId && x.TelegramUserId == telegramUserId && x.Status == "open" && x.Subject == subject)
+            .Where(x => x.UserId == run.RequestedByUserId && x.TelegramUserId == telegramUserId && (x.Status == "open" || x.Status == "pending") && x.Subject == subject)
             .ToListAsync(cancellationToken);
         var conversation = conversationCandidates
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefault();
+        var isExistingConversation = conversation is not null;
         if (conversation is null)
         {
             conversation = new SupportConversation
@@ -522,6 +523,12 @@ public sealed class ProvisioningWorker : BackgroundService
             IsInternalNote = true,
             AttachmentsJson = "[]"
         });
+        if (isExistingConversation)
+        {
+            conversation.Status = "open";
+            conversation.ClosedAt = null;
+            conversation.Revision = checked(conversation.Revision + 1);
+        }
         conversation.UpdatedAt = clock.UtcNow;
     }
 

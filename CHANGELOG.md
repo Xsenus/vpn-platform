@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.511.0 - 2026-08-05
+
+Release entry: `2026-08-05-support-conversation-concurrency`.
+
+### Исправлено
+
+- `SupportConversation.Revision` стал optimistic concurrency token; cabinet/admin reply, status и note требуют ожидаемую ревизию и возвращают `409 Conflict` вместо перезаписи более нового изменения.
+- Telegram и provisioning повышают ревизию существующего обращения; входящий ответ повторно открывает `pending`-диалог, не оставляя новое сообщение вне активной очереди.
+- Назначить ответственным теперь можно только активного незаблокированного пользователя с `SupportWrite`; кабинет fail-closed скрывает сообщения с `Direction=internal`, даже если legacy-флаг `IsInternalNote` ошибочно не выставлен.
+- API client и оба интерфейса передают ревизию, обновляют очередь после конфликта; PostgreSQL migration и idempotent local SQLite repair добавляют rollout-совместимую колонку.
+
+### Проверено
+
+- Backend full suite `1059/1059`; targeted support/Telegram/provisioning/SQLite suite `56/56`, включая stale status, assignment capability и pending reopen во всех provisioning writers.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Локальная SQLite база обновлена аддитивно; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `639` files, `0` findings.
+- Roadmap status: `524/544` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.510.0 - 2026-08-05
 
 Release entry: `2026-08-05-pending-order-intent-concurrency`.

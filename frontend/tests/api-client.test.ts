@@ -319,7 +319,7 @@ test('ApiClient.initMyPayment calls tokenized endpoint', async () => {
 
 test('ApiClient cabinet support endpoints are tokenized and link order context', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
-  const conversation = { id: 'support-1', userId: 'user-1', channel: 'web', status: 'open', subject: 'Оплата', internalNote: 'Связано: заказ order-1.', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  const conversation = { id: 'support-1', userId: 'user-1', channel: 'web', status: 'open', subject: 'Оплата', internalNote: 'Связано: заказ order-1.', revision: 4, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   const message = { id: 'message-1', supportConversationId: 'support-1', userId: 'user-1', direction: 'inbound', text: 'Нужна помощь', attachmentsJson: '[]', isInternalNote: false, createdAt: new Date().toISOString() }
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
@@ -337,7 +337,7 @@ test('ApiClient cabinet support endpoints are tokenized and link order context',
       return new Response(JSON.stringify(message), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/me/support/conversations/support-1/status') && init?.method === 'PATCH') {
-      return new Response(JSON.stringify({ conversationId: 'support-1', status: 'closed' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ conversationId: 'support-1', status: 'closed', revision: 5 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     throw new Error(`Unexpected URL ${path}`)
@@ -347,14 +347,16 @@ test('ApiClient cabinet support endpoints are tokenized and link order context',
   await client.getMySupportConversations('user-token')
   await client.createMySupportConversation('user-token', { subject: 'Оплата', text: 'Нужна помощь', orderId: 'order-1', subscriptionId: null })
   await client.getMySupportMessages('user-token', 'support-1')
-  await client.replyMySupportConversation('user-token', 'support-1', 'Спасибо')
-  await client.updateMySupportConversationStatus('user-token', 'support-1', 'closed')
+  await client.replyMySupportConversation('user-token', 'support-1', 'Спасибо', 4)
+  await client.updateMySupportConversationStatus('user-token', 'support-1', 'closed', 4)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/me/support/conversations')
   assert.equal(calls[1]?.init?.method, 'POST')
   assert.match(String(calls[1]?.init?.body), /order-1/)
   assert.equal(calls[3]?.init?.method, 'POST')
+  assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), { text: 'Спасибо', revision: 4 })
   assert.equal(calls[4]?.init?.method, 'PATCH')
+  assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), { status: 'closed', revision: 4 })
   assert.equal(new Headers(calls[4]?.init?.headers).get('Authorization'), 'Bearer user-token')
 })
 
@@ -613,13 +615,16 @@ test('ApiClient admin support reply and note endpoints are tokenized', async () 
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
-  await client.replyAdminSupportConversation('admin-token', 'conv-1', 'reply')
-  await client.updateAdminSupportConversationStatus('admin-token', 'conv-1', 'pending')
-  await client.addAdminSupportInternalNote('admin-token', 'conv-1', 'note')
+  await client.replyAdminSupportConversation('admin-token', 'conv-1', 'reply', 7)
+  await client.updateAdminSupportConversationStatus('admin-token', 'conv-1', 'pending', 8)
+  await client.addAdminSupportInternalNote('admin-token', 'conv-1', 'note', 9)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/support/conversations/conv-1/reply')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/support/conversations/conv-1/status')
   assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/support/conversations/conv-1/notes')
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), { text: 'reply', revision: 7 })
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), { status: 'pending', assignedToUserId: null, revision: 8 })
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), { text: 'note', revision: 9 })
   assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 

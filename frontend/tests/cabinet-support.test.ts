@@ -10,6 +10,7 @@ function conversation(overrides: Partial<SupportConversationDto>): SupportConver
     status: 'open',
     subject: 'Оплата',
     internalNote: '',
+    revision: 0,
     createdAt: '2026-05-27T10:00:00Z',
     updatedAt: '2026-05-27T10:00:00Z',
     ...overrides
@@ -40,4 +41,3 @@ test('cabinet support selects current conversation and counts open queue', () =>
   assert.equal(selectCurrentSupportConversation([first], 'missing')?.id, 'support-1')
   assert.equal(countOpenSupportConversations([first, second, third]), 2)
 })
-

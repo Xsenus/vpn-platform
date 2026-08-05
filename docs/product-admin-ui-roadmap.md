@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `523/543` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `524/544` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1053/1053`.
+- [x] Backend full suite: `1059/1059`.
 - [x] Frontend unit tests: `84/84`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -123,7 +123,8 @@
 - [x] Concurrent registration email conflict возвращает `email_exists` без partial auth rows; unrelated persistence failures не маскируются.
 - [x] Password reset reissue закрывает старый code; per-user generation/revision защищает concurrent issue/reset и admin bootstrap password change.
 - [x] Refresh token optimistic revision закрывает double rotation; concurrent reuse/logout/admin deactivation fail closed без активной stale branch.
-- [x] Latest "Что нового": `2026-08-05-pending-order-intent-concurrency`, версия `0.510.0`.
+- [x] Support conversation revision закрывает stale reply/status/note; оба UI обновляют очередь после conflict, pending inbound thread снова становится active.
+- [x] Latest "Что нового": `2026-08-05-support-conversation-concurrency`, версия `0.511.0`.
 
 ## Как вести дальше
 

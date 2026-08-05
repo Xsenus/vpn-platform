@@ -451,7 +451,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/support/conversations') {
-      await fulfillJson(route, [{ id: 'support-all-screens', userId: user.id, userEmail: user.email, subject: 'Smoke support', status: 'Open', createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'support-all-screens', userId: user.id, userEmail: user.email, subject: 'Smoke support', status: 'Open', revision: 0, createdAt: now, updatedAt: now }])
       return
     }
 

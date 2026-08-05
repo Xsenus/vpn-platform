@@ -48,9 +48,9 @@ public sealed record QueueProvisionHttpRequest(bool DryRun = false);
 public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
 public sealed record RefundReadinessDto(bool IsSupported, bool CanRefund, decimal RefundableAmount, IReadOnlyList<string> Blockers);
 public sealed record SetProviderEnabledHttpRequest(bool Enabled);
-public sealed record AdminSupportReplyHttpRequest(string Text);
-public sealed record AdminSupportStatusHttpRequest(string Status, Guid? AssignedToUserId = null);
-public sealed record AdminSupportNoteHttpRequest(string Text);
+public sealed record AdminSupportReplyHttpRequest(string Text, int? Revision = null);
+public sealed record AdminSupportStatusHttpRequest(string Status, Guid? AssignedToUserId = null, int? Revision = null);
+public sealed record AdminSupportNoteHttpRequest(string Text, int? Revision = null);
 public sealed record AdminSubscriptionExtendHttpRequest(int Days, string? Reason = null);
 public sealed record AdminAccessActionHttpRequest(string? Reason = null);
 public sealed record SetNodeAllocationHttpRequest(bool Available);
@@ -1105,7 +1105,7 @@ public class AdminOperationsController : ControllerBase
     {
         var conversations = await _db.SupportConversations
             .AsNoTracking()
-            .Select(x => new SupportConversationDto(x.Id, x.UserId, x.TelegramUserId, x.Channel, x.Status, x.Subject, x.AssignedToUserId, x.InternalNote, x.ClosedAt, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new SupportConversationDto(x.Id, x.UserId, x.TelegramUserId, x.Channel, x.Status, x.Subject, x.AssignedToUserId, x.InternalNote, x.Revision, x.ClosedAt, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(cancellationToken);
         return Ok(conversations.OrderByDescending(x => x.UpdatedAt).Take(200).ToList());
     }
@@ -1130,6 +1130,17 @@ public class AdminOperationsController : ControllerBase
         if (conversation is null)
         {
             return NotFound(new { error = "Support conversation not found." });
+        }
+
+        var expectedRevision = request?.Revision;
+        if (!expectedRevision.HasValue)
+        {
+            return BadRequest(new { error = "Support conversation revision is required." });
+        }
+
+        if (expectedRevision.Value != conversation.Revision)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry.", revision = conversation.Revision });
         }
 
         var text = NormalizeSupportText(request?.Text, 4000);
@@ -1172,6 +1183,7 @@ public class AdminOperationsController : ControllerBase
 
         conversation.Status = conversation.Status == "closed" ? "open" : conversation.Status;
         conversation.ClosedAt = conversation.Status == "closed" ? conversation.ClosedAt : null;
+        conversation.Revision = checked(conversation.Revision + 1);
         conversation.UpdatedAt = _clock.UtcNow;
         AddAuditLog(
             "support.reply",
@@ -1179,8 +1191,15 @@ public class AdminOperationsController : ControllerBase
             conversation.Id,
             before,
             JsonSerializer.Serialize(new { conversation.Status, messageId = message.Id, notificationQueued }));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new { conversationId = id, status = "queued" });
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry." });
+        }
+        return Ok(new { conversationId = id, status = "queued", conversation.Revision });
     }
 
 
@@ -1194,20 +1213,53 @@ public class AdminOperationsController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
+        var expectedRevision = request?.Revision;
+        if (!expectedRevision.HasValue)
+        {
+            return BadRequest(new { error = "Support conversation revision is required." });
+        }
+
+        if (expectedRevision.Value != conversation.Revision)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry.", revision = conversation.Revision });
+        }
+
         var status = string.IsNullOrWhiteSpace(request?.Status) ? conversation.Status : request.Status.Trim().ToLowerInvariant();
         if (status is not ("open" or "pending" or "closed"))
         {
             return BadRequest(new { error = "Status must be open, pending or closed." });
         }
 
+        var assignedToUserId = request?.AssignedToUserId;
+        if (assignedToUserId.HasValue)
+        {
+            var assignedUser = await _db.Users.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == assignedToUserId.Value, cancellationToken);
+            if (assignedUser is null
+                || assignedUser.IsBlocked
+                || assignedUser.Status != UserStatus.Active
+                || !AdminPolicies.HasAccess(UserRoles.Parse(assignedUser.RolesCsv), AdminPolicies.SupportWrite))
+            {
+                return BadRequest(new { error = "Assigned support agent must be an active user with support write access." });
+            }
+        }
+
         var before = SerializeSupportConversationAudit(conversation);
         conversation.Status = status;
-        conversation.AssignedToUserId = request?.AssignedToUserId ?? conversation.AssignedToUserId;
+        conversation.AssignedToUserId = assignedToUserId ?? conversation.AssignedToUserId;
         conversation.ClosedAt = status == "closed" ? _clock.UtcNow : null;
+        conversation.Revision = checked(conversation.Revision + 1);
         conversation.UpdatedAt = _clock.UtcNow;
         AddAuditLog("support.status.update", "SupportConversation", conversation.Id, before, SerializeSupportConversationAudit(conversation));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new { conversationId = id, conversation.Status, conversation.AssignedToUserId });
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry." });
+        }
+        return Ok(new { conversationId = id, conversation.Status, conversation.AssignedToUserId, conversation.Revision });
     }
 
     [HttpPost("support/conversations/{id:guid}/notes")]
@@ -1218,6 +1270,17 @@ public class AdminOperationsController : ControllerBase
         if (conversation is null)
         {
             return NotFound(new { error = "Support conversation not found." });
+        }
+
+        var expectedRevision = request?.Revision;
+        if (!expectedRevision.HasValue)
+        {
+            return BadRequest(new { error = "Support conversation revision is required." });
+        }
+
+        if (expectedRevision.Value != conversation.Revision)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry.", revision = conversation.Revision });
         }
 
         var text = NormalizeSupportText(request?.Text, 4000);
@@ -1239,6 +1302,7 @@ public class AdminOperationsController : ControllerBase
         };
         _db.SupportMessages.Add(note);
         conversation.InternalNote = text;
+        conversation.Revision = checked(conversation.Revision + 1);
         conversation.UpdatedAt = _clock.UtcNow;
         AddAuditLog(
             "support.note.add",
@@ -1246,7 +1310,14 @@ public class AdminOperationsController : ControllerBase
             conversation.Id,
             before,
             JsonSerializer.Serialize(new { conversation.Status, noteId = note.Id, hasInternalNote = true }));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Support conversation changed. Reload it and retry." });
+        }
         return Ok(new SupportMessageDto(note.Id, note.SupportConversationId, note.UserId, note.TelegramUserId, note.Direction, note.Text, note.AttachmentsJson, note.IsInternalNote, note.CreatedAt));
     }
 
@@ -2554,6 +2625,7 @@ public class AdminOperationsController : ControllerBase
             conversation.Status,
             conversation.AssignedToUserId,
             hasInternalNote = !string.IsNullOrWhiteSpace(conversation.InternalNote),
+            conversation.Revision,
             conversation.ClosedAt
         });
 

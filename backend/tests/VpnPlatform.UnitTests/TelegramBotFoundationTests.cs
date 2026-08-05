@@ -99,6 +99,19 @@ public class TelegramBotFoundationTests
         Assert.True(result.IsSuccess, result.Error);
         Assert.Equal(1, await db.SupportConversations.CountAsync());
         Assert.Equal(1, await db.SupportMessages.CountAsync());
+
+        var conversation = await db.SupportConversations.SingleAsync();
+        conversation.Status = "pending";
+        conversation.Revision++;
+        await db.SaveChangesAsync();
+
+        var followUp = await service.ProcessUpdateAsync(Update(106, "Нужна дополнительная помощь"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.True(followUp.IsSuccess, followUp.Error);
+        Assert.Equal(1, await db.SupportConversations.CountAsync());
+        Assert.Equal(2, await db.SupportMessages.CountAsync());
+        Assert.Equal("open", conversation.Status);
+        Assert.Equal(2, conversation.Revision);
     }
 
 

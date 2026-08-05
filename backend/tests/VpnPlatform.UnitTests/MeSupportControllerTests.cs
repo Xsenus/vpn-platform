@@ -6,8 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Api.Controllers.Me;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
 using Xunit;
 
@@ -31,7 +33,7 @@ public class MeSupportControllerTests
 
         db.Users.AddRange(
             new User { Id = userId, Email = "support-user@example.test", DisplayName = "Support user", PasswordHash = "hash", ReferralCode = "support-user" },
-            new User { Id = adminId, Email = "support-admin@example.test", DisplayName = "Support admin", PasswordHash = "hash", ReferralCode = "support-admin" });
+            new User { Id = adminId, Email = "support-admin@example.test", DisplayName = "Support admin", PasswordHash = "hash", ReferralCode = "support-admin", RolesCsv = UserRoles.SupportAgent, Status = UserStatus.Active });
         db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Support", Slug = "support", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
         db.Orders.Add(new Order { Id = orderId, UserId = userId, TariffId = tariffId, Amount = 100, Currency = "RUB", ExpiresAt = DateTimeOffset.UtcNow.AddHours(1) });
         db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = userId, TariffId = tariffId, StartAt = DateTimeOffset.UtcNow.AddDays(-1), EndAt = DateTimeOffset.UtcNow.AddDays(29) });
@@ -47,13 +49,13 @@ public class MeSupportControllerTests
         Assert.Equal("open", conversationDto.Status);
 
         var admin = CreateAdminController(db, adminId);
-        var replyResult = await admin.ReplySupportConversation(conversationDto.Id, new AdminSupportReplyHttpRequest("Проверили платеж, заказ в обработке."), CancellationToken.None);
+        var replyResult = await admin.ReplySupportConversation(conversationDto.Id, new AdminSupportReplyHttpRequest("Проверили платеж, заказ в обработке.", conversationDto.Revision), CancellationToken.None);
         Assert.IsType<OkObjectResult>(replyResult);
 
-        var noteResult = await admin.AddSupportInternalNote(conversationDto.Id, new AdminSupportNoteHttpRequest("Проверить повторно после webhook."), CancellationToken.None);
+        var noteResult = await admin.AddSupportInternalNote(conversationDto.Id, new AdminSupportNoteHttpRequest("Проверить повторно после webhook.", conversationDto.Revision + 1), CancellationToken.None);
         Assert.IsType<OkObjectResult>(noteResult);
 
-        var statusResult = await admin.UpdateSupportConversationStatus(conversationDto.Id, new AdminSupportStatusHttpRequest("pending", adminId), CancellationToken.None);
+        var statusResult = await admin.UpdateSupportConversationStatus(conversationDto.Id, new AdminSupportStatusHttpRequest("pending", adminId, conversationDto.Revision + 2), CancellationToken.None);
         Assert.IsType<OkObjectResult>(statusResult);
         var adminAudits = await db.AuditLogs.Where(x => x.EntityId == conversationDto.Id.ToString()).ToListAsync();
         Assert.Contains(adminAudits, x => x.Action == "support.reply");
@@ -69,15 +71,16 @@ public class MeSupportControllerTests
         Assert.Contains(messages, x => x.Direction == "outbound" && x.Text.Contains("заказ", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(messages, x => x.IsInternalNote);
 
-        var closeResult = await cabinet.UpdateSupportConversationStatus(conversationDto.Id, new MeSupportStatusHttpRequest("closed"), CancellationToken.None);
+        var closeResult = await cabinet.UpdateSupportConversationStatus(conversationDto.Id, new MeSupportStatusHttpRequest("closed", conversationDto.Revision + 3), CancellationToken.None);
         Assert.IsType<OkObjectResult>(closeResult);
         Assert.Equal("closed", (await db.SupportConversations.SingleAsync(x => x.Id == conversationDto.Id)).Status);
 
-        var reopenResult = await cabinet.ReplySupportConversation(conversationDto.Id, new MeSupportReplyHttpRequest("Вопрос снова актуален."), CancellationToken.None);
+        var reopenResult = await cabinet.ReplySupportConversation(conversationDto.Id, new MeSupportReplyHttpRequest("Вопрос снова актуален.", conversationDto.Revision + 4), CancellationToken.None);
         Assert.IsType<OkObjectResult>(reopenResult);
         var reopened = await db.SupportConversations.SingleAsync(x => x.Id == conversationDto.Id);
         Assert.Equal("open", reopened.Status);
         Assert.Null(reopened.ClosedAt);
+        Assert.Equal(conversationDto.Revision + 5, reopened.Revision);
         Assert.Equal(4, await db.SupportMessages.CountAsync(x => x.SupportConversationId == conversationDto.Id));
     }
 
@@ -129,6 +132,7 @@ public class MeSupportControllerTests
         db.SupportConversations.Add(conversation);
         db.SupportMessages.Add(new SupportMessage { SupportConversationId = conversation.Id, UserId = userId, Direction = "inbound", Text = "Вопрос" });
         db.SupportMessages.Add(new SupportMessage { SupportConversationId = conversation.Id, Direction = "internal", Text = "Скрытая заметка", IsInternalNote = true });
+        db.SupportMessages.Add(new SupportMessage { SupportConversationId = conversation.Id, Direction = "internal", Text = "Legacy скрытая заметка", IsInternalNote = false });
         await db.SaveChangesAsync();
 
         var controller = CreateController(db, userId);
@@ -138,7 +142,7 @@ public class MeSupportControllerTests
         Assert.Single(messages);
         Assert.DoesNotContain(messages, x => x.IsInternalNote);
 
-        var statusResult = await controller.UpdateSupportConversationStatus(conversation.Id, new MeSupportStatusHttpRequest("closed"), CancellationToken.None);
+        var statusResult = await controller.UpdateSupportConversationStatus(conversation.Id, new MeSupportStatusHttpRequest("closed", conversation.Revision), CancellationToken.None);
         Assert.IsType<OkObjectResult>(statusResult);
 
         var updated = await db.SupportConversations.SingleAsync();
@@ -184,7 +188,48 @@ public class MeSupportControllerTests
 
         Assert.IsType<BadRequestObjectResult>(await controller.CreateSupportConversation(new CreateMeSupportConversationHttpRequest("Опл", "Слишком коротко", null, null), CancellationToken.None));
         Assert.IsType<BadRequestObjectResult>(await controller.ReplySupportConversation(conversation.Id, new MeSupportReplyHttpRequest(" "), CancellationToken.None));
-        Assert.IsType<BadRequestObjectResult>(await controller.UpdateSupportConversationStatus(conversation.Id, new MeSupportStatusHttpRequest("pending"), CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateSupportConversationStatus(conversation.Id, new MeSupportStatusHttpRequest("pending", conversation.Revision), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SupportStatus_Should_Reject_Stale_Revision_Without_Overwriting_State()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var conversation = new SupportConversation
+        {
+            UserId = userId,
+            Channel = "web",
+            Status = "open",
+            Subject = "Конкурентный статус",
+            Revision = 3
+        };
+        db.Users.Add(new User
+        {
+            Id = userId,
+            Email = "stale-support@example.test",
+            DisplayName = "Stale support user",
+            Status = UserStatus.Active
+        });
+        db.SupportConversations.Add(conversation);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, userId);
+        var result = await controller.UpdateSupportConversationStatus(
+            conversation.Id,
+            new MeSupportStatusHttpRequest("closed", 2),
+            CancellationToken.None);
+
+        Assert.IsType<ConflictObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var unchanged = await db.SupportConversations.SingleAsync();
+        Assert.Equal("open", unchanged.Status);
+        Assert.Equal(3, unchanged.Revision);
+        Assert.Null(unchanged.ClosedAt);
     }
 
     private static MeController CreateController(ApplicationDbContext db, Guid userId)

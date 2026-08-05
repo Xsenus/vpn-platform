@@ -426,7 +426,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/support/conversations') {
-      await fulfillJson(route, [{ id: 'support-e2e', userId: 'user-e2e', telegramUserId: null, channel: 'Web', status: 'open', subject: 'Проверка доступа', assignedToUserId: null, internalNote: '', closedAt: null, createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'support-e2e', userId: 'user-e2e', telegramUserId: null, channel: 'Web', status: 'open', subject: 'Проверка доступа', assignedToUserId: null, internalNote: '', revision: 0, closedAt: null, createdAt: now, updatedAt: now }])
       return
     }
 

@@ -448,6 +448,7 @@ public class SupportConversation : AuditableEntity
     public Guid? AssignedToUserId { get; set; }
     public string Subject { get; set; } = string.Empty;
     public string InternalNote { get; set; } = string.Empty;
+    public int Revision { get; set; }
     public DateTimeOffset? ClosedAt { get; set; }
 
     public User? User { get; set; }

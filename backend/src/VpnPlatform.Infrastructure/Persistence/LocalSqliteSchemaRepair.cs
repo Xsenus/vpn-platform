@@ -33,6 +33,15 @@ public static class LocalSqliteSchemaRepair
             }
         }
 
+        if (await TableExistsAsync(db, "SupportConversations", cancellationToken)
+            && !await ColumnExistsAsync(db, "SupportConversations", "Revision", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "SupportConversations" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;""",
+                cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "Users", cancellationToken)
             && !await ColumnExistsAsync(db, "Users", "SessionVersion", cancellationToken))
         {

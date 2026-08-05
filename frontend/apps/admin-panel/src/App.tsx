@@ -2155,8 +2155,15 @@ export function App() {
 
   const handleReplySupport = async () => {
     if (!token || !selectedSupportConversationId || !supportReplyText.trim()) return
+    const conversation = supportConversations.find((item) => item.id === selectedSupportConversationId)
+    if (!conversation) return
     await runAction(`support-reply-${selectedSupportConversationId}`, async () => {
-      await api.replyAdminSupportConversation(token, selectedSupportConversationId, supportReplyText.trim())
+      try {
+        await api.replyAdminSupportConversation(token, selectedSupportConversationId, supportReplyText.trim(), conversation.revision)
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 409) await loadAll(token)
+        throw error
+      }
       setSupportReplyText('')
       setNotice('Ответ сохранен и поставлен в очередь отправки Telegram.')
       await loadSupportMessages(selectedSupportConversationId)
@@ -2166,8 +2173,15 @@ export function App() {
 
   const handleSupportStatus = async (status: string, conversationId = selectedSupportConversationId) => {
     if (!token || !conversationId) return
+    const conversation = supportConversations.find((item) => item.id === conversationId)
+    if (!conversation) return
     await runAction(`support-status-${conversationId}`, async () => {
-      await api.updateAdminSupportConversationStatus(token, conversationId, status)
+      try {
+        await api.updateAdminSupportConversationStatus(token, conversationId, status, conversation.revision)
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 409) await loadAll(token)
+        throw error
+      }
       setNotice(`Статус обращения обновлен: ${status}.`)
       await loadSupportMessages(conversationId)
       await loadAll(token)
@@ -2176,11 +2190,19 @@ export function App() {
 
   const handleSupportNote = async () => {
     if (!token || !selectedSupportConversationId || !supportNoteText.trim()) return
+    const conversation = supportConversations.find((item) => item.id === selectedSupportConversationId)
+    if (!conversation) return
     await runAction(`support-note-${selectedSupportConversationId}`, async () => {
-      await api.addAdminSupportInternalNote(token, selectedSupportConversationId, supportNoteText.trim())
+      try {
+        await api.addAdminSupportInternalNote(token, selectedSupportConversationId, supportNoteText.trim(), conversation.revision)
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 409) await loadAll(token)
+        throw error
+      }
       setSupportNoteText('')
       setNotice('Внутренняя заметка сохранена.')
       await loadSupportMessages(selectedSupportConversationId)
+      await loadAll(token)
     })
   }
 

@@ -2071,10 +2071,11 @@ public class TelegramBotService
     {
         var conversation = await _db.SupportConversations
             .Include(x => x.Messages)
-            .Where(x => x.TelegramUserId == account.TelegramUserId && x.Status == "open")
+            .Where(x => x.TelegramUserId == account.TelegramUserId && (x.Status == "open" || x.Status == "pending"))
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var isExistingConversation = conversation is not null;
         if (conversation is null)
         {
             conversation = new SupportConversation
@@ -2100,6 +2101,12 @@ public class TelegramBotService
                 AttachmentsJson = attachmentsJson,
                 IsInternalNote = isInternalNote
             });
+            if (isExistingConversation)
+            {
+                conversation.Status = "open";
+                conversation.ClosedAt = null;
+                conversation.Revision = checked(conversation.Revision + 1);
+            }
             conversation.UpdatedAt = _clock.UtcNow;
         }
     }

@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: support conversation concurrency
+
+Scope:
+- Проверены stale reply/status/note, назначение ответственного, Telegram/provisioning pending reopen, фильтрация internal messages, PostgreSQL migration и local SQLite repair.
+
+Results:
+- Roadmap progress: `524/544` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-support-conversation-concurrency`, version `0.511.0`.
+- Backend full suite: OK, `1059/1059`; targeted support/Telegram/provisioning/SQLite suite: OK, `56/56`.
+- Optimistic revision отклоняет устаревшие cabinet/admin mutations с `409` без partial message/audit/notification rows; UI перечитывает актуальную очередь.
+- Telegram и provisioning переоткрывают существующий `pending`-диалог и повышают revision; assignment принимает только active non-blocked `SupportWrite` user.
+- Cabinet не возвращает internal message при `Direction=internal`, даже если legacy `IsInternalNote=false`.
+- PostgreSQL migration/EF snapshot и idempotent local SQLite legacy repair: OK; локальная SQLite база получила `SupportConversations.Revision` с корректным default.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `639` files, `0` findings; artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: pending order intent concurrency
 
 Scope:

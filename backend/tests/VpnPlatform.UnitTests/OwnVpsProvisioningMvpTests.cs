@@ -327,6 +327,49 @@ public class OwnVpsProvisioningMvpTests
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.cancel" && x.EntityId == runId.ToString());
     }
 
+    [Fact]
+    public async Task MarkSupportNeeded_Should_Reopen_Existing_Pending_Conversation()
+    {
+        await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var node = new VpnNode
+        {
+            Name = "Own VPS",
+            Host = "vps.example.test",
+            SshUser = "root",
+            SshPort = 22,
+            TagsCsv = "telegram-user-id:5050"
+        };
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            RequestedByUserId = userId,
+            Status = ProvisioningRunStatus.PrecheckFailed,
+            ExecutionLog = "Precheck failed."
+        };
+        var conversation = new SupportConversation
+        {
+            UserId = userId,
+            TelegramUserId = 5050,
+            Channel = "telegram",
+            Status = "pending",
+            Subject = "Own VPS provisioning needs support",
+            Revision = 4
+        };
+        db.AddRange(node, run, conversation);
+        await db.SaveChangesAsync();
+
+        var result = await new ProvisioningService(db, new TestClock(), new TestSecretProtector())
+            .MarkSupportNeededAsync(run.Id, Guid.NewGuid());
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(conversation.Id.ToString(), result.Value);
+        Assert.Equal(1, await db.SupportConversations.CountAsync());
+        Assert.Equal("open", conversation.Status);
+        Assert.Equal(5, conversation.Revision);
+        Assert.Single(await db.SupportMessages.Where(x => x.SupportConversationId == conversation.Id).ToListAsync());
+    }
+
     [Theory]
     [InlineData(ProvisioningRunStatus.Running)]
     [InlineData(ProvisioningRunStatus.Prechecking)]

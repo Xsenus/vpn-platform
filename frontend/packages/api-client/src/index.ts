@@ -411,6 +411,7 @@ export type SupportConversationDto = {
   subject: string
   assignedToUserId?: string | null
   internalNote: string
+  revision: number
   closedAt?: string | null
   createdAt: string
   updatedAt: string
@@ -1394,20 +1395,20 @@ export class ApiClient {
     })
   }
 
-  replyMySupportConversation(token: string, conversationId: string, text: string): Promise<SupportMessageDto> {
+  replyMySupportConversation(token: string, conversationId: string, text: string, revision: number): Promise<SupportMessageDto> {
     return this.request<SupportMessageDto>(`/api/me/support/conversations/${conversationId}/reply`, {
       method: 'POST',
       token,
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, revision }),
       errorMessage: apiFallbackErrorMessage
     })
   }
 
-  updateMySupportConversationStatus(token: string, conversationId: string, status: 'open' | 'closed'): Promise<{ conversationId: string; status: string }> {
-    return this.request<{ conversationId: string; status: string }>(`/api/me/support/conversations/${conversationId}/status`, {
+  updateMySupportConversationStatus(token: string, conversationId: string, status: 'open' | 'closed', revision: number): Promise<{ conversationId: string; status: string; revision: number }> {
+    return this.request<{ conversationId: string; status: string; revision: number }>(`/api/me/support/conversations/${conversationId}/status`, {
       method: 'PATCH',
       token,
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, revision }),
       errorMessage: apiFallbackErrorMessage
     })
   }
@@ -1680,29 +1681,29 @@ export class ApiClient {
     return this.request<SupportMessageDto[]>(`/api/admin/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
   }
 
-  replyAdminSupportConversation(token: string, conversationId: string, text: string): Promise<{ conversationId: string; status: string }> {
-    return this.request<{ conversationId: string; status: string }>(`/api/admin/support/conversations/${conversationId}/reply`, {
+  replyAdminSupportConversation(token: string, conversationId: string, text: string, revision: number): Promise<{ conversationId: string; status: string; revision: number }> {
+    return this.request<{ conversationId: string; status: string; revision: number }>(`/api/admin/support/conversations/${conversationId}/reply`, {
       method: 'POST',
       token,
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, revision }),
       errorMessage: apiFallbackErrorMessage
     })
   }
 
-  updateAdminSupportConversationStatus(token: string, conversationId: string, status: string, assignedToUserId?: string | null): Promise<{ conversationId: string; status: string }> {
-    return this.request<{ conversationId: string; status: string }>(`/api/admin/support/conversations/${conversationId}/status`, {
+  updateAdminSupportConversationStatus(token: string, conversationId: string, status: string, revision: number, assignedToUserId?: string | null): Promise<{ conversationId: string; status: string; revision: number }> {
+    return this.request<{ conversationId: string; status: string; revision: number }>(`/api/admin/support/conversations/${conversationId}/status`, {
       method: 'PATCH',
       token,
-      body: JSON.stringify({ status, assignedToUserId: assignedToUserId ?? null }),
+      body: JSON.stringify({ status, assignedToUserId: assignedToUserId ?? null, revision }),
       errorMessage: apiFallbackErrorMessage
     })
   }
 
-  addAdminSupportInternalNote(token: string, conversationId: string, text: string): Promise<SupportMessageDto> {
+  addAdminSupportInternalNote(token: string, conversationId: string, text: string, revision: number): Promise<SupportMessageDto> {
     return this.request<SupportMessageDto>(`/api/admin/support/conversations/${conversationId}/notes`, {
       method: 'POST',
       token,
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, revision }),
       errorMessage: apiFallbackErrorMessage
     })
   }

@@ -126,6 +126,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<TelegramBotDeepLink>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<TelegramBotNotification>().HasIndex(x => x.DeduplicationKey).IsUnique();
         modelBuilder.Entity<SupportConversation>().HasIndex(x => new { x.TelegramUserId, x.Status });
+        modelBuilder.Entity<SupportConversation>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<VpnPanel>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<VpnPanel>().HasIndex(x => x.BaseUrl).IsUnique();
         modelBuilder.Entity<VpnPanel>().Property(x => x.UsedCapacity).IsConcurrencyToken();

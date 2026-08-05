@@ -394,6 +394,7 @@ async function mockCabinetApi(page: Page) {
         subject: payload.subject,
         assignedToUserId: null,
         internalNote: '',
+        revision: 0,
         closedAt: null,
         createdAt: now,
         updatedAt: now

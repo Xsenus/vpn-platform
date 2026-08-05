@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1053/1053", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-pending-order-intent-concurrency", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1059/1059", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-support-conversation-concurrency", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1053/1053",
-                     "2026-08-05-pending-order-intent-concurrency",
-                     "0.510.0",
+                     "1059/1059",
+                     "2026-08-05-support-conversation-concurrency",
+                     "0.511.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,17 +104,17 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-pending-order-intent-concurrency",
-                     "0.510.0",
+                     "2026-08-05-support-conversation-concurrency",
+                     "0.511.0",
                      "522/542",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1053/1053`",
+                     "Backend full suite: OK, `1059/1059`",
                      "Local SQLite smoke: OK",
-                     "Secret scan: OK, `637` files, `0` findings",
+                     "Secret scan: OK, `639` files, `0` findings",
                      "Artifact cleanup: OK",
                      "external evidence remains open",
                      "real VPS/staging/live evidence remains open"
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-pending-order-intent-concurrency",
-                     "0.510.0",
+                     "2026-08-05-support-conversation-concurrency",
+                     "0.511.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -166,9 +166,9 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1053/1053`",
+                     "backend full suite `1059/1059`",
                      "PostgreSQL SQL",
-                     "secret scan `637` files, `0` findings"
+                     "secret scan `639` files, `0` findings"
                  })
         {
             Assert.Contains(expected, changelog, StringComparison.OrdinalIgnoreCase);

@@ -463,6 +463,28 @@ public class LocalSqliteSchemaRepairTests
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
     }
 
+    [Fact]
+    public async Task ApplyAsync_Should_Add_Support_Revision_To_Legacy_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "SupportConversations" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "Status" TEXT NOT NULL
+            );
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(1, repaired);
+        Assert.True(await ColumnExistsAsync(connection, "SupportConversations", "Revision"));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+    }
+
     private static OutboxMessage OutboxMessage(string correlationId)
         => new()
         {
