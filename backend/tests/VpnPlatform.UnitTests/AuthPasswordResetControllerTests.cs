@@ -160,6 +160,103 @@ public class AuthPasswordResetControllerTests
             "invalid_or_expired_reset_token");
     }
 
+    [Fact]
+    public async Task Successful_Reset_Should_Invalidate_Other_Outstanding_Tokens()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var passwordService = new PasswordService();
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "multiple-reset@example.test",
+            DisplayName = "Multiple Reset",
+            PasswordHash = passwordService.Hash("InitialPassword123!"),
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "multiple-reset"
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateAuthController(db, new TestClock(new DateTimeOffset(2026, 8, 5, 2, 20, 0, TimeSpan.Zero)));
+        var first = Assert.IsType<ForgotPasswordResponse>(Assert.IsType<OkObjectResult>(
+            await controller.ForgotPassword(new ForgotPasswordRequest("multiple-reset@example.test"), CancellationToken.None)).Value);
+        var second = Assert.IsType<ForgotPasswordResponse>(Assert.IsType<OkObjectResult>(
+            await controller.ForgotPassword(new ForgotPasswordRequest("multiple-reset@example.test"), CancellationToken.None)).Value);
+
+        Assert.IsType<OkObjectResult>(await controller.ResetPassword(
+            new ResetPasswordRequest(second.ValidationResetToken!, "SecondPassword123!"),
+            CancellationToken.None));
+
+        AssertBadRequestError(
+            await controller.ResetPassword(
+                new ResetPasswordRequest(first.ValidationResetToken!, "CompromisedPassword123!"),
+                CancellationToken.None),
+            "invalid_or_expired_reset_token");
+        Assert.True(passwordService.Verify("SecondPassword123!", (await db.Users.SingleAsync()).PasswordHash));
+        var tokens = await db.PasswordResetTokens.ToListAsync();
+        var invalidatedToken = Assert.Single(tokens, x => x.InvalidatedAt is not null);
+        Assert.Equal("password_reset_completed", invalidatedToken.InvalidationReason);
+        Assert.Equal(1, invalidatedToken.Revision);
+        var usedToken = Assert.Single(tokens, x => x.UsedAt is not null);
+        Assert.Equal(1, usedToken.Revision);
+    }
+
+    [Fact]
+    public async Task Password_Reset_Revision_Should_Reject_Concurrent_Sibling_Commit()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        var userId = Guid.NewGuid();
+        var firstId = Guid.NewGuid();
+        var secondId = Guid.NewGuid();
+        await using (var setup = new ApplicationDbContext(options))
+        {
+            await setup.Database.EnsureCreatedAsync();
+            setup.Users.Add(new User
+            {
+                Id = userId,
+                Email = "concurrent-reset@example.test",
+                DisplayName = "Concurrent Reset",
+                PasswordHash = new PasswordService().Hash("InitialPassword123!"),
+                RolesCsv = UserRoles.User,
+                Status = UserStatus.Active,
+                ReferralCode = "concurrent-reset"
+            });
+            setup.PasswordResetTokens.AddRange(
+                new PasswordResetToken { Id = firstId, UserId = userId, TokenHash = "first-hash", ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(30) },
+                new PasswordResetToken { Id = secondId, UserId = userId, TokenHash = "second-hash", ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(30) });
+            await setup.SaveChangesAsync();
+        }
+
+        await using var firstContext = new ApplicationDbContext(options);
+        await using var secondContext = new ApplicationDbContext(options);
+        var firstWinner = await firstContext.PasswordResetTokens.SingleAsync(x => x.Id == firstId);
+        var invalidatedSibling = await firstContext.PasswordResetTokens.SingleAsync(x => x.Id == secondId);
+        var concurrentSibling = await secondContext.PasswordResetTokens.SingleAsync(x => x.Id == secondId);
+        var now = DateTimeOffset.UtcNow;
+        firstWinner.UsedAt = now;
+        firstWinner.Revision++;
+        invalidatedSibling.InvalidatedAt = now;
+        invalidatedSibling.InvalidationReason = "password_reset_completed";
+        invalidatedSibling.Revision++;
+        concurrentSibling.UsedAt = now.AddSeconds(1);
+        concurrentSibling.Revision++;
+
+        await firstContext.SaveChangesAsync();
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => secondContext.SaveChangesAsync());
+
+        await using var verification = new ApplicationDbContext(options);
+        var storedSibling = await verification.PasswordResetTokens.SingleAsync(x => x.Id == secondId);
+        Assert.NotNull(storedSibling.InvalidatedAt);
+        Assert.Null(storedSibling.UsedAt);
+        Assert.Equal(1, storedSibling.Revision);
+    }
+
     private static void AssertBadRequestError(IActionResult result, string expectedError)
     {
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);

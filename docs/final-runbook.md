@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-05 локально подтверждено:
 
-- backend full suite: 1032/1032;
+- backend full suite: 1034/1034;
 - frontend tests: 84/84;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -201,9 +201,11 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - VPN access lifecycle: enable/sync/reset пробрасывают caller cancellation после durable history/audit; enable/reset uncertainty сохраняется как `SyncRequired` для ручной сверки.
 - Auth session lifecycle: access JWT и refresh rows содержат `session_version`; password reset, деактивация и изменяющий полномочия admin bootstrap повышают версию и отзывают старые refresh-сессии. JWT без claim после обновления требует refresh/relogin.
 - Refresh replay lifecycle: новый login получает отдельный `FamilyId`, rotation наследует family, а reuse detection отзывает только эту цепочку; legacy NULL-family rows связываются через `ReplacedByTokenHash`.
+- Password reset lifecycle: winning token получает `UsedAt`, остальные outstanding tokens — `InvalidatedAt`/reason; concurrency `Revision` отклоняет stale sibling commit и сохраняет единственный результат.
+- Cabinet auth hydration: login/register/refresh и восстановленная сессия выполняют ровно один `loadAll`, включая `React.StrictMode` reload.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-refresh-token-family-boundary`, версия `0.504.0`.
-- roadmap progress: `516/536` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-password-reset-token-lifecycle`, версия `0.505.0`.
+- roadmap progress: `518/538` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

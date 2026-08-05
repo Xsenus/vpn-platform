@@ -29,15 +29,23 @@ public class LocalSqliteSchemaRepairTests
                 "UserId" TEXT NOT NULL,
                 "TokenHash" TEXT NOT NULL
             );
+            CREATE TABLE "PasswordResetTokens" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "UserId" TEXT NOT NULL,
+                "TokenHash" TEXT NOT NULL
+            );
             """);
 
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
-        Assert.Equal(4, repaired);
+        Assert.Equal(7, repaired);
         Assert.True(await ColumnExistsAsync(connection, "Users", "SessionVersion"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "SessionVersion"));
         Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "FamilyId"));
         Assert.True(await IndexExistsAsync(connection, "IX_UserRefreshTokens_UserId_SessionVersion_FamilyId"));
+        Assert.True(await ColumnExistsAsync(connection, "PasswordResetTokens", "InvalidatedAt"));
+        Assert.True(await ColumnExistsAsync(connection, "PasswordResetTokens", "InvalidationReason"));
+        Assert.True(await ColumnExistsAsync(connection, "PasswordResetTokens", "Revision"));
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
     }
 

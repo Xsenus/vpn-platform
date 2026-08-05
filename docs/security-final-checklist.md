@@ -76,7 +76,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 1032/1032.
+- Backend full suite: 1034/1034.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -91,7 +91,9 @@ git diff --check
 - VPN access enable/sync/reset caller cancellation and reset uncertainty persist safe audit/reconciliation state: OK.
 - Access/refresh `session_version`, password reset/admin invalidation and stale rotation rejection: OK.
 - Refresh token family isolation, stale-generation replay and legacy rotation chain handling: OK.
-- Latest local release: `2026-08-05-refresh-token-family-boundary`, версия `0.504.0`.
+- Password reset sibling invalidation, explicit lifecycle reason and optimistic concurrency: OK.
+- Cabinet auth hydration is single-flight for new and restored sessions under `React.StrictMode`: OK.
+- Latest local release: `2026-08-05-password-reset-token-lifecycle`, версия `0.505.0`.
 - Frontend tests: 84/84.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AccessCredentialDto,
   ApiClient,
@@ -100,6 +100,7 @@ export function App() {
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [appVersionOpenSignal, setAppVersionOpenSignal] = useState(0)
+  const restoredSessionHydrationStarted = useRef(false)
   const authPanelId = 'cabinet-auth-panel'
   const activeAuthTabId = authMode === 'login' ? 'cabinet-auth-login-tab' : 'cabinet-auth-register-tab'
   const authValidationErrors = validateAuthInput(authMode, authEmail, authPassword, authDisplayName)
@@ -249,8 +250,11 @@ export function App() {
   }
 
   useEffect(() => {
+    if (restoredSessionHydrationStarted.current) return
+    restoredSessionHydrationStarted.current = true
+    // New login and refresh sessions are loaded by their handlers; this hydrates only a restored session.
     void loadAll(token)
-  }, [token])
+  }, [])
 
   useEffect(() => {
     if (!token || !selectedSupportConversation?.id) {

@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1032/1032`.
+- Backend full suite: `1034/1034`.
 - API Release build: OK.
 - Frontend unit tests: `84/84`.
 - Frontend typecheck/build: OK.
@@ -52,8 +52,10 @@ Production-ready решение заблокировано следующими 
 - X3Ui client migration резервирует target capacity до remote add и компенсирует remote/local failure; last-slot concurrency проверена на независимых SQLite-контекстах.
 - Versioned access/refresh sessions закрывают старые полномочия после password reset, деактивации и изменяющего роли/password admin bootstrap; JWT старого формата требует refresh/relogin.
 - Refresh reuse detection ограничен одной token family и поддерживает legacy NULL-family chains без отзыва независимых сессий.
-- Latest "Что нового": `2026-08-05-refresh-token-family-boundary`, версия `0.504.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `516/536` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Password reset invalidates outstanding sibling tokens in one transaction; optimistic `Revision` rejects stale concurrent commit across API instances.
+- Cabinet login/register/refresh and restored-session reload use one protected-data hydration cycle without duplicate API calls or DOM replacement race.
+- Latest "Что нового": `2026-08-05-password-reset-token-lifecycle`, версия `0.505.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `518/538` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

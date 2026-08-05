@@ -495,6 +495,8 @@ async function mockCabinetApi(page: Page) {
     rejectAuthorizedRequests: () => { authorizedRequestsRejected = true },
     allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
     rejectNextAuthorizedPath: (path: string) => { rejectedAuthorizedPath = path },
+    getRequestCount: (path: string, method = 'GET') =>
+      requests.filter((item) => item.method === method && new URL(item.url).pathname === path).length,
     getLastRequest: (path: string, method = 'POST') =>
       requests.findLast((item) => item.method === method && new URL(item.url).pathname === path)
   }
@@ -603,9 +605,11 @@ test('cabinet covers register, login, payments, subscription access and support'
   const loginPanel = page.locator('#cabinet-auth-panel')
   await loginPanel.getByLabel('Email').fill(user.email)
   await loginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  const profileLoadsBeforeRelogin = api.getRequestCount('/api/me')
   await loginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText('Вход выполнен.')).toBeVisible()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/me')).toBe(profileLoadsBeforeRelogin + 1)
 
   api.rejectAuthorizedRequests()
   await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
@@ -624,6 +628,10 @@ test('cabinet covers register, login, payments, subscription access and support'
   await reloginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
   await reloginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  const profileLoadsBeforeRestore = api.getRequestCount('/api/me')
+  await page.reload()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/me')).toBe(profileLoadsBeforeRestore + 1)
 
   const resetCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Сброс пароля' }) })
   await resetCard.getByLabel('Email').fill(user.email)

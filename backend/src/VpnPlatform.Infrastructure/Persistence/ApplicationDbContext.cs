@@ -77,6 +77,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<UserRefreshToken>().HasIndex(x => new { x.UserId, x.SessionVersion, x.FamilyId });
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => new { x.UserId, x.ExpiresAt });
+        modelBuilder.Entity<PasswordResetToken>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<ChannelProfile>().HasIndex(x => new { x.ProviderType, x.ExternalUserId }).IsUnique();
         modelBuilder.Entity<Tariff>().HasIndex(x => x.Slug).IsUnique();
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.IsActive, x.ShowOnFaqPage, x.SortOrder });

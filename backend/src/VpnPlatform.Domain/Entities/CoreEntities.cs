@@ -60,6 +60,9 @@ public class PasswordResetToken : AuditableEntity
     public string TokenHash { get; set; } = string.Empty;
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? UsedAt { get; set; }
+    public DateTimeOffset? InvalidatedAt { get; set; }
+    public string InvalidationReason { get; set; } = string.Empty;
+    public int Revision { get; set; }
     public string RequestedByIp { get; set; } = string.Empty;
     public string UserAgent { get; set; } = string.Empty;
 

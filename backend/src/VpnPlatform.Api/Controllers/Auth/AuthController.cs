@@ -269,7 +269,7 @@ public class AuthController : ControllerBase
         var now = _clock.UtcNow;
         var hash = HashToken(token);
         var reset = await _db.PasswordResetTokens.FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
-        if (reset is null || reset.UsedAt is not null || reset.ExpiresAt <= now)
+        if (reset is null || reset.UsedAt is not null || reset.InvalidatedAt is not null || reset.ExpiresAt <= now)
         {
             return BadRequest(new { error = "invalid_or_expired_reset_token" });
         }
@@ -284,9 +284,35 @@ public class AuthController : ControllerBase
         user.SessionVersion = checked(user.SessionVersion + 1);
         user.UpdatedAt = now;
         reset.UsedAt = now;
+        reset.Revision = checked(reset.Revision + 1);
+        reset.UpdatedAt = now;
+        var siblingTokens = await _db.PasswordResetTokens
+            .Where(x => x.UserId == user.Id
+                && x.Id != reset.Id
+                && x.UsedAt == null
+                && x.InvalidatedAt == null)
+            .ToListAsync(cancellationToken);
+        foreach (var sibling in siblingTokens)
+        {
+            sibling.InvalidatedAt = now;
+            sibling.InvalidationReason = "password_reset_completed";
+            sibling.Revision = checked(sibling.Revision + 1);
+            sibling.UpdatedAt = now;
+        }
         await RevokeUserSessionsAsync(user.Id, "password_reset", cancellationToken);
-        AddAudit("auth.password_reset_completed", "User", user.Id, null, new { resetTokenId = reset.Id });
-        await _db.SaveChangesAsync(cancellationToken);
+        AddAudit("auth.password_reset_completed", "User", user.Id, null, new { resetTokenId = reset.Id, siblingTokensInvalidated = siblingTokens.Count });
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (_db is DbContext dbContext)
+            {
+                dbContext.ChangeTracker.Clear();
+            }
+            return BadRequest(new { error = "invalid_or_expired_reset_token" });
+        }
         return Ok(new { status = "password_changed" });
     }
 

@@ -2,6 +2,27 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: password reset token lifecycle
+
+Scope:
+- Проверены несколько outstanding reset codes, повторная смена пароля старым кодом, sibling invalidation, cross-context optimistic concurrency, PostgreSQL migration и local SQLite repair.
+- Проверена однократная загрузка защищенных данных кабинета после повторного входа без дублирующего token effect и DOM replacement race.
+
+Results:
+- Roadmap progress: `518/538` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-password-reset-token-lifecycle`, version `0.505.0`.
+- Backend full suite: OK, `1034/1034`; targeted auth/session/SQLite schema suite: OK, `21/21`.
+- Successful reset marks the consumed token used and atomically invalidates every other outstanding token with `password_reset_completed`.
+- EF concurrency `Revision` rejects a sibling token loaded before the winning commit and preserves the winner's password/session state.
+- Cabinet desktop/mobile E2E confirms that relogin adds exactly one profile/data hydration and QR interaction is not detached by a duplicate request cycle.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `629` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: refresh token family boundary
 
 Scope:

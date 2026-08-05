@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.505.0 - 2026-08-05
+
+Release entry: `2026-08-05-password-reset-token-lifecycle`.
+
+### Исправлено
+
+- Успешный password reset атомарно инвалидирует остальные outstanding tokens пользователя, поэтому старый код больше не может повторно заменить пароль.
+- Consumed и invalidated tokens повышают `Revision`; конкурентный sibling commit получает controlled `invalid_or_expired_reset_token` вместо второго успешного reset.
+- Lifecycle хранит `InvalidatedAt` и `InvalidationReason=password_reset_completed`, а security audit фиксирует число закрытых sibling tokens.
+- Добавлены PostgreSQL migration и idempotent local SQLite schema repair для новых полей.
+- Кабинет больше не запускает повторную загрузку восьми защищенных ресурсов после login/register/refresh; восстановленная при старте сессия и новая сессия имеют раздельные пути гидратации без замены интерактивных кнопок во время клика.
+
+### Проверено
+
+- Backend full suite `1034/1034`; targeted auth/session/SQLite schema suite `21/21`, включая cross-context concurrency regression.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `629` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `518/538` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.504.0 - 2026-08-05
 
 Release entry: `2026-08-05-refresh-token-family-boundary`.

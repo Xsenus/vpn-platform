@@ -50,6 +50,33 @@ public static class LocalSqliteSchemaRepair
             repaired++;
         }
 
+        if (await TableExistsAsync(db, "PasswordResetTokens", cancellationToken)
+            && !await ColumnExistsAsync(db, "PasswordResetTokens", "InvalidatedAt", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "PasswordResetTokens" ADD COLUMN "InvalidatedAt" TEXT NULL;""",
+                cancellationToken);
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "PasswordResetTokens", cancellationToken)
+            && !await ColumnExistsAsync(db, "PasswordResetTokens", "InvalidationReason", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "PasswordResetTokens" ADD COLUMN "InvalidationReason" TEXT NOT NULL DEFAULT '';""",
+                cancellationToken);
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "PasswordResetTokens", cancellationToken)
+            && !await ColumnExistsAsync(db, "PasswordResetTokens", "Revision", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "PasswordResetTokens" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;""",
+                cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "PaymentProviderAccounts", cancellationToken)
             && !await ColumnExistsAsync(db, "PaymentProviderAccounts", "WebhookUrl", cancellationToken))
         {

@@ -11764,5 +11764,32 @@
         "text": "Roadmap progress is 516/536 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-password-reset-token-lifecycle",
+    "version": "0.505.0",
+    "releasedAt": "2026-08-05T09:29:23+07:00",
+    "title": "Сброс пароля закрывает старые коды",
+    "summary": "Успешная смена пароля атомарно инвалидирует остальные выданные коды пользователя, а кабинет загружает новую сессию один раз без гонки интерактивных элементов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "После успешного reset ранее выданный код возвращает invalid_or_expired_reset_token и не может заменить новый пароль."
+      },
+      {
+        "type": "improved",
+        "text": "Password reset tokens получили InvalidatedAt, InvalidationReason и Revision; PostgreSQL и local SQLite сохраняют атомарный lifecycle и обнаруживают конкурентный commit."
+      },
+      {
+        "type": "fixed",
+        "text": "После login, register или refresh кабинет больше не дублирует загрузку профиля, подписок, платежей и VPN-доступа через token effect."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 518/538 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
