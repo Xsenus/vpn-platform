@@ -94,6 +94,7 @@ async function mockPublicApi(page: Page) {
   let rejectNextProfileRequest = true
   let rejectNextCheckoutPromo = false
   let checkoutDelayMs = 0
+  let unsafePaymentLink = false
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -229,7 +230,10 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/me/orders/public-order/payments/YooKassa/init', async (route) => {
-    await fulfillJson(route, { paymentId: 'public-payment', redirectUrl: 'https://pay.example.test/public' })
+    await fulfillJson(route, {
+      paymentId: 'public-payment',
+      redirectUrl: unsafePaymentLink ? 'javascript:alert(1)' : 'https://pay.example.test/public'
+    })
   })
 
   await page.route('**/api/auth/logout', async (route) => {
@@ -249,7 +253,8 @@ async function mockPublicApi(page: Page) {
     getRefreshPayload: () => refreshPayload,
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
-    delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs }
+    delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
+    returnUnsafePaymentLink: () => { unsafePaymentLink = true }
   }
 }
 
@@ -317,11 +322,16 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   await authPanel.getByLabel('Email').fill('public@example.test')
   await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
   await authPanel.getByLabel('Реферальный код').fill('PUBLIC-REF')
+  api.returnUnsafePaymentLink()
   const registrationRequestPromise = page.waitForRequest((request) => request.method() === 'POST' && new URL(request.url()).pathname === '/api/auth/register')
   await authPanel.getByRole('button', { name: 'Создать аккаунт' }).click()
   const registrationRequest = await registrationRequestPromise
   expect(registrationRequest.postDataJSON()).toMatchObject({ referralCode: 'PUBLIC-REF' })
   await expect(page.getByText('Public E2E').first()).toBeVisible()
+  const rejectedPaymentLinkAlert = page.getByRole('alert').filter({ hasText: 'Ссылка оплаты отклонена как некорректная' })
+  await expect(rejectedPaymentLinkAlert).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Скопировать ссылку: скопировать значение/ })).toHaveCount(0)
   expect(api.getRefreshPayload()).toEqual({ refreshToken: 'public-refresh-token' })
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-public-refresh-token'))).toBe('public-refreshed-refresh-token')
   const expectedRefreshLogs = consoleErrors.filter((message) => message.includes('401 (Unauthorized)'))

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.522.0 - 2026-08-05
+
+Release entry: `2026-08-05-payment-link-safety-boundary`.
+
+### Исправлено
+
+- `PaymentOrchestrator` принимает только абсолютный `http/https` return URL без встроенных учетных данных и прекращает операцию до вызова провайдера при нарушении контракта.
+- Относительный, исполняемый, `data:` или credential-bearing redirect провайдера не сохраняется и не возвращается клиенту; небезопасный legacy `confirmationUrl` также не переиспользуется.
+- Public и cabinet открывают, показывают и копируют payment/Telegram URL только после общей frontend-проверки; при отказе выводится понятное предупреждение без активной ссылки.
+
+### Проверено
+
+- Backend full suite `1112/1112`, включая targeted payment initialization SQLite suite `17/17` и негативные return/provider/stored URL cases.
+- Frontend `92/92`, typecheck и production build всех трех приложений.
+- Измененные public/cabinet desktop/mobile сценарии `4/4`; полный public/cabinet/admin/all-screens/mobile/console responsive suite `16/16`.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access.
+- `RoadmapCurrentStateTests`, release/documentation guards, dependency/secret/UTF-8 проверки подтверждают latest `2026-08-05-payment-link-safety-boundary`, версию `0.522.0` и roadmap `535/555`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами.
+
 ## 0.521.0 - 2026-08-05
 
 Release entry: `2026-08-05-clipboard-feedback-boundary`.

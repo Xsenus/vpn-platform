@@ -286,6 +286,19 @@ export function ErrorBlock({ message }: { message: string }) {
 
 type ClipboardWriter = Pick<Clipboard, 'writeText'>
 
+export function getSafeHttpUrl(value?: string | null) {
+  const normalized = String(value ?? '').trim()
+  if (!normalized) return null
+
+  try {
+    const url = new URL(normalized)
+    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password || !url.hostname) return null
+    return normalized
+  } catch {
+    return null
+  }
+}
+
 export async function tryWriteClipboardText(value: string, writer?: ClipboardWriter | null) {
   try {
     const clipboard = writer === undefined
@@ -353,6 +366,39 @@ export function CopyButton({ value, label = 'Скопировать', disabled }
       </PrimaryButton>
       <span id={feedbackId} className={`copy-feedback${status === 'failed' ? ' copy-feedback-error' : ''}`} role="status" aria-live="polite">{feedback}</span>
     </span>
+  )
+}
+
+export function ExternalLinkActions({
+  value,
+  openLabel,
+  copyLabel = 'Скопировать ссылку',
+  ariaLabel,
+  invalidMessage = 'Внешняя ссылка недоступна: получен некорректный адрес.',
+  className = 'copy-row',
+  valueClassName,
+  showValue = true
+}: {
+  value?: string | null
+  openLabel: string
+  copyLabel?: string | null
+  ariaLabel?: string
+  invalidMessage?: string
+  className?: string
+  valueClassName?: string
+  showValue?: boolean
+}) {
+  const safeUrl = getSafeHttpUrl(value)
+  if (!safeUrl) return <p className="safe-note external-link-warning" role="alert">{invalidMessage}</p>
+
+  return (
+    <>
+      <div className={className}>
+        <a href={safeUrl} target="_blank" rel="noopener noreferrer" className="button" aria-label={ariaLabel}>{openLabel}</a>
+        {copyLabel && <CopyButton value={safeUrl} label={copyLabel} />}
+      </div>
+      {showValue && <div className={valueClassName}><CodeBlock>{safeUrl}</CodeBlock></div>}
+    </>
   )
 }
 

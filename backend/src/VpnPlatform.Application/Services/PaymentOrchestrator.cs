@@ -106,11 +106,15 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         var account = accountResult.Value;
         var provider = _paymentProviderFactory.Get(command.Provider);
         var now = _clock.UtcNow;
-        var returnUrl = !string.IsNullOrWhiteSpace(command.ReturnUrl)
+        var requestedReturnUrl = !string.IsNullOrWhiteSpace(command.ReturnUrl)
             ? command.ReturnUrl.Trim()
             : !string.IsNullOrWhiteSpace(account.ReturnUrl)
                 ? account.ReturnUrl
                 : "http://localhost:5174/payments";
+        if (!TryNormalizeHttpUrl(requestedReturnUrl, out var returnUrl))
+        {
+            return Result<PaymentInitResult>.Failure("Payment return URL must be an absolute http/https URL without embedded credentials.");
+        }
 
         var existingPendingCandidates = await _db.Payments
             .Where(x =>
@@ -125,7 +129,15 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         if (existingPending is not null && !string.IsNullOrWhiteSpace(existingPending.ConfirmationUrl))
         {
-            return Result<PaymentInitResult>.Success(new PaymentInitResult(existingPending.ProviderPaymentId, existingPending.ConfirmationUrl, existingPending.RawResponse));
+            if (!TryNormalizeHttpUrl(existingPending.ConfirmationUrl, out var existingConfirmationUrl))
+            {
+                existingPending.StatusReason = "Stored payment confirmation URL failed the http/https safety check.";
+                existingPending.UpdatedAt = now;
+                await TrySavePaymentStateAsync();
+                return Result<PaymentInitResult>.Failure("Stored payment confirmation URL is invalid; contact support before retrying.");
+            }
+
+            return Result<PaymentInitResult>.Success(new PaymentInitResult(existingPending.ProviderPaymentId, existingConfirmationUrl, existingPending.RawResponse));
         }
 
         var payment = existingPending ?? new PaymentAttempt
@@ -160,7 +172,12 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                         .FirstOrDefaultAsync(x => x.IdempotencyKey == payment.IdempotencyKey, cancellationToken);
                     if (concurrentPayment is not null && !string.IsNullOrWhiteSpace(concurrentPayment.ConfirmationUrl))
                     {
-                        return Result<PaymentInitResult>.Success(new PaymentInitResult(concurrentPayment.ProviderPaymentId, concurrentPayment.ConfirmationUrl, concurrentPayment.RawResponse));
+                        if (!TryNormalizeHttpUrl(concurrentPayment.ConfirmationUrl, out var concurrentConfirmationUrl))
+                        {
+                            return Result<PaymentInitResult>.Failure("Stored payment confirmation URL is invalid; contact support before retrying.");
+                        }
+
+                        return Result<PaymentInitResult>.Success(new PaymentInitResult(concurrentPayment.ProviderPaymentId, concurrentConfirmationUrl, concurrentPayment.RawResponse));
                     }
 
                     if (concurrentPayment is not null)
@@ -205,6 +222,19 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             await TrySavePaymentStateAsync();
             return Result<PaymentInitResult>.Failure(ex.Message);
         }
+
+        if (!TryNormalizeHttpUrl(init.RedirectUrl, out var redirectUrl))
+        {
+            payment.ProviderPaymentId = string.IsNullOrWhiteSpace(init.PaymentId) ? payment.ProviderPaymentId : init.PaymentId.Trim();
+            payment.RawResponse = init.RawResponse;
+            payment.ConfirmationUrl = string.Empty;
+            payment.StatusReason = "Payment provider returned an invalid confirmation URL.";
+            payment.UpdatedAt = now;
+            await TrySavePaymentStateAsync();
+            return Result<PaymentInitResult>.Failure("Payment provider returned an invalid confirmation URL; no external link was exposed.");
+        }
+
+        init = new PaymentInitResult(init.PaymentId, redirectUrl, init.RawResponse);
 
         payment.ProviderPaymentId = init.PaymentId;
         payment.RawResponse = init.RawResponse;
@@ -258,6 +288,15 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 or OrderStatus.PartiallyProcessed
                 or OrderStatus.Completed
                 or OrderStatus.Refunded;
+
+    private static bool TryNormalizeHttpUrl(string? value, out string normalized)
+    {
+        normalized = value?.Trim() ?? string.Empty;
+        return Uri.TryCreate(normalized, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            && string.IsNullOrEmpty(uri.UserInfo)
+            && !string.IsNullOrWhiteSpace(uri.Host);
+    }
 
     private static void RestoreTrackedOrder(Order order, Order currentOrder)
     {

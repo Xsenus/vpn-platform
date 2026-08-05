@@ -699,6 +699,11 @@ form { display: grid; gap: 12px; max-width: 560px; }
 .toast-success { color: #166534; background: #ecfdf5; border: 1px solid #bbf7d0; }
 .toast-error { color: var(--danger); background: #fef2f2; border: 1px solid #fecaca; }
 .safe-note { color: var(--warning); background: #fffbeb; border: 1px solid #fde68a; }
+.external-link-warning {
+  width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .qr-preview svg { max-width: 220px; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 8px; }
 .qr-preview { overflow-x: auto; }
 

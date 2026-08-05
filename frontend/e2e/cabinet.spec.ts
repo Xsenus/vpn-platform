@@ -160,6 +160,14 @@ const paidPayment = {
   updatedAt: now
 }
 
+const unsafeLinkPayment = {
+  ...paidPayment,
+  id: 'payment-unsafe-link',
+  orderId: 'order-unsafe-link',
+  providerPaymentId: 'unsafe-link-attempt',
+  confirmationUrl: 'javascript:alert(1)'
+}
+
 const access = {
   id: 'access-active',
   subscriptionId: subscription.id,
@@ -371,7 +379,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/payments') {
-      await fulfillJson(route, [paidPayment])
+      await fulfillJson(route, [paidPayment, unsafeLinkPayment])
       return
     }
 
@@ -554,6 +562,10 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
   await expect(page.getByText('yk-paid-1')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'EU Sandbox' })).toBeVisible()
+  const unsafeLinkPaymentCard = page.locator('.payment-record').filter({ hasText: 'order-unsafe-link' })
+  await expect(unsafeLinkPaymentCard.getByRole('alert')).toContainText('Сохраненная ссылка оплаты отклонена как некорректная')
+  await expect(unsafeLinkPaymentCard.getByRole('link', { name: 'Открыть оплату' })).toHaveCount(0)
+  await expect(unsafeLinkPaymentCard.getByRole('button', { name: /Скопировать ссылку/ })).toHaveCount(0)
 
   const firstCopyButton = page.getByRole('button', { name: /Скопировать ссылку: скопировать значение/ }).first()
   await firstCopyButton.click()

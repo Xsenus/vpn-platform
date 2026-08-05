@@ -22,7 +22,7 @@ import {
   validatePasswordResetConfirm,
   validatePasswordResetRequest
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetSessionRejected } from './cabinet-session'
@@ -828,11 +828,12 @@ export function App() {
                 {telegramLink && (
                   <>
                     <p>Ссылка действует до {new Date(telegramLink.expiresAt).toLocaleString()}</p>
-                    <div className="copy-row">
-                      <a href={telegramLink.deepLinkUrl} target="_blank" rel="noreferrer" className="button" aria-label="Открыть Telegram-бота в новой вкладке">Открыть бота</a>
-                      <CopyButton value={telegramLink.deepLinkUrl} label="Скопировать ссылку" />
-                    </div>
-                    <CodeBlock>{telegramLink.deepLinkUrl}</CodeBlock>
+                    <ExternalLinkActions
+                      value={telegramLink.deepLinkUrl}
+                      openLabel="Открыть бота"
+                      ariaLabel="Открыть Telegram-бота в новой вкладке"
+                      invalidMessage="Ссылка на Telegram-бота отклонена как некорректная. Создайте новую ссылку."
+                    />
                   </>
                 )}
               </>
@@ -845,11 +846,12 @@ export function App() {
               <p>ID подписки: {renewalState.subscriptionId}</p>
               <p>Статус заказа: <StatusBadge value={renewalState.order.status} /></p>
               <p>ID платежа: {renewalState.payment.paymentId}</p>
-              <div className="copy-row">
-                <a href={renewalState.payment.redirectUrl} target="_blank" rel="noreferrer" className="button" aria-label="Открыть оплату в новой вкладке">Открыть оплату</a>
-                <CopyButton value={renewalState.payment.redirectUrl} label="Скопировать ссылку" />
-              </div>
-              <CodeBlock>{renewalState.payment.redirectUrl}</CodeBlock>
+              <ExternalLinkActions
+                value={renewalState.payment.redirectUrl}
+                openLabel="Открыть оплату"
+                ariaLabel="Открыть оплату в новой вкладке"
+                invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите продление или обратитесь в поддержку."
+              />
             </Card>
           )}
 
@@ -858,11 +860,12 @@ export function App() {
               <h3>Последняя повторная оплата</h3>
               <p>Заказ: {retryPaymentState.order.tariffName || retryPaymentState.order.id}</p>
               <p>ID платежа: {retryPaymentState.payment.paymentId}</p>
-              <div className="copy-row">
-                <a href={retryPaymentState.payment.redirectUrl} target="_blank" rel="noreferrer" className="button" aria-label="Открыть повторную оплату в новой вкладке">Открыть оплату</a>
-                <CopyButton value={retryPaymentState.payment.redirectUrl} label="Скопировать ссылку" />
-              </div>
-              <CodeBlock>{retryPaymentState.payment.redirectUrl}</CodeBlock>
+              <ExternalLinkActions
+                value={retryPaymentState.payment.redirectUrl}
+                openLabel="Открыть оплату"
+                ariaLabel="Открыть повторную оплату в новой вкладке"
+                invalidMessage="Ссылка повторной оплаты отклонена как некорректная. Повторите операцию или обратитесь в поддержку."
+              />
             </Card>
           )}
         </div>
@@ -1023,10 +1026,13 @@ export function App() {
                   <div><dt>Активация</dt><dd>{payment.isActivationProcessed ? 'обработана' : 'ожидает'}</dd></div>
                 </dl>
                 {payment.confirmationUrl && (
-                  <div className="toolbar compact">
-                    <a className="button" href={payment.confirmationUrl} target="_blank" rel="noreferrer">Открыть оплату</a>
-                    <CopyButton value={payment.confirmationUrl} label="Скопировать ссылку" />
-                  </div>
+                  <ExternalLinkActions
+                    value={payment.confirmationUrl}
+                    openLabel="Открыть оплату"
+                    className="toolbar compact"
+                    showValue={false}
+                    invalidMessage="Сохраненная ссылка оплаты отклонена как некорректная. Создайте новую попытку оплаты или обратитесь в поддержку."
+                  />
                 )}
               </div>
             ))}

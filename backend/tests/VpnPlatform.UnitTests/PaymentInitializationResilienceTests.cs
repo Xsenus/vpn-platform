@@ -146,6 +146,88 @@ public class PaymentInitializationResilienceTests
         Assert.Empty(payment.ConfirmationUrl);
     }
 
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html,payment")]
+    [InlineData("/payments/return")]
+    [InlineData("https://user:secret@example.test/return")]
+    public async Task Unsafe_Return_Url_Should_Be_Rejected_Before_Provider_Call(string returnUrl)
+    {
+        await using var fixture = await PaymentFixture.CreateAsync();
+        var provider = new TrackingPaymentProvider();
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(
+            new PaymentInitCommand(fixture.OrderId, PaymentProvider.YooKassa, returnUrl),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("absolute http/https", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.InitCalls);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        Assert.Empty(await verificationDb.Payments.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html,payment")]
+    [InlineData("/provider/checkout")]
+    [InlineData("https://user:secret@provider.example.test/checkout")]
+    public async Task Unsafe_Provider_Redirect_Should_Not_Be_Stored_Or_Exposed(string redirectUrl)
+    {
+        await using var fixture = await PaymentFixture.CreateAsync();
+        var provider = new TrackingPaymentProvider(redirectUrl: redirectUrl);
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(fixture.Command, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("invalid confirmation URL", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, provider.InitCalls);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        var payment = await verificationDb.Payments.SingleAsync();
+        Assert.Equal(PaymentStatus.New, payment.Status);
+        Assert.Equal(provider.PaymentId, payment.ProviderPaymentId);
+        Assert.Empty(payment.ConfirmationUrl);
+        Assert.Contains("invalid confirmation URL", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Unsafe_Stored_Confirmation_Url_Should_Not_Be_Reused()
+    {
+        await using var fixture = await PaymentFixture.CreateAsync();
+        var account = await fixture.Db.PaymentProviderAccounts.SingleAsync();
+        fixture.Db.Payments.Add(new PaymentAttempt
+        {
+            OrderId = fixture.OrderId,
+            PaymentProviderAccountId = account.Id,
+            Provider = PaymentProvider.YooKassa,
+            ProviderMode = account.Mode,
+            ProviderPaymentId = "stored-provider-id",
+            IdempotencyKey = $"stored-{Guid.NewGuid():N}",
+            ConfirmationUrl = "javascript:alert(1)",
+            ReturnUrl = "https://example.test/return",
+            Amount = 100m,
+            Currency = "RUB",
+            Status = PaymentStatus.Pending,
+            RawRequest = "{}",
+            RawResponse = "{}"
+        });
+        await fixture.Db.SaveChangesAsync();
+        var provider = new TrackingPaymentProvider();
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(fixture.Command, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Stored payment confirmation URL is invalid", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.InitCalls);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        var payment = await verificationDb.Payments.SingleAsync();
+        Assert.Equal("javascript:alert(1)", payment.ConfirmationUrl);
+        Assert.Contains("safety check", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class PaymentFixture : IAsyncDisposable
     {
         private readonly SqliteConnection _connection;
@@ -225,12 +307,12 @@ public class PaymentInitializationResilienceTests
         }
     }
 
-    private sealed class TrackingPaymentProvider(Action? beforeReturn = null) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(Action? beforeReturn = null, string? redirectUrl = null) : IPaymentProvider
     {
         public PaymentProvider Provider => PaymentProvider.YooKassa;
         public int InitCalls { get; private set; }
         public string PaymentId { get; } = $"provider-{Guid.NewGuid():N}";
-        public string RedirectUrl { get; } = "https://provider.example.test/checkout";
+        public string RedirectUrl { get; } = redirectUrl ?? "https://provider.example.test/checkout";
 
         public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
         {

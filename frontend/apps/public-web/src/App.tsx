@@ -17,7 +17,7 @@ import {
   validatePasswordResetConfirm,
   validatePasswordResetRequest
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
 import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 
@@ -584,15 +584,14 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
             <p>ID заказа: {checkoutState.order.id}</p>
             <p>Платеж: {checkoutState.payment.paymentId}</p>
             <p className="muted">{content('home.checkout.afterPaymentText')}</p>
-            <div className="copy-row">
-              <a href={checkoutState.payment.redirectUrl} target="_blank" rel="noreferrer" className="button" aria-label="Открыть оплату в новой вкладке">
-                {content('home.checkout.openPaymentCta')}
-              </a>
-              <CopyButton value={checkoutState.payment.redirectUrl} label={content('home.checkout.copyPaymentLink')} />
-            </div>
-            <div className="mt-16">
-              <CodeBlock>{checkoutState.payment.redirectUrl}</CodeBlock>
-            </div>
+            <ExternalLinkActions
+              value={checkoutState.payment.redirectUrl}
+              openLabel={content('home.checkout.openPaymentCta')}
+              copyLabel={content('home.checkout.copyPaymentLink')}
+              ariaLabel="Открыть оплату в новой вкладке"
+              invalidMessage="Ссылка оплаты отклонена как некорректная. Обновите страницу или обратитесь в поддержку."
+              valueClassName="mt-16"
+            />
           </Card>
         </div>
       )}
@@ -827,11 +826,12 @@ function AccountPage({
               <h3>Последний заказ</h3>
               <p>Тариф: {lastCheckout.tariffName}</p>
               <p>Статус: <StatusBadge value={lastCheckout.order.status} /></p>
-              <div className="copy-row">
-                <a href={lastCheckout.payment.redirectUrl} target="_blank" rel="noreferrer" className="button" aria-label="Открыть оплату в новой вкладке">Открыть оплату</a>
-                <CopyButton value={lastCheckout.payment.redirectUrl} label="Скопировать ссылку" />
-              </div>
-              <CodeBlock>{lastCheckout.payment.redirectUrl}</CodeBlock>
+              <ExternalLinkActions
+                value={lastCheckout.payment.redirectUrl}
+                openLabel="Открыть оплату"
+                ariaLabel="Открыть оплату в новой вкладке"
+                invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите оформление или обратитесь в поддержку."
+              />
             </Card>
           )}
         </div>

@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: payment link safety boundary
+
+Scope:
+- Проверены request return URL, provider redirect, сохраненный confirmation URL и все payment/Telegram external-link surfaces public/cabinet.
+
+Results:
+- Roadmap progress: `535/555` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-payment-link-safety-boundary`, version `0.522.0`.
+- Backend full suite: OK, `1112/1112`; targeted payment initialization SQLite suite: OK, `17/17`.
+- Frontend tests: OK, `92/92`; typecheck и production build всех трех приложений: OK.
+- Backend до provider call отклоняет относительные, исполняемые, `data:` и credential-bearing return URL; небезопасный provider/stored confirmation URL не сохраняется и не возвращается клиенту.
+- Shared frontend boundary показывает и копирует только абсолютный credential-free `http/https` URL; при отказе остается видимое предупреждение без ссылки и copy-команды.
+- Public/cabinet desktop/mobile changed scenarios: OK, `4/4`; full responsive/console suite: OK, `16/16`.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены.
+- Artifact cleanup и strict UTF-8 guard выполняются перед коммитом.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui и real SMTP не были доступны.
+
 ## Check 2026-08-05: clipboard feedback boundary
 
 Scope:

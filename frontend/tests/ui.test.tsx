@@ -9,7 +9,9 @@ import {
   DataTableLite,
   EmptyState,
   ErrorBlock,
+  ExternalLinkActions,
   FormValidationSummary,
+  getSafeHttpUrl,
   LoadingBlock,
   PageShell,
   PasswordField,
@@ -101,6 +103,29 @@ test('clipboard boundary reports success, unavailable API and denied permission'
   assert.equal(written, 'vpn://success')
   assert.equal(await tryWriteClipboardText('vpn://unavailable', null), false)
   assert.equal(await tryWriteClipboardText('vpn://denied', { writeText: async () => { throw new Error('permission denied') } }), false)
+})
+
+test('external link boundary exposes only absolute credential-free http URLs', () => {
+  assert.equal(getSafeHttpUrl(' https://pay.example.test/checkout?id=1 '), 'https://pay.example.test/checkout?id=1')
+  assert.equal(getSafeHttpUrl('http://127.0.0.1:5173/payment-sandbox'), 'http://127.0.0.1:5173/payment-sandbox')
+  assert.equal(getSafeHttpUrl('javascript:alert(1)'), null)
+  assert.equal(getSafeHttpUrl('data:text/html,payment'), null)
+  assert.equal(getSafeHttpUrl('/relative-payment'), null)
+  assert.equal(getSafeHttpUrl('https://user:secret@pay.example.test/checkout'), null)
+
+  const validHtml = renderToStaticMarkup(
+    <ExternalLinkActions value="https://pay.example.test/checkout" openLabel="Открыть оплату" />
+  )
+  assert.match(validHtml, /href="https:\/\/pay\.example\.test\/checkout"/)
+  assert.match(validHtml, /rel="noopener noreferrer"/)
+  assert.match(validHtml, /Скопировать ссылку/)
+
+  const rejectedHtml = renderToStaticMarkup(
+    <ExternalLinkActions value="javascript:alert(1)" openLabel="Открыть оплату" invalidMessage="Ссылка отклонена" />
+  )
+  assert.match(rejectedHtml, /role="alert"/)
+  assert.match(rejectedHtml, /Ссылка отклонена/)
+  assert.doesNotMatch(rejectedHtml, /href=|javascript:|Скопировать ссылку/)
 })
 
 test('Design system primitives render shared tabs, states and tables', () => {
