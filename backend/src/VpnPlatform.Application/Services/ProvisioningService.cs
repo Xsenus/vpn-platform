@@ -50,10 +50,10 @@ public class ProvisioningService
 
     public async Task<Result<ProvisioningRun>> QueueAsync(Guid nodeId, bool dryRun, Guid? requestedByUserId, CancellationToken cancellationToken = default)
     {
-        return await QueueCoreAsync(nodeId, dryRun, requestedByUserId, requestedByUserId, cancellationToken);
+        return await QueueCoreAsync(nodeId, dryRun, requestedByUserId, requestedByUserId, isRetry: false, cancellationToken);
     }
 
-    private async Task<Result<ProvisioningRun>> QueueCoreAsync(Guid nodeId, bool dryRun, Guid? ownerUserId, Guid? actorUserId, CancellationToken cancellationToken)
+    private async Task<Result<ProvisioningRun>> QueueCoreAsync(Guid nodeId, bool dryRun, Guid? ownerUserId, Guid? actorUserId, bool isRetry, CancellationToken cancellationToken)
     {
         await using var gate = await PaymentProcessingGate.AcquireProvisioningNodeAsync(nodeId, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId, cancellationToken);
@@ -130,7 +130,9 @@ public class ProvisioningService
         }
 
         var now = _clock.UtcNow;
-        var status = dryRun ? ProvisioningRunStatus.PrecheckQueued : ProvisioningRunStatus.DeployQueued;
+        var status = isRetry
+            ? ProvisioningRunStatus.Retrying
+            : dryRun ? ProvisioningRunStatus.PrecheckQueued : ProvisioningRunStatus.DeployQueued;
         var run = new ProvisioningRun
         {
             NodeId = nodeId,
@@ -138,18 +140,18 @@ public class ProvisioningService
             RequestedByUserId = ownerUserId,
             DryRun = dryRun,
             StartedAt = now,
-            ExecutionLog = dryRun ? "Precheck queued." : "Deploy queued."
+            ExecutionLog = isRetry ? "Retry queued for provisioning run." : dryRun ? "Precheck queued." : "Deploy queued."
         };
 
         _db.ProvisioningRuns.Add(run);
         _db.ProvisioningStepRuns.Add(new ProvisioningStepRun
         {
             ProvisioningRunId = run.Id,
-            StepName = dryRun ? "Precheck queued" : "Deploy queued",
+            StepName = isRetry ? "Retry queued" : dryRun ? "Precheck queued" : "Deploy queued",
             Status = status,
             StartedAt = now,
             FinishedAt = now,
-            Output = dryRun ? "Safe precheck run queued." : "Safe deploy run queued."
+            Output = isRetry ? "Retry queued in one atomic provisioning state change." : dryRun ? "Safe precheck run queued." : "Safe deploy run queued."
         });
 
         node.ProvisioningStatus = status;
@@ -290,7 +292,7 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("Provisioning run is not ready to deploy.");
         }
 
-        return await QueueCoreAsync(original.NodeId, false, original.RequestedByUserId, requestedByUserId, cancellationToken);
+        return await QueueCoreAsync(original.NodeId, false, original.RequestedByUserId, requestedByUserId, isRetry: false, cancellationToken);
     }
 
     public async Task<Result<ProvisioningRun>> RetryAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)
@@ -306,14 +308,7 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("Only failed or cancelled provisioning runs can be retried.");
         }
 
-        var queued = await QueueCoreAsync(original.NodeId, original.DryRun, original.RequestedByUserId, requestedByUserId, cancellationToken);
-        if (queued.IsSuccess && queued.Value is not null)
-        {
-            StatusStateMachine.SetProvisioningRunStatus(queued.Value, ProvisioningRunStatus.Retrying, _clock.UtcNow);
-            queued.Value.ExecutionLog = "Retry queued for provisioning run.";
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-        return queued;
+        return await QueueCoreAsync(original.NodeId, original.DryRun, original.RequestedByUserId, requestedByUserId, isRetry: true, cancellationToken);
     }
 
     public async Task<Result<string>> CancelAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)

@@ -257,7 +257,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - повторный password reset request немедленно закрывает старый код; generation/revision сериализует concurrent reissue и stale reset, включая admin bootstrap password change;
 - refresh rotation защищена optimistic revision: один source token не создает две ветви, concurrent reuse отзывает winning family, а logout/admin deactivation повторяются без HTTP 500;
 - обращения поддержки используют optimistic revision: stale reply/status/note получают controlled conflict, а pending Telegram/provisioning диалог возвращается в active queue после нового сообщения;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-provisioning-owner-actor-boundary`, версия `0.512.0`;
-- roadmap progress: `525/545` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-provisioning-retry-atomic-queue`, версия `0.513.0`;
+- roadmap progress: `526/546` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

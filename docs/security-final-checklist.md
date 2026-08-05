@@ -97,7 +97,7 @@ git diff --check
 - Password reset newest-generation-only boundary covers sequential reissue, concurrent issue/reset and explicit bootstrap password changes: OK.
 - Refresh token revision rejects double rotation, revokes the winning family on reuse and gives logout/admin deactivation controlled retry paths: OK.
 - Support conversation revision rejects stale mutations; internal messages fail closed and assignment requires active support capability: OK.
-- Latest local release: `2026-08-05-provisioning-owner-actor-boundary`, версия `0.512.0`.
+- Latest local release: `2026-08-05-provisioning-retry-atomic-queue`, версия `0.513.0`.
 - Frontend tests: 84/84.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

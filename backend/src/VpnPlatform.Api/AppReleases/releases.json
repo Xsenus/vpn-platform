@@ -11952,5 +11952,28 @@
         "text": "Roadmap progress is 525/545 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-provisioning-retry-atomic-queue",
+    "version": "0.513.0",
+    "releasedAt": "2026-08-05T13:38:44+07:00",
+    "title": "Повторный запуск VPS не теряет статус",
+    "summary": "Retry сохраняется одной атомарной операцией, поэтому фоновый обработчик не может начать задачу между двумя несовместимыми статусами.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Повторный provisioning сразу получает статус Retrying вместе с записью очереди, журналом и аудитом, без промежуточного окна для другого worker."
+      },
+      {
+        "type": "improved",
+        "text": "Состояние retry остается согласованным между API и несколькими worker-инстансами даже при немедленном захвате задачи."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 526/546 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

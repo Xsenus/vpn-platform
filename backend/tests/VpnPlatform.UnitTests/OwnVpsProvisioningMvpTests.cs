@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using VpnPlatform.Api.Controllers.Admin;
@@ -313,8 +314,10 @@ public class OwnVpsProvisioningMvpTests
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
+        var saveChangesInterceptor = new CountingSaveChangesInterceptor();
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlite(connection)
+            .AddInterceptors(saveChangesInterceptor)
             .Options;
         await using var db = new ApplicationDbContext(options);
         await db.Database.EnsureCreatedAsync();
@@ -374,6 +377,7 @@ public class OwnVpsProvisioningMvpTests
         };
         db.AddRange(queueNode, deployNode, retryNode, previousQueueRun, readyRun, failedRun);
         await db.SaveChangesAsync();
+        saveChangesInterceptor.Reset();
 
         var service = new ProvisioningService(db, new TestClock(), new TestSecretProtector());
         var queue = await service.QueueAsync(queueNode.Id, dryRun: true, actorUserId);
@@ -387,6 +391,7 @@ public class OwnVpsProvisioningMvpTests
         Assert.Equal(ownerUserId, deploy.Value!.RequestedByUserId);
         Assert.Equal(ownerUserId, retry.Value!.RequestedByUserId);
         Assert.Equal(ProvisioningRunStatus.Retrying, retry.Value.Status);
+        Assert.Equal(3, saveChangesInterceptor.SaveChangesCount);
 
         var queueAudits = await db.AuditLogs
             .Where(x => x.Action == "provisioning.queue")
@@ -397,6 +402,14 @@ public class OwnVpsProvisioningMvpTests
             Assert.Equal(actorUserId.ToString(), audit.ActorId);
             Assert.Contains(ownerUserId.ToString(), audit.AfterJson, StringComparison.OrdinalIgnoreCase);
         });
+
+        db.ChangeTracker.Clear();
+        var persistedRetry = await db.ProvisioningRuns.SingleAsync(x => x.Id == retry.Value.Id);
+        var retryStep = await db.ProvisioningStepRuns.SingleAsync(x => x.ProvisioningRunId == retry.Value.Id);
+        Assert.Equal(ProvisioningRunStatus.Retrying, persistedRetry.Status);
+        Assert.Equal("Retry queued for provisioning run.", persistedRetry.ExecutionLog);
+        Assert.Equal("Retry queued", retryStep.StepName);
+        Assert.Equal(ProvisioningRunStatus.Retrying, retryStep.Status);
     }
 
     [Fact]
@@ -535,6 +548,22 @@ public class OwnVpsProvisioningMvpTests
         {
             if (string.IsNullOrWhiteSpace(value)) return string.Empty;
             return value.Length <= visibleTail ? "***" : $"***{value[^visibleTail..]}";
+        }
+    }
+
+    private sealed class CountingSaveChangesInterceptor : SaveChangesInterceptor
+    {
+        public int SaveChangesCount { get; private set; }
+
+        public void Reset() => SaveChangesCount = 0;
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            SaveChangesCount++;
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
         }
     }
 }

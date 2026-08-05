@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `525/545` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `526/546` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -124,7 +124,7 @@
 - [x] Password reset reissue закрывает старый code; per-user generation/revision защищает concurrent issue/reset и admin bootstrap password change.
 - [x] Refresh token optimistic revision закрывает double rotation; concurrent reuse/logout/admin deactivation fail closed без активной stale branch.
 - [x] Support conversation revision закрывает stale reply/status/note; оба UI обновляют очередь после conflict, pending inbound thread снова становится active.
-- [x] Latest "Что нового": `2026-08-05-provisioning-owner-actor-boundary`, версия `0.512.0`.
+- [x] Latest "Что нового": `2026-08-05-provisioning-retry-atomic-queue`, версия `0.513.0`.
 
 ## Как вести дальше
 

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.513.0 - 2026-08-05
+
+Release entry: `2026-08-05-provisioning-retry-atomic-queue`.
+
+### Исправлено
+
+- Provisioning retry больше не публикует промежуточный claimable `PrecheckQueued`/`DeployQueued` перед отдельным переходом в `Retrying`.
+- Run, node, queue step, execution log и audit сохраняются согласованно одним commit сразу в статусе `Retrying`; worker другого инстанса не может обработать run между двумя API-коммитами.
+- Coordinator продолжает атомарно claim-ить `Retrying` в `Prechecking` или `Deploying`; изменение схемы и миграция не потребовались.
+
+### Проверено
+
+- Backend full suite `1060/1060`; targeted provisioning/coordinator suite `39/39`, включая SQLite commit-count regression и sandbox worker retry E2E.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют; dependency audit `0 vulnerabilities`.
+- Secret scan `639` files, `0` findings; artifact cleanup и strict UTF-8 guard пройдены.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `526/546` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.512.0 - 2026-08-05
 
 Release entry: `2026-08-05-provisioning-owner-actor-boundary`.

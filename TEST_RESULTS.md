@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: provisioning retry atomic queue
+
+Scope:
+- Проверены retry enqueue transaction boundary, persisted run/node/step/log/audit state, coordinator claim и worker completion на SQLite/sandbox.
+
+Results:
+- Roadmap progress: `526/546` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-provisioning-retry-atomic-queue`, version `0.513.0`.
+- Backend full suite: OK, `1060/1060`; targeted provisioning/coordinator suite: OK, `39/39`.
+- Retry run сохраняется сразу как `Retrying` вместе с согласованными node, step, execution log и audit rows.
+- SQLite `SaveChangesInterceptor` подтверждает один commit на retry; worker не видит промежуточный `PrecheckQueued`/`DeployQueued`, а coordinator claim-ит `Retrying` в processing status.
+- Sandbox worker E2E выполняет retry precheck/deploy до клиентской subscription/VPN access без повторной публикации.
+- Изменений EF-модели и миграции не требуется; EF pending model changes: none.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors.
+- Secret scan: OK, `639` files, `0` findings; artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: provisioning owner/actor boundary
 
 Scope:
