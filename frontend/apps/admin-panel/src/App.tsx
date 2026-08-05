@@ -1019,11 +1019,6 @@ function providerCheckResultClass(result: PaymentProviderAccountCheckResultDto) 
   return result.isReady ? 'provider-check-result provider-check-result-ok' : 'provider-check-result provider-check-result-problem'
 }
 
-async function copyToClipboard(text: string, setNotice: (value: string) => void) {
-  await navigator.clipboard?.writeText(text)
-  setNotice('Скопировано в буфер обмена.')
-}
-
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')

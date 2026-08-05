@@ -529,6 +529,15 @@ test('cabinet covers register, login, payments, subscription access and support'
 
   const api = await mockCabinetApi(page)
 
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => sessionStorage.setItem('cabinet-e2e-copied-value', value)
+      }
+    })
+  })
+
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Личный кабинет', exact: true })).toBeVisible()
   await page.getByRole('tab', { name: 'Регистрация' }).click()
@@ -545,6 +554,19 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
   await expect(page.getByText('yk-paid-1')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'EU Sandbox' })).toBeVisible()
+
+  const firstCopyButton = page.getByRole('button', { name: /Скопировать ссылку: скопировать значение/ }).first()
+  await firstCopyButton.click()
+  await expect(page.getByText('Скопировано', { exact: true }).first()).toBeVisible()
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('cabinet-e2e-copied-value'))).toBe(subscription.accessUri)
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.clipboard, 'writeText', {
+      configurable: true,
+      value: async () => { throw new DOMException('Clipboard permission denied', 'NotAllowedError') }
+    })
+  })
+  await firstCopyButton.click()
+  await expect(page.getByText('Не удалось скопировать', { exact: true }).first()).toBeVisible()
   const referralRewardRow = page.locator('.list-item').filter({ hasText: 'Бонусные дни' })
   await expect(referralRewardRow.getByText('7 days', { exact: false })).toBeVisible()
   await expect(referralRewardRow.getByText('Подтверждено')).toBeVisible()

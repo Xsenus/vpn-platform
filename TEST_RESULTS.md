@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: clipboard feedback boundary
+
+Scope:
+- Проверены 12 shared copy-команд в public/cabinet/admin, обработка отсутствующего Clipboard API, отказа разрешения, повторного запуска и responsive feedback.
+
+Results:
+- Roadmap progress: `534/554` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-clipboard-feedback-boundary`, version `0.521.0`.
+- Backend full suite: OK, `1103/1103`.
+- Frontend tests: OK, `91/91`; typecheck и production build всех трех приложений: OK.
+- `tryWriteClipboardText` возвращает success только после выполненного `writeText`; unavailable API и rejected permission возвращают controlled failure.
+- `CopyButton` сериализует вызов до перерендера, показывает видимый live feedback и очищает таймер при unmount без необработанного Promise rejection.
+- Cabinet desktop/mobile Clipboard success/NotAllowedError: OK, `2/2`; full responsive/console suite: OK, `16/16`.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены.
+- Artifact cleanup и strict UTF-8 guard выполняются перед коммитом.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui и real SMTP не были доступны.
+
 ## Check 2026-08-05: checkout operation guard
 
 Scope:

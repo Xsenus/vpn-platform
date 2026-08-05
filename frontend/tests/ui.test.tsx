@@ -20,6 +20,7 @@ import {
   SkipLink,
   StateBlock,
   StatusBadge,
+  tryWriteClipboardText,
   ValidationModeBadge,
   designTokens
 } from '../packages/ui/src/index.tsx'
@@ -76,6 +77,7 @@ test('UI polish helpers render loading, empty, error, copy and validation states
   assert.match(html, /No payments/)
   assert.match(html, /Скопировать/)
   assert.match(html, /copy-action/)
+  assert.match(html, /copy-feedback/)
   assert.match(html, /role="status"/)
   assert.match(html, /aria-label="Скопировать: скопировать значение в буфер обмена"/)
   assert.match(html, /password-field-row/)
@@ -91,6 +93,14 @@ test('UI polish helpers render loading, empty, error, copy and validation states
   assert.match(html, /Удалить/)
   assert.match(html, /Задано|Webhook secret/)
   assert.doesNotMatch(html, /raw-password|PRIVATE KEY|bot-token/i)
+})
+
+test('clipboard boundary reports success, unavailable API and denied permission', async () => {
+  let written = ''
+  assert.equal(await tryWriteClipboardText('vpn://success', { writeText: async (value) => { written = value } }), true)
+  assert.equal(written, 'vpn://success')
+  assert.equal(await tryWriteClipboardText('vpn://unavailable', null), false)
+  assert.equal(await tryWriteClipboardText('vpn://denied', { writeText: async () => { throw new Error('permission denied') } }), false)
 })
 
 test('Design system primitives render shared tabs, states and tables', () => {

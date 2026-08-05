@@ -12152,5 +12152,32 @@
         "text": "Roadmap progress is 533/553 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-clipboard-feedback-boundary",
+    "version": "0.521.0",
+    "releasedAt": "2026-08-05T18:03:00+07:00",
+    "title": "Копирование показывает реальный результат",
+    "summary": "Кнопки копирования во всех интерфейсах больше не сообщают об успехе при недоступном буфере обмена или отказе разрешения и сохраняют стабильную геометрию панели.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Отсутствующий Clipboard API и NotAllowedError теперь дают понятное сообщение об ошибке вместо ложного статуса «Скопировано» и необработанного browser rejection."
+      },
+      {
+        "type": "improved",
+        "text": "Shared copy-команда защищена от быстрого повторного запуска, очищает таймер при размонтировании и резервирует место под feedback без сдвига соседних элементов."
+      },
+      {
+        "type": "improved",
+        "text": "Cabinet Playwright на desktop и mobile проверяет успешное копирование VPN-ссылки и отказ разрешения без console/page errors."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 534/554 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

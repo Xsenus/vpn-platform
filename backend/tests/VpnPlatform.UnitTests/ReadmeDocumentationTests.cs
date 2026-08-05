@@ -39,13 +39,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1103/1103", readme, StringComparison.Ordinal);
-        Assert.Contains("90/90", readme, StringComparison.Ordinal);
+        Assert.Contains("91/91", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-checkout-operation-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-clipboard-feedback-boundary", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1103/1103",
-                     "2026-08-05-checkout-operation-guard",
-                     "0.520.0",
+                     "2026-08-05-clipboard-feedback-boundary",
+                     "0.521.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

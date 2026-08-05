@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, useId, useState } from 'react'
+import React, { PropsWithChildren, useEffect, useId, useRef, useState } from 'react'
 
 export const designTokens = {
   colors: {
@@ -284,24 +284,66 @@ export function ErrorBlock({ message }: { message: string }) {
   )
 }
 
+type ClipboardWriter = Pick<Clipboard, 'writeText'>
+
+export async function tryWriteClipboardText(value: string, writer?: ClipboardWriter | null) {
+  try {
+    const clipboard = writer === undefined
+      ? (typeof navigator === 'undefined' ? null : navigator.clipboard)
+      : writer
+    if (!clipboard?.writeText) return false
+    await clipboard.writeText(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function CopyButton({ value, label = 'Скопировать', disabled }: { value?: string | null; label?: string; disabled?: boolean }) {
-  const [copied, setCopied] = useState(false)
+  const feedbackId = useId()
+  const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [busy, setBusy] = useState(false)
+  const inFlightRef = useRef(false)
+  const operationRef = useRef(0)
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const canCopy = Boolean(value) && !disabled
 
+  useEffect(() => () => {
+    inFlightRef.current = false
+    operationRef.current += 1
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+  }, [])
+
   const handleCopy = async () => {
-    if (!value) return
-    await navigator.clipboard?.writeText(value)
-    setCopied(true)
-    if (typeof window !== 'undefined') {
-      window.setTimeout(() => setCopied(false), 1800)
-    }
+    if (!value || inFlightRef.current) return
+    inFlightRef.current = true
+    const operation = ++operationRef.current
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+    setStatus('idle')
+    setBusy(true)
+    const copied = await tryWriteClipboardText(value)
+    if (operation !== operationRef.current) return
+    inFlightRef.current = false
+    setStatus(copied ? 'copied' : 'failed')
+    setBusy(false)
+    resetTimerRef.current = setTimeout(() => {
+      if (operation === operationRef.current) setStatus('idle')
+    }, 1800)
   }
+
+  const feedback = status === 'copied'
+    ? 'Скопировано'
+    : status === 'failed'
+      ? 'Не удалось скопировать'
+      : '\u00a0'
 
   return (
     <span className="copy-action">
       <PrimaryButton
         type="button"
-        disabled={!canCopy}
+        disabled={!canCopy || busy}
+        aria-busy={busy}
+        aria-describedby={feedbackId}
         onClick={() => void handleCopy()}
         title={value ? 'Скопировать в буфер обмена' : 'Нечего копировать'}
         aria-label={value ? `${label}: скопировать значение в буфер обмена` : `${label}: нечего копировать`}
@@ -309,7 +351,7 @@ export function CopyButton({ value, label = 'Скопировать', disabled }
       >
         {label}
       </PrimaryButton>
-      <span className="sr-only" role="status" aria-live="polite">{copied ? 'Скопировано' : ''}</span>
+      <span id={feedbackId} className={`copy-feedback${status === 'failed' ? ' copy-feedback-error' : ''}`} role="status" aria-live="polite">{feedback}</span>
     </span>
   )
 }

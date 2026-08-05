@@ -522,6 +522,23 @@ form { display: grid; gap: 12px; max-width: 560px; }
 .copy-action {
   display: inline-grid;
   position: relative;
+  gap: 3px;
+  align-content: start;
+  min-width: 176px;
+  max-width: 100%;
+}
+.copy-action > .button {
+  width: 100%;
+}
+.copy-feedback {
+  min-height: 16px;
+  color: var(--success);
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+.copy-feedback-error {
+  color: var(--danger);
 }
 .actions .button { min-height: 36px; padding: 8px 12px; }
 .segmented-control {

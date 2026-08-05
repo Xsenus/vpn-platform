@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.521.0 - 2026-08-05
+
+Release entry: `2026-08-05-clipboard-feedback-boundary`.
+
+### Исправлено
+
+- Shared `CopyButton` больше не сообщает об успехе, если Clipboard API отсутствует или браузер отклонил разрешение; Promise rejection обрабатывается внутри компонента.
+- Быстрые повторные клики сериализованы синхронным guard, таймер feedback очищается при размонтировании, а постоянная строка статуса сохраняет стабильную геометрию панели.
+- Удалён неиспользуемый админский clipboard helper с прежним ложным success-поведением.
+
+### Проверено
+
+- Frontend `91/91`, typecheck и production build всех трех приложений.
+- Cabinet Clipboard API success/NotAllowedError на desktop/mobile `2/2`; полный public/cabinet/admin/all-screens/mobile/console responsive suite `16/16`.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access.
+- Backend full suite `1103/1103`; release/documentation guards подтверждают latest `2026-08-05-clipboard-feedback-boundary`, версию `0.521.0` и roadmap `534/554`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами.
+
 ## 0.520.0 - 2026-08-05
 
 Release entry: `2026-08-05-checkout-operation-guard`.

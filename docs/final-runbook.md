@@ -177,7 +177,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-05 локально подтверждено:
 
 - backend full suite: 1103/1103;
-- frontend tests: 90/90;
+- frontend tests: 91/91;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -210,8 +210,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Support conversation concurrency: stale reply/status/note возвращают controlled conflict, pending inbound message переоткрывает active thread, assignment ограничен active `SupportWrite` users.
 - Checkout claim atomicity: conditional session reservation, order creation и final link выполняются одной transaction; same-user race возвращает winner, другой user не создаёт orphan-order, completed status остаётся terminal.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-checkout-operation-guard`, версия `0.520.0`.
-- roadmap progress: `533/553` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-clipboard-feedback-boundary`, версия `0.521.0`.
+- roadmap progress: `534/554` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production
