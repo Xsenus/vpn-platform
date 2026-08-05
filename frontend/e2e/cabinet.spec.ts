@@ -119,6 +119,13 @@ const stalePendingOrder = {
   linkedSubscriptionId: null
 }
 
+const retryablePendingOrder = {
+  ...stalePendingOrder,
+  id: 'order-retryable',
+  tariffName: 'Повторная оплата',
+  expiresAt: '2099-06-14T00:00:00Z'
+}
+
 const paidPayment = {
   id: 'payment-paid',
   orderId: paidOrder.id,
@@ -359,7 +366,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/orders') {
-      await fulfillJson(route, [paidOrder, stalePendingOrder])
+      await fulfillJson(route, [paidOrder, stalePendingOrder, retryablePendingOrder])
       return
     }
 
@@ -465,6 +472,15 @@ async function mockCabinetApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/me/orders/order-retryable/payments/YooKassa/init') {
+      await fulfillJson(route, {
+        paymentId: 'payment-retry',
+        redirectUrl: 'https://pay.example.test/retry',
+        rawResponse: '{"sandbox":true}'
+      })
+      return
+    }
+
     if (method === 'GET' && path === '/api/cabinet/access/access-active/qr') {
       await route.fulfill({
         status: 200,
@@ -538,6 +554,13 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(staleOrderCard.getByText('Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.')).toBeVisible()
   await expect(staleOrderCard.getByRole('button', { name: 'Повторить оплату' })).toHaveCount(0)
   await expect(staleOrderCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)
+
+  const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
+  await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
+  await expect(page.getByRole('heading', { name: 'Последняя повторная оплата' })).toBeVisible()
+  await expect(page.getByText('payment-retry')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveAttribute('href', 'https://pay.example.test/retry')
+  expect(api.getLastRequest('/api/me/orders/order-retryable/payments/YooKassa/init')).toBeDefined()
 
   const blockedCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Заблокированный тариф' }) })
   const cancelledCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отменённый тариф' }) })

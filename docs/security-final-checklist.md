@@ -99,7 +99,7 @@ git diff --check
 - Support conversation revision rejects stale mutations; internal messages fail closed and assignment requires active support capability: OK.
 - Checkout claim transaction prevents cross-user order duplication and preserves terminal completed state: OK.
 - Promo lifecycle validation, relational redemption limits and paid free-days snapshot fail closed across checkout, order and subscription activation: OK.
-- Latest local release: `2026-08-05-server-owned-checkout-context`, версия `0.519.0`.
+- Latest local release: `2026-08-05-checkout-operation-guard`, версия `0.520.0`.
 - Frontend tests: 90/90.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

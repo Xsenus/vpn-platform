@@ -93,6 +93,7 @@ async function mockPublicApi(page: Page) {
   let refreshPayload: unknown = null
   let rejectNextProfileRequest = true
   let rejectNextCheckoutPromo = false
+  let checkoutDelayMs = 0
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -117,6 +118,11 @@ async function mockPublicApi(page: Page) {
     }
 
     checkoutPayload = route.request().postDataJSON()
+    if (checkoutDelayMs > 0) {
+      const delay = checkoutDelayMs
+      checkoutDelayMs = 0
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
     if (rejectNextCheckoutPromo) {
       rejectNextCheckoutPromo = false
       await fulfillJson(route, { error: 'Promo code not found.' }, 400)
@@ -242,7 +248,8 @@ async function mockPublicApi(page: Page) {
     getLogoutAuthorization: () => logoutAuthorization,
     getRefreshPayload: () => refreshPayload,
     failLogout: () => { logoutShouldFail = true },
-    rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true }
+    rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
+    delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs }
   }
 }
 
@@ -270,10 +277,16 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   await expect(providerSelect.locator('option')).toContainText(['YooKassa sandbox · проверка'])
 
   api.rejectCheckoutPromo()
+  api.delayNextCheckout(300)
   await page.getByLabel('Промокод').fill('UNKNOWN')
   await page.getByRole('button', { name: 'Купить' }).first().click()
+  await expect(providerSelect).toBeDisabled()
+  await expect(page.getByLabel('Промокод')).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Создаем заказ...' })).toBeDisabled()
   await expect(page).toHaveURL(/\/tariffs$/)
   await expect(page.getByText('Промокод не найден. Проверьте написание.')).toBeVisible()
+  await expect(providerSelect).toBeEnabled()
+  await expect(page.getByLabel('Промокод')).toBeEnabled()
   const expectedPromoFailureLogs = consoleErrors.filter((message) => message.includes('400 (Bad Request)'))
   expect(expectedPromoFailureLogs.length).toBeGreaterThan(0)
   for (const message of expectedPromoFailureLogs) consoleErrors.splice(consoleErrors.indexOf(message), 1)

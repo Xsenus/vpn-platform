@@ -72,9 +72,9 @@ test('public page state explains checkout availability and button state', () => 
   assert.equal(getCheckoutUnavailableReason(false, [], '', copy), copy.noProviders)
   assert.equal(getCheckoutUnavailableReason(false, providers, '', copy), copy.chooseProvider)
   assert.equal(getCheckoutUnavailableReason(false, providers, 'YooKassa', copy), '')
-  assert.equal(canStartCheckout('', 'tariff-1', false, providers, 'YooKassa'), true)
-  assert.equal(canStartCheckout('tariff-1', 'tariff-1', false, providers, 'YooKassa'), false)
-  assert.equal(canStartCheckout('', 'tariff-1', false, [], 'YooKassa'), false)
+  assert.equal(canStartCheckout('', false, providers, 'YooKassa'), true)
+  assert.equal(canStartCheckout('tariff-1', false, providers, 'YooKassa'), false)
+  assert.equal(canStartCheckout('', false, [], 'YooKassa'), false)
 })
 
 test('public checkout translates promo failures and preserves unrelated errors', () => {

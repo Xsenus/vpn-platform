@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.520.0 - 2026-08-05
+
+Release entry: `2026-08-05-checkout-operation-guard`.
+
+### Исправлено
+
+- Публичная страница блокирует все тарифы, способ оплаты и промокод на время checkout; синхронный guard не допускает второй запрос до React-перерендера.
+- Повторная оплата в кабинете больше не зависит от popup после асинхронного API-вызова: результат отображается отдельной карточкой с явной ссылкой и копированием.
+
+### Проверено
+
+- Frontend `90/90`, typecheck и production build всех трех приложений.
+- Playwright desktop/mobile для измененных сценариев `4/4`; полный public/cabinet/admin/all-screens/mobile/console suite `16/16` без неожиданных console errors и responsive overflow.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access и подтвердил предыдущий опубликованный release перед синхронизацией seed.
+- Backend full suite `1103/1103`; release/documentation guards подтверждают latest `2026-08-05-checkout-operation-guard`, версию `0.520.0` и roadmap `533/553`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами.
+
 ## 0.519.0 - 2026-08-05
 
 Release entry: `2026-08-05-server-owned-checkout-context`.

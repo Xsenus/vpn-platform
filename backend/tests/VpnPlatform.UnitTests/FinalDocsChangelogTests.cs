@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1103/1103", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-server-owned-checkout-context", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-checkout-operation-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "1103/1103",
-                     "2026-08-05-server-owned-checkout-context",
-                     "0.519.0",
+                     "2026-08-05-checkout-operation-guard",
+                     "0.520.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,8 +104,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-server-owned-checkout-context",
-                     "0.519.0",
+                     "2026-08-05-checkout-operation-guard",
+                     "0.520.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-server-owned-checkout-context",
-                     "0.519.0",
+                     "2026-08-05-checkout-operation-guard",
+                     "0.520.0",
                      "522/542",
                      "96.3%",
                      "20",

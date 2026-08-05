@@ -243,6 +243,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - ручной перенос 3x-ui клиента резервирует target panel/inbound capacity до remote add и полностью компенсирует source/target при failure/cancellation/local-save ошибке;
 - кабинет не предлагает QR до выдачи VPN URI; все карточки и handler используют единое правило готовности доступа;
 - кабинет не предлагает повторную оплату истёкшего заказа и ведёт пользователя к новому оформлению;
+- public checkout блокирует все тарифы и параметры на время запроса, а кабинет показывает надежную ссылку повторной оплаты без зависимости от popup;
 - public web сохраняет и ротирует refresh session, вызывает backend logout и очищает browser tokens даже при недоступности revoke-запроса;
 - cabinet logout гарантированно удаляет локальные токены и пользовательские/VPN-данные при success или failure backend revoke;
 - admin deactivation атомарно отзывает refresh-сессии; каждый JWT-запрос повторно проверяет активность user, а кабинет и linked Telegram account fail-closed очищают или скрывают чувствительные данные;
@@ -260,7 +261,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - обращения поддержки используют optimistic revision: stale reply/status/note получают controlled conflict, а pending Telegram/provisioning диалог возвращается в active queue после нового сообщения;
 - checkout claim резервирует session, создаёт order и публикует связь одной transaction: same-user race возвращает winner, другой user не создаёт второй заказ, completed не деградирует в expired;
 - реферальный код атомарно связывает пользователей, а завершение подходящей покупки через durable outbox создаёт идемпотентные начисления; кабинет получает redacted DTO, программы и журнал управляются в отдельном admin-разделе;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-server-owned-checkout-context`, версия `0.519.0`;
-- roadmap progress: `532/552` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-checkout-operation-guard`, версия `0.520.0`;
+- roadmap progress: `533/553` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

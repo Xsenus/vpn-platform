@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, Route, Routes, useNavigate } from 'react-router'
 import {
   ApiClient,
@@ -410,6 +410,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
   const [pendingTariffId, setPendingTariffId] = useState<string>('')
   const [checkoutState, setCheckoutState] = useState<CheckoutState>(null)
   const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
+  const checkoutInFlightRef = useRef(false)
   const navigate = useNavigate()
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
   const checkoutUnavailableReason = getCheckoutUnavailableReason(paymentProvidersLoading, paymentProviders, provider, {
@@ -438,16 +439,18 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
   }, [])
 
   const handleCheckout = async (tariff: TariffDto) => {
+    if (checkoutInFlightRef.current) return
+
     setError('')
     setNotice('')
-    setPendingTariffId(tariff.id)
 
     if (!provider) {
       setError(content('home.errors.noPaymentProviders'))
-      setPendingTariffId('')
       return
     }
 
+    checkoutInFlightRef.current = true
+    setPendingTariffId(tariff.id)
     try {
       const session = await api.createCheckoutSession({
         tariffId: tariff.id,
@@ -477,6 +480,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
     } catch (e) {
       setError(getCheckoutErrorMessage(e, content('home.errors.checkoutCreate')))
     } finally {
+      checkoutInFlightRef.current = false
       setPendingTariffId('')
     }
   }
@@ -497,7 +501,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
           <div className="toolbar">
             <label>
               <span>Способ оплаты</span>
-              <select value={provider} disabled={paymentProvidersLoading || paymentProviders.length === 0} onChange={(e) => setProvider(e.target.value as PaymentProvider)}>
+              <select value={provider} disabled={paymentProvidersLoading || paymentProviders.length === 0 || Boolean(pendingTariffId)} onChange={(e) => setProvider(e.target.value as PaymentProvider)}>
                 {paymentProviders.map((item) => (
                   <option key={item.provider} value={item.provider}>{item.publicName || item.provider}{item.mode === 'Sandbox' ? ' · проверка' : ''}</option>
                 ))}
@@ -505,7 +509,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
             </label>
             <label>
               <span>Промокод</span>
-              <input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="Например, WELCOME10" />
+              <input value={promoCode} disabled={Boolean(pendingTariffId)} onChange={(e) => setPromoCode(e.target.value)} placeholder="Например, WELCOME10" />
             </label>
           </div>
           {paymentProvidersLoading && <LoadingBlock label={content('home.checkout.unavailable.loading')} />}
@@ -535,7 +539,10 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
         {tariffsState === 'empty' && <EmptyState title="Тарифы пока не опубликованы" description="Администратор должен включить тариф для public/Telegram витрины." />}
         {tariffs.map((tariff) => {
           const features = tariffFeatures(tariff)
-          const checkoutAvailable = canStartCheckout(pendingTariffId, tariff.id, paymentProvidersLoading, paymentProviders, provider)
+          const checkoutAvailable = canStartCheckout(pendingTariffId, paymentProvidersLoading, paymentProviders, provider)
+          const buttonUnavailableReason = pendingTariffId
+            ? 'Дождитесь завершения текущего оформления.'
+            : checkoutUnavailableReason
 
           return (
           <div className="card" key={tariff.id}>
@@ -558,7 +565,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
               </ul>
             )}
             {tariff.afterPaymentText && <p className="muted">{tariff.afterPaymentText}</p>}
-            <PrimaryButton disabled={!checkoutAvailable} aria-busy={pendingTariffId === tariff.id} title={checkoutUnavailableReason || undefined} onClick={() => void handleCheckout(tariff)}>
+            <PrimaryButton disabled={!checkoutAvailable} aria-busy={pendingTariffId === tariff.id} title={buttonUnavailableReason || undefined} onClick={() => void handleCheckout(tariff)}>
               {pendingTariffId === tariff.id ? 'Создаем заказ...' : 'Купить'}
             </PrimaryButton>
             {checkoutUnavailableReason && <p className="muted">{checkoutUnavailableReason}</p>}

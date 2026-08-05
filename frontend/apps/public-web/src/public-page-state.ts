@@ -46,12 +46,11 @@ export function getCheckoutUnavailableReason(
 
 export function canStartCheckout(
   pendingTariffId: string,
-  tariffId: string,
   paymentProvidersLoading: boolean,
   paymentProviders: PublicPaymentProviderDto[],
   provider: string
 ) {
-  return pendingTariffId !== tariffId
+  return pendingTariffId.length === 0
     && !paymentProvidersLoading
     && paymentProviders.length > 0
     && provider.trim().length > 0

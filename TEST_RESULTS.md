@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: checkout operation guard
+
+Scope:
+- Проверены защита публичного checkout от параллельных запусков и надежный пользовательский путь повторной оплаты без popup.
+
+Results:
+- Roadmap progress: `533/553` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-checkout-operation-guard`, version `0.520.0`.
+- Backend full suite: OK, `1103/1103`.
+- Frontend tests: OK, `90/90`; public/cabinet typecheck и production build: OK; полный production build трех приложений: OK.
+- Public checkout блокирует provider, promo и все тарифные команды до завершения active request; `useRef` guard не допускает повторный вызов до перерендера.
+- Cabinet retry сохраняет `PaymentInitResult` и показывает доступную ссылку/копирование вместо ложного сообщения о popup.
+- Playwright changed desktop/mobile scenarios: OK, `4/4`; full responsive/console suite: OK, `16/16`.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены.
+- Artifact cleanup и strict UTF-8 guard выполняются перед коммитом.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui и real SMTP не были доступны.
+
 ## Check 2026-08-05: server-owned checkout context
 
 Scope:

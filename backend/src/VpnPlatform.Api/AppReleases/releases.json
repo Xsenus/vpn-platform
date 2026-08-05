@@ -12125,5 +12125,32 @@
         "text": "Roadmap progress is 532/552 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-checkout-operation-guard",
+    "version": "0.520.0",
+    "releasedAt": "2026-08-05T17:47:00+07:00",
+    "title": "Оформление и повторная оплата защищены от двойного запуска",
+    "summary": "Публичная форма блокирует все параметры и тарифы на время checkout, а кабинет показывает надежную ссылку повторной оплаты без зависимости от разрешения браузера на popup.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Во время создания checkout-сессии нельзя запустить второй тариф, сменить платежный способ или промокод; синхронный guard также закрывает повторный клик до перерендера."
+      },
+      {
+        "type": "fixed",
+        "text": "Повторная оплата больше не заявляет об открытом окне после асинхронного запроса: кабинет сохраняет результат и показывает явную ссылку с копированием."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop и mobile Playwright проверяют промежуточное disabled-состояние checkout и полный путь повторной оплаты без popup."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 533/553 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

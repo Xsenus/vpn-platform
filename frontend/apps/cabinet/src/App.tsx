@@ -64,6 +64,11 @@ type RenewalState = {
   payment: PaymentInitResult
 } | null
 
+type RetryPaymentState = {
+  order: OrderDto
+  payment: PaymentInitResult
+} | null
+
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
@@ -97,6 +102,7 @@ export function App() {
   const [authDisplayName, setAuthDisplayName] = useState('')
   const [authReferralCode, setAuthReferralCode] = useState('')
   const [renewalState, setRenewalState] = useState<RenewalState>(null)
+  const [retryPaymentState, setRetryPaymentState] = useState<RetryPaymentState>(null)
   const [qrSvgs, setQrSvgs] = useState<Record<string, string>>({})
   const [resetEmail, setResetEmail] = useState('')
   const [resetToken, setResetToken] = useState('')
@@ -172,6 +178,7 @@ export function App() {
     setTelegramStatus(null)
     setTelegramLink(null)
     setRenewalState(null)
+    setRetryPaymentState(null)
     setQrSvgs({})
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
@@ -547,9 +554,9 @@ export function App() {
     setNotice('')
     try {
       const payment = await api.initMyPayment(token, order.id, provider, window.location.href)
-      window.open(payment.redirectUrl, '_blank', 'noopener,noreferrer')
+      setRetryPaymentState({ order, payment })
       if (!await loadAll(token)) return
-      setNotice('Платеж открыт в новой вкладке.')
+      setNotice('Ссылка для повторной оплаты подготовлена.')
     } catch (e) {
       handleAuthenticatedError(e, 'Не удалось повторить оплату')
     } finally {
@@ -843,6 +850,19 @@ export function App() {
                 <CopyButton value={renewalState.payment.redirectUrl} label="Скопировать ссылку" />
               </div>
               <CodeBlock>{renewalState.payment.redirectUrl}</CodeBlock>
+            </Card>
+          )}
+
+          {retryPaymentState && (
+            <Card>
+              <h3>Последняя повторная оплата</h3>
+              <p>Заказ: {retryPaymentState.order.tariffName || retryPaymentState.order.id}</p>
+              <p>ID платежа: {retryPaymentState.payment.paymentId}</p>
+              <div className="copy-row">
+                <a href={retryPaymentState.payment.redirectUrl} target="_blank" rel="noreferrer" className="button" aria-label="Открыть повторную оплату в новой вкладке">Открыть оплату</a>
+                <CopyButton value={retryPaymentState.payment.redirectUrl} label="Скопировать ссылку" />
+              </div>
+              <CodeBlock>{retryPaymentState.payment.redirectUrl}</CodeBlock>
             </Card>
           )}
         </div>
