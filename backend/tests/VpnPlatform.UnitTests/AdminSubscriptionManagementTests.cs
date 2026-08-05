@@ -94,6 +94,41 @@ public class AdminSubscriptionManagementTests
         Assert.Contains("current VPN access", JsonSerializer.Serialize(badRequest.Value), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Cancelled_Subscription_Sync_Should_Reject_Before_Provider_Call_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 5, 7, 0, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        subscription.Status = SubscriptionStatus.Cancelled;
+        subscription.CancelledAt = clock.UtcNow;
+        access.Status = AccessCredentialStatus.Active;
+        access.DisabledAt = null;
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var controller = CreateController(db, provider, clock);
+
+        var result = await controller.SyncSubscriptionAccess(
+            ids.SubscriptionId,
+            new AdminAccessActionHttpRequest("operator sync"),
+            CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("cancelled", JsonSerializer.Serialize(badRequest.Value), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.SyncCalls);
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        Assert.Equal(SubscriptionStatus.Cancelled, (await db.Subscriptions.SingleAsync()).Status);
+        Assert.Equal(AccessCredentialStatus.Active, (await db.AccessCredentials.SingleAsync()).Status);
+    }
+
     [Theory]
     [InlineData("extend", SubscriptionStatus.Expired, AccessCredentialStatus.Disabled, true)]
     [InlineData("activate", SubscriptionStatus.PendingActivation, AccessCredentialStatus.Disabled, true)]

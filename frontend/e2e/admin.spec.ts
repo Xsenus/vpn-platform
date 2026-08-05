@@ -182,7 +182,10 @@ async function mockAdminApi(page: Page) {
   const releases = [release()]
   const scenarios = [workScenario()]
   const panels = [vpnPanel()]
-  const subscriptions: Array<Record<string, unknown>> = [{ id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }]
+  const subscriptions: Array<Record<string, unknown>> = [
+    { id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now },
+    { id: 'sub-cancelled', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Отменённая подписка', status: 'Cancelled', startAt: '2026-05-01T00:00:00Z', endAt: now, cancelledAt: now, gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-revoked', lastPaymentId: 'payment-old', renewalCount: 0, accessUri: 'vless://cancelled-stale-secret@example.test', qrCodePath: 'qr://cancelled-stale-secret', configPath: 'config://cancelled-stale-secret', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }
+  ]
   const inbounds: Array<Record<string, unknown>> = [
     { id: 'inbound-default', vpnPanelId: 'panel-eu', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 1000, usedCapacity: 12 },
     { id: 'inbound-backup', vpnPanelId: 'panel-eu', externalInboundId: '2', name: 'backup-vless', protocol: 'vless', port: 8443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: false, isActive: true, capacity: 20, usedCapacity: 3 }
@@ -668,6 +671,10 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
 
   await openAdminSection(page, 'Подписки', 'subscriptions')
   const subscriptionsPanel = page.locator('#subscriptions')
+  const cancelledSubscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Отменённая подписка' })
+  await expect(cancelledSubscriptionRow.getByText('Отменённая подписка является терминальной. Доступны только просмотр и история.')).toBeVisible()
+  await expect(cancelledSubscriptionRow.getByRole('button')).toHaveCount(0)
+  await expect(cancelledSubscriptionRow.getByRole('spinbutton')).toHaveCount(0)
   await subscriptionsPanel.getByRole('button', { name: 'Отменить' }).click()
   await expect(subscriptionsPanel.getByRole('dialog')).toContainText('VPN-доступ будет отозван и удален с сервера')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
@@ -823,13 +830,13 @@ test('finance role loads only permitted data and keeps common sections read-only
   await expect(page.getByText('Ответы, заметки и статусы обращений')).toHaveCount(0)
 
   await openAdminSection(page, 'Тарифы', 'tariffs')
-  await expect(page.getByText('Только просмотр')).toBeVisible()
+  await expect(page.getByText('Только просмотр', { exact: true })).toBeVisible()
   await expect(page.locator('#tariffs form').first()).toBeHidden()
   await expect(page.locator('#tariffs').getByRole('button', { name: 'Редактировать' })).toHaveCount(0)
 
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.locator('#payments form').first()).toBeVisible()
-  await expect(page.getByText('Только просмотр')).toHaveCount(0)
+  await expect(page.getByText('Только просмотр', { exact: true })).toHaveCount(0)
   expect(failedResponses).toEqual([])
 })
 

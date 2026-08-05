@@ -50,6 +50,7 @@ import {
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 import { canAccessAdminSection, canWriteAdminSection, type AdminSectionId } from './admin-capabilities'
+import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun } from './provisioning-state'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
@@ -2032,7 +2033,13 @@ export function App() {
     })
   }
 
-  const handleSubscriptionAction = async (subscription: SubscriptionDto, action: 'activate' | 'extend' | 'block' | 'unblock' | 'cancel' | 'sync') => {
+  const handleSubscriptionAction = async (subscription: SubscriptionDto, action: AdminSubscriptionAction) => {
+    const blocker = getAdminSubscriptionActionBlocker(subscription, action)
+    if (blocker) {
+      setError(blocker)
+      return
+    }
+
     if (action === 'activate') {
       await runAction(`${action}-${subscription.id}`, async () => {
         await api.activateAdminSubscription(token, subscription.id, 'manual_subscription_activate')
@@ -3155,7 +3162,7 @@ export function App() {
             {subscriptions.length === 0 && <EmptyState title="Подписок нет" description="После успешной оплаты подписка появится здесь." />}
             {subscriptions.slice(0, 12).map((subscription) => {
               const isActionBusy = actionBusyId.endsWith(subscription.id)
-              const canActivate = !['Active', 'Cancelled', 'Expired'].includes(subscription.status)
+              const actionAvailability = getAdminSubscriptionActionAvailability(subscription)
               return (
                 <div id={`subscription-${subscription.id}`} key={subscription.id} className="list-item-vertical">
                   <div className="item-head">
@@ -3171,19 +3178,20 @@ export function App() {
                       <StatusBadge value={subscription.currentAccessId ? 'Access linked' : 'No access'} />
                     </div>
                   </div>
-                  <div className="toolbar" hidden={!canWriteSection('subscriptions')}>
+                  {actionAvailability.reason && <p className="safe-note" role="status">{actionAvailability.reason}</p>}
+                  {actionAvailability.canManage && <div className="toolbar" hidden={!canWriteSection('subscriptions')}>
                     <label className="inline-number-field">
                       <span>Дней</span>
                       <input value={subscriptionExtendDays[subscription.id] ?? 30} onChange={(e) => setSubscriptionExtendDays((current) => ({ ...current, [subscription.id]: Number(e.target.value) || 0 }))} type="number" min={1} step="1" inputMode="numeric" />
                     </label>
-                    {canActivate && (
+                    {actionAvailability.canActivate && (
                       <PrimaryButton disabled={isActionBusy} onClick={() => void handleSubscriptionAction(subscription, 'activate')}>Активировать</PrimaryButton>
                     )}
                     <PrimaryButton disabled={isActionBusy} onClick={() => void handleSubscriptionAction(subscription, 'extend')}>Продлить</PrimaryButton>
-                    <PrimaryButton className="button-secondary" disabled={isActionBusy || !subscription.currentAccessId} title={subscription.currentAccessId ? undefined : 'У подписки нет текущего VPN-доступа'} onClick={() => void handleSubscriptionAction(subscription, 'sync')}>Синхронизировать доступ</PrimaryButton>
-                    <ConfirmButton className="button-secondary" disabled={isActionBusy} message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => void handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton>
-                    <ConfirmButton className="button-danger" disabled={isActionBusy || subscription.status === 'Cancelled'} message="Отменить подписку без возможности восстановления? VPN-доступ будет отозван и удален с сервера, а занятый слот освободится." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton>
-                  </div>
+                    <PrimaryButton className="button-secondary" disabled={isActionBusy || !actionAvailability.canSync} title={actionAvailability.canSync ? undefined : 'У подписки нет текущего VPN-доступа'} onClick={() => void handleSubscriptionAction(subscription, 'sync')}>Синхронизировать доступ</PrimaryButton>
+                    {actionAvailability.canToggleBlock && <ConfirmButton className="button-secondary" disabled={isActionBusy} message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => void handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton>}
+                    {actionAvailability.canCancel && <ConfirmButton className="button-danger" disabled={isActionBusy} message="Отменить подписку без возможности восстановления? VPN-доступ будет отозван и удален с сервера, а занятый слот освободится." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton>}
+                  </div>}
                 </div>
               )
             })}

@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-05",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1011/1011`",
-                     "Frontend unit tests: `77/77`",
+                     "Backend full suite: `1012/1012`",
+                     "Frontend unit tests: `80/80`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `16/16`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-05-revoked-vpn-access-terminal-guard",
-                     "0.498.0"
+                     "2026-08-05-cancelled-subscription-terminal-guard",
+                     "0.499.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-revoked-vpn-access-terminal-guard", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-revoked-vpn-access-terminal-guard", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-cancelled-subscription-terminal-guard", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-cancelled-subscription-terminal-guard", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1011/1011`",
-                     "Frontend unit tests: `77/77`",
+                     "Backend full suite: `1012/1012`",
+                     "Frontend unit tests: `80/80`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-05-revoked-vpn-access-terminal-guard",
-                     "0.498.0",
+                     "2026-08-05-cancelled-subscription-terminal-guard",
+                     "0.499.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

@@ -537,6 +537,11 @@ public class AdminOperationsController : ControllerBase
 
         var subscription = await _db.Subscriptions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (subscription is null) return NotFound();
+        if (subscription.Status == SubscriptionStatus.Cancelled)
+        {
+            return BadRequest(new { error = "Cancelled subscription VPN access cannot be synchronized." });
+        }
+
         if (!subscription.CurrentAccessId.HasValue)
         {
             return BadRequest(new { error = "Subscription does not have a current VPN access." });

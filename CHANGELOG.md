@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.499.0 - 2026-08-05
+
+Release entry: `2026-08-05-cancelled-subscription-terminal-guard`.
+
+### Исправлено
+
+- `Cancelled` подписка теперь является терминальной для административной синхронизации VPN-доступа: backend отклоняет команду до provider call даже при несогласованном legacy credential со статусом `Active`.
+- Admin-panel использует единую fail-closed матрицу действий и показывает отменённую подписку только для просмотра и истории, без продления, активации, синхронизации, блокировки, отмены и поля количества дней.
+- SQLite и frontend regressions фиксируют backend/UI контракт, а desktop/mobile Playwright проверяет отсутствие управляющих элементов у terminal record.
+
+### Проверено
+
+- Backend full suite `1012/1012`; targeted admin subscription SQLite suite `22/22`.
+- Frontend `80/80`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `617` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `511/531` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.498.0 - 2026-08-05
 
 Release entry: `2026-08-05-revoked-vpn-access-terminal-guard`.

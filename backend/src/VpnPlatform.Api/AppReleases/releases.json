@@ -11626,5 +11626,28 @@
         "text": "Roadmap progress is 510/530 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-cancelled-subscription-terminal-guard",
+    "version": "0.499.0",
+    "releasedAt": "2026-08-05T06:53:00+07:00",
+    "title": "Отменённая подписка доступна только как история",
+    "summary": "Cancelled подписка больше не принимает административные команды и не вызывает VPN-провайдера даже при несогласованном legacy-доступе.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Backend отклоняет синхронизацию отменённой подписки до provider call и не создаёт ложные history/audit записи."
+      },
+      {
+        "type": "fixed",
+        "text": "Admin-panel показывает terminal record без активации, продления, синхронизации, блокировки, отмены и numeric input; handler дополнительно проверяет action matrix."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 511/531 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

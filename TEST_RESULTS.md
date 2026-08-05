@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-05-25.
 
+## Check 2026-08-05: cancelled subscription terminal guard
+
+Scope:
+- Проверено, что `Cancelled` подписка не принимает административные mutation/provider-команды и отображается как terminal history record.
+
+Results:
+- Roadmap progress: `511/531` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-cancelled-subscription-terminal-guard`, version `0.499.0`.
+- Backend full suite: OK, `1012/1012`; targeted admin subscription SQLite suite: OK, `22/22`.
+- Admin sync отклоняет `Cancelled` до provider call, history/audit и локальное состояние не изменяются даже при legacy `Active` current credential.
+- Frontend tests: OK, `80/80`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`; terminal record не содержит кнопок или numeric input, неожиданных console errors/overflow нет.
+- Local SQLite smoke: OK; fresh sandbox checkout завершил webhook, подписку и выдачу `vless://` VPN-доступа.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `617` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: revoked VPN access terminal guard
 
 Scope:
