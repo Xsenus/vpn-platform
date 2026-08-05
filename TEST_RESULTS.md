@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: active user session boundary
+
+Scope:
+- Проверена немедленная деактивация пользователя для уже выданного JWT, refresh-сессий, загруженного cabinet state и linked Telegram account, включая Telegram Stars pre-checkout и settlement состоявшегося платежа.
+
+Results:
+- Roadmap progress: `514/534` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-active-user-session-boundary`, version `0.502.0`.
+- Backend full suite: OK, `1027/1027`; targeted auth/admin/Telegram suite: OK, `48/48`.
+- Admin deactivation atomically revokes refresh sessions; JWT bearer revalidates `User.Status`/`IsBlocked` on every authenticated request.
+- Cabinet clears browser tokens and loaded VPN/payment/support state after 401/403; linked inactive Telegram users cannot read keys, create operations or pass pre-checkout.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`; session rejection removes secrets and storage without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `622` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: cancelled subscription cabinet boundary
 
 Scope:

@@ -90,6 +90,10 @@ builder.Services
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = builder.Configuration.BuildJwtSigningKey()
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = ActiveUserAccessValidator.ValidateAsync
+        };
     });
 
 builder.Services.AddAuthorization(options =>

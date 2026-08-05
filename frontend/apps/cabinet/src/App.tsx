@@ -24,6 +24,7 @@ import {
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
+import { cabinetSessionEndedMessage, isCabinetSessionRejected } from './cabinet-session'
 import { buildOrderExportText, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -173,16 +174,26 @@ export function App() {
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
   }
 
+  const handleAuthenticatedError = (error: unknown, fallback: string) => {
+    if (isCabinetSessionRejected(error)) {
+      clearSession()
+      setError(cabinetSessionEndedMessage)
+      return
+    }
+
+    setError(error instanceof Error ? error.message : fallback)
+  }
+
   const storeSession = async (response: AuthResponse) => {
     setToken(response.accessToken)
     setRefreshToken(response.refreshToken)
     writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
     writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-    await loadAll(response.accessToken)
+    return await loadAll(response.accessToken)
   }
 
   const loadAll = async (currentToken: string) => {
-    if (!currentToken) return
+    if (!currentToken) return false
 
     setBusy(true)
     setError('')
@@ -210,8 +221,10 @@ export function App() {
         setSelectedSupportConversationId(nextSupportConversations[0].id)
       }
       setTelegramStatus(nextTelegramStatus)
+      return true
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить кабинет')
+      handleAuthenticatedError(e, 'Не удалось загрузить кабинет')
+      return false
     } finally {
       setBusy(false)
     }
@@ -220,14 +233,16 @@ export function App() {
   const loadSupportMessages = async (conversationId: string) => {
     if (!token || !conversationId) {
       setSupportMessages([])
-      return
+      return false
     }
 
     setSupportLoading(true)
     try {
       setSupportMessages(await api.getMySupportMessages(token, conversationId))
+      return true
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить переписку поддержки')
+      handleAuthenticatedError(e, 'Не удалось загрузить переписку поддержки')
+      return false
     } finally {
       setSupportLoading(false)
     }
@@ -285,7 +300,7 @@ export function App() {
       const response = authMode === 'login'
         ? await api.login(authEmail.trim(), authPassword)
         : await api.register(authEmail.trim(), authPassword, authDisplayName.trim() || authEmail.trim())
-      await storeSession(response)
+      if (!await storeSession(response)) return
       setAuthPassword('')
       setNotice(authMode === 'login' ? 'Вход выполнен.' : 'Аккаунт создан.')
     } catch (e) {
@@ -315,10 +330,10 @@ export function App() {
       setRefreshToken(response.refreshToken)
       writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
       writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-      await loadAll(response.accessToken)
+      if (!await loadAll(response.accessToken)) return
       setNotice('Сессия обновлена.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось обновить сессию')
+      handleAuthenticatedError(e, 'Не удалось обновить сессию')
     } finally {
       setBusy(false)
     }
@@ -393,7 +408,7 @@ export function App() {
       setQrSvgs((current) => ({ ...current, [accessId]: svg }))
       setNotice('QR-код загружен.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить QR')
+      handleAuthenticatedError(e, 'Не удалось загрузить QR')
     } finally {
       setBusy(false)
     }
@@ -407,10 +422,10 @@ export function App() {
     try {
       const link = await api.createTelegramLinkToken(token)
       setTelegramLink(link)
-      await loadAll(token)
+      if (!await loadAll(token)) return
       setNotice('Ссылка на Telegram-бота создана.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать ссылку Telegram')
+      handleAuthenticatedError(e, 'Не удалось создать ссылку Telegram')
     } finally {
       setBusy(false)
     }
@@ -427,7 +442,7 @@ export function App() {
       setTelegramLink(null)
       setNotice('Telegram отвязан от аккаунта.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось отвязать Telegram')
+      handleAuthenticatedError(e, 'Не удалось отвязать Telegram')
     } finally {
       setBusy(false)
     }
@@ -457,10 +472,10 @@ export function App() {
       setSupportText('')
       setSupportOrderId('')
       setSupportSubscriptionId('')
-      await loadSupportMessages(conversation.id)
+      if (!await loadSupportMessages(conversation.id)) return
       setNotice('Обращение в поддержку создано.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать обращение в поддержку')
+      handleAuthenticatedError(e, 'Не удалось создать обращение в поддержку')
     } finally {
       setBusy(false)
     }
@@ -484,7 +499,7 @@ export function App() {
       setSupportReplyText('')
       setNotice('Сообщение отправлено в поддержку.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось отправить сообщение в поддержку')
+      handleAuthenticatedError(e, 'Не удалось отправить сообщение в поддержку')
     } finally {
       setBusy(false)
     }
@@ -500,7 +515,7 @@ export function App() {
       setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: result.status, closedAt: result.status === 'closed' ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : item))
       setNotice(result.status === 'closed' ? 'Обращение закрыто.' : 'Обращение переоткрыто.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось изменить статус обращения')
+      handleAuthenticatedError(e, 'Не удалось изменить статус обращения')
     } finally {
       setBusy(false)
     }
@@ -523,10 +538,10 @@ export function App() {
     try {
       const payment = await api.initMyPayment(token, order.id, provider, window.location.href)
       window.open(payment.redirectUrl, '_blank', 'noopener,noreferrer')
-      await loadAll(token)
+      if (!await loadAll(token)) return
       setNotice('Платеж открыт в новой вкладке.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось повторить оплату')
+      handleAuthenticatedError(e, 'Не удалось повторить оплату')
     } finally {
       setBusy(false)
     }
@@ -560,10 +575,10 @@ export function App() {
       })
       const payment = await api.initMyPayment(token, order.id, provider, window.location.origin)
       setRenewalState({ subscriptionId: subscription.id, order, payment })
-      await loadAll(token)
+      if (!await loadAll(token)) return
       setNotice('Продление создано. Откройте оплату в карточке последнего продления.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать продление')
+      handleAuthenticatedError(e, 'Не удалось создать продление')
     } finally {
       setBusy(false)
     }

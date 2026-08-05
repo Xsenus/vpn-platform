@@ -175,7 +175,7 @@ public class TelegramBotPurchaseFlowTests
                 await seedDb.Database.EnsureCreatedAsync();
                 var tariff = await SeedCatalogAndProvidersAsync(seedDb);
                 await EnableTelegramStarsAsync(seedDb);
-                var user = new User { Id = Guid.NewGuid(), Email = "telegram-concurrency@example.test", DisplayName = "Telegram concurrency", PasswordHash = "hash", ReferralCode = $"tg-{Guid.NewGuid():N}" };
+                var user = new User { Id = Guid.NewGuid(), Email = "telegram-concurrency@example.test", DisplayName = "Telegram concurrency", PasswordHash = "hash", ReferralCode = $"tg-{Guid.NewGuid():N}", Status = UserStatus.Active };
                 seedDb.Users.Add(user);
                 seedDb.TelegramAccounts.Add(new TelegramAccount { TelegramUserId = 777777, UserId = user.Id, Username = "ivan", FirstName = "Ivan", LinkedAt = new FixedClock().UtcNow });
                 var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Telegram, PaymentProvider = PaymentProvider.TelegramStars, Status = OrderStatus.PendingPayment, Amount = 490m, Currency = "XTR", ExpiresAt = new FixedClock().UtcNow.AddMinutes(15) };
@@ -428,6 +428,41 @@ public class TelegramBotPurchaseFlowTests
         Assert.DoesNotContain("node.example.com", access.Value.ResponseText.ToLowerInvariant());
     }
 
+    [Theory]
+    [InlineData(UserStatus.Active, true)]
+    [InlineData(UserStatus.Suspended, false)]
+    public async Task Linked_Inactive_User_Should_Not_Read_Vpn_Access(UserStatus status, bool isBlocked)
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(263, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(264, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var user = await db.Users.SingleAsync();
+        var subscription = new Subscription { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Status = SubscriptionStatus.Active, StartAt = new FixedClock().UtcNow, EndAt = new FixedClock().UtcNow.AddDays(30) };
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(new AccessCredential
+        {
+            SubscriptionId = subscription.Id,
+            ProviderAccessId = "inactive-user-access",
+            ServerId = db.VpnNodes.Single().Id,
+            AccessUri = "vless://must-not-leak@vpn.test:443",
+            QrCodePath = "vless://must-not-leak@vpn.test:443",
+            ConfigPath = string.Empty,
+            Status = AccessCredentialStatus.Active
+        });
+        user.Status = status;
+        user.IsBlocked = isBlocked;
+        await db.SaveChangesAsync();
+
+        var access = await service.ProcessUpdateAsync(Update(265, "/access"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.True(access.IsSuccess, access.Error);
+        Assert.Contains("ограничен", access.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("must-not-leak", access.Value.ResponseText, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Support_Attachment_Metadata_Should_Be_Saved()
     {
@@ -465,6 +500,59 @@ public class TelegramBotPurchaseFlowTests
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.True(result.Value!.PreCheckoutOk);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_PreCheckout_Should_Reject_Inactive_User()
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(286, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(287, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(288, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(289, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(290, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await db.Payments.SingleAsync(x => x.Provider == PaymentProvider.TelegramStars);
+        var user = await db.Users.SingleAsync();
+        user.IsBlocked = true;
+        await db.SaveChangesAsync();
+
+        var result = await service.ProcessUpdateAsync(PreCheckoutUpdate(291, payment.Id, 490, "XTR"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.False(result.Value!.PreCheckoutOk);
+        Assert.Contains("disabled", result.Value.PreCheckoutError!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_SuccessfulPayment_Should_Still_Settle_After_User_Deactivation()
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(292, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(293, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(294, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(295, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(296, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await db.Payments.SingleAsync(x => x.Provider == PaymentProvider.TelegramStars);
+        var user = await db.Users.SingleAsync();
+        user.Status = UserStatus.Suspended;
+        await db.SaveChangesAsync();
+
+        var result = await service.ProcessUpdateAsync(SuccessfulPaymentUpdate(297, payment.Id, "tg-charge-after-deactivation"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(PaymentStatus.Succeeded, (await db.Payments.SingleAsync()).Status);
+        Assert.Single(await db.Subscriptions.ToListAsync());
+        Assert.Single(await db.AccessCredentials.ToListAsync());
     }
 
 
@@ -778,7 +866,7 @@ public class TelegramBotPurchaseFlowTests
         var tariff = await SeedCatalogAndProvidersAsync(db);
         await EnableTelegramStarsAsync(db);
         var now = new FixedClock().UtcNow;
-        var user = new User { Id = Guid.NewGuid(), Email = $"telegram-lease-{updateId}@example.test", DisplayName = "Telegram lease", PasswordHash = "hash", ReferralCode = $"tg-{Guid.NewGuid():N}" };
+        var user = new User { Id = Guid.NewGuid(), Email = $"telegram-lease-{updateId}@example.test", DisplayName = "Telegram lease", PasswordHash = "hash", ReferralCode = $"tg-{Guid.NewGuid():N}", Status = UserStatus.Active };
         db.Users.Add(user);
         db.TelegramAccounts.Add(new TelegramAccount { TelegramUserId = 777777, UserId = user.Id, Username = "ivan", FirstName = "Ivan", LinkedAt = now });
         var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Telegram, PaymentProvider = PaymentProvider.TelegramStars, Status = OrderStatus.PendingPayment, Amount = 490m, Currency = "XTR", ExpiresAt = now.AddMinutes(15) };

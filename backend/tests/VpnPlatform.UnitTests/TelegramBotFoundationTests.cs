@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
 using Xunit;
 
@@ -33,7 +34,7 @@ public class TelegramBotFoundationTests
     {
         await using var db = CreateDbContext();
         var clock = new FixedClock();
-        var user = new User { Id = Guid.NewGuid(), Email = "user@example.test", DisplayName = "User", PasswordHash = "hash", ReferralCode = "user" };
+        var user = new User { Id = Guid.NewGuid(), Email = "user@example.test", DisplayName = "User", PasswordHash = "hash", ReferralCode = "user", Status = UserStatus.Active };
         db.Users.Add(user);
         await db.SaveChangesAsync();
         var service = new TelegramBotService(db, clock);
@@ -130,8 +131,8 @@ public class TelegramBotFoundationTests
     public async Task TelegramAccount_Should_Not_Link_To_Two_Users_And_User_Can_Unlink()
     {
         await using var db = CreateDbContext();
-        var firstUser = new User { Id = Guid.NewGuid(), Email = "first@example.test", DisplayName = "First", PasswordHash = "hash", ReferralCode = "first" };
-        var secondUser = new User { Id = Guid.NewGuid(), Email = "second@example.test", DisplayName = "Second", PasswordHash = "hash", ReferralCode = "second" };
+        var firstUser = new User { Id = Guid.NewGuid(), Email = "first@example.test", DisplayName = "First", PasswordHash = "hash", ReferralCode = "first", Status = UserStatus.Active };
+        var secondUser = new User { Id = Guid.NewGuid(), Email = "second@example.test", DisplayName = "Second", PasswordHash = "hash", ReferralCode = "second", Status = UserStatus.Active };
         db.Users.AddRange(firstUser, secondUser);
         await db.SaveChangesAsync();
         var service = new TelegramBotService(db, new FixedClock());
@@ -158,7 +159,7 @@ public class TelegramBotFoundationTests
         await using var db = CreateSqliteDbContext(connection);
         await db.Database.EnsureCreatedAsync();
         var clock = new FixedClock();
-        var user = new User { Id = Guid.NewGuid(), Email = "sqlite@example.test", DisplayName = "SQLite User", PasswordHash = "hash", ReferralCode = "sqlite" };
+        var user = new User { Id = Guid.NewGuid(), Email = "sqlite@example.test", DisplayName = "SQLite User", PasswordHash = "hash", ReferralCode = "sqlite", Status = UserStatus.Active };
         db.Users.Add(user);
         await db.SaveChangesAsync();
         var service = new TelegramBotService(db, clock);

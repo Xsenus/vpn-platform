@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1021/1021", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-cancelled-subscription-cabinet-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1027/1027", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-active-user-session-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1021/1021",
-                     "2026-08-05-cancelled-subscription-cabinet-boundary",
-                     "0.501.0",
+                     "1027/1027",
+                     "2026-08-05-active-user-session-boundary",
+                     "0.502.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,17 +104,17 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cancelled-subscription-cabinet-boundary",
-                     "0.501.0",
-                     "513/533",
-                     "96.2%",
+                     "2026-08-05-active-user-session-boundary",
+                     "0.502.0",
+                     "514/534",
+                     "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1021/1021`",
+                     "Backend full suite: OK, `1027/1027`",
                      "Local SQLite smoke: OK",
-                     "Secret scan: OK, `619` files, `0` findings",
+                     "Secret scan: OK, `622` files, `0` findings",
                      "Artifact cleanup: OK",
                      "external evidence remains open",
                      "real VPS/staging/live evidence remains open"
@@ -154,10 +154,10 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cancelled-subscription-cabinet-boundary",
-                     "0.501.0",
-                     "513/533",
-                     "96.2%",
+                     "2026-08-05-active-user-session-boundary",
+                     "0.502.0",
+                     "514/534",
+                     "96.3%",
                      "20",
                      "19",
                      "1",
@@ -166,9 +166,9 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1021/1021`",
+                     "backend full suite `1027/1027`",
                      "PostgreSQL SQL",
-                     "secret scan `619` files, `0` findings"
+                     "secret scan `622` files, `0` findings"
                  })
         {
             Assert.Contains(expected, changelog, StringComparison.OrdinalIgnoreCase);

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Contracts;
 using VpnPlatform.Api.Controllers.Auth;
+using VpnPlatform.Api.Security;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
@@ -19,6 +21,41 @@ namespace VpnPlatform.UnitTests;
 
 public class AuthSessionControllerTests
 {
+    [Fact]
+    public void Api_Jwt_Bearer_Should_Revalidate_Current_User_State()
+    {
+        var root = FindRepositoryRoot();
+        var program = File.ReadAllText(Path.Combine(root, "backend", "src", "VpnPlatform.Api", "Program.cs"));
+
+        Assert.Contains("OnTokenValidated", program, StringComparison.Ordinal);
+        Assert.Contains("ActiveUserAccessValidator.ValidateAsync", program, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Active_User_Access_Validator_Should_Reject_Blocked_Suspended_Missing_And_Invalid_Subjects_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var activeId = Guid.NewGuid();
+        var blockedId = Guid.NewGuid();
+        var suspendedId = Guid.NewGuid();
+        db.Users.AddRange(
+            new User { Id = activeId, Email = "active-token@example.test", DisplayName = "Active", ReferralCode = "active-token", Status = UserStatus.Active },
+            new User { Id = blockedId, Email = "blocked-token@example.test", DisplayName = "Blocked", ReferralCode = "blocked-token", Status = UserStatus.Active, IsBlocked = true },
+            new User { Id = suspendedId, Email = "suspended-token@example.test", DisplayName = "Suspended", ReferralCode = "suspended-token", Status = UserStatus.Suspended });
+        await db.SaveChangesAsync();
+
+        Assert.True(await ActiveUserAccessValidator.IsActiveAsync(Principal(activeId.ToString()), db, CancellationToken.None));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal(blockedId.ToString()), db, CancellationToken.None));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal(suspendedId.ToString()), db, CancellationToken.None));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal(Guid.NewGuid().ToString()), db, CancellationToken.None));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal("invalid-subject"), db, CancellationToken.None));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(null, db, CancellationToken.None));
+    }
+
     [Fact]
     public async Task Login_Refresh_Logout_Should_Work_With_Sqlite_And_Reject_Invalid_Sessions()
     {
@@ -128,6 +165,26 @@ public class AuthSessionControllerTests
             .UseSqlite(connection)
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private static ClaimsPrincipal Principal(string subject)
+        => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, subject)], "test"));
+
+    private static string FindRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "README.md"))
+                && Directory.Exists(Path.Combine(current.FullName, "backend")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Repository root not found.");
     }
 
     private sealed class TestClock : IClock

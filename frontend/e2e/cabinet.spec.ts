@@ -262,6 +262,8 @@ async function mockCabinetApi(page: Page) {
   let supportConversations: unknown[] = []
   let supportMessages: unknown[] = []
   let logoutShouldFail = false
+  let authorizedRequestsRejected = false
+  let rejectedAuthorizedPath: string | null = null
   let renewalOrder = {
     ...paidOrder,
     id: 'order-renewal',
@@ -316,6 +318,19 @@ async function mockCabinetApi(page: Page) {
 
     if (method === 'POST' && path === '/api/auth/logout') {
       await fulfillJson(route, logoutShouldFail ? { error: 'logout unavailable' } : { status: 'ok' }, logoutShouldFail ? 503 : 200)
+      return
+    }
+
+    if (authorizedRequestsRejected
+      && request.headers().authorization
+      && (path.startsWith('/api/me') || path.startsWith('/api/cabinet/'))) {
+      await fulfillJson(route, { error: 'user_not_active' }, 401)
+      return
+    }
+
+    if (rejectedAuthorizedPath === path && request.headers().authorization) {
+      rejectedAuthorizedPath = null
+      await fulfillJson(route, { error: 'user_not_active' }, 401)
       return
     }
 
@@ -463,6 +478,9 @@ async function mockCabinetApi(page: Page) {
   return {
     requests,
     failLogout: () => { logoutShouldFail = true },
+    rejectAuthorizedRequests: () => { authorizedRequestsRejected = true },
+    allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
+    rejectNextAuthorizedPath: (path: string) => { rejectedAuthorizedPath = path },
     getLastRequest: (path: string, method = 'POST') =>
       requests.findLast((item) => item.method === method && new URL(item.url).pathname === path)
   }
@@ -573,6 +591,38 @@ test('cabinet covers register, login, payments, subscription access and support'
   await loginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
   await loginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText('Вход выполнен.')).toBeVisible()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  api.rejectAuthorizedRequests()
+  await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
+  await expect(page.getByText('Сессия завершена или доступ к аккаунту ограничен. Войдите заново.')).toBeVisible()
+  await expect(page.getByRole('tabpanel', { name: 'Вход' })).toBeVisible()
+  await expect(page.getByText('vless://cabinet-e2e@example.com:443', { exact: false })).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+  for (const message of consoleErrors.filter((item) => item.includes('401 (Unauthorized)'))) consoleErrors.splice(consoleErrors.indexOf(message), 1)
+
+  api.allowAuthorizedRequests()
+  const reloginPanel = page.locator('#cabinet-auth-panel')
+  await reloginPanel.getByLabel('Email').fill(user.email)
+  await reloginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await reloginPanel.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  api.rejectNextAuthorizedPath('/api/me/support/conversations/support-created/messages')
+  await page.getByLabel('Тема').fill('Проверка завершения сессии')
+  await page.getByLabel('Сообщение').fill('Повторная загрузка переписки должна завершить локальную сессию.')
+  await page.getByRole('button', { name: 'Создать обращение' }).click()
+  await expect(page.getByText('Сессия завершена или доступ к аккаунту ограничен. Войдите заново.')).toBeVisible()
+  await expect(page.getByText('Обращение в поддержку создано.')).toHaveCount(0)
+  await expect(page.getByRole('tabpanel', { name: 'Вход' })).toBeVisible()
+  for (const message of consoleErrors.filter((item) => item.includes('401 (Unauthorized)'))) consoleErrors.splice(consoleErrors.indexOf(message), 1)
+
+  await reloginPanel.getByLabel('Email').fill(user.email)
+  await reloginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await reloginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
 
   api.failLogout()

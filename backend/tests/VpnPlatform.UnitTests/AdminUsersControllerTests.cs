@@ -96,6 +96,12 @@ public class AdminUsersControllerTests
             PreferredLanguage = "ru",
             ReferralCode = "REF3"
         });
+        db.UserRefreshTokens.Add(new UserRefreshToken
+        {
+            UserId = userId,
+            TokenHash = "active-refresh-session",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(30)
+        });
         await db.SaveChangesAsync();
 
         using var payload = JsonDocument.Parse("{\"displayName\":\"After\",\"isBlocked\":true,\"status\":\"Suspended\"}");
@@ -110,6 +116,9 @@ public class AdminUsersControllerTests
         Assert.Equal("After", updated.DisplayName);
         Assert.True(updated.IsBlocked);
         Assert.Equal(UserStatus.Suspended, updated.Status);
+        var session = await db.UserRefreshTokens.SingleAsync(x => x.UserId == userId);
+        Assert.NotNull(session.RevokedAt);
+        Assert.Equal("admin_user_deactivated", session.RevocationReason);
         var audit = await db.AuditLogs.SingleAsync(x => x.Action == "user.update");
         Assert.Equal(userId.ToString(), audit.EntityId);
         Assert.NotEqual(audit.BeforeJson, audit.AfterJson);

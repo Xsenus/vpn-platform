@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.502.0 - 2026-08-05
+
+Release entry: `2026-08-05-active-user-session-boundary`.
+
+### Исправлено
+
+- JWT bearer повторно проверяет `User.Status` и `IsBlocked` на каждом авторизованном запросе; admin user patch атомарно отзывает все активные refresh-сессии при блокировке, suspension или deletion.
+- Cabinet централизованно обрабатывает 401/403: очищает access/refresh tokens, профиль, подписки, платежи, VPN URI/QR и support state и возвращает пользователя к форме входа.
+- Linked Telegram account не читает ключи, не создаёт заказы/поддержку/provisioning и не проходит Telegram Stars pre-checkout после деактивации; уже полученный `successful_payment` продолжает безопасный settlement.
+
+### Проверено
+
+- Backend full suite `1027/1027`; targeted auth/admin/Telegram suite `48/48`, включая SQLite active-user validator и payment/access regressions.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `622` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `514/534` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.501.0 - 2026-08-05
 
 Release entry: `2026-08-05-cancelled-subscription-cabinet-boundary`.

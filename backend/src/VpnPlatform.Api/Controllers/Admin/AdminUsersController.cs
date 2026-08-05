@@ -298,11 +298,27 @@ public class AdminUsersController : ControllerBase
         }
 
         var before = MapUser(user);
+        var now = DateTimeOffset.UtcNow;
         if (nextDisplayName is not null) user.DisplayName = nextDisplayName;
         if (nextIsBlocked.HasValue) user.IsBlocked = nextIsBlocked.Value;
         if (nextStatus.HasValue) user.Status = nextStatus.Value;
 
-        user.UpdatedAt = DateTimeOffset.UtcNow;
+        if (user.IsBlocked || user.Status != UserStatus.Active)
+        {
+            var sessions = await _db.UserRefreshTokens
+                .Where(x => x.UserId == user.Id && x.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            var revokedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+            foreach (var session in sessions)
+            {
+                session.RevokedAt = now;
+                session.RevokedByIp = revokedByIp;
+                session.RevocationReason = "admin_user_deactivated";
+                session.UpdatedAt = now;
+            }
+        }
+
+        user.UpdatedAt = now;
         AdminAuditLogWriter.Add(_db, this, "user.update", "User", user.Id, before, MapUser(user));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(MapUser(user));

@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `513/533` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `514/534` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1021/1021`.
-- [x] Frontend unit tests: `83/83`.
+- [x] Backend full suite: `1027/1027`.
+- [x] Frontend unit tests: `84/84`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -116,7 +116,7 @@
 - [x] Audit domain scope проверен SQLite role matrix и Finance/Support desktop/mobile E2E: чужие actions, entity types, payload и категории отсутствуют.
 - [x] VPN access cancellation/reconciliation проверен SQLite `8/8` и расширенным X3Ui/admin/subscription regression `117/117`.
 - [x] Отозванный VPN-доступ является терминальным: кабинет и админка скрывают URI/QR, а provider-команды fail-closed до сетевого вызова.
-- [x] Latest "Что нового": `2026-08-05-cancelled-subscription-cabinet-boundary`, версия `0.501.0`.
+- [x] Latest "Что нового": `2026-08-05-active-user-session-boundary`, версия `0.502.0`.
 
 ## Как вести дальше
 

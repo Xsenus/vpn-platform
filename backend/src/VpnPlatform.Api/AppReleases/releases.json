@@ -11695,5 +11695,28 @@
         "text": "Roadmap progress is 513/533 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-active-user-session-boundary",
+    "version": "0.502.0",
+    "releasedAt": "2026-08-05T08:16:00+07:00",
+    "title": "Деактивация аккаунта завершает доступ во всех каналах",
+    "summary": "Блокировка или приостановка пользователя теперь немедленно закрывает JWT/refresh-сессии, кабинет и операции привязанного Telegram-аккаунта.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "JWT повторно проверяет активное состояние пользователя на каждом API-запросе, а административная деактивация атомарно отзывает все refresh-сессии."
+      },
+      {
+        "type": "fixed",
+        "text": "Кабинет очищает токены и загруженные VPN-данные после 401/403; Telegram не раскрывает ключи и не принимает новые операции неактивного linked user, но сохраняет settlement уже состоявшегося платежа."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 514/534 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -556,14 +556,23 @@ public class TelegramBotService
 
     private async Task<RouteResult> RouteAsync(TelegramAccount account, ParsedTelegramUpdate parsed, string rawBody, CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(parsed.PreCheckoutQueryId))
-        {
-            return await HandlePreCheckoutQueryAsync(account, parsed, cancellationToken);
-        }
-
         if (!string.IsNullOrWhiteSpace(parsed.SuccessfulPaymentTelegramChargeId))
         {
             return await HandleSuccessfulPaymentAsync(account, parsed, rawBody, cancellationToken);
+        }
+
+        var linkedUserIsActive = await IsLinkedUserActiveAsync(account, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(parsed.PreCheckoutQueryId))
+        {
+            return linkedUserIsActive
+                ? await HandlePreCheckoutQueryAsync(account, parsed, cancellationToken)
+                : new RouteResult(string.Empty, parsed.ChatId, null, parsed.PreCheckoutQueryId, false, "Account access is disabled.");
+        }
+
+        if (!linkedUserIsActive)
+        {
+            await ClearSessionAsync(account.TelegramUserId, cancellationToken);
+            return new RouteResult("Доступ к аккаунту ограничен. Обратитесь в поддержку.", parsed.ChatId, null);
         }
 
         var text = (parsed.CallbackData ?? parsed.Text ?? string.Empty).Trim();
@@ -757,6 +766,18 @@ public class TelegramBotService
         }
 
         return new RouteResult(HelpText(), parsed.ChatId, account.UserId.HasValue ? LinkedMenuReplyMarkupJson() : UnlinkedMenuReplyMarkupJson());
+    }
+
+    private async Task<bool> IsLinkedUserActiveAsync(TelegramAccount account, CancellationToken cancellationToken)
+    {
+        if (!account.UserId.HasValue)
+        {
+            return true;
+        }
+
+        return await _db.Users.AsNoTracking().AnyAsync(
+            x => x.Id == account.UserId.Value && !x.IsBlocked && x.Status == UserStatus.Active,
+            cancellationToken);
     }
 
     private static bool IsOwnVpsState(string? state)
