@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1098/1098", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-email-delivery-lifecycle", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1103/1103", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-server-owned-checkout-context", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1098/1098",
-                     "2026-08-05-email-delivery-lifecycle",
-                     "0.518.0",
+                     "1103/1103",
+                     "2026-08-05-server-owned-checkout-context",
+                     "0.519.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-email-delivery-lifecycle",
-                     "0.518.0",
+                     "2026-08-05-server-owned-checkout-context",
+                     "0.519.0",
                      "522/542",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1098/1098`",
+                     "Backend full suite: OK, `1103/1103`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `639` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-email-delivery-lifecycle",
-                     "0.518.0",
+                     "2026-08-05-server-owned-checkout-context",
+                     "0.519.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1098/1098`",
+                     "backend full suite `1103/1103`",
                      "PostgreSQL SQL",
                      "secret scan `639` files, `0` findings"
                  })
@@ -252,6 +252,29 @@ public class FinalDocsChangelogTests
         Assert.True(testResultsTopEntry.Success, "TEST_RESULTS.md must start with the latest release check block.");
         Assert.Contains(releaseId, testResultsTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(version, testResultsTopEntry.Groups["body"].Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Latest_Status_Release_Should_Already_Be_Published_By_Api_Time()
+    {
+        var root = FindRepositoryRoot();
+        using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            root,
+            "backend",
+            "src",
+            "VpnPlatform.Api",
+            "AppReleases",
+            "releases.json")));
+        var latestRelease = releasesJson.RootElement
+            .EnumerateArray()
+            .Where(x => x.GetProperty("isActive").GetBoolean())
+            .OrderByDescending(x => x.GetProperty("releasedAt").GetDateTimeOffset())
+            .First();
+        var releasedAt = latestRelease.GetProperty("releasedAt").GetDateTimeOffset();
+
+        Assert.True(
+            releasedAt <= DateTimeOffset.UtcNow.AddMinutes(1),
+            $"Latest status release {latestRelease.GetProperty("releaseId").GetString()} is still upcoming at {releasedAt:O}.");
     }
 
     private static string FindRepositoryRoot()

@@ -13,7 +13,7 @@ using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Controllers.Me;
 
-public sealed record CreateMeOrderHttpRequest(Guid TariffId, string Type, string Channel, string PaymentProvider, string? PromoCode, bool IsFirstPurchase, Guid? SubscriptionId);
+public sealed record CreateMeOrderHttpRequest(Guid TariffId, string Type, string PaymentProvider, string? PromoCode, Guid? SubscriptionId);
 public sealed record InitMePaymentHttpRequest(string? ReturnUrl);
 public sealed record CreateMeSupportConversationHttpRequest(string Subject, string Text, Guid? OrderId, Guid? SubscriptionId);
 public sealed record MeSupportReplyHttpRequest(string Text, int? Revision = null);
@@ -136,7 +136,6 @@ public class MeController : ControllerBase
     public async Task<IActionResult> CreateOrder([FromBody] CreateMeOrderHttpRequest request, CancellationToken cancellationToken)
     {
         if (!TryParseDefined(request.Type, out OrderType orderType)
-            || !TryParseDefined(request.Channel, out ChannelType channel)
             || !TryParseDefined(request.PaymentProvider, out PaymentProvider paymentProvider))
         {
             return BadRequest(new { error = "Invalid order request." });
@@ -181,10 +180,10 @@ public class MeController : ControllerBase
                 userId,
                 tariffId,
                 orderType,
-                channel,
+                ChannelType.Web,
                 paymentProvider,
                 request.PromoCode,
-                request.IsFirstPurchase,
+                false,
                 RenewalSubscriptionId: renewalSubscriptionId),
             cancellationToken);
 

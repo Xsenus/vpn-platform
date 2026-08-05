@@ -332,10 +332,8 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
   await client.createMyOrder('token-123', {
     tariffId: 'tariff-1',
     type: 'NewSubscription',
-    channel: 'Web',
     paymentProvider: 'YooKassa',
     promoCode: 'WELCOME10',
-    isFirstPurchase: false,
     subscriptionId: 'subscription-1'
   })
 
@@ -345,6 +343,7 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
   assert.equal(headers.get('Authorization'), 'Bearer token-123')
   assert.match(String(calls[0]?.init?.body), /WELCOME10/)
   assert.match(String(calls[0]?.init?.body), /subscription-1/)
+  assert.doesNotMatch(String(calls[0]?.init?.body), /channel|isFirstPurchase/)
 })
 
 test('ApiClient.initMyPayment calls tokenized endpoint', async () => {
@@ -612,10 +611,8 @@ test('ApiClient.createCheckoutSession calls public checkout-session endpoint', a
   const response = await client.createCheckoutSession({
     tariffId: 'tariff-1',
     type: 'NewSubscription',
-    channel: 'Web',
     paymentProvider: 'YooKassa',
     promoCode: null,
-    isFirstPurchase: false,
     emailHint: null,
     returnUrl: 'http://localhost:5173/account'
   })
@@ -623,6 +620,7 @@ test('ApiClient.createCheckoutSession calls public checkout-session endpoint', a
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/checkout-sessions')
   assert.equal(calls[0]?.init?.method, 'POST')
   assert.match(String(calls[0]?.init?.body), /YooKassa/)
+  assert.doesNotMatch(String(calls[0]?.init?.body), /channel|isFirstPurchase/)
   assert.equal(response.token, 'checkout-token')
 })
 

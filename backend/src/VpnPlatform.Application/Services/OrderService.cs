@@ -165,6 +165,13 @@ public class OrderService
                 : Math.Max(0, amount - promo.DiscountValue);
         }
 
+        var isFirstPurchase = command.Type == OrderType.NewSubscription
+            && !await _db.Orders.AsNoTracking().AnyAsync(
+                x => x.UserId == command.UserId
+                    && x.Type == OrderType.NewSubscription
+                    && x.Status == OrderStatus.Completed,
+                cancellationToken);
+
         var order = new Order
         {
             UserId = command.UserId,
@@ -178,7 +185,7 @@ public class OrderService
             Currency = tariff.Currency,
             PromoCodeId = promo?.Id,
             ExpiresAt = expiresAt,
-            IsFirstPurchase = command.IsFirstPurchase,
+            IsFirstPurchase = isFirstPurchase,
             ReferralContext = BuildReferralContext(command.RenewalSubscriptionId, promo?.FreeDays),
             PendingIntentKey = BuildPendingIntentKey(command, promo?.Id)
         };
@@ -390,14 +397,6 @@ public class OrderService
         return subscription.TariffId != command.TariffId
             ? "Tariff does not match subscription."
             : null;
-    }
-
-    public async Task<Result<OrderDto>> GetOrderStatusAsync(Guid orderId, CancellationToken cancellationToken = default)
-    {
-        var order = await _db.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == orderId, cancellationToken);
-        return order is null
-            ? Result<OrderDto>.Failure("Order not found.")
-            : Result<OrderDto>.Success(MapToDto(order));
     }
 
     public async Task<int> ExpirePendingOrdersAsync(CancellationToken cancellationToken = default)

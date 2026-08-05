@@ -226,6 +226,40 @@ public class OrderServiceSqliteTests
     }
 
     [Fact]
+    public async Task CreateOrderAsync_Should_Derive_First_Purchase_Without_Trusting_Command()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 5, 10, 30, 0, TimeSpan.Zero);
+        var userId = Guid.NewGuid();
+        var firstTariffId = Guid.NewGuid();
+        var secondTariffId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = "first-purchase@test.local", DisplayName = "First purchase", PasswordHash = "hash" });
+        db.Tariffs.AddRange(
+            new Tariff { Id = firstTariffId, Name = "First", Slug = "first-purchase-one", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true },
+            new Tariff { Id = secondTariffId, Name = "Second", Slug = "first-purchase-two", DurationDays = 30, Price = 200, Currency = "RUB", IsActive = true });
+        await db.SaveChangesAsync();
+        var service = new OrderService(db, new FixedClock(now));
+
+        var first = await service.CreateOrderAsync(new CreateOrderCommand(
+            userId, firstTariffId, OrderType.NewSubscription, ChannelType.Web, PaymentProvider.YooKassa, null, false));
+        Assert.True(first.IsSuccess, first.Error);
+        var firstOrder = await db.Orders.SingleAsync(x => x.Id == first.Value!.Id);
+        Assert.True(firstOrder.IsFirstPurchase);
+        firstOrder.Status = OrderStatus.Completed;
+        await db.SaveChangesAsync();
+
+        var second = await service.CreateOrderAsync(new CreateOrderCommand(
+            userId, secondTariffId, OrderType.NewSubscription, ChannelType.Web, PaymentProvider.YooKassa, null, true));
+
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.False((await db.Orders.SingleAsync(x => x.Id == second.Value!.Id)).IsFirstPurchase);
+    }
+
+    [Fact]
     public async Task ProcessSubscriptionLifecycle_Should_Work_With_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

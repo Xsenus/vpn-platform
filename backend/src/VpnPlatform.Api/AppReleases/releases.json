@@ -12075,7 +12075,7 @@
   {
     "releaseId": "2026-08-05-email-delivery-lifecycle",
     "version": "0.518.0",
-    "releasedAt": "2026-08-05T17:30:00+07:00",
+    "releasedAt": "2026-08-05T17:05:45+07:00",
     "title": "Коды восстановления доставляются через надежную очередь",
     "summary": "Email-уведомления получили безопасную SMTP-доставку с повторными попытками, а состояние очереди теперь видно администратору без раскрытия адресов и одноразовых кодов.",
     "isActive": true,
@@ -12096,6 +12096,33 @@
       {
         "type": "important",
         "text": "Roadmap progress is 531/551 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
+  },
+  {
+    "releaseId": "2026-08-05-server-owned-checkout-context",
+    "version": "0.519.0",
+    "releasedAt": "2026-08-05T17:24:00+07:00",
+    "title": "Покупка использует проверенный серверный контекст",
+    "summary": "Канал продажи и признак первой покупки больше не принимаются от браузера, checkout создается только для готового web-провайдера, а анонимное чтение заказа по идентификатору закрыто.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Public checkout принимает только новую web-подписку, а кабинет всегда создает web-заказ; канал и признак первой покупки вычисляются сервером и не зависят от тела запроса."
+      },
+      {
+        "type": "fixed",
+        "text": "Анонимный статус заказа по GUID закрыт ответом 410, потому что идентификатор заказа не является учетными данными и не должен раскрывать пользователя, тариф или сумму."
+      },
+      {
+        "type": "improved",
+        "text": "Checkout-сессия создается только для включенного и полностью настроенного web-провайдера; отключенные, неготовые и Telegram Stars варианты отклоняются до записи сессии."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 532/552 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
   }

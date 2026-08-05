@@ -1090,10 +1090,8 @@ export type WorkScenarioUpsertPayload = Omit<WorkScenarioDto, 'id' | 'createdAt'
 export type CreateCheckoutSessionPayload = {
   tariffId: string
   type: OrderType
-  channel: ChannelType
   paymentProvider: PaymentProvider
   promoCode?: string | null
-  isFirstPurchase: boolean
   emailHint?: string | null
   returnUrl?: string | null
 }
@@ -1111,10 +1109,8 @@ export type CreatePublicOrderPayload = {
 export type CreateMyOrderPayload = {
   tariffId: string
   type: OrderType
-  channel: ChannelType
   paymentProvider: PaymentProvider
   promoCode?: string | null
-  isFirstPurchase: boolean
   subscriptionId?: string | null
 }
 
@@ -1376,10 +1372,6 @@ export class ApiClient {
       body: JSON.stringify({ orderId }),
       errorMessage: apiFallbackErrorMessage
     })
-  }
-
-  getOrderStatus(orderId: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/public/orders/${orderId}/status`, { errorMessage: apiFallbackErrorMessage })
   }
 
   createMyOrder(token: string, payload: CreateMyOrderPayload): Promise<OrderDto> {

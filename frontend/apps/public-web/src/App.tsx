@@ -452,10 +452,8 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       const session = await api.createCheckoutSession({
         tariffId: tariff.id,
         type: 'NewSubscription',
-        channel: 'Web',
         paymentProvider: provider,
         promoCode: promoCode || null,
-        isFirstPurchase: false,
         emailHint: null,
         returnUrl: `${window.location.origin}/account`
       })

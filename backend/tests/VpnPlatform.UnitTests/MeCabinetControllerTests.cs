@@ -18,10 +18,9 @@ namespace VpnPlatform.UnitTests;
 public class MeCabinetControllerTests
 {
     [Theory]
-    [InlineData("999", "Web", "YooKassa")]
-    [InlineData("NewSubscription", "999", "YooKassa")]
-    [InlineData("NewSubscription", "Web", "999")]
-    public async Task Cabinet_Order_Actions_Should_Reject_Undefined_Enum_Values_Without_Creating_Data(string type, string channel, string provider)
+    [InlineData("999", "YooKassa")]
+    [InlineData("NewSubscription", "999")]
+    public async Task Cabinet_Order_Actions_Should_Reject_Undefined_Enum_Values_Without_Creating_Data(string type, string provider)
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -35,10 +34,33 @@ public class MeCabinetControllerTests
         await db.SaveChangesAsync();
         var controller = CreateController(db, userId);
 
-        var result = await controller.CreateOrder(new CreateMeOrderHttpRequest(tariff.Id, type, channel, provider, null, false, null), CancellationToken.None);
+        var result = await controller.CreateOrder(new CreateMeOrderHttpRequest(tariff.Id, type, provider, null, null), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Empty(await db.Orders.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Cabinet_Order_Should_Use_Server_Owned_Web_Channel_And_First_Purchase_State()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Owned context", Slug = "owned-context", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        db.Users.Add(User(userId, "owned-context@example.test"));
+        db.Tariffs.Add(tariff);
+        await db.SaveChangesAsync();
+
+        var result = await CreateController(db, userId).CreateOrder(
+            new CreateMeOrderHttpRequest(tariff.Id, "NewSubscription", "YooKassa", null, null),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        var order = await db.Orders.SingleAsync();
+        Assert.Equal(ChannelType.Web, order.Channel);
+        Assert.True(order.IsFirstPurchase);
     }
 
     [Fact]
@@ -102,7 +124,7 @@ public class MeCabinetControllerTests
         await db.SaveChangesAsync();
 
         var result = await CreateController(db, userId).CreateOrder(
-            new CreateMeOrderHttpRequest(tariff.Id, "Renewal", "Web", "YooKassa", null, false, subscription.Id),
+            new CreateMeOrderHttpRequest(tariff.Id, "Renewal", "YooKassa", null, subscription.Id),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
@@ -549,7 +571,9 @@ public class MeCabinetControllerTests
     private static MeController CreateController(ApplicationDbContext db, Guid userId, SvgQrCodeGenerator? qrCodeGenerator = null)
     {
         var configuration = new ConfigurationBuilder().Build();
-        return new MeController(db, null!, null!, null!, null!, qrCodeGenerator!, configuration)
+        var clock = new TestClock();
+        var orderService = new VpnPlatform.Application.Services.OrderService(db, clock);
+        return new MeController(db, orderService, new VpnPlatform.Application.Services.CheckoutSessionService(db, clock, orderService), null!, null!, qrCodeGenerator!, configuration)
         {
             ControllerContext = new ControllerContext
             {

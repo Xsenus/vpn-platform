@@ -578,10 +578,11 @@ test('cabinet covers register, login, payments, subscription access and support'
   expect(api.getLastRequest('/api/me/orders')?.body).toMatchObject({
     tariffId: 'tariff-pro',
     type: 'Renewal',
-    channel: 'Web',
     paymentProvider: 'YooKassa',
     subscriptionId: 'sub-active'
   })
+  expect(api.getLastRequest('/api/me/orders')?.body).not.toHaveProperty('channel')
+  expect(api.getLastRequest('/api/me/orders')?.body).not.toHaveProperty('isFirstPurchase')
 
   await page.getByLabel('Тема').fill('Не вижу продление')
   await page.getByLabel('Сообщение').fill('Оплата создана, хочу проверить статус подписки и доступ.')

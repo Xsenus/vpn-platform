@@ -26,10 +26,10 @@ public class CheckoutSessionTests
         var user = await SeedUserAsync(db, "controller-buyer@example.test");
         var orderService = new OrderService(db, clock);
         var checkoutService = new CheckoutSessionService(db, clock, orderService);
-        var controller = new OrdersController(checkoutService, orderService);
+        var controller = new OrdersController(checkoutService);
 
         var createdResult = await controller.CreateCheckoutSession(
-            new CreateCheckoutSessionHttpRequest(tariff.Id, "NewSubscription", "Web", "YooKassa", null, true, user.Email, "https://example.test/return"),
+            new CreateCheckoutSessionHttpRequest(tariff.Id, "NewSubscription", "YooKassa", null, user.Email, "https://example.test/return"),
             CancellationToken.None);
         var created = Assert.IsType<CheckoutSessionDto>(Assert.IsType<OkObjectResult>(createdResult).Value);
 
@@ -38,31 +38,78 @@ public class CheckoutSessionTests
 
         var claimed = await checkoutService.ClaimAsync(new ClaimCheckoutSessionCommand(created.Token, user.Id));
         Assert.True(claimed.IsSuccess, claimed.Error);
-        var statusResult = await controller.GetStatus(claimed.Value!.Id, CancellationToken.None);
-        Assert.IsType<OkObjectResult>(statusResult);
+        var statusResult = Assert.IsType<ObjectResult>(controller.GetStatus(claimed.Value!.Id));
+        Assert.Equal(StatusCodes.Status410Gone, statusResult.StatusCode);
+        Assert.DoesNotContain(user.Id.ToString(), System.Text.Json.JsonSerializer.Serialize(statusResult.Value), StringComparison.OrdinalIgnoreCase);
 
         var legacyResult = Assert.IsType<ObjectResult>(controller.CreateAnonymousOrder());
         Assert.Equal(StatusCodes.Status410Gone, legacyResult.StatusCode);
     }
 
     [Theory]
-    [InlineData("invalid", "Web", "YooKassa")]
-    [InlineData("NewSubscription", "invalid", "YooKassa")]
-    [InlineData("NewSubscription", "Web", "invalid")]
-    [InlineData("999", "Web", "YooKassa")]
-    public async Task Public_Checkout_Controller_Should_Return_BadRequest_For_Invalid_Enum_Values(string type, string channel, string provider)
+    [InlineData("invalid", "YooKassa")]
+    [InlineData("Renewal", "YooKassa")]
+    [InlineData("NewSubscription", "invalid")]
+    [InlineData("999", "YooKassa")]
+    public async Task Public_Checkout_Controller_Should_Reject_Invalid_Or_Unsupported_Order_Context(string type, string provider)
     {
         await using var db = CreateDbContext();
         var clock = new FixedClock(new DateTimeOffset(2026, 4, 29, 8, 0, 0, TimeSpan.Zero));
         var tariff = await SeedTariffAsync(db);
         var orderService = new OrderService(db, clock);
-        var controller = new OrdersController(new CheckoutSessionService(db, clock, orderService), orderService);
+        var controller = new OrdersController(new CheckoutSessionService(db, clock, orderService));
 
         var result = await controller.CreateCheckoutSession(
-            new CreateCheckoutSessionHttpRequest(tariff.Id, type, channel, provider, null, false, null, null),
+            new CreateCheckoutSessionHttpRequest(tariff.Id, type, provider, null, null, null),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.CheckoutSessions.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(OrderType.Renewal, ChannelType.Web)]
+    [InlineData(OrderType.NewSubscription, ChannelType.Telegram)]
+    public async Task CheckoutSession_Service_Should_Reject_Non_Public_Order_Context(OrderType type, ChannelType channel)
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 5, 10, 0, 0, TimeSpan.Zero));
+        var tariff = await SeedTariffAsync(db);
+        var service = CreateService(db, clock);
+
+        var result = await service.CreateAsync(new(
+            tariff.Id,
+            type,
+            channel,
+            PaymentProvider.YooKassa,
+            null,
+            true,
+            null,
+            null));
+
+        Assert.False(result.IsSuccess);
+        Assert.Empty(await db.CheckoutSessions.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CheckoutSession_Should_Reject_Disabled_Or_Unconfigured_Payment_Provider()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 5, 10, 15, 0, TimeSpan.Zero));
+        var tariff = await SeedTariffAsync(db);
+
+        var result = await CreateService(db, clock).CreateAsync(new(
+            tariff.Id,
+            OrderType.NewSubscription,
+            ChannelType.Web,
+            PaymentProvider.RoboKassa,
+            null,
+            false,
+            null,
+            null));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not configured", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(await db.CheckoutSessions.ToListAsync());
     }
 
@@ -86,7 +133,10 @@ public class CheckoutSessionTests
         Assert.True(claimed.IsSuccess, claimed.Error);
         Assert.Equal(user.Id, claimed.Value!.UserId);
         Assert.Equal(user.Id, (await db.CheckoutSessions.SingleAsync()).UserId);
-        Assert.Equal(user.Id, (await db.Orders.SingleAsync()).UserId);
+        var order = await db.Orders.SingleAsync();
+        Assert.Equal(user.Id, order.UserId);
+        Assert.Equal(ChannelType.Web, order.Channel);
+        Assert.True(order.IsFirstPurchase);
     }
 
     [Fact]
@@ -328,6 +378,16 @@ public class CheckoutSessionTests
     {
         var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Monthly", Slug = "monthly", Description = "Monthly", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true };
         db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.YooKassa,
+            Mode = PaymentProviderMode.Sandbox,
+            Name = "checkout-tests",
+            PublicName = "Checkout tests",
+            ShopId = "checkout-test-shop",
+            IsEnabled = true,
+            IsDefault = true
+        });
         await db.SaveChangesAsync();
         return tariff;
     }

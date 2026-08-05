@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: server-owned checkout context
+
+Scope:
+- Проверены public checkout, кабинетное создание заказа, выбор платежного провайдера, вычисление первой покупки, анонимное чтение статуса и все browser surfaces.
+
+Results:
+- Roadmap progress: `532/552` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-server-owned-checkout-context`, version `0.519.0`.
+- Backend full suite: OK, `1103/1103`; targeted checkout/order/payment/referral SQLite suite: OK, `55/55`.
+- Public checkout допускает только `NewSubscription/Web`; кабинетный API всегда использует `Web`, а `IsFirstPurchase` вычисляется по завершенным покупкам пользователя.
+- Checkout write-boundary отклоняет отключенного, неготового и bot-only провайдера до сохранения сессии.
+- Анонимный статус заказа по GUID возвращает `410 Gone`; после входа используется `/api/me/orders`.
+- Fresh local SQLite smoke: OK, sandbox checkout/payment/subscription/VPN access завершены.
+- Frontend tests: OK, `90/90`; typecheck/build: OK; Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`.
+- Release timestamp guard подтверждает, что latest status release уже опубликован по времени API.
+- Artifact cleanup и strict UTF-8 guard выполняются перед коммитом.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui и real SMTP не были доступны.
+
 ## Check 2026-08-05: email delivery lifecycle
 
 Scope:

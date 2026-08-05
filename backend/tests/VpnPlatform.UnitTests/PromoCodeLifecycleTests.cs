@@ -305,10 +305,8 @@ public class PromoCodeLifecycleTests
                 var result = await controller.CreateOrder(new CreateMeOrderHttpRequest(
                     tariffId,
                     "NewSubscription",
-                    "Web",
                     "YooKassa",
                     "LastOne",
-                    false,
                     null), CancellationToken.None);
 
                 Assert.True(interceptor.WinnerResult?.IsSuccess, interceptor.WinnerResult?.Error);

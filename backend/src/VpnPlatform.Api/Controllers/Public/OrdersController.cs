@@ -7,19 +7,17 @@ using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Controllers.Public;
 
-public sealed record CreateCheckoutSessionHttpRequest(Guid TariffId, string Type, string Channel, string PaymentProvider, string? PromoCode, bool IsFirstPurchase, string? EmailHint, string? ReturnUrl);
+public sealed record CreateCheckoutSessionHttpRequest(Guid TariffId, string Type, string PaymentProvider, string? PromoCode, string? EmailHint, string? ReturnUrl);
 
 [ApiController]
 [Route("api/public")]
 public class OrdersController : ControllerBase
 {
     private readonly CheckoutSessionService _checkoutSessionService;
-    private readonly OrderService _orderService;
 
-    public OrdersController(CheckoutSessionService checkoutSessionService, OrderService orderService)
+    public OrdersController(CheckoutSessionService checkoutSessionService)
     {
         _checkoutSessionService = checkoutSessionService;
-        _orderService = orderService;
     }
 
     [HttpPost("checkout-sessions")]
@@ -31,9 +29,9 @@ public class OrdersController : ControllerBase
             return BadRequest(new { error = "Invalid order type." });
         }
 
-        if (!TryParseDefined(request.Channel, out ChannelType channel))
+        if (orderType != OrderType.NewSubscription)
         {
-            return BadRequest(new { error = "Invalid sales channel." });
+            return BadRequest(new { error = "Public checkout supports only new subscriptions." });
         }
 
         if (!TryParseDefined(request.PaymentProvider, out PaymentProvider paymentProvider))
@@ -45,10 +43,10 @@ public class OrdersController : ControllerBase
             new CreateCheckoutSessionCommand(
                 request.TariffId,
                 orderType,
-                channel,
+                ChannelType.Web,
                 paymentProvider,
                 request.PromoCode,
-                request.IsFirstPurchase,
+                false,
                 request.EmailHint,
                 request.ReturnUrl),
             cancellationToken);
@@ -64,11 +62,13 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet("orders/{id:guid}/status")]
-    public async Task<IActionResult> GetStatus([FromRoute] Guid id, CancellationToken cancellationToken)
-    {
-        var result = await _orderService.GetOrderStatusAsync(id, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : NotFound(new { error = result.Error });
-    }
+    public IActionResult GetStatus([FromRoute] Guid id)
+        => StatusCode(StatusCodes.Status410Gone, new
+        {
+            id,
+            error = "anonymous_order_status_disabled",
+            message = "Authenticate and use GET /api/me/orders. Public order identifiers are not status credentials."
+        });
 
     [HttpPost("orders")]
     [EnableRateLimiting(ApiRateLimitPolicies.PublicCheckout)]

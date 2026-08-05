@@ -24,10 +24,23 @@ public class CheckoutSessionService
 
     public async Task<Result<CheckoutSessionDto>> CreateAsync(CreateCheckoutSessionCommand command, CancellationToken cancellationToken = default)
     {
+        if (command.Type != OrderType.NewSubscription || command.Channel != ChannelType.Web)
+        {
+            return Result<CheckoutSessionDto>.Failure("Public checkout supports only new web subscriptions.");
+        }
+
         var tariffExists = await _db.Tariffs.AnyAsync(x => x.Id == command.TariffId && x.IsActive, cancellationToken);
         if (!tariffExists)
         {
             return Result<CheckoutSessionDto>.Failure("Tariff not found or inactive.");
+        }
+
+        var providerAccounts = await _db.PaymentProviderAccounts.AsNoTracking()
+            .Where(x => x.Provider == command.PaymentProvider && x.IsEnabled && x.Mode != PaymentProviderMode.Disabled)
+            .ToListAsync(cancellationToken);
+        if (PaymentProviderConfigurationRules.SelectWebCheckoutAccount(providerAccounts, command.PaymentProvider) is null)
+        {
+            return Result<CheckoutSessionDto>.Failure("Payment provider is not configured for public web checkout.");
         }
 
         var promoValidation = await _orderService.ValidatePromoForCheckoutAsync(

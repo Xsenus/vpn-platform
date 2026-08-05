@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.519.0 - 2026-08-05
+
+Release entry: `2026-08-05-server-owned-checkout-context`.
+
+### Исправлено
+
+- Public checkout принимает только новую web-подписку и не позволяет подменить канал для channel-limited промокода или реферальной программы.
+- `IsFirstPurchase` вычисляется backend по предыдущим завершенным покупкам и больше не доверяет public/cabinet payload.
+- Checkout-сессия не создается для отключенного, неготового или bot-only платежного провайдера.
+- Анонимный `GET /api/public/orders/{id}/status` закрыт ответом `410 Gone` и больше не раскрывает `UserId`, тариф и сумму по одному GUID.
+- Время email-релиза исправлено на фактическое время коммита; новый guard не допускает, чтобы статусные документы объявляли upcoming-релиз опубликованным.
+
+### Проверено
+
+- Backend full suite `1103/1103`; targeted checkout/order/payment/referral SQLite suite `55/55`.
+- Frontend `90/90`, typecheck/build; Playwright desktop/mobile/all-screens responsive suite `16/16` без console errors и overflow на ширинах `305..1920`.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access и подтвердил latest release `2026-08-05-server-owned-checkout-context`.
+- Roadmap guards фиксируют `532/552` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными моками.
+
 ## 0.518.0 - 2026-08-05
 
 Release entry: `2026-08-05-email-delivery-lifecycle`.

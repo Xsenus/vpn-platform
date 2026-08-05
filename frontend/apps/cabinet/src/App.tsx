@@ -577,10 +577,8 @@ export function App() {
       const order = await api.createMyOrder(token, {
         tariffId: subscription.tariffId,
         type: 'Renewal',
-        channel: 'Web',
         paymentProvider: provider,
         promoCode: null,
-        isFirstPurchase: false,
         subscriptionId: subscription.id
       })
       const payment = await api.initMyPayment(token, order.id, provider, window.location.origin)
