@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: API response size boundary
+
+Scope:
+- Проверено ограничение памяти при JSON, error и QR response body: declared `Content-Length`, фактический streamed byte count, ранняя отмена transport и controlled UI error.
+
+Results:
+- Roadmap progress: `540/560` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-api-response-size-boundary`, version `0.527.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `98/98`; typecheck и production build всех трёх приложений: OK.
+- Typed JSON body ограничен `10 MB`, error payload `64 KB`, QR SVG `1 MB`; размер считается по bytes до объединения chunks и декодирования.
+- `Content-Length` выше лимита отклоняется без чтения body; фактическое превышение вызывает `ReadableStream.cancel()` и controlled `ApiClientError` `502` без сохранения raw payload.
+- Oversized JSON public regression: OK, desktop/mobile `2/2`, видимый error state, `0` page errors.
+- Browser responsive/console suite: OK, `18/18`, включая public, cabinet, admin, all-screens и mobile widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-05: successful API JSON response boundary
 
 Scope:

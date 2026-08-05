@@ -12314,5 +12314,32 @@
         "text": "Roadmap progress is 539/559 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-api-response-size-boundary",
+    "version": "0.527.0",
+    "releasedAt": "2026-08-05T20:04:00+07:00",
+    "title": "Размер API-ответов ограничен до загрузки в память",
+    "summary": "Public, cabinet и admin теперь читают JSON, ошибки и QR потоково с ограничением по байтам, поэтому чрезмерный ответ прекращается до полной буферизации в браузере.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Typed JSON ограничен 10 MB, server error payload 64 KB, QR SVG 1 MB; declared Content-Length проверяется до чтения body."
+      },
+      {
+        "type": "fixed",
+        "text": "Фактический размер считается по bytes каждого chunk, а превышение вызывает ReadableStream.cancel и controlled API-client ошибку 502 без raw payload."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile browser regression передаёт реальный oversized JSON и подтверждает видимое состояние ошибки без pageerror и обрушения страницы."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 540/560 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

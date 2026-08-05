@@ -262,7 +262,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - обращения поддержки используют optimistic revision: stale reply/status/note получают controlled conflict, а pending Telegram/provisioning диалог возвращается в active queue после нового сообщения;
 - checkout claim резервирует session, создаёт order и публикует связь одной transaction: same-user race возвращает winner, другой user не создаёт второй заказ, completed не деградирует в expired;
 - реферальный код атомарно связывает пользователей, а завершение подходящей покупки через durable outbox создаёт идемпотентные начисления; кабинет получает redacted DTO, программы и журнал управляются в отдельном admin-разделе;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-api-json-response-boundary`, версия `0.526.0`;
-- roadmap progress: `539/559` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-api-response-size-boundary`, версия `0.527.0`;
+- roadmap progress: `540/560` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

@@ -45,7 +45,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-05-api-json-response-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-05-api-response-size-boundary", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1112/1112",
-                     "2026-08-05-api-json-response-boundary",
-                     "0.526.0",
+                     "2026-08-05-api-response-size-boundary",
+                     "0.527.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

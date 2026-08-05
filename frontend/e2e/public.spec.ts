@@ -96,6 +96,7 @@ async function mockPublicApi(page: Page) {
   let checkoutDelayMs = 0
   let unsafePaymentLink = false
   let invalidTariffsResponse = false
+  let oversizedTariffsResponse = false
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -106,6 +107,14 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/public/tariffs', async (route) => {
+    if (oversizedTariffsResponse) {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ padding: 'x'.repeat(10_000_000) })
+      })
+      return
+    }
     if (invalidTariffsResponse) {
       await route.fulfill({
         status: 200,
@@ -264,11 +273,15 @@ async function mockPublicApi(page: Page) {
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
     returnUnsafePaymentLink: () => { unsafePaymentLink = true },
-    returnInvalidTariffsResponse: () => { invalidTariffsResponse = true }
+    returnInvalidTariffsResponse: () => { invalidTariffsResponse = true },
+    returnOversizedTariffsResponse: () => {
+      invalidTariffsResponse = false
+      oversizedTariffsResponse = true
+    }
   }
 }
 
-test('public tariffs handles an invalid successful API response without a render crash', async ({ page }) => {
+test('public tariffs handles invalid and oversized successful API responses without a render crash', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
   const api = await mockPublicApi(page)
@@ -276,6 +289,12 @@ test('public tariffs handles an invalid successful API response without a render
 
   await page.goto('/tariffs')
 
+  await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')
+  await expect(page.getByText('Start 30 дней')).toHaveCount(0)
+
+  api.returnOversizedTariffsResponse()
+  await page.reload()
   await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
   await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')
   await expect(page.getByText('Start 30 дней')).toHaveCount(0)

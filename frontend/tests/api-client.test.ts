@@ -1068,10 +1068,21 @@ test('ApiClient QR SVG endpoints return text with auth headers', async () => {
 })
 
 test('ApiClient QR SVG endpoints reject wrong MIME, empty and oversized responses', async () => {
+  let oversizedStreamCancelled = false
+  let oversizedStreamPulls = 0
+  const oversizedStream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      oversizedStreamPulls += 1
+      controller.enqueue(new Uint8Array(600_000))
+    },
+    cancel() {
+      oversizedStreamCancelled = true
+    }
+  })
   const responses = [
     new Response('<svg></svg>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
     new Response('   ', { status: 200, headers: { 'Content-Type': 'image/svg+xml; charset=utf-8' } }),
-    new Response(`<svg>${'x'.repeat(1_000_001)}</svg>`, { status: 200, headers: { 'Content-Type': 'image/svg+xml' } })
+    new Response(oversizedStream, { status: 200, headers: { 'Content-Type': 'image/svg+xml' } })
   ]
   globalThis.fetch = (async () => responses.shift()!) as typeof fetch
   const client = new ApiClient('http://localhost:8080')
@@ -1088,6 +1099,8 @@ test('ApiClient QR SVG endpoints reject wrong MIME, empty and oversized response
     () => client.getAdminAccessQrSvg('admin-token', 'oversized'),
     (error: unknown) => error instanceof ApiClientError && error.status === 502 && /размер/i.test(error.message)
   )
+  assert.equal(oversizedStreamCancelled, true)
+  assert.ok(oversizedStreamPulls >= 2)
 })
 
 test('ApiClient rejects invalid successful JSON responses and accepts structured JSON media types', async () => {
@@ -1096,6 +1109,8 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
     new Response('', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('{"id":', { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } }),
     new Response('null', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json', 'Content-Length': '10000001' } }),
+    new Response('provider failure', { status: 503, headers: { 'Content-Type': 'text/plain', 'Content-Length': '64001' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/vnd.vpn-platform+json' } })
   ]
   globalThis.fetch = (async () => responses.shift()!) as typeof fetch
@@ -1116,6 +1131,14 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
   await assert.rejects(
     () => client.getTariffs(),
     (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректный JSON/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /размер/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /размер/i.test(error.message)
   )
   assert.deepEqual(await client.getTariffs(), [])
 })

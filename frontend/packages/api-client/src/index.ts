@@ -1192,7 +1192,10 @@ const apiRequestTimeoutMessage = 'Сервер не ответил воврем�
 const apiEmptyResponseMessage = 'Сервер вернул пустой ответ. Повторите запрос позже.'
 const apiInvalidJsonResponseMessage = 'Сервер вернул некорректный JSON-ответ. Повторите запрос позже.'
 const apiUnsupportedResponseMessage = 'Сервер вернул ответ в неподдерживаемом формате. Повторите запрос позже.'
+const apiOversizedResponseMessage = 'Ответ сервера превышает допустимый размер. Повторите запрос позже.'
 const defaultApiRequestTimeoutMs = 30_000
+const defaultJsonResponseMaxBytes = 10_000_000
+const defaultApiErrorResponseMaxBytes = 64_000
 
 function isJsonContentType(value: string | null) {
   const mediaType = value?.split(';', 1)[0]?.trim().toLowerCase() ?? ''
@@ -1253,6 +1256,57 @@ export class ApiClient {
     }
   }
 
+  private async cancelResponseBody(response: Response): Promise<void> {
+    try {
+      await response.body?.cancel()
+    } catch {
+      // Keep the response contract violation as the caller-visible error.
+    }
+  }
+
+  private async readResponseText(response: Response, maxBytes: number): Promise<string> {
+    const declaredLength = response.headers.get('Content-Length')?.trim() ?? ''
+    if (/^\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
+      await this.cancelResponseBody(response)
+      throw new ApiClientError(apiOversizedResponseMessage, 502, { maxBytes })
+    }
+
+    if (!response.body) return ''
+
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let totalBytes = 0
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        if (!value) continue
+
+        totalBytes += value.byteLength
+        if (totalBytes > maxBytes) {
+          try {
+            await reader.cancel()
+          } catch {
+            // Keep the size violation as the caller-visible error.
+          }
+          throw new ApiClientError(apiOversizedResponseMessage, 502, { maxBytes })
+        }
+        chunks.push(value)
+      }
+    } finally {
+      reader.releaseLock()
+    }
+
+    const bytes = new Uint8Array(totalBytes)
+    let offset = 0
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    return new TextDecoder().decode(bytes)
+  }
+
   private async request<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }): Promise<T> {
     const { token, errorMessage, ...requestInit } = init ?? {}
     const headers = new Headers(requestInit.headers ?? {})
@@ -1266,16 +1320,18 @@ export class ApiClient {
     }
 
     return this.fetchWithTimeout(path, { ...requestInit, headers }, async (response) => {
-      const text = await response.text()
       if (!response.ok) {
+        const text = await this.readResponseText(response, defaultApiErrorResponseMaxBytes)
         const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
         throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
       }
 
       const contentType = response.headers.get('Content-Type')
       if (!isJsonContentType(contentType)) {
+        await this.cancelResponseBody(response)
         throw new ApiClientError(apiUnsupportedResponseMessage, 502, { contentType })
       }
+      const text = await this.readResponseText(response, defaultJsonResponseMaxBytes)
       if (!text.trim()) {
         throw new ApiClientError(apiEmptyResponseMessage, 502, null)
       }
@@ -1296,8 +1352,8 @@ export class ApiClient {
   }
 
 
-  private async requestText(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string; expectedContentType?: string; maxLength?: number }): Promise<string> {
-    const { token, errorMessage, expectedContentType, maxLength, ...requestInit } = init ?? {}
+  private async requestText(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string; expectedContentType?: string; maxBytes?: number }): Promise<string> {
+    const { token, errorMessage, expectedContentType, maxBytes = 1_000_000, ...requestInit } = init ?? {}
     const headers = new Headers(requestInit.headers ?? {})
 
     if (token) {
@@ -1305,18 +1361,20 @@ export class ApiClient {
     }
 
     return this.fetchWithTimeout(path, { ...requestInit, headers }, async (response) => {
-      const text = await response.text()
       if (!response.ok) {
+        const text = await this.readResponseText(response, defaultApiErrorResponseMaxBytes)
         const payload = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : null
         throw new ApiClientError(normalizeApiError(payload, errorMessage ?? apiFallbackErrorMessage), response.status, payload)
       }
 
       const contentType = response.headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() ?? ''
       if (expectedContentType && contentType !== expectedContentType.toLowerCase()) {
+        await this.cancelResponseBody(response)
         throw new ApiClientError('QR-код пришел в неподдерживаемом формате.', 502, { contentType })
       }
-      if (!text.trim() || (maxLength && text.length > maxLength)) {
-        throw new ApiClientError('QR-код пустой или превышает допустимый размер.', 502, null)
+      const text = await this.readResponseText(response, maxBytes)
+      if (!text.trim()) {
+        throw new ApiClientError('QR-код пустой.', 502, null)
       }
 
       return text
@@ -1536,7 +1594,7 @@ export class ApiClient {
   }
 
   getMyAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxLength: 1_000_000 })
+    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxBytes: 1_000_000 })
   }
 
   getMyReferrals(token: string): Promise<RewardLedgerDto[]> {
@@ -1654,7 +1712,7 @@ export class ApiClient {
   }
 
   getAdminAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxLength: 1_000_000 })
+    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxBytes: 1_000_000 })
   }
 
   enableAdminAccess(token: string, id: string, reason?: string | null): Promise<AccessActionResultDto> {

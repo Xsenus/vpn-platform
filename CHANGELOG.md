@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.527.0 - 2026-08-05
+
+Release entry: `2026-08-05-api-response-size-boundary`.
+
+### Исправлено
+
+- API client больше не использует безусловный `response.text()` для JSON, error и QR body: общий streaming reader ограничивает объём до полной буферизации.
+- Typed JSON ограничен `10 MB`, server error payload `64 KB`, QR SVG `1 MB`; declared `Content-Length` проверяется до чтения, фактический размер считается по bytes.
+- При превышении transport вызывает `ReadableStream.cancel()` и возвращает controlled `ApiClientError` `502`; неверный успешный MIME также отклоняется до чтения потенциально чрезмерного body.
+
+### Проверено
+
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует.
+- Frontend `98/98`, включая ранний declared-length отказ, bounded error response и фактическую отмену streamed QR, typecheck и production build всех трёх приложений.
+- Реальный oversized JSON public regression desktop/mobile `2/2`; полный public/cabinet/admin/all-screens/mobile/console responsive suite `18/18` без `pageerror`.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings.
+- `RoadmapCurrentStateTests` и release/documentation/UTF-8 guards подтверждают latest `2026-08-05-api-response-size-boundary`, версию `0.527.0` и roadmap `540/560`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами.
+
 ## 0.526.0 - 2026-08-05
 
 Release entry: `2026-08-05-api-json-response-boundary`.
