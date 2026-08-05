@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `518/538` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `519/539` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1034/1034`.
+- [x] Backend full suite: `1036/1036`.
 - [x] Frontend unit tests: `84/84`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -120,7 +120,8 @@
 - [x] Refresh-token replay изолирован по login/rotation families и не завершает независимые входы; legacy цепочки поддерживаются при rollout.
 - [x] Password reset atomically invalidates sibling tokens; stale concurrent confirmation получает controlled отказ.
 - [x] Cabinet auth hydration выполняется один раз после login/register/refresh и после reload восстановленной сессии под `React.StrictMode`.
-- [x] Latest "Что нового": `2026-08-05-password-reset-token-lifecycle`, версия `0.505.0`.
+- [x] Concurrent registration email conflict возвращает `email_exists` без partial auth rows; unrelated persistence failures не маскируются.
+- [x] Latest "Что нового": `2026-08-05-registration-email-race-boundary`, версия `0.506.0`.
 
 ## Как вести дальше
 

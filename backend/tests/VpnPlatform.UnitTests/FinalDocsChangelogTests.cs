@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1034/1034", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-password-reset-token-lifecycle", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1036/1036", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-registration-email-race-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1034/1034",
-                     "2026-08-05-password-reset-token-lifecycle",
-                     "0.505.0",
+                     "1036/1036",
+                     "2026-08-05-registration-email-race-boundary",
+                     "0.506.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-password-reset-token-lifecycle",
-                     "0.505.0",
-                     "518/538",
+                     "2026-08-05-registration-email-race-boundary",
+                     "0.506.0",
+                     "519/539",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1034/1034`",
+                     "Backend full suite: OK, `1036/1036`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `629` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-password-reset-token-lifecycle",
-                     "0.505.0",
-                     "518/538",
+                     "2026-08-05-registration-email-race-boundary",
+                     "0.506.0",
+                     "519/539",
                      "96.3%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1034/1034`",
+                     "backend full suite `1036/1036`",
                      "PostgreSQL SQL",
                      "secret scan `629` files, `0` findings"
                  })

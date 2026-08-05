@@ -65,13 +65,24 @@ public class AuthController : ControllerBase
             PasswordHash = _passwordService.Hash(password),
             RolesCsv = UserRoles.User,
             Status = UserStatus.Active,
-            ReferralCode = $"REF-{Guid.NewGuid():N}"[..10]
+            ReferralCode = CreateReferralCode()
         };
 
         _db.Users.Add(user);
         AddAudit("auth.register", "User", user.Id, null, new { email = normalizedEmail });
         var response = await IssueAuthResponseAsync(user, cancellationToken);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUserEmailUniqueConstraintViolation(ex))
+        {
+            if (_db is DbContext dbContext)
+            {
+                dbContext.ChangeTracker.Clear();
+            }
+            return BadRequest(new { error = "email_exists" });
+        }
 
         return Ok(response);
     }
@@ -401,6 +412,25 @@ public class AuthController : ControllerBase
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim()));
         return Convert.ToBase64String(bytes);
+    }
+
+    private static string CreateReferralCode()
+        => $"REF-{Convert.ToHexString(RandomNumberGenerator.GetBytes(8))}";
+
+    private static bool IsUserEmailUniqueConstraintViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            var constraintName = current.GetType().GetProperty("ConstraintName")?.GetValue(current)?.ToString();
+            if (string.Equals(constraintName, "IX_Users_Email", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("IX_Users_Email", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("Users.Email", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void AddAudit(string action, string entityType, Guid entityId, object? before, object after)

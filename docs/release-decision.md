@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1034/1034`.
+- Backend full suite: `1036/1036`.
 - API Release build: OK.
 - Frontend unit tests: `84/84`.
 - Frontend typecheck/build: OK.
@@ -54,8 +54,9 @@ Production-ready решение заблокировано следующими 
 - Refresh reuse detection ограничен одной token family и поддерживает legacy NULL-family chains без отзыва независимых сессий.
 - Password reset invalidates outstanding sibling tokens in one transaction; optimistic `Revision` rejects stale concurrent commit across API instances.
 - Cabinet login/register/refresh and restored-session reload use one protected-data hydration cycle without duplicate API calls or DOM replacement race.
-- Latest "Что нового": `2026-08-05-password-reset-token-lifecycle`, версия `0.505.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `518/538` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Registration email race maps the exact unique conflict to `email_exists` without partial auth rows and preserves unrelated storage failures.
+- Latest "Что нового": `2026-08-05-registration-email-race-boundary`, версия `0.506.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
+- Roadmap progress: `519/539` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

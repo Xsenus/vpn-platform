@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: registration email race boundary
+
+Scope:
+- Проверены два запроса регистрации одинакового нормализованного email между pre-check и SaveChanges, атомарность user/refresh/audit rows и поведение unrelated persistence failure.
+
+Results:
+- Roadmap progress: `519/539` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-registration-email-race-boundary`, version `0.506.0`.
+- Backend full suite: OK, `1036/1036`; targeted auth/session/SQLite schema suite: OK, `24/24`.
+- File-backed SQLite interceptor reproduces the real unique-index race after a successful pre-check; loser returns `email_exists` with no partial refresh session or audit.
+- Non-unique `DbUpdateException` remains unhandled by the duplicate-email filter and preserves the original storage failure.
+- New referral codes carry 64 random bits instead of 24; existing codes are unchanged.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `629` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: password reset token lifecycle
 
 Scope:

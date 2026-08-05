@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-05-password-reset-token-lifecycle";
-    private const string CurrentVersion = "0.505.0";
+    private const string CurrentReleaseId = "2026-08-05-registration-email-race-boundary";
+    private const string CurrentVersion = "0.506.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,7 +18,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-08-05", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("1034/1034", roadmap, StringComparison.Ordinal);
+        Assert.Contains("1036/1036", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);
         Assert.Contains("84/84", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
@@ -220,9 +220,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1034/1034", readme, StringComparison.Ordinal);
-        Assert.Contains("1034/1034", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1034/1034", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1036/1036", readme, StringComparison.Ordinal);
+        Assert.Contains("1036/1036", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1036/1036", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

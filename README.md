@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `1034/1034` unit tests;
+- backend на .NET 9: `1036/1036` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `84/84`;
 - frontend typecheck и production build: OK;
@@ -253,7 +253,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - refresh-token replay ограничен одной login/rotation family и не может отзывать новые входы после logout/password reset; legacy NULL-family chains связываются безопасно при первом replay;
 - успешный password reset инвалидирует остальные коды пользователя, а concurrency `Revision` не допускает второго параллельного подтверждения sibling token;
 - кабинет выполняет один цикл загрузки защищенных данных для новой или восстановленной auth-сессии, включая запуск под `React.StrictMode`;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-password-reset-token-lifecycle`, версия `0.505.0`;
-- roadmap progress: `518/538` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- конкурентная регистрация одного email возвращает `email_exists` без partial session/audit rows; unrelated DB errors не маскируются, а новые referral codes имеют 64 случайных бита;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-registration-email-race-boundary`, версия `0.506.0`;
+- roadmap progress: `519/539` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

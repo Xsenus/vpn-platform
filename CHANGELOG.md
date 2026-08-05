@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.506.0 - 2026-08-05
+
+Release entry: `2026-08-05-registration-email-race-boundary`.
+
+### Исправлено
+
+- Два конкурентных запроса регистрации одного email больше не превращают проигравший запрос в HTTP 500 после успешного `AnyAsync`.
+- Точный конфликт `IX_Users_Email` возвращает существующий контракт `email_exists`; атомарный SaveChanges не оставляет refresh session или audit проигравшего запроса.
+- Другие `DbUpdateException` не маскируются как duplicate email и продолжают пробрасываться для корректной диагностики/HTTP 500.
+- Новые referral codes увеличены с 24 до 64 бит случайной части без изменения существующих кодов.
+
+### Проверено
+
+- Backend full suite `1036/1036`; targeted auth/session/SQLite schema suite `24/24`, включая file-backed SQLite race и unrelated persistence failure.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `629` files, `0` findings.
+- Roadmap status: `519/539` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.505.0 - 2026-08-05
 
 Release entry: `2026-08-05-password-reset-token-lifecycle`.

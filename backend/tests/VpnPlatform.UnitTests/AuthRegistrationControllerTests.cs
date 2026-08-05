@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Contracts;
 using VpnPlatform.Api.Controllers.Auth;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
+using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Auth;
 using VpnPlatform.Infrastructure.Persistence;
@@ -41,7 +43,9 @@ public class AuthRegistrationControllerTests
         Assert.Equal("Иван", user.DisplayName);
         Assert.Equal(UserStatus.Active, user.Status);
         Assert.Equal(UserRoles.User, user.RolesCsv);
-        Assert.NotEmpty(user.ReferralCode);
+        Assert.StartsWith("REF-", user.ReferralCode, StringComparison.Ordinal);
+        Assert.Equal(20, user.ReferralCode.Length);
+        Assert.Matches("^REF-[0-9A-F]{16}$", user.ReferralCode);
         Assert.Single(await db.UserRefreshTokens.ToListAsync());
         Assert.DoesNotContain(response.RefreshToken, JsonSerializer.Serialize(await db.UserRefreshTokens.ToListAsync()), StringComparison.Ordinal);
 
@@ -58,6 +62,67 @@ public class AuthRegistrationControllerTests
         var fallbackResponse = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(fallbackName).Value);
         Assert.Equal("fallback", fallbackResponse.DisplayName);
         Assert.Equal(2, await db.Users.CountAsync());
+    }
+
+    [Fact]
+    public async Task Concurrent_Duplicate_Email_Should_Return_Email_Exists_Without_Partial_Session()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-auth-register-{Guid.NewGuid():N}.db");
+        try
+        {
+            var connectionString = $"Data Source={databasePath};Default Timeout=30;Pooling=False";
+            var baseOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            await using (var seed = new ApplicationDbContext(baseOptions))
+            {
+                await seed.Database.EnsureCreatedAsync();
+            }
+
+            const string email = "registration-race@example.test";
+            var raceOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .AddInterceptors(new ConcurrentRegistrationInterceptor(baseOptions, email))
+                .Options;
+            await using var db = new ApplicationDbContext(raceOptions);
+            var controller = CreateAuthController(db);
+
+            var result = await controller.Register(
+                new RegisterRequest(email, "Password123!", "Race loser"),
+                CancellationToken.None);
+
+            AssertBadRequestError(result, "email_exists");
+            await using var verify = new ApplicationDbContext(baseOptions);
+            var persisted = Assert.Single(await verify.Users.AsNoTracking().ToListAsync());
+            Assert.Equal(email, persisted.Email);
+            Assert.Equal("Concurrent winner", persisted.DisplayName);
+            Assert.Empty(await verify.UserRefreshTokens.AsNoTracking().ToListAsync());
+            Assert.Empty(await verify.AuditLogs.AsNoTracking().ToListAsync());
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task NonUnique_Registration_Persistence_Failure_Should_Not_Be_Masked_As_Email_Exists()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"auth-registration-failure-{Guid.NewGuid():N}")
+            .Options;
+        await using var db = new FailingRegistrationDbContext(options);
+        var controller = CreateAuthController(db);
+
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(() => controller.Register(
+            new RegisterRequest("storage-failure@example.test", "Password123!", "Storage failure"),
+            CancellationToken.None));
+
+        Assert.Contains("storage unavailable", exception.InnerException!.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AssertBadRequestError(IActionResult result, string expectedError)
@@ -96,5 +161,45 @@ public class AuthRegistrationControllerTests
     private sealed class TestClock : IClock
     {
         public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+    }
+
+    private sealed class ConcurrentRegistrationInterceptor(
+        DbContextOptions<ApplicationDbContext> competitorOptions,
+        string email) : SaveChangesInterceptor
+    {
+        private int _inserted;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _inserted, 1) != 0)
+            {
+                return result;
+            }
+
+            await using var competitor = new ApplicationDbContext(competitorOptions);
+            competitor.Users.Add(new User
+            {
+                Email = email,
+                DisplayName = "Concurrent winner",
+                PasswordHash = "competitor-hash",
+                RolesCsv = UserRoles.User,
+                Status = UserStatus.Active,
+                ReferralCode = $"race-{Guid.NewGuid():N}"
+            });
+            await competitor.SaveChangesAsync(cancellationToken);
+            return result;
+        }
+    }
+
+    private sealed class FailingRegistrationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : ApplicationDbContext(options)
+    {
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+            => Task.FromException<int>(new DbUpdateException(
+                "simulated registration persistence failure",
+                new InvalidOperationException("storage unavailable")));
     }
 }

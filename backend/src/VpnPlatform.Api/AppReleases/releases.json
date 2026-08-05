@@ -11791,5 +11791,28 @@
         "text": "Roadmap progress is 518/538 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-registration-email-race-boundary",
+    "version": "0.506.0",
+    "releasedAt": "2026-08-05T10:06:35+07:00",
+    "title": "Параллельная регистрация возвращает понятный ответ",
+    "summary": "Если два запроса одновременно регистрируют один email, создается один аккаунт, а второй запрос получает email_exists без частичной сессии и внутренней ошибки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Конфликт уникального индекса email после конкурентного pre-check преобразуется в тот же email_exists, что и обычная повторная регистрация."
+      },
+      {
+        "type": "improved",
+        "text": "Регистрация различает точный конфликт Users.Email и другие ошибки хранилища; referral code новых пользователей получил больше случайной энтропии."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 519/539 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]
