@@ -549,6 +549,21 @@ async function installApiMock(page: Page) {
       return
     }
 
+    if (method === 'GET' && path === '/api/admin/notification-deliveries') {
+      await fulfillJson(route, [{
+        id: 'notification-all-screens',
+        templateKey: 'password_reset_requested',
+        channel: 'Email',
+        maskedToAddress: 'al***@example.test',
+        status: 'Failed',
+        attempts: 5,
+        errorText: 'SMTP connection unavailable',
+        createdAt: now,
+        updatedAt: now
+      }])
+      return
+    }
+
     if (method === 'GET' && ['/api/admin/payment-webhook-events', '/api/admin/refunds'].includes(path)) {
       await fulfillJson(route, [])
       return

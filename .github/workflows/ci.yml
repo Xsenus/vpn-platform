@@ -28,6 +28,7 @@ jobs:
       Database__SeedDemoData: "false"
       AdminBootstrap__Enabled: "false"
       TelegramBot__Enabled: "false"
+      Email__Mode: Disabled
       TelegramBot__BotToken: ""
       TelegramBot__WebhookUrl: ""
       TelegramBot__SecretToken: ""

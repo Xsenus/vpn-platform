@@ -16,6 +16,7 @@ using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Auth;
+using VpnPlatform.Infrastructure.Security;
 using VpnPlatform.Infrastructure.Persistence;
 using VpnPlatform.Infrastructure.Services;
 using Xunit;
@@ -72,6 +73,9 @@ public class AuthPasswordResetControllerTests
         Assert.Single(await db.PasswordResetTokens.ToListAsync());
         Assert.Single(await db.OutboxMessages.Where(x => x.Type == "password_reset_requested").ToListAsync());
         Assert.DoesNotContain(forgotResponse.ValidationResetToken!, JsonSerializer.Serialize(await db.PasswordResetTokens.ToListAsync()), StringComparison.Ordinal);
+        var resetOutboxPayload = (await db.OutboxMessages.SingleAsync(x => x.Type == "password_reset_requested")).PayloadJson;
+        Assert.DoesNotContain(forgotResponse.ValidationResetToken!, resetOutboxPayload, StringComparison.Ordinal);
+        Assert.Contains("protectedResetToken", resetOutboxPayload, StringComparison.Ordinal);
 
         AssertBadRequestError(
             await controller.ResetPassword(new ResetPasswordRequest(forgotResponse.ValidationResetToken!, "short"), CancellationToken.None),
@@ -462,12 +466,13 @@ public class AuthPasswordResetControllerTests
                 ["Jwt:Issuer"] = "vpn-platform-test",
                 ["Jwt:Audience"] = "vpn-platform-test",
                 ["Jwt:SigningKey"] = "unit-test-jwt-signing-key-0000000000000000000000",
+                ["Security:SecretEncryptionKey"] = "unit-test-secret-encryption-key-000000000000000000",
                 ["Auth:RefreshTokenDays"] = "30",
                 ["Auth:PasswordReset:ExpiryMinutes"] = "30",
                 ["Auth:PasswordReset:ReturnTokenForValidation"] = "true"
             })
             .Build();
-        var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), clock, configuration);
+        var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), clock, configuration, new SecretProtector(configuration));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         return controller;
     }

@@ -136,6 +136,22 @@ export type AdminAuditLogFilters = {
   limit?: number
 }
 
+export type AdminNotificationDeliveryDto = {
+  id: string
+  userId?: string | null
+  templateKey: string
+  channel: string
+  maskedToAddress: string
+  status: string
+  attempts: number
+  processingStartedAt?: string | null
+  nextAttemptAt?: string | null
+  sentAt?: string | null
+  errorText: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type UserProfileDto = {
   id: string
   email?: string | null
@@ -1510,6 +1526,18 @@ export class ApiClient {
     if (filters.limit) params.set('limit', String(filters.limit))
     const query = params.toString()
     return this.request<AdminAuditLogDto[]>(`/api/admin/audit-logs${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+  }
+
+  getAdminNotificationDeliveries(token: string): Promise<AdminNotificationDeliveryDto[]> {
+    return this.request<AdminNotificationDeliveryDto[]>('/api/admin/notification-deliveries?limit=100', { token, errorMessage: apiFallbackErrorMessage })
+  }
+
+  retryAdminNotificationDelivery(token: string, deliveryId: string): Promise<{ id: string; status: string; nextAttemptAt?: string | null }> {
+    return this.request<{ id: string; status: string; nextAttemptAt?: string | null }>(`/api/admin/notification-deliveries/${deliveryId}/retry`, {
+      method: 'POST',
+      token,
+      errorMessage: apiFallbackErrorMessage
+    })
   }
 
   getAdminUsers(token: string, filters?: { search?: string; status?: string; role?: string }): Promise<AdminUserDto[]> {

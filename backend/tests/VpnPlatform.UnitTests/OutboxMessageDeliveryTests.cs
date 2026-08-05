@@ -258,7 +258,7 @@ public class OutboxMessageDeliveryTests
         db.Users.Add(user);
         var message = Message(
             new DateTimeOffset(2026, 8, 4, 14, 0, 0, TimeSpan.Zero),
-            payloadJson: JsonSerializer.Serialize(new { userId = user.Id, email = user.Email, validationTokenReturned = false }),
+            payloadJson: JsonSerializer.Serialize(new { userId = user.Id, email = user.Email, protectedResetToken = "protected:test-code", expiryMinutes = 30, validationTokenReturned = false }),
             type: "password_reset_requested");
         db.OutboxMessages.Add(message);
         await db.SaveChangesAsync();

@@ -56,6 +56,7 @@ require_file "$SCAN_SECRETS"
 
 # Compose validation override must keep live integrations off inside containers.
 expect_text "$COMPOSE_FILE" 'TelegramBot__Enabled:[[:space:]]*"?false"?' 'compose disables Telegram bot runtime'
+expect_text "$COMPOSE_FILE" 'Email__Mode:[[:space:]]*Disabled' 'compose disables external email delivery'
 expect_text "$COMPOSE_FILE" 'AdminBootstrap__Enabled:[[:space:]]*"?false"?' 'compose disables admin bootstrap'
 expect_text "$COMPOSE_FILE" 'Auth__PasswordReset__ReturnTokenForValidation:[[:space:]]*"?false"?' 'compose disables password-reset validation token return'
 expect_text "$COMPOSE_FILE" 'Provisioning__LiveExecutionEnabled:[[:space:]]*"?false"?' 'compose disables live provisioning execution'
@@ -70,6 +71,7 @@ done
 
 # GitHub workflow validation env must also stay safe.
 expect_text "$WORKFLOW_FILE" 'TelegramBot__Enabled:[[:space:]]*"false"' 'workflow disables Telegram bot runtime'
+expect_text "$WORKFLOW_FILE" 'Email__Mode:[[:space:]]*Disabled' 'workflow disables external email delivery'
 expect_text "$WORKFLOW_FILE" 'AdminBootstrap__Enabled:[[:space:]]*"false"' 'workflow disables admin bootstrap'
 expect_text "$WORKFLOW_FILE" 'Auth__PasswordReset__ReturnTokenForValidation:[[:space:]]*"false"' 'workflow disables password-reset validation token return'
 expect_text "$WORKFLOW_FILE" 'Provisioning__LiveExecutionEnabled:[[:space:]]*"false"' 'workflow disables live provisioning execution'
@@ -84,6 +86,7 @@ done
 
 # .env.example must remain non-live by default and must not contain obvious real tokens.
 expect_text "$ENV_EXAMPLE" '^TelegramBot__Enabled=false$' '.env.example disables Telegram by default'
+expect_text "$ENV_EXAMPLE" '^Email__Mode=Disabled$' '.env.example disables external email delivery by default'
 expect_text "$ENV_EXAMPLE" '^AdminBootstrap__Enabled=false$' '.env.example disables admin bootstrap by default'
 expect_text "$ENV_EXAMPLE" '^Auth__PasswordReset__ReturnTokenForValidation=false$' '.env.example disables password-reset validation token return by default'
 expect_text "$ENV_EXAMPLE" '^Provisioning__LiveExecutionEnabled=false$' '.env.example disables live provisioning execution by default'

@@ -176,8 +176,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-05 локально подтверждено:
 
-- backend full suite: 1087/1087;
-- frontend tests: 89/89;
+- backend full suite: 1098/1098;
+- frontend tests: 90/90;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -192,6 +192,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - subscription activation consistency: remote create компенсируется после local credential save failure; cleanup uncertainty сохраняет `SyncRequired`, cancellation пробрасывается после durable retry-state.
 - Telegram ingress consistency: update reservation предшествует side effects; fresh lease возвращает retryable 503, failed/stale update восстанавливается, long-polling не теряет offset.
 - Outbox consistency: enqueue дедуплицируется по event identity, dispatcher использует conditional claim, stale lease, backoff/dead-letter и не подтверждает malformed/unsupported payload как успешный.
+- Email delivery consistency: SMTP worker использует conditional claim/stale lease/backoff, reset-код хранится только protected, а admin API возвращает маскированную диагностику без payload.
 - Provisioning consistency: worker использует conditional claim и lease, stale execution требует явного operator retry, runner ограничен timeout, active run нельзя отменить или повторить поверх внешнего deploy.
 - Subscription lifecycle consistency: expiration сначала отключает VPN-доступ, затем меняет статус; provider failure сохраняет `GracePeriod`, lease/backoff и retry diagnostics, а batch workers изолируют ошибки отдельных записей.
 - Panel sync consistency: частичный unique index сериализует `Running` между инстансами, stale lease и worker snapshot восстанавливаются, health/sync diagnostics сохраняются redacted.
@@ -209,8 +210,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Support conversation concurrency: stale reply/status/note возвращают controlled conflict, pending inbound message переоткрывает active thread, assignment ограничен active `SupportWrite` users.
 - Checkout claim atomicity: conditional session reservation, order creation и final link выполняются одной transaction; same-user race возвращает winner, другой user не создаёт orphan-order, completed status остаётся terminal.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-referral-reward-lifecycle`, версия `0.517.0`.
-- roadmap progress: `530/550` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-email-delivery-lifecycle`, версия `0.518.0`.
+- roadmap progress: `531/551` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

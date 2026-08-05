@@ -22,9 +22,9 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1087/1087`.
+- Backend full suite: `1098/1098`.
 - API Release build: OK.
-- Frontend unit tests: `89/89`.
+- Frontend unit tests: `90/90`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `16/16`; responsive all-screens: `6/6`.
@@ -41,6 +41,7 @@ Production-ready решение заблокировано следующими 
 - Subscription activation compensates remote create after local credential save failure, persists `SyncRequired` when cleanup is uncertain and propagates cancellation after durable retry-state.
 - Telegram update processing reserves `update_id` before side effects, retries failed/stale leases and preserves long-polling offset for retryable outcomes.
 - Outbox events use unique event identity, atomic conditional claim, stale lease recovery, redacted retry/dead-letter and fail-closed payload validation; local email queue materialization is covered by SQLite tests.
+- Email deliveries use a separate SMTP worker with conditional claim, stale lease/backoff and terminal failure; reset codes remain protected at rest and admin monitoring is masked/redacted.
 - Provisioning runs use atomic claim and bounded lease; stale execution is quarantined without automatic external replay, runner timeout kills the process tree, and unsafe active retry/cancel is blocked.
 - Subscription expiration disables remote access before `Expired`, persists lease/backoff retry state on provider failure and isolates lifecycle/panel worker failures per item.
 - Panel sync uses a cross-instance unique claim, stale lease/snapshot recovery and redacted persisted diagnostics; legacy raw panel errors are cleared by the upgrade path.
@@ -60,8 +61,8 @@ Production-ready решение заблокировано следующими 
 - Support conversation revision rejects stale reply/status/note, reopens pending inbound threads and validates assigned support agents without closing external evidence gates.
 - Checkout claim reserves the session, creates the order and publishes the final link in one transaction; same-user retries resolve the winner and another user cannot persist a second order.
 - Promo validation is fail-closed across checkout and order creation; relational redemption limits, paid free-days snapshot and activation/renewal duration are covered by deterministic SQLite and browser regression.
-- Latest "Что нового": `2026-08-05-referral-reward-lifecycle`, версия `0.517.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Production readiness gate и full live VPS/staging evidence все еще требуются.
-- Roadmap progress: `530/550` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-05-email-delivery-lifecycle`, версия `0.518.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `531/551` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

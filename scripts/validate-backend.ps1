@@ -68,6 +68,7 @@ try {
     $env:Auth__RefreshTokenDays = "30"
     $env:Auth__PasswordReset__ExpiryMinutes = "30"
     $env:Auth__PasswordReset__ReturnTokenForValidation = "false"
+    $env:Email__Mode = "Disabled"
     $env:Provisioning__LiveExecutionEnabled = "false"
     $env:Provisioning__AllowLiveDeploy = "false"
     $env:TelegramBot__Enabled = "false"

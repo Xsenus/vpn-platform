@@ -37,6 +37,7 @@ env:
   Provisioning__LiveExecutionEnabled: "false"
   Provisioning__AllowLiveDeploy: "false"
   TelegramBot__Enabled: "false"
+  Email__Mode: Disabled
   TelegramBot__BotToken: ""
   TelegramBot__WebhookUrl: ""
   TelegramBot__SecretToken: ""

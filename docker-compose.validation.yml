@@ -12,6 +12,7 @@ services:
       Auth__RefreshTokenDays: "30"
       Auth__PasswordReset__ExpiryMinutes: "30"
       Auth__PasswordReset__ReturnTokenForValidation: "false"
+      Email__Mode: Disabled
       Provisioning__LiveExecutionEnabled: "false"
       Provisioning__AllowLiveDeploy: "false"
       TelegramBot__Enabled: "false"
@@ -42,6 +43,7 @@ services:
       Auth__RefreshTokenDays: "30"
       Auth__PasswordReset__ExpiryMinutes: "30"
       Auth__PasswordReset__ReturnTokenForValidation: "false"
+      Email__Mode: Disabled
       Provisioning__LiveExecutionEnabled: "false"
       Provisioning__AllowLiveDeploy: "false"
       TelegramBot__Enabled: "false"

@@ -112,3 +112,50 @@ public class OutboxDispatcherWorker : BackgroundService
         }
     }
 }
+
+public sealed class EmailNotificationDispatcherWorker : BackgroundService
+{
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<EmailNotificationDispatcherWorker> _logger;
+
+    public EmailNotificationDispatcherWorker(IServiceProvider serviceProvider, ILogger<EmailNotificationDispatcherWorker> logger)
+    {
+        _serviceProvider = serviceProvider;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var delivery = scope.ServiceProvider.GetRequiredService<EmailNotificationDeliveryService>();
+                var notificationIds = await delivery.GetDispatchableIdsAsync(50, stoppingToken);
+                foreach (var notificationId in notificationIds)
+                {
+                    var result = await delivery.DeliverAsync(notificationId, stoppingToken);
+                    if (!result.IsSuccess)
+                    {
+                        _logger.LogWarning(
+                            "Email notification {NotificationId} delivery deferred or failed: {Error}",
+                            notificationId,
+                            result.Error);
+                    }
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Email notification dispatcher failed");
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+            }
+        }
+    }
+}

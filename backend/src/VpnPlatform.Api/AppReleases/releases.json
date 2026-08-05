@@ -12071,5 +12071,32 @@
         "text": "Roadmap progress is 530/550 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-email-delivery-lifecycle",
+    "version": "0.518.0",
+    "releasedAt": "2026-08-05T17:30:00+07:00",
+    "title": "Коды восстановления доставляются через надежную очередь",
+    "summary": "Email-уведомления получили безопасную SMTP-доставку с повторными попытками, а состояние очереди теперь видно администратору без раскрытия адресов и одноразовых кодов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Запрос сброса пароля теперь передает рабочий одноразовый код в очередь только в защищенном виде и отправляет его через настроенный SMTP."
+      },
+      {
+        "type": "improved",
+        "text": "Доставка восстанавливается после временных ошибок и зависших попыток, ограничивает число повторов и не пишет чувствительные данные в диагностику."
+      },
+      {
+        "type": "new",
+        "text": "В административном аудите появилась маскированная очередь email-уведомлений с безопасным повтором неуспешной доставки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 531/551 closed, readiness 96.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

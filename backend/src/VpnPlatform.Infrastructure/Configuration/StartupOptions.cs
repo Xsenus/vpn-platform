@@ -35,3 +35,15 @@ public sealed class TelegramBotOptions
     public string PublicBotUsername { get; set; } = string.Empty;
     public string WebAppUrl { get; set; } = string.Empty;
 }
+
+public sealed class EmailDeliveryOptions
+{
+    public string Mode { get; set; } = "Disabled";
+    public string Host { get; set; } = string.Empty;
+    public int Port { get; set; } = 587;
+    public bool UseSsl { get; set; } = true;
+    public string FromAddress { get; set; } = string.Empty;
+    public string FromName { get; set; } = "VPN Platform";
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}

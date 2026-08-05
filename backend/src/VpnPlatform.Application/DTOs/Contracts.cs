@@ -283,6 +283,20 @@ public sealed record PaymentProviderSettingDto(Guid Id, Guid PaymentProviderAcco
 public sealed record PaymentWebhookEventDto(Guid Id, PaymentProvider Provider, Guid? PaymentAttemptId, Guid? PaymentProviderAccountId, string ProviderPaymentId, string ExternalEventId, string EventType, string Status, bool SignatureValidated, DateTimeOffset ReceivedAt, DateTimeOffset? ProcessedAt, string ErrorText);
 public sealed record RefundDto(Guid Id, Guid PaymentAttemptId, PaymentProvider Provider, string ProviderRefundId, string Status, decimal Amount, string Currency, string Reason, DateTimeOffset CreatedAt, DateTimeOffset? RefundedAt);
 public sealed record AdminAuditLogDto(Guid Id, string ActorType, string ActorId, string Action, string EntityType, string EntityId, string BeforeJson, string AfterJson, string Ip, string UserAgent, DateTimeOffset CreatedAt);
+public sealed record AdminNotificationDeliveryDto(
+    Guid Id,
+    Guid? UserId,
+    string TemplateKey,
+    string Channel,
+    string MaskedToAddress,
+    string Status,
+    int Attempts,
+    DateTimeOffset? ProcessingStartedAt,
+    DateTimeOffset? NextAttemptAt,
+    DateTimeOffset? SentAt,
+    string ErrorText,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
 
 public sealed record SubscriptionDto(
     Guid Id,

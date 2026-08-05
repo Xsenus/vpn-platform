@@ -25,19 +25,22 @@ public class AuthController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly IClock _clock;
     private readonly IConfiguration _configuration;
+    private readonly ISecretProtector _secretProtector;
 
     public AuthController(
         IApplicationDbContext db,
         IPasswordService passwordService,
         ITokenService tokenService,
         IClock clock,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ISecretProtector secretProtector)
     {
         _db = db;
         _passwordService = passwordService;
         _tokenService = tokenService;
         _clock = clock;
         _configuration = configuration;
+        _secretProtector = secretProtector;
     }
 
     [HttpPost("register")]
@@ -293,12 +296,13 @@ public class AuthController : ControllerBase
             }
 
             var rawToken = _tokenService.CreateRefreshToken();
+            var expiryMinutes = GetInt("Auth:PasswordReset:ExpiryMinutes", 30);
             var resetToken = new PasswordResetToken
             {
                 UserId = user.Id,
                 Generation = state.Generation,
                 TokenHash = HashToken(rawToken),
-                ExpiresAt = now.AddMinutes(GetInt("Auth:PasswordReset:ExpiryMinutes", 30)),
+                ExpiresAt = now.AddMinutes(expiryMinutes),
                 RequestedByIp = ResolveIp(),
                 UserAgent = Request.Headers.UserAgent.ToString()
             };
@@ -308,7 +312,14 @@ public class AuthController : ControllerBase
             {
                 Type = "password_reset_requested",
                 CorrelationId = resetToken.Id.ToString("N"),
-                PayloadJson = JsonSerializer.Serialize(new { userId = user.Id, email = user.Email, validationTokenReturned = returnValidationToken })
+                PayloadJson = JsonSerializer.Serialize(new
+                {
+                    userId = user.Id,
+                    email = user.Email,
+                    protectedResetToken = _secretProtector.Protect(rawToken),
+                    expiryMinutes,
+                    validationTokenReturned = returnValidationToken
+                })
             });
             AddAudit("auth.password_reset_requested", "User", user.Id, null, new
             {

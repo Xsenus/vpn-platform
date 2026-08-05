@@ -48,12 +48,15 @@ public class NotificationTemplate : AuditableEntity
 public class NotificationDelivery : AuditableEntity
 {
     public Guid? UserId { get; set; }
+    public Guid? SourceOutboxMessageId { get; set; }
     public string TemplateKey { get; set; } = string.Empty;
     public NotificationChannelType Channel { get; set; }
     public string ToAddress { get; set; } = string.Empty;
     public NotificationDeliveryStatus Status { get; set; } = NotificationDeliveryStatus.Pending;
     public string PayloadJson { get; set; } = "{}";
     public int Attempts { get; set; }
+    public DateTimeOffset? ProcessingStartedAt { get; set; }
+    public DateTimeOffset? NextAttemptAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }
     public string? ErrorText { get; set; }
 }

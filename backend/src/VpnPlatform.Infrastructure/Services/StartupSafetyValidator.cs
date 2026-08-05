@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Mail;
 using VpnPlatform.Infrastructure.Configuration;
 using VpnPlatform.Infrastructure.Persistence;
 
@@ -15,6 +16,7 @@ public sealed class StartupSafetyValidator : IHostedService
     private readonly DatabaseStartupOptions _databaseOptions;
     private readonly AdminBootstrapOptions _adminOptions;
     private readonly CorsOptions _corsOptions;
+    private readonly EmailDeliveryOptions _emailOptions;
 
     public StartupSafetyValidator(
         IConfiguration configuration,
@@ -22,7 +24,8 @@ public sealed class StartupSafetyValidator : IHostedService
         ILogger<StartupSafetyValidator> logger,
         IOptions<DatabaseStartupOptions> databaseOptions,
         IOptions<AdminBootstrapOptions> adminOptions,
-        IOptions<CorsOptions> corsOptions)
+        IOptions<CorsOptions> corsOptions,
+        IOptions<EmailDeliveryOptions> emailOptions)
     {
         _configuration = configuration;
         _environment = environment;
@@ -30,6 +33,7 @@ public sealed class StartupSafetyValidator : IHostedService
         _databaseOptions = databaseOptions.Value;
         _adminOptions = adminOptions.Value;
         _corsOptions = corsOptions.Value;
+        _emailOptions = emailOptions.Value;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -51,6 +55,31 @@ public sealed class StartupSafetyValidator : IHostedService
         if (_adminOptions.Enabled && (string.IsNullOrWhiteSpace(_adminOptions.Email) || string.IsNullOrWhiteSpace(_adminOptions.Password) || _adminOptions.Password.Length < 16))
         {
             errors.Add("AdminBootstrap is enabled but Email/Password are invalid. Password must have at least 16 characters.");
+        }
+
+        var smtpEnabled = string.Equals(_emailOptions.Mode, "Smtp", StringComparison.OrdinalIgnoreCase);
+        var emailDisabled = string.Equals(_emailOptions.Mode, "Disabled", StringComparison.OrdinalIgnoreCase);
+        if (!smtpEnabled && !emailDisabled)
+        {
+            errors.Add("Email:Mode must be Disabled or Smtp.");
+        }
+
+        if (smtpEnabled)
+        {
+            if (string.IsNullOrWhiteSpace(_emailOptions.Host) || _emailOptions.Port is < 1 or > 65535)
+            {
+                errors.Add("Email SMTP host and a valid port are required when Email:Mode=Smtp.");
+            }
+
+            if (!MailAddress.TryCreate(_emailOptions.FromAddress, out _))
+            {
+                errors.Add("Email:FromAddress must be a valid email address when Email:Mode=Smtp.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(_emailOptions.Username) && string.IsNullOrWhiteSpace(_emailOptions.Password))
+            {
+                errors.Add("Email:Password is required when Email:Username is configured.");
+            }
         }
 
         if (_environment.IsProduction())
@@ -97,6 +126,11 @@ public sealed class StartupSafetyValidator : IHostedService
             if (string.Equals(_configuration["Vpn:X3Ui:Mode"], "Sandbox", StringComparison.OrdinalIgnoreCase))
             {
                 errors.Add("Vpn:X3Ui:Mode=Sandbox is forbidden in Production.");
+            }
+
+            if (!smtpEnabled)
+            {
+                errors.Add("Email:Mode=Smtp is required in Production so queued account notifications are delivered.");
             }
 
             foreach (var pair in FlattenConfiguration(_configuration))

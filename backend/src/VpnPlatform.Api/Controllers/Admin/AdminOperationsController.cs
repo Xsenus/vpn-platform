@@ -65,6 +65,7 @@ public sealed record DeleteServerHttpResponse(
     int LinkedMigrationJobs);
 public sealed record NodeHealthCheckDto(Guid Id, Guid NodeId, string Status, DateTimeOffset CheckedAt, long LatencyMs, string MetadataJson, string ErrorText);
 public sealed record AdminAuditLogFilters(string? Action = null, string? EntityType = null, string? ActorType = null, string? Search = null, DateTimeOffset? From = null, DateTimeOffset? To = null, int Limit = 200);
+public sealed record AdminNotificationDeliveryFilters(string? Status = null, string? TemplateKey = null, string? Search = null, int Limit = 100);
 public sealed record ReferralProgramUpsertHttpRequest(
     string Name,
     string Status,
@@ -257,6 +258,102 @@ public class AdminOperationsController : ControllerBase
             .ToList();
 
         return Ok(logs);
+    }
+
+    [HttpGet("notification-deliveries")]
+    [Authorize(Policy = AdminPolicies.AdminRead)]
+    public async Task<IActionResult> GetNotificationDeliveries([FromQuery] AdminNotificationDeliveryFilters filters, CancellationToken cancellationToken)
+    {
+        var limit = Math.Clamp(filters.Limit, 1, 500);
+        var query = _db.NotificationDeliveries.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(filters.Status)
+            && Enum.TryParse<NotificationDeliveryStatus>(filters.Status.Trim(), true, out var status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.TemplateKey))
+        {
+            var templateKey = filters.TemplateKey.Trim();
+            query = query.Where(x => x.TemplateKey == templateKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.Search))
+        {
+            var search = filters.Search.Trim();
+            query = query.Where(x => x.TemplateKey.Contains(search) || x.ToAddress.Contains(search));
+        }
+
+        List<NotificationDelivery> rows;
+        if (_db is DbContext dbContext
+            && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal))
+        {
+            rows = (await query.ToListAsync(cancellationToken))
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(limit)
+                .ToList();
+        }
+        else
+        {
+            rows = await query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
+        }
+        return Ok(rows.Select(x => new AdminNotificationDeliveryDto(
+            x.Id,
+            x.UserId,
+            x.TemplateKey,
+            x.Channel.ToString(),
+            MaskEmail(x.ToAddress),
+            x.Status.ToString(),
+            x.Attempts,
+            x.ProcessingStartedAt,
+            x.NextAttemptAt,
+            x.SentAt,
+            SensitiveDataRedactor.Redact(x.ErrorText, [x.ToAddress], maxLength: 500),
+            x.CreatedAt,
+            x.UpdatedAt)).ToList());
+    }
+
+    [HttpPost("notification-deliveries/{id:guid}/retry")]
+    [Authorize(Policy = AdminPolicies.AdminWrite)]
+    public async Task<IActionResult> RetryNotificationDelivery(Guid id, CancellationToken cancellationToken)
+    {
+        var delivery = await _db.NotificationDeliveries.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (delivery is null)
+        {
+            return NotFound(new { error = "notification_delivery_not_found" });
+        }
+
+        if (delivery.Status != NotificationDeliveryStatus.Failed)
+        {
+            return Conflict(new { error = "notification_delivery_not_failed" });
+        }
+
+        var before = JsonSerializer.Serialize(new
+        {
+            status = delivery.Status.ToString(),
+            delivery.Attempts,
+            errorText = SensitiveDataRedactor.Redact(delivery.ErrorText, [delivery.ToAddress], maxLength: 500)
+        });
+        delivery.Status = NotificationDeliveryStatus.Pending;
+        delivery.Attempts = 0;
+        delivery.ProcessingStartedAt = null;
+        delivery.NextAttemptAt = _clock.UtcNow;
+        delivery.ErrorText = null;
+        delivery.SentAt = null;
+        delivery.UpdatedAt = _clock.UtcNow;
+        AddAuditLog(
+            "notification_delivery.retry",
+            nameof(NotificationDelivery),
+            delivery.Id,
+            before,
+            JsonSerializer.Serialize(new { status = delivery.Status.ToString(), delivery.Attempts, maskedToAddress = MaskEmail(delivery.ToAddress) }));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(new { delivery.Id, Status = delivery.Status.ToString(), delivery.NextAttemptAt });
     }
 
     [HttpGet("subscriptions")]
@@ -3023,5 +3120,23 @@ public class AdminOperationsController : ControllerBase
 
         var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
         return Guid.TryParse(sub, out var value) ? value : null;
+    }
+
+    private static string MaskEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return string.Empty;
+        }
+
+        var separator = email.IndexOf('@');
+        if (separator <= 0 || separator == email.Length - 1)
+        {
+            return "***";
+        }
+
+        var local = email[..separator];
+        var visible = local[..Math.Min(2, local.Length)];
+        return $"{visible}***@{email[(separator + 1)..]}";
     }
 }

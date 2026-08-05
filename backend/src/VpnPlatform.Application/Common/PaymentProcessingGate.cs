@@ -31,6 +31,9 @@ public static class PaymentProcessingGate
     public static async ValueTask<IAsyncDisposable> AcquireOutboxMessageAsync(Guid messageId, CancellationToken cancellationToken)
         => await AcquireAsync($"outbox:{messageId:N}", cancellationToken);
 
+    public static async ValueTask<IAsyncDisposable> AcquireEmailNotificationAsync(Guid notificationId, CancellationToken cancellationToken)
+        => await AcquireAsync($"email-notification:{notificationId:N}", cancellationToken);
+
     public static async ValueTask<IAsyncDisposable> AcquireProvisioningNodeAsync(Guid nodeId, CancellationToken cancellationToken)
         => await AcquireVpnNodeStateAsync(nodeId, cancellationToken);
 

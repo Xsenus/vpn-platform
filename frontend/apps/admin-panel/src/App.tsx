@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   AccessCredentialDto,
   AdminAuditLogDto,
+  AdminNotificationDeliveryDto,
   AdminDashboardSummaryDto,
   AdminReferralProgramDto,
   AdminRewardLedgerDto,
@@ -1039,6 +1040,7 @@ export function App() {
   const [userOverview, setUserOverview] = useState<AdminUserOverviewDto | null>(null)
   const [summary, setSummary] = useState<AdminDashboardSummaryDto | null>(null)
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogDto[]>([])
+  const [notificationDeliveries, setNotificationDeliveries] = useState<AdminNotificationDeliveryDto[]>([])
   const [auditActionFilter, setAuditActionFilter] = useState('')
   const [auditEntityTypeFilter, setAuditEntityTypeFilter] = useState('')
   const [auditActorTypeFilter, setAuditActorTypeFilter] = useState('')
@@ -1208,6 +1210,7 @@ export function App() {
     const [
       nextSummary,
       nextAuditLogs,
+      nextNotificationDeliveries,
       nextUsers,
       nextSubscriptions,
       nextAccessCredentials,
@@ -1234,6 +1237,7 @@ export function App() {
     ] = await Promise.all([
       safeLoad('dashboard', () => api.getAdminDashboardSummary(currentToken), null, errors),
       safeLoad('аудит', () => api.getAdminAuditLogs(currentToken, { action: auditActionFilter, entityType: auditEntityTypeFilter, actorType: auditActorTypeFilter, search: auditSearch, limit: 200 }), [], errors),
+      safeLoad('email-уведомления', () => api.getAdminNotificationDeliveries(currentToken), [], errors),
       safeLoad('users', () => api.getAdminUsers(currentToken, { search: userSearch, status: userStatusFilter }), [], errors),
       safeLoad('subscriptions', () => api.getAdminSubscriptions(currentToken), [], errors),
       safeLoad('accesses', () => api.getAdminAccesses(currentToken), [], errors),
@@ -1261,6 +1265,7 @@ export function App() {
 
     setSummary(nextSummary)
     setAuditLogs(nextAuditLogs)
+    setNotificationDeliveries(nextNotificationDeliveries)
     setUsers(nextUsers)
     setSubscriptions(nextSubscriptions)
     setAccessCredentials(nextAccessCredentials)
@@ -1490,6 +1495,7 @@ export function App() {
     setSelectedUserId('')
     setUserOverview(null)
     setSummary(null)
+    setNotificationDeliveries([])
     setSubscriptions([])
     setAccessCredentials([])
     setAdminQrSvgs({})
@@ -2623,6 +2629,12 @@ export function App() {
     await loadAll(token)
   })
 
+  const handleRetryNotificationDelivery = (deliveryId: string) => runAction(`retry-notification-${deliveryId}`, async () => {
+    await api.retryAdminNotificationDelivery(token, deliveryId)
+    setNotice('Email-уведомление возвращено в очередь доставки.')
+    await loadAll(token)
+  })
+
   const handleDeployProvisioningRun = (runId: string) => {
     return runAction(`deploy-run-${runId}`, async () => {
       const response = await api.deployAdminProvisioningRun(token, runId)
@@ -2920,6 +2932,36 @@ export function App() {
                     <strong>После</strong>
                     <CodeBlock>{entry.afterJson || '{}'}</CodeBlock>
                   </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <h3>Очередь email-уведомлений</h3>
+          <p className="muted">Адреса получателей маскируются, содержимое писем и одноразовые коды не выводятся.</p>
+          <div className="list-stack mt-12">
+            {notificationDeliveries.length === 0 && <EmptyState title="Уведомлений пока нет" description="После активации подписки или запроса сброса пароля здесь появится состояние доставки." />}
+            {notificationDeliveries.slice(0, 20).map((delivery) => (
+              <div key={delivery.id} className="list-item">
+                <div>
+                  <strong>{delivery.templateKey}</strong>
+                  <div className="muted">{delivery.maskedToAddress || 'адрес скрыт'} · попыток: {delivery.attempts} · {formatDate(delivery.createdAt)}</div>
+                  {delivery.nextAttemptAt && <div className="muted">следующая попытка: {formatDate(delivery.nextAttemptAt)}</div>}
+                  {delivery.errorText && <div className="muted">{delivery.errorText}</div>}
+                </div>
+                <div className="row-actions">
+                  <StatusBadge value={delivery.status} />
+                  {delivery.status.toLowerCase() === 'failed' && adminSession?.capabilities.adminWrite && (
+                    <PrimaryButton
+                      className="button-ghost"
+                      onClick={() => void handleRetryNotificationDelivery(delivery.id)}
+                      disabled={actionBusyId === `retry-notification-${delivery.id}`}
+                      aria-busy={actionBusyId === `retry-notification-${delivery.id}`}
+                    >
+                      Повторить
+                    </PrimaryButton>
+                  )}
                 </div>
               </div>
             ))}

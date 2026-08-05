@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.518.0 - 2026-08-05
+
+Release entry: `2026-08-05-email-delivery-lifecycle`.
+
+### Исправлено
+
+- Pending email deliveries теперь обрабатываются отдельным worker-ом с conditional claim, stale lease recovery, exponential backoff и terminal failure после пяти попыток.
+- Password reset outbox содержит одноразовый код только в формате `ISecretProtector`; SMTP-адаптер расшифровывает его непосредственно перед отправкой.
+- Production startup fail-closed требует `Email:Mode=Smtp`, SMTP host/port/from и пароль при настроенном username.
+- Admin «Аудит» показывает маскированную очередь без payload и позволяет `adminWrite` безопасно повторить только failed delivery.
+
+### Проверено
+
+- Backend full suite `1098/1098`; targeted email/auth/outbox/audit/startup suite `40/40` на SQLite.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; frontend `90/90`, typecheck/build OK.
+- Playwright desktop/mobile/all-screens responsive suite `16/16` прошел без неожиданных console errors/overflow.
+- EF migration `20260805092911_EmailNotificationDeliveryLifecycle` согласована с моделью; pending model changes отсутствуют.
+- API/TelegramBot Release builds: `0` warnings, `0` errors; validation safety guard учитывает disabled email mode для Local/CI.
+- Dependency audit `0 vulnerabilities`; secret scan `649` files/`0` findings; strict UTF-8 guard пройден.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `531/551` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальный SMTP/VPS/staging smoke недоступен; локальные fake sender и browser mocks не считаются доказательством внешней доставки.
+
 ## 0.517.0 - 2026-08-05
 
 Release entry: `2026-08-05-referral-reward-lifecycle`.

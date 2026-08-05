@@ -29,7 +29,7 @@ const sectionWriteCapability: Record<AdminSectionId, keyof AdminSessionCapabilit
   dashboard: null,
   users: 'adminWrite',
   support: 'supportWrite',
-  audit: null,
+  audit: 'adminWrite',
   payments: 'financeWrite',
   tariffs: 'adminWrite',
   referrals: 'adminWrite',

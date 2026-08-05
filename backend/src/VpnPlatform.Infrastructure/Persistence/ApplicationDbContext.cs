@@ -151,6 +151,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .HasFilter("\"Status\" IN (0, 1, 8, 9, 12, 13, 15)")
             .IsUnique();
         modelBuilder.Entity<InboxMessage>().HasIndex(x => new { x.Source, x.ExternalKey }).IsUnique();
+        modelBuilder.Entity<NotificationDelivery>().HasIndex(x => x.SourceOutboxMessageId).IsUnique();
+        modelBuilder.Entity<NotificationDelivery>().HasIndex(x => new { x.Status, x.NextAttemptAt });
         modelBuilder.Entity<OutboxMessage>().HasIndex(x => new { x.Type, x.CorrelationId }).IsUnique();
         modelBuilder.Entity<AppRelease>().HasIndex(x => x.ReleaseId).IsUnique();
         modelBuilder.Entity<AppRelease>().HasIndex(x => new { x.IsActive, x.ReleasedAt });

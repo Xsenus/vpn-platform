@@ -1170,6 +1170,30 @@ test('admin source includes referral program operations', () => {
   assert.match(adminSource, /Реферальная программа/)
 })
 
+test('ApiClient exposes safe notification delivery monitoring and retry', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify(String(url).endsWith('/retry')
+      ? { id: 'delivery-1', status: 'Pending' }
+      : [{ id: 'delivery-1', maskedToAddress: 'us***@example.test', status: 'Failed' }]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }) as typeof fetch
+  const client = new ApiClient('http://localhost:8080')
+
+  const deliveries = await client.getAdminNotificationDeliveries('admin-token')
+  const retried = await client.retryAdminNotificationDelivery('admin-token', 'delivery-1')
+
+  assert.equal(deliveries[0]?.maskedToAddress, 'us***@example.test')
+  assert.equal(retried.status, 'Pending')
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/notification-deliveries?limit=100')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/notification-deliveries/delivery-1/retry')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
 test('frontend sources include managed FAQ surfaces', () => {
   const publicSource = readFileSync(new URL('../apps/public-web/src/App.tsx', import.meta.url), 'utf8')
   const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')

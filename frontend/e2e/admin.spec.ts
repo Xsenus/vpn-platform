@@ -360,6 +360,25 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'GET' && path === '/api/admin/notification-deliveries') {
+      await fulfillJson(route, [{
+        id: 'notification-e2e',
+        userId: 'user-e2e',
+        templateKey: 'password_reset_requested',
+        channel: 'Email',
+        maskedToAddress: 'cl***@example.test',
+        status: 'Failed',
+        attempts: 5,
+        processingStartedAt: null,
+        nextAttemptAt: null,
+        sentAt: null,
+        errorText: 'SMTP connection unavailable',
+        createdAt: now,
+        updatedAt: now
+      }])
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/users') {
       await fulfillJson(route, [{ id: 'user-e2e', email: 'client@example.test', displayName: 'Client E2E', rolesCsv: 'User', status: 'Active', isBlocked: false, preferredLanguage: 'ru', referralCode: 'E2E', authSource: 'Local', emailConfirmed: true, lastLoginAt: now, telegramRegistrationCompletedAt: null, createdAt: now, updatedAt: now }])
       return

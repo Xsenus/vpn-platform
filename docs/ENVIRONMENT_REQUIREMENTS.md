@@ -30,10 +30,13 @@
 ## Безопасные значения по умолчанию
 
 - `TelegramBot:Enabled=false`.
+- `Email:Mode=Disabled` локально; Production требует `Email:Mode=Smtp`, host, port и from address.
 - `Vpn:X3Ui:Mode=Sandbox` для локальной проверки.
 - `Provisioning:LiveExecutionEnabled=false`.
 - `Provisioning:AllowLiveDeploy=false`.
-- Реальные токены Telegram, платёжные секреты, SSH-ключи и пароли 3x-ui нельзя хранить в репозитории.
+- Реальные токены Telegram, SMTP credentials, платёжные секреты, SSH-ключи и пароли 3x-ui нельзя хранить в репозитории.
+
+Полный SMTP-контракт и порядок проверки описаны в [email-delivery.md](email-delivery.md).
 
 ## Быстрая диагностика
 

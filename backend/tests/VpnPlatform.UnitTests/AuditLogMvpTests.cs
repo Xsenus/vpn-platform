@@ -168,10 +168,78 @@ public class AuditLogMvpTests
         Assert.Empty(await db.OutboxMessages.ToListAsync());
     }
 
+    [Fact]
+    public async Task Notification_Deliveries_Should_Mask_Recipient_And_Omit_Payload()
+    {
+        await using var db = CreateDbContext();
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 5, 9, 30, 0, TimeSpan.Zero);
+        db.NotificationDeliveries.Add(new NotificationDelivery
+        {
+            TemplateKey = "password_reset_requested",
+            Channel = NotificationChannelType.Email,
+            ToAddress = "private.user@example.test",
+            Status = NotificationDeliveryStatus.Failed,
+            Attempts = 5,
+            PayloadJson = "{\"protectedResetToken\":\"must-not-leak\"}",
+            ErrorText = "smtp mailbox private.user@example.test unavailable",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db, new FixedClock(now));
+
+        var response = await controller.GetNotificationDeliveries(new AdminNotificationDeliveryFilters(Status: "Failed"), CancellationToken.None);
+
+        var delivery = Assert.Single(AssertOk<List<AdminNotificationDeliveryDto>>(response));
+        Assert.Equal("pr***@example.test", delivery.MaskedToAddress);
+        Assert.Equal("Failed", delivery.Status);
+        Assert.DoesNotContain("private.user@example.test", delivery.ErrorText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("must-not-leak", System.Text.Json.JsonSerializer.Serialize(delivery), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Failed_Notification_Retry_Should_Reset_State_And_Write_Safe_Audit()
+    {
+        await using var db = CreateDbContext();
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 5, 9, 35, 0, TimeSpan.Zero);
+        var delivery = new NotificationDelivery
+        {
+            TemplateKey = "password_reset_requested",
+            Channel = NotificationChannelType.Email,
+            ToAddress = "private.user@example.test",
+            Status = NotificationDeliveryStatus.Failed,
+            Attempts = 5,
+            PayloadJson = "{\"protectedResetToken\":\"must-not-leak\"}",
+            ErrorText = "token=must-not-leak mailbox private.user@example.test last failure",
+            CreatedAt = now.AddMinutes(-5),
+            UpdatedAt = now.AddMinutes(-1)
+        };
+        db.NotificationDeliveries.Add(delivery);
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db, new FixedClock(now));
+
+        var response = await controller.RetryNotificationDelivery(delivery.Id, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(response);
+        var stored = await db.NotificationDeliveries.AsNoTracking().SingleAsync();
+        Assert.Equal(NotificationDeliveryStatus.Pending, stored.Status);
+        Assert.Equal(0, stored.Attempts);
+        Assert.Equal(now, stored.NextAttemptAt);
+        Assert.Null(stored.ErrorText);
+        var audit = await db.AuditLogs.SingleAsync(x => x.Action == "notification_delivery.retry");
+        Assert.Contains("pr***@example.test", audit.AfterJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-leak", audit.AfterJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-leak", audit.BeforeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("private.user@example.test", audit.AfterJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("private.user@example.test", audit.BeforeJson, StringComparison.Ordinal);
+    }
+
     private static AdminOperationsController CreateAdminController(ApplicationDbContext db, FixedClock clock, string role = UserRoles.Admin)
     {
         var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
-        var controller = new AdminOperationsController(db, null!, null!, providerAccounts, secretProtector: new TestSecretProtector());
+        var controller = new AdminOperationsController(db, null!, null!, providerAccounts, secretProtector: new TestSecretProtector(), clock: clock);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext

@@ -96,6 +96,13 @@ public interface IOutboxMessageSink
     Task DispatchAsync(Guid messageId, string type, string correlationId, string payloadJson, CancellationToken cancellationToken);
 }
 
+public sealed record EmailMessage(string ToAddress, string Subject, string Body);
+
+public interface IEmailSender
+{
+    Task SendAsync(EmailMessage message, CancellationToken cancellationToken);
+}
+
 
 public interface ITelegramInvoiceProvider
 {

@@ -30,6 +30,7 @@ Recommended local environment:
 ```bash
 export ASPNETCORE_ENVIRONMENT=Development
 export TelegramBot__Enabled=false
+export Email__Mode=Disabled
 export Vpn__X3Ui__Mode=Sandbox
 export Payments__YooMoney__Mode=Disabled
 export Payments__YooKassa__Mode=Disabled

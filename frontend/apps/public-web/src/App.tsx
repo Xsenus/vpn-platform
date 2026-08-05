@@ -906,7 +906,7 @@ function AccountPage({
           </Card>
           <Card>
             <h3>Сброс пароля</h3>
-            <p className="muted">В режиме проверки письмо не отправляется наружу: API возвращает одноразовый код только для локальной проверки сценария.</p>
+            <p className="muted">Код восстановления придёт на email. В локальном режиме проверки он может быть показан сразу.</p>
             <form className="form-grid" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleResetPassword() }}>
               <label><span>Email</span><input value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /></label>
               <PasswordField label="Код сброса" value={resetToken} onChange={setResetToken} placeholder="Одноразовый код" autoComplete="one-time-code" />

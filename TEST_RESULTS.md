@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: email delivery lifecycle
+
+Scope:
+- Проверен полный локальный путь от auth/outbox до durable email worker, защищенного reset-кода и маскированного admin retry.
+
+Results:
+- Roadmap progress: `531/551` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-email-delivery-lifecycle`, version `0.518.0`.
+- Backend full suite: OK, `1098/1098`; targeted email/auth/outbox/audit/startup suite: OK, `40/40`.
+- Email queue: conditional claim, stale lease, retry/backoff, terminal failure, deleted-recipient cancellation и source outbox deduplication покрыты SQLite.
+- Password reset code сохраняется в delivery payload только через `ISecretProtector`; admin DTO/audit не возвращают payload, полный адрес или код.
+- Production startup требует полную SMTP-конфигурацию; disabled SMTP sender fail-closed.
+- Fresh local SQLite smoke: OK; EF migration/model drift: OK.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; validation safety guard: OK.
+- Frontend tests: OK, `90/90`; typecheck/build: OK.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without unexpected console errors/overflow.
+- Dependency audit: `0 vulnerabilities`; secret scan: `649` files, `0` findings; strict UTF-8 guard: OK.
+- External evidence remains open: real SMTP mailbox, VPS/staging, live payment and production-like 3x-ui checks were not available.
+
 ## Check 2026-08-05: referral reward lifecycle
 
 Scope:

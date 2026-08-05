@@ -29,6 +29,8 @@ public static class DependencyInjection
             .Bind(configuration.GetSection("Cors"));
         services.AddOptions<TelegramBotOptions>()
             .Bind(configuration.GetSection("TelegramBot"));
+        services.AddOptions<EmailDeliveryOptions>()
+            .Bind(configuration.GetSection("Email"));
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
@@ -109,6 +111,7 @@ public static class DependencyInjection
         services.AddScoped<ProvisioningRunCoordinator>();
         services.AddScoped<AppReleaseSeedService>();
         services.AddScoped<IOutboxMessageSink, LocalOutboxMessageSink>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
 
         if (includeHostedServices)
         {
@@ -119,6 +122,10 @@ public static class DependencyInjection
             {
                 services.AddHostedService<SubscriptionLifecycleWorker>();
                 services.AddHostedService<OutboxDispatcherWorker>();
+                if (string.Equals(configuration["Email:Mode"], "Smtp", StringComparison.OrdinalIgnoreCase))
+                {
+                    services.AddHostedService<EmailNotificationDispatcherWorker>();
+                }
                 services.AddHostedService<ProvisioningWorker>();
                 services.AddHostedService<PanelHealthWorker>();
                 services.AddHostedService<PanelSyncWorker>();

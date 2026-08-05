@@ -33,6 +33,7 @@ env:
   Provisioning__AllowLiveDeploy: "false"
   Vpn__X3Ui__Mode: Sandbox
   TelegramBot__Enabled: "false"
+  Email__Mode: Disabled
   Payments__YooMoney__Mode: Disabled
   Payments__YooKassa__Mode: Disabled
   Payments__RoboKassa__Mode: Disabled

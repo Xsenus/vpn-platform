@@ -209,9 +209,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `1087/1087` unit tests;
+- backend на .NET 9: `1098/1098` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `89/89`;
+- frontend unit tests: `90/90`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят; responsive matrix проверяет ширины `305..1920` px;
@@ -233,6 +233,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - Telegram response и pre-checkout acknowledgement сохраняются до отправки, доставляются через отдельную lease/backoff и восстанавливаются webhook/long-polling без повторной обработки update;
 - Telegram notification dispatcher атомарно захватывает pending/stale sending записи, восстанавливает их по lease/backoff и завершает blocked/invalid/max-attempt случаи без двойной отправки;
 - outbox dispatcher атомарно захватывает события, восстанавливает stale lease, применяет redacted retry/dead-letter и материализует локальную email-очередь без ложного `ProcessedAt` до handler;
+- email worker доставляет pending-уведомления через явный SMTP mode, восстанавливает stale lease/backoff, хранит reset-код только в защищенном payload и предоставляет маскированный admin retry;
 - provisioning worker атомарно захватывает запуск, ограничивает runner timeout, восстанавливает stale lease без автоматического replay и блокирует небезопасные retry/cancel;
 - истечение подписки отключает VPN-доступ до перевода в `Expired`, сохраняет lease/backoff и диагностируемый retry-state; lifecycle, panel health и panel sync workers изолируют ошибки отдельных записей;
 - синхронизация 3x-ui использует межинстансный claim, восстанавливает stale `Running`, отклоняет устаревший worker snapshot и сохраняет только redacted health/sync diagnostics;
@@ -259,7 +260,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - обращения поддержки используют optimistic revision: stale reply/status/note получают controlled conflict, а pending Telegram/provisioning диалог возвращается в active queue после нового сообщения;
 - checkout claim резервирует session, создаёт order и публикует связь одной transaction: same-user race возвращает winner, другой user не создаёт второй заказ, completed не деградирует в expired;
 - реферальный код атомарно связывает пользователей, а завершение подходящей покупки через durable outbox создаёт идемпотентные начисления; кабинет получает redacted DTO, программы и журнал управляются в отдельном admin-разделе;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-referral-reward-lifecycle`, версия `0.517.0`;
-- roadmap progress: `530/550` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-email-delivery-lifecycle`, версия `0.518.0`;
+- roadmap progress: `531/551` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

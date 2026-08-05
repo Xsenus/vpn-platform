@@ -294,6 +294,41 @@ public static class LocalSqliteSchemaRepair
             }
         }
 
+        if (await TableExistsAsync(db, "NotificationDeliveries", cancellationToken))
+        {
+            foreach (var (column, sql) in new[]
+                     {
+                         ("SourceOutboxMessageId", """ALTER TABLE "NotificationDeliveries" ADD COLUMN "SourceOutboxMessageId" TEXT NULL;"""),
+                         ("ProcessingStartedAt", """ALTER TABLE "NotificationDeliveries" ADD COLUMN "ProcessingStartedAt" TEXT NULL;"""),
+                         ("NextAttemptAt", """ALTER TABLE "NotificationDeliveries" ADD COLUMN "NextAttemptAt" TEXT NULL;""")
+                     })
+            {
+                if (await ColumnExistsAsync(db, "NotificationDeliveries", column, cancellationToken))
+                {
+                    continue;
+                }
+
+                await db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+                repaired++;
+            }
+
+            if (!await IndexExistsAsync(db, "IX_NotificationDeliveries_SourceOutboxMessageId", cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    """CREATE UNIQUE INDEX "IX_NotificationDeliveries_SourceOutboxMessageId" ON "NotificationDeliveries" ("SourceOutboxMessageId");""",
+                    cancellationToken);
+                repaired++;
+            }
+
+            if (!await IndexExistsAsync(db, "IX_NotificationDeliveries_Status_NextAttemptAt", cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    """CREATE INDEX "IX_NotificationDeliveries_Status_NextAttemptAt" ON "NotificationDeliveries" ("Status", "NextAttemptAt");""",
+                    cancellationToken);
+                repaired++;
+            }
+        }
+
         if (await TableExistsAsync(db, "ProvisioningRuns", cancellationToken))
         {
             foreach (var (column, sql) in new[]

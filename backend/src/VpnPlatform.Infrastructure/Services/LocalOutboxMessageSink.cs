@@ -79,6 +79,7 @@ public sealed class LocalOutboxMessageSink : IOutboxMessageSink
         _db.NotificationDeliveries.Add(new NotificationDelivery
         {
             UserId = userId,
+            SourceOutboxMessageId = messageId,
             TemplateKey = templateKey,
             Channel = NotificationChannelType.Email,
             ToAddress = email,
@@ -91,9 +92,11 @@ public sealed class LocalOutboxMessageSink : IOutboxMessageSink
     {
         var userId = RequireGuid(payload, "userId");
         var email = RequireString(payload, "email");
+        RequireString(payload, "protectedResetToken");
         _db.NotificationDeliveries.Add(new NotificationDelivery
         {
             UserId = userId,
+            SourceOutboxMessageId = messageId,
             TemplateKey = "password_reset_requested",
             Channel = NotificationChannelType.Email,
             ToAddress = email,

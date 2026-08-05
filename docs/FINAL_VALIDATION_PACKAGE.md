@@ -34,6 +34,7 @@ Before backend, frontend, Docker, or sandbox E2E checks, run:
 Expected safety state:
 
 - `TelegramBot__Enabled=false`
+- `Email__Mode=Disabled` для локальной/CI-проверки; production требует `Smtp`
 - all payment providers `Mode=Disabled`
 - `Vpn__X3Ui__Mode=Sandbox`
 - `X3UI_BASE_URL=` empty

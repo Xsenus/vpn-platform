@@ -52,7 +52,7 @@ test('read-only role sees finance and support data without mutation rights', () 
   assert.ok(visible.includes('payments'))
   assert.ok(visible.includes('support'))
   assert.ok(!visible.includes('bot'))
-  assert.equal(visible.every((section) => canWriteAdminSection(access, section) === (section === 'dashboard' || section === 'audit')), true)
+  assert.equal(visible.every((section) => canWriteAdminSection(access, section) === (section === 'dashboard')), true)
 })
 
 test('operator sees bot and operational sections without finance data', () => {

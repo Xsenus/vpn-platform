@@ -415,12 +415,13 @@ public class SecurityHardeningMvpTests
                 ["Jwt:Issuer"] = "vpn-platform-test",
                 ["Jwt:Audience"] = "vpn-platform-test",
                 ["Jwt:SigningKey"] = "unit-test-jwt-signing-key-0000000000000000000000",
+                ["Security:SecretEncryptionKey"] = "unit-test-secret-encryption-key-000000000000000000",
                 ["Auth:RefreshTokenDays"] = "30",
                 ["Auth:PasswordReset:ExpiryMinutes"] = "30",
                 ["Auth:PasswordReset:ReturnTokenForValidation"] = returnResetTokenForValidation ? "true" : "false"
             })
             .Build();
-        var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), new TestClock(), configuration);
+        var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), new TestClock(), configuration, new SecretProtector(configuration));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         return controller;
     }

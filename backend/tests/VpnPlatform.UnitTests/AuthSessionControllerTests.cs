@@ -16,6 +16,7 @@ using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Auth;
+using VpnPlatform.Infrastructure.Security;
 using VpnPlatform.Infrastructure.Persistence;
 using VpnPlatform.Infrastructure.Services;
 using Xunit;
@@ -454,12 +455,13 @@ public class AuthSessionControllerTests
                 ["Jwt:Issuer"] = "vpn-platform-test",
                 ["Jwt:Audience"] = "vpn-platform-test",
                 ["Jwt:SigningKey"] = "unit-test-jwt-signing-key-0000000000000000000000",
+                ["Security:SecretEncryptionKey"] = "unit-test-secret-encryption-key-000000000000000000",
                 ["Auth:RefreshTokenDays"] = "30",
                 ["Auth:PasswordReset:ExpiryMinutes"] = "30",
                 ["Auth:PasswordReset:ReturnTokenForValidation"] = "true"
             })
             .Build();
-        var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), new TestClock(), configuration);
+        var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), new TestClock(), configuration, new SecretProtector(configuration));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         return controller;
     }
