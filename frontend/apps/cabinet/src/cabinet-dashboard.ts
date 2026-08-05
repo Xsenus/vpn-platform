@@ -22,13 +22,35 @@ export function getSubscriptionRenewalAvailability(subscription: SubscriptionDto
   return { canRenew: true, reason: null }
 }
 
-export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'accessUri' | 'status'> | null | undefined) {
+export function getCabinetAccessTerminalReason(
+  access: Pick<AccessCredentialDto, 'status' | 'subscriptionStatus' | 'isTerminal'> | null | undefined,
+  subscriptionStatus?: string | null
+) {
+  if (access?.status === 'Revoked') {
+    return 'Доступ отозван. Ключ и QR-код больше недоступны.'
+  }
+
+  if (subscriptionStatus === 'Cancelled' || access?.subscriptionStatus === 'Cancelled') {
+    return 'Родительская подписка отменена. Ключ и QR-код больше недоступны.'
+  }
+
+  if (access?.isTerminal) {
+    return 'VPN-доступ завершён. Ключ и QR-код больше недоступны.'
+  }
+
+  return null
+}
+
+export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'accessUri' | 'status' | 'subscriptionStatus' | 'isTerminal'> | null | undefined) {
   if (access?.status === 'Revoked') {
     return {
       canGenerate: false,
       reason: 'Доступ отозван. Ссылка подключения и QR-код больше недоступны.'
     }
   }
+
+  const terminalReason = getCabinetAccessTerminalReason(access)
+  if (terminalReason) return { canGenerate: false, reason: terminalReason }
 
   const canGenerate = Boolean(access?.accessUri?.trim())
   return {
@@ -52,11 +74,11 @@ export function findAccessForSubscription(subscription: SubscriptionDto | null, 
 
   if (subscription.currentAccessId) {
     const linked = accesses.find((access) => access.id === subscription.currentAccessId)
-    if (linked) return linked.status === 'Revoked' ? null : linked
+    if (linked) return getCabinetAccessTerminalReason(linked, subscription.status) ? null : linked
   }
 
-  return accesses.find((access) => access.subscriptionId === subscription.id && access.status === 'Active')
-    ?? accesses.find((access) => access.subscriptionId === subscription.id && access.status !== 'Revoked')
+  return accesses.find((access) => access.subscriptionId === subscription.id && access.status === 'Active' && !getCabinetAccessTerminalReason(access, subscription.status))
+    ?? accesses.find((access) => access.subscriptionId === subscription.id && !getCabinetAccessTerminalReason(access, subscription.status))
     ?? null
 }
 
@@ -80,6 +102,6 @@ export function buildCabinetSummary(subscriptions: SubscriptionDto[], accesses: 
     currentAccess,
     daysLeft,
     hasActiveSubscription: currentSubscription ? isCurrentSubscription(currentSubscription) : false,
-    hasConnectionLink: linkedCurrentAccess?.status !== 'Revoked' && Boolean(currentAccess?.accessUri || currentSubscription?.accessUri)
+    hasConnectionLink: !getCabinetAccessTerminalReason(linkedCurrentAccess, currentSubscription?.status) && Boolean(currentAccess?.accessUri || currentSubscription?.accessUri)
   }
 }

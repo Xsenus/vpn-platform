@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Controllers.Me;
@@ -25,6 +26,17 @@ public class CabinetAccessController : ControllerBase
     public async Task<IActionResult> GetAccessQr(Guid id, CancellationToken cancellationToken)
     {
         var userId = ResolveUserId();
+        var subscriptionId = await _db.AccessCredentials
+            .AsNoTracking()
+            .Where(x => x.Id == id && x.Subscription != null && x.Subscription.UserId == userId)
+            .Select(x => (Guid?)x.SubscriptionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!subscriptionId.HasValue)
+        {
+            return NotFound(new { error = "VPN access not found." });
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
         var access = await _db.AccessCredentials
             .AsNoTracking()
             .Include(x => x.Subscription)
@@ -37,6 +49,11 @@ public class CabinetAccessController : ControllerBase
         if (access.Status == AccessCredentialStatus.Revoked)
         {
             return BadRequest(new { error = "Revoked VPN access QR code is not available." });
+        }
+
+        if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
+        {
+            return BadRequest(new { error = "Cancelled subscription VPN access QR code is not available." });
         }
 
         if (string.IsNullOrWhiteSpace(access.AccessUri))

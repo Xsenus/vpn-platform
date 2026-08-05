@@ -11672,5 +11672,28 @@
         "text": "Roadmap progress is 512/532 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-cancelled-subscription-cabinet-boundary",
+    "version": "0.501.0",
+    "releasedAt": "2026-08-05T07:43:00+07:00",
+    "title": "Кабинет больше не раскрывает доступ отменённой подписки",
+    "summary": "Пользовательские subscription/access DTO и оба QR route теперь fail-closed для stale Active credential с Cancelled parent.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Cabinet API редактирует URI, provider ID, QR и config по parent subscription status и возвращает terminal marker."
+      },
+      {
+        "type": "fixed",
+        "text": "Оба пользовательских QR route повторно читают state внутри subscription lifecycle gate, а desktop/mobile UI скрывает stale secrets и кнопки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 513/533 closed, readiness 96.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

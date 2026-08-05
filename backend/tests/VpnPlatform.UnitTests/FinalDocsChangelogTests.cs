@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1018/1018", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-cancelled-subscription-access-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1021/1021", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-cancelled-subscription-cabinet-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1018/1018",
-                     "2026-08-05-cancelled-subscription-access-boundary",
-                     "0.500.0",
+                     "1021/1021",
+                     "2026-08-05-cancelled-subscription-cabinet-boundary",
+                     "0.501.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cancelled-subscription-access-boundary",
-                     "0.500.0",
-                     "512/532",
+                     "2026-08-05-cancelled-subscription-cabinet-boundary",
+                     "0.501.0",
+                     "513/533",
                      "96.2%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1018/1018`",
+                     "Backend full suite: OK, `1021/1021`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `619` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-cancelled-subscription-access-boundary",
-                     "0.500.0",
-                     "512/532",
+                     "2026-08-05-cancelled-subscription-cabinet-boundary",
+                     "0.501.0",
+                     "513/533",
                      "96.2%",
                      "20",
                      "19",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1018/1018`",
+                     "backend full suite `1021/1021`",
                      "PostgreSQL SQL",
                      "secret scan `619` files, `0` findings"
                  })

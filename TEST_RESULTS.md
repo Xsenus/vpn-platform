@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: cancelled subscription cabinet boundary
+
+Scope:
+- Проверено, что stale Active credential отменённой подписки не раскрывается в пользовательских subscription/access DTO, QR routes и повторяющихся cabinet views, включая гонку с lifecycle gate.
+
+Results:
+- Roadmap progress: `513/533` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-cancelled-subscription-cabinet-boundary`, version `0.501.0`.
+- Backend full suite: OK, `1021/1021`; targeted cabinet SQLite suite: OK, `13/13`.
+- User subscription/access projections redact URI/provider/QR/config and return parent status/terminal marker; both QR routes wait for subscription gate and recheck `Cancelled`.
+- Frontend tests: OK, `83/83`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`; adversarial stale secrets and terminal QR controls are absent without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `619` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: cancelled subscription access boundary
 
 Scope:

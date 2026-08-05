@@ -176,8 +176,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-05 локально подтверждено:
 
-- backend full suite: 1018/1018;
-- frontend tests: 82/82;
+- backend full suite: 1021/1021;
+- frontend tests: 83/83;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -200,8 +200,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Admin audit scope: finance/support/Telegram записи и JSON payload фильтруются по capabilities до Action/EntityType/Search; frontend показывает только разрешенные категории.
 - VPN access lifecycle: enable/sync/reset пробрасывают caller cancellation после durable history/audit; enable/reset uncertainty сохраняется как `SyncRequired` для ручной сверки.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-cancelled-subscription-access-boundary`, версия `0.500.0`.
-- roadmap progress: `512/532` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-cancelled-subscription-cabinet-boundary`, версия `0.501.0`.
+- roadmap progress: `513/533` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

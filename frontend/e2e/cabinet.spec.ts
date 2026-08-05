@@ -66,6 +66,19 @@ const cancelledSubscription = {
   cancelledAt: now
 }
 
+const cancelledStaleSubscription = {
+  ...subscription,
+  id: 'sub-cancelled-stale',
+  tariffName: 'Отменённый stale тариф',
+  status: 'Cancelled',
+  currentAccessId: 'access-cancelled-stale',
+  lastPaymentId: null,
+  accessUri: 'vless://cancelled-cabinet-stale-secret@example.test',
+  qrCodePath: 'qr://cancelled-cabinet-stale-secret',
+  configPath: 'config://cancelled-cabinet-stale-secret',
+  cancelledAt: now
+}
+
 const paidOrder = {
   id: 'order-paid',
   userId: user.id,
@@ -143,6 +156,8 @@ const paidPayment = {
 const access = {
   id: 'access-active',
   subscriptionId: subscription.id,
+  subscriptionStatus: 'Active',
+  isTerminal: false,
   userId: user.id,
   providerType: 'X3UI',
   providerAccessId: 'x3ui-client-1',
@@ -167,6 +182,7 @@ const pendingAccess = {
   ...access,
   id: 'access-pending',
   subscriptionId: blockedSubscription.id,
+  subscriptionStatus: 'Blocked',
   providerAccessId: 'x3ui-client-pending',
   serverName: 'Ожидает выдачи',
   accessUri: '',
@@ -181,6 +197,8 @@ const revokedAccess = {
   ...access,
   id: 'access-revoked',
   subscriptionId: cancelledSubscription.id,
+  subscriptionStatus: 'Cancelled',
+  isTerminal: true,
   providerAccessId: 'x3ui-client-revoked',
   serverName: 'Отозванный доступ',
   accessUri: 'vless://revoked-cabinet-secret@example.test',
@@ -189,6 +207,22 @@ const revokedAccess = {
   configPath: 'config://revoked-cabinet-secret',
   status: 'Revoked',
   revision: 2
+}
+
+const cancelledStaleAccess = {
+  ...access,
+  id: 'access-cancelled-stale',
+  subscriptionId: cancelledStaleSubscription.id,
+  subscriptionStatus: 'Cancelled',
+  isTerminal: true,
+  providerAccessId: 'x3ui-client-cancelled-stale-secret',
+  serverName: 'Отменённый stale доступ',
+  accessUri: 'vless://cancelled-cabinet-stale-secret@example.test',
+  qrCodePayload: 'vless://cancelled-cabinet-stale-secret@example.test',
+  qrCodePath: 'qr://cancelled-cabinet-stale-secret',
+  configPath: 'config://cancelled-cabinet-stale-secret',
+  status: 'Active',
+  revision: 4
 }
 
 const provider = {
@@ -291,7 +325,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/subscriptions') {
-      await fulfillJson(route, [subscription, blockedSubscription, cancelledSubscription])
+      await fulfillJson(route, [subscription, blockedSubscription, cancelledSubscription, cancelledStaleSubscription])
       return
     }
 
@@ -306,7 +340,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/accesses') {
-      await fulfillJson(route, [access, pendingAccess, revokedAccess])
+      await fulfillJson(route, [access, pendingAccess, revokedAccess, cancelledStaleAccess])
       return
     }
 
@@ -467,10 +501,14 @@ test('cabinet covers register, login, payments, subscription access and support'
 
   const blockedCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Заблокированный тариф' }) })
   const cancelledCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отменённый тариф' }) })
+  const cancelledStaleSubscriptionCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отменённый stale тариф' }) })
   await expect(blockedCard.getByText('Продление заблокировано. Обратитесь в поддержку.')).toBeVisible()
   await expect(cancelledCard.getByText('Отменённую подписку нельзя продлить. Оформите новый тариф.')).toBeVisible()
   await expect(blockedCard.getByRole('button', { name: 'Продлить' })).toHaveCount(0)
   await expect(cancelledCard.getByRole('button', { name: 'Продлить' })).toHaveCount(0)
+  await expect(cancelledStaleSubscriptionCard.getByText('Родительская подписка отменена. Ключ и QR-код больше недоступны.')).toBeVisible()
+  await expect(cancelledStaleSubscriptionCard.getByRole('button', { name: 'Показать QR-код' })).toHaveCount(0)
+  await expect(cancelledStaleSubscriptionCard.getByRole('button', { name: 'Скопировать ссылку' })).toHaveCount(0)
 
   const pendingAccessCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Ожидает выдачи' }) })
   await expect(pendingAccessCard.getByText('Ссылка ещё не выдана')).toBeVisible()
@@ -482,6 +520,14 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(revokedAccessCard.getByRole('button', { name: 'Скопировать ссылку' })).toHaveCount(0)
   await expect(page.getByText('vless://revoked-cabinet-secret@example.test')).toHaveCount(0)
   expect(api.getLastRequest('/api/cabinet/access/access-revoked/qr', 'GET')).toBeUndefined()
+
+  const cancelledStaleAccessCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отменённый stale доступ' }) })
+  await expect(cancelledStaleAccessCard.getByText('Родительская подписка отменена. Ключ и QR-код больше недоступны.')).toBeVisible()
+  await expect(cancelledStaleAccessCard.getByRole('button')).toHaveCount(0)
+  await expect(page.getByText('vless://cancelled-cabinet-stale-secret@example.test')).toHaveCount(0)
+  await expect(page.getByText('qr://cancelled-cabinet-stale-secret')).toHaveCount(0)
+  await expect(page.getByText('config://cancelled-cabinet-stale-secret')).toHaveCount(0)
+  expect(api.getLastRequest('/api/cabinet/access/access-cancelled-stale/qr', 'GET')).toBeUndefined()
 
   await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
   await expect(page.locator('.qr-preview').first()).toContainText('qr-e2e')

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { AccessCredentialDto, SubscriptionDto } from '../packages/api-client/src/index.ts'
-import { buildCabinetSummary, daysUntil, findAccessForSubscription, getAccessQrAvailability, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
+import { buildCabinetSummary, daysUntil, findAccessForSubscription, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
 
 function subscription(overrides: Partial<SubscriptionDto>): SubscriptionDto {
   return {
@@ -113,4 +113,27 @@ test('cabinet dashboard enables QR only after the access URI is issued', () => {
   const staleSubscription = subscription({ currentAccessId: revoked.id, accessUri: 'vless://revoked-secret' })
   assert.equal(findAccessForSubscription(staleSubscription, [revoked]), null)
   assert.equal(buildCabinetSummary([staleSubscription], [revoked]).hasConnectionLink, false)
+})
+
+test('cabinet treats stale active access of a cancelled subscription as terminal', () => {
+  const staleAccess = access({
+    id: 'access-cancelled',
+    subscriptionStatus: 'Cancelled',
+    isTerminal: true,
+    status: 'Active',
+    accessUri: 'vless://cancelled-stale-secret'
+  })
+  const cancelled = subscription({
+    status: 'Cancelled',
+    currentAccessId: staleAccess.id,
+    accessUri: 'vless://cancelled-stale-secret'
+  })
+
+  assert.equal(getCabinetAccessTerminalReason(staleAccess), 'Родительская подписка отменена. Ключ и QR-код больше недоступны.')
+  assert.deepEqual(getAccessQrAvailability(staleAccess), {
+    canGenerate: false,
+    reason: 'Родительская подписка отменена. Ключ и QR-код больше недоступны.'
+  })
+  assert.equal(findAccessForSubscription(cancelled, [staleAccess]), null)
+  assert.equal(buildCabinetSummary([cancelled], [staleAccess]).hasConnectionLink, false)
 })

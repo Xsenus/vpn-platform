@@ -23,7 +23,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
-import { buildCabinetSummary, getAccessQrAvailability, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
+import { buildCabinetSummary, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { buildOrderExportText, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -144,11 +144,11 @@ export function App() {
   const linkedCurrentAccess = cabinetSummary.currentSubscription?.currentAccessId
     ? accesses.find((access) => access.id === cabinetSummary.currentSubscription?.currentAccessId)
     : null
-  const currentAccessIsRevoked = linkedCurrentAccess?.status === 'Revoked'
-  const currentConnectionLink = currentAccessIsRevoked
+  const currentAccessTerminalReason = getCabinetAccessTerminalReason(linkedCurrentAccess ?? cabinetSummary.currentAccess, cabinetSummary.currentSubscription?.status)
+  const currentConnectionLink = currentAccessTerminalReason
     ? ''
     : cabinetSummary.currentAccess?.accessUri ?? cabinetSummary.currentSubscription?.accessUri ?? ''
-  const currentAccessId = currentAccessIsRevoked
+  const currentAccessId = currentAccessTerminalReason
     ? ''
     : cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
   const currentQrAvailability = getAccessQrAvailability(linkedCurrentAccess ?? cabinetSummary.currentAccess)
@@ -643,8 +643,8 @@ export function App() {
                       </div>
                       {currentAccessId && qrSvgs[currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[currentAccessId] }} />}
                     </>
-                  ) : currentAccessIsRevoked ? (
-                    <p className="safe-note" role="status">Доступ отозван. Ключ и QR-код больше недоступны.</p>
+                  ) : currentAccessTerminalReason ? (
+                    <p className="safe-note" role="status">{currentAccessTerminalReason}</p>
                   ) : (
                     <EmptyState title="Ключ ещё готовится" description="После подтверждения оплаты ссылка подключения и QR-код появятся здесь автоматически." />
                   )}
@@ -832,7 +832,8 @@ export function App() {
             const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
             const currentAccess = accesses.find((access) => access.id === subscription.currentAccessId)
             const qrAvailability = getAccessQrAvailability(currentAccess)
-            const isRevoked = currentAccess?.status === 'Revoked'
+            const terminalReason = getCabinetAccessTerminalReason(currentAccess, subscription.status)
+            const isTerminal = Boolean(terminalReason)
             return <div className="card" key={subscription.id}>
               <div className="card-head">
                 <div>
@@ -842,7 +843,7 @@ export function App() {
                 </div>
                 <StatusBadge value={subscription.status} />
               </div>
-              {subscription.accessUri && !isRevoked && (
+              {subscription.accessUri && !isTerminal && (
                 <>
                   <CodeBlock>{subscription.accessUri}</CodeBlock>
                   <div className="toolbar">
@@ -851,11 +852,11 @@ export function App() {
                   </div>
                 </>
               )}
-              {isRevoked && <p className="safe-note" role="status">Доступ отозван. Ключ и QR-код больше недоступны.</p>}
-              {!isRevoked && subscription.qrCodePath && <CodeBlock>QR-содержимое: {subscription.qrCodePath}</CodeBlock>}
-              {!isRevoked && subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[subscription.currentAccessId] }} />}
-              {!isRevoked && subscription.configPath && <p>Конфигурация: {subscription.configPath}</p>}
-              {!isRevoked && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый VLESS/Xray клиент. Если доступ требует проверки, дождитесь подтверждения администратора.</p>}
+              {isTerminal && <p className="safe-note" role="status">{terminalReason}</p>}
+              {!isTerminal && subscription.qrCodePath && <CodeBlock>QR-содержимое: {subscription.qrCodePath}</CodeBlock>}
+              {!isTerminal && subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[subscription.currentAccessId] }} />}
+              {!isTerminal && subscription.configPath && <p>Конфигурация: {subscription.configPath}</p>}
+              {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый VLESS/Xray клиент. Если доступ требует проверки, дождитесь подтверждения администратора.</p>}
               {renewalAvailability.canRenew ? (
                 <div className="toolbar">
                   <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRenew(subscription)}>Продлить</PrimaryButton>
@@ -874,7 +875,8 @@ export function App() {
         <div className="card-list">
           {accesses.map((access) => {
             const qrAvailability = getAccessQrAvailability(access)
-            const isRevoked = access.status === 'Revoked'
+            const terminalReason = getCabinetAccessTerminalReason(access)
+            const isTerminal = Boolean(terminalReason)
             return <Card key={access.id}>
               <div className="card-head">
                 <div>
@@ -883,15 +885,15 @@ export function App() {
                 </div>
                 <StatusBadge value={access.status} />
               </div>
-              {isRevoked
-                ? <p className="safe-note" role="status">Доступ отозван. Ключ и QR-код больше недоступны.</p>
+              {isTerminal
+                ? <p className="safe-note" role="status">{terminalReason}</p>
                 : access.accessUri ? <CodeBlock>{access.accessUri}</CodeBlock> : <EmptyState title="Ссылка ещё не выдана" description="Если оплата прошла, обратитесь в поддержку." />}
-              {!isRevoked && <div className="toolbar mt-12">
+              {!isTerminal && <div className="toolbar mt-12">
                 <CopyButton value={access.accessUri} label="Скопировать ссылку" />
                 <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
               </div>}
-              {!isRevoked && qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
-              {!isRevoked && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый Xray/VLESS клиент. Никому не пересылайте ключ.</p>}
+              {!isTerminal && qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
+              {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый Xray/VLESS клиент. Никому не пересылайте ключ.</p>}
             </Card>
           })}
         </div>
@@ -1094,7 +1096,8 @@ export function App() {
             {accesses.length === 0 && <EmptyState title="Доступы не выдавались" description="Когда подписка будет активирована, здесь появятся ключи и QR-коды." />}
             {accesses.map((access) => {
               const qrAvailability = getAccessQrAvailability(access)
-              const isRevoked = access.status === 'Revoked'
+              const terminalReason = getCabinetAccessTerminalReason(access)
+              const isTerminal = Boolean(terminalReason)
               return <div key={access.id} className="list-item-vertical">
                 <div className="card-head">
                   <div>
@@ -1103,16 +1106,16 @@ export function App() {
                   </div>
                   <StatusBadge value={access.status} />
                 </div>
-                {isRevoked
-                  ? <p className="safe-note" role="status">Доступ отозван. Ключ и QR-код больше недоступны.</p>
+                {isTerminal
+                  ? <p className="safe-note" role="status">{terminalReason}</p>
                   : access.accessUri ? <CodeBlock>{access.accessUri}</CodeBlock> : <EmptyState title="Ключ ещё не готов" description="Доступ появится после обработки оплаты или синхронизации." />}
-                {!isRevoked && access.qrCodePath && <CodeBlock>QR-содержимое: {access.qrCodePath}</CodeBlock>}
-                {!isRevoked && <div className="toolbar">
+                {!isTerminal && access.qrCodePath && <CodeBlock>QR-содержимое: {access.qrCodePath}</CodeBlock>}
+                {!isTerminal && <div className="toolbar">
                   <CopyButton value={access.accessUri} label="Скопировать ссылку" />
                   <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
                 </div>}
-                {!isRevoked && qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
-                {!isRevoked && <p className="muted">Подключение: импортируйте строку выше в VLESS/Xray клиент или используйте QR-код.</p>}
+                {!isTerminal && qrSvgs[access.id] && <div className="qr-preview" dangerouslySetInnerHTML={{ __html: qrSvgs[access.id] }} />}
+                {!isTerminal && <p className="muted">Подключение: импортируйте строку выше в VLESS/Xray клиент или используйте QR-код.</p>}
               </div>
             })}
           </div>

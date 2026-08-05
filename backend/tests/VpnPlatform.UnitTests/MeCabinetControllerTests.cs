@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Me;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
@@ -227,6 +228,133 @@ public class MeCabinetControllerTests
     }
 
     [Fact]
+    public async Task Cabinet_Should_Redact_Stale_Active_Access_Of_Cancelled_Subscription_And_Reject_All_Qr_Routes_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Cancelled stale", Slug = "cancelled-stale-access", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var node = new VpnNode { Id = Guid.NewGuid(), Name = "cancelled-node", Host = "cancelled.example.test", IpAddress = "192.0.2.31", Provider = "x3ui", Region = "eu", Country = "NL" };
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Cancelled,
+            StartAt = DateTimeOffset.UtcNow.AddDays(-30),
+            EndAt = DateTimeOffset.UtcNow,
+            CancelledAt = DateTimeOffset.UtcNow
+        };
+        var access = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "cancelled-provider-secret",
+            AccessUri = "vless://cancelled-stale-secret@example.test",
+            QrCodePath = "vless://cancelled-stale-qr-secret@example.test",
+            ConfigPath = "/configs/cancelled-stale-secret.json",
+            Status = AccessCredentialStatus.Active
+        };
+        db.Users.Add(User(userId, "cancelled-stale-access@example.test"));
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+        subscription.CurrentAccessId = access.Id;
+        await db.SaveChangesAsync();
+
+        var qrGenerator = new SvgQrCodeGenerator(new TestClock());
+        var meController = CreateController(db, userId, qrGenerator);
+        var subscriptions = AssertOkList(await meController.GetSubscriptions(CancellationToken.None));
+        var accesses = AssertOkList(await meController.GetAccesses(CancellationToken.None));
+        var subscriptionDto = Assert.Single(subscriptions);
+        var accessDto = Assert.Single(accesses);
+
+        Assert.Null(subscriptionDto.GetType().GetProperty("AccessUri")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath")!.GetValue(subscriptionDto));
+        Assert.Equal("Cancelled", Read<string>(accessDto, "SubscriptionStatus"));
+        Assert.True(Read<bool>(accessDto, "IsTerminal"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePayload"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePath"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "ConfigPath"));
+        Assert.IsType<BadRequestObjectResult>(await meController.GetAccessQr(access.Id, CancellationToken.None));
+
+        var cabinetController = new CabinetAccessController(db, qrGenerator)
+        {
+            ControllerContext = new ControllerContext { HttpContext = HttpContextForUser(userId) }
+        };
+        Assert.IsType<BadRequestObjectResult>(await cabinetController.GetAccessQr(access.Id, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("me")]
+    [InlineData("cabinet")]
+    public async Task Cabinet_Qr_Routes_Should_Wait_For_Subscription_Gate_And_Recheck_Cancelled_Status(string route)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "QR gate", Slug = $"qr-gate-{route}", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var node = new VpnNode { Id = Guid.NewGuid(), Name = "qr-gate-node", Host = "qr-gate.example.test", IpAddress = "192.0.2.32", Provider = "x3ui", Region = "eu", Country = "NL" };
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Active,
+            StartAt = DateTimeOffset.UtcNow.AddDays(-1),
+            EndAt = DateTimeOffset.UtcNow.AddDays(29)
+        };
+        var access = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = $"qr-gate-{route}",
+            AccessUri = $"vless://qr-gate-{route}@example.test",
+            Status = AccessCredentialStatus.Active
+        };
+        db.Users.Add(User(userId, $"qr-gate-{route}@example.test"));
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+
+        var qrGenerator = new SvgQrCodeGenerator(new TestClock());
+        var heldGate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscription.Id, CancellationToken.None);
+        var qrTask = route == "me"
+            ? CreateController(db, userId, qrGenerator).GetAccessQr(access.Id, CancellationToken.None)
+            : new CabinetAccessController(db, qrGenerator)
+            {
+                ControllerContext = new ControllerContext { HttpContext = HttpContextForUser(userId) }
+            }.GetAccessQr(access.Id, CancellationToken.None);
+
+        await Task.Delay(100);
+        var waitedForGate = !qrTask.IsCompleted;
+        subscription.Status = SubscriptionStatus.Cancelled;
+        subscription.CancelledAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+        await heldGate.DisposeAsync();
+
+        Assert.True(waitedForGate);
+        Assert.IsType<BadRequestObjectResult>(await qrTask);
+    }
+
+    [Fact]
     public async Task Cabinet_Should_Return_Empty_Subscriptions_And_Accesses_For_User_Without_Subscription_On_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -409,10 +537,10 @@ public class MeCabinetControllerTests
         return Assert.IsType<T>(property.GetValue(value));
     }
 
-    private static MeController CreateController(ApplicationDbContext db, Guid userId)
+    private static MeController CreateController(ApplicationDbContext db, Guid userId, SvgQrCodeGenerator? qrCodeGenerator = null)
     {
         var configuration = new ConfigurationBuilder().Build();
-        return new MeController(db, null!, null!, null!, null!, null!, configuration)
+        return new MeController(db, null!, null!, null!, null!, qrCodeGenerator!, configuration)
         {
             ControllerContext = new ControllerContext
             {

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -76,9 +77,9 @@ public class MeController : ControllerBase
                 x.Status.ToString(),
                 x.StartAt,
                 x.EndAt,
-                x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.AccessUri : null,
-                x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.QrCodePath : null,
-                x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.ConfigPath : null,
+                x.Status != SubscriptionStatus.Cancelled && x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.AccessUri : null,
+                x.Status != SubscriptionStatus.Cancelled && x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.QrCodePath : null,
+                x.Status != SubscriptionStatus.Cancelled && x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.ConfigPath : null,
                 x.CurrentServer != null ? x.CurrentServer.Name : null,
                 x.Tariff != null ? x.Tariff.Name : null,
                 x.GracePeriodEndAt,
@@ -497,14 +498,16 @@ public class MeController : ControllerBase
                 x.Id,
                 x.SubscriptionId,
                 UserId = x.Subscription != null ? x.Subscription.UserId : (Guid?)null,
+                SubscriptionStatus = x.Subscription != null ? x.Subscription.Status.ToString() : string.Empty,
+                IsTerminal = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled),
                 x.ProviderType,
-                ProviderAccessId = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.ProviderAccessId,
+                ProviderAccessId = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.ProviderAccessId,
                 x.ServerId,
                 ServerName = x.Server != null ? x.Server.Name : null,
-                AccessUri = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.AccessUri,
-                QrCodePayload = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.QrCodePath,
-                QrCodePath = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.QrCodePath,
-                ConfigPath = x.Status == AccessCredentialStatus.Revoked ? string.Empty : x.ConfigPath,
+                AccessUri = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.AccessUri,
+                QrCodePayload = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.QrCodePath,
+                QrCodePath = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.QrCodePath,
+                ConfigPath = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.ConfigPath,
                 Status = x.Status.ToString(),
                 x.IssuedAt,
                 ExpiryDate = x.Subscription != null ? x.Subscription.EndAt : (DateTimeOffset?)null,
@@ -523,6 +526,17 @@ public class MeController : ControllerBase
     public async Task<IActionResult> GetAccessQr(Guid id, CancellationToken cancellationToken)
     {
         var userId = ResolveUserId();
+        var subscriptionId = await _db.AccessCredentials
+            .AsNoTracking()
+            .Where(x => x.Id == id && x.Subscription != null && x.Subscription.UserId == userId)
+            .Select(x => (Guid?)x.SubscriptionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!subscriptionId.HasValue)
+        {
+            return NotFound(new { error = "VPN access not found." });
+        }
+
+        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
         var access = await _db.AccessCredentials
             .AsNoTracking()
             .Include(x => x.Subscription)
@@ -535,6 +549,11 @@ public class MeController : ControllerBase
         if (access.Status == AccessCredentialStatus.Revoked)
         {
             return BadRequest(new { error = "Revoked VPN access QR code is not available." });
+        }
+
+        if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
+        {
+            return BadRequest(new { error = "Cancelled subscription VPN access QR code is not available." });
         }
 
         if (string.IsNullOrWhiteSpace(access.AccessUri))

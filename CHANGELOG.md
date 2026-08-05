@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.501.0 - 2026-08-05
+
+Release entry: `2026-08-05-cancelled-subscription-cabinet-boundary`.
+
+### Исправлено
+
+- `/api/me/subscriptions` и `/api/me/accesses` теперь редактируют URI, provider ID, QR и config не только для `Revoked`, но и для stale credential с `Cancelled` parent; access DTO возвращает parent status и terminal marker.
+- Оба пользовательских QR route сериализованы через subscription lifecycle gate и повторно читают статус после ожидания, поэтому конкурентная отмена не может выдать QR по stale URI.
+- Cabinet helper и все повторяющиеся desktop/mobile представления подписок и доступов работают fail-closed, скрывают уже полученные secrets/QR и не отправляют terminal QR-запрос.
+
+### Проверено
+
+- Backend full suite `1021/1021`; targeted cabinet SQLite suite `13/13`, включая два lifecycle gate race regression.
+- Frontend `83/83`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошел; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `619` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `513/533` closed, readiness `96.2%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence все еще требуется.
+
 ## 0.500.0 - 2026-08-05
 
 Release entry: `2026-08-05-cancelled-subscription-access-boundary`.
