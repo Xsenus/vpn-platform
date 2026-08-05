@@ -13,6 +13,7 @@ public class User : AuditableEntity
     public string RolesCsv { get; set; } = "User";
     public UserStatus Status { get; set; } = UserStatus.New;
     public bool IsBlocked { get; set; }
+    public int SessionVersion { get; set; }
     public DateTimeOffset? LastLoginAt { get; set; }
     public string PreferredLanguage { get; set; } = "ru";
     public string ReferralCode { get; set; } = string.Empty;
@@ -37,6 +38,7 @@ public class User : AuditableEntity
 public class UserRefreshToken : AuditableEntity
 {
     public Guid UserId { get; set; }
+    public int SessionVersion { get; set; }
     public string TokenHash { get; set; } = string.Empty;
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }

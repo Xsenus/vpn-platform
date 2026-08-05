@@ -673,6 +673,7 @@ function AccountPage({
   token,
   profile,
   onAuthenticated,
+  onPasswordReset,
   onLogout,
   logoutBusy,
   sessionError,
@@ -686,6 +687,7 @@ function AccountPage({
   token: string
   profile: UserProfileDto | null
   onAuthenticated: (response: AuthResponse) => void
+  onPasswordReset: () => void
   onLogout: () => Promise<void>
   logoutBusy: boolean
   sessionError: string
@@ -751,6 +753,7 @@ function AccountPage({
     setError('')
     try {
       await api.resetPassword(resetToken, newPassword)
+      onPasswordReset()
       setNewPassword('')
       setResetMessage('Пароль изменён. Войдите с новым паролем.')
     } catch (e) {
@@ -1115,6 +1118,7 @@ export function App() {
               token={token}
               profile={profile}
               onAuthenticated={handleAuthenticated}
+              onPasswordReset={clearSession}
               onLogout={handleLogout}
               logoutBusy={logoutBusy}
               sessionError={sessionError}

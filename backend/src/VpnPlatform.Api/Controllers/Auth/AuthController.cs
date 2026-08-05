@@ -179,13 +179,22 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "user_not_active" });
         }
 
+        if (session.SessionVersion != user.SessionVersion)
+        {
+            session.RevokedAt = now;
+            session.RevokedByIp = ResolveIp();
+            session.RevocationReason = "session_version_mismatch";
+            await _db.SaveChangesAsync(cancellationToken);
+            return Unauthorized(new { error = "session_invalidated" });
+        }
+
         var rawRefreshToken = _tokenService.CreateRefreshToken();
         var newHash = HashToken(rawRefreshToken);
         session.RevokedAt = now;
         session.RevokedByIp = ResolveIp();
         session.RevocationReason = "rotated";
         session.ReplacedByTokenHash = newHash;
-        _db.UserRefreshTokens.Add(BuildRefreshToken(user.Id, rawRefreshToken));
+        _db.UserRefreshTokens.Add(BuildRefreshToken(user, rawRefreshToken));
         user.LastLoginAt = now;
         AddAudit("auth.refresh", "User", user.Id, null, new { sessionRotated = session.Id });
         await _db.SaveChangesAsync(cancellationToken);
@@ -257,6 +266,7 @@ public class AuthController : ControllerBase
         }
 
         user.PasswordHash = _passwordService.Hash(newPassword);
+        user.SessionVersion = checked(user.SessionVersion + 1);
         user.UpdatedAt = now;
         reset.UsedAt = now;
         await RevokeUserSessionsAsync(user.Id, "password_reset", cancellationToken);
@@ -268,7 +278,7 @@ public class AuthController : ControllerBase
     private async Task<AuthResponse> IssueAuthResponseAsync(User user, CancellationToken cancellationToken)
     {
         var refreshToken = _tokenService.CreateRefreshToken();
-        _db.UserRefreshTokens.Add(BuildRefreshToken(user.Id, refreshToken));
+        _db.UserRefreshTokens.Add(BuildRefreshToken(user, refreshToken));
         await Task.CompletedTask;
         return new AuthResponse(
             _tokenService.CreateAccessToken(user, UserRoles.Parse(user.RolesCsv)),
@@ -277,10 +287,11 @@ public class AuthController : ControllerBase
             user.DisplayName);
     }
 
-    private UserRefreshToken BuildRefreshToken(Guid userId, string rawToken)
+    private UserRefreshToken BuildRefreshToken(User user, string rawToken)
         => new()
         {
-            UserId = userId,
+            UserId = user.Id,
+            SessionVersion = user.SessionVersion,
             TokenHash = HashToken(rawToken),
             ExpiresAt = _clock.UtcNow.AddDays(GetInt("Auth:RefreshTokenDays", 30)),
             CreatedByIp = ResolveIp(),

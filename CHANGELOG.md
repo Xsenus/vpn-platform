@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.503.0 - 2026-08-05
+
+Release entry: `2026-08-05-versioned-auth-sessions`.
+
+### Исправлено
+
+- JWT содержит `session_version`, а refresh row сохраняет поколение пользовательской сессии; active-user validator и rotation отклоняют отсутствующую, устаревшую или несовпадающую версию.
+- Password reset, переход active-to-inactive, изменение ролей/пароля и восстановление администратора через bootstrap увеличивают версию и отзывают активные refresh-сессии, поэтому block/unblock и гонка rotation не возвращают старые полномочия.
+- Public и cabinet немедленно очищают access/refresh storage и загруженные приватные данные после успешной смены пароля.
+- Добавлены EF migration для PostgreSQL и idempotent repair колонок `SessionVersion` в локальной SQLite.
+
+### Проверено
+
+- Backend full suite `1030/1030`; targeted auth/admin/bootstrap/SQLite schema suite `32/32`.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `625` files, `0` findings.
+- `RoadmapCurrentStateTests` и release/documentation guards фиксируют `515/535` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.502.0 - 2026-08-05
 
 Release entry: `2026-08-05-active-user-session-boundary`.

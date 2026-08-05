@@ -76,7 +76,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 1027/1027.
+- Backend full suite: 1030/1030.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -89,7 +89,8 @@ git diff --check
 - Admin dashboard finance/support aggregates and payment/Telegram readiness checks are capability-redacted: OK.
 - Admin audit finance/support/Telegram actions, entity types and JSON payload are capability-scoped before user filters: OK.
 - VPN access enable/sync/reset caller cancellation and reset uncertainty persist safe audit/reconciliation state: OK.
-- Latest local release: `2026-08-05-active-user-session-boundary`, версия `0.502.0`.
+- Access/refresh `session_version`, password reset/admin invalidation and stale rotation rejection: OK.
+- Latest local release: `2026-08-05-versioned-auth-sessions`, версия `0.503.0`.
 - Frontend tests: 84/84.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

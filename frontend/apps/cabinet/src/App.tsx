@@ -384,6 +384,7 @@ export function App() {
     setNotice('')
     try {
       await api.resetPassword(resetToken, newPassword)
+      clearSession()
       setNewPassword('')
       setNotice('Пароль изменён. Войдите с новым паролем.')
     } catch (e) {

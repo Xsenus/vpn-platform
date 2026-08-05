@@ -11718,5 +11718,28 @@
         "text": "Roadmap progress is 514/534 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-05-versioned-auth-sessions",
+    "version": "0.503.0",
+    "releasedAt": "2026-08-05T08:51:40+07:00",
+    "title": "Смена пароля немедленно завершает старые сессии",
+    "summary": "Access- и refresh-токены теперь привязаны к версии пользовательской сессии, поэтому смена пароля, блокировка, изменение ролей или восстановление администратора не оставляют старые полномочия действующими.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Сброс пароля и административные изменения увеличивают версию сессии; старые JWT отклоняются на каждом API-запросе, а refresh-токены старой версии не могут восстановить доступ даже при гонке ротации."
+      },
+      {
+        "type": "fixed",
+        "text": "Публичный сайт и кабинет сразу удаляют browser-токены и загруженные приватные данные после успешной смены пароля; повторный вход выполняется уже с новым паролем."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 515/535 closed, readiness 96.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -49,6 +50,11 @@ public class AuthSessionControllerTests
         await db.SaveChangesAsync();
 
         Assert.True(await ActiveUserAccessValidator.IsActiveAsync(Principal(activeId.ToString()), db, CancellationToken.None));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal(activeId.ToString(), 1), db, CancellationToken.None));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(
+            new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, activeId.ToString())], "test")),
+            db,
+            CancellationToken.None));
         Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal(blockedId.ToString()), db, CancellationToken.None));
         Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal(suspendedId.ToString()), db, CancellationToken.None));
         Assert.False(await ActiveUserAccessValidator.IsActiveAsync(Principal(Guid.NewGuid().ToString()), db, CancellationToken.None));
@@ -105,6 +111,8 @@ public class AuthSessionControllerTests
         Assert.Equal("session@example.test", loginResponse.Email);
         Assert.False(string.IsNullOrWhiteSpace(loginResponse.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(loginResponse.RefreshToken));
+        var accessToken = new JwtSecurityTokenHandler().ReadJwtToken(loginResponse.AccessToken);
+        Assert.Equal("0", accessToken.Claims.Single(x => x.Type == "session_version").Value);
         Assert.Single(await db.UserRefreshTokens.Where(x => x.RevokedAt == null).ToListAsync());
         Assert.DoesNotContain(loginResponse.RefreshToken, JsonSerializer.Serialize(await db.UserRefreshTokens.ToListAsync()), StringComparison.Ordinal);
         Assert.NotNull((await db.Users.SingleAsync(x => x.Email == "session@example.test")).LastLoginAt);
@@ -132,6 +140,40 @@ public class AuthSessionControllerTests
 
         var emptyRefresh = await controller.Refresh(null!, CancellationToken.None);
         AssertUnauthorizedError(emptyRefresh, "invalid_refresh_token");
+    }
+
+    [Fact]
+    public async Task Refresh_Should_Reject_Session_Created_Before_Session_Version_Change()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var password = "CorrectPassword123!";
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "versioned-refresh@example.test",
+            DisplayName = "Versioned Refresh",
+            PasswordHash = new PasswordService().Hash(password),
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "versioned-refresh"
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateAuthController(db);
+        var login = await controller.Login(new LoginRequest("versioned-refresh@example.test", password), CancellationToken.None);
+        var response = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(login).Value);
+        var user = await db.Users.SingleAsync();
+        user.SessionVersion++;
+        await db.SaveChangesAsync();
+
+        var refresh = await controller.Refresh(new RefreshTokenRequest(response.RefreshToken), CancellationToken.None);
+
+        AssertUnauthorizedError(refresh, "session_invalidated");
+        var session = await db.UserRefreshTokens.SingleAsync();
+        Assert.NotNull(session.RevokedAt);
+        Assert.Equal("session_version_mismatch", session.RevocationReason);
     }
 
     private static void AssertUnauthorizedError(IActionResult result, string expectedError)
@@ -167,8 +209,13 @@ public class AuthSessionControllerTests
         return new ApplicationDbContext(options);
     }
 
-    private static ClaimsPrincipal Principal(string subject)
-        => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, subject)], "test"));
+    private static ClaimsPrincipal Principal(string subject, int sessionVersion = 0)
+        => new(new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.NameIdentifier, subject),
+                new Claim(AuthClaimTypes.SessionVersion, sessionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            ],
+            "test"));
 
     private static string FindRepositoryRoot()
     {

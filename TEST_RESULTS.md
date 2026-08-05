@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: versioned auth sessions
+
+Scope:
+- Проверены отзыв старых JWT/refresh-сессий после password reset, block/unblock, role change и admin bootstrap, защита от гонки refresh rotation, миграция PostgreSQL/repair SQLite и немедленная очистка browser state после смены пароля.
+
+Results:
+- Roadmap progress: `515/535` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-versioned-auth-sessions`, version `0.503.0`.
+- Backend full suite: OK, `1030/1030`; targeted auth/admin/bootstrap/SQLite schema suite: OK, `32/32`.
+- Access JWT and refresh rows carry `session_version`; stale or missing JWT versions and stale refresh generations fail closed.
+- Password reset, active-to-inactive admin patch and bootstrap identity changes increment the user version and revoke active refresh sessions.
+- Existing pre-release JWT without `session_version` requires refresh/relogin; a valid generation-0 refresh can issue a versioned JWT unless the account has been invalidated.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`; public/cabinet reset password clears tokens and sensitive state without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `625` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: active user session boundary
 
 Scope:

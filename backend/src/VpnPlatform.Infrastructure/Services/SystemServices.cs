@@ -88,6 +88,11 @@ public sealed class AdminBootstrapService
             return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: true, ExistingPasswordReset: true);
         }
 
+        var shouldInvalidateSessions = admin.IsBlocked
+            || admin.Status != UserStatus.Active
+            || !string.Equals(admin.RolesCsv, rolesCsv, StringComparison.Ordinal)
+            || options.ResetExistingPassword;
+
         admin.RolesCsv = rolesCsv;
         admin.Status = UserStatus.Active;
         admin.IsBlocked = false;
@@ -96,6 +101,21 @@ public sealed class AdminBootstrapService
         if (options.ResetExistingPassword)
         {
             admin.PasswordHash = _passwordService.Hash(options.Password);
+        }
+
+        if (shouldInvalidateSessions)
+        {
+            var now = DateTimeOffset.UtcNow;
+            admin.SessionVersion = checked(admin.SessionVersion + 1);
+            var sessions = await db.UserRefreshTokens
+                .Where(x => x.UserId == admin.Id && x.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var session in sessions)
+            {
+                session.RevokedAt = now;
+                session.RevocationReason = "admin_bootstrap_session_invalidated";
+                session.UpdatedAt = now;
+            }
         }
 
         return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: false, ExistingPasswordReset: options.ResetExistingPassword);

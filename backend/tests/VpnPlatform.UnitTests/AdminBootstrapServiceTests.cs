@@ -46,15 +46,25 @@ public class AdminBootstrapServiceTests
         await using var db = CreateDb();
         var passwordService = new PasswordService();
         var originalHash = passwordService.Hash("OldAdminPassword123!");
+        var adminId = Guid.NewGuid();
         db.Users.Add(new User
         {
+            Id = adminId,
             Email = "admin@example.test",
             DisplayName = "Old Admin",
             PasswordHash = originalHash,
             RolesCsv = UserRoles.User,
             Status = UserStatus.Suspended,
             IsBlocked = true,
+            SessionVersion = 3,
             ReferralCode = "ADMOLD"
+        });
+        db.UserRefreshTokens.Add(new UserRefreshToken
+        {
+            UserId = adminId,
+            TokenHash = "bootstrap-suspended-session",
+            SessionVersion = 3,
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(30)
         });
         await db.SaveChangesAsync();
 
@@ -78,6 +88,10 @@ public class AdminBootstrapServiceTests
         Assert.Equal(originalHash, admin.PasswordHash);
         Assert.True(passwordService.Verify("OldAdminPassword123!", admin.PasswordHash));
         Assert.False(passwordService.Verify("NewAdminPassword123!", admin.PasswordHash));
+        Assert.Equal(4, admin.SessionVersion);
+        var session = await db.UserRefreshTokens.SingleAsync();
+        Assert.NotNull(session.RevokedAt);
+        Assert.Equal("admin_bootstrap_session_invalidated", session.RevocationReason);
     }
 
     [Fact]
@@ -85,14 +99,22 @@ public class AdminBootstrapServiceTests
     {
         await using var db = CreateDb();
         var passwordService = new PasswordService();
+        var adminId = Guid.NewGuid();
         db.Users.Add(new User
         {
+            Id = adminId,
             Email = "admin@example.test",
             DisplayName = "Admin",
             PasswordHash = passwordService.Hash("OldAdminPassword123!"),
             RolesCsv = UserRoles.Admin,
             Status = UserStatus.Active,
             ReferralCode = "ADMREF"
+        });
+        db.UserRefreshTokens.Add(new UserRefreshToken
+        {
+            UserId = adminId,
+            TokenHash = "bootstrap-active-session",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(30)
         });
         await db.SaveChangesAsync();
 
@@ -112,6 +134,10 @@ public class AdminBootstrapServiceTests
         Assert.True(result.ExistingPasswordReset);
         Assert.True(passwordService.Verify("NewAdminPassword123!", admin.PasswordHash));
         Assert.False(passwordService.Verify("OldAdminPassword123!", admin.PasswordHash));
+        Assert.Equal(1, admin.SessionVersion);
+        var session = await db.UserRefreshTokens.SingleAsync();
+        Assert.NotNull(session.RevokedAt);
+        Assert.Equal("admin_bootstrap_session_invalidated", session.RevocationReason);
     }
 
     [Fact]

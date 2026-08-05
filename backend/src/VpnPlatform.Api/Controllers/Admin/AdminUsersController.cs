@@ -298,12 +298,19 @@ public class AdminUsersController : ControllerBase
         }
 
         var before = MapUser(user);
+        var wasActive = !user.IsBlocked && user.Status == UserStatus.Active;
         var now = DateTimeOffset.UtcNow;
         if (nextDisplayName is not null) user.DisplayName = nextDisplayName;
         if (nextIsBlocked.HasValue) user.IsBlocked = nextIsBlocked.Value;
         if (nextStatus.HasValue) user.Status = nextStatus.Value;
+        var isActive = !user.IsBlocked && user.Status == UserStatus.Active;
 
-        if (user.IsBlocked || user.Status != UserStatus.Active)
+        if (wasActive && !isActive)
+        {
+            user.SessionVersion = checked(user.SessionVersion + 1);
+        }
+
+        if (!isActive)
         {
             var sessions = await _db.UserRefreshTokens
                 .Where(x => x.UserId == user.Id && x.RevokedAt == null)

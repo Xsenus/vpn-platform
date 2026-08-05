@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Api.Security;
@@ -20,13 +21,22 @@ public static class ActiveUserAccessValidator
     public static async Task<bool> IsActiveAsync(ClaimsPrincipal? principal, IApplicationDbContext db, CancellationToken cancellationToken)
     {
         var subject = principal?.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal?.FindFirstValue("sub");
-        if (!Guid.TryParse(subject, out var userId) || userId == Guid.Empty)
+        var sessionVersionValue = principal?.FindFirstValue(AuthClaimTypes.SessionVersion);
+        if (!Guid.TryParse(subject, out var userId)
+            || userId == Guid.Empty
+            || !int.TryParse(sessionVersionValue, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var sessionVersion)
+            || sessionVersion < 0)
         {
             return false;
         }
 
         return await db.Users
             .AsNoTracking()
-            .AnyAsync(x => x.Id == userId && !x.IsBlocked && x.Status == UserStatus.Active, cancellationToken);
+            .AnyAsync(
+                x => x.Id == userId
+                    && !x.IsBlocked
+                    && x.Status == UserStatus.Active
+                    && x.SessionVersion == sessionVersion,
+                cancellationToken);
     }
 }

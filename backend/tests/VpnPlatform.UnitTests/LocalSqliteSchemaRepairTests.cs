@@ -10,6 +10,36 @@ namespace VpnPlatform.UnitTests;
 public class LocalSqliteSchemaRepairTests
 {
     [Fact]
+    public async Task ApplyAsync_Should_Add_Missing_User_SessionVersion_To_Existing_Local_Sqlite_Db()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "Users" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "Email" TEXT NULL
+            );
+            CREATE TABLE "UserRefreshTokens" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "UserId" TEXT NOT NULL,
+                "TokenHash" TEXT NOT NULL
+            );
+            """);
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+
+        Assert.Equal(2, repaired);
+        Assert.True(await ColumnExistsAsync(connection, "Users", "SessionVersion"));
+        Assert.True(await ColumnExistsAsync(connection, "UserRefreshTokens", "SessionVersion"));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+    }
+
+    [Fact]
     public async Task ApplyAsync_Should_Add_Missing_PaymentProvider_WebhookUrl_To_Existing_Local_Sqlite_Db()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

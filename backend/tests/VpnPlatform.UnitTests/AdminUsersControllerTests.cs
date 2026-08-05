@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
+using VpnPlatform.Api.Security;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
@@ -116,6 +117,7 @@ public class AdminUsersControllerTests
         Assert.Equal("After", updated.DisplayName);
         Assert.True(updated.IsBlocked);
         Assert.Equal(UserStatus.Suspended, updated.Status);
+        Assert.Equal(1, updated.SessionVersion);
         var session = await db.UserRefreshTokens.SingleAsync(x => x.UserId == userId);
         Assert.NotNull(session.RevokedAt);
         Assert.Equal("admin_user_deactivated", session.RevocationReason);
@@ -123,6 +125,42 @@ public class AdminUsersControllerTests
         Assert.Equal(userId.ToString(), audit.EntityId);
         Assert.NotEqual(audit.BeforeJson, audit.AfterJson);
         Assert.DoesNotContain("secret-hash", audit.BeforeJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Block_Then_Unblock_Should_Not_Reactivate_PreBlock_Access_Token()
+    {
+        await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = userId,
+            Email = "session-version@example.test",
+            DisplayName = "Session Version",
+            PasswordHash = "hash",
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "SESSION-VERSION"
+        });
+        await db.SaveChangesAsync();
+        var oldAccessPrincipal = new ClaimsPrincipal(new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim("session_version", "0")
+            ],
+            "test"));
+        var controller = new AdminUsersController(db);
+
+        using (var blockPayload = JsonDocument.Parse("{\"isBlocked\":true,\"status\":\"Suspended\"}"))
+        {
+            Assert.IsType<OkObjectResult>(await controller.Patch(userId, blockPayload.RootElement, CancellationToken.None));
+        }
+        using (var unblockPayload = JsonDocument.Parse("{\"isBlocked\":false,\"status\":\"Active\"}"))
+        {
+            Assert.IsType<OkObjectResult>(await controller.Patch(userId, unblockPayload.RootElement, CancellationToken.None));
+        }
+
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(oldAccessPrincipal, db, CancellationToken.None));
     }
 
     [Theory]

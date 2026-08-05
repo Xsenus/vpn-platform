@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -6,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Contracts;
 using VpnPlatform.Api.Controllers.Auth;
+using VpnPlatform.Api.Security;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
@@ -79,10 +82,21 @@ public class AuthPasswordResetControllerTests
         Assert.NotNull(storedReset.UsedAt);
         Assert.Empty(await db.UserRefreshTokens.Where(x => x.RevokedAt == null).ToListAsync());
         Assert.All(await db.UserRefreshTokens.ToListAsync(), session => Assert.Equal("password_reset", session.RevocationReason));
-        Assert.True(passwordService.Verify(newPassword, (await db.Users.SingleAsync()).PasswordHash));
+        var resetUser = await db.Users.SingleAsync();
+        Assert.True(passwordService.Verify(newPassword, resetUser.PasswordHash));
+        Assert.Equal(1, resetUser.SessionVersion);
+        var oldAccessPrincipal = new ClaimsPrincipal(new ClaimsIdentity(
+            new JwtSecurityTokenHandler().ReadJwtToken(loginBeforeResetResponse.AccessToken).Claims,
+            "test"));
+        Assert.False(await ActiveUserAccessValidator.IsActiveAsync(oldAccessPrincipal, db, CancellationToken.None));
 
         AssertUnauthorizedError(await controller.Login(new LoginRequest("reset-flow@example.test", oldPassword), CancellationToken.None), "invalid_credentials");
         var loginAfterReset = await controller.Login(new LoginRequest("reset-flow@example.test", newPassword), CancellationToken.None);
+        var loginAfterResetResponse = Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(loginAfterReset).Value);
+        var newAccessPrincipal = new ClaimsPrincipal(new ClaimsIdentity(
+            new JwtSecurityTokenHandler().ReadJwtToken(loginAfterResetResponse.AccessToken).Claims,
+            "test"));
+        Assert.True(await ActiveUserAccessValidator.IsActiveAsync(newAccessPrincipal, db, CancellationToken.None));
         Assert.IsType<AuthResponse>(Assert.IsType<OkObjectResult>(loginAfterReset).Value);
 
         AssertBadRequestError(

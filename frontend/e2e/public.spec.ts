@@ -158,6 +158,18 @@ async function mockPublicApi(page: Page) {
     })
   })
 
+  await page.route('**/api/auth/forgot-password', async (route) => {
+    await fulfillJson(route, {
+      accepted: true,
+      message: 'If the account exists, a password reset instruction has been queued for the configured delivery channel.',
+      validationResetToken: 'public-reset-token'
+    })
+  })
+
+  await page.route('**/api/auth/reset-password', async (route) => {
+    await fulfillJson(route, { status: 'password_changed' })
+  })
+
   await page.route('**/api/auth/refresh', async (route) => {
     if (route.request().method() === 'OPTIONS') {
       await route.fulfill({ status: 204, headers: corsHeaders })
@@ -290,9 +302,25 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
     refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
   }))).toEqual({ access: null, refresh: null })
 
+  const resetCard = page.getByRole('heading', { name: 'Сброс пароля' }).locator('..')
+  await page.evaluate(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'stale-public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'stale-public-refresh-token')
+  })
+  await resetCard.getByLabel('Email').fill('public@example.test')
+  await resetCard.getByRole('button', { name: 'Запросить код' }).click()
+  await resetCard.getByRole('textbox', { name: 'Новый пароль', exact: true }).fill('ChangedPassword123!')
+  await resetCard.getByRole('button', { name: 'Изменить пароль' }).click()
+  await expect(page.getByText('Пароль изменён. Войдите с новым паролем.')).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Вход' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-public-token'),
+    refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+
   await page.getByRole('tab', { name: 'Вход' }).click()
   await authPanel.getByLabel('Email').fill('public@example.test')
-  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('ChangedPassword123!')
   await authPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText('Public E2E').first()).toBeVisible()
   api.failLogout()

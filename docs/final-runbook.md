@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-05 локально подтверждено:
 
-- backend full suite: 1027/1027;
+- backend full suite: 1030/1030;
 - frontend tests: 84/84;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -199,9 +199,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Admin dashboard consistency: finance/support aggregates и payment/Telegram readiness checks вычисляются только при соответствующих capabilities; frontend скрывает недоступные метрики и действия.
 - Admin audit scope: finance/support/Telegram записи и JSON payload фильтруются по capabilities до Action/EntityType/Search; frontend показывает только разрешенные категории.
 - VPN access lifecycle: enable/sync/reset пробрасывают caller cancellation после durable history/audit; enable/reset uncertainty сохраняется как `SyncRequired` для ручной сверки.
+- Auth session lifecycle: access JWT и refresh rows содержат `session_version`; password reset, деактивация и изменяющий полномочия admin bootstrap повышают версию и отзывают старые refresh-сессии. JWT без claim после обновления требует refresh/relogin.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-05-active-user-session-boundary`, версия `0.502.0`.
-- roadmap progress: `514/534` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-05-versioned-auth-sessions`, версия `0.503.0`.
+- roadmap progress: `515/535` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

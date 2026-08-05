@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 
 namespace VpnPlatform.Infrastructure.Auth;
@@ -29,7 +30,8 @@ public class JwtTokenService : ITokenService
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new("name", user.DisplayName),
-            new("preferred_language", user.PreferredLanguage)
+            new("preferred_language", user.PreferredLanguage),
+            new(AuthClaimTypes.SessionVersion, user.SessionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture))
         };
 
         claims.AddRange(roles.Select(x => new Claim(ClaimTypes.Role, x)));

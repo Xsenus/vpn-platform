@@ -14,6 +14,24 @@ public static class LocalSqliteSchemaRepair
         }
 
         var repaired = 0;
+        if (await TableExistsAsync(db, "Users", cancellationToken)
+            && !await ColumnExistsAsync(db, "Users", "SessionVersion", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Users" ADD COLUMN "SessionVersion" INTEGER NOT NULL DEFAULT 0;""",
+                cancellationToken);
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "UserRefreshTokens", cancellationToken)
+            && !await ColumnExistsAsync(db, "UserRefreshTokens", "SessionVersion", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "UserRefreshTokens" ADD COLUMN "SessionVersion" INTEGER NOT NULL DEFAULT 0;""",
+                cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "PaymentProviderAccounts", cancellationToken)
             && !await ColumnExistsAsync(db, "PaymentProviderAccounts", "WebhookUrl", cancellationToken))
         {

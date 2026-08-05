@@ -316,6 +316,20 @@ async function mockCabinetApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/auth/forgot-password') {
+      await fulfillJson(route, {
+        accepted: true,
+        message: 'If the account exists, a password reset instruction has been queued for the configured delivery channel.',
+        validationResetToken: 'cabinet-reset-token'
+      })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/auth/reset-password') {
+      await fulfillJson(route, { status: 'password_changed' })
+      return
+    }
+
     if (method === 'POST' && path === '/api/auth/logout') {
       await fulfillJson(route, logoutShouldFail ? { error: 'logout unavailable' } : { status: 'ok' }, logoutShouldFail ? 503 : 200)
       return
@@ -608,6 +622,24 @@ test('cabinet covers register, login, payments, subscription access and support'
   const reloginPanel = page.locator('#cabinet-auth-panel')
   await reloginPanel.getByLabel('Email').fill(user.email)
   await reloginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await reloginPanel.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  const resetCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Сброс пароля' }) })
+  await resetCard.getByLabel('Email').fill(user.email)
+  await resetCard.getByRole('button', { name: 'Запросить код' }).click()
+  await resetCard.getByRole('textbox', { name: 'Новый пароль', exact: true }).fill('ChangedPassword123!')
+  await resetCard.getByRole('button', { name: 'Сохранить пароль' }).click()
+  await expect(page.getByText('Пароль изменён. Войдите с новым паролем.')).toBeVisible()
+  await expect(page.getByRole('tabpanel', { name: 'Вход' })).toBeVisible()
+  await expect(page.getByText('vless://cabinet-e2e@example.com:443', { exact: false })).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+
+  await reloginPanel.getByLabel('Email').fill(user.email)
+  await reloginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('ChangedPassword123!')
   await reloginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
 

@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-05 локально подтверждено:
 
-- backend на .NET 9: `1027/1027` unit tests;
+- backend на .NET 9: `1030/1030` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `84/84`;
 - frontend typecheck и production build: OK;
@@ -249,7 +249,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - dashboard редактирует финансовые и support-агрегаты по backend policy, readiness не возвращает недоступные payment/Telegram checks, а UI не показывает скрытые метрики и переходы partial roles;
 - журнал аудита применяет finance/support/Telegram scope до пользовательских фильтров и не возвращает partial role чужие actions, entity types или JSON payload;
 - VPN access enable/sync/reset пробрасывают caller cancellation после durable audit/history; enable/reset и неопределенный reset failure переводят доступ в `SyncRequired` для ручной сверки;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-active-user-session-boundary`, версия `0.502.0`;
-- roadmap progress: `514/534` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- access JWT и refresh-токены привязаны к `session_version`; password reset, деактивация и admin bootstrap с изменением полномочий отзывают старые поколения, а public/cabinet очищают browser state после смены пароля;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-05-versioned-auth-sessions`, версия `0.503.0`;
+- roadmap progress: `515/535` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
