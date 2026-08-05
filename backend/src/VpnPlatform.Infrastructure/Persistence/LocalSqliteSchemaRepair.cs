@@ -77,6 +77,44 @@ public static class LocalSqliteSchemaRepair
             repaired++;
         }
 
+        if (await TableExistsAsync(db, "PasswordResetTokens", cancellationToken)
+            && !await ColumnExistsAsync(db, "PasswordResetTokens", "Generation", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "PasswordResetTokens" ADD COLUMN "Generation" INTEGER NOT NULL DEFAULT 0;""",
+                cancellationToken);
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "Users", cancellationToken)
+            && !await TableExistsAsync(db, "PasswordResetStates", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE "PasswordResetStates" (
+                    "Id" TEXT NOT NULL CONSTRAINT "PK_PasswordResetStates" PRIMARY KEY,
+                    "UserId" TEXT NOT NULL,
+                    "Generation" INTEGER NOT NULL DEFAULT 0,
+                    "Revision" INTEGER NOT NULL DEFAULT 0,
+                    "CreatedAt" TEXT NOT NULL,
+                    "UpdatedAt" TEXT NOT NULL,
+                    CONSTRAINT "FK_PasswordResetStates_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+                );
+                CREATE UNIQUE INDEX "IX_PasswordResetStates_UserId" ON "PasswordResetStates" ("UserId");
+                """,
+                cancellationToken);
+            repaired++;
+        }
+
+        if (await TableExistsAsync(db, "PasswordResetStates", cancellationToken)
+            && !await IndexExistsAsync(db, "IX_PasswordResetStates_UserId", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """CREATE UNIQUE INDEX "IX_PasswordResetStates_UserId" ON "PasswordResetStates" ("UserId");""",
+                cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "PaymentProviderAccounts", cancellationToken)
             && !await ColumnExistsAsync(db, "PaymentProviderAccounts", "WebhookUrl", cancellationToken))
         {

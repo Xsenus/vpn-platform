@@ -8,6 +8,7 @@ public interface IApplicationDbContext
     DbSet<User> Users { get; }
     DbSet<UserRefreshToken> UserRefreshTokens { get; }
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
+    DbSet<PasswordResetState> PasswordResetStates { get; }
     DbSet<ChannelProfile> ChannelProfiles { get; }
     DbSet<Tariff> Tariffs { get; }
     DbSet<PromoCode> PromoCodes { get; }

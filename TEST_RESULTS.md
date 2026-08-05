@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-05.
 
+## Check 2026-08-05: password reset generation boundary
+
+Scope:
+- Проверены sequential reissue, два конкурентных `forgot-password`, stale reset против новой выдачи, legacy generation 0, admin bootstrap invalidation, PostgreSQL migration и local SQLite repair.
+
+Results:
+- Roadmap progress: `520/540` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-05-password-reset-generation-boundary`, version `0.507.0`.
+- Backend full suite: OK, `1039/1039`; targeted auth/bootstrap/SQLite schema suite: OK, `31/31`.
+- Reissue invalidates the previous code with `password_reset_reissued`; only the latest state generation can change the password.
+- File-backed SQLite races prove retry after concurrent first-state insert and full rollback of a stale reset when a newer request commits first.
+- Explicit admin bootstrap password reset advances generation and invalidates outstanding codes; role/unblock-only bootstrap preserves them.
+- Frontend tests: OK, `84/84`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Playwright desktop/mobile/all-screens responsive suite: OK, `16/16`, without console errors/overflow.
+- Local SQLite smoke: OK; fresh sandbox checkout completed webhook, subscription and `vless://` VPN access.
+- API/TelegramBot Release builds: OK, `0` warnings, `0` errors; EF pending model changes: none.
+- Secret scan: OK, `631` files, `0` findings.
+- Artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui checks were not available; no external roadmap marker was closed.
+
 ## Check 2026-08-05: registration email race boundary
 
 Scope:

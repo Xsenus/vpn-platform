@@ -76,7 +76,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 1036/1036.
+- Backend full suite: 1039/1039.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -94,7 +94,8 @@ git diff --check
 - Password reset sibling invalidation, explicit lifecycle reason and optimistic concurrency: OK.
 - Cabinet auth hydration is single-flight for new and restored sessions under `React.StrictMode`: OK.
 - Registration email unique race returns a controlled duplicate response without partial auth state; unrelated DB failures are not masked: OK.
-- Latest local release: `2026-08-05-registration-email-race-boundary`, версия `0.506.0`.
+- Password reset newest-generation-only boundary covers sequential reissue, concurrent issue/reset and explicit bootstrap password changes: OK.
+- Latest local release: `2026-08-05-password-reset-generation-boundary`, версия `0.507.0`.
 - Frontend tests: 84/84.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

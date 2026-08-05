@@ -66,6 +66,19 @@ public class AdminBootstrapServiceTests
             SessionVersion = 3,
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(30)
         });
+        db.PasswordResetStates.Add(new PasswordResetState
+        {
+            UserId = adminId,
+            Generation = 4,
+            Revision = 2
+        });
+        db.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            UserId = adminId,
+            Generation = 4,
+            TokenHash = "bootstrap-reset-token",
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(30)
+        });
         await db.SaveChangesAsync();
 
         var service = new AdminBootstrapService(passwordService);
@@ -89,6 +102,8 @@ public class AdminBootstrapServiceTests
         Assert.True(passwordService.Verify("OldAdminPassword123!", admin.PasswordHash));
         Assert.False(passwordService.Verify("NewAdminPassword123!", admin.PasswordHash));
         Assert.Equal(4, admin.SessionVersion);
+        Assert.Equal(4, (await db.PasswordResetStates.SingleAsync()).Generation);
+        Assert.Null((await db.PasswordResetTokens.SingleAsync()).InvalidatedAt);
         var session = await db.UserRefreshTokens.SingleAsync();
         Assert.NotNull(session.RevokedAt);
         Assert.Equal("admin_bootstrap_session_invalidated", session.RevocationReason);
@@ -116,6 +131,19 @@ public class AdminBootstrapServiceTests
             TokenHash = "bootstrap-active-session",
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(30)
         });
+        db.PasswordResetStates.Add(new PasswordResetState
+        {
+            UserId = adminId,
+            Generation = 4,
+            Revision = 2
+        });
+        db.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            UserId = adminId,
+            Generation = 4,
+            TokenHash = "bootstrap-active-reset-token",
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(30)
+        });
         await db.SaveChangesAsync();
 
         var service = new AdminBootstrapService(passwordService);
@@ -135,6 +163,13 @@ public class AdminBootstrapServiceTests
         Assert.True(passwordService.Verify("NewAdminPassword123!", admin.PasswordHash));
         Assert.False(passwordService.Verify("OldAdminPassword123!", admin.PasswordHash));
         Assert.Equal(1, admin.SessionVersion);
+        var resetState = await db.PasswordResetStates.SingleAsync();
+        Assert.Equal(5, resetState.Generation);
+        Assert.Equal(3, resetState.Revision);
+        var resetToken = await db.PasswordResetTokens.SingleAsync();
+        Assert.NotNull(resetToken.InvalidatedAt);
+        Assert.Equal("admin_bootstrap_password_reset", resetToken.InvalidationReason);
+        Assert.Equal(1, resetToken.Revision);
         var session = await db.UserRefreshTokens.SingleAsync();
         Assert.NotNull(session.RevokedAt);
         Assert.Equal("admin_bootstrap_session_invalidated", session.RevocationReason);

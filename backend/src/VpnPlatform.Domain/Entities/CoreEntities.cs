@@ -57,6 +57,7 @@ public class UserRefreshToken : AuditableEntity
 public class PasswordResetToken : AuditableEntity
 {
     public Guid UserId { get; set; }
+    public int Generation { get; set; }
     public string TokenHash { get; set; } = string.Empty;
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? UsedAt { get; set; }
@@ -65,6 +66,15 @@ public class PasswordResetToken : AuditableEntity
     public int Revision { get; set; }
     public string RequestedByIp { get; set; } = string.Empty;
     public string UserAgent { get; set; } = string.Empty;
+
+    public User? User { get; set; }
+}
+
+public class PasswordResetState : AuditableEntity
+{
+    public Guid UserId { get; set; }
+    public int Generation { get; set; }
+    public int Revision { get; set; }
 
     public User? User { get; set; }
 }

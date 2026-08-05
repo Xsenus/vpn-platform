@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1036/1036", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-05-registration-email-race-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1039/1039", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-05-password-reset-generation-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1036/1036",
-                     "2026-08-05-registration-email-race-boundary",
-                     "0.506.0",
+                     "1039/1039",
+                     "2026-08-05-password-reset-generation-boundary",
+                     "0.507.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,17 +104,17 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-registration-email-race-boundary",
-                     "0.506.0",
-                     "519/539",
+                     "2026-08-05-password-reset-generation-boundary",
+                     "0.507.0",
+                     "520/540",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1036/1036`",
+                     "Backend full suite: OK, `1039/1039`",
                      "Local SQLite smoke: OK",
-                     "Secret scan: OK, `629` files, `0` findings",
+                     "Secret scan: OK, `631` files, `0` findings",
                      "Artifact cleanup: OK",
                      "external evidence remains open",
                      "real VPS/staging/live evidence remains open"
@@ -154,9 +154,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-05-registration-email-race-boundary",
-                     "0.506.0",
-                     "519/539",
+                     "2026-08-05-password-reset-generation-boundary",
+                     "0.507.0",
+                     "520/540",
                      "96.3%",
                      "20",
                      "19",
@@ -166,9 +166,9 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1036/1036`",
+                     "backend full suite `1039/1039`",
                      "PostgreSQL SQL",
-                     "secret scan `629` files, `0` findings"
+                     "secret scan `631` files, `0` findings"
                  })
         {
             Assert.Contains(expected, changelog, StringComparison.OrdinalIgnoreCase);

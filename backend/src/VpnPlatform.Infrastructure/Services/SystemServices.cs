@@ -100,7 +100,30 @@ public sealed class AdminBootstrapService
 
         if (options.ResetExistingPassword)
         {
+            var now = DateTimeOffset.UtcNow;
             admin.PasswordHash = _passwordService.Hash(options.Password);
+            var resetState = await db.PasswordResetStates.FirstOrDefaultAsync(x => x.UserId == admin.Id, cancellationToken);
+            if (resetState is null)
+            {
+                db.PasswordResetStates.Add(new PasswordResetState { UserId = admin.Id, Generation = 1 });
+            }
+            else
+            {
+                resetState.Generation = checked(resetState.Generation + 1);
+                resetState.Revision = checked(resetState.Revision + 1);
+                resetState.UpdatedAt = now;
+            }
+
+            var resetTokens = await db.PasswordResetTokens
+                .Where(x => x.UserId == admin.Id && x.UsedAt == null && x.InvalidatedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var resetToken in resetTokens)
+            {
+                resetToken.InvalidatedAt = now;
+                resetToken.InvalidationReason = "admin_bootstrap_password_reset";
+                resetToken.Revision = checked(resetToken.Revision + 1);
+                resetToken.UpdatedAt = now;
+            }
         }
 
         if (shouldInvalidateSessions)

@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<PasswordResetState> PasswordResetStates => Set<PasswordResetState>();
     public DbSet<ChannelProfile> ChannelProfiles => Set<ChannelProfile>();
     public DbSet<Tariff> Tariffs => Set<Tariff>();
     public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
@@ -78,6 +79,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<PasswordResetToken>().HasIndex(x => new { x.UserId, x.ExpiresAt });
         modelBuilder.Entity<PasswordResetToken>().Property(x => x.Revision).IsConcurrencyToken();
+        modelBuilder.Entity<PasswordResetState>().HasIndex(x => x.UserId).IsUnique();
+        modelBuilder.Entity<PasswordResetState>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<ChannelProfile>().HasIndex(x => new { x.ProviderType, x.ExternalUserId }).IsUnique();
         modelBuilder.Entity<Tariff>().HasIndex(x => x.Slug).IsUnique();
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.IsActive, x.ShowOnFaqPage, x.SortOrder });
@@ -146,6 +149,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<PasswordResetToken>()
+            .HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PasswordResetState>()
             .HasOne(x => x.User)
             .WithMany()
             .HasForeignKey(x => x.UserId)

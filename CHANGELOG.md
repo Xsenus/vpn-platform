@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.507.0 - 2026-08-05
+
+Release entry: `2026-08-05-password-reset-generation-boundary`.
+
+### Исправлено
+
+- Повторный запрос сброса пароля немедленно закрывает ранее выданный код с причиной `password_reset_reissued`; действителен только код последней generation.
+- Отдельный `PasswordResetState` с optimistic `Revision` сериализует конкурентные выдачи между API-инстансами без добавления concurrency-конфликтов в обычные login/profile операции.
+- Гонка stale reset против нового `forgot-password` завершается fail-closed: новый запрос сохраняется, старый код не меняет пароль и не помечается использованным.
+- Явный admin bootstrap password reset повышает generation и инвалидирует outstanding reset tokens; изменение ролей/разблокировка без смены пароля их не закрывает.
+- Добавлены PostgreSQL migration и idempotent local SQLite repair для state table и token generation.
+
+### Проверено
+
+- Backend full suite `1039/1039`; targeted auth/bootstrap/SQLite schema suite `31/31`, включая две file-backed cross-context гонки.
+- Frontend `84/84`, typecheck/build OK; Playwright desktop/mobile/all-screens responsive suite `16/16` без неожиданных console errors/overflow.
+- Fresh local SQLite checkout с webhook, подпиской и VPN-доступом прошёл; API/TelegramBot Release builds `0` warnings/`0` errors, EF pending model changes отсутствуют.
+- Dependency audit `0 vulnerabilities`, secret scan `631` files, `0` findings.
+- Roadmap status: `520/540` closed, readiness `96.3%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Статус остается `staging-ready baseline`, not production-ready: real VPS/staging/payment/3x-ui evidence всё ещё требуется.
+
 ## 0.506.0 - 2026-08-05
 
 Release entry: `2026-08-05-registration-email-race-boundary`.

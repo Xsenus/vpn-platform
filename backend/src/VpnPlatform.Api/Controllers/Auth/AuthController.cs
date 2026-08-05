@@ -237,33 +237,90 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = NormalizeEmail(request?.Email);
-        var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
-        string? validationToken = null;
-
-        if (user is not null && !user.IsBlocked && user.Status == UserStatus.Active)
+        const int maxAttempts = 5;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
+            if (user is null || user.IsBlocked || user.Status != UserStatus.Active)
+            {
+                return AcceptedForgotPasswordResponse(null);
+            }
+
+            var now = _clock.UtcNow;
+            var state = await _db.PasswordResetStates.FirstOrDefaultAsync(x => x.UserId == user.Id, cancellationToken);
+            if (state is null)
+            {
+                state = new PasswordResetState { UserId = user.Id, Generation = 1 };
+                _db.PasswordResetStates.Add(state);
+            }
+            else
+            {
+                state.Generation = checked(state.Generation + 1);
+                state.Revision = checked(state.Revision + 1);
+                state.UpdatedAt = now;
+            }
+
+            var supersededTokens = await _db.PasswordResetTokens
+                .Where(x => x.UserId == user.Id && x.UsedAt == null && x.InvalidatedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var superseded in supersededTokens)
+            {
+                superseded.InvalidatedAt = now;
+                superseded.InvalidationReason = "password_reset_reissued";
+                superseded.Revision = checked(superseded.Revision + 1);
+                superseded.UpdatedAt = now;
+            }
+
             var rawToken = _tokenService.CreateRefreshToken();
-            validationToken = _configuration.GetValue<bool>("Auth:PasswordReset:ReturnTokenForValidation") ? rawToken : null;
             var resetToken = new PasswordResetToken
             {
                 UserId = user.Id,
+                Generation = state.Generation,
                 TokenHash = HashToken(rawToken),
-                ExpiresAt = _clock.UtcNow.AddMinutes(GetInt("Auth:PasswordReset:ExpiryMinutes", 30)),
+                ExpiresAt = now.AddMinutes(GetInt("Auth:PasswordReset:ExpiryMinutes", 30)),
                 RequestedByIp = ResolveIp(),
                 UserAgent = Request.Headers.UserAgent.ToString()
             };
             _db.PasswordResetTokens.Add(resetToken);
+            var returnValidationToken = _configuration.GetValue<bool>("Auth:PasswordReset:ReturnTokenForValidation");
             _db.OutboxMessages.Add(new OutboxMessage
             {
                 Type = "password_reset_requested",
                 CorrelationId = resetToken.Id.ToString("N"),
-                PayloadJson = JsonSerializer.Serialize(new { userId = user.Id, email = user.Email, validationTokenReturned = validationToken is not null })
+                PayloadJson = JsonSerializer.Serialize(new { userId = user.Id, email = user.Email, validationTokenReturned = returnValidationToken })
             });
-            AddAudit("auth.password_reset_requested", "User", user.Id, null, new { email = normalizedEmail, validationTokenReturned = validationToken is not null });
+            AddAudit("auth.password_reset_requested", "User", user.Id, null, new
+            {
+                email = normalizedEmail,
+                generation = state.Generation,
+                supersededTokens = supersededTokens.Count,
+                validationTokenReturned = returnValidationToken
+            });
+
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+                return AcceptedForgotPasswordResponse(returnValidationToken ? rawToken : null);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ClearChangeTracker();
+                if (attempt == maxAttempts - 1)
+                {
+                    return AcceptedForgotPasswordResponse(null);
+                }
+            }
+            catch (DbUpdateException ex) when (IsPasswordResetStateUniqueConstraintViolation(ex))
+            {
+                ClearChangeTracker();
+                if (attempt == maxAttempts - 1)
+                {
+                    return AcceptedForgotPasswordResponse(null);
+                }
+            }
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new ForgotPasswordResponse(true, "If the account exists, a password reset instruction has been queued for the configured delivery channel.", validationToken));
+        return AcceptedForgotPasswordResponse(null);
     }
 
     [HttpPost("reset-password")]
@@ -291,6 +348,12 @@ public class AuthController : ControllerBase
             return BadRequest(new { error = "invalid_or_expired_reset_token" });
         }
 
+        var resetState = await _db.PasswordResetStates.FirstOrDefaultAsync(x => x.UserId == user.Id, cancellationToken);
+        if (reset.Generation != (resetState?.Generation ?? 0))
+        {
+            return BadRequest(new { error = "invalid_or_expired_reset_token" });
+        }
+
         user.PasswordHash = _passwordService.Hash(newPassword);
         user.SessionVersion = checked(user.SessionVersion + 1);
         user.UpdatedAt = now;
@@ -310,6 +373,20 @@ public class AuthController : ControllerBase
             sibling.Revision = checked(sibling.Revision + 1);
             sibling.UpdatedAt = now;
         }
+        if (resetState is null)
+        {
+            _db.PasswordResetStates.Add(new PasswordResetState
+            {
+                UserId = user.Id,
+                Generation = 1
+            });
+        }
+        else
+        {
+            resetState.Generation = checked(resetState.Generation + 1);
+            resetState.Revision = checked(resetState.Revision + 1);
+            resetState.UpdatedAt = now;
+        }
         await RevokeUserSessionsAsync(user.Id, "password_reset", cancellationToken);
         AddAudit("auth.password_reset_completed", "User", user.Id, null, new { resetTokenId = reset.Id, siblingTokensInvalidated = siblingTokens.Count });
         try
@@ -318,10 +395,12 @@ public class AuthController : ControllerBase
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (_db is DbContext dbContext)
-            {
-                dbContext.ChangeTracker.Clear();
-            }
+            ClearChangeTracker();
+            return BadRequest(new { error = "invalid_or_expired_reset_token" });
+        }
+        catch (DbUpdateException ex) when (IsPasswordResetStateUniqueConstraintViolation(ex))
+        {
+            ClearChangeTracker();
             return BadRequest(new { error = "invalid_or_expired_reset_token" });
         }
         return Ok(new { status = "password_changed" });
@@ -431,6 +510,36 @@ public class AuthController : ControllerBase
         }
 
         return false;
+    }
+
+    private static bool IsPasswordResetStateUniqueConstraintViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            var constraintName = current.GetType().GetProperty("ConstraintName")?.GetValue(current)?.ToString();
+            if (string.Equals(constraintName, "IX_PasswordResetStates_UserId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("IX_PasswordResetStates_UserId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("PasswordResetStates.UserId", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private IActionResult AcceptedForgotPasswordResponse(string? validationToken)
+        => Ok(new ForgotPasswordResponse(
+            true,
+            "If the account exists, a password reset instruction has been queued for the configured delivery channel.",
+            validationToken));
+
+    private void ClearChangeTracker()
+    {
+        if (_db is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
     }
 
     private void AddAudit(string action, string entityType, Guid entityId, object? before, object after)

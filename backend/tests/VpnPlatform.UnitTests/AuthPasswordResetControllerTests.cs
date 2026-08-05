@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -161,6 +163,44 @@ public class AuthPasswordResetControllerTests
     }
 
     [Fact]
+    public async Task Reissued_Reset_Token_Should_Invalidate_Previous_Code_Before_Use()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var passwordService = new PasswordService();
+        db.Users.Add(new User
+        {
+            Email = "reissued-reset@example.test",
+            DisplayName = "Reissued Reset",
+            PasswordHash = passwordService.Hash("InitialPassword123!"),
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "reissued-reset"
+        });
+        await db.SaveChangesAsync();
+        var controller = CreateAuthController(db, new TestClock(new DateTimeOffset(2026, 8, 5, 3, 0, 0, TimeSpan.Zero)));
+
+        var first = Assert.IsType<ForgotPasswordResponse>(Assert.IsType<OkObjectResult>(
+            await controller.ForgotPassword(new ForgotPasswordRequest("reissued-reset@example.test"), CancellationToken.None)).Value);
+        var second = Assert.IsType<ForgotPasswordResponse>(Assert.IsType<OkObjectResult>(
+            await controller.ForgotPassword(new ForgotPasswordRequest("reissued-reset@example.test"), CancellationToken.None)).Value);
+
+        AssertBadRequestError(
+            await controller.ResetPassword(new ResetPasswordRequest(first.ValidationResetToken!, "CompromisedPassword123!"), CancellationToken.None),
+            "invalid_or_expired_reset_token");
+        Assert.IsType<OkObjectResult>(await controller.ResetPassword(
+            new ResetPasswordRequest(second.ValidationResetToken!, "NewestPassword123!"),
+            CancellationToken.None));
+        Assert.True(passwordService.Verify("NewestPassword123!", (await db.Users.SingleAsync()).PasswordHash));
+        Assert.Equal(3, (await db.PasswordResetStates.SingleAsync()).Generation);
+        var invalidated = Assert.Single(await db.PasswordResetTokens.Where(x => x.InvalidatedAt != null).ToListAsync());
+        Assert.Equal("password_reset_reissued", invalidated.InvalidationReason);
+        Assert.Equal(1, invalidated.Revision);
+    }
+
+    [Fact]
     public async Task Successful_Reset_Should_Invalidate_Other_Outstanding_Tokens()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -184,6 +224,11 @@ public class AuthPasswordResetControllerTests
             await controller.ForgotPassword(new ForgotPasswordRequest("multiple-reset@example.test"), CancellationToken.None)).Value);
         var second = Assert.IsType<ForgotPasswordResponse>(Assert.IsType<OkObjectResult>(
             await controller.ForgotPassword(new ForgotPasswordRequest("multiple-reset@example.test"), CancellationToken.None)).Value);
+        var legacySibling = await db.PasswordResetTokens.SingleAsync(x => x.InvalidatedAt != null);
+        legacySibling.InvalidatedAt = null;
+        legacySibling.InvalidationReason = string.Empty;
+        legacySibling.Revision = 0;
+        await db.SaveChangesAsync();
 
         Assert.IsType<OkObjectResult>(await controller.ResetPassword(
             new ResetPasswordRequest(second.ValidationResetToken!, "SecondPassword123!"),
@@ -201,6 +246,144 @@ public class AuthPasswordResetControllerTests
         Assert.Equal(1, invalidatedToken.Revision);
         var usedToken = Assert.Single(tokens, x => x.UsedAt is not null);
         Assert.Equal(1, usedToken.Revision);
+    }
+
+    [Fact]
+    public async Task Concurrent_Forgot_Password_Should_Retry_With_Newer_Generation()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-password-reset-generation-{Guid.NewGuid():N}.db");
+        try
+        {
+            var connectionString = $"Data Source={databasePath};Default Timeout=30;Pooling=False";
+            var baseOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            var userId = Guid.NewGuid();
+            await using (var setup = new ApplicationDbContext(baseOptions))
+            {
+                await setup.Database.EnsureCreatedAsync();
+                setup.Users.Add(new User
+                {
+                    Id = userId,
+                    Email = "concurrent-forgot@example.test",
+                    DisplayName = "Concurrent Forgot",
+                    PasswordHash = new PasswordService().Hash("InitialPassword123!"),
+                    RolesCsv = UserRoles.User,
+                    Status = UserStatus.Active,
+                    ReferralCode = "concurrent-forgot"
+                });
+                await setup.SaveChangesAsync();
+            }
+
+            var clock = new TestClock(new DateTimeOffset(2026, 8, 5, 3, 15, 0, TimeSpan.Zero));
+            var raceOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            await using var db = new ConcurrentForgotPasswordDbContext(raceOptions, baseOptions, userId, clock.UtcNow);
+            var controller = CreateAuthController(db, clock);
+
+            var action = await controller.ForgotPassword(
+                new ForgotPasswordRequest("concurrent-forgot@example.test"),
+                CancellationToken.None);
+
+            var response = Assert.IsType<ForgotPasswordResponse>(Assert.IsType<OkObjectResult>(action).Value);
+            Assert.False(string.IsNullOrWhiteSpace(response.ValidationResetToken));
+            await using var verify = new ApplicationDbContext(baseOptions);
+            var state = await verify.PasswordResetStates.AsNoTracking().SingleAsync();
+            Assert.Equal(2, state.Generation);
+            Assert.Equal(1, state.Revision);
+            var tokens = await verify.PasswordResetTokens.AsNoTracking().OrderBy(x => x.Generation).ToListAsync();
+            Assert.Equal(2, tokens.Count);
+            Assert.Equal("password_reset_reissued", tokens[0].InvalidationReason);
+            Assert.NotNull(tokens[0].InvalidatedAt);
+            Assert.Equal(1, tokens[0].Revision);
+            Assert.Equal(2, tokens[1].Generation);
+            Assert.Null(tokens[1].InvalidatedAt);
+            Assert.Equal(HashToken(response.ValidationResetToken!), tokens[1].TokenHash);
+            Assert.Equal(2, await verify.OutboxMessages.CountAsync(x => x.Type == "password_reset_requested"));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Concurrent_Reissue_Should_Prevent_Stale_Reset_Commit()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-password-reset-reissue-{Guid.NewGuid():N}.db");
+        try
+        {
+            var connectionString = $"Data Source={databasePath};Default Timeout=30;Pooling=False";
+            var baseOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            var userId = Guid.NewGuid();
+            var oldPassword = "InitialPassword123!";
+            var passwordService = new PasswordService();
+            var now = new DateTimeOffset(2026, 8, 5, 3, 30, 0, TimeSpan.Zero);
+            await using (var setup = new ApplicationDbContext(baseOptions))
+            {
+                await setup.Database.EnsureCreatedAsync();
+                setup.Users.Add(new User
+                {
+                    Id = userId,
+                    Email = "reset-reissue-race@example.test",
+                    DisplayName = "Reset Reissue Race",
+                    PasswordHash = passwordService.Hash(oldPassword),
+                    RolesCsv = UserRoles.User,
+                    Status = UserStatus.Active,
+                    ReferralCode = "reset-reissue-race"
+                });
+                setup.PasswordResetStates.Add(new PasswordResetState { UserId = userId, Generation = 1 });
+                setup.PasswordResetTokens.Add(new PasswordResetToken
+                {
+                    UserId = userId,
+                    Generation = 1,
+                    TokenHash = HashToken("stale-reset-token"),
+                    ExpiresAt = now.AddMinutes(30)
+                });
+                await setup.SaveChangesAsync();
+            }
+
+            var raceOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            await using var db = new ConcurrentResetReissueDbContext(raceOptions, baseOptions, userId, now);
+            var controller = CreateAuthController(db, new TestClock(now));
+
+            var action = await controller.ResetPassword(
+                new ResetPasswordRequest("stale-reset-token", "CompromisedPassword123!"),
+                CancellationToken.None);
+
+            AssertBadRequestError(action, "invalid_or_expired_reset_token");
+            await using var verify = new ApplicationDbContext(baseOptions);
+            var user = await verify.Users.AsNoTracking().SingleAsync();
+            Assert.True(passwordService.Verify(oldPassword, user.PasswordHash));
+            Assert.False(passwordService.Verify("CompromisedPassword123!", user.PasswordHash));
+            var state = await verify.PasswordResetStates.AsNoTracking().SingleAsync();
+            Assert.Equal(2, state.Generation);
+            Assert.Equal(1, state.Revision);
+            var tokens = await verify.PasswordResetTokens.AsNoTracking().OrderBy(x => x.Generation).ToListAsync();
+            Assert.Equal(2, tokens.Count);
+            Assert.NotNull(tokens[0].InvalidatedAt);
+            Assert.Null(tokens[0].UsedAt);
+            Assert.Equal("password_reset_reissued", tokens[0].InvalidationReason);
+            Assert.Null(tokens[1].InvalidatedAt);
+            Assert.Equal(2, tokens[1].Generation);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
     }
 
     [Fact]
@@ -297,10 +480,95 @@ public class AuthPasswordResetControllerTests
         return new ApplicationDbContext(options);
     }
 
+    private static string HashToken(string token)
+        => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim())));
+
     private sealed class TestClock(DateTimeOffset utcNow) : IClock
     {
         public DateTimeOffset UtcNow { get; private set; } = utcNow;
 
         public void Advance(TimeSpan value) => UtcNow = UtcNow.Add(value);
+    }
+
+    private sealed class ConcurrentForgotPasswordDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        DbContextOptions<ApplicationDbContext> competitorOptions,
+        Guid userId,
+        DateTimeOffset now) : ApplicationDbContext(options)
+    {
+        private int _inserted;
+
+        public override async Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _inserted, 1) == 0)
+            {
+                await using var competitor = new ApplicationDbContext(competitorOptions);
+                var resetToken = new PasswordResetToken
+                {
+                    UserId = userId,
+                    Generation = 1,
+                    TokenHash = HashToken("competitor-reset-token"),
+                    ExpiresAt = now.AddMinutes(30)
+                };
+                competitor.PasswordResetStates.Add(new PasswordResetState { UserId = userId, Generation = 1 });
+                competitor.PasswordResetTokens.Add(resetToken);
+                competitor.OutboxMessages.Add(new OutboxMessage
+                {
+                    Type = "password_reset_requested",
+                    CorrelationId = resetToken.Id.ToString("N"),
+                    PayloadJson = "{}"
+                });
+                await competitor.SaveChangesAsync(cancellationToken);
+            }
+
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+    }
+
+    private sealed class ConcurrentResetReissueDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        DbContextOptions<ApplicationDbContext> competitorOptions,
+        Guid userId,
+        DateTimeOffset now) : ApplicationDbContext(options)
+    {
+        private int _inserted;
+
+        public override async Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _inserted, 1) == 0)
+            {
+                await using var competitor = new ApplicationDbContext(competitorOptions);
+                var state = await competitor.PasswordResetStates.SingleAsync(x => x.UserId == userId, cancellationToken);
+                state.Generation = checked(state.Generation + 1);
+                state.Revision = checked(state.Revision + 1);
+                state.UpdatedAt = now;
+                var previousToken = await competitor.PasswordResetTokens.SingleAsync(x => x.UserId == userId, cancellationToken);
+                previousToken.InvalidatedAt = now;
+                previousToken.InvalidationReason = "password_reset_reissued";
+                previousToken.Revision = checked(previousToken.Revision + 1);
+                previousToken.UpdatedAt = now;
+                var nextToken = new PasswordResetToken
+                {
+                    UserId = userId,
+                    Generation = state.Generation,
+                    TokenHash = HashToken("newer-reset-token"),
+                    ExpiresAt = now.AddMinutes(30)
+                };
+                competitor.PasswordResetTokens.Add(nextToken);
+                competitor.OutboxMessages.Add(new OutboxMessage
+                {
+                    Type = "password_reset_requested",
+                    CorrelationId = nextToken.Id.ToString("N"),
+                    PayloadJson = "{}"
+                });
+                await competitor.SaveChangesAsync(cancellationToken);
+            }
+
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
     }
 }
