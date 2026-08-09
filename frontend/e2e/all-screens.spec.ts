@@ -95,6 +95,9 @@ const subscription = {
   currentAccessId: 'access-all-screens',
   lastPaymentId: 'payment-all-screens',
   renewalCount: 0,
+  blockReason: null,
+  suspendedAt: null,
+  cancelledAt: null,
   accessUri: 'vless://all-screens@example.test:443#all-screens',
   qrCodePath: 'qr://all-screens',
   configPath: 'config://all-screens',
@@ -112,7 +115,7 @@ const order = {
   tariffName: tariff.name,
   amount: 490,
   currency: 'RUB',
-  status: 'Paid',
+  status: 'Completed',
   type: 'NewSubscription',
   channel: 'Web',
   paymentProvider: 'YooKassa',
@@ -138,6 +141,8 @@ const payment = {
   paymentProviderAccountId: 'provider-yookassa',
   providerMode: 'Sandbox',
   providerPaymentId: 'yk-all-screens',
+  externalEventId: '',
+  idempotencyKey: null,
   confirmationUrl: 'https://pay.example.test/all-screens',
   returnUrl: 'http://127.0.0.1:5294',
   amount: 490,
@@ -145,7 +150,14 @@ const payment = {
   status: 'Succeeded',
   signatureValidated: true,
   isActivationProcessed: true,
+  activationProcessedAt: '2026-06-14T08:00:00Z',
   paidAt: '2026-06-14T08:00:00Z',
+  failedAt: null,
+  refundedAt: null,
+  refundedAmount: 0,
+  statusReason: null,
+  webhookEventsCount: 1,
+  refundsCount: 0,
   refundSupported: true,
   canRefund: false,
   refundableAmount: 0,
@@ -157,6 +169,8 @@ const payment = {
 const access = {
   id: 'access-all-screens',
   subscriptionId: subscription.id,
+  subscriptionStatus: 'Active',
+  isTerminal: false,
   userId: user.id,
   providerType: 'X3UI',
   providerAccessId: 'x3ui-all-screens',
@@ -348,12 +362,25 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path.startsWith('/api/me/support/conversations')) {
-      await fulfillJson(route, path.endsWith('/messages') ? [] : [{ id: 'support-all-screens', subject: 'Smoke support', status: 'Open', createdAt: now, updatedAt: now }])
+      await fulfillJson(route, path.endsWith('/messages') ? [] : [{
+        id: 'support-all-screens',
+        userId: user.id,
+        telegramUserId: null,
+        channel: 'web',
+        status: 'open',
+        subject: 'Smoke support',
+        assignedToUserId: null,
+        internalNote: '',
+        revision: 0,
+        closedAt: null,
+        createdAt: now,
+        updatedAt: now
+      }])
       return
     }
 
     if (method === 'GET' && path === '/api/me/telegram/status') {
-      await fulfillJson(route, { isLinked: false, telegramUserId: null, username: null })
+      await fulfillJson(route, { isLinked: false, telegramUserId: null, username: null, linkedAt: null })
       return
     }
 

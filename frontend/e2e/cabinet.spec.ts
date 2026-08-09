@@ -32,6 +32,9 @@ const subscription = {
   currentAccessId: 'access-active',
   lastPaymentId: 'payment-paid',
   renewalCount: 0,
+  blockReason: null,
+  suspendedAt: null,
+  cancelledAt: null,
   accessUri: 'vless://cabinet-e2e@example.com:443?security=reality#cabinet-e2e',
   qrCodePath: 'qr://cabinet-e2e',
   configPath: 'config://cabinet-e2e',
@@ -88,7 +91,7 @@ const paidOrder = {
   tariffName: subscription.tariffName,
   amount: 490,
   currency: 'RUB',
-  status: 'Paid',
+  status: 'Completed',
   type: 'NewSubscription',
   channel: 'Web',
   paymentProvider: 'YooKassa',
@@ -280,6 +283,7 @@ async function mockCabinetApi(page: Page) {
   let authorizedRequestsRejected = false
   let rejectedAuthorizedPath: string | null = null
   let unsafeQrSvg = false
+  let invalidSubscriptionsResponse = false
   let renewalOrder = {
     ...paidOrder,
     id: 'order-renewal',
@@ -370,7 +374,7 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/subscriptions') {
-      await fulfillJson(route, [subscription, blockedSubscription, cancelledSubscription, cancelledStaleSubscription])
+      await fulfillJson(route, invalidSubscriptionsResponse ? [{}] : [subscription, blockedSubscription, cancelledSubscription, cancelledStaleSubscription])
       return
     }
 
@@ -405,7 +409,7 @@ async function mockCabinetApi(page: Page) {
         id: 'support-created',
         userId: user.id,
         telegramUserId: null,
-        channel: 'Web',
+        channel: 'web',
         status: 'open',
         subject: payload.subject,
         assignedToUserId: null,
@@ -523,6 +527,7 @@ async function mockCabinetApi(page: Page) {
     rejectAuthorizedRequests: () => { authorizedRequestsRejected = true },
     allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
+    returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     rejectNextAuthorizedPath: (path: string) => { rejectedAuthorizedPath = path },
     getRequestCount: (path: string, method = 'GET') =>
       requests.filter((item) => item.method === method && new URL(item.url).pathname === path).length,
@@ -742,6 +747,13 @@ test('cabinet covers register, login, payments, subscription access and support'
   await reloginPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
   await reloginPanel.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  api.returnInvalidSubscriptionsResponse()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Личный кабинет', exact: true })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await expect(page.getByText(user.email, { exact: true })).toHaveCount(0)
+  await expect(page.getByText('vless://cabinet-e2e@example.com:443', { exact: false })).toHaveCount(0)
 
   api.failLogout()
   await page.getByRole('button', { name: 'Выйти' }).click()

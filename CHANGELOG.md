@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.530.0 - 2026-08-09
+
+Release entry: `2026-08-09-cabinet-api-dto-validation`.
+
+### Исправлено
+
+- Личный кабинет больше не принимает синтаксически корректные, но неполные DTO профиля, подписок, заказов, платежей, VPN-доступов, рефералов, поддержки и Telegram как доверенные данные.
+- Runtime-контракты проверяют обязательные поля, даты, числовые значения, backend enum и уникальные `id`; несовместимый ответ завершается controlled `ApiClientError` `502` без raw payload до передачи данных в React.
+- Та же проверка применяется к ответам создания заказа и обращения, загрузки отдельного платежа, ответа в поддержку и отвязки Telegram.
+- Независимые cabinet/all-screens browser fixtures приведены к реальным backend-контрактам, включая `Completed`, lower-case support channel/status и полные payment/access projections.
+
+### Проверено
+
+- Frontend `98/98`, включая malformed DTO всех bootstrap-коллекций и связанных операций; typecheck и production build всех трех приложений.
+- Malformed cabinet bootstrap regression desktop/mobile `2/2`: видимый error-state, без старого email/VPN URI и без `pageerror`.
+- Полный public/cabinet/admin/all-screens/mobile/console responsive suite `18/18`; dependency audit `0 vulnerabilities`.
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует; fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; secret scan `649` files/`0` findings.
+- `RoadmapCurrentStateTests` и release/documentation/UTF-8 guards подтверждают latest `2026-08-09-cabinet-api-dto-validation`, версию `0.530.0` и roadmap `543/563`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.529.0 - 2026-08-09
 
 Release entry: `2026-08-09-public-api-dto-validation`.

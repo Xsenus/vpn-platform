@@ -329,7 +329,27 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'order-1', userId: 'user-1', tariffId: 'tariff-1', amount: 490, currency: 'RUB', status: 'PendingPayment', expiresAt: new Date().toISOString() }), {
+    const timestamp = new Date().toISOString()
+    return new Response(JSON.stringify({
+      id: 'order-1',
+      userId: 'user-1',
+      tariffId: 'tariff-1',
+      tariffName: null,
+      amount: 490,
+      currency: 'RUB',
+      status: 'PendingPayment',
+      type: 'NewSubscription',
+      channel: 'Web',
+      paymentProvider: 'YooKassa',
+      checkoutSessionId: null,
+      expiresAt: timestamp,
+      paidAt: null,
+      isFirstPurchase: false,
+      paymentAttemptsCount: 0,
+      linkedSubscriptionId: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -374,8 +394,8 @@ test('ApiClient.initMyPayment calls tokenized endpoint', async () => {
 
 test('ApiClient cabinet support endpoints are tokenized and link order context', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
-  const conversation = { id: 'support-1', userId: 'user-1', channel: 'web', status: 'open', subject: 'Оплата', internalNote: 'Связано: заказ order-1.', revision: 4, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  const message = { id: 'message-1', supportConversationId: 'support-1', userId: 'user-1', direction: 'inbound', text: 'Нужна помощь', attachmentsJson: '[]', isInternalNote: false, createdAt: new Date().toISOString() }
+  const conversation = { id: 'support-1', userId: 'user-1', telegramUserId: null, channel: 'web', status: 'open', subject: 'Оплата', assignedToUserId: null, internalNote: 'Связано: заказ order-1.', revision: 4, closedAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  const message = { id: 'message-1', supportConversationId: 'support-1', userId: 'user-1', telegramUserId: null, direction: 'inbound', text: 'Нужна помощь', attachmentsJson: '[]', isInternalNote: false, createdAt: new Date().toISOString() }
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     const path = String(url)
@@ -1129,6 +1149,20 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
     new Response('[{"provider":"YooKassa","publicName":"First","mode":"Sandbox","healthStatus":"Healthy"},{"provider":"YooKassa","publicName":"Second","mode":"Production","healthStatus":"Healthy"}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json', 'Content-Length': '10000001' } }),
     new Response('provider failure', { status: 503, headers: { 'Content-Type': 'text/plain', 'Content-Length': '64001' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/vnd.vpn-platform+json' } })
   ]
   globalThis.fetch = (async () => responses.shift()!) as typeof fetch
@@ -1190,6 +1224,31 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
     () => client.getTariffs(),
     (error: unknown) => error instanceof ApiClientError && error.status === 502 && /размер/i.test(error.message)
   )
+  const isInvalidResponseDataError = (error: unknown) =>
+    error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  await assert.rejects(() => client.getMe('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getMySubscriptions('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getMyOrders('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getMyPayments('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getMyAccesses('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getMyReferrals('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getMySupportConversations('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getMySupportMessages('user-token', 'support-1'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getTelegramStatus('user-token'), isInvalidResponseDataError)
+  await assert.rejects(
+    () => client.createMyOrder('user-token', { tariffId: 'tariff-1', type: 'NewSubscription', paymentProvider: 'YooKassa' }),
+    isInvalidResponseDataError
+  )
+  await assert.rejects(() => client.getMyPayment('user-token', 'payment-1'), isInvalidResponseDataError)
+  await assert.rejects(
+    () => client.createMySupportConversation('user-token', { subject: 'Subject', text: 'Message' }),
+    isInvalidResponseDataError
+  )
+  await assert.rejects(
+    () => client.replyMySupportConversation('user-token', 'support-1', 'Message', 0),
+    isInvalidResponseDataError
+  )
+  await assert.rejects(() => client.unlinkTelegram('user-token'), isInvalidResponseDataError)
   assert.deepEqual(await client.getTariffs(), [])
 })
 
@@ -1452,7 +1511,29 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
       }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/me/accesses')) {
-      return new Response(JSON.stringify([{ id: 'access-1', accessUri: 'vless://sandbox/client', status: 'Active' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([{
+        id: 'access-1',
+        subscriptionId: 'sub-1',
+        subscriptionStatus: 'Active',
+        isTerminal: false,
+        userId: 'user-1',
+        providerType: 'XUi',
+        providerAccessId: 'sandbox-client',
+        serverId: 'server-1',
+        serverName: 'Sandbox node',
+        accessUri: 'vless://sandbox/client',
+        qrCodePayload: 'vless://sandbox/client',
+        qrCodePath: '/api/cabinet/access/access-1/qr',
+        configPath: '/api/cabinet/access/access-1/config',
+        status: 'Active',
+        issuedAt: '2026-08-05T00:00:00Z',
+        expiryDate: null,
+        disabledAt: null,
+        lastSyncedAt: '2026-08-05T00:00:00Z',
+        revision: 1,
+        createdAt: '2026-08-05T00:00:00Z',
+        updatedAt: '2026-08-05T00:00:00Z'
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/cabinet/access/access-1/qr')) {
       return new Response('<svg>vless://sandbox/client</svg>', { status: 200, headers: { 'Content-Type': 'image/svg+xml' } })

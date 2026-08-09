@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: cabinet API DTO field validation
+
+Scope:
+- Проверены runtime-контракты полного пакета данных личного кабинета и связанных операций до передачи ответов в React.
+
+Results:
+- Roadmap progress: `543/563` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-cabinet-api-dto-validation`, version `0.530.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `98/98`; typecheck и production build всех трех приложений: OK.
+- Профиль, подписки, заказы, платежи, VPN-доступы, реферальные начисления, обращения и сообщения поддержки, Telegram status, а также ответы создания заказа/обращения, ответа в поддержку и отвязки Telegram проверяются по обязательным полям, датам, enum и уникальным `id` до TypeScript cast.
+- Malformed cabinet bootstrap regression: OK, desktop/mobile `2/2`; видимый controlled `502` error state, старые пользовательские и VPN-данные не остаются на экране, `0` page errors.
+- Browser responsive/console suite: OK, `18/18`, включая public, cabinet, admin, all-screens и mobile widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: public API DTO field validation
 
 Scope:

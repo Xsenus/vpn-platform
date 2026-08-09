@@ -1211,6 +1211,18 @@ const paymentProviderValues = new Set<PaymentProvider>([
   'PayPal'
 ])
 const publicPaymentProviderModeValues = new Set<PaymentProviderMode>(['Sandbox', 'Production'])
+const paymentProviderModeValues = new Set<PaymentProviderMode>(['Disabled', 'Sandbox', 'Production'])
+const userStatusValues = new Set(['New', 'Active', 'Suspended', 'Deleted'])
+const channelTypeValues = new Set<ChannelType>(['Web', 'Telegram', 'Discord', 'Vk', 'WhatsApp', 'Email'])
+const orderTypeValues = new Set<OrderType>(['NewSubscription', 'Renewal', 'Upgrade', 'Compensation'])
+const orderStatusValues = new Set(['Draft', 'PendingPayment', 'PaymentReceived', 'FulfillmentInProgress', 'Completed', 'Failed', 'Cancelled', 'Expired', 'Refunded', 'PartiallyProcessed'])
+const paymentStatusValues = new Set(['New', 'Pending', 'WaitingConfirmation', 'Succeeded', 'Failed', 'Cancelled', 'Refunded', 'PartiallyRefunded', 'Unknown'])
+const subscriptionStatusValues = new Set(['PendingActivation', 'Active', 'GracePeriod', 'Expired', 'Suspended', 'Cancelled', 'Blocked'])
+const accessCredentialStatusValues = new Set(['Provisioning', 'Active', 'Rotating', 'Disabled', 'Revoked', 'Error', 'SyncRequired'])
+const rewardStatusValues = new Set(['Pending', 'Approved', 'Cancelled', 'Reverted'])
+const supportChannelValues = new Set(['web', 'telegram'])
+const supportStatusValues = new Set(['open', 'pending', 'closed'])
+const supportDirectionValues = new Set(['inbound', 'outbound'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -1236,6 +1248,19 @@ function hasBoolean(record: Record<string, unknown>, key: string) {
 
 function hasNullableString(record: Record<string, unknown>, key: string) {
   return record[key] === null || typeof record[key] === 'string'
+}
+
+function hasNullableInteger(record: Record<string, unknown>, key: string, minimum?: number) {
+  return record[key] === null || hasInteger(record, key, minimum)
+}
+
+function hasDateString(record: Record<string, unknown>, key: string) {
+  const value = record[key]
+  return typeof value === 'string' && value.trim().length > 0 && Number.isFinite(Date.parse(value))
+}
+
+function hasNullableDateString(record: Record<string, unknown>, key: string) {
+  return record[key] === null || hasDateString(record, key)
 }
 
 function hasUniqueStringKey(items: unknown[], key: string) {
@@ -1320,6 +1345,193 @@ function isPublicPaymentProviderDto(value: unknown): value is PublicPaymentProvi
     && hasString(value, 'mode', true)
     && publicPaymentProviderModeValues.has(value.mode as PaymentProviderMode)
     && hasString(value, 'healthStatus', true)
+}
+
+function isUserProfileDto(value: unknown): value is UserProfileDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasNullableString(value, 'email')
+    && hasString(value, 'displayName', true)
+    && hasString(value, 'preferredLanguage', true)
+    && hasString(value, 'referralCode', true)
+    && hasString(value, 'status', true)
+    && userStatusValues.has(value.status as string)
+}
+
+function isCabinetSubscriptionDto(value: unknown): value is SubscriptionDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'userId', true)
+    && hasString(value, 'tariffId', true)
+    && hasString(value, 'status', true)
+    && subscriptionStatusValues.has(value.status as string)
+    && hasDateString(value, 'startAt')
+    && hasDateString(value, 'endAt')
+    && hasNullableString(value, 'tariffName')
+    && hasNullableDateString(value, 'gracePeriodEndAt')
+    && hasBoolean(value, 'autoRenewFlag')
+    && hasString(value, 'sourceChannel', true)
+    && channelTypeValues.has(value.sourceChannel as ChannelType)
+    && hasNullableString(value, 'currentServerId')
+    && hasNullableString(value, 'currentAccessId')
+    && hasNullableString(value, 'lastPaymentId')
+    && hasInteger(value, 'renewalCount', 0)
+    && hasNullableString(value, 'blockReason')
+    && hasNullableDateString(value, 'suspendedAt')
+    && hasNullableDateString(value, 'cancelledAt')
+    && hasNullableString(value, 'accessUri')
+    && hasNullableString(value, 'qrCodePath')
+    && hasNullableString(value, 'configPath')
+    && hasNullableString(value, 'nodeName')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isCabinetOrderDto(value: unknown): value is OrderDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'userId', true)
+    && hasString(value, 'tariffId', true)
+    && hasNullableString(value, 'tariffName')
+    && hasFiniteNumber(value, 'amount', 0)
+    && hasString(value, 'currency', true)
+    && hasString(value, 'status', true)
+    && orderStatusValues.has(value.status as string)
+    && hasString(value, 'type', true)
+    && orderTypeValues.has(value.type as OrderType)
+    && hasString(value, 'channel', true)
+    && channelTypeValues.has(value.channel as ChannelType)
+    && hasString(value, 'paymentProvider', true)
+    && paymentProviderValues.has(value.paymentProvider as PaymentProvider)
+    && hasNullableString(value, 'checkoutSessionId')
+    && hasDateString(value, 'expiresAt')
+    && hasNullableDateString(value, 'paidAt')
+    && hasBoolean(value, 'isFirstPurchase')
+    && hasInteger(value, 'paymentAttemptsCount', 0)
+    && hasNullableString(value, 'linkedSubscriptionId')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isCabinetPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'orderId', true)
+    && hasNullableString(value, 'userId')
+    && hasString(value, 'provider', true)
+    && paymentProviderValues.has(value.provider as PaymentProvider)
+    && hasNullableString(value, 'paymentProviderAccountId')
+    && hasString(value, 'providerMode', true)
+    && paymentProviderModeValues.has(value.providerMode as PaymentProviderMode)
+    && hasString(value, 'providerPaymentId')
+    && hasString(value, 'externalEventId')
+    && hasNullableString(value, 'idempotencyKey')
+    && hasNullableString(value, 'confirmationUrl')
+    && hasNullableString(value, 'returnUrl')
+    && hasFiniteNumber(value, 'amount', 0)
+    && hasString(value, 'currency', true)
+    && hasString(value, 'status', true)
+    && paymentStatusValues.has(value.status as string)
+    && hasBoolean(value, 'signatureValidated')
+    && hasBoolean(value, 'isActivationProcessed')
+    && hasNullableDateString(value, 'activationProcessedAt')
+    && hasNullableDateString(value, 'paidAt')
+    && hasNullableDateString(value, 'failedAt')
+    && hasNullableDateString(value, 'refundedAt')
+    && hasFiniteNumber(value, 'refundedAmount', 0)
+    && hasNullableString(value, 'statusReason')
+    && hasInteger(value, 'webhookEventsCount', 0)
+    && hasInteger(value, 'refundsCount', 0)
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isCabinetAccessCredentialDto(value: unknown): value is AccessCredentialDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'subscriptionId', true)
+    && hasString(value, 'subscriptionStatus', true)
+    && subscriptionStatusValues.has(value.subscriptionStatus as string)
+    && hasBoolean(value, 'isTerminal')
+    && hasNullableString(value, 'userId')
+    && hasString(value, 'providerType', true)
+    && hasString(value, 'providerAccessId')
+    && hasString(value, 'serverId', true)
+    && hasNullableString(value, 'serverName')
+    && hasString(value, 'accessUri')
+    && hasNullableString(value, 'qrCodePayload')
+    && hasString(value, 'qrCodePath')
+    && hasString(value, 'configPath')
+    && hasString(value, 'status', true)
+    && accessCredentialStatusValues.has(value.status as string)
+    && hasDateString(value, 'issuedAt')
+    && hasNullableDateString(value, 'expiryDate')
+    && hasNullableDateString(value, 'disabledAt')
+    && hasNullableDateString(value, 'lastSyncedAt')
+    && hasInteger(value, 'revision', 0)
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isRewardLedgerDto(value: unknown): value is RewardLedgerDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'type', true)
+    && hasString(value, 'status', true)
+    && rewardStatusValues.has(value.status as string)
+    && hasFiniteNumber(value, 'value')
+    && hasString(value, 'currencyOrUnit', true)
+    && hasNullableDateString(value, 'processedAt')
+    && hasDateString(value, 'createdAt')
+}
+
+function isSupportConversationDto(value: unknown): value is SupportConversationDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasNullableString(value, 'userId')
+    && hasNullableInteger(value, 'telegramUserId', 1)
+    && hasString(value, 'channel', true)
+    && supportChannelValues.has(value.channel as string)
+    && hasString(value, 'status', true)
+    && supportStatusValues.has(value.status as string)
+    && hasString(value, 'subject', true)
+    && hasNullableString(value, 'assignedToUserId')
+    && hasString(value, 'internalNote')
+    && hasInteger(value, 'revision', 0)
+    && hasNullableDateString(value, 'closedAt')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isSupportMessageDto(value: unknown): value is SupportMessageDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'supportConversationId', true)
+    && hasNullableString(value, 'userId')
+    && hasNullableInteger(value, 'telegramUserId', 1)
+    && hasString(value, 'direction', true)
+    && supportDirectionValues.has(value.direction as string)
+    && hasString(value, 'text', true)
+    && hasString(value, 'attachmentsJson')
+    && hasBoolean(value, 'isInternalNote')
+    && value.isInternalNote === false
+    && hasDateString(value, 'createdAt')
+}
+
+function isTelegramStatusDto(value: unknown): value is TelegramStatusDto {
+  if (!isRecord(value) || !hasBoolean(value, 'isLinked') || !hasNullableString(value, 'username')) return false
+  if (value.isLinked) {
+    return hasInteger(value, 'telegramUserId', 1) && hasDateString(value, 'linkedAt')
+  }
+  return value.telegramUserId === null && value.linkedAt === null && value.username === null
 }
 
 function isJsonContentType(value: string | null) {
@@ -1610,7 +1822,7 @@ export class ApiClient {
   }
 
   getMe(token: string): Promise<UserProfileDto> {
-    return this.request<UserProfileDto>('/api/me', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<UserProfileDto>('/api/me', { token, errorMessage: apiFallbackErrorMessage }, 'object', isUserProfileDto)
   }
 
   createCheckoutSession(payload: CreateCheckoutSessionPayload): Promise<CheckoutSessionDto> {
@@ -1658,7 +1870,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isCabinetOrderDto)
   }
 
   initMyPayment(token: string, orderId: string, provider: PaymentProvider, returnUrl?: string | null): Promise<PaymentInitResult> {
@@ -1671,27 +1883,27 @@ export class ApiClient {
   }
 
   getMySubscriptions(token: string): Promise<SubscriptionDto[]> {
-    return this.requestArray<SubscriptionDto>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SubscriptionDto>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage }, isCabinetSubscriptionDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMyOrders(token: string): Promise<OrderDto[]> {
-    return this.requestArray<OrderDto>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<OrderDto>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage }, isCabinetOrderDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMyPayments(token: string): Promise<PaymentAttemptDto[]> {
-    return this.requestArray<PaymentAttemptDto>('/api/me/payments', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentAttemptDto>('/api/me/payments', { token, errorMessage: apiFallbackErrorMessage }, isCabinetPaymentAttemptDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMyPayment(token: string, paymentId: string): Promise<PaymentAttemptDto> {
-    return this.request<PaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<PaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: apiFallbackErrorMessage }, 'object', isCabinetPaymentAttemptDto)
   }
 
   getMySupportConversations(token: string): Promise<SupportConversationDto[]> {
-    return this.requestArray<SupportConversationDto>('/api/me/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportConversationDto>('/api/me/support/conversations', { token, errorMessage: apiFallbackErrorMessage }, isSupportConversationDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMySupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
-    return this.requestArray<SupportMessageDto>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportMessageDto>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage }, isSupportMessageDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   createMySupportConversation(token: string, payload: CreateMySupportConversationPayload): Promise<SupportConversationDto> {
@@ -1705,7 +1917,7 @@ export class ApiClient {
         subscriptionId: payload.subscriptionId ?? null
       }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isSupportConversationDto)
   }
 
   replyMySupportConversation(token: string, conversationId: string, text: string, revision: number): Promise<SupportMessageDto> {
@@ -1714,7 +1926,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ text, revision }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isSupportMessageDto)
   }
 
   updateMySupportConversationStatus(token: string, conversationId: string, status: 'open' | 'closed', revision: number): Promise<{ conversationId: string; status: string; revision: number }> {
@@ -1737,7 +1949,7 @@ export class ApiClient {
   }
 
   getTelegramStatus(token: string): Promise<TelegramStatusDto> {
-    return this.request<TelegramStatusDto>('/api/me/telegram/status', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<TelegramStatusDto>('/api/me/telegram/status', { token, errorMessage: apiFallbackErrorMessage }, 'object', isTelegramStatusDto)
   }
 
   unlinkTelegram(token: string): Promise<TelegramStatusDto> {
@@ -1745,11 +1957,11 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isTelegramStatusDto)
   }
 
   getMyAccesses(token: string): Promise<AccessCredentialDto[]> {
-    return this.requestArray<AccessCredentialDto>('/api/me/accesses', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AccessCredentialDto>('/api/me/accesses', { token, errorMessage: apiFallbackErrorMessage }, isCabinetAccessCredentialDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMyAccessQrSvg(token: string, id: string): Promise<string> {
@@ -1757,7 +1969,7 @@ export class ApiClient {
   }
 
   getMyReferrals(token: string): Promise<RewardLedgerDto[]> {
-    return this.requestArray<RewardLedgerDto>('/api/me/referrals', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<RewardLedgerDto>('/api/me/referrals', { token, errorMessage: apiFallbackErrorMessage }, isRewardLedgerDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getLatestAppVersion(token: string): Promise<AppVersionLatestResponse> {
