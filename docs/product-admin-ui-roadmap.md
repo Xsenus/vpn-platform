@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `555/575` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `556/576` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -86,11 +86,11 @@
 ## Проверки, которыми закрыт локальный продуктовый слой
 
 - [x] Backend full suite: `1112/1112`.
-- [x] Frontend unit tests: `104/104`.
+- [x] Frontend unit tests: `107/107`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `24/24`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `26/26`.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
@@ -130,7 +130,8 @@
 - [x] После межпанельной миграции карточки панелей сразу показывают обновленные source/target capacity и не откатываются после следующего refresh.
 - [x] Кабинет сохраняет созданный заказ продления при сбое payment init и повторяет подготовку ссылки по тому же ID без создания дубликата.
 - [x] Public checkout имеет один owner для claim/payment-init, сохраняет partial order для retry и отбрасывает late response после logout.
-- [x] Latest "Что нового": `2026-08-09-public-checkout-single-flight`, версия `0.542.0`.
+- [x] Persisted public checkout проходит bounded token/provider/shape validation и очищается до API-запросов при повреждённом browser state.
+- [x] Latest "Что нового": `2026-08-09-public-checkout-storage-validation`, версия `0.543.0`.
 
 ## Как вести дальше
 

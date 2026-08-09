@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.543.0 - 2026-08-09
+
+Release entry: `2026-08-09-public-checkout-storage-validation`.
+
+### Исправлено
+
+- Восстановление pending checkout больше не доверяет произвольному JSON из `sessionStorage`: проверяются структура, размеры, формат checkout token и payment-provider allow-list.
+- Повреждённое или подменённое состояние удаляется до запуска авторизованных claim/payment-init запросов и не отображается как сохранённая покупка.
+
+### Проверено
+
+- Новый parser unit suite проверяет valid restore, нормализацию tariff name, invalid JSON/object/array, пустые и oversized значения, malformed token и provider path injection.
+- Desktop/mobile E2E подтверждает удаление подменённого checkout, отсутствие stale UI, `checkout=0`, `claim=0`, `payment-init=0` и отсутствие `pageerror`.
+- Frontend `107/107`, typecheck/build всех приложений; полный desktop/mobile console-responsive Playwright suite `26/26`.
+- Backend `1112/1112`; fresh local SQLite smoke прошёл checkout, payment, subscription и VPN access; Release build `0` warnings/`0` errors.
+- Dependency audit `0 vulnerabilities`, secret scan `651/0` и strict UTF-8 guards пройдены.
+- `RoadmapCurrentStateTests` фиксирует `556/576` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.542.0 - 2026-08-09
 
 Release entry: `2026-08-09-public-checkout-single-flight`.

@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-public-checkout-single-flight`, версия `0.542.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `555/575` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-public-checkout-storage-validation`, версия `0.543.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `556/576` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-09:
 
 - [x] `STATE-001` Backend test suite проходит: `1112/1112`.
-- [x] `STATE-002` Frontend test suite проходит: `104/104`.
+- [x] `STATE-002` Frontend test suite проходит: `107/107`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -1916,6 +1916,10 @@ git diff --check
   - Что сделать: TariffsPage и parent effect не должны одновременно claim-ить одну checkout session, повторять payment init после каждого render/token refresh или принимать поздний результат после logout.
   - Что сделано: создание session отделено от единственного parent-owned claim/payment-init; попытка имеет stable token+retry generation, runtime-state сохраняет созданный order для payment-only retry, request generation отбрасывает stale completion. Результат использует управляемые CMS-тексты и показывает order/payment IDs.
   - Доказательство: frontend `104/104`, typecheck/build и desktop/mobile Playwright `24/24`; E2E фиксирует первый путь `1/1/1`, ручной retry `checkout=1/claim=1/payment-init=2`, отсутствие автоматического повтора после `503`/token refresh и отсутствие late UI/session restore после logout. Backend `1112/1112`; real live payment evidence остается открытым.
+- [x] `P11-ACC-266` Валидировать pending public checkout перед восстановлением из browser storage. 2026-08-09.
+  - Что сделать: синтаксически корректный, но подменённый JSON из `sessionStorage` не должен попадать в UI или формировать авторизованные claim/payment-init маршруты.
+  - Что сделано: отдельный bounded parser проверяет object shape, размер raw state, base64url token, длину tariff name и provider через общий API-client allow-list; invalid state удаляется до запуска checkout effect.
+  - Доказательство: parser unit regression `3/3`, frontend `107/107`, typecheck/build, desktop/mobile public `12/12` и полный console-responsive Playwright `26/26`; malicious provider path даёт `checkout=0/claim=0/payment-init=0`, storage очищается без stale UI и `pageerror`. Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и audit пройдены; live evidence не переиспользовалось.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

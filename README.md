@@ -211,7 +211,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1112/1112` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `104/104`;
+- frontend unit tests: `107/107`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят; responsive matrix проверяет ширины `305..1920` px;
@@ -267,9 +267,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - auth, checkout, payment-init, support status и Telegram link-token ответы проходят runtime-проверку; mutation order проверяется по фактическому минимальному backend DTO, а устаревшие anonymous order/payment client-методы удалены;
 - кабинет сохраняет уже созданный заказ продления при сбое payment init и повторяет подготовку оплаты по тому же `orderId`, не создавая дубликат;
 - public checkout использует один single-flight claim/payment-init, сохраняет созданный order для payment-only retry и игнорирует поздний ответ после logout;
+- public checkout восстанавливается из browser storage только после проверки структуры, лимитов, token format и payment-provider allow-list; повреждённое состояние удаляется до API-запросов;
 - общий каталог inbound позволяет админке переносить VPN-клиента между совместимыми доступными 3x-ui панелями и после успеха открывать панель назначения;
 - после межпанельного переноса карточки панелей сразу отражают освобождённую source capacity и занятую target capacity, а следующий API-refresh сохраняет фактические значения;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-public-checkout-single-flight`, версия `0.542.0`;
-- roadmap progress: `555/575` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-public-checkout-storage-validation`, версия `0.543.0`;
+- roadmap progress: `556/576` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

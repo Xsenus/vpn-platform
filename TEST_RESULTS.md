@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: public pending checkout storage validation
+
+Scope:
+- Проверена runtime-граница восстановления незавершённой публичной покупки из browser `sessionStorage`.
+- Проверены синтаксически корректные, но структурно неверные и подменённые значения token, tariff name и payment provider.
+
+Results:
+- Roadmap progress: `556/576` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-public-checkout-storage-validation`, version `0.543.0`.
+- Bounded parser принимает только object с base64url checkout token, непустым tariff name до 200 символов и provider из общего API-client allow-list; malformed/oversized state удаляется.
+- Desktop/mobile E2E подтверждает отсутствие stale checkout UI, authorized claim/payment-init запросов и `pageerror` для provider path injection.
+- Frontend tests: OK, `107/107`; typecheck/build всех приложений: OK; полный desktop/mobile console-responsive suite: `26/26`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- Dependency audit: `0 vulnerabilities`; secret scan: `651` files/`0` findings; strict UTF-8 guards пройдены.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: public authenticated checkout single-flight
 
 Scope:

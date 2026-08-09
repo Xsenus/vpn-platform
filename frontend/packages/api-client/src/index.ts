@@ -1262,6 +1262,11 @@ const paymentProviderValues = new Set<PaymentProvider>([
   'Stripe',
   'PayPal'
 ])
+
+export function isPaymentProvider(value: unknown): value is PaymentProvider {
+  return typeof value === 'string' && paymentProviderValues.has(value as PaymentProvider)
+}
+
 const publicPaymentProviderModeValues = new Set<PaymentProviderMode>(['Sandbox', 'Production'])
 const paymentProviderModeValues = new Set<PaymentProviderMode>(['Disabled', 'Sandbox', 'Production'])
 const userStatusValues = new Set(['New', 'Active', 'Suspended', 'Deleted'])

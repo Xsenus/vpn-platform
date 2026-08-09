@@ -12750,5 +12750,32 @@
         "text": "Roadmap progress is 555/575 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-public-checkout-storage-validation",
+    "version": "0.543.0",
+    "releasedAt": "2026-08-09T15:50:49+07:00",
+    "title": "Сохранённая покупка проверяется перед восстановлением",
+    "summary": "Повреждённый или подменённый pending checkout удаляется из browser storage до отображения и авторизованных API-запросов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Persisted checkout проходит runtime-проверку object shape, размера, base64url token, tariff name и payment-provider allow-list."
+      },
+      {
+        "type": "fixed",
+        "text": "Malformed и oversized browser state удаляется до claim/payment-init и не отображается пользователю как настоящая сохранённая покупка."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile E2E подтверждает checkout=0, claim=0, payment-init=0, отсутствие stale UI и pageerror для provider path injection."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 556/576 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

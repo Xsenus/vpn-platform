@@ -103,8 +103,9 @@ git diff --check
 - Post-success migration state обновляет только публичные capacity counters и не выполняет второй fallible запрос после подтверждённого provider side effect: OK.
 - Cabinet renewal retry использует уже созданный order ID и не повторяет mutation создания заказа после сбоя payment init: OK.
 - Public checkout single-flight не дублирует claim/payment init, а request generation не принимает late payment response после logout: OK.
-- Latest local release: `2026-08-09-public-checkout-single-flight`, версия `0.542.0`.
-- Frontend tests: 104/104.
+- Persisted public checkout допускает только bounded base64url token, нормализованное имя тарифа и payment provider из runtime allow-list; invalid state удаляется до API-запросов: OK.
+- Latest local release: `2026-08-09-public-checkout-storage-validation`, версия `0.543.0`.
+- Frontend tests: 107/107.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 

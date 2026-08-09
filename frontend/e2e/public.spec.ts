@@ -432,6 +432,28 @@ test('public checkout and auth reject malformed success DTOs without persisting 
   expect(pageErrors).toEqual([])
 })
 
+test('public account discards an unsafe persisted checkout before authorized requests', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+    sessionStorage.setItem('vpn-platform-pending-checkout', JSON.stringify({
+      token: 'checkout_token_1234567890123456789012345678',
+      tariffName: 'Injected tariff',
+      provider: '../../auth/logout'
+    }))
+  })
+  const api = await mockPublicApi(page)
+
+  await page.goto('/account')
+  await expect(page.getByText('Public E2E').first()).toBeVisible()
+  await expect(page.getByText('Injected tariff')).toHaveCount(0)
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 0, claim: 0, paymentInit: 0 })
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
+  expect(pageErrors).toEqual([])
+})
+
 test('authenticated public checkout owns one claim and payment initialization', async ({ page }) => {
   await page.addInitScript(() => {
     sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')

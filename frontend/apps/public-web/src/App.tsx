@@ -19,6 +19,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
+import { parsePendingCheckout, type PendingCheckout } from './pending-checkout'
 import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
@@ -32,12 +33,6 @@ type CheckoutState = {
   order: OrderDto
   payment: PaymentInitResult
 } | null
-
-type PendingCheckout = {
-  token: string
-  tariffName: string
-  provider: PaymentProvider
-}
 
 function readSessionStorageItem(key: string) {
   try {
@@ -67,12 +62,12 @@ function readPendingCheckout(): PendingCheckout | null {
   const raw = readSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
   if (!raw) return null
 
-  try {
-    return JSON.parse(raw) as PendingCheckout
-  } catch {
+  const pendingCheckout = parsePendingCheckout(raw)
+  if (!pendingCheckout) {
     removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
-    return null
   }
+
+  return pendingCheckout
 }
 
 const landingPlans = [
