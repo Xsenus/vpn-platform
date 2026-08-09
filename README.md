@@ -211,7 +211,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1112/1112` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `111/111`;
+- frontend unit tests: `112/112`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `78/78`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
@@ -276,7 +276,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin mutation lifecycle привязывает CRUD/payment/subscription/VPN/provisioning/bot completion к исходной сессии, блокирует duplicate submit и сохраняет новые form drafts при delayed save/reload;
 - public/cabinet mutation lifecycle блокирует duplicate auth/refresh/action requests, отбрасывает completion старой сессии и сохраняет более новые support/reset drafts;
 - публичная витрина и admin login используют три локальных WebP из production bundle вместо runtime Unsplash; desktop/mobile screenshots и 18 viewport-конфигураций проверены без overflow и clipped controls;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`;
-- roadmap progress: `564/584` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- axe проверяет WCAG 2.0/2.1/2.2 A/AA и best practices без allow-list на 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`;
+- roadmap progress: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

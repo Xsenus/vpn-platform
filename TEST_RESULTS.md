@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: automated WCAG accessibility gate
+
+Scope:
+- Добавлен автоматический axe-аудит WCAG 2.0/2.1/2.2 A/AA и best practices без allow-list на desktop и compact mobile состояниях public, cabinet и всех 17 admin sections.
+- Проверены и исправлены контраст акцента, auth tabpanel semantics, heading order страницы аккаунта и top-level admin landmarks.
+
+Results:
+- Roadmap progress: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-automated-wcag-accessibility-gate`, version `0.552.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- All-screens: `6/6`; axe violations: `0` на 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px; responsive matrix: 18 viewport-конфигураций.
+- Backend full suite: `1112/1112`; strict UTF-8 guards: OK; fresh local SQLite smoke: OK.
+- Automated axe coverage detects only machine-testable rules and does not replace manual accessibility acceptance.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: local visual assets and responsive breakpoint boundaries
 
 Scope:

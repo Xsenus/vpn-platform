@@ -24,7 +24,7 @@ Production-ready решение заблокировано следующими 
 
 - Backend full suite: `1112/1112`.
 - API Release build: OK.
-- Frontend unit tests: `111/111`.
+- Frontend unit tests: `112/112`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `78/78`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
@@ -71,8 +71,9 @@ Production-ready решение заблокировано следующими 
 - Admin detail request generation исключает out-of-order user/support state и post-logout completion; status action не подменяет выбранный support thread.
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
-- Latest "Что нового": `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`; локальный backend/frontend/browser regression, bundled visual assets и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
-- Roadmap progress: `564/584` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
+- Latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`; локальный backend/frontend/browser regression, automated accessibility и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

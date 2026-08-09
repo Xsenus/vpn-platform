@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.552.0 - 2026-08-09
+
+Release entry: `2026-08-09-automated-wcag-accessibility-gate`.
+
+### Исправлено
+
+- All-screens gate запускает axe с тегами WCAG 2.0/2.1/2.2 A/AA и best practices без allow-list для 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
+- Публичный красный акцент затемнен до AA-контраста; auth tabs больше не назначают недопустимый `tabpanel` непосредственно форме.
+- Структура `/account` получила последовательный heading level, а admin auth/recovery больше не вкладывает второй `main` landmark в общий `PageShell`.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений; dependency audit сообщает `0 vulnerabilities`.
+- All-screens `6/6` проходит axe и 18 viewport-конфигураций `305x568..2560x1440`; browser audit не использует исключения rules/selectors.
+- Backend `1112/1112`, strict UTF-8 guards и fresh local SQLite smoke пройдены; автоматический axe-аудит не заменяет ручную проверку доступности.
+- External VPS/staging/live payment/production-like 3x-ui и SMTP evidence не переиспользовалось.
+- Roadmap: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.551.0 - 2026-08-09
 
 Release entry: `2026-08-09-local-visual-assets-responsive-boundaries`.

@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -803,6 +804,20 @@ async function expectPageQuality(page: Page, screenName: string) {
   expect(issues, `${screenName} must meet the page quality baseline`).toEqual([])
 }
 
+async function expectWcagQuality(page: Page, screenName: string) {
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
+    .analyze()
+  const violations = results.violations.map((violation) => ({
+    id: violation.id,
+    impact: violation.impact,
+    help: violation.help,
+    nodes: violation.nodes.map((node) => ({ target: node.target, summary: node.failureSummary }))
+  }))
+
+  expect(violations, `${screenName} must pass automated WCAG A/AA and best-practice checks`).toEqual([])
+}
+
 async function expectLocalBackgroundAssets(page: Page, selectors: string[]) {
   const issues = await page.evaluate(async (targetSelectors) => {
     const problems: string[] = []
@@ -881,6 +896,7 @@ test('all public routes render without blank screens or browser errors', async (
     await page.goto(route)
     await expectNonBlankPage(page)
     await expectPageQuality(page, route)
+    await expectWcagQuality(page, route)
     if (route === '/') {
       await expectLocalBackgroundAssets(page, ['.landing-hero', '.landing-illustration', '.coverage-map'])
       await captureAuditScreenshot(page, testInfo, 'public-home-desktop')
@@ -898,6 +914,7 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
   await page.goto('http://127.0.0.1:5294/')
   await expectNonBlankPage(page)
   await expectPageQuality(page, 'cabinet auth')
+  await expectWcagQuality(page, 'cabinet auth')
   await captureAuditScreenshot(page, testInfo, 'cabinet-auth-desktop')
 
   const authForm = page.locator('#cabinet-auth-panel')
@@ -907,6 +924,7 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
   await expect(page.locator('.code-block').filter({ hasText: 'vless://' }).first()).toBeVisible()
   await expectNonBlankPage(page)
   await expectPageQuality(page, 'cabinet dashboard')
+  await expectWcagQuality(page, 'cabinet dashboard')
   await captureAuditScreenshot(page, testInfo, 'cabinet-dashboard-desktop')
 
   expect(browserErrors).toEqual([])
@@ -918,6 +936,7 @@ test('every admin section renders without blank screens or browser errors', asyn
 
   await page.goto('http://127.0.0.1:5295/')
   await expectPageQuality(page, 'admin auth')
+  await expectWcagQuality(page, 'admin auth')
   await expectLocalBackgroundAssets(page, ['.admin-login-intro'])
   await captureAuditScreenshot(page, testInfo, 'admin-auth-desktop')
   await page.locator('input[type="email"]').fill('admin@example.test')
@@ -930,6 +949,7 @@ test('every admin section renders without blank screens or browser errors', asyn
     await expect(page.locator('.admin-shell')).toBeVisible()
     await expectNonBlankPage(page)
     await expectPageQuality(page, `admin ${section}`)
+    await expectWcagQuality(page, `admin ${section}`)
     if (section === 'dashboard' || section === 'panels') {
       await captureAuditScreenshot(page, testInfo, `admin-${section}-desktop`)
     }
@@ -948,6 +968,7 @@ test('all public routes fit representative responsive viewports', async ({ page 
     for (const route of publicRoutes) {
       await page.goto(route)
       await expectResponsiveLayout(page, `${route} at ${viewport.name}`)
+      if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `${route} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile' && (route === '/' || route === '/account')) {
         await captureAuditScreenshot(page, testInfo, `public-${route === '/' ? 'home' : 'account'}-mobile`)
       }
@@ -973,6 +994,7 @@ test('cabinet fits representative responsive viewports after authentication', as
       await expect(page.locator('.code-block').filter({ hasText: 'vless://' }).first()).toBeVisible()
     }
     await expectResponsiveLayout(page, `cabinet at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `cabinet at ${viewport.name}`)
     if (viewport.name === 'compact-mobile') await captureAuditScreenshot(page, testInfo, 'cabinet-dashboard-mobile')
   }
 
@@ -1001,6 +1023,7 @@ test('every admin section fits representative responsive viewports', async ({ pa
     for (const section of adminSections) {
       await page.goto(`http://127.0.0.1:5295/#${section}`)
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
+      if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile' && (section === 'dashboard' || section === 'panels')) {
         await captureAuditScreenshot(page, testInfo, `admin-${section}-mobile`)
       }

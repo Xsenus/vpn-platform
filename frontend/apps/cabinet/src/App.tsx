@@ -983,37 +983,39 @@ export function App() {
                   ]}
                 />
               </div>
-              <form id={authPanelId} role="tabpanel" aria-labelledby={activeAuthTabId} aria-busy={busy} onSubmit={(event) => void handleAuthSubmit(event)}>
-                {authMode === 'register' && (
+              <div id={authPanelId} role="tabpanel" aria-labelledby={activeAuthTabId}>
+                <form aria-busy={busy} onSubmit={(event) => void handleAuthSubmit(event)}>
+                  {authMode === 'register' && (
+                    <label>
+                      <span>Имя</span>
+                      <input value={authDisplayName} onChange={(e) => setAuthDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" />
+                    </label>
+                  )}
+                  {authMode === 'register' && (
+                    <label>
+                      <span>Реферальный код</span>
+                      <input value={authReferralCode} onChange={(e) => setAuthReferralCode(e.target.value)} placeholder="Необязательно" autoComplete="off" />
+                      <small>Укажите код пользователя, который вас пригласил.</small>
+                    </label>
+                  )}
                   <label>
-                    <span>Имя</span>
-                    <input value={authDisplayName} onChange={(e) => setAuthDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" />
+                    <span>Email</span>
+                    <input value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required />
+                    <small>На этот email будут привязаны покупки и продления.</small>
                   </label>
-                )}
-                {authMode === 'register' && (
-                  <label>
-                    <span>Реферальный код</span>
-                    <input value={authReferralCode} onChange={(e) => setAuthReferralCode(e.target.value)} placeholder="Необязательно" autoComplete="off" />
-                    <small>Укажите код пользователя, который вас пригласил.</small>
-                  </label>
-                )}
-                <label>
-                  <span>Email</span>
-                  <input value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required />
-                  <small>На этот email будут привязаны покупки и продления.</small>
-                </label>
-                <PasswordField label="Пароль" value={authPassword} onChange={setAuthPassword} placeholder="Минимум 8 символов" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} minLength={8} required help="Сессия хранится только в этом браузере." />
-                {showAuthValidation && (
-                  <ul className="validation-list" aria-live="polite">
-                    {authValidationErrors.map((item) => <li key={item}>{item}</li>)}
-                  </ul>
-                )}
-                <div className="form-actions">
-                  <PrimaryButton type="submit" disabled={busy || authValidationErrors.length > 0} aria-busy={busy}>
-                    {busy ? 'Проверяем...' : authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}
-                  </PrimaryButton>
-                </div>
-              </form>
+                  <PasswordField label="Пароль" value={authPassword} onChange={setAuthPassword} placeholder="Минимум 8 символов" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} minLength={8} required help="Сессия хранится только в этом браузере." />
+                  {showAuthValidation && (
+                    <ul className="validation-list" aria-live="polite">
+                      {authValidationErrors.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  )}
+                  <div className="form-actions">
+                    <PrimaryButton type="submit" disabled={busy || authValidationErrors.length > 0} aria-busy={busy}>
+                      {busy ? 'Проверяем...' : authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}
+                    </PrimaryButton>
+                  </div>
+                </form>
+              </div>
             </>
           ) : !profile ? (
             <>

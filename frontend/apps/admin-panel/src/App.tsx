@@ -3148,7 +3148,7 @@ export function App() {
     return (
       <PageShell title="Админ-панель VPN Platform">
         <SkipLink href="#admin-session-recovery" />
-        <main id="admin-session-recovery" className="admin-login-shell" tabIndex={-1}>
+        <div id="admin-session-recovery" className="admin-login-shell" tabIndex={-1}>
           <section className="admin-login-intro" aria-label="Возможности админ-панели">
             <p className="eyebrow">VPN Platform Admin</p>
             <h2>Единый центр управления продажей VPN</h2>
@@ -3179,7 +3179,7 @@ export function App() {
             {busy && <LoadingBlock label="Проверяем административный доступ..." />}
             {error && <ErrorBlock message={error} />}
           </Card>
-        </main>
+        </div>
       </PageShell>
     )
   }
@@ -3188,7 +3188,7 @@ export function App() {
     return (
       <PageShell title="Админ-панель VPN Platform">
         <SkipLink href="#admin-login" />
-        <main id="admin-login" className="admin-login-shell" tabIndex={-1}>
+        <div id="admin-login" className="admin-login-shell" tabIndex={-1}>
           <section className="admin-login-intro" aria-label="Возможности админ-панели">
             <p className="eyebrow">VPN Platform Admin</p>
             <h2>Единый центр управления продажей VPN</h2>
@@ -3244,7 +3244,7 @@ export function App() {
             {notice && <p className="toast-success" role="status" aria-live="polite">{notice}</p>}
             {error && <ErrorBlock message={error} />}
           </Card>
-        </main>
+        </div>
       </PageShell>
     )
   }

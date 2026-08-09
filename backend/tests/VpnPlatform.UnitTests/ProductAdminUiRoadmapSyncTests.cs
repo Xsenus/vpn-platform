@@ -19,14 +19,14 @@ public class ProductAdminUiRoadmapSyncTests
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
                      "Backend full suite: `1112/1112`",
-                     "Frontend unit tests: `111/111`",
+                     "Frontend unit tests: `112/112`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `78/78`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-09-local-visual-assets-responsive-boundaries",
-                     "0.551.0"
+                     "2026-08-09-automated-wcag-accessibility-gate",
+                     "0.552.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-09-local-visual-assets-responsive-boundaries", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-09-local-visual-assets-responsive-boundaries", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-automated-wcag-accessibility-gate", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-automated-wcag-accessibility-gate", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,11 +72,11 @@ public class ProductAdminUiRoadmapSyncTests
         foreach (var expected in new[]
                  {
                      "Backend full suite: `1112/1112`",
-                     "Frontend unit tests: `111/111`",
+                     "Frontend unit tests: `112/112`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-09-local-visual-assets-responsive-boundaries",
-                     "0.551.0",
+                     "2026-08-09-automated-wcag-accessibility-gate",
+                     "0.552.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

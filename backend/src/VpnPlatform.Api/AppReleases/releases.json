@@ -13029,5 +13029,32 @@
         "text": "Roadmap progress is 564/584 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-automated-wcag-accessibility-gate",
+    "version": "0.552.0",
+    "releasedAt": "2026-08-09T19:58:00+07:00",
+    "title": "Автоматический WCAG-аудит для всех frontend-экранов",
+    "summary": "Public, cabinet и все 17 разделов админки проходят axe WCAG A/AA и best-practice проверки на desktop и compact mobile без исключений правил.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "All-screens gate запускает axe на 5 публичных маршрутах, экранах входа и рабочих состояниях кабинета и админки на desktop и 320 px."
+      },
+      {
+        "type": "fixed",
+        "text": "Исправлены AA-контраст красного акцента, семантика auth tabpanel, порядок заголовков аккаунта и вложенные main landmarks admin auth."
+      },
+      {
+        "type": "improved",
+        "text": "Source-contract закрепляет dependency, WCAG 2.0/2.1/2.2 A/AA и best-practice tags, mobile audit и запрет allow-list rules/selectors."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 565/585 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Automated axe coverage does not replace manual acceptance. Real VPS/staging/payment/3x-ui evidence is still required, and real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

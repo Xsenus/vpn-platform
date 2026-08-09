@@ -811,6 +811,7 @@ function AccountPage({
 
   return (
     <PageShell title="Аккаунт">
+      <h2 className="sr-only">Состояние аккаунта</h2>
       <div className="grid">
         <StatTile label="Авторизация" value={profile ? 'подключен' : token ? (sessionHydrationBusy ? 'проверяется' : 'требует проверки') : 'не выполнена'} />
         <StatTile label="Покупка" value={pendingCheckoutOrder ? 'заказ создан' : pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто'} />
@@ -930,29 +931,28 @@ function AccountPage({
                 ]}
               />
             </div>
-            <form
-              id={authPanelId}
-              role="tabpanel"
-              aria-labelledby={activeAuthTabId}
-              aria-busy={busy}
-              onSubmit={(e) => {
-                e.preventDefault()
-                void handleAuthSubmit()
-              }}
-            >
-              {mode === 'register' && <label><span>Имя</span><input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" /></label>}
-              {mode === 'register' && <label><span>Реферальный код</span><input value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder="Необязательно" autoComplete="off" /><small>Если вас пригласил другой пользователь, укажите его код.</small></label>}
-              <label><span>Email</span><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /><small>Используется для входа и привязки покупок.</small></label>
-              <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Минимум 8 символов" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required help="Минимум 8 символов." />
-              {showAuthValidation && (
-                <ul className="validation-list" aria-live="polite">
-                  {authValidationErrors.map((item) => <li key={item}>{item}</li>)}
-                </ul>
-              )}
-              <div className="form-actions">
-                <PrimaryButton type="submit" disabled={busy || authValidationErrors.length > 0} aria-busy={busy}>{busy ? 'Сохраняем...' : submitLabel}</PrimaryButton>
-              </div>
-            </form>
+            <div id={authPanelId} role="tabpanel" aria-labelledby={activeAuthTabId}>
+              <form
+                aria-busy={busy}
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void handleAuthSubmit()
+                }}
+              >
+                {mode === 'register' && <label><span>Имя</span><input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" /></label>}
+                {mode === 'register' && <label><span>Реферальный код</span><input value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder="Необязательно" autoComplete="off" /><small>Если вас пригласил другой пользователь, укажите его код.</small></label>}
+                <label><span>Email</span><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /><small>Используется для входа и привязки покупок.</small></label>
+                <PasswordField label="Пароль" value={password} onChange={setPassword} placeholder="Минимум 8 символов" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required help="Минимум 8 символов." />
+                {showAuthValidation && (
+                  <ul className="validation-list" aria-live="polite">
+                    {authValidationErrors.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                )}
+                <div className="form-actions">
+                  <PrimaryButton type="submit" disabled={busy || authValidationErrors.length > 0} aria-busy={busy}>{busy ? 'Сохраняем...' : submitLabel}</PrimaryButton>
+                </div>
+              </form>
+            </div>
             {busy && <LoadingBlock label="Обрабатываем запрос..." />}
             {error && <ErrorBlock message={error} />}
             {resetMessage && <p className="toast-success" role="status" aria-live="polite">{resetMessage}</p>}

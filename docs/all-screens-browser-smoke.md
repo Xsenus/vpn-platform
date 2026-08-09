@@ -63,6 +63,7 @@ PNG создаются только при явном флаге внутри `f
 
 - Responsive matrix расширена с 8 до 18 viewport-конфигураций и покрывает обе стороны всех используемых CSS-breakpoints.
 - Встроена проверка local/same-origin decode фоновых WebP и их размеров.
+- Встроен `@axe-core/playwright`: WCAG 2.0/2.1/2.2 A/AA и best-practice правила без allow-list проверяют desktop и compact mobile состояния public, cabinet и всех 17 admin sections.
 - Representative public, account, cabinet и admin screenshots проверены вручную на desktop/mobile; временные PNG очищены.
 - `npm run e2e:all-screens --prefix frontend`: `6/6`; полный `npm run e2e:console --prefix frontend`: `78/78`.
-- Latest "Что нового": `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`.
+- Latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`.

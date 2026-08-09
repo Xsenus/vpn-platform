@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `564/584` проверяемых пунктов, готовность `96.6%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `565/585` проверяемых пунктов, готовность `96.6%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-09:
 
 - [x] `STATE-001` Backend test suite проходит: `1112/1112`.
-- [x] `STATE-002` Frontend test suite проходит: `111/111`.
+- [x] `STATE-002` Frontend test suite проходит: `112/112`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -1952,6 +1952,10 @@ git diff --check
   - Что сделать: ключевые фоны public/admin не должны зависеть от стороннего CDN; browser gate должен подтверждать загрузку изображений и отсутствие визуального overflow не только на стандартных desktop/mobile, но и сразу после каждого CSS-breakpoint.
   - Что сделано: три оптимизированных WebP добавлены в общий UI asset-контур и включаются Vite с хешированными именами; external CSS URLs и viewport-scaled fonts удалены. All-screens matrix расширена до 18 viewport-конфигураций `305x568..2560x1440`, добавлена same-origin/decode/dimension проверка background assets и опциональный screenshot audit без постоянных CI-артефактов.
   - Доказательство: frontend `111/111`, typecheck/build и audit; полный console-responsive Playwright `78/78`, all-screens `6/6` на 18 конфигурациях, manual desktop/mobile screenshot review; backend `1112/1112`, Release build `0` warnings/`0` errors. Внешние evidence-пункты не закрывались.
+- [x] `P11-ACC-275` Автоматизировать WCAG A/AA аудит всех frontend-поверхностей. 2026-08-09.
+  - Что сделать: существующий page quality smoke не должен ограничиваться landmarks, IDs, alt и именами controls; public, cabinet и все admin sections нужно проверять полноценным accessibility engine на desktop и compact mobile без allow-list нарушений.
+  - Что сделано: `@axe-core/playwright` встроен в all-screens gate с тегами WCAG 2.0/2.1/2.2 A/AA и best practices. Исправлены AA-контраст публичного акцента, недопустимый `tabpanel` на двух auth-формах, пропущенный `h2` аккаунта и вложенные admin `main` landmarks. Axe запускается на 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop, а также на всех пользовательских и рабочих состояниях при `320x720`; исключений правил и селекторов нет.
+  - Доказательство: frontend `112/112`, typecheck/build, dependency audit `0 vulnerabilities`, all-screens `6/6` с axe и responsive matrix; backend `1112/1112`, strict UTF-8 guards и fresh local SQLite smoke пройдены. Автоматический axe-аудит не заменяет ручную проверку и не закрывает внешние VPS/staging/live payment/3x-ui/SMTP evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2598,6 +2602,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-09-008` | P1 | Frontend accessibility | Автоматизированный browser gate не запускал WCAG engine; слабый красный контраст, `tabpanel` на form, пропущенный heading level и вложенные `main` landmarks оставались незамеченными. | Исправлено локально | Axe WCAG A/AA + best-practice gate без allow-list проходит public, cabinet и 17 admin sections на desktop и 320 px. |
 | `BUG-2026-08-09-007` | P1 | Frontend visual assets | Четыре ключевых background загружались с Unsplash во время runtime и могли исчезнуть из public/admin UI при CSP, offline/CDN failure; responsive gate не проверял decode assets и ширины сразу после CSS-breakpoints. | Исправлено локально | Локальные WebP bundles, same-origin decode/dimension guard, 18 viewport-конфигураций и manual screenshot review подтверждают визуальный контракт. |
 | `BUG-2026-08-09-006` | P0 | Public/cabinet mutation lifecycle | Cabinet actions и public auth/reset полагались на React busy после render: синхронный повтор мог дублировать запрос, late response мог изменить новую сессию или маршрут, а завершение старой отправки стирало новый draft. | Исправлено локально | Session/request ownership, synchronous locks, unmount invalidation и snapshot-owned reset покрыты полным desktop/mobile E2E `78/78`. |
 | `BUG-2026-08-09-005` | P0 | Admin mutation lifecycle | Delayed mutation могла после logout/new login сбросить форму, показать старое уведомление и запустить reload старым токеном; синхронный double-submit дублировал запрос, а общий reload стирал dirty bot draft. | Исправлено локально | Session-owned action context, request/in-flight generation и snapshot-owned form reset покрыты desktop/mobile E2E. |

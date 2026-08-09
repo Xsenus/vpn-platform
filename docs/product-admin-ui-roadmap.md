@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `564/584` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -86,7 +86,7 @@
 ## Проверки, которыми закрыт локальный продуктовый слой
 
 - [x] Backend full suite: `1112/1112`.
-- [x] Frontend unit tests: `111/111`.
+- [x] Frontend unit tests: `112/112`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -97,7 +97,7 @@
 - [x] Encoding guard: OK.
 - [x] Secret scan: OK.
 - [x] Operation boundary regression: malformed enum/JSON returns 400 without partial mutation; all 8 payment webhook routes and fail-closed VPN provisioning are covered.
-- [x] Page quality gate covers landmarks, duplicate IDs, image alt text and accessible control names on public, cabinet and all 16 admin screens.
+- [x] Page quality gate covers landmarks, duplicate IDs, image alt text and accessible control names plus axe WCAG A/AA and best-practice checks on public, cabinet and all 17 admin screens at desktop and 320 px.
 - [x] Subscription migration and archived-node mode actions are fail-closed and covered by SQLite regression.
 - [x] Mobile admin navigation uses the compact section selector; desktop counters and previous/next order match the grouped menu.
 - [x] Subscription commands fail closed on VPN provider errors; node deletion preserves health/migration history and reports all linked records in the admin UI.
@@ -137,7 +137,7 @@
 - [x] Admin user/support detail views отбрасывают out-of-order и post-logout responses, очищают drafts при смене обращения и не загружают thread невыбранной status action.
 - [x] Admin mutations применяют state/reload только в исходной session operation, отклоняют duplicate submit и сохраняют новый form draft при delayed completion.
 - [x] Public/cabinet mutations отклоняют duplicate events, late session/unmount completion и сохраняют более новый support/reset draft.
-- [x] Latest "Что нового": `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`.
+- [x] Latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`.
 
 ## Как вести дальше
 

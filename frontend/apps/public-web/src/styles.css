@@ -46,7 +46,7 @@
 .landing-hero .eyebrow,
 .landing-section .eyebrow {
   margin: 0 0 10px;
-  color: #ef4444;
+  color: #b91c1c;
   font-size: 12px;
   font-weight: 850;
   letter-spacing: 0.12em;
@@ -115,7 +115,7 @@
   width: 92px;
   height: 92px;
   color: #fff;
-  background: #ef4444;
+  background: #b91c1c;
   transform: translate(-50%, -50%);
 }
 
@@ -357,7 +357,7 @@
   width: 54px;
   height: 54px;
   border-radius: 999px;
-  background: #ef4444;
+  background: #b91c1c;
   color: #fff;
   font-weight: 850;
   box-shadow: 0 12px 28px rgba(239, 68, 68, 0.26);

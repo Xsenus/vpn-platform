@@ -109,8 +109,8 @@ git diff --check
 - Admin user/support detail requests принимают только актуальный selected/session response и не возвращают старые данные после logout: OK.
 - Admin mutation completion, reload и form reset ограничены исходной session operation и отправленным snapshot; duplicate submit блокируется синхронно: OK.
 - Public/cabinet mutation completion ограничен исходной session/unmount operation; duplicate auth/refresh/action events блокируются синхронно, а более новые drafts сохраняются: OK.
-- Latest local release: `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`; внешние runtime backgrounds удалены, same-origin WebP decode проверен browser gate.
-- Frontend tests: 111/111.
+- Latest local release: `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`; axe WCAG A/AA и best-practice gate без allow-list проверен на desktop и 320 px.
+- Frontend tests: 112/112.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 
