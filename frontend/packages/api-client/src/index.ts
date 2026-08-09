@@ -68,17 +68,17 @@ export type AppReleaseDto = {
   isActive: boolean
   source: string
   items: AppReleaseItemDto[]
-  createdByUserId?: string | null
-  createdByUserName?: string | null
-  updatedByUserId?: string | null
-  updatedByUserName?: string | null
+  createdByUserId: string | null
+  createdByUserName: string
+  updatedByUserId: string | null
+  updatedByUserName: string
   createdAt: string
   updatedAt: string
 }
 
 export type AppVersionLatestResponse = {
-  currentVersion?: string | null
-  latestRelease?: AppReleaseDto | null
+  currentVersion: string | null
+  latestRelease: AppReleaseDto | null
   seenByCurrentUser: boolean
 }
 
@@ -1224,6 +1224,9 @@ const rewardStatusValues = new Set(['Pending', 'Approved', 'Cancelled', 'Reverte
 const supportChannelValues = new Set(['web', 'telegram'])
 const supportStatusValues = new Set(['open', 'pending', 'closed'])
 const supportDirectionValues = new Set(['inbound', 'outbound'])
+const referralProgramStatusValues = new Set(['draft', 'active', 'paused', 'archived'])
+const appReleaseItemTypeValues = new Set(['new', 'improved', 'fixed', 'important'])
+const appReleaseSourceValues = new Set(['agent', 'manual'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -1268,6 +1271,27 @@ function hasStringArray(record: Record<string, unknown>, key: string, requireNon
   const value = record[key]
   return Array.isArray(value)
     && value.every((item) => typeof item === 'string' && (!requireNonEmptyItems || item.trim().length > 0))
+}
+
+function hasJsonObjectString(record: Record<string, unknown>, key: string) {
+  if (!hasString(record, key, true)) return false
+  try {
+    return isRecord(JSON.parse(record[key] as string))
+  } catch {
+    return false
+  }
+}
+
+function hasJsonUniqueStringArray(record: Record<string, unknown>, key: string) {
+  if (!hasString(record, key, true)) return false
+  try {
+    const parsed = JSON.parse(record[key] as string)
+    return Array.isArray(parsed)
+      && parsed.every((item) => typeof item === 'string' && item.trim().length > 0)
+      && new Set(parsed).size === parsed.length
+  } catch {
+    return false
+  }
 }
 
 function hasUniqueStringKey(items: unknown[], key: string) {
@@ -1699,6 +1723,214 @@ function isAdminSupportMutationResult(value: unknown): value is { conversationId
     && hasString(value, 'conversationId', true)
     && hasString(value, 'status', true)
     && hasInteger(value, 'revision', 1)
+}
+
+function isAdminReferralProgramDto(value: unknown): value is AdminReferralProgramDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'name', true)
+    && hasString(value, 'status', true)
+    && referralProgramStatusValues.has(value.status as string)
+    && hasNullableDateString(value, 'startAt')
+    && hasNullableDateString(value, 'endAt')
+    && (value.startAt === null || value.endAt === null || Date.parse(value.endAt as string) > Date.parse(value.startAt as string))
+    && hasJsonObjectString(value, 'ruleDefinition')
+    && hasJsonObjectString(value, 'rewardDefinition')
+    && hasJsonObjectString(value, 'antiFraudSettings')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isAdminRewardLedgerDto(value: unknown): value is AdminRewardLedgerDto {
+  return isRewardLedgerDto(value)
+    && isRecord(value)
+    && hasString(value, 'userId', true)
+    && hasNullableString(value, 'sourceUserId')
+    && hasNullableString(value, 'referralProgramId')
+}
+
+function isAppReleaseItemDto(value: unknown): value is AppReleaseItemDto {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasString(value, 'type', true)
+    && appReleaseItemTypeValues.has(value.type as string)
+    && hasString(value, 'text', true)
+    && hasInteger(value, 'sortOrder', 0)
+}
+
+function isAppReleaseDto(value: unknown): value is AppReleaseDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'releaseId', true)
+    && hasString(value, 'version', true)
+    && hasDateString(value, 'releasedAt')
+    && hasString(value, 'title', true)
+    && hasString(value, 'summary', true)
+    && hasBoolean(value, 'isActive')
+    && hasString(value, 'source', true)
+    && appReleaseSourceValues.has(value.source as string)
+    && Array.isArray(value.items)
+    && value.items.every(isAppReleaseItemDto)
+    && hasUniqueStringKey(value.items, 'id')
+    && hasNullableString(value, 'createdByUserId')
+    && hasString(value, 'createdByUserName')
+    && hasNullableString(value, 'updatedByUserId')
+    && hasString(value, 'updatedByUserName')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isAppVersionLatestResponse(value: unknown): value is AppVersionLatestResponse {
+  if (!isRecord(value)
+    || !hasNullableString(value, 'currentVersion')
+    || !hasBoolean(value, 'seenByCurrentUser')
+    || (value.latestRelease !== null && !isAppReleaseDto(value.latestRelease))) return false
+
+  return value.latestRelease === null
+    ? value.currentVersion === null && value.seenByCurrentUser === true
+    : value.currentVersion === value.latestRelease.version
+}
+
+function isAppReleaseSeenResult(value: unknown): value is { releaseId: string; seen: boolean } {
+  return isRecord(value)
+    && hasString(value, 'releaseId', true)
+    && value.seen === true
+}
+
+function isAppReleaseOverviewDto(value: unknown): value is AppReleaseOverviewDto {
+  if (!isRecord(value)) return false
+
+  const countKeys: Array<keyof AppReleaseOverviewDto> = [
+    'totalCount',
+    'publishedCount',
+    'upcomingCount',
+    'hiddenCount',
+    'agentCount',
+    'manualCount',
+    'seenCount'
+  ]
+  if (!countKeys.every((key) => hasInteger(value, key, 0))
+    || !hasNullableString(value, 'latestPublishedReleaseId')
+    || !hasNullableString(value, 'latestPublishedVersion')
+    || !hasStringArray(value, 'emptyReleaseIds', true)
+    || new Set(value.emptyReleaseIds as string[]).size !== (value.emptyReleaseIds as string[]).length) return false
+
+  return value.totalCount === (value.publishedCount as number) + (value.upcomingCount as number) + (value.hiddenCount as number)
+    && value.totalCount === (value.agentCount as number) + (value.manualCount as number)
+    && ((value.publishedCount as number) > 0
+      ? value.latestPublishedReleaseId !== null && value.latestPublishedVersion !== null
+      : value.latestPublishedReleaseId === null && value.latestPublishedVersion === null)
+}
+
+function isFaqOverviewDto(value: unknown): value is FaqOverviewDto {
+  if (!isRecord(value)) return false
+
+  const countKeys: Array<keyof FaqOverviewDto> = [
+    'totalCount',
+    'activeCount',
+    'hiddenCount',
+    'homeCount',
+    'faqPageCount',
+    'publicCount',
+    'categoryCount'
+  ]
+  if (!countKeys.every((key) => hasInteger(value, key, 0))
+    || !hasStringArray(value, 'categories', true)
+    || !hasStringArray(value, 'duplicateQuestions', true)
+    || !hasBoolean(value, 'hasPublicFaq')
+    || !hasBoolean(value, 'hasHomeFaq')) return false
+
+  return value.totalCount === (value.activeCount as number) + (value.hiddenCount as number)
+    && value.categoryCount === (value.categories as string[]).length
+    && new Set(value.categories as string[]).size === (value.categories as string[]).length
+    && new Set(value.duplicateQuestions as string[]).size === (value.duplicateQuestions as string[]).length
+    && (value.homeCount as number) <= (value.activeCount as number)
+    && (value.faqPageCount as number) <= (value.activeCount as number)
+    && value.publicCount === value.faqPageCount
+    && value.hasPublicFaq === ((value.publicCount as number) > 0)
+    && value.hasHomeFaq === ((value.homeCount as number) > 0)
+}
+
+function isSiteContentReadinessDto(value: unknown): value is SiteContentReadinessDto {
+  if (!isRecord(value)
+    || !hasBoolean(value, 'isReady')
+    || !hasInteger(value, 'requiredCount', 0)
+    || !hasInteger(value, 'presentCount', 0)
+    || !hasInteger(value, 'activeRequiredCount', 0)
+    || !hasInteger(value, 'publicBlocksCount', 0)) return false
+
+  const arrayKeys: Array<keyof SiteContentReadinessDto> = [
+    'missingKeys',
+    'inactiveKeys',
+    'emptyKeys',
+    'duplicateKeys',
+    'requiredKeys'
+  ]
+  if (!arrayKeys.every((key) => hasStringArray(value, key, true)
+    && new Set(value[key] as string[]).size === (value[key] as string[]).length)) return false
+
+  const noIssues = (value.missingKeys as string[]).length === 0
+    && (value.inactiveKeys as string[]).length === 0
+    && (value.emptyKeys as string[]).length === 0
+    && (value.duplicateKeys as string[]).length === 0
+  return value.requiredCount === (value.requiredKeys as string[]).length
+    && (value.presentCount as number) <= (value.requiredCount as number)
+    && (value.activeRequiredCount as number) <= (value.presentCount as number)
+    && (value.missingKeys as string[]).length === (value.requiredCount as number) - (value.presentCount as number)
+    && value.isReady === (noIssues
+      && value.presentCount === value.requiredCount
+      && value.activeRequiredCount === value.requiredCount)
+}
+
+function isSiteContentDefaultsResultDto(value: unknown): value is SiteContentDefaultsResultDto {
+  return isRecord(value)
+    && hasInteger(value, 'created', 0)
+    && hasInteger(value, 'restored', 0)
+    && isSiteContentReadinessDto(value.readiness)
+}
+
+function isWorkScenarioDto(value: unknown): value is WorkScenarioDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'name', true)
+    && hasString(value, 'key', true)
+    && hasBoolean(value, 'isActive')
+    && hasJsonUniqueStringArray(value, 'allowedTariffIdsJson')
+    && hasString(value, 'vpnProtocol', true)
+    && hasString(value, 'serverSelectionRule', true)
+    && hasString(value, 'inboundSelectionRule', true)
+    && hasString(value, 'provisioningMode', true)
+    && hasString(value, 'onPaymentSucceeded', true)
+    && hasString(value, 'onPaymentFailed', true)
+    && hasString(value, 'onRefund', true)
+    && hasString(value, 'onSubscriptionExpired', true)
+    && hasString(value, 'onRenewal', true)
+    && hasString(value, 'cabinetText')
+    && hasString(value, 'telegramText')
+    && hasBoolean(value, 'generateQrCode')
+    && hasInteger(value, 'maxDevices', 1)
+    && hasNullableInteger(value, 'trafficLimit', 0)
+    && hasInteger(value, 'sortOrder')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isDeleteResultDto(value: unknown): value is { id: string; deleted: boolean } {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasBoolean(value, 'deleted')
+}
+
+function isTariffDeleteResultDto(value: unknown): value is { id: string; deleted: boolean; archived?: boolean } {
+  if (!isRecord(value)
+    || !hasString(value, 'id', true)
+    || !hasBoolean(value, 'deleted')) return false
+
+  return (value.archived === undefined || typeof value.archived === 'boolean')
+    && (value.deleted === true || value.archived === true)
 }
 
 function isAdminTelegramAccountDto(value: unknown): value is AdminTelegramAccountDto {
@@ -2419,11 +2651,11 @@ export class ApiClient {
   }
 
   getLatestAppVersion(token: string): Promise<AppVersionLatestResponse> {
-    return this.request<AppVersionLatestResponse>('/api/app-version/latest', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<AppVersionLatestResponse>('/api/app-version/latest', { token, errorMessage: apiFallbackErrorMessage }, 'object', isAppVersionLatestResponse)
   }
 
   getAppVersionHistory(token: string): Promise<AppReleaseDto[]> {
-    return this.requestArray<AppReleaseDto>('/api/app-version/history', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AppReleaseDto>('/api/app-version/history', { token, errorMessage: apiFallbackErrorMessage }, isAppReleaseDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   markAppVersionSeen(token: string, releaseId: string): Promise<{ releaseId: string; seen: boolean }> {
@@ -2432,7 +2664,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ releaseId }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAppReleaseSeenResult)
   }
 
   getAdminDashboardSummary(token: string): Promise<AdminDashboardSummaryDto> {
@@ -2832,15 +3064,15 @@ export class ApiClient {
   }
 
   getAdminTariffs(token: string): Promise<TariffDto[]> {
-    return this.requestArray<TariffDto>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<TariffDto>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage }, isTariffDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminReferralPrograms(token: string): Promise<AdminReferralProgramDto[]> {
-    return this.requestArray<AdminReferralProgramDto>('/api/admin/referral-programs', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminReferralProgramDto>('/api/admin/referral-programs', { token, errorMessage: apiFallbackErrorMessage }, isAdminReferralProgramDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminReferralRewards(token: string): Promise<AdminRewardLedgerDto[]> {
-    return this.requestArray<AdminRewardLedgerDto>('/api/admin/referrals', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminRewardLedgerDto>('/api/admin/referrals', { token, errorMessage: apiFallbackErrorMessage }, isAdminRewardLedgerDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminAppReleases(token: string, filters: AppReleaseFilters = {}): Promise<AppReleaseDto[]> {
@@ -2849,11 +3081,11 @@ export class ApiClient {
     if (filters.source && filters.source !== 'all') params.set('source', filters.source)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.requestArray<AppReleaseDto>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AppReleaseDto>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isAppReleaseDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminAppReleaseOverview(token: string): Promise<AppReleaseOverviewDto> {
-    return this.request<AppReleaseOverviewDto>('/api/app-version/admin/releases/overview', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<AppReleaseOverviewDto>('/api/app-version/admin/releases/overview', { token, errorMessage: apiFallbackErrorMessage }, 'object', isAppReleaseOverviewDto)
   }
 
   getAdminFaq(token: string, filters: AdminFaqFilters = {}): Promise<FaqItem[]> {
@@ -2862,20 +3094,20 @@ export class ApiClient {
     if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.requestArray<FaqItem>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<FaqItem>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isFaqItem, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminFaqOverview(token: string): Promise<FaqOverviewDto> {
-    return this.request<FaqOverviewDto>('/api/admin/faq/overview', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<FaqOverviewDto>('/api/admin/faq/overview', { token, errorMessage: apiFallbackErrorMessage }, 'object', isFaqOverviewDto)
   }
 
   getAdminSiteContent(token: string, group = 'home'): Promise<SiteContentBlockDto[]> {
     const suffix = group ? `?group=${encodeURIComponent(group)}` : ''
-    return this.requestArray<SiteContentBlockDto>(`/api/admin/site-content${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SiteContentBlockDto>(`/api/admin/site-content${suffix}`, { token, errorMessage: apiFallbackErrorMessage }, isSiteContentBlockDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminHomeContentReadiness(token: string): Promise<SiteContentReadinessDto> {
-    return this.request<SiteContentReadinessDto>('/api/admin/site-content/home-readiness', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<SiteContentReadinessDto>('/api/admin/site-content/home-readiness', { token, errorMessage: apiFallbackErrorMessage }, 'object', isSiteContentReadinessDto)
   }
 
   restoreAdminHomeContentDefaults(token: string): Promise<SiteContentDefaultsResultDto> {
@@ -2884,7 +3116,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isSiteContentDefaultsResultDto)
   }
 
   createAdminSiteContent(token: string, payload: SiteContentBlockUpsertPayload): Promise<SiteContentBlockDto> {
@@ -2893,7 +3125,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isSiteContentBlockDto)
   }
 
   updateAdminSiteContent(token: string, id: string, payload: SiteContentBlockUpsertPayload): Promise<SiteContentBlockDto> {
@@ -2902,7 +3134,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isSiteContentBlockDto)
   }
 
   deleteAdminSiteContent(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
@@ -2910,11 +3142,11 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isDeleteResultDto)
   }
 
   getAdminWorkScenarios(token: string): Promise<WorkScenarioDto[]> {
-    return this.requestArray<WorkScenarioDto>('/api/admin/work-scenarios', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<WorkScenarioDto>('/api/admin/work-scenarios', { token, errorMessage: apiFallbackErrorMessage }, isWorkScenarioDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   createAdminWorkScenario(token: string, payload: WorkScenarioUpsertPayload): Promise<WorkScenarioDto> {
@@ -2923,7 +3155,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isWorkScenarioDto)
   }
 
   updateAdminWorkScenario(token: string, id: string, payload: WorkScenarioUpsertPayload): Promise<WorkScenarioDto> {
@@ -2932,7 +3164,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isWorkScenarioDto)
   }
 
   deleteAdminWorkScenario(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
@@ -2940,7 +3172,7 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isDeleteResultDto)
   }
 
   createAdminFaq(token: string, payload: FaqUpsertPayload): Promise<FaqItem> {
@@ -2949,7 +3181,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isFaqItem)
   }
 
   updateAdminFaq(token: string, id: string, payload: FaqUpsertPayload): Promise<FaqItem> {
@@ -2958,7 +3190,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isFaqItem)
   }
 
   deleteAdminFaq(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
@@ -2966,7 +3198,7 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isDeleteResultDto)
   }
 
   createAdminAppRelease(token: string, payload: AppReleaseUpsertPayload): Promise<AppReleaseDto> {
@@ -2975,7 +3207,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAppReleaseDto)
   }
 
   updateAdminAppRelease(token: string, id: string, payload: AppReleaseUpsertPayload): Promise<AppReleaseDto> {
@@ -2984,7 +3216,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAppReleaseDto)
   }
 
   deleteAdminAppRelease(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
@@ -2992,7 +3224,7 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isDeleteResultDto)
   }
 
   createAdminTariff(token: string, payload: UpdateTariffPayload): Promise<TariffDto> {
@@ -3001,7 +3233,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isTariffDto)
   }
 
   updateAdminTariff(token: string, id: string, payload: UpdateTariffPayload): Promise<TariffDto> {
@@ -3010,7 +3242,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isTariffDto)
   }
 
   deleteAdminTariff(token: string, id: string): Promise<{ id: string; deleted: boolean; archived?: boolean }> {
@@ -3018,7 +3250,7 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isTariffDeleteResultDto)
   }
 
   createAdminReferralProgram(token: string, payload: ReferralProgramUpsertPayload): Promise<AdminReferralProgramDto> {
@@ -3027,7 +3259,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminReferralProgramDto)
   }
 
   updateAdminReferralProgram(token: string, id: string, payload: ReferralProgramUpsertPayload): Promise<AdminReferralProgramDto> {
@@ -3036,7 +3268,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminReferralProgramDto)
   }
 
   getAdminServers(token: string): Promise<VpnNodeDto[]> {

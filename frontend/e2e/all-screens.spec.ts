@@ -246,7 +246,11 @@ const release = {
   summary: 'Browser smoke covers public, cabinet and admin surfaces.',
   isActive: true,
   source: 'agent',
-  items: [{ type: 'new', text: 'All screens smoke is available.', sortOrder: 1 }],
+  items: [{ id: 'release-item-all-screens', type: 'new', text: 'All screens smoke is available.', sortOrder: 1 }],
+  createdByUserId: null,
+  createdByUserName: 'Agent',
+  updatedByUserId: null,
+  updatedByUserName: 'Agent',
   createdAt: now,
   updatedAt: now
 }
@@ -297,18 +301,30 @@ async function installApiMock(page: Page) {
 
     if (method === 'GET' && path === '/api/public/content/home') {
       await fulfillJson(route, [
-        { key: 'home.hero.title', value: 'All screens VPN' },
-        { key: 'home.hero.subtitle', value: 'Browser smoke content.' },
-        { key: 'home.hero.primaryCta', value: 'Choose tariff' },
-        { key: 'home.pricing.title', value: 'Tariffs' },
-        { key: 'home.finalCta.title', value: 'Start VPN' }
-      ])
+        ['home.hero.title', 'All screens VPN'],
+        ['home.hero.subtitle', 'Browser smoke content.'],
+        ['home.hero.primaryCta', 'Choose tariff'],
+        ['home.pricing.title', 'Tariffs'],
+        ['home.finalCta.title', 'Start VPN']
+      ].map(([key, value], index) => ({
+        id: `public-content-${index + 1}`,
+        key,
+        value,
+        group: 'home',
+        label: key,
+        description: '',
+        inputType: 'text',
+        isActive: true,
+        sortOrder: index + 1,
+        createdAt: now,
+        updatedAt: now
+      })))
       return
     }
 
     if (method === 'GET' && path.startsWith('/api/public/content/faq')) {
       await fulfillJson(route, [
-        { id: 'faq-all-screens', question: 'How to pay?', answer: 'Use sandbox provider.', category: 'Payment', sortOrder: 1 }
+        { id: 'faq-all-screens', question: 'How to pay?', answer: 'Use sandbox provider.', category: 'Payment', sortOrder: 1, isActive: true, showOnHome: true, showOnFaqPage: true, createdAt: now, updatedAt: now }
       ])
       return
     }
@@ -350,7 +366,7 @@ async function installApiMock(page: Page) {
         await fulfillJson(route, [release])
         return
       }
-      await fulfillJson(route, { latestRelease: release, hasUnseenRelease: false, seenAt: now })
+      await fulfillJson(route, { currentVersion: release.version, latestRelease: release, seenByCurrentUser: true })
       return
     }
 
@@ -528,7 +544,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/faq') {
-      await fulfillJson(route, [{ id: 'faq-all-screens', question: 'How to pay?', answer: 'Use sandbox provider.', category: 'Payment', sortOrder: 1, isActive: true }])
+      await fulfillJson(route, [{ id: 'faq-all-screens', question: 'How to pay?', answer: 'Use sandbox provider.', category: 'Payment', sortOrder: 1, isActive: true, showOnHome: true, showOnFaqPage: true, createdAt: now, updatedAt: now }])
       return
     }
 
@@ -550,7 +566,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/site-content') {
-      await fulfillJson(route, [{ id: 'content-hero', key: 'home.hero.title', value: 'All screens VPN', isActive: true, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'content-hero', key: 'home.hero.title', value: 'All screens VPN', group: 'home', label: 'Hero title', description: '', inputType: 'text', isActive: true, sortOrder: 1, createdAt: now, updatedAt: now }])
       return
     }
 
@@ -571,7 +587,30 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/work-scenarios') {
-      await fulfillJson(route, [{ id: 'scenario-auto', key: 'auto', name: 'Auto provisioning', isActive: true, provisioningMode: 'auto' }])
+      await fulfillJson(route, [{
+        id: 'scenario-auto',
+        key: 'auto',
+        name: 'Auto provisioning',
+        isActive: true,
+        allowedTariffIdsJson: '[]',
+        vpnProtocol: 'vless',
+        serverSelectionRule: 'least-loaded',
+        inboundSelectionRule: 'default',
+        provisioningMode: 'auto',
+        onPaymentSucceeded: 'create_subscription_and_access',
+        onPaymentFailed: 'keep_order_pending',
+        onRefund: 'disable_access',
+        onSubscriptionExpired: 'disable_access_after_grace',
+        onRenewal: 'extend_subscription',
+        cabinetText: 'Access is ready.',
+        telegramText: 'VPN is ready.',
+        generateQrCode: true,
+        maxDevices: 3,
+        trafficLimit: null,
+        sortOrder: 1,
+        createdAt: now,
+        updatedAt: now
+      }])
       return
     }
 

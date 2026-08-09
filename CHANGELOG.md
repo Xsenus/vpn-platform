@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.533.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-content-api-dto-validation`.
+
+### Исправлено
+
+- API-клиент больше не принимает неполные DTO тарифов, реферальных программ и начислений, релизов приложения, FAQ, контента сайта и сценариев работы как доверенные данные.
+- Runtime-контракты проверяют обязательные поля, даты, enum, nullable-значения, JSON-объекты и массивы, уникальные `id`, счетчики overview/readiness и согласованность latest release с текущей версией.
+- Read и mutation ответы всех перечисленных разделов завершаются controlled `ApiClientError` `502` до TypeScript cast при нарушении фактического backend-контракта.
+- Поврежденный список тарифов очищает ранее загруженные карточки вместо показа устаревших коммерческих данных.
+
+### Проверено
+
+- Frontend `100/100`, включая malformed content/reference/app-release read и mutation DTO; typecheck и production build всех трех приложений.
+- Admin desktop/mobile `6/6`, malformed tariffs regression `2/2`, все admin-разделы и representative responsive widths `2/2`; полный console/responsive suite `18/18`.
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует; fresh local SQLite checkout/payment/subscription/VPN smoke пройден.
+- Dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings; release/documentation/UTF-8 guards подтверждают latest `2026-08-09-admin-content-api-dto-validation`, версию `0.533.0` и roadmap `546/566`.
+- Roadmap progress: `546/566` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.532.0 - 2026-08-09
 
 Release entry: `2026-08-09-admin-finance-support-api-dto-validation`.

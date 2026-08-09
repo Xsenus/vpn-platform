@@ -126,7 +126,7 @@ function release(overrides: Record<string, unknown> = {}) {
     summary: 'Релиз для проверки раздела Что нового.',
     isActive: true,
     source: 'agent',
-    items: [{ type: 'new', text: 'Раздел релизов открыт в E2E.', sortOrder: 1 }],
+    items: [{ id: 'release-item-admin-e2e', type: 'new', text: 'Раздел релизов открыт в E2E.', sortOrder: 1 }],
     createdByUserId: 'admin-user',
     createdByUserName: 'Admin E2E',
     updatedByUserId: 'admin-user',
@@ -196,6 +196,7 @@ async function mockAdminApi(page: Page) {
   let dashboardShouldDeny = false
   let invalidUsersResponse = false
   let invalidPaymentProviderAccountsResponse = false
+  let invalidTariffsResponse = false
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const referralPrograms = [referralProgram()]
@@ -342,7 +343,8 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/app-version/latest') {
-      await fulfillJson(route, { currentVersion: null, latestRelease: releases[releases.length - 1] ?? null, seenByCurrentUser: true })
+      const latestRelease = releases[releases.length - 1] ?? null
+      await fulfillJson(route, { currentVersion: latestRelease?.version ?? null, latestRelease, seenByCurrentUser: true })
       return
     }
 
@@ -485,7 +487,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/tariffs') {
-      await fulfillJson(route, tariffs)
+      await fulfillJson(route, invalidTariffsResponse ? [{}] : tariffs)
       return
     }
 
@@ -535,7 +537,16 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/app-version/admin/releases') {
-      const created = release({ ...(body as Record<string, unknown>), id: 'release-created-e2e', createdAt: now, updatedAt: now })
+      const releaseBody = body as Record<string, unknown>
+      const created = release({
+        ...releaseBody,
+        id: 'release-created-e2e',
+        items: Array.isArray(releaseBody.items)
+          ? releaseBody.items.map((item, index) => ({ ...(item as Record<string, unknown>), id: `release-created-item-${index + 1}` }))
+          : [],
+        createdAt: now,
+        updatedAt: now
+      })
       releases.push(created)
       await fulfillJson(route, created, 201)
       return
@@ -652,6 +663,7 @@ async function mockAdminApi(page: Page) {
     denyNextDashboard: () => { dashboardShouldDeny = true },
     returnInvalidUsersResponse: () => { invalidUsersResponse = true },
     returnInvalidPaymentProviderAccountsResponse: () => { invalidPaymentProviderAccountsResponse = true },
+    returnInvalidTariffsResponse: () => { invalidTariffsResponse = true },
     failLogout: () => { logoutShouldFail = true }
   }
 }
@@ -877,6 +889,14 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
   await page.getByRole('button', { name: 'Войти в админку' }).click()
   await expect(page.locator('.admin-shell')).toBeVisible()
+
+  api.returnInvalidTariffsResponse()
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect(page.locator('.code-block').filter({ hasText: 'tariffs:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await openAdminSection(page, 'Тарифы', 'tariffs')
+  await expect(page.getByText('Тарифов нет')).toBeVisible()
+  await expect(page.locator('#tariffs').getByText('Admin Pro 30', { exact: true })).toHaveCount(0)
+  await expect(page.locator('#tariffs').getByText('E2E Premium 45', { exact: true })).toHaveCount(0)
 
   api.returnInvalidPaymentProviderAccountsResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()

@@ -16,6 +16,92 @@ import {
 
 const adminFixtureTimestamp = '2026-08-09T00:00:00Z'
 
+function adminTariffFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'tariff-1',
+    name: 'Premium',
+    slug: 'premium',
+    description: 'Premium access',
+    fullDescription: 'Premium VPN access',
+    features: ['Автовыдача'],
+    featuresJson: '["Автовыдача"]',
+    badge: 'Популярный',
+    durationDays: 30,
+    price: 299,
+    currency: 'RUB',
+    maxDevices: 3,
+    trafficLimit: null,
+    isTrial: false,
+    isActive: true,
+    sortOrder: 10,
+    visibleFrom: null,
+    visibleTo: null,
+    tariffType: 'Personal',
+    category: 'default',
+    allowedRegionsCsv: '',
+    allowedNodeGroupsCsv: '',
+    isReferralEligible: true,
+    provisioningScenario: 'auto',
+    afterPaymentText: 'Доступ появится в кабинете.',
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function adminReferralProgramFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'program-1',
+    name: 'Welcome',
+    status: 'active',
+    startAt: null,
+    endAt: null,
+    ruleDefinition: '{"firstPurchaseOnly":true}',
+    rewardDefinition: '{"referrer":{"type":"bonus-days","value":7,"unit":"days","autoApprove":true}}',
+    antiFraudSettings: '{}',
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function faqFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'faq-1',
+    question: 'Как подключиться?',
+    answer: 'Через кабинет',
+    category: 'Подключение',
+    isActive: true,
+    showOnHome: true,
+    showOnFaqPage: true,
+    sortOrder: 10,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function appReleaseFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'release-guid',
+    releaseId: 'release-1',
+    version: '0.2.0',
+    releasedAt: adminFixtureTimestamp,
+    title: 'Что нового',
+    summary: 'Описание релиза',
+    isActive: true,
+    source: 'manual',
+    items: [{ id: 'item-1', type: 'new', text: 'Пункт релиза', sortOrder: 10 }],
+    createdByUserId: null,
+    createdByUserName: 'Agent',
+    updatedByUserId: null,
+    updatedByUserName: 'Agent',
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function adminCapabilitiesFixture(overrides: Record<string, unknown> = {}) {
   return {
     adminRead: true,
@@ -414,7 +500,14 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
       })
     }
 
-    return new Response(JSON.stringify({ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 }), {
+    if (init?.method === 'DELETE') {
+      return new Response(JSON.stringify({ id: 'faq-1', deleted: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(JSON.stringify(faqFixture()), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -449,11 +542,11 @@ test('ApiClient site content endpoints cover public and admin CRUD', async () =>
     calls.push({ url: String(url), init })
     if (String(url).includes('/api/public/content/home') || String(url).includes('/api/admin/site-content')) {
       if (String(url).includes('/home-readiness')) {
-        return new Response(JSON.stringify({ isReady: true, requiredCount: 18, presentCount: 18, activeRequiredCount: 18, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: 18, requiredKeys: ['home.hero.title'] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ isReady: true, requiredCount: 1, presentCount: 1, activeRequiredCount: 1, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: 1, requiredKeys: ['home.hero.title'] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
       if (String(url).includes('/home-defaults')) {
-        return new Response(JSON.stringify({ created: 1, restored: 2, readiness: { isReady: true, requiredCount: 18, presentCount: 18, activeRequiredCount: 18, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: 18, requiredKeys: ['home.hero.title'] } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ created: 1, restored: 2, readiness: { isReady: true, requiredCount: 1, presentCount: 1, activeRequiredCount: 1, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: 1, requiredKeys: ['home.hero.title'] } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
       if (init?.method === 'DELETE') {
@@ -519,7 +612,7 @@ test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).endsWith('/api/admin/tariffs') && init?.method !== 'POST') {
-      return new Response(JSON.stringify([{ id: 'tariff-1', name: 'Premium', features: ['Автовыдача'], badge: 'Популярный' }]), {
+      return new Response(JSON.stringify([adminTariffFixture()]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -532,7 +625,7 @@ test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
       })
     }
 
-    return new Response(JSON.stringify({ id: 'tariff-1', name: 'Premium', features: ['Автовыдача'], badge: 'Выгодно' }), {
+    return new Response(JSON.stringify(adminTariffFixture({ badge: 'Выгодно' })), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -557,7 +650,7 @@ test('ApiClient admin referral endpoints cover programs and rewards', async () =
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     const isProgramList = String(url).endsWith('/referral-programs') && (init?.method ?? 'GET') === 'GET'
-    return new Response(JSON.stringify(String(url).endsWith('/referrals') ? [] : isProgramList ? [{ id: 'program-1', name: 'Welcome', status: 'active' }] : { id: 'program-1', name: 'Welcome', status: 'active' }), {
+    return new Response(JSON.stringify(String(url).endsWith('/referrals') ? [] : isProgramList ? [adminReferralProgramFixture()] : adminReferralProgramFixture()), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1591,6 +1684,123 @@ test('ApiClient rejects malformed admin finance, audit, notification and support
   assert.equal(responses.length, 0)
 })
 
+test('ApiClient rejects malformed admin content and app release DTOs', async () => {
+  const responses = [
+    '{}', '[{}]', '{}',
+    '[{}]', '{}', '{}', '{}',
+    '[{}]', '[{}]', '{}', '{}',
+    '[{}]', '{}', '{}', '{}', '{}',
+    '[{}]', '{}', '{}', '{}', '{}',
+    '[{}]', '{}', '{}', '{}', '{}', '{}',
+    '[{}]', '{}', '{}', '{}'
+  ]
+  globalThis.fetch = (async () => new Response(responses.shift(), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const tariffPayload = { name: 'Premium', featuresJson: '[]' }
+  const referralPayload = {
+    name: 'Welcome',
+    status: 'active',
+    startAt: null,
+    endAt: null,
+    ruleDefinition: '{}',
+    rewardDefinition: '{}',
+    antiFraudSettings: '{}'
+  }
+  const releasePayload = {
+    releaseId: 'release-1',
+    version: '0.2.0',
+    releasedAt: adminFixtureTimestamp,
+    title: 'Что нового',
+    summary: 'Описание',
+    isActive: true,
+    source: 'manual' as const,
+    items: [{ type: 'new' as const, text: 'Пункт', sortOrder: 10 }]
+  }
+  const faqPayload = {
+    question: 'Как?',
+    answer: 'Так',
+    category: 'Общее',
+    isActive: true,
+    showOnHome: true,
+    showOnFaqPage: true,
+    sortOrder: 10
+  }
+  const siteContentPayload = {
+    key: 'home.hero.title',
+    value: 'VPN',
+    group: 'home',
+    label: 'Hero title',
+    inputType: 'text',
+    isActive: true,
+    sortOrder: 10
+  }
+  const scenarioPayload = {
+    name: 'Auto',
+    key: 'auto',
+    isActive: true,
+    allowedTariffIdsJson: '[]',
+    vpnProtocol: 'vless',
+    serverSelectionRule: 'least-loaded',
+    inboundSelectionRule: 'default',
+    provisioningMode: 'auto',
+    onPaymentSucceeded: 'create_subscription_and_access',
+    onPaymentFailed: 'keep_order_pending',
+    onRefund: 'disable_access',
+    onSubscriptionExpired: 'disable_access_after_grace',
+    onRenewal: 'extend_subscription',
+    cabinetText: 'Ready',
+    telegramText: 'Ready',
+    generateQrCode: true,
+    maxDevices: 3,
+    trafficLimit: null,
+    sortOrder: 10
+  }
+  const operations = [
+    () => client.getLatestAppVersion('user-token'),
+    () => client.getAppVersionHistory('user-token'),
+    () => client.markAppVersionSeen('user-token', 'release-1'),
+    () => client.getAdminTariffs('admin-token'),
+    () => client.createAdminTariff('admin-token', tariffPayload),
+    () => client.updateAdminTariff('admin-token', 'tariff-1', tariffPayload),
+    () => client.deleteAdminTariff('admin-token', 'tariff-1'),
+    () => client.getAdminReferralPrograms('admin-token'),
+    () => client.getAdminReferralRewards('admin-token'),
+    () => client.createAdminReferralProgram('admin-token', referralPayload),
+    () => client.updateAdminReferralProgram('admin-token', 'program-1', referralPayload),
+    () => client.getAdminAppReleases('admin-token'),
+    () => client.getAdminAppReleaseOverview('admin-token'),
+    () => client.createAdminAppRelease('admin-token', releasePayload),
+    () => client.updateAdminAppRelease('admin-token', 'release-guid', releasePayload),
+    () => client.deleteAdminAppRelease('admin-token', 'release-guid'),
+    () => client.getAdminFaq('admin-token'),
+    () => client.getAdminFaqOverview('admin-token'),
+    () => client.createAdminFaq('admin-token', faqPayload),
+    () => client.updateAdminFaq('admin-token', 'faq-1', faqPayload),
+    () => client.deleteAdminFaq('admin-token', 'faq-1'),
+    () => client.getAdminSiteContent('admin-token'),
+    () => client.getAdminHomeContentReadiness('admin-token'),
+    () => client.restoreAdminHomeContentDefaults('admin-token'),
+    () => client.createAdminSiteContent('admin-token', siteContentPayload),
+    () => client.updateAdminSiteContent('admin-token', 'content-1', siteContentPayload),
+    () => client.deleteAdminSiteContent('admin-token', 'content-1'),
+    () => client.getAdminWorkScenarios('admin-token'),
+    () => client.createAdminWorkScenario('admin-token', scenarioPayload),
+    () => client.updateAdminWorkScenario('admin-token', 'scenario-1', scenarioPayload),
+    () => client.deleteAdminWorkScenario('admin-token', 'scenario-1')
+  ]
+  const isInvalidResponseDataError = (error: unknown) =>
+    error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+
+  for (const operation of operations) {
+    await assert.rejects(operation, isInvalidResponseDataError)
+  }
+  assert.equal(responses.length, 0)
+})
+
 test('ApiClient times out stalled fetches and response bodies with controlled errors', async () => {
   let abortedFetches = 0
   globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
@@ -1643,7 +1853,7 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).endsWith('/latest')) {
-      return new Response(JSON.stringify({ currentVersion: '0.2.0', latestRelease: null, seenByCurrentUser: true }), {
+      return new Response(JSON.stringify({ currentVersion: '0.2.0', latestRelease: appReleaseFixture(), seenByCurrentUser: true }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -1655,10 +1865,24 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
       })
     }
     if (String(url).endsWith('/history') || String(url).includes('/admin/releases?') || (String(url).endsWith('/admin/releases') && (init?.method ?? 'GET') === 'GET')) {
-      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([appReleaseFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
-    return new Response(JSON.stringify({ id: 'release-1', releaseId: 'release-1', version: '0.2.0', items: [] }), {
+    if (String(url).endsWith('/mark-seen')) {
+      return new Response(JSON.stringify({ releaseId: 'release-1', seen: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (init?.method === 'DELETE') {
+      return new Response(JSON.stringify({ id: 'release-guid', deleted: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(JSON.stringify(appReleaseFixture()), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
