@@ -12449,5 +12449,32 @@
         "text": "Roadmap progress is 544/564 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-admin-finance-support-api-dto-validation",
+    "version": "0.532.0",
+    "releasedAt": "2026-08-09T11:25:07+07:00",
+    "title": "Финансы и поддержка админки проверяются до рендера",
+    "summary": "Финансовые, audit, notification и support ответы админки теперь проходят runtime-проверку фактического backend-контракта, а поврежденный список платежных аккаунтов не оставляет на экране устаревшую готовность оплаты.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Audit logs, notification delivery/retry, payment recheck/refund, provider accounts/checks, webhook events, refunds и support read/mutation DTO отклоняются до TypeScript cast при отсутствии обязательных полей."
+      },
+      {
+        "type": "fixed",
+        "text": "Вложенные capabilities и required fields, даты, enum, суммы, nullable-поля, уникальные id и internal-note semantics проверяются по фактическому backend-контракту."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile regression подтверждает controlled 502 для malformed payment provider accounts без stale способа оплаты, ложной readiness, pageerror и обрушения админки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 545/565 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

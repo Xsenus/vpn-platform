@@ -99,13 +99,14 @@ function paymentProviderAccount(overrides: Record<string, unknown> = {}) {
     healthStatus: 'Healthy',
     isCheckoutConfigured: true,
     checkoutConfigurationIssue: null,
+    capabilitiesJson: '["checkout","refund"]',
     capabilities: [
       { key: 'checkout', label: 'Checkout', supported: true, status: 'Ready' },
       { key: 'refund', label: 'Refund', supported: true, status: 'Ready' }
     ],
     requiredFields: [
-      { key: 'shopId', label: 'Shop ID', required: true, configured: true },
-      { key: 'secretKey', label: 'Secret key', required: true, configured: true }
+      { key: 'shopId', label: 'Shop ID', required: true, configured: true, issue: null },
+      { key: 'secretKey', label: 'Secret key', required: true, configured: true, issue: null }
     ],
     readinessBlockers: [],
     isPubliclyAvailable: true,
@@ -194,6 +195,7 @@ async function mockAdminApi(page: Page) {
   let logoutShouldFail = false
   let dashboardShouldDeny = false
   let invalidUsersResponse = false
+  let invalidPaymentProviderAccountsResponse = false
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const referralPrograms = [referralProgram()]
@@ -439,7 +441,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/payment-providers/accounts') {
-      await fulfillJson(route, providers)
+      await fulfillJson(route, invalidPaymentProviderAccountsResponse ? [{}] : providers)
       return
     }
 
@@ -473,12 +475,12 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/support/conversations') {
-      await fulfillJson(route, [{ id: 'support-e2e', userId: 'user-e2e', telegramUserId: null, channel: 'Web', status: 'open', subject: 'Проверка доступа', assignedToUserId: null, internalNote: '', revision: 0, closedAt: null, createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'support-e2e', userId: 'user-e2e', telegramUserId: null, channel: 'web', status: 'open', subject: 'Проверка доступа', assignedToUserId: null, internalNote: '', revision: 0, closedAt: null, createdAt: now, updatedAt: now }])
       return
     }
 
     if (method === 'GET' && path === '/api/admin/support/conversations/support-e2e/messages') {
-      await fulfillJson(route, [{ id: 'support-message-e2e', supportConversationId: 'support-e2e', userId: 'user-e2e', telegramUserId: null, direction: 'Inbound', text: 'Нужна проверка доступа', attachmentsJson: '[]', isInternalNote: false, createdAt: now }])
+      await fulfillJson(route, [{ id: 'support-message-e2e', supportConversationId: 'support-e2e', userId: 'user-e2e', telegramUserId: null, direction: 'inbound', text: 'Нужна проверка доступа', attachmentsJson: '[]', isInternalNote: false, createdAt: now }])
       return
     }
 
@@ -649,6 +651,7 @@ async function mockAdminApi(page: Page) {
       requests.findLast((item) => item.method === method && item.path === path),
     denyNextDashboard: () => { dashboardShouldDeny = true },
     returnInvalidUsersResponse: () => { invalidUsersResponse = true },
+    returnInvalidPaymentProviderAccountsResponse: () => { invalidPaymentProviderAccountsResponse = true },
     failLogout: () => { logoutShouldFail = true }
   }
 }
@@ -874,6 +877,13 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
   await page.getByRole('button', { name: 'Войти в админку' }).click()
   await expect(page.locator('.admin-shell')).toBeVisible()
+
+  api.returnInvalidPaymentProviderAccountsResponse()
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect(page.locator('.code-block').filter({ hasText: 'способы оплаты:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await openAdminSection(page, 'Оплаты', 'payments')
+  await expect(page.getByText('Способы оплаты не настроены')).toBeVisible()
+  await expect(page.locator('#payments').getByText('YooKassa sandbox', { exact: true })).toHaveCount(0)
 
   api.returnInvalidUsersResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()

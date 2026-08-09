@@ -39,13 +39,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1112/1112", readme, StringComparison.Ordinal);
-        Assert.Contains("98/98", readme, StringComparison.Ordinal);
+        Assert.Contains("99/99", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-09-admin-core-api-dto-validation", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-admin-finance-support-api-dto-validation", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1112/1112",
-                     "2026-08-09-admin-core-api-dto-validation",
-                     "0.531.0",
+                     "2026-08-09-admin-finance-support-api-dto-validation",
+                     "0.532.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

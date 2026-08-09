@@ -228,8 +228,9 @@ const providerAccount = {
   healthStatus: 'Healthy',
   isCheckoutConfigured: true,
   checkoutConfigurationIssue: null,
+  capabilitiesJson: '["checkout"]',
   capabilities: [{ key: 'checkout', label: 'Checkout', supported: true, status: 'Ready' }],
-  requiredFields: [{ key: 'shopId', label: 'Shop ID', required: true, configured: true }],
+  requiredFields: [{ key: 'shopId', label: 'Shop ID', required: true, configured: true, issue: null }],
   readinessBlockers: [],
   isPubliclyAvailable: true,
   createdAt: now,
@@ -517,7 +518,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/support/conversations') {
-      await fulfillJson(route, [{ id: 'support-all-screens', userId: user.id, userEmail: user.email, subject: 'Smoke support', status: 'Open', revision: 0, createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'support-all-screens', userId: user.id, telegramUserId: null, channel: 'web', subject: 'Smoke support', status: 'open', assignedToUserId: null, internalNote: '', revision: 0, closedAt: null, createdAt: now, updatedAt: now }])
       return
     }
 
@@ -607,11 +608,15 @@ async function installApiMock(page: Page) {
     if (method === 'GET' && path === '/api/admin/notification-deliveries') {
       await fulfillJson(route, [{
         id: 'notification-all-screens',
+        userId: user.id,
         templateKey: 'password_reset_requested',
         channel: 'Email',
         maskedToAddress: 'al***@example.test',
         status: 'Failed',
         attempts: 5,
+        processingStartedAt: null,
+        nextAttemptAt: null,
+        sentAt: null,
         errorText: 'SMTP connection unavailable',
         createdAt: now,
         updatedAt: now

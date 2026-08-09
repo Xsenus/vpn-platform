@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.532.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-finance-support-api-dto-validation`.
+
+### Исправлено
+
+- Админка больше не принимает неполные DTO журнала аудита, email-уведомлений, recheck/refund, платежных аккаунтов, webhook-событий, возвратов и поддержки как доверенные данные.
+- Runtime-контракты проверяют вложенные capabilities/required fields платежного аккаунта, даты, enum, суммы, nullable-поля, уникальные `id` и согласованность account check с исходным аккаунтом.
+- Для admin support введен отдельный контракт сообщений: обычные сообщения и внутренние заметки проверяются по фактическим backend direction/isInternalNote, не ослабляя кабинетный запрет на внутренние заметки.
+- Поврежденный список платежных аккаунтов теперь дает controlled `ApiClientError` `502` и очищает ранее загруженные способы оплаты вместо показа устаревшей готовности.
+
+### Проверено
+
+- Frontend `99/99`, включая malformed finance/audit/notification/support read и mutation DTO; typecheck и production build всех трех приложений.
+- Admin desktop/mobile `6/6`, malformed payment providers regression `2/2`, все admin-разделы и representative responsive widths `2/2`; полный console/responsive suite `18/18`.
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует; fresh local SQLite checkout/payment/subscription/VPN smoke пройден.
+- Dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings; release/documentation/UTF-8 guards подтверждают latest `2026-08-09-admin-finance-support-api-dto-validation`, версию `0.532.0` и roadmap `545/565`.
+- Roadmap progress: `545/565` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.531.0 - 2026-08-09
 
 Release entry: `2026-08-09-admin-core-api-dto-validation`.

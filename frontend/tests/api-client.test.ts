@@ -167,6 +167,38 @@ function adminPaymentFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function adminPaymentProviderAccountFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'provider-1',
+    provider: 'YooKassa',
+    mode: 'Sandbox',
+    name: 'yookassa-sandbox',
+    publicName: 'YooKassa sandbox',
+    isEnabled: true,
+    isDefault: true,
+    shopId: 'shop-1',
+    apiBaseUrl: 'https://api.yookassa.ru',
+    returnUrl: 'https://cabinet.example.test/payment-return',
+    webhookUrl: 'https://api.example.test/webhooks/payments/yookassa',
+    hasSecretKey: true,
+    hasWebhookSecret: false,
+    useWebhookIpAllowList: false,
+    allowedWebhookIpRangesCsv: '',
+    extraSettingsJson: '{}',
+    healthStatus: 'Unknown',
+    isCheckoutConfigured: true,
+    checkoutConfigurationIssue: null,
+    capabilitiesJson: '["createPayment"]',
+    capabilities: [{ key: 'createPayment', label: 'Создание платежа', supported: true, status: 'supported' }],
+    requiredFields: [{ key: 'shopId', label: 'ShopId / merchant id', required: true, configured: true, issue: null }],
+    readinessBlockers: [],
+    isPubliclyAvailable: true,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function adminSubscriptionFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'sub-1',
@@ -905,13 +937,13 @@ test('ApiClient admin support reply and note endpoints are tokenized', async () 
     calls.push({ url: String(url), init })
     const body = String(init?.body ?? '')
     if (String(url).endsWith('/notes')) {
-      return new Response(JSON.stringify({ id: 'msg-1', supportConversationId: 'conv-1', direction: 'internal', text: 'note', attachmentsJson: '[]', isInternalNote: true, createdAt: new Date().toISOString() }), {
+      return new Response(JSON.stringify({ id: 'msg-1', supportConversationId: 'conv-1', userId: 'admin-1', telegramUserId: null, direction: 'internal', text: 'note', attachmentsJson: '[]', isInternalNote: true, createdAt: new Date().toISOString() }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
-    return new Response(JSON.stringify({ conversationId: 'conv-1', status: body.includes('pending') ? 'pending' : 'queued' }), {
+    return new Response(JSON.stringify({ conversationId: 'conv-1', status: body.includes('pending') ? 'pending' : 'queued', revision: body.includes('pending') ? 9 : 8 }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1082,7 +1114,7 @@ test('ApiClient admin payment providers expose readiness fields without secrets'
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify([{ id: 'account-1', provider: 'YooKassa', mode: 'Sandbox', name: 'Yoo', publicName: 'Yoo', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: '', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', hasSecretKey: true, hasWebhookSecret: false, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{"apiSecret":"***"}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]', capabilities: [{ key: 'createPayment', label: 'Создание платежа', supported: true, status: 'supported' }], requiredFields: [{ key: 'shopId', label: 'ShopId / merchant id', required: true, configured: true, issue: null }], readinessBlockers: [], isPubliclyAvailable: true }]), {
+    return new Response(JSON.stringify([adminPaymentProviderAccountFixture({ id: 'account-1', name: 'Yoo', publicName: 'Yoo', shopId: 'shop', apiBaseUrl: '', extraSettingsJson: '{"apiSecret":"***"}' })]), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1105,7 +1137,7 @@ test('ApiClient admin payment providers can create, update and toggle accounts',
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    const body = { id: 'account-1', provider: 'Stripe', mode: 'Sandbox', name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/stripe', hasSecretKey: true, hasWebhookSecret: true, useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}', healthStatus: 'Unknown', isCheckoutConfigured: true, checkoutConfigurationIssue: null, capabilitiesJson: '["createPayment"]' }
+    const body = adminPaymentProviderAccountFixture({ id: 'account-1', provider: 'Stripe', name: 'stripe-main', publicName: 'Stripe', shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/stripe', hasWebhookSecret: true })
     return new Response(JSON.stringify(String(url).endsWith('/check') ? { accountId: 'account-1', provider: 'Stripe', mode: 'Sandbox', isReady: true, checkScope: 'ConfigurationOnly', configurationStatus: 'Ready', healthStatus: 'Unknown', message: 'Configuration is ready. External provider account was not requested.', details: ['Checkout configuration is ready.'], checkedAt: new Date().toISOString(), account: body } : body), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -1144,7 +1176,7 @@ test('ApiClient admin payments expose refund readiness and send refund payload',
       })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
-    return new Response(JSON.stringify({ id: 'refund-1', paymentAttemptId: 'payment-1', provider: 'YooKassa', providerRefundId: 'rf-1', status: 'Succeeded', amount: 50, currency: 'RUB', reason: 'manual', createdAt: new Date().toISOString() }), {
+    return new Response(JSON.stringify({ id: 'refund-1', paymentAttemptId: 'payment-1', provider: 'YooKassa', providerRefundId: 'rf-1', status: 'Succeeded', amount: 50, currency: 'RUB', reason: 'manual', createdAt: new Date().toISOString(), refundedAt: new Date().toISOString() }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1486,6 +1518,79 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
   assert.deepEqual(await client.getTariffs(), [])
 })
 
+test('ApiClient rejects malformed admin finance, audit, notification and support DTOs', async () => {
+  const responses = [
+    '[{}]',
+    '[{}]',
+    '{}',
+    '{}',
+    '{}',
+    '{}',
+    '[{}]',
+    '{}',
+    '{}',
+    '{}',
+    '{}',
+    '[{}]',
+    '[{}]',
+    '[{}]',
+    '[{}]',
+    '{}',
+    '{}',
+    '{}'
+  ]
+  globalThis.fetch = (async () => new Response(responses.shift(), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const providerPayload = {
+    provider: 'YooKassa' as const,
+    mode: 'Sandbox' as const,
+    name: 'sandbox',
+    publicName: 'Sandbox',
+    isEnabled: true,
+    isDefault: true,
+    shopId: 'shop',
+    apiBaseUrl: '',
+    returnUrl: '',
+    webhookUrl: '',
+    secretKey: '',
+    webhookSecret: '',
+    useWebhookIpAllowList: false,
+    allowedWebhookIpRangesCsv: '',
+    extraSettingsJson: '{}'
+  }
+  const isInvalidResponseDataError = (error: unknown) =>
+    error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  const operations = [
+    () => client.getAdminAuditLogs('admin-token'),
+    () => client.getAdminNotificationDeliveries('admin-token'),
+    () => client.retryAdminNotificationDelivery('admin-token', 'delivery-1'),
+    () => client.recheckAdminPayment('admin-token', 'payment-1'),
+    () => client.recheckAdminOrderPayment('admin-token', 'order-1'),
+    () => client.refundAdminPayment('admin-token', 'payment-1', 50),
+    () => client.getAdminPaymentProviderAccounts('admin-token'),
+    () => client.createAdminPaymentProviderAccount('admin-token', providerPayload),
+    () => client.updateAdminPaymentProviderAccount('admin-token', 'provider-1', providerPayload),
+    () => client.setAdminPaymentProviderAccountEnabled('admin-token', 'provider-1', false),
+    () => client.checkAdminPaymentProviderAccount('admin-token', 'provider-1'),
+    () => client.getAdminPaymentWebhookEvents('admin-token'),
+    () => client.getAdminRefunds('admin-token'),
+    () => client.getAdminSupportConversations('admin-token'),
+    () => client.getAdminSupportMessages('admin-token', 'conversation-1'),
+    () => client.replyAdminSupportConversation('admin-token', 'conversation-1', 'Reply', 1),
+    () => client.updateAdminSupportConversationStatus('admin-token', 'conversation-1', 'pending', 1),
+    () => client.addAdminSupportInternalNote('admin-token', 'conversation-1', 'Note', 1)
+  ]
+
+  for (const operation of operations) {
+    await assert.rejects(operation, isInvalidResponseDataError)
+  }
+  assert.equal(responses.length, 0)
+})
+
 test('ApiClient times out stalled fetches and response bodies with controlled errors', async () => {
   let abortedFetches = 0
   globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
@@ -1639,8 +1744,8 @@ test('ApiClient exposes safe notification delivery monitoring and retry', async 
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     return new Response(JSON.stringify(String(url).endsWith('/retry')
-      ? { id: 'delivery-1', status: 'Pending' }
-      : [{ id: 'delivery-1', maskedToAddress: 'us***@example.test', status: 'Failed' }]), {
+      ? { id: 'delivery-1', status: 'Pending', nextAttemptAt: adminFixtureTimestamp }
+      : [{ id: 'delivery-1', userId: 'user-1', templateKey: 'password_reset_requested', channel: 'Email', maskedToAddress: 'us***@example.test', status: 'Failed', attempts: 5, processingStartedAt: null, nextAttemptAt: null, sentAt: null, errorText: 'SMTP unavailable', createdAt: adminFixtureTimestamp, updatedAt: adminFixtureTimestamp }]), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1727,7 +1832,7 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
       return new Response(JSON.stringify({ run: { id: 'run-1', targetHost: 'vps.example.test', credentialsConfigured: true, executionLog: 'credential=***', linkedAccessId: 'access-1' }, steps: [{ stepName: 'Validate input', output: 'secret=***' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/payment-providers/accounts')) {
-      return new Response(JSON.stringify([{ id: 'ppa-1', provider: 'YooKassa', mode: 'Sandbox', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', isCheckoutConfigured: true, extraSettingsJson: '{"apiSecret":"***"}' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([adminPaymentProviderAccountFixture({ id: 'ppa-1', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', extraSettingsJson: '{"apiSecret":"***"}' })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/telegram-bot/settings')) {
       return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: true, adminChatId: '', webAppUrl: 'http://localhost:5174', welcomeText: 'Welcome', instructionText: '', supportText: '', afterPaymentTextTemplate: '', renewalTextTemplate: '', paymentFailedTextTemplate: '', subscriptionExpiredTextTemplate: '', generatedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })

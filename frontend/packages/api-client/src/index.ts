@@ -318,13 +318,13 @@ export type PaymentProviderAccountDto = {
   allowedWebhookIpRangesCsv: string
   extraSettingsJson: string
   healthStatus: string
-  isCheckoutConfigured?: boolean
-  checkoutConfigurationIssue?: string | null
-  capabilitiesJson?: string
-  capabilities?: PaymentProviderCapabilityDto[]
-  requiredFields?: PaymentProviderRequiredFieldDto[]
-  readinessBlockers?: string[]
-  isPubliclyAvailable?: boolean
+  isCheckoutConfigured: boolean
+  checkoutConfigurationIssue: string | null
+  capabilitiesJson: string
+  capabilities: PaymentProviderCapabilityDto[]
+  requiredFields: PaymentProviderRequiredFieldDto[]
+  readinessBlockers: string[]
+  isPubliclyAvailable: boolean
   createdAt: string
   updatedAt: string
 }
@@ -1517,6 +1517,190 @@ function isAdminPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
     && hasStringArray(value, 'refundBlockers')
 }
 
+function isAdminAuditLogDto(value: unknown): value is AdminAuditLogDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'actorType', true)
+    && hasString(value, 'actorId')
+    && hasString(value, 'action', true)
+    && hasString(value, 'entityType', true)
+    && hasString(value, 'entityId')
+    && hasString(value, 'beforeJson')
+    && hasString(value, 'afterJson')
+    && hasString(value, 'ip')
+    && hasString(value, 'userAgent')
+    && hasDateString(value, 'createdAt')
+}
+
+function isAdminNotificationDeliveryDto(value: unknown): value is AdminNotificationDeliveryDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasNullableString(value, 'userId')
+    && hasString(value, 'templateKey', true)
+    && hasString(value, 'channel', true)
+    && hasString(value, 'maskedToAddress')
+    && hasString(value, 'status', true)
+    && hasInteger(value, 'attempts', 0)
+    && hasNullableDateString(value, 'processingStartedAt')
+    && hasNullableDateString(value, 'nextAttemptAt')
+    && hasNullableDateString(value, 'sentAt')
+    && hasString(value, 'errorText')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isAdminNotificationRetryResult(value: unknown): value is { id: string; status: string; nextAttemptAt?: string | null } {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasString(value, 'status', true)
+    && hasNullableDateString(value, 'nextAttemptAt')
+}
+
+function isPaymentStatusResultDto(value: unknown): value is PaymentStatusResultDto {
+  if (!isRecord(value)) return false
+
+  return (value.orderId === undefined || hasString(value, 'orderId', true))
+    && hasString(value, 'paymentId', true)
+    && hasString(value, 'status', true)
+    && paymentStatusValues.has(value.status as string)
+    && hasString(value, 'rawResponse')
+    && (value.statusReason === undefined || hasNullableString(value, 'statusReason'))
+}
+
+function isPaymentProviderCapabilityDto(value: unknown): value is PaymentProviderCapabilityDto {
+  return isRecord(value)
+    && hasString(value, 'key', true)
+    && hasString(value, 'label', true)
+    && hasBoolean(value, 'supported')
+    && hasString(value, 'status', true)
+}
+
+function isPaymentProviderRequiredFieldDto(value: unknown): value is PaymentProviderRequiredFieldDto {
+  return isRecord(value)
+    && hasString(value, 'key', true)
+    && hasString(value, 'label', true)
+    && hasBoolean(value, 'required')
+    && hasBoolean(value, 'configured')
+    && hasNullableString(value, 'issue')
+}
+
+function isPaymentProviderAccountDto(value: unknown): value is PaymentProviderAccountDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'provider', true)
+    && paymentProviderValues.has(value.provider as PaymentProvider)
+    && hasString(value, 'mode', true)
+    && paymentProviderModeValues.has(value.mode as PaymentProviderMode)
+    && hasString(value, 'name', true)
+    && hasString(value, 'publicName', true)
+    && hasBoolean(value, 'isEnabled')
+    && hasBoolean(value, 'isDefault')
+    && hasString(value, 'shopId')
+    && hasString(value, 'apiBaseUrl')
+    && hasString(value, 'returnUrl')
+    && hasString(value, 'webhookUrl')
+    && hasBoolean(value, 'hasSecretKey')
+    && hasBoolean(value, 'hasWebhookSecret')
+    && hasBoolean(value, 'useWebhookIpAllowList')
+    && hasString(value, 'allowedWebhookIpRangesCsv')
+    && hasString(value, 'extraSettingsJson')
+    && hasString(value, 'healthStatus', true)
+    && hasBoolean(value, 'isCheckoutConfigured')
+    && hasNullableString(value, 'checkoutConfigurationIssue')
+    && hasString(value, 'capabilitiesJson')
+    && Array.isArray(value.capabilities)
+    && value.capabilities.every(isPaymentProviderCapabilityDto)
+    && hasUniqueStringKey(value.capabilities, 'key')
+    && Array.isArray(value.requiredFields)
+    && value.requiredFields.every(isPaymentProviderRequiredFieldDto)
+    && hasUniqueStringKey(value.requiredFields, 'key')
+    && hasStringArray(value, 'readinessBlockers', true)
+    && hasBoolean(value, 'isPubliclyAvailable')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isPaymentProviderAccountCheckResultDto(value: unknown): value is PaymentProviderAccountCheckResultDto {
+  return isRecord(value)
+    && hasString(value, 'accountId', true)
+    && hasString(value, 'provider', true)
+    && paymentProviderValues.has(value.provider as PaymentProvider)
+    && hasString(value, 'mode', true)
+    && paymentProviderModeValues.has(value.mode as PaymentProviderMode)
+    && hasBoolean(value, 'isReady')
+    && value.checkScope === 'ConfigurationOnly'
+    && (value.configurationStatus === 'Ready' || value.configurationStatus === 'NeedsConfiguration')
+    && hasString(value, 'healthStatus', true)
+    && hasString(value, 'message', true)
+    && hasStringArray(value, 'details', true)
+    && hasDateString(value, 'checkedAt')
+    && isPaymentProviderAccountDto(value.account)
+    && value.accountId === value.account.id
+    && value.provider === value.account.provider
+    && value.mode === value.account.mode
+}
+
+function isPaymentWebhookEventDto(value: unknown): value is PaymentWebhookEventDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'provider', true)
+    && paymentProviderValues.has(value.provider as PaymentProvider)
+    && hasNullableString(value, 'paymentAttemptId')
+    && hasNullableString(value, 'paymentProviderAccountId')
+    && hasString(value, 'providerPaymentId')
+    && hasString(value, 'externalEventId')
+    && hasString(value, 'eventType', true)
+    && hasString(value, 'status', true)
+    && hasBoolean(value, 'signatureValidated')
+    && hasDateString(value, 'receivedAt')
+    && hasNullableDateString(value, 'processedAt')
+    && hasString(value, 'errorText')
+}
+
+function isRefundDto(value: unknown): value is RefundDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'paymentAttemptId', true)
+    && hasString(value, 'provider', true)
+    && paymentProviderValues.has(value.provider as PaymentProvider)
+    && hasString(value, 'providerRefundId', true)
+    && hasString(value, 'status', true)
+    && hasFiniteNumber(value, 'amount', 0)
+    && (value.amount as number) > 0
+    && hasString(value, 'currency', true)
+    && hasString(value, 'reason')
+    && hasDateString(value, 'createdAt')
+    && hasNullableDateString(value, 'refundedAt')
+}
+
+function isAdminSupportMessageDto(value: unknown): value is SupportMessageDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'supportConversationId', true)
+    && hasNullableString(value, 'userId')
+    && hasNullableInteger(value, 'telegramUserId', 1)
+    && hasString(value, 'direction', true)
+    && (supportDirectionValues.has(value.direction as string) || value.direction === 'internal')
+    && hasString(value, 'text', true)
+    && hasString(value, 'attachmentsJson')
+    && hasBoolean(value, 'isInternalNote')
+    && (value.isInternalNote === (value.direction === 'internal'))
+    && hasDateString(value, 'createdAt')
+}
+
+function isAdminSupportMutationResult(value: unknown): value is { conversationId: string; status: string; revision: number } {
+  return isRecord(value)
+    && hasString(value, 'conversationId', true)
+    && hasString(value, 'status', true)
+    && hasInteger(value, 'revision', 1)
+}
+
 function isAdminTelegramAccountDto(value: unknown): value is AdminTelegramAccountDto {
   if (!isRecord(value)) return false
 
@@ -2269,11 +2453,11 @@ export class ApiClient {
     if (filters.to) params.set('to', filters.to)
     if (filters.limit) params.set('limit', String(filters.limit))
     const query = params.toString()
-    return this.requestArray<AdminAuditLogDto>(`/api/admin/audit-logs${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminAuditLogDto>(`/api/admin/audit-logs${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isAdminAuditLogDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminNotificationDeliveries(token: string): Promise<AdminNotificationDeliveryDto[]> {
-    return this.requestArray<AdminNotificationDeliveryDto>('/api/admin/notification-deliveries?limit=100', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminNotificationDeliveryDto>('/api/admin/notification-deliveries?limit=100', { token, errorMessage: apiFallbackErrorMessage }, isAdminNotificationDeliveryDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   retryAdminNotificationDelivery(token: string, deliveryId: string): Promise<{ id: string; status: string; nextAttemptAt?: string | null }> {
@@ -2281,7 +2465,7 @@ export class ApiClient {
       method: 'POST',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminNotificationRetryResult)
   }
 
   getAdminUsers(token: string, filters?: { search?: string; status?: string; role?: string }): Promise<AdminUserDto[]> {
@@ -2403,7 +2587,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isPaymentStatusResultDto)
   }
 
   recheckAdminOrderPayment(token: string, orderId: string): Promise<PaymentStatusResultDto> {
@@ -2412,7 +2596,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isPaymentStatusResultDto)
   }
 
   refundAdminPayment(token: string, paymentId: string, amount: number, reason?: string): Promise<RefundDto> {
@@ -2421,11 +2605,11 @@ export class ApiClient {
       token,
       body: JSON.stringify({ amount, reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isRefundDto)
   }
 
   getAdminPaymentProviderAccounts(token: string): Promise<PaymentProviderAccountDto[]> {
-    return this.requestArray<PaymentProviderAccountDto>('/api/admin/payment-providers/accounts', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentProviderAccountDto>('/api/admin/payment-providers/accounts', { token, errorMessage: apiFallbackErrorMessage }, isPaymentProviderAccountDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   createAdminPaymentProviderAccount(token: string, payload: UpsertPaymentProviderAccountPayload): Promise<PaymentProviderAccountDto> {
@@ -2434,7 +2618,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isPaymentProviderAccountDto)
   }
 
   updateAdminPaymentProviderAccount(token: string, id: string, payload: UpsertPaymentProviderAccountPayload): Promise<PaymentProviderAccountDto> {
@@ -2443,7 +2627,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isPaymentProviderAccountDto)
   }
 
   setAdminPaymentProviderAccountEnabled(token: string, id: string, enabled: boolean): Promise<PaymentProviderAccountDto> {
@@ -2452,7 +2636,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ enabled }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isPaymentProviderAccountDto)
   }
 
   checkAdminPaymentProviderAccount(token: string, id: string): Promise<PaymentProviderAccountCheckResultDto> {
@@ -2460,24 +2644,24 @@ export class ApiClient {
       method: 'POST',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isPaymentProviderAccountCheckResultDto)
   }
 
   getAdminPaymentWebhookEvents(token: string): Promise<PaymentWebhookEventDto[]> {
-    return this.requestArray<PaymentWebhookEventDto>('/api/admin/payment-webhook-events', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentWebhookEventDto>('/api/admin/payment-webhook-events', { token, errorMessage: apiFallbackErrorMessage }, isPaymentWebhookEventDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminRefunds(token: string): Promise<RefundDto[]> {
-    return this.requestArray<RefundDto>('/api/admin/refunds', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<RefundDto>('/api/admin/refunds', { token, errorMessage: apiFallbackErrorMessage }, isRefundDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
 
   getAdminSupportConversations(token: string): Promise<SupportConversationDto[]> {
-    return this.requestArray<SupportConversationDto>('/api/admin/support/conversations', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportConversationDto>('/api/admin/support/conversations', { token, errorMessage: apiFallbackErrorMessage }, isSupportConversationDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminSupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
-    return this.requestArray<SupportMessageDto>(`/api/admin/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SupportMessageDto>(`/api/admin/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage }, isAdminSupportMessageDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   replyAdminSupportConversation(token: string, conversationId: string, text: string, revision: number): Promise<{ conversationId: string; status: string; revision: number }> {
@@ -2486,7 +2670,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ text, revision }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminSupportMutationResult)
   }
 
   updateAdminSupportConversationStatus(token: string, conversationId: string, status: string, revision: number, assignedToUserId?: string | null): Promise<{ conversationId: string; status: string; revision: number }> {
@@ -2495,7 +2679,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ status, assignedToUserId: assignedToUserId ?? null, revision }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminSupportMutationResult)
   }
 
   addAdminSupportInternalNote(token: string, conversationId: string, text: string, revision: number): Promise<SupportMessageDto> {
@@ -2504,7 +2688,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ text, revision }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminSupportMessageDto)
   }
 
   getAdminVpnPanels(token: string): Promise<VpnPanelDto[]> {
