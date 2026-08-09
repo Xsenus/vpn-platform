@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.535.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-infrastructure-api-dto-validation`.
+
+### Исправлено
+
+- API-клиент больше не принимает неполные DTO VPN-серверов, node health, provisioning run/detail/command и Telegram bot settings/readiness как доверенные данные.
+- Все 22 read и mutation маршрута проверяют обязательные поля, даты, enum, JSON, capacity, mode/risk/live-deploy связи, уникальные `id` и соответствие `nodeId/runId` фактическому backend-контракту.
+- Поврежденная инфраструктурная загрузка очищает старые серверы, запуски provisioning, форму редактирования исчезнувшего сервера и устаревший результат Telegram connection check; поздний check отбрасывается по поколению запроса.
+
+### Проверено
+
+- Frontend `102/102`, включая malformed server/provisioning/Telegram DTO; typecheck и production build всех трех приложений.
+- Admin/all-screens desktop/mobile `12/12` с malformed infrastructure regression; полный console/responsive suite `18/18`.
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует; fresh local SQLite checkout/payment/subscription/VPN smoke пройден.
+- Dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings; release/documentation/UTF-8 guards подтверждают latest `2026-08-09-admin-infrastructure-api-dto-validation`, версию `0.535.0` и roadmap `548/568`.
+- Roadmap progress: `548/568` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.534.0 - 2026-08-09
 
 Release entry: `2026-08-09-vpn-panel-api-dto-validation`.

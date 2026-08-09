@@ -615,7 +615,16 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/servers') {
-      await fulfillJson(route, [{ id: 'server-all-screens', name: 'EU Smoke', host: 'vpn.example.test', status: 'Active', healthStatus: 'Healthy', provider: 'hetzner', region: 'eu', capacity: 100, activeUsers: 1, validationMode: true }])
+      await fulfillJson(route, [{
+        id: 'server-all-screens', name: 'EU Smoke', host: 'vpn.example.test', ipAddress: '203.0.113.10', provider: 'hetzner', region: 'eu', country: 'NL', datacenter: 'fsn1',
+        status: 'Ready', capacity: 100, usedCapacity: 1, supportedProtocolsCsv: 'vless', healthStatus: 'Healthy', lastHealthCheckAt: now, lastHealthLatencyMs: 12,
+        lastHealthError: '', lastHealthMetadataJson: '{}', provisioningStatus: 'Succeeded', provisioningMode: 'validation-deploy', provisioningModeTitle: 'Validation deploy',
+        provisioningRiskLevel: 'low', liveDeployAllowed: false, provisioningNextAction: 'Проверьте precheck.', provisioningOperatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+        precheckMode: 'dry-run', precheckModeTitle: 'Dry-run precheck', installedVersion: '1.0.0', backupStatus: 'Ready', monitoringStatus: 'Ready', loggingStatus: 'Ready',
+        tagsCsv: 'validation-mode:true', priority: 10, isAvailableForNewUsers: true, sshUser: 'root', sshPort: 22, sshAuthMethod: 'ssh_key', sshCredentialConfigured: true,
+        skipHostKeyChecking: true, panelBaseUrl: 'https://panel.example.test', panelUsername: 'admin', panelPasswordConfigured: true, panelInboundId: 1,
+        publicHostname: 'vpn.example.test', publicPort: 443, nodeGroupId: null, createdAt: now, updatedAt: now
+      }])
       return
     }
 
@@ -655,7 +664,11 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/telegram-bot/settings') {
-      await fulfillJson(route, { isEnabled: false, botUsername: 'vpn_smoke_bot', hasBotToken: false, webhookUrl: '', status: 'Disabled' })
+      await fulfillJson(route, {
+        enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_smoke_bot', hasBotToken: false, botTokenMasked: '', webhookUrl: '', hasSecretToken: false,
+        adminChatId: '', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', instructionText: 'Instruction', supportText: 'Support',
+        afterPaymentTextTemplate: 'After payment', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired', generatedAt: now
+      })
       return
     }
 

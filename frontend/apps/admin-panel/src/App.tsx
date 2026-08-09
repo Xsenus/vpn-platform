@@ -1095,6 +1095,7 @@ export function App() {
   const [botSettings, setBotSettings] = useState<AdminTelegramBotSettingsDto>(defaultBotSettings)
   const [botSettingsForm, setBotSettingsForm] = useState<UpdateTelegramBotSettingsPayload>({})
   const [botSettingsCheck, setBotSettingsCheck] = useState<AdminTelegramBotConnectionCheckDto | null>(null)
+  const botSettingsCheckRequestId = useRef(0)
   const [loadErrors, setLoadErrors] = useState<LoadError[]>([])
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -1289,6 +1290,8 @@ export function App() {
       clearVpnPanelDetails()
     }
     setBotSettings(nextBotSettings)
+    botSettingsCheckRequestId.current += 1
+    setBotSettingsCheck(null)
     setBotSettingsForm({
       enabled: nextBotSettings.enabled,
       mode: nextBotSettings.mode,
@@ -1391,6 +1394,13 @@ export function App() {
       clearVpnPanelDetails()
     }
   }, [token, selectedVpnPanelId])
+
+  useEffect(() => {
+    if (editingServerId && !servers.some((server) => server.id === editingServerId)) {
+      setEditingServerId(null)
+      setServerForm(defaultServerForm)
+    }
+  }, [servers, editingServerId])
 
   useEffect(() => {
     if (token && selectedSupportConversationId) void loadSupportMessages(selectedSupportConversationId)
@@ -1558,6 +1568,7 @@ export function App() {
     setVpnPanelForm(defaultVpnPanelForm)
     setEditingVpnPanelId(null)
     setBotSettings(defaultBotSettings)
+    botSettingsCheckRequestId.current += 1
     setBotSettingsForm({})
     setBotSettingsCheck(null)
     setLoadErrors([])
@@ -2685,12 +2696,15 @@ export function App() {
     const saved = await api.updateAdminTelegramBotSettings(token, botSettingsForm)
     setBotSettings(saved)
     setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+    botSettingsCheckRequestId.current += 1
     setBotSettingsCheck(null)
     setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
   })
 
   const handleTestBotSettings = () => runAction('bot-settings-test', async () => {
+    const requestId = ++botSettingsCheckRequestId.current
     const result = await api.testAdminTelegramBotSettings(token)
+    if (requestId !== botSettingsCheckRequestId.current) return
     setBotSettingsCheck(result)
     setNotice(result.isReady ? 'Telegram-бот готов к работе.' : 'Проверка Telegram-бота нашла настройки, которые нужно заполнить.')
   })

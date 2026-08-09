@@ -190,6 +190,127 @@ function vpnPanel(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function vpnServer(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'server-eu',
+    name: 'EU Sandbox',
+    host: 'eu.example.test',
+    ipAddress: '10.0.0.1',
+    provider: 'Local',
+    region: 'EU',
+    country: 'DE',
+    datacenter: 'FRA',
+    status: 'Ready',
+    capacity: 1000,
+    usedCapacity: 12,
+    supportedProtocolsCsv: 'vless',
+    healthStatus: 'Healthy',
+    lastHealthCheckAt: now,
+    lastHealthLatencyMs: 15,
+    lastHealthError: '',
+    lastHealthMetadataJson: '{}',
+    provisioningStatus: 'Succeeded',
+    provisioningMode: 'validation-deploy',
+    provisioningModeTitle: 'Validation deploy',
+    provisioningRiskLevel: 'low',
+    liveDeployAllowed: false,
+    provisioningNextAction: 'Проверьте precheck перед deploy.',
+    provisioningOperatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+    precheckMode: 'dry-run',
+    precheckModeTitle: 'Dry-run precheck',
+    installedVersion: '1.0.0',
+    backupStatus: 'Ready',
+    monitoringStatus: 'Ready',
+    loggingStatus: 'Ready',
+    tagsCsv: 'validation-mode:true',
+    priority: 10,
+    isAvailableForNewUsers: true,
+    sshUser: 'root',
+    sshPort: 22,
+    sshAuthMethod: 'ssh_key',
+    sshCredentialConfigured: true,
+    skipHostKeyChecking: true,
+    panelBaseUrl: 'https://panel-eu.example.test',
+    panelUsername: 'admin',
+    panelPasswordConfigured: true,
+    panelInboundId: 1,
+    publicHostname: 'vpn-eu.example.test',
+    publicPort: 443,
+    nodeGroupId: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  }
+}
+
+function provisioningRun(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'provisioning-e2e',
+    nodeId: 'server-eu',
+    nodeName: 'EU Sandbox',
+    targetHost: 'eu.example.test',
+    sshPort: 22,
+    username: 'root',
+    authMethod: 'ssh_key',
+    credentialsConfigured: true,
+    source: 'admin',
+    owner: 'admin',
+    validationMode: true,
+    mode: 'dry-run',
+    modeTitle: 'Dry-run precheck',
+    riskLevel: 'safe',
+    liveDeployAllowed: false,
+    nextAction: 'Проверьте precheck.',
+    operatorWarning: 'Dry-run не меняет VPS.',
+    deployMode: 'validation-deploy',
+    deployModeTitle: 'Validation deploy',
+    deployRiskLevel: 'low',
+    deployLiveDeployAllowed: false,
+    deployNextAction: 'Запустите validation deploy.',
+    deployOperatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+    status: 'ReadyToDeploy',
+    currentStep: 'ready_to_deploy',
+    requestedByUserId: null,
+    dryRun: true,
+    attemptCount: 0,
+    processingStartedAt: null,
+    leaseExpiresAt: null,
+    lastError: '',
+    startedAt: now,
+    finishedAt: now,
+    errorSummary: '',
+    executionLog: 'precheck ok',
+    executionLogPreview: 'precheck ok',
+    precheckReportPreview: 'VPS precheck ready.',
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  }
+}
+
+function telegramBotSettings(overrides: Record<string, unknown> = {}) {
+  return {
+    enabled: false,
+    mode: 'LongPolling',
+    publicBotUsername: 'vpnplatform_bot',
+    hasBotToken: false,
+    botTokenMasked: '',
+    webhookUrl: '',
+    hasSecretToken: false,
+    adminChatId: '',
+    webAppUrl: 'http://127.0.0.1:5294',
+    welcomeText: 'Добро пожаловать',
+    instructionText: 'Выберите тариф',
+    supportText: 'Поддержка',
+    afterPaymentTextTemplate: 'После оплаты',
+    renewalTextTemplate: 'Продление',
+    paymentFailedTextTemplate: 'Ошибка оплаты',
+    subscriptionExpiredTextTemplate: 'Подписка истекла',
+    generatedAt: now,
+    ...overrides
+  }
+}
+
 async function mockAdminApi(page: Page) {
   const requests: Array<{ method: string; path: string; body: unknown; authorization: string }> = []
   let logoutShouldFail = false
@@ -198,7 +319,11 @@ async function mockAdminApi(page: Page) {
   let invalidPaymentProviderAccountsResponse = false
   let invalidTariffsResponse = false
   let invalidVpnPanelsResponse = false
+  let invalidServersResponse = false
+  let invalidProvisioningRunsResponse = false
+  let invalidBotSettingsResponse = false
   let delayNextVpnPanelInboundsResponse = false
+  let delayNextBotSettingsCheckResponse = false
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const referralPrograms = [referralProgram()]
@@ -592,12 +717,12 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/servers') {
-      await fulfillJson(route, [{ id: 'server-eu', name: 'EU Sandbox', host: 'eu.example.test', ipAddress: '10.0.0.1', provider: 'Local', region: 'EU', country: 'DE', datacenter: 'FRA', status: 'Active', capacity: 1000, usedCapacity: 12, supportedProtocolsCsv: 'vless', healthStatus: 'Healthy', lastHealthCheckAt: now, lastHealthLatencyMs: 15, lastHealthError: null, lastHealthMetadataJson: '{}', provisioningStatus: 'Ready', provisioningMode: 'auto', provisioningModeTitle: 'Автоматически', provisioningRiskLevel: 'safe', liveDeployAllowed: false, provisioningNextAction: null, provisioningOperatorWarning: null, precheckMode: 'validation', precheckModeTitle: 'Validation', installedVersion: '1.0.0', backupStatus: 'Ready', monitoringStatus: 'Ready', loggingStatus: 'Ready', tagsCsv: 'validation-mode:true', priority: 10, isAvailableForNewUsers: true, sshUser: 'root', sshPort: 22, sshAuthMethod: 'Password', sshCredentialConfigured: true, skipHostKeyChecking: true, panelBaseUrl: 'https://panel-eu.example.test', panelUsername: 'admin', panelPasswordConfigured: true, panelInboundId: 1, publicHostname: 'vpn-eu.example.test', publicPort: 443, nodeGroupId: 'default' }])
+      await fulfillJson(route, invalidServersResponse ? [{}] : [vpnServer()])
       return
     }
 
     if (method === 'GET' && path === '/api/admin/provisioning-runs') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, invalidProvisioningRunsResponse ? [{}] : [provisioningRun()])
       return
     }
 
@@ -655,8 +780,17 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/admin/telegram-bot/settings/test') {
+      if (delayNextBotSettingsCheckResponse) {
+        delayNextBotSettingsCheckResponse = false
+        await new Promise((resolve) => setTimeout(resolve, 1200))
+      }
+      await fulfillJson(route, { isReady: true, status: 'ready', requiredActions: [], warnings: [], checkedAt: now })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/telegram-bot/settings') {
-      await fulfillJson(route, { enabled: false, mode: 'LongPolling', publicBotUsername: 'vpnplatform_bot', hasBotToken: false, botTokenMasked: '', webhookUrl: '', hasSecretToken: false, adminChatId: '', webAppUrl: 'http://127.0.0.1:5294', welcomeText: 'Добро пожаловать', instructionText: 'Выберите тариф', supportText: 'Поддержка', afterPaymentTextTemplate: 'После оплаты', renewalTextTemplate: 'Продление', paymentFailedTextTemplate: 'Ошибка оплаты', subscriptionExpiredTextTemplate: 'Подписка истекла', generatedAt: now })
+      await fulfillJson(route, invalidBotSettingsResponse ? {} : telegramBotSettings())
       return
     }
 
@@ -671,7 +805,11 @@ async function mockAdminApi(page: Page) {
     returnInvalidPaymentProviderAccountsResponse: () => { invalidPaymentProviderAccountsResponse = true },
     returnInvalidTariffsResponse: () => { invalidTariffsResponse = true },
     returnInvalidVpnPanelsResponse: () => { invalidVpnPanelsResponse = true },
+    returnInvalidServersResponse: () => { invalidServersResponse = true },
+    returnInvalidProvisioningRunsResponse: () => { invalidProvisioningRunsResponse = true },
+    returnInvalidBotSettingsResponse: () => { invalidBotSettingsResponse = true },
     delayNextVpnPanelInbounds: () => { delayNextVpnPanelInboundsResponse = true },
+    delayNextBotSettingsCheck: () => { delayNextBotSettingsCheckResponse = true },
     failLogout: () => { logoutShouldFail = true }
   }
 }
@@ -898,6 +1036,20 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await page.getByRole('button', { name: 'Войти в админку' }).click()
   await expect(page.locator('.admin-shell')).toBeVisible()
 
+  await openAdminSection(page, 'Серверы', 'nodes')
+  const staleNodesSection = page.locator('#nodes')
+  await staleNodesSection.getByRole('button', { name: 'Редактировать' }).click()
+  await expect(staleNodesSection.getByRole('heading', { name: 'Редактировать VPN-сервер' })).toBeVisible()
+
+  await openAdminSection(page, 'Подготовка VPS', 'provisioning')
+  const staleProvisioningSection = page.locator('#provisioning')
+  await expect(staleProvisioningSection.getByText('VPS precheck ready.', { exact: true })).toBeVisible()
+
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+  const staleBotSection = page.locator('#bot')
+  await staleBotSection.getByRole('button', { name: 'Проверить подключение' }).click()
+  await expect(staleBotSection.getByRole('status').filter({ hasText: 'Проверка подключения' })).toBeVisible()
+
   await openAdminSection(page, '3x-ui панели', 'panels')
   const stalePanelsSection = page.locator('#panels')
   const panelSelect = stalePanelsSection.getByRole('combobox', { name: 'Панель' })
@@ -906,9 +1058,21 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   const delayedDetailsRequest = page.waitForRequest((request) => request.method() === 'GET' && request.url().endsWith('/api/admin/vpn-panels/panel-eu/inbounds'))
   await panelSelect.selectOption('panel-eu')
   await delayedDetailsRequest
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+  api.delayNextBotSettingsCheck()
+  const delayedBotCheckRequest = page.waitForRequest((request) => request.method() === 'POST' && request.url().endsWith('/api/admin/telegram-bot/settings/test'))
+  await staleBotSection.getByRole('button', { name: 'Проверить подключение' }).click()
+  await delayedBotCheckRequest
+  api.returnInvalidServersResponse()
+  api.returnInvalidProvisioningRunsResponse()
+  api.returnInvalidBotSettingsResponse()
   api.returnInvalidVpnPanelsResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect(page.locator('.code-block').filter({ hasText: 'servers:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await expect(page.locator('.code-block').filter({ hasText: 'подготовка серверов:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await expect(page.locator('.code-block').filter({ hasText: 'настройки Telegram-бота:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
   await expect(page.locator('.code-block').filter({ hasText: 'VPN-панели:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await openAdminSection(page, '3x-ui панели', 'panels')
   await expect(stalePanelsSection.getByText('3x-ui панели не добавлены')).toBeVisible()
   await page.waitForTimeout(1400)
   await expect(stalePanelsSection.getByText('EU 3x-ui Sandbox', { exact: true })).toHaveCount(0)
@@ -916,6 +1080,21 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(stalePanelsSection.getByText('client@example.test', { exact: true })).toHaveCount(0)
   await expect(stalePanelsSection.getByText('Remote panel sync failed.', { exact: true })).toHaveCount(0)
   await expect(stalePanelsSection.getByRole('combobox', { name: 'Панель' })).toHaveValue('')
+
+  await openAdminSection(page, 'Серверы', 'nodes')
+  await expect(staleNodesSection.getByText('VPN-серверы не добавлены')).toBeVisible()
+  await expect(staleNodesSection.getByText('EU Sandbox', { exact: true })).toHaveCount(0)
+  await expect(staleNodesSection.getByRole('heading', { name: 'Добавить VPN-сервер' })).toBeVisible()
+  await expect(staleNodesSection.getByLabel('Название')).toHaveValue('')
+
+  await openAdminSection(page, 'Подготовка VPS', 'provisioning')
+  await expect(staleProvisioningSection.getByText('Запусков подготовки нет')).toBeVisible()
+  await expect(staleProvisioningSection.getByText('VPS precheck ready.', { exact: true })).toHaveCount(0)
+
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+  await expect(staleBotSection.getByText('@не настроен', { exact: true })).toBeVisible()
+  await expect(staleBotSection.getByRole('status').filter({ hasText: 'Проверка подключения' })).toHaveCount(0)
+  await expect(staleBotSection.getByLabel('Username публичного бота')).toHaveValue('')
 
   api.returnInvalidTariffsResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()

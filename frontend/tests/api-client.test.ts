@@ -210,6 +210,187 @@ function panelHealthCheckFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function vpnNodeFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'node-1',
+    name: 'nl-01',
+    host: 'nl-01.example.com',
+    ipAddress: '203.0.113.10',
+    provider: 'hetzner',
+    region: 'eu',
+    country: 'NL',
+    datacenter: 'fsn1',
+    status: 'Ready',
+    capacity: 5000,
+    usedCapacity: 1,
+    supportedProtocolsCsv: 'vless,vmess,trojan',
+    healthStatus: 'Healthy',
+    lastHealthCheckAt: adminFixtureTimestamp,
+    lastHealthLatencyMs: 12,
+    lastHealthError: '',
+    lastHealthMetadataJson: '{}',
+    provisioningStatus: 'Succeeded',
+    provisioningMode: 'validation-deploy',
+    provisioningModeTitle: 'Validation deploy',
+    provisioningRiskLevel: 'low',
+    liveDeployAllowed: false,
+    provisioningNextAction: 'Проверьте precheck.',
+    provisioningOperatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+    precheckMode: 'dry-run',
+    precheckModeTitle: 'Dry-run precheck',
+    installedVersion: '1.0.0',
+    backupStatus: 'Ready',
+    monitoringStatus: 'Ready',
+    loggingStatus: 'Ready',
+    tagsCsv: 'validation-mode:true',
+    priority: 100,
+    isAvailableForNewUsers: true,
+    sshUser: 'root',
+    sshPort: 22,
+    sshAuthMethod: 'ssh_key',
+    sshCredentialConfigured: true,
+    skipHostKeyChecking: true,
+    panelBaseUrl: 'https://panel.example.test',
+    panelUsername: 'admin',
+    panelPasswordConfigured: true,
+    panelInboundId: 1,
+    publicHostname: 'vpn.example.test',
+    publicPort: 443,
+    nodeGroupId: null,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function nodeHealthCheckFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'node-check-1',
+    nodeId: 'node-1',
+    status: 'Healthy',
+    checkedAt: adminFixtureTimestamp,
+    latencyMs: 12,
+    metadataJson: '{}',
+    errorText: '',
+    ...overrides
+  }
+}
+
+function provisioningRunFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'run-1',
+    nodeId: 'node-1',
+    nodeName: 'nl-01',
+    targetHost: 'nl-01.example.com',
+    sshPort: 22,
+    username: 'root',
+    authMethod: 'ssh_key',
+    credentialsConfigured: true,
+    source: 'admin',
+    owner: 'admin',
+    validationMode: true,
+    mode: 'dry-run',
+    modeTitle: 'Dry-run precheck',
+    riskLevel: 'safe',
+    liveDeployAllowed: false,
+    nextAction: 'Проверьте результат precheck.',
+    operatorWarning: 'Dry-run не меняет VPS.',
+    deployMode: 'validation-deploy',
+    deployModeTitle: 'Validation deploy',
+    deployRiskLevel: 'low',
+    deployLiveDeployAllowed: false,
+    deployNextAction: 'Запустите validation deploy.',
+    deployOperatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+    status: 'ReadyToDeploy',
+    currentStep: 'ready_to_deploy',
+    requestedByUserId: null,
+    dryRun: true,
+    attemptCount: 0,
+    processingStartedAt: null,
+    leaseExpiresAt: null,
+    lastError: '',
+    startedAt: adminFixtureTimestamp,
+    finishedAt: adminFixtureTimestamp,
+    errorSummary: '',
+    executionLog: 'precheck ok',
+    executionLogPreview: 'precheck ok',
+    precheckReportPreview: 'ready',
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function provisioningRunDetailsFixture(overrides: Record<string, unknown> = {}) {
+  const { executionLogPreview: _executionLogPreview, precheckReportPreview: _precheckReportPreview, ...run } = provisioningRunFixture()
+  return {
+    run: { ...run, precheckReport: 'ready', linkedAccessId: null },
+    steps: [{
+      id: 'step-1',
+      provisioningRunId: 'run-1',
+      stepName: 'Validate input',
+      status: 'Succeeded',
+      startedAt: adminFixtureTimestamp,
+      finishedAt: adminFixtureTimestamp,
+      output: 'credentials=***',
+      errorText: '',
+      createdAt: adminFixtureTimestamp,
+      updatedAt: adminFixtureTimestamp
+    }],
+    ...overrides
+  }
+}
+
+function provisioningCommandFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    serverId: 'node-1',
+    runId: 'run-1',
+    status: 'queued',
+    dryRun: false,
+    mode: 'validation-deploy',
+    modeTitle: 'Validation deploy',
+    riskLevel: 'low',
+    liveDeployAllowed: false,
+    nextAction: 'Проверьте результат.',
+    operatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+    ...overrides
+  }
+}
+
+function telegramBotSettingsFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    enabled: false,
+    mode: 'LongPolling',
+    publicBotUsername: 'vpnplatform_bot',
+    hasBotToken: true,
+    botTokenMasked: '1234***7890',
+    webhookUrl: '',
+    hasSecretToken: true,
+    adminChatId: '',
+    webAppUrl: 'https://cabinet.example.test',
+    welcomeText: 'Добро пожаловать',
+    instructionText: 'Инструкция',
+    supportText: 'Поддержка',
+    afterPaymentTextTemplate: 'Оплата получена',
+    renewalTextTemplate: 'Продление',
+    paymentFailedTextTemplate: 'Ошибка оплаты',
+    subscriptionExpiredTextTemplate: 'Подписка истекла',
+    generatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function telegramBotConnectionCheckFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    isReady: true,
+    status: 'ready',
+    requiredActions: [],
+    warnings: [],
+    checkedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function adminCapabilitiesFixture(overrides: Record<string, unknown> = {}) {
   return {
     adminRead: true,
@@ -943,21 +1124,25 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
       })
     }
 
+    if (String(url).endsWith('/api/admin/servers') && !init?.method) {
+      return new Response(JSON.stringify([vpnNodeFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
     if (String(url).endsWith('/health-check') && init?.method === 'POST') {
-      return new Response(JSON.stringify({ id: 'check-1', nodeId: 'node-1', status: 'Healthy', checkedAt: new Date().toISOString(), latencyMs: 12, metadataJson: '{}', errorText: '' }), {
+      return new Response(JSON.stringify(nodeHealthCheckFixture()), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
     if (String(url).endsWith('/health-checks')) {
-      return new Response(JSON.stringify([{ id: 'check-1', nodeId: 'node-1', status: 'Healthy', checkedAt: new Date().toISOString(), latencyMs: 12, metadataJson: '{}', errorText: '' }]), {
+      return new Response(JSON.stringify([nodeHealthCheckFixture()]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
-    return new Response(JSON.stringify({ id: 'node-1', name: 'nl-01', host: 'nl-01.example.com', ipAddress: '203.0.113.10', provider: 'hetzner', region: 'eu', country: 'NL', datacenter: 'fsn1', status: 'New', capacity: 5000, usedCapacity: 0, supportedProtocolsCsv: 'vless,vmess,trojan', healthStatus: 'Unknown', installedVersion: '', backupStatus: 'unknown', monitoringStatus: 'unknown', loggingStatus: 'unknown', tagsCsv: '', priority: 100, isAvailableForNewUsers: false }), {
+    return new Response(JSON.stringify(vpnNodeFixture()), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -993,33 +1178,40 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
     nodeGroupId: null
   }
 
+  await client.getAdminServers('admin-token')
   await client.createAdminServer('admin-token', payload)
   await client.updateAdminServer('admin-token', 'node-1', { ...payload, name: 'nl-01-edited', priority: 200, tagsCsv: 'tier:premium' })
   await client.disableAdminServer('admin-token', 'node-1')
   await client.checkAdminServerHealth('admin-token', 'node-1')
   await client.getAdminServerHealthChecks('admin-token', 'node-1')
+  await client.enableAdminServerAllocation('admin-token', 'node-1')
+  await client.disableAdminServerAllocation('admin-token', 'node-1')
+  await client.enableAdminServerMaintenance('admin-token', 'node-1')
+  await client.disableAdminServerMaintenance('admin-token', 'node-1')
   const deletion = await client.deleteAdminServer('admin-token', 'node-1')
 
   const headers = new Headers(calls[0]?.init?.headers)
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers')
-  assert.equal(calls[0]?.init?.method, 'POST')
   assert.equal(headers.get('Authorization'), 'Bearer admin-token')
-  assert.match(String(calls[0]?.init?.body), /nl-01/)
-  assert.match(String(calls[0]?.init?.body), /sshCredential/)
-  assert.match(String(calls[0]?.init?.body), /validationMode/)
-  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/servers/node-1')
-  assert.equal(calls[1]?.init?.method, 'PUT')
-  assert.match(String(calls[1]?.init?.body), /nl-01-edited/)
-  assert.match(String(calls[1]?.init?.body), /tier:premium/)
-  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/servers/node-1/disable')
-  assert.equal(calls[2]?.init?.method, 'POST')
-  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/servers/node-1/health-check')
-  assert.equal(calls[3]?.init?.method, 'POST')
-  assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/servers/node-1/health-checks')
-  assert.equal(calls[4]?.init?.method, undefined)
-  assert.equal(calls[5]?.url, 'http://localhost:8080/api/admin/servers/node-1')
-  assert.equal(calls[5]?.init?.method, 'DELETE')
-  assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(calls[1]?.init?.method, 'POST')
+  assert.match(String(calls[1]?.init?.body), /sshCredential/)
+  assert.match(String(calls[1]?.init?.body), /validationMode/)
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/servers/node-1')
+  assert.equal(calls[2]?.init?.method, 'PUT')
+  assert.match(String(calls[2]?.init?.body), /nl-01-edited/)
+  assert.match(String(calls[2]?.init?.body), /tier:premium/)
+  assert.deepEqual(calls.slice(3, 10).map((call) => new URL(call.url).pathname), [
+    '/api/admin/servers/node-1/disable',
+    '/api/admin/servers/node-1/health-check',
+    '/api/admin/servers/node-1/health-checks',
+    '/api/admin/servers/node-1/enable-allocation',
+    '/api/admin/servers/node-1/disable-allocation',
+    '/api/admin/servers/node-1/maintenance',
+    '/api/admin/servers/node-1/disable-maintenance'
+  ])
+  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/servers/node-1')
+  assert.equal(calls[10]?.init?.method, 'DELETE')
+  assert.equal(new Headers(calls[10]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(deletion.archived, true)
   assert.equal(deletion.linkedHealthChecks, 2)
   assert.equal(deletion.linkedMigrationJobs, 1)
@@ -1029,8 +1221,14 @@ test('ApiClient provisioning run details and actions are tokenized', async () =>
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
+    if (String(url).endsWith('/api/admin/provisioning-runs') && !init?.method) {
+      return new Response(JSON.stringify([provisioningRunFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (String(url).endsWith('/retry')) {
+      return new Response(JSON.stringify(provisioningCommandFixture({ status: 'Retrying', dryRun: true, mode: 'dry-run', modeTitle: 'Dry-run precheck', riskLevel: 'safe', nextAction: 'Проверьте precheck.', operatorWarning: 'Dry-run не меняет VPS.' })), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
     if (String(url).endsWith('/deploy')) {
-      return new Response(JSON.stringify({ runId: 'run-1', status: 'DeployQueued', dryRun: false, mode: 'validation-deploy', modeTitle: 'Validation deploy', riskLevel: 'low', liveDeployAllowed: false }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify(provisioningCommandFixture({ status: 'DeployQueued' })), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (String(url).endsWith('/cancel')) {
       return new Response(JSON.stringify({ runId: 'run-1', status: 'cancelled' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -1039,24 +1237,27 @@ test('ApiClient provisioning run details and actions are tokenized', async () =>
       return new Response(JSON.stringify({ runId: 'run-1', supportConversationId: 'support-1' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
-    return new Response(JSON.stringify({
-      run: { id: 'run-1', nodeId: 'node-1', nodeName: 'customer-vps', targetHost: 'vps.example.com', sshPort: 22, username: 'root', authMethod: 'ssh_key', credentialsConfigured: true, status: 'ReadyToDeploy', currentStep: 'ready_to_deploy', dryRun: true, mode: 'dry-run', modeTitle: 'Dry-run precheck', riskLevel: 'safe', liveDeployAllowed: false, deployMode: 'validation-deploy', deployModeTitle: 'Validation deploy', deployRiskLevel: 'low', deployLiveDeployAllowed: false, startedAt: new Date().toISOString(), executionLog: 'password=***', linkedAccessId: null, createdAt: new Date().toISOString() },
-      steps: [{ id: 'step-1', provisioningRunId: 'run-1', stepName: 'Validate input', status: 'Succeeded', output: 'credentials=***', errorText: '', createdAt: new Date().toISOString() }]
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify(provisioningRunDetailsFixture()), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
+  await client.getAdminProvisioningRuns('admin-token')
   const details = await client.getAdminProvisioningRun('admin-token', 'run-1')
+  await client.retryAdminProvisioningRun('admin-token', 'run-1')
   const deploy = await client.deployAdminProvisioningRun('admin-token', 'run-1')
   await client.cancelAdminProvisioningRun('admin-token', 'run-1')
   await client.markAdminProvisioningSupportNeeded('admin-token', 'run-1')
 
-  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/provisioning-runs/run-1')
-  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/provisioning-runs/run-1/deploy')
-  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/provisioning-runs/run-1/cancel')
-  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/provisioning-runs/run-1/support-needed')
-  assert.equal(calls[1]?.init?.method, 'POST')
-  assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.deepEqual(calls.map((call) => new URL(call.url).pathname), [
+    '/api/admin/provisioning-runs',
+    '/api/admin/provisioning-runs/run-1',
+    '/api/admin/provisioning-runs/run-1/retry',
+    '/api/admin/provisioning-runs/run-1/deploy',
+    '/api/admin/provisioning-runs/run-1/cancel',
+    '/api/admin/provisioning-runs/run-1/support-needed'
+  ])
+  assert.equal(calls[3]?.init?.method, 'POST')
+  assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(details.run.credentialsConfigured, true)
   assert.equal(details.run.mode, 'dry-run')
   assert.equal(details.run.deployMode, 'validation-deploy')
@@ -1068,22 +1269,27 @@ test('ApiClient.queueAdminProvision calls provisioning endpoint', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ serverId: 'node-1', runId: 'run-1', status: 'queued', dryRun: false, mode: 'live-deploy', modeTitle: 'Live deploy', riskLevel: 'high', liveDeployAllowed: true }), {
+    const precheck = String(url).endsWith('/precheck')
+    return new Response(JSON.stringify(provisioningCommandFixture(precheck
+      ? { dryRun: true, mode: 'dry-run', modeTitle: 'Dry-run precheck', riskLevel: 'safe', nextAction: 'Проверьте precheck.', operatorWarning: 'Dry-run не меняет VPS.' }
+      : {})), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
+  await client.precheckAdminServer('admin-token', 'node-1')
   const response = await client.queueAdminProvision('admin-token', 'node-1')
   const headers = new Headers(calls[0]?.init?.headers)
 
-  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers/node-1/provision')
+  assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers/node-1/precheck')
+  assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/servers/node-1/provision')
   assert.equal(calls[0]?.init?.method, 'POST')
   assert.equal(headers.get('Authorization'), 'Bearer admin-token')
   assert.equal(response.runId, 'run-1')
-  assert.equal(response.mode, 'live-deploy')
-  assert.equal(response.riskLevel, 'high')
+  assert.equal(response.mode, 'validation-deploy')
+  assert.equal(response.riskLevel, 'low')
 })
 
 test('ApiClient.createCheckoutSession calls public checkout-session endpoint', async () => {
@@ -2006,6 +2212,72 @@ test('ApiClient rejects malformed VPN panel, inbound, client and observation DTO
   assert.equal(responses.length, 0)
 })
 
+test('ApiClient rejects malformed server, provisioning and Telegram bot DTOs', async () => {
+  const responses = [
+    '[{}]', '{}', JSON.stringify(vpnNodeFixture({ id: 'node-other' })),
+    JSON.stringify({ id: 'node-other', deleted: true, archived: false, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 0, linkedMigrationJobs: 0 }),
+    JSON.stringify(vpnNodeFixture({ id: 'node-other' })),
+    JSON.stringify(nodeHealthCheckFixture({ nodeId: 'node-other' })),
+    JSON.stringify([nodeHealthCheckFixture({ nodeId: 'node-other' })]),
+    JSON.stringify(vpnNodeFixture({ id: 'node-other' })),
+    JSON.stringify(vpnNodeFixture({ id: 'node-other' })),
+    JSON.stringify(vpnNodeFixture({ id: 'node-other' })),
+    JSON.stringify(vpnNodeFixture({ id: 'node-other' })),
+    JSON.stringify(provisioningCommandFixture({ serverId: 'node-other', dryRun: true, mode: 'dry-run', modeTitle: 'Dry-run precheck', riskLevel: 'safe', nextAction: 'Проверьте precheck.', operatorWarning: 'Dry-run не меняет VPS.' })),
+    JSON.stringify(provisioningCommandFixture({ serverId: 'node-other' })),
+    '[{}]',
+    JSON.stringify(provisioningRunDetailsFixture({ run: { ...provisioningRunDetailsFixture().run, id: 'run-other' } })),
+    JSON.stringify(provisioningCommandFixture({ runId: 'run-other' })),
+    JSON.stringify(provisioningCommandFixture({ dryRun: true, mode: 'dry-run', modeTitle: 'Dry-run precheck', riskLevel: 'safe', nextAction: 'Проверьте precheck.', operatorWarning: 'Dry-run не меняет VPS.' })),
+    JSON.stringify({ runId: 'run-other', status: 'cancelled' }),
+    JSON.stringify({ runId: 'run-other', supportConversationId: 'support-1' }),
+    '{}',
+    JSON.stringify(telegramBotConnectionCheckFixture({ isReady: true, status: 'needs_configuration', requiredActions: ['Укажите токен.'] })),
+    '{}'
+  ]
+  globalThis.fetch = (async () => new Response(responses.shift(), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const serverPayload = {
+    name: 'node', host: 'node.example.test', ipAddress: '', provider: 'local', region: 'eu', country: 'NL', datacenter: 'test',
+    capacity: 100, priority: 10, sshPort: 22, skipHostKeyChecking: true, publicPort: 443
+  }
+  const operations = [
+    () => client.getAdminServers('admin-token'),
+    () => client.createAdminServer('admin-token', serverPayload),
+    () => client.updateAdminServer('admin-token', 'node-1', serverPayload),
+    () => client.deleteAdminServer('admin-token', 'node-1'),
+    () => client.disableAdminServer('admin-token', 'node-1'),
+    () => client.checkAdminServerHealth('admin-token', 'node-1'),
+    () => client.getAdminServerHealthChecks('admin-token', 'node-1'),
+    () => client.enableAdminServerAllocation('admin-token', 'node-1'),
+    () => client.disableAdminServerAllocation('admin-token', 'node-1'),
+    () => client.enableAdminServerMaintenance('admin-token', 'node-1'),
+    () => client.disableAdminServerMaintenance('admin-token', 'node-1'),
+    () => client.precheckAdminServer('admin-token', 'node-1'),
+    () => client.queueAdminProvision('admin-token', 'node-1'),
+    () => client.getAdminProvisioningRuns('admin-token'),
+    () => client.getAdminProvisioningRun('admin-token', 'run-1'),
+    () => client.retryAdminProvisioningRun('admin-token', 'run-1'),
+    () => client.deployAdminProvisioningRun('admin-token', 'run-1'),
+    () => client.cancelAdminProvisioningRun('admin-token', 'run-1'),
+    () => client.markAdminProvisioningSupportNeeded('admin-token', 'run-1'),
+    () => client.getAdminTelegramBotSettings('admin-token'),
+    () => client.testAdminTelegramBotSettings('admin-token'),
+    () => client.updateAdminTelegramBotSettings('admin-token', { enabled: false })
+  ]
+  const isInvalidResponseDataError = (error: unknown) =>
+    error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+
+  for (const operation of operations) {
+    await assert.rejects(operation, isInvalidResponseDataError)
+  }
+  assert.equal(responses.length, 0)
+})
+
 test('ApiClient times out stalled fetches and response bodies with controlled errors', async () => {
   let abortedFetches = 0
   globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
@@ -2255,16 +2527,19 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
       return new Response(JSON.stringify([adminAccessFixture({ accessUri: 'vless://sandbox/client' })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/provisioning-runs')) {
-      return new Response(JSON.stringify([{ id: 'run-1', targetHost: 'vps.example.test', credentialsConfigured: true, executionLog: 'password=***' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([provisioningRunFixture({ targetHost: 'vps.example.test', executionLog: 'password=***', executionLogPreview: 'password=***' })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/provisioning-runs/run-1')) {
-      return new Response(JSON.stringify({ run: { id: 'run-1', targetHost: 'vps.example.test', credentialsConfigured: true, executionLog: 'credential=***', linkedAccessId: 'access-1' }, steps: [{ stepName: 'Validate input', output: 'secret=***' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      const details = provisioningRunDetailsFixture()
+      details.run = { ...details.run, targetHost: 'vps.example.test', executionLog: 'credential=***', linkedAccessId: 'access-1' }
+      details.steps = details.steps.map((step) => ({ ...step, output: 'secret=***' }))
+      return new Response(JSON.stringify(details), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/payment-providers/accounts')) {
       return new Response(JSON.stringify([adminPaymentProviderAccountFixture({ id: 'ppa-1', webhookUrl: 'https://api.example.test/webhooks/payments/yookassa', extraSettingsJson: '{"apiSecret":"***"}' })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/telegram-bot/settings')) {
-      return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: true, adminChatId: '', webAppUrl: 'http://localhost:5174', welcomeText: 'Welcome', instructionText: '', supportText: '', afterPaymentTextTemplate: '', renewalTextTemplate: '', paymentFailedTextTemplate: '', subscriptionExpiredTextTemplate: '', generatedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify(telegramBotSettingsFixture({ publicBotUsername: 'vpn_bot', webAppUrl: 'http://localhost:5174' })), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/public/payments/providers')) {
       return new Response(JSON.stringify([{ provider: 'YooKassa', publicName: 'YooKassa Sandbox', mode: 'Sandbox', healthStatus: 'Unknown' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })

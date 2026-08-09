@@ -550,19 +550,19 @@ export type VpnNodeDto = {
   usedCapacity: number
   supportedProtocolsCsv: string
   healthStatus: string
-  lastHealthCheckAt?: string | null
-  lastHealthLatencyMs?: number | null
-  lastHealthError?: string | null
-  lastHealthMetadataJson?: string | null
-  provisioningStatus?: string
-  provisioningMode?: string | null
-  provisioningModeTitle?: string | null
-  provisioningRiskLevel?: string | null
-  liveDeployAllowed?: boolean
-  provisioningNextAction?: string | null
-  provisioningOperatorWarning?: string | null
-  precheckMode?: string | null
-  precheckModeTitle?: string | null
+  lastHealthCheckAt: string | null
+  lastHealthLatencyMs: number | null
+  lastHealthError: string
+  lastHealthMetadataJson: string
+  provisioningStatus: string
+  provisioningMode: string
+  provisioningModeTitle: string
+  provisioningRiskLevel: string
+  liveDeployAllowed: boolean
+  provisioningNextAction: string
+  provisioningOperatorWarning: string
+  precheckMode: string
+  precheckModeTitle: string
   installedVersion: string
   backupStatus: string
   monitoringStatus: string
@@ -570,73 +570,75 @@ export type VpnNodeDto = {
   tagsCsv: string
   priority: number
   isAvailableForNewUsers: boolean
-  sshUser?: string | null
-  sshPort?: number | null
-  sshAuthMethod?: string | null
-  sshCredentialConfigured?: boolean
-  skipHostKeyChecking?: boolean | null
-  panelBaseUrl?: string | null
-  panelUsername?: string | null
-  panelPasswordConfigured?: boolean
-  panelInboundId?: number | null
-  publicHostname?: string | null
-  publicPort?: number | null
-  nodeGroupId?: string | null
+  sshUser: string
+  sshPort: number
+  sshAuthMethod: string
+  sshCredentialConfigured: boolean
+  skipHostKeyChecking: boolean
+  panelBaseUrl: string
+  panelUsername: string
+  panelPasswordConfigured: boolean
+  panelInboundId: number | null
+  publicHostname: string
+  publicPort: number
+  nodeGroupId: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export type ProvisioningRunDto = {
   id: string
   nodeId: string
   status: string
-  nodeName?: string | null
-  targetHost?: string | null
-  sshPort?: number | null
-  username?: string | null
-  authMethod?: string | null
-  credentialsConfigured?: boolean
-  source?: string | null
-  owner?: string | null
-  validationMode?: boolean
-  mode?: string | null
-  modeTitle?: string | null
-  riskLevel?: string | null
-  liveDeployAllowed?: boolean
-  nextAction?: string | null
-  operatorWarning?: string | null
-  deployMode?: string | null
-  deployModeTitle?: string | null
-  deployRiskLevel?: string | null
-  deployLiveDeployAllowed?: boolean
-  deployNextAction?: string | null
-  deployOperatorWarning?: string | null
-  currentStep?: string | null
-  requestedByUserId?: string | null
+  nodeName: string
+  targetHost: string
+  sshPort: number
+  username: string
+  authMethod: string
+  credentialsConfigured: boolean
+  source: string
+  owner: string
+  validationMode: boolean
+  mode: string
+  modeTitle: string
+  riskLevel: string
+  liveDeployAllowed: boolean
+  nextAction: string
+  operatorWarning: string
+  deployMode: string
+  deployModeTitle: string
+  deployRiskLevel: string
+  deployLiveDeployAllowed: boolean
+  deployNextAction: string
+  deployOperatorWarning: string
+  currentStep: string
+  requestedByUserId: string | null
   dryRun: boolean
-  attemptCount?: number
-  processingStartedAt?: string | null
-  leaseExpiresAt?: string | null
-  lastError?: string | null
+  attemptCount: number
+  processingStartedAt: string | null
+  leaseExpiresAt: string | null
+  lastError: string
   startedAt: string
-  finishedAt?: string | null
-  errorSummary?: string | null
+  finishedAt: string | null
+  errorSummary: string
   executionLog: string
-  executionLogPreview?: string | null
-  precheckReport?: string | null
-  precheckReportPreview?: string | null
+  executionLogPreview: string
+  precheckReportPreview: string
   createdAt: string
+  updatedAt: string
 }
 
 export type ProvisioningCommandResponse = {
-  serverId?: string | null
+  serverId: string
   runId: string
   status: string
   dryRun: boolean
-  mode?: string | null
-  modeTitle?: string | null
-  riskLevel?: string | null
-  liveDeployAllowed?: boolean
-  nextAction?: string | null
-  operatorWarning?: string | null
+  mode: string
+  modeTitle: string
+  riskLevel: string
+  liveDeployAllowed: boolean
+  nextAction: string
+  operatorWarning: string
 }
 
 export type NodeHealthCheckDto = {
@@ -651,19 +653,33 @@ export type NodeHealthCheckDto = {
 
 
 export type ProvisioningRunDetailsDto = {
-  run: ProvisioningRunDto & { linkedAccessId?: string | null }
+  run: Omit<ProvisioningRunDto, 'executionLogPreview' | 'precheckReportPreview'> & {
+    precheckReport: string
+    linkedAccessId: string | null
+  }
   steps: Array<{
     id: string
     provisioningRunId: string
     stepName: string
     status: string
-    startedAt?: string | null
-    finishedAt?: string | null
-    output?: string | null
-    errorText?: string | null
-    createdAt?: string | null
-    updatedAt?: string | null
+    startedAt: string
+    finishedAt: string | null
+    output: string
+    errorText: string
+    createdAt: string
+    updatedAt: string
   }>
+}
+
+export type DeleteAdminServerResult = {
+  id: string
+  deleted: boolean
+  archived: boolean
+  linkedSubscriptions: number
+  linkedAccesses: number
+  linkedProvisioningRuns: number
+  linkedHealthChecks: number
+  linkedMigrationJobs: number
 }
 
 export type CreateServerPayload = {
@@ -1233,6 +1249,18 @@ const vpnSslVerificationModeValues = new Set(['Strict', 'AllowSelfSigned', 'Disa
 const x3UiApiVariantValues = new Set(['X3UiOfficial', 'ThreeXUi', 'LegacyXUi', 'Custom'])
 const vpnInboundProtocolValues = new Set(['vless', 'vmess', 'trojan'])
 const panelSyncRunStatusValues = new Set(['Pending', 'Running', 'Succeeded', 'Failed'])
+const nodeStatusValues = new Set(['New', 'Provisioning', 'Ready', 'Degraded', 'Full', 'Draining', 'Maintenance', 'Disabled', 'Error', 'Archived'])
+const provisioningRunStatusValues = new Set(['Pending', 'Running', 'Succeeded', 'Failed', 'Cancelled', 'Requested', 'AwaitingCredentials', 'AwaitingConfirmation', 'PrecheckQueued', 'Prechecking', 'PrecheckFailed', 'ReadyToDeploy', 'DeployQueued', 'Deploying', 'Deployed', 'Retrying'])
+const provisioningCommandStatusValues = new Set(['queued', ...provisioningRunStatusValues])
+const provisioningModeValues = new Map([
+  ['dry-run', { risk: 'safe', live: false }],
+  ['unknown', { risk: 'blocked', live: false }],
+  ['validation-deploy', { risk: 'low', live: false }],
+  ['live-deploy', { risk: 'high', live: true }],
+  ['live-deploy-blocked', { risk: 'blocked', live: false }]
+])
+const telegramBotModeValues = new Set(['LongPolling', 'Webhook'])
+const telegramBotCheckStatusValues = new Set(['ready', 'needs_configuration'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -1288,6 +1316,11 @@ function hasJsonObjectString(record: Record<string, unknown>, key: string) {
   }
 }
 
+function hasEmptyOrJsonObjectString(record: Record<string, unknown>, key: string) {
+  return hasString(record, key)
+    && (record[key] === '' || hasJsonObjectString(record, key))
+}
+
 function hasJsonUniqueStringArray(record: Record<string, unknown>, key: string) {
   if (!hasString(record, key, true)) return false
   try {
@@ -1308,6 +1341,28 @@ function hasAbsoluteHttpUrl(record: Record<string, unknown>, key: string) {
   } catch {
     return false
   }
+}
+
+function hasProvisioningModeDescriptor(
+  record: Record<string, unknown>,
+  modeKey: string,
+  titleKey: string,
+  riskKey: string,
+  liveKey: string,
+  nextActionKey: string,
+  warningKey: string
+) {
+  if (!hasString(record, modeKey, true)
+    || !hasString(record, titleKey, true)
+    || !hasString(record, riskKey, true)
+    || !hasBoolean(record, liveKey)
+    || !hasString(record, nextActionKey, true)
+    || !hasString(record, warningKey, true)) return false
+
+  const expected = provisioningModeValues.get(record[modeKey] as string)
+  return expected !== undefined
+    && record[riskKey] === expected.risk
+    && record[liveKey] === expected.live
 }
 
 function hasUniqueStringKey(items: unknown[], key: string) {
@@ -2082,6 +2137,231 @@ function isPanelHealthCheckDto(value: unknown): value is PanelHealthCheckDto {
     && hasString(value, 'version')
     && hasString(value, 'errorMessage')
     && hasDateString(value, 'checkedAt')
+}
+
+function isVpnNodeDto(value: unknown): value is VpnNodeDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'name', true)
+    && hasString(value, 'host')
+    && hasString(value, 'ipAddress')
+    && ((value.host as string).trim().length > 0 || (value.ipAddress as string).trim().length > 0)
+    && hasString(value, 'provider')
+    && hasString(value, 'region')
+    && hasString(value, 'country')
+    && hasString(value, 'datacenter')
+    && hasString(value, 'status', true)
+    && nodeStatusValues.has(value.status as string)
+    && hasInteger(value, 'capacity', 1)
+    && hasInteger(value, 'usedCapacity', 0)
+    && (value.usedCapacity as number) <= (value.capacity as number)
+    && hasString(value, 'supportedProtocolsCsv', true)
+    && hasString(value, 'healthStatus', true)
+    && healthStatusValues.has(value.healthStatus as string)
+    && hasNullableDateString(value, 'lastHealthCheckAt')
+    && hasNullableInteger(value, 'lastHealthLatencyMs', 0)
+    && hasString(value, 'lastHealthError')
+    && hasEmptyOrJsonObjectString(value, 'lastHealthMetadataJson')
+    && hasString(value, 'provisioningStatus', true)
+    && provisioningRunStatusValues.has(value.provisioningStatus as string)
+    && hasProvisioningModeDescriptor(value, 'provisioningMode', 'provisioningModeTitle', 'provisioningRiskLevel', 'liveDeployAllowed', 'provisioningNextAction', 'provisioningOperatorWarning')
+    && value.provisioningMode !== 'dry-run'
+    && value.precheckMode === 'dry-run'
+    && hasString(value, 'precheckModeTitle', true)
+    && hasString(value, 'installedVersion')
+    && hasString(value, 'backupStatus', true)
+    && hasString(value, 'monitoringStatus', true)
+    && hasString(value, 'loggingStatus', true)
+    && hasString(value, 'tagsCsv')
+    && hasInteger(value, 'priority', 0)
+    && hasBoolean(value, 'isAvailableForNewUsers')
+    && hasString(value, 'sshUser', true)
+    && hasInteger(value, 'sshPort', 1)
+    && (value.sshPort as number) <= 65535
+    && hasString(value, 'sshAuthMethod', true)
+    && hasBoolean(value, 'sshCredentialConfigured')
+    && hasBoolean(value, 'skipHostKeyChecking')
+    && hasString(value, 'panelBaseUrl')
+    && hasString(value, 'panelUsername')
+    && hasBoolean(value, 'panelPasswordConfigured')
+    && hasNullableInteger(value, 'panelInboundId', 1)
+    && hasString(value, 'publicHostname')
+    && hasInteger(value, 'publicPort', 1)
+    && (value.publicPort as number) <= 65535
+    && hasNullableString(value, 'nodeGroupId')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+    && Date.parse(value.updatedAt as string) >= Date.parse(value.createdAt as string)
+}
+
+function isDeleteAdminServerResult(value: unknown): value is DeleteAdminServerResult {
+  if (!isRecord(value)
+    || !hasString(value, 'id', true)
+    || !hasBoolean(value, 'deleted')
+    || !hasBoolean(value, 'archived')) return false
+
+  const countKeys: Array<keyof DeleteAdminServerResult> = [
+    'linkedSubscriptions',
+    'linkedAccesses',
+    'linkedProvisioningRuns',
+    'linkedHealthChecks',
+    'linkedMigrationJobs'
+  ]
+  if (!countKeys.every((key) => hasInteger(value, key, 0))) return false
+
+  const linkedCount = countKeys.reduce((total, key) => total + (value[key] as number), 0)
+  return value.deleted !== value.archived
+    && value.archived === (linkedCount > 0)
+}
+
+function isNodeHealthCheckDto(value: unknown): value is NodeHealthCheckDto {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasString(value, 'nodeId', true)
+    && hasString(value, 'status', true)
+    && healthStatusValues.has(value.status as string)
+    && hasDateString(value, 'checkedAt')
+    && hasInteger(value, 'latencyMs', 0)
+    && hasJsonObjectString(value, 'metadataJson')
+    && hasString(value, 'errorText')
+}
+
+function isProvisioningRunBase(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'nodeId', true)
+    && hasString(value, 'nodeName')
+    && hasString(value, 'targetHost')
+    && hasInteger(value, 'sshPort', 0)
+    && (value.sshPort as number) <= 65535
+    && hasString(value, 'username')
+    && hasString(value, 'authMethod')
+    && hasBoolean(value, 'credentialsConfigured')
+    && hasString(value, 'source')
+    && hasString(value, 'owner')
+    && hasBoolean(value, 'validationMode')
+    && hasProvisioningModeDescriptor(value, 'mode', 'modeTitle', 'riskLevel', 'liveDeployAllowed', 'nextAction', 'operatorWarning')
+    && hasProvisioningModeDescriptor(value, 'deployMode', 'deployModeTitle', 'deployRiskLevel', 'deployLiveDeployAllowed', 'deployNextAction', 'deployOperatorWarning')
+    && hasString(value, 'status', true)
+    && provisioningRunStatusValues.has(value.status as string)
+    && hasString(value, 'currentStep', true)
+    && hasNullableString(value, 'requestedByUserId')
+    && hasBoolean(value, 'dryRun')
+    && ((value.dryRun === true && value.mode === 'dry-run') || (value.dryRun === false && value.mode !== 'dry-run'))
+    && hasInteger(value, 'attemptCount', 0)
+    && hasNullableDateString(value, 'processingStartedAt')
+    && hasNullableDateString(value, 'leaseExpiresAt')
+    && hasString(value, 'lastError')
+    && hasDateString(value, 'startedAt')
+    && hasNullableDateString(value, 'finishedAt')
+    && (value.finishedAt === null || Date.parse(value.finishedAt as string) >= Date.parse(value.startedAt as string))
+    && hasString(value, 'errorSummary')
+    && hasString(value, 'executionLog')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+    && Date.parse(value.updatedAt as string) >= Date.parse(value.createdAt as string)
+}
+
+function isProvisioningRunDto(value: unknown): value is ProvisioningRunDto {
+  return isProvisioningRunBase(value)
+    && hasString(value, 'executionLogPreview')
+    && hasString(value, 'precheckReportPreview')
+}
+
+function isProvisioningStepDto(value: unknown) {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasString(value, 'provisioningRunId', true)
+    && hasString(value, 'stepName', true)
+    && hasString(value, 'status', true)
+    && provisioningRunStatusValues.has(value.status as string)
+    && hasDateString(value, 'startedAt')
+    && hasNullableDateString(value, 'finishedAt')
+    && (value.finishedAt === null || Date.parse(value.finishedAt as string) >= Date.parse(value.startedAt as string))
+    && hasString(value, 'output')
+    && hasString(value, 'errorText')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+    && Date.parse(value.updatedAt as string) >= Date.parse(value.createdAt as string)
+}
+
+function isProvisioningRunDetailsDto(value: unknown): value is ProvisioningRunDetailsDto {
+  if (!isRecord(value)) return false
+  const run = value.run
+  if (!isProvisioningRunBase(run)
+    || !hasString(run, 'precheckReport')
+    || !hasNullableString(run, 'linkedAccessId')
+    || !Array.isArray(value.steps)
+    || !value.steps.every(isProvisioningStepDto)
+    || !hasUniqueStringKey(value.steps, 'id')) return false
+
+  return value.steps.every((step) => step.provisioningRunId === run.id)
+}
+
+function isProvisioningCommandResponse(value: unknown): value is ProvisioningCommandResponse {
+  return isRecord(value)
+    && hasString(value, 'serverId', true)
+    && hasString(value, 'runId', true)
+    && hasString(value, 'status', true)
+    && provisioningCommandStatusValues.has(value.status as string)
+    && hasBoolean(value, 'dryRun')
+    && hasProvisioningModeDescriptor(value, 'mode', 'modeTitle', 'riskLevel', 'liveDeployAllowed', 'nextAction', 'operatorWarning')
+    && ((value.dryRun === true && value.mode === 'dry-run') || (value.dryRun === false && value.mode !== 'dry-run'))
+}
+
+function isProvisioningCancelResult(value: unknown): value is { runId: string; status: string } {
+  return isRecord(value)
+    && hasString(value, 'runId', true)
+    && value.status === 'cancelled'
+}
+
+function isProvisioningSupportResult(value: unknown): value is { runId: string; supportConversationId: string } {
+  return isRecord(value)
+    && hasString(value, 'runId', true)
+    && hasString(value, 'supportConversationId', true)
+}
+
+function isAdminTelegramBotSettingsDto(value: unknown): value is AdminTelegramBotSettingsDto {
+  if (!isRecord(value)) return false
+
+  return hasBoolean(value, 'enabled')
+    && hasString(value, 'mode', true)
+    && telegramBotModeValues.has(value.mode as string)
+    && hasString(value, 'publicBotUsername')
+    && hasBoolean(value, 'hasBotToken')
+    && hasString(value, 'botTokenMasked')
+    && ((value.hasBotToken === true && (value.botTokenMasked as string).length > 0) || (value.hasBotToken === false && value.botTokenMasked === ''))
+    && hasString(value, 'webhookUrl')
+    && hasBoolean(value, 'hasSecretToken')
+    && hasString(value, 'adminChatId')
+    && hasString(value, 'webAppUrl')
+    && hasString(value, 'welcomeText')
+    && hasString(value, 'instructionText')
+    && hasString(value, 'supportText')
+    && hasString(value, 'afterPaymentTextTemplate')
+    && hasString(value, 'renewalTextTemplate')
+    && hasString(value, 'paymentFailedTextTemplate')
+    && hasString(value, 'subscriptionExpiredTextTemplate')
+    && hasDateString(value, 'generatedAt')
+}
+
+function isAdminTelegramBotConnectionCheckDto(value: unknown): value is AdminTelegramBotConnectionCheckDto {
+  if (!isRecord(value)
+    || !hasBoolean(value, 'isReady')
+    || !hasString(value, 'status', true)
+    || !telegramBotCheckStatusValues.has(value.status as string)
+    || !hasStringArray(value, 'requiredActions', true)
+    || !hasStringArray(value, 'warnings', true)
+    || !hasDateString(value, 'checkedAt')) return false
+
+  const requiredActions = value.requiredActions as string[]
+  const warnings = value.warnings as string[]
+  return new Set(requiredActions).size === requiredActions.length
+    && new Set(warnings).size === warnings.length
+    && value.isReady === (value.status === 'ready')
+    && value.isReady === (requiredActions.length === 0)
 }
 
 function isAdminTelegramAccountDto(value: unknown): value is AdminTelegramAccountDto {
@@ -3431,7 +3711,7 @@ export class ApiClient {
   }
 
   getAdminServers(token: string): Promise<VpnNodeDto[]> {
-    return this.requestArray<VpnNodeDto>('/api/admin/servers', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnNodeDto>('/api/admin/servers', { token, errorMessage: apiFallbackErrorMessage }, isVpnNodeDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   createAdminServer(token: string, payload: CreateServerPayload): Promise<VpnNodeDto> {
@@ -3440,7 +3720,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isVpnNodeDto)
   }
 
   updateAdminServer(token: string, serverId: string, payload: CreateServerPayload): Promise<VpnNodeDto> {
@@ -3449,19 +3729,19 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
-  deleteAdminServer(token: string, serverId: string): Promise<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number; linkedHealthChecks: number; linkedMigrationJobs: number }> {
-    return this.request<{ id: string; deleted: boolean; archived: boolean; linkedSubscriptions: number; linkedAccesses: number; linkedProvisioningRuns: number; linkedHealthChecks: number; linkedMigrationJobs: number }>(`/api/admin/servers/${serverId}`, {
+  deleteAdminServer(token: string, serverId: string): Promise<DeleteAdminServerResult> {
+    return this.request<DeleteAdminServerResult>(`/api/admin/servers/${serverId}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is DeleteAdminServerResult => isDeleteAdminServerResult(value) && value.id === serverId)
   }
 
   disableAdminServer(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
   checkAdminServerHealth(token: string, serverId: string): Promise<NodeHealthCheckDto> {
@@ -3470,27 +3750,28 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is NodeHealthCheckDto => isNodeHealthCheckDto(value) && value.nodeId === serverId)
   }
 
   getAdminServerHealthChecks(token: string, serverId: string): Promise<NodeHealthCheckDto[]> {
-    return this.requestArray<NodeHealthCheckDto>(`/api/admin/servers/${serverId}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<NodeHealthCheckDto>(`/api/admin/servers/${serverId}/health-checks`, { token, errorMessage: apiFallbackErrorMessage }, isNodeHealthCheckDto, (items) => hasUniqueStringKey(items, 'id')
+      && items.every((item) => item.nodeId === serverId))
   }
 
   enableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
   disableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
   enableAdminServerMaintenance(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
   disableAdminServerMaintenance(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage })
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
   precheckAdminServer(token: string, serverId: string): Promise<ProvisioningCommandResponse> {
@@ -3499,7 +3780,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.serverId === serverId && value.dryRun === true)
   }
 
   queueAdminProvision(token: string, serverId: string, dryRun = false): Promise<ProvisioningCommandResponse> {
@@ -3508,16 +3789,16 @@ export class ApiClient {
       token,
       body: JSON.stringify({ dryRun }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.serverId === serverId && value.dryRun === dryRun)
   }
 
   getAdminProvisioningRuns(token: string): Promise<ProvisioningRunDto[]> {
-    return this.requestArray<ProvisioningRunDto>('/api/admin/provisioning-runs', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<ProvisioningRunDto>('/api/admin/provisioning-runs', { token, errorMessage: apiFallbackErrorMessage }, isProvisioningRunDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
 
   getAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningRunDetailsDto> {
-    return this.request<ProvisioningRunDetailsDto>(`/api/admin/provisioning-runs/${runId}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<ProvisioningRunDetailsDto>(`/api/admin/provisioning-runs/${runId}`, { token, errorMessage: apiFallbackErrorMessage }, 'object', (value): value is ProvisioningRunDetailsDto => isProvisioningRunDetailsDto(value) && value.run.id === runId)
   }
 
   retryAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningCommandResponse> {
@@ -3526,7 +3807,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.runId === runId)
   }
 
   deployAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningCommandResponse> {
@@ -3535,7 +3816,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.runId === runId && value.dryRun === false)
   }
 
   cancelAdminProvisioningRun(token: string, runId: string): Promise<{ runId: string; status: string }> {
@@ -3544,7 +3825,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is { runId: string; status: string } => isProvisioningCancelResult(value) && value.runId === runId)
   }
 
   markAdminProvisioningSupportNeeded(token: string, runId: string): Promise<{ runId: string; supportConversationId: string }> {
@@ -3553,11 +3834,11 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is { runId: string; supportConversationId: string } => isProvisioningSupportResult(value) && value.runId === runId)
   }
 
   getAdminTelegramBotSettings(token: string): Promise<AdminTelegramBotSettingsDto> {
-    return this.request<AdminTelegramBotSettingsDto>('/api/admin/telegram-bot/settings', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<AdminTelegramBotSettingsDto>('/api/admin/telegram-bot/settings', { token, errorMessage: apiFallbackErrorMessage }, 'object', isAdminTelegramBotSettingsDto)
   }
 
   testAdminTelegramBotSettings(token: string): Promise<AdminTelegramBotConnectionCheckDto> {
@@ -3566,7 +3847,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminTelegramBotConnectionCheckDto)
   }
 
   updateAdminTelegramBotSettings(token: string, payload: UpdateTelegramBotSettingsPayload): Promise<AdminTelegramBotSettingsDto> {
@@ -3575,6 +3856,6 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAdminTelegramBotSettingsDto)
   }
 }
