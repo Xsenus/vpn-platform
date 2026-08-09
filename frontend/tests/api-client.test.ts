@@ -104,7 +104,13 @@ test('ApiClient.getTariffs calls public endpoint', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify([{ id: '1', name: '1 month' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify([{
+      id: '1', name: '1 month', slug: 'one-month', description: '', fullDescription: '', features: [], featuresJson: '[]', badge: '',
+      durationDays: 30, price: 299, currency: 'RUB', maxDevices: 2, trafficLimit: null, isTrial: false, isActive: true,
+      sortOrder: 10, visibleFrom: null, visibleTo: null, tariffType: 'Personal', category: 'default', allowedRegionsCsv: '',
+      allowedNodeGroupsCsv: '', isReferralEligible: true, provisioningScenario: 'auto', afterPaymentText: '',
+      createdAt: '2026-08-05T00:00:00Z', updatedAt: '2026-08-05T00:00:00Z'
+    }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
@@ -141,7 +147,7 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
     }
 
     if (String(url).includes('/api/public/content/faq') || String(url).includes('/api/admin/faq?') || (String(url).endsWith('/api/admin/faq') && (init?.method ?? 'GET') === 'GET')) {
-      return new Response(JSON.stringify([{ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 }]), {
+      return new Response(JSON.stringify([{ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10, createdAt: '2026-08-05T00:00:00Z', updatedAt: '2026-08-05T00:00:00Z' }]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -1115,6 +1121,12 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
     new Response('null', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{"provider":"Unknown","publicName":"Unknown","mode":"Sandbox","healthStatus":"Healthy"}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{"provider":"YooKassa","publicName":"YooKassa","mode":"Disabled","healthStatus":"Healthy"}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{"provider":"YooKassa","publicName":"First","mode":"Sandbox","healthStatus":"Healthy"},{"provider":"YooKassa","publicName":"Second","mode":"Production","healthStatus":"Healthy"}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json', 'Content-Length': '10000001' } }),
     new Response('provider failure', { status: 503, headers: { 'Content-Type': 'text/plain', 'Content-Length': '64001' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/vnd.vpn-platform+json' } })
@@ -1145,6 +1157,30 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
   await assert.rejects(
     () => client.getAdminDashboardSummary('admin-token'),
     (error: unknown) => error instanceof ApiClientError && error.status === 502 && /неожиданной формы/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getFaq(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getHomeContent(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getPublicPaymentProviders(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getPublicPaymentProviders(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
+  await assert.rejects(
+    () => client.getPublicPaymentProviders(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
   )
   await assert.rejects(
     () => client.getTariffs(),
@@ -1404,10 +1440,16 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
       return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: true, adminChatId: '', webAppUrl: 'http://localhost:5174', welcomeText: 'Welcome', instructionText: '', supportText: '', afterPaymentTextTemplate: '', renewalTextTemplate: '', paymentFailedTextTemplate: '', subscriptionExpiredTextTemplate: '', generatedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/public/payments/providers')) {
-      return new Response(JSON.stringify([{ provider: 'YooKassa', publicName: 'YooKassa Sandbox', mode: 'Sandbox' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([{ provider: 'YooKassa', publicName: 'YooKassa Sandbox', mode: 'Sandbox', healthStatus: 'Unknown' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/public/tariffs')) {
-      return new Response(JSON.stringify([{ id: 'tariff-1', name: 'Monthly', isActive: true }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([{
+        id: 'tariff-1', name: 'Monthly', slug: 'monthly', description: '', fullDescription: '', features: [], featuresJson: '[]', badge: '',
+        durationDays: 30, price: 299, currency: 'RUB', maxDevices: 2, trafficLimit: null, isTrial: false, isActive: true,
+        sortOrder: 10, visibleFrom: null, visibleTo: null, tariffType: 'Personal', category: 'default', allowedRegionsCsv: '',
+        allowedNodeGroupsCsv: '', isReferralEligible: true, provisioningScenario: 'auto', afterPaymentText: '',
+        createdAt: '2026-08-05T00:00:00Z', updatedAt: '2026-08-05T00:00:00Z'
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/me/accesses')) {
       return new Response(JSON.stringify([{ id: 'access-1', accessUri: 'vless://sandbox/client', status: 'Active' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })

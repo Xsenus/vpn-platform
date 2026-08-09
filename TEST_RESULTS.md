@@ -1,6 +1,24 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-05.
+Дата проверки: 2026-08-09.
+
+## Check 2026-08-09: public API DTO field validation
+
+Scope:
+- Проверены runtime-контракты элементов публичных тарифов, FAQ, контента главной и доступных способов оплаты до передачи данных в React.
+
+Results:
+- Roadmap progress: `542/562` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-public-api-dto-validation`, version `0.529.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `98/98`; typecheck и production build всех трёх приложений: OK.
+- Обязательные поля четырех публичных DTO, `features`, конечные числа, флаги, активный payment provider/mode и уникальные `id/slug/key/provider` проверяются до TypeScript cast; нарушение возвращает controlled `ApiClientError` `502` без raw payload.
+- Invalid-item public tariffs regression: OK, desktop/mobile `2/2`, видимый error state, `0` page errors.
+- Browser responsive/console suite: OK, `18/18`, включая public, cabinet, admin, all-screens и mobile widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
 
 ## Check 2026-08-05: typed API top-level response shape boundary
 

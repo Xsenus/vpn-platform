@@ -13,7 +13,18 @@ const homeContent = [
   { key: 'home.hero.primaryCta', value: 'Выбрать тариф' },
   { key: 'home.pricing.title', value: 'Тарифы для проверки покупки' },
   { key: 'home.finalCta.title', value: 'Готовы купить VPN?' }
-]
+].map((item, index) => ({
+  id: `content-${index + 1}`,
+  ...item,
+  group: 'home',
+  label: item.key,
+  description: '',
+  inputType: 'text',
+  isActive: true,
+  sortOrder: index + 1,
+  createdAt: '2026-06-13T00:00:00Z',
+  updatedAt: '2026-06-13T00:00:00Z'
+}))
 
 const faqItems = [
   {
@@ -21,14 +32,24 @@ const faqItems = [
     question: 'Как оплатить VPN?',
     answer: 'Выберите тариф и способ оплаты, затем создайте заказ.',
     category: 'Оплата',
-    sortOrder: 1
+    isActive: true,
+    showOnHome: true,
+    showOnFaqPage: true,
+    sortOrder: 1,
+    createdAt: '2026-06-13T00:00:00Z',
+    updatedAt: '2026-06-13T00:00:00Z'
   },
   {
     id: 'faq-connect',
     question: 'Когда появится подключение?',
     answer: 'После подтверждения платежа доступ появится в личном кабинете.',
     category: 'Подключение',
-    sortOrder: 2
+    isActive: true,
+    showOnHome: true,
+    showOnFaqPage: true,
+    sortOrder: 2,
+    createdAt: '2026-06-13T00:00:00Z',
+    updatedAt: '2026-06-13T00:00:00Z'
   }
 ]
 
@@ -97,6 +118,7 @@ async function mockPublicApi(page: Page) {
   let unsafePaymentLink = false
   let invalidTariffsResponse = false
   let wrongShapeTariffsResponse = false
+  let invalidItemTariffsResponse = false
   let oversizedTariffsResponse = false
 
   await page.route('**/api/public/content/home', async (route) => {
@@ -118,6 +140,10 @@ async function mockPublicApi(page: Page) {
     }
     if (wrongShapeTariffsResponse) {
       await fulfillJson(route, {})
+      return
+    }
+    if (invalidItemTariffsResponse) {
+      await fulfillJson(route, [{}])
       return
     }
     if (invalidTariffsResponse) {
@@ -283,15 +309,21 @@ async function mockPublicApi(page: Page) {
       invalidTariffsResponse = false
       wrongShapeTariffsResponse = true
     },
+    returnInvalidItemTariffsResponse: () => {
+      invalidTariffsResponse = false
+      wrongShapeTariffsResponse = false
+      invalidItemTariffsResponse = true
+    },
     returnOversizedTariffsResponse: () => {
       invalidTariffsResponse = false
       wrongShapeTariffsResponse = false
+      invalidItemTariffsResponse = false
       oversizedTariffsResponse = true
     }
   }
 }
 
-test('public tariffs handles invalid, wrong-shape and oversized API responses without a render crash', async ({ page }) => {
+test('public tariffs handles invalid MIME, shape, item and size without a render crash', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
   const api = await mockPublicApi(page)
@@ -304,6 +336,12 @@ test('public tariffs handles invalid, wrong-shape and oversized API responses wi
   await expect(page.getByText('Start 30 дней')).toHaveCount(0)
 
   api.returnWrongShapeTariffsResponse()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')
+  await expect(page.getByText('Start 30 дней')).toHaveCount(0)
+
+  api.returnInvalidItemTariffsResponse()
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
   await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')

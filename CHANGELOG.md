@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.529.0 - 2026-08-09
+
+Release entry: `2026-08-09-public-api-dto-validation`.
+
+### Исправлено
+
+- Публичные тарифы, FAQ, контент главной и способы оплаты больше не передают в React синтаксически корректные, но неполные или несовместимые DTO.
+- Runtime-контракты проверяют обязательные строки, числа и флаги, вложенный список `features`, активные payment provider/mode и уникальные `id/slug/key/provider`; нарушение возвращает controlled `ApiClientError` `502` без raw payload.
+- Страница тарифов показывает штатное error-state для ответа `[{}]` вместо пустой карточки, неверного checkout или render exception.
+
+### Проверено
+
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует.
+- Frontend `98/98`, включая malformed DTO всех четырех публичных коллекций, typecheck и production build всех трёх приложений.
+- Invalid-item public regression desktop/mobile `2/2`; полный public/cabinet/admin/all-screens/mobile/console responsive suite `18/18` без `pageerror`.
+- Fresh local SQLite smoke завершил checkout, sandbox payment, subscription и VPN access; dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings.
+- `RoadmapCurrentStateTests` и release/documentation/UTF-8 guards подтверждают latest `2026-08-09-public-api-dto-validation`, версию `0.529.0` и roadmap `542/562`.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.528.0 - 2026-08-05
 
 Release entry: `2026-08-05-api-response-shape-boundary`.

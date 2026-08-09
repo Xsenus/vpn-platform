@@ -1194,9 +1194,133 @@ const apiInvalidJsonResponseMessage = 'Сервер вернул некорре�
 const apiUnsupportedResponseMessage = 'Сервер вернул ответ в неподдерживаемом формате. Повторите запрос позже.'
 const apiOversizedResponseMessage = 'Ответ сервера превышает допустимый размер. Повторите запрос позже.'
 const apiUnexpectedResponseShapeMessage = 'Сервер вернул JSON-ответ неожиданной формы. Повторите запрос позже.'
+const apiInvalidResponseDataMessage = 'Сервер вернул JSON-ответ с некорректными данными. Повторите запрос позже.'
 const defaultApiRequestTimeoutMs = 30_000
 const defaultJsonResponseMaxBytes = 10_000_000
 const defaultApiErrorResponseMaxBytes = 64_000
+
+const paymentProviderValues = new Set<PaymentProvider>([
+  'YooMoney',
+  'YooKassa',
+  'RoboKassa',
+  'TelegramStars',
+  'CloudPayments',
+  'TBankAcquiring',
+  'Prodamus',
+  'Stripe',
+  'PayPal'
+])
+const publicPaymentProviderModeValues = new Set<PaymentProviderMode>(['Sandbox', 'Production'])
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function hasString(record: Record<string, unknown>, key: string, requireValue = false) {
+  const value = record[key]
+  return typeof value === 'string' && (!requireValue || value.trim().length > 0)
+}
+
+function hasFiniteNumber(record: Record<string, unknown>, key: string, minimum?: number) {
+  const value = record[key]
+  return typeof value === 'number' && Number.isFinite(value) && (minimum === undefined || value >= minimum)
+}
+
+function hasInteger(record: Record<string, unknown>, key: string, minimum?: number) {
+  return hasFiniteNumber(record, key, minimum) && Number.isInteger(record[key])
+}
+
+function hasBoolean(record: Record<string, unknown>, key: string) {
+  return typeof record[key] === 'boolean'
+}
+
+function hasNullableString(record: Record<string, unknown>, key: string) {
+  return record[key] === null || typeof record[key] === 'string'
+}
+
+function hasUniqueStringKey(items: unknown[], key: string) {
+  const values = new Set<string>()
+  for (const item of items) {
+    if (!isRecord(item) || typeof item[key] !== 'string' || values.has(item[key])) return false
+    values.add(item[key])
+  }
+  return true
+}
+
+function isTariffDto(value: unknown): value is TariffDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'name', true)
+    && hasString(value, 'slug', true)
+    && hasString(value, 'description')
+    && hasString(value, 'fullDescription')
+    && Array.isArray(value.features)
+    && value.features.every((item) => typeof item === 'string')
+    && hasString(value, 'featuresJson')
+    && hasString(value, 'badge')
+    && hasInteger(value, 'durationDays', 1)
+    && hasFiniteNumber(value, 'price', 0)
+    && hasString(value, 'currency', true)
+    && hasInteger(value, 'maxDevices', 1)
+    && (value.trafficLimit === null || (hasInteger(value, 'trafficLimit', 0)))
+    && hasBoolean(value, 'isTrial')
+    && hasBoolean(value, 'isActive')
+    && hasInteger(value, 'sortOrder')
+    && hasNullableString(value, 'visibleFrom')
+    && hasNullableString(value, 'visibleTo')
+    && hasString(value, 'tariffType', true)
+    && hasString(value, 'category', true)
+    && hasString(value, 'allowedRegionsCsv')
+    && hasString(value, 'allowedNodeGroupsCsv')
+    && hasBoolean(value, 'isReferralEligible')
+    && hasString(value, 'provisioningScenario', true)
+    && hasString(value, 'afterPaymentText')
+    && hasString(value, 'createdAt', true)
+    && hasString(value, 'updatedAt', true)
+}
+
+function isFaqItem(value: unknown): value is FaqItem {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'question', true)
+    && hasString(value, 'answer', true)
+    && hasString(value, 'category', true)
+    && hasBoolean(value, 'isActive')
+    && hasBoolean(value, 'showOnHome')
+    && hasBoolean(value, 'showOnFaqPage')
+    && hasInteger(value, 'sortOrder')
+    && hasString(value, 'createdAt', true)
+    && hasString(value, 'updatedAt', true)
+}
+
+function isSiteContentBlockDto(value: unknown): value is SiteContentBlockDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'key', true)
+    && hasString(value, 'value')
+    && hasString(value, 'group', true)
+    && hasString(value, 'label')
+    && hasString(value, 'description')
+    && hasString(value, 'inputType', true)
+    && hasBoolean(value, 'isActive')
+    && hasInteger(value, 'sortOrder')
+    && hasString(value, 'createdAt', true)
+    && hasString(value, 'updatedAt', true)
+}
+
+function isPublicPaymentProviderDto(value: unknown): value is PublicPaymentProviderDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'provider', true)
+    && paymentProviderValues.has(value.provider as PaymentProvider)
+    && hasString(value, 'publicName', true)
+    && hasString(value, 'mode', true)
+    && publicPaymentProviderModeValues.has(value.mode as PaymentProviderMode)
+    && hasString(value, 'healthStatus', true)
+}
 
 function isJsonContentType(value: string | null) {
   const mediaType = value?.split(';', 1)[0]?.trim().toLowerCase() ?? ''
@@ -1308,7 +1432,7 @@ export class ApiClient {
     return new TextDecoder().decode(bytes)
   }
 
-  private async request<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }, expectedShape: 'object' | 'array' = 'object'): Promise<T> {
+  private async request<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }, expectedShape: 'object' | 'array' = 'object', responseValidator?: (payload: unknown) => boolean): Promise<T> {
     const { token, errorMessage, ...requestInit } = init ?? {}
     const headers = new Headers(requestInit.headers ?? {})
 
@@ -1350,13 +1474,25 @@ export class ApiClient {
       if ((expectedShape === 'array') !== Array.isArray(payload)) {
         throw new ApiClientError(apiUnexpectedResponseShapeMessage, 502, { expectedShape })
       }
+      if (responseValidator && !responseValidator(payload)) {
+        throw new ApiClientError(apiInvalidResponseDataMessage, 502, { expectedShape })
+      }
 
       return payload as T
     })
   }
 
-  private requestArray<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }): Promise<T[]> {
-    return this.request<T[]>(path, init, 'array')
+  private requestArray<T>(path: string, init?: RequestInit & { token?: string | null; errorMessage?: string }, itemValidator?: (item: unknown) => item is T, collectionValidator?: (items: T[]) => boolean): Promise<T[]> {
+    return this.request<T[]>(
+      path,
+      init,
+      'array',
+      itemValidator || collectionValidator
+        ? (payload) => Array.isArray(payload)
+          && (!itemValidator || payload.every((item) => itemValidator(item)))
+          && (!collectionValidator || collectionValidator(payload as T[]))
+        : undefined
+    )
   }
 
 
@@ -1390,23 +1526,38 @@ export class ApiClient {
   }
 
   getTariffs(): Promise<TariffDto[]> {
-    return this.requestArray<TariffDto>('/api/public/tariffs', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<TariffDto>(
+      '/api/public/tariffs',
+      { errorMessage: apiFallbackErrorMessage },
+      isTariffDto,
+      (items) => hasUniqueStringKey(items, 'id') && hasUniqueStringKey(items, 'slug')
+    )
   }
 
   getFaq(): Promise<FaqItem[]> {
-    return this.requestArray<FaqItem>('/api/public/content/faq', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<FaqItem>('/api/public/content/faq', { errorMessage: apiFallbackErrorMessage }, isFaqItem, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getHomeFaq(): Promise<FaqItem[]> {
-    return this.requestArray<FaqItem>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<FaqItem>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage }, isFaqItem, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getHomeContent(): Promise<SiteContentBlockDto[]> {
-    return this.requestArray<SiteContentBlockDto>('/api/public/content/home', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SiteContentBlockDto>(
+      '/api/public/content/home',
+      { errorMessage: apiFallbackErrorMessage },
+      isSiteContentBlockDto,
+      (items) => hasUniqueStringKey(items, 'id') && hasUniqueStringKey(items, 'key')
+    )
   }
 
   getPublicPaymentProviders(): Promise<PublicPaymentProviderDto[]> {
-    return this.requestArray<PublicPaymentProviderDto>('/api/public/payments/providers', { errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PublicPaymentProviderDto>(
+      '/api/public/payments/providers',
+      { errorMessage: apiFallbackErrorMessage },
+      isPublicPaymentProviderDto,
+      (items) => hasUniqueStringKey(items, 'provider')
+    )
   }
 
   register(email: string, password: string, displayName: string, referralCode?: string | null): Promise<AuthResponse> {

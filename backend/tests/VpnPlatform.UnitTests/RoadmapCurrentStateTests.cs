@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-05-api-response-shape-boundary";
-    private const string CurrentVersion = "0.528.0";
+    private const string CurrentReleaseId = "2026-08-09-public-api-dto-validation";
+    private const string CurrentVersion = "0.529.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -16,7 +16,7 @@ public class RoadmapCurrentStateTests
         var root = FindRepositoryRoot();
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
-        Assert.Contains("Дата актуализации: 2026-08-05", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Дата актуализации: 2026-08-09", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001`", roadmap, StringComparison.Ordinal);
         Assert.Contains("1112/1112", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002`", roadmap, StringComparison.Ordinal);

@@ -1,6 +1,6 @@
 # Product/UI roadmap: сайт, кабинет и админка VPN Platform
 
-Дата актуализации: 2026-08-05.
+Дата актуализации: 2026-08-09.
 
 Этот документ был исходным продуктовым планом по единому сайту, кабинету и админке. Актуальный источник правды по production-ready статусу находится в [PRODUCT_COMPLETION_ROADMAP.md](PRODUCT_COMPLETION_ROADMAP.md). Здесь оставлен компактный продуктовый срез, чтобы старые незакрытые чекбоксы не противоречили фактическим проверкам.
 
@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `541/561` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `542/562` closed, readiness `96.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -125,7 +125,7 @@
 - [x] Refresh token optimistic revision закрывает double rotation; concurrent reuse/logout/admin deactivation fail closed без активной stale branch.
 - [x] Support conversation revision закрывает stale reply/status/note; оба UI обновляют очередь после conflict, pending inbound thread снова становится active.
 - [x] Checkout claim атомарно связывает session/user/order; concurrent same-user получает winner, другой user не создаёт второй заказ, completed status остаётся terminal.
-- [x] Latest "Что нового": `2026-08-05-api-response-shape-boundary`, версия `0.528.0`.
+- [x] Latest "Что нового": `2026-08-09-public-api-dto-validation`, версия `0.529.0`.
 
 ## Как вести дальше
 
