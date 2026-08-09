@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.531.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-core-api-dto-validation`.
+
+### Исправлено
+
+- Админка больше не принимает неполные DTO административной сессии, dashboard readiness, пользователей, user overview, подписок, VPN-доступов, заказов и платежей как доверенные данные.
+- Runtime-контракты проверяют capabilities, счетчики, вложенные readiness checks, даты, backend enum, обязательные поля и уникальные `id`; несовместимый ответ завершается controlled `ApiClientError` `502` без raw payload.
+- При ошибке или пустом результате загрузки пользователей очищаются выбранный пользователь и его ранее загруженная карточка, поэтому персональные данные не остаются в активном разделе.
+- Backend user overview снова соответствует `SupportConversationDto` и возвращает обязательный optimistic-concurrency `revision`.
+
+### Проверено
+
+- Frontend `98/98`, включая malformed admin core DTO; typecheck и production build всех трех приложений.
+- Admin desktop/mobile `6/6`, malformed users regression `2/2`, все admin-разделы и representative responsive widths `2/2`; полный console/responsive suite `18/18`.
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует; SQLite overview regression и fresh local SQLite checkout/payment/subscription/VPN smoke пройдены.
+- Dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings; `RoadmapCurrentStateTests` и release/documentation/UTF-8 guards подтверждают latest `2026-08-09-admin-core-api-dto-validation`, версию `0.531.0` и roadmap `544/564`.
+- Roadmap progress: `544/564` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.530.0 - 2026-08-09
 
 Release entry: `2026-08-09-cabinet-api-dto-validation`.

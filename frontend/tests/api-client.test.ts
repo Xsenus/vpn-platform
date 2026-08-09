@@ -14,6 +14,230 @@ import {
   validatePasswordResetRequest
 } from '../packages/api-client/src/index.ts'
 
+const adminFixtureTimestamp = '2026-08-09T00:00:00Z'
+
+function adminCapabilitiesFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    adminRead: true,
+    adminWrite: true,
+    financeRead: true,
+    financeWrite: true,
+    supportRead: true,
+    supportWrite: true,
+    provisioningManage: true,
+    vpnManage: true,
+    botManage: true,
+    settingsManage: true,
+    ...overrides
+  }
+}
+
+function adminSessionFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    userId: 'admin-1',
+    email: 'admin@example.test',
+    displayName: 'Admin',
+    roles: ['Admin'],
+    capabilities: adminCapabilitiesFixture(),
+    ...overrides
+  }
+}
+
+function adminDashboardFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    totalUsers: 1,
+    telegramUsers: 0,
+    activeSubscriptions: 1,
+    expiringSubscriptions: 0,
+    paidOrders: 1,
+    pendingOrders: 0,
+    failedPayments: 0,
+    recentPayments: 1,
+    recentOrders: 1,
+    vpnAccessesCount: 1,
+    vpnNodesCount: 1,
+    healthyVpnNodes: 1,
+    vpnPanelsCount: 1,
+    healthyVpnPanels: 1,
+    supportConversationsCount: 0,
+    openSupportConversations: 0,
+    provisioningErrors: 0,
+    productionReadiness: {
+      isReady: false,
+      status: 'Blocked',
+      checks: [{
+        key: 'payment-webhook',
+        label: 'Payment webhook',
+        status: 'Blocked',
+        message: 'Webhook URL is not configured.',
+        category: 'Payments',
+        severity: 'critical',
+        actionLabel: 'Open payments',
+        actionHref: '#payments'
+      }]
+    },
+    generatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function adminUserFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'user-1',
+    email: 'user@example.test',
+    displayName: 'User',
+    rolesCsv: 'User',
+    status: 'Active',
+    isBlocked: false,
+    preferredLanguage: 'ru',
+    referralCode: 'USER1',
+    authSource: 'Local',
+    emailConfirmed: true,
+    lastLoginAt: null,
+    telegramRegistrationCompletedAt: null,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function adminOrderFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'order-1',
+    userId: 'user-1',
+    userDisplayName: 'User',
+    userEmail: 'user@example.test',
+    tariffId: 'tariff-1',
+    tariffName: 'Monthly',
+    amount: 100,
+    currency: 'RUB',
+    status: 'PendingPayment',
+    type: 'NewSubscription',
+    channel: 'Web',
+    paymentProvider: 'YooKassa',
+    checkoutSessionId: null,
+    expiresAt: adminFixtureTimestamp,
+    paidAt: null,
+    isFirstPurchase: false,
+    paymentAttemptsCount: 1,
+    lastPaymentId: 'payment-1',
+    lastPaymentStatus: 'Pending',
+    lastPaymentProvider: 'YooKassa',
+    linkedSubscriptionId: null,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function adminPaymentFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'payment-1',
+    orderId: 'order-1',
+    userId: 'user-1',
+    userDisplayName: 'User',
+    provider: 'YooKassa',
+    paymentProviderAccountId: 'provider-1',
+    providerMode: 'Sandbox',
+    providerPaymentId: 'provider-payment-1',
+    externalEventId: '',
+    idempotencyKey: null,
+    confirmationUrl: null,
+    returnUrl: null,
+    amount: 100,
+    currency: 'RUB',
+    status: 'Succeeded',
+    signatureValidated: true,
+    isActivationProcessed: true,
+    activationProcessedAt: adminFixtureTimestamp,
+    paidAt: adminFixtureTimestamp,
+    failedAt: null,
+    refundedAt: null,
+    refundedAmount: 0,
+    statusReason: null,
+    webhookEventsCount: 1,
+    refundsCount: 0,
+    refundSupported: true,
+    canRefund: false,
+    refundableAmount: 0,
+    refundBlockers: [],
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function adminSubscriptionFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'sub-1',
+    userId: 'user-1',
+    tariffId: 'tariff-1',
+    tariffName: 'Monthly',
+    status: 'Active',
+    startAt: adminFixtureTimestamp,
+    endAt: '2026-09-09T00:00:00Z',
+    gracePeriodEndAt: null,
+    autoRenewFlag: false,
+    sourceChannel: 'Web',
+    currentServerId: 'server-1',
+    currentAccessId: 'access-1',
+    lastPaymentId: 'payment-1',
+    renewalCount: 0,
+    blockReason: null,
+    suspendedAt: null,
+    cancelledAt: null,
+    lifecycleAttemptCount: 0,
+    lifecycleProcessingStartedAt: null,
+    lifecycleLeaseExpiresAt: null,
+    lifecycleNextAttemptAt: null,
+    lifecycleLastError: null,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function adminAccessFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'access-1',
+    subscriptionId: 'sub-1',
+    subscriptionStatus: 'Active',
+    isTerminal: false,
+    userId: 'user-1',
+    providerType: 'x3ui',
+    providerAccessId: 'client-1',
+    serverId: 'server-1',
+    serverName: 'Sandbox node',
+    accessUri: 'vless://test',
+    qrCodePayload: 'vless://test',
+    qrCodePath: 'vless://test',
+    configPath: '',
+    status: 'Active',
+    issuedAt: adminFixtureTimestamp,
+    expiryDate: '2026-09-09T00:00:00Z',
+    disabledAt: null,
+    lastSyncedAt: adminFixtureTimestamp,
+    revision: 1,
+    history: [],
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function adminUserOverviewFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    user: adminUserFixture(),
+    telegramAccounts: [],
+    orders: [],
+    payments: [],
+    subscriptions: [],
+    accessCredentials: [],
+    supportConversations: [],
+    ...overrides
+  }
+}
+
 test('buildAuthHeaders returns bearer header when token exists', () => {
   assert.deepEqual(buildAuthHeaders('abc'), { Authorization: 'Bearer abc' })
   assert.deepEqual(buildAuthHeaders(''), {})
@@ -48,13 +272,18 @@ test('ApiClient.getAdminSession loads the capability contract with bearer auth',
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({
-      userId: 'admin-1',
-      email: 'admin@example.test',
-      displayName: 'Admin',
+    return new Response(JSON.stringify(adminSessionFixture({
       roles: ['FinanceManager'],
-      capabilities: { adminRead: true, financeRead: true, financeWrite: true }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      capabilities: adminCapabilitiesFixture({
+        adminWrite: false,
+        supportRead: false,
+        supportWrite: false,
+        provisioningManage: false,
+        vpnManage: false,
+        botManage: false,
+        settingsManage: false
+      })
+    })), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
@@ -706,7 +935,7 @@ test('ApiClient.getAdminAccesses calls admin VPN access endpoint', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify([{ id: 'access-1', subscriptionId: 'sub-1', providerType: 'x3ui', providerAccessId: 'client-1', serverId: 'node-1', accessUri: 'vless://test', qrCodePath: 'vless://test', configPath: '', status: 'Active', issuedAt: new Date().toISOString(), revision: 1 }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify([adminAccessFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
@@ -802,22 +1031,19 @@ test('ApiClient admin dashboard and user overview endpoints are tokenized', asyn
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).includes('/overview')) {
-      return new Response(JSON.stringify({ user: { id: 'user-1', displayName: 'User' }, orders: [], payments: [], subscriptions: [], accessCredentials: [], supportConversations: [] }), {
+      return new Response(JSON.stringify(adminUserOverviewFixture()), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
-    return new Response(JSON.stringify({
-      totalUsers: 1,
-      activeSubscriptions: 1,
+    return new Response(JSON.stringify(adminDashboardFixture({
       productionReadiness: {
         isReady: false,
         status: 'Blocked',
         checks: [{ key: 'payment-webhook', label: 'Webhook платежей', status: 'Blocked', message: 'Webhook URL не заполнен', category: 'Платежи', severity: 'critical', actionLabel: 'Открыть платежи', actionHref: '#payments' }]
-      },
-      generatedAt: new Date().toISOString()
-    }), {
+      }
+    })), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -911,19 +1137,11 @@ test('ApiClient admin payments expose refund readiness and send refund payload',
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).endsWith('/api/admin/payments')) {
-      return new Response(JSON.stringify([{
-        id: 'payment-1',
-        orderId: 'order-1',
-        provider: 'YooKassa',
-        status: 'Succeeded',
-        amount: 100,
-        currency: 'RUB',
+      return new Response(JSON.stringify([adminPaymentFixture({
         refundedAmount: 25,
-        refundSupported: true,
         canRefund: true,
         refundableAmount: 75,
-        refundBlockers: []
-      }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
     return new Response(JSON.stringify({ id: 'refund-1', paymentAttemptId: 'payment-1', provider: 'YooKassa', providerRefundId: 'rf-1', status: 'Succeeded', amount: 50, currency: 'RUB', reason: 'manual', createdAt: new Date().toISOString() }), {
@@ -984,7 +1202,7 @@ test('ApiClient admin order filters and recheck endpoints use finance-safe route
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).includes('/api/admin/orders?')) {
-      return new Response(JSON.stringify([{ id: 'order-1', status: 'PendingPayment', lastPaymentId: 'payment-1', lastPaymentStatus: 'Pending' }]), {
+      return new Response(JSON.stringify([adminOrderFixture()]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -1163,6 +1381,14 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
     new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response('[{}]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     new Response('[]', { status: 200, headers: { 'Content-Type': 'application/vnd.vpn-platform+json' } })
   ]
   globalThis.fetch = (async () => responses.shift()!) as typeof fetch
@@ -1249,6 +1475,14 @@ test('ApiClient rejects invalid successful JSON responses and accepts structured
     isInvalidResponseDataError
   )
   await assert.rejects(() => client.unlinkTelegram('user-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminSession('admin-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminDashboardSummary('admin-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminUsers('admin-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminUserOverview('admin-token', 'user-1'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminSubscriptions('admin-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminAccesses('admin-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminOrders('admin-token'), isInvalidResponseDataError)
+  await assert.rejects(() => client.getAdminPayments('admin-token'), isInvalidResponseDataError)
   assert.deepEqual(await client.getTariffs(), [])
 })
 
@@ -1466,25 +1700,25 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
     calls.push({ url: path, init })
 
     if (path.endsWith('/api/admin/dashboard/summary')) {
-      return new Response(JSON.stringify({ totalUsers: 1, activeSubscriptions: 1, vpnAccesses: 1, failedPayments: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify(adminDashboardFixture()), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.includes('/api/admin/users/user-1/overview')) {
-      return new Response(JSON.stringify({ user: { id: 'user-1', email: 'user@example.test', roles: ['User'] }, orders: [{ id: 'order-1' }], payments: [{ id: 'pay-1' }], subscriptions: [{ id: 'sub-1' }], accesses: [{ id: 'access-1' }], supportConversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify(adminUserOverviewFixture()), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/users?search=user')) {
-      return new Response(JSON.stringify([{ id: 'user-1', email: 'user@example.test', passwordHash: undefined }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([adminUserFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/orders')) {
-      return new Response(JSON.stringify([{ id: 'order-1', paymentProvider: 'YooKassa', linkedSubscriptionId: 'sub-1' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([adminOrderFixture({ linkedSubscriptionId: 'sub-1' })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/payments')) {
-      return new Response(JSON.stringify([{ id: 'pay-1', provider: 'YooKassa', status: 'Succeeded', providerPaymentId: 'sandbox-pay-1' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([adminPaymentFixture({ providerPaymentId: 'sandbox-pay-1' })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/subscriptions')) {
-      return new Response(JSON.stringify([{ id: 'sub-1', status: 'Active', currentAccessId: 'access-1' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([adminSubscriptionFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/access-credentials')) {
-      return new Response(JSON.stringify([{ id: 'access-1', status: 'Active', accessUri: 'vless://sandbox/client', latestHistory: [{ eventType: 'AccessCreated' }] }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([adminAccessFixture({ accessUri: 'vless://sandbox/client' })]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/admin/provisioning-runs')) {
       return new Response(JSON.stringify([{ id: 'run-1', targetHost: 'vps.example.test', credentialsConfigured: true, executionLog: 'password=***' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })

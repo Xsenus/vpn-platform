@@ -1186,7 +1186,10 @@ export function App() {
     if (!currentToken) return
     const nextUsers = await api.getAdminUsers(currentToken, { search: userSearch, status: userStatusFilter })
     setUsers(nextUsers)
-    if (!selectedUserId && nextUsers.length > 0) setSelectedUserId(String(nextUsers[0].id ?? ''))
+    if (!nextUsers.some((item) => String(item.id) === selectedUserId)) {
+      setSelectedUserId(String(nextUsers[0]?.id ?? ''))
+      setUserOverview(null)
+    }
   }
 
   const loadAll = async (currentToken: string, currentSession: AdminSessionDto | null = adminSession) => {
@@ -1298,7 +1301,10 @@ export function App() {
     setLoadErrors(errors)
     if (!selectedSupportConversationId && nextSupportConversations.length > 0) setSelectedSupportConversationId(nextSupportConversations[0].id)
     if (!selectedVpnPanelId && nextVpnPanels.length > 0) setSelectedVpnPanelId(nextVpnPanels[0].id)
-    if (!selectedUserId && nextUsers.length > 0) setSelectedUserId(String(nextUsers[0].id ?? ''))
+    if (!nextUsers.some((item) => String(item.id) === selectedUserId)) {
+      setSelectedUserId(String(nextUsers[0]?.id ?? ''))
+      setUserOverview(null)
+    }
     setBusy(false)
   }
 

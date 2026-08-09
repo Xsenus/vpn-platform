@@ -50,6 +50,18 @@ const user = {
   status: 'Active'
 }
 
+const adminUser = {
+  ...user,
+  rolesCsv: 'User',
+  isBlocked: false,
+  authSource: 'Local',
+  emailConfirmed: true,
+  lastLoginAt: now,
+  telegramRegistrationCompletedAt: null,
+  createdAt: now,
+  updatedAt: now
+}
+
 const tariff = {
   id: 'tariff-all-screens',
   name: 'All Screens 30',
@@ -98,6 +110,11 @@ const subscription = {
   blockReason: null,
   suspendedAt: null,
   cancelledAt: null,
+  lifecycleAttemptCount: 0,
+  lifecycleProcessingStartedAt: null,
+  lifecycleLeaseExpiresAt: null,
+  lifecycleNextAttemptAt: null,
+  lifecycleLastError: null,
   accessUri: 'vless://all-screens@example.test:443#all-screens',
   qrCodePath: 'qr://all-screens',
   configPath: 'config://all-screens',
@@ -413,30 +430,41 @@ async function installApiMock(page: Page) {
 
     if (method === 'GET' && path === '/api/admin/dashboard/summary') {
       await fulfillJson(route, {
-        generatedAt: now,
         totalUsers: 1,
+        telegramUsers: 0,
         activeSubscriptions: 1,
-        monthlyRevenue: 490,
+        expiringSubscriptions: 0,
+        paidOrders: 1,
         pendingOrders: 0,
-        openSupportTickets: 1,
-        activeVpnAccesses: 1,
-        paymentProviderIssues: 0,
-        vpnPanelIssues: 0,
-        recentOrders: 1,
+        failedPayments: 0,
         recentPayments: 1,
-        provisioningQueue: []
+        recentOrders: 1,
+        vpnAccessesCount: 1,
+        vpnNodesCount: 1,
+        healthyVpnNodes: 1,
+        vpnPanelsCount: 1,
+        healthyVpnPanels: 1,
+        supportConversationsCount: 1,
+        openSupportConversations: 1,
+        provisioningErrors: 0,
+        productionReadiness: {
+          isReady: false,
+          status: 'Blocked',
+          checks: [{ key: 'vpn-panel', label: 'VPN panel', status: 'Blocked', message: 'Live panel evidence is required.', category: 'VPN', severity: 'critical', actionLabel: 'Open panels', actionHref: '#panels' }]
+        },
+        generatedAt: now
       })
       return
     }
 
     if (method === 'GET' && path === '/api/admin/users') {
-      await fulfillJson(route, [user])
+      await fulfillJson(route, [adminUser])
       return
     }
 
     if (method === 'GET' && path.startsWith('/api/admin/users/') && path.endsWith('/overview')) {
       await fulfillJson(route, {
-        user,
+        user: adminUser,
         orders: [order],
         subscriptions: [subscription],
         payments: [payment],

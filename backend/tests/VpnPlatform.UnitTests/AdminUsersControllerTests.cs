@@ -419,6 +419,7 @@ public class AdminUsersControllerTests
             Status = "open",
             Subject = "Нужна помощь",
             InternalNote = "VIP",
+            Revision = 3,
             CreatedAt = now.AddHours(-3),
             UpdatedAt = now.AddHours(-2)
         });
@@ -445,6 +446,7 @@ public class AdminUsersControllerTests
         Assert.True(root.GetProperty("Subscriptions")[0].GetProperty("AutoRenewFlag").GetBoolean());
         Assert.Equal("vless://client-1", root.GetProperty("AccessCredentials")[0].GetProperty("QrCodePath").GetString());
         Assert.Equal("VIP", root.GetProperty("SupportConversations")[0].GetProperty("InternalNote").GetString());
+        Assert.Equal(3, root.GetProperty("SupportConversations")[0].GetProperty("Revision").GetInt32());
 
         savedSubscription.Status = SubscriptionStatus.Cancelled;
         savedSubscription.CancelledAt = now;

@@ -1213,6 +1213,7 @@ const paymentProviderValues = new Set<PaymentProvider>([
 const publicPaymentProviderModeValues = new Set<PaymentProviderMode>(['Sandbox', 'Production'])
 const paymentProviderModeValues = new Set<PaymentProviderMode>(['Disabled', 'Sandbox', 'Production'])
 const userStatusValues = new Set(['New', 'Active', 'Suspended', 'Deleted'])
+const authSourceValues = new Set(['Local', 'Telegram', 'Imported'])
 const channelTypeValues = new Set<ChannelType>(['Web', 'Telegram', 'Discord', 'Vk', 'WhatsApp', 'Email'])
 const orderTypeValues = new Set<OrderType>(['NewSubscription', 'Renewal', 'Upgrade', 'Compensation'])
 const orderStatusValues = new Set(['Draft', 'PendingPayment', 'PaymentReceived', 'FulfillmentInProgress', 'Completed', 'Failed', 'Cancelled', 'Expired', 'Refunded', 'PartiallyProcessed'])
@@ -1261,6 +1262,12 @@ function hasDateString(record: Record<string, unknown>, key: string) {
 
 function hasNullableDateString(record: Record<string, unknown>, key: string) {
   return record[key] === null || hasDateString(record, key)
+}
+
+function hasStringArray(record: Record<string, unknown>, key: string, requireNonEmptyItems = false) {
+  const value = record[key]
+  return Array.isArray(value)
+    && value.every((item) => typeof item === 'string' && (!requireNonEmptyItems || item.trim().length > 0))
 }
 
 function hasUniqueStringKey(items: unknown[], key: string) {
@@ -1345,6 +1352,261 @@ function isPublicPaymentProviderDto(value: unknown): value is PublicPaymentProvi
     && hasString(value, 'mode', true)
     && publicPaymentProviderModeValues.has(value.mode as PaymentProviderMode)
     && hasString(value, 'healthStatus', true)
+}
+
+function isAdminSessionCapabilitiesDto(value: unknown): value is AdminSessionCapabilitiesDto {
+  if (!isRecord(value)) return false
+
+  const keys: Array<keyof AdminSessionCapabilitiesDto> = [
+    'adminRead',
+    'adminWrite',
+    'financeRead',
+    'financeWrite',
+    'supportRead',
+    'supportWrite',
+    'provisioningManage',
+    'vpnManage',
+    'botManage',
+    'settingsManage'
+  ]
+  if (!keys.every((key) => hasBoolean(value, key))) return false
+
+  return value.adminRead === true
+    && (value.adminWrite !== true || value.adminRead === true)
+    && (value.financeWrite !== true || value.financeRead === true)
+    && (value.supportWrite !== true || value.supportRead === true)
+}
+
+function isAdminSessionDto(value: unknown): value is AdminSessionDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'userId', true)
+    && hasString(value, 'email', true)
+    && hasString(value, 'displayName', true)
+    && hasStringArray(value, 'roles', true)
+    && (value.roles as string[]).length > 0
+    && new Set(value.roles as string[]).size === (value.roles as string[]).length
+    && isAdminSessionCapabilitiesDto(value.capabilities)
+}
+
+function isAdminProductionReadinessCheckDto(value: unknown): value is AdminProductionReadinessCheckDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'key', true)
+    && hasString(value, 'label', true)
+    && hasString(value, 'status', true)
+    && (value.status === 'Ready' || value.status === 'Blocked')
+    && hasString(value, 'message')
+    && hasString(value, 'category', true)
+    && hasString(value, 'severity', true)
+    && hasString(value, 'actionLabel')
+    && hasString(value, 'actionHref')
+}
+
+function isAdminDashboardSummaryDto(value: unknown): value is AdminDashboardSummaryDto {
+  if (!isRecord(value)) return false
+
+  const countKeys: Array<keyof AdminDashboardSummaryDto> = [
+    'totalUsers',
+    'telegramUsers',
+    'activeSubscriptions',
+    'expiringSubscriptions',
+    'paidOrders',
+    'pendingOrders',
+    'failedPayments',
+    'recentPayments',
+    'recentOrders',
+    'vpnAccessesCount',
+    'vpnNodesCount',
+    'healthyVpnNodes',
+    'vpnPanelsCount',
+    'healthyVpnPanels',
+    'supportConversationsCount',
+    'openSupportConversations',
+    'provisioningErrors'
+  ]
+  if (!countKeys.every((key) => hasInteger(value, key, 0)) || !hasDateString(value, 'generatedAt')) return false
+  if (!isRecord(value.productionReadiness)
+    || !hasBoolean(value.productionReadiness, 'isReady')
+    || !hasString(value.productionReadiness, 'status', true)
+    || (value.productionReadiness.status !== 'Ready' && value.productionReadiness.status !== 'Blocked')
+    || !Array.isArray(value.productionReadiness.checks)
+    || !value.productionReadiness.checks.every(isAdminProductionReadinessCheckDto)) return false
+
+  return hasUniqueStringKey(value.productionReadiness.checks, 'key')
+}
+
+function isAdminUserDto(value: unknown): value is AdminUserDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasNullableString(value, 'email')
+    && hasString(value, 'displayName', true)
+    && hasString(value, 'rolesCsv', true)
+    && hasString(value, 'status', true)
+    && userStatusValues.has(value.status as string)
+    && hasBoolean(value, 'isBlocked')
+    && hasString(value, 'preferredLanguage', true)
+    && hasString(value, 'referralCode', true)
+    && hasString(value, 'authSource', true)
+    && authSourceValues.has(value.authSource as string)
+    && hasBoolean(value, 'emailConfirmed')
+    && hasNullableDateString(value, 'lastLoginAt')
+    && hasNullableDateString(value, 'telegramRegistrationCompletedAt')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isAdminSubscriptionDto(value: unknown): value is SubscriptionDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'userId', true)
+    && hasString(value, 'tariffId', true)
+    && hasNullableString(value, 'tariffName')
+    && hasString(value, 'status', true)
+    && subscriptionStatusValues.has(value.status as string)
+    && hasDateString(value, 'startAt')
+    && hasDateString(value, 'endAt')
+    && hasNullableDateString(value, 'gracePeriodEndAt')
+    && hasBoolean(value, 'autoRenewFlag')
+    && hasString(value, 'sourceChannel', true)
+    && channelTypeValues.has(value.sourceChannel as ChannelType)
+    && hasNullableString(value, 'currentServerId')
+    && hasNullableString(value, 'currentAccessId')
+    && hasNullableString(value, 'lastPaymentId')
+    && hasInteger(value, 'renewalCount', 0)
+    && hasNullableString(value, 'blockReason')
+    && hasNullableDateString(value, 'suspendedAt')
+    && hasNullableDateString(value, 'cancelledAt')
+    && hasInteger(value, 'lifecycleAttemptCount', 0)
+    && hasNullableDateString(value, 'lifecycleProcessingStartedAt')
+    && hasNullableDateString(value, 'lifecycleLeaseExpiresAt')
+    && hasNullableDateString(value, 'lifecycleNextAttemptAt')
+    && hasNullableString(value, 'lifecycleLastError')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isAdminAccessHistoryDto(value: unknown): value is AccessCredentialHistoryDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'accessCredentialId', true)
+    && hasString(value, 'subscriptionId', true)
+    && hasString(value, 'eventType', true)
+    && hasString(value, 'oldValueJson')
+    && hasString(value, 'newValueJson')
+    && hasDateString(value, 'createdAt')
+}
+
+function isAdminAccessCredentialDto(value: unknown): value is AccessCredentialDto {
+  if (!isCabinetAccessCredentialDto(value) || !isRecord(value)) return false
+
+  return Array.isArray(value.history)
+    && value.history.every(isAdminAccessHistoryDto)
+    && hasUniqueStringKey(value.history, 'id')
+}
+
+function isAdminPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
+  if (!isCabinetPaymentAttemptDto(value) || !isRecord(value)) return false
+
+  return hasBoolean(value, 'refundSupported')
+    && hasBoolean(value, 'canRefund')
+    && hasFiniteNumber(value, 'refundableAmount', 0)
+    && hasStringArray(value, 'refundBlockers')
+}
+
+function isAdminTelegramAccountDto(value: unknown): value is AdminTelegramAccountDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasInteger(value, 'telegramUserId', 1)
+    && hasString(value, 'username')
+    && hasString(value, 'firstName')
+    && hasString(value, 'lastName')
+    && hasString(value, 'languageCode')
+    && hasBoolean(value, 'isBlocked')
+    && hasNullableDateString(value, 'linkedAt')
+    && hasNullableDateString(value, 'lastSeenAt')
+    && hasNullableDateString(value, 'registrationCompletedAt')
+}
+
+function isAdminOverviewSubscriptionDto(value: unknown): value is SubscriptionDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'userId', true)
+    && hasString(value, 'tariffId', true)
+    && hasNullableString(value, 'tariffName')
+    && hasString(value, 'status', true)
+    && subscriptionStatusValues.has(value.status as string)
+    && hasDateString(value, 'startAt')
+    && hasDateString(value, 'endAt')
+    && hasNullableDateString(value, 'gracePeriodEndAt')
+    && hasBoolean(value, 'autoRenewFlag')
+    && hasString(value, 'sourceChannel', true)
+    && channelTypeValues.has(value.sourceChannel as ChannelType)
+    && hasNullableString(value, 'currentServerId')
+    && hasNullableString(value, 'currentAccessId')
+    && hasNullableString(value, 'lastPaymentId')
+    && hasInteger(value, 'renewalCount', 0)
+    && hasNullableString(value, 'blockReason')
+    && hasNullableDateString(value, 'suspendedAt')
+    && hasNullableDateString(value, 'cancelledAt')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isAdminOverviewAccessDto(value: unknown): value is AccessCredentialDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'subscriptionId', true)
+    && hasString(value, 'subscriptionStatus', true)
+    && subscriptionStatusValues.has(value.subscriptionStatus as string)
+    && hasBoolean(value, 'isTerminal')
+    && hasNullableString(value, 'userId')
+    && hasString(value, 'providerType', true)
+    && hasString(value, 'providerAccessId')
+    && hasString(value, 'serverId', true)
+    && hasNullableString(value, 'serverName')
+    && hasString(value, 'accessUri')
+    && hasNullableString(value, 'qrCodePayload')
+    && hasString(value, 'qrCodePath')
+    && hasString(value, 'configPath')
+    && hasString(value, 'status', true)
+    && accessCredentialStatusValues.has(value.status as string)
+    && hasDateString(value, 'issuedAt')
+    && hasNullableDateString(value, 'disabledAt')
+    && hasNullableDateString(value, 'lastSyncedAt')
+    && hasInteger(value, 'revision', 0)
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+}
+
+function isAdminUserOverviewDto(value: unknown): value is AdminUserOverviewDto {
+  if (!isRecord(value)
+    || !isAdminUserDto(value.user)
+    || !Array.isArray(value.telegramAccounts)
+    || !Array.isArray(value.orders)
+    || !Array.isArray(value.payments)
+    || !Array.isArray(value.subscriptions)
+    || !Array.isArray(value.accessCredentials)
+    || !Array.isArray(value.supportConversations)) return false
+
+  return value.telegramAccounts.every(isAdminTelegramAccountDto)
+    && value.orders.every(isCabinetOrderDto)
+    && value.payments.every(isCabinetPaymentAttemptDto)
+    && value.subscriptions.every(isAdminOverviewSubscriptionDto)
+    && value.accessCredentials.every(isAdminOverviewAccessDto)
+    && value.supportConversations.every(isSupportConversationDto)
+    && hasUniqueStringKey(value.telegramAccounts, 'id')
+    && hasUniqueStringKey(value.orders, 'id')
+    && hasUniqueStringKey(value.payments, 'id')
+    && hasUniqueStringKey(value.subscriptions, 'id')
+    && hasUniqueStringKey(value.accessCredentials, 'id')
+    && hasUniqueStringKey(value.supportConversations, 'id')
 }
 
 function isUserProfileDto(value: unknown): value is UserProfileDto {
@@ -1990,11 +2252,11 @@ export class ApiClient {
   }
 
   getAdminDashboardSummary(token: string): Promise<AdminDashboardSummaryDto> {
-    return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<AdminDashboardSummaryDto>('/api/admin/dashboard/summary', { token, errorMessage: apiFallbackErrorMessage }, 'object', isAdminDashboardSummaryDto)
   }
 
   getAdminSession(token: string): Promise<AdminSessionDto> {
-    return this.request<AdminSessionDto>('/api/admin/session', { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<AdminSessionDto>('/api/admin/session', { token, errorMessage: apiFallbackErrorMessage }, 'object', isAdminSessionDto)
   }
 
   getAdminAuditLogs(token: string, filters: AdminAuditLogFilters = {}): Promise<AdminAuditLogDto[]> {
@@ -2028,15 +2290,15 @@ export class ApiClient {
     if (filters?.status) params.set('status', filters.status)
     if (filters?.role) params.set('role', filters.role)
     const suffix = params.toString() ? `?${params.toString()}` : ''
-    return this.requestArray<AdminUserDto>(`/api/admin/users${suffix}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AdminUserDto>(`/api/admin/users${suffix}`, { token, errorMessage: apiFallbackErrorMessage }, isAdminUserDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminUserOverview(token: string, userId: string): Promise<AdminUserOverviewDto> {
-    return this.request<AdminUserOverviewDto>(`/api/admin/users/${userId}/overview`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.request<AdminUserOverviewDto>(`/api/admin/users/${userId}/overview`, { token, errorMessage: apiFallbackErrorMessage }, 'object', isAdminUserOverviewDto)
   }
 
   getAdminSubscriptions(token: string): Promise<SubscriptionDto[]> {
-    return this.requestArray<SubscriptionDto>('/api/admin/subscriptions', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<SubscriptionDto>('/api/admin/subscriptions', { token, errorMessage: apiFallbackErrorMessage }, isAdminSubscriptionDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   extendAdminSubscription(token: string, id: string, days: number, reason?: string | null): Promise<{ id: string; status: string; endAt: string }> {
@@ -2079,7 +2341,7 @@ export class ApiClient {
   }
 
   getAdminAccesses(token: string): Promise<AccessCredentialDto[]> {
-    return this.requestArray<AccessCredentialDto>('/api/admin/access-credentials', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<AccessCredentialDto>('/api/admin/access-credentials', { token, errorMessage: apiFallbackErrorMessage }, isAdminAccessCredentialDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminAccessQrSvg(token: string, id: string): Promise<string> {
@@ -2128,11 +2390,11 @@ export class ApiClient {
     if (filters.status) params.set('status', filters.status)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.requestArray<OrderDto>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<OrderDto>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isCabinetOrderDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminPayments(token: string): Promise<PaymentAttemptDto[]> {
-    return this.requestArray<PaymentAttemptDto>('/api/admin/payments', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PaymentAttemptDto>('/api/admin/payments', { token, errorMessage: apiFallbackErrorMessage }, isAdminPaymentAttemptDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   recheckAdminPayment(token: string, paymentId: string): Promise<PaymentStatusResultDto> {

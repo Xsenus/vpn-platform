@@ -230,6 +230,7 @@ public class AdminUsersController : ControllerBase
                 x.Subject,
                 x.AssignedToUserId,
                 x.InternalNote,
+                x.Revision,
                 x.ClosedAt,
                 x.CreatedAt,
                 x.UpdatedAt

@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: admin core API DTO field validation
+
+Scope:
+- Проверены runtime-контракты административной сессии, dashboard readiness, пользователей и карточки пользователя, подписок, VPN-доступов, заказов и платежей до передачи ответов в React.
+
+Results:
+- Roadmap progress: `544/564` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-admin-core-api-dto-validation`, version `0.531.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `98/98`; typecheck и production build всех трех приложений: OK.
+- Admin session/capabilities, dashboard counters/readiness checks, users, user overview и коммерческие коллекции проверяются по обязательным полям, датам, enum, уникальным `id` и вложенным массивам; нарушение возвращает controlled `ApiClientError` `502` без raw payload.
+- Backend user overview снова возвращает обязательный support conversation `revision`; SQLite regression подтверждает projection.
+- Malformed admin users regression: OK, desktop/mobile `2/2`; список и ранее выбранная карточка очищаются, персональные данные не остаются в активной панели, `0` page errors.
+- Browser responsive/console suite: OK, `18/18`, включая все admin-разделы и widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: cabinet API DTO field validation
 
 Scope:
