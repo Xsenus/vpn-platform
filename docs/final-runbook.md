@@ -181,7 +181,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 20/20; responsive all-screens: 6/6;
+- browser console smoke: 24/24; responsive all-screens: 6/6;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
 - page quality gate: public, cabinet and 16 admin screens pass landmark, duplicate ID, image alt and accessible-name checks.
@@ -210,9 +210,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Support conversation concurrency: stale reply/status/note возвращают controlled conflict, pending inbound message переоткрывает active thread, assignment ограничен active `SupportWrite` users.
 - Checkout claim atomicity: conditional session reservation, order creation и final link выполняются одной transaction; same-user race возвращает winner, другой user не создаёт orphan-order, completed status остаётся terminal.
 - Cabinet renewal partial success: созданный order остается видимым при ошибке payment init, а retry использует тот же `orderId` без повторного создания заказа.
+- Public authenticated checkout: session создается один раз, claim/payment-init имеет одного владельца, а partial success повторяет только оплату и игнорирует late response после logout.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`.
-- roadmap progress: `554/574` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-09-public-checkout-single-flight`, версия `0.542.0`.
+- roadmap progress: `555/575` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -394,21 +394,17 @@ function HomePage({ profile }: { profile: UserProfileDto | null }) {
   )
 }
 
-function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
-  token: string
-  onCheckoutComplete: (state: CheckoutState) => void
+function TariffsPage({ onPendingCheckout }: {
   onPendingCheckout: (pending: PendingCheckout) => void
 }) {
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
   const [tariffsLoading, setTariffsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [promoCode, setPromoCode] = useState('')
   const [paymentProviders, setPaymentProviders] = useState<PublicPaymentProviderDto[]>([])
   const [paymentProvidersLoading, setPaymentProvidersLoading] = useState(true)
   const [provider, setProvider] = useState<PaymentProvider | ''>('')
   const [pendingTariffId, setPendingTariffId] = useState<string>('')
-  const [checkoutState, setCheckoutState] = useState<CheckoutState>(null)
   const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
   const checkoutInFlightRef = useRef(false)
   const navigate = useNavigate()
@@ -442,7 +438,6 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
     if (checkoutInFlightRef.current) return
 
     setError('')
-    setNotice('')
 
     if (!provider) {
       setError(content('home.errors.noPaymentProviders'))
@@ -464,19 +459,7 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
       const pending = { token: session.token, tariffName: tariff.name, provider }
       writeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY, JSON.stringify(pending))
       onPendingCheckout(pending)
-
-      if (!token) {
-        setNotice(content('home.checkout.pendingAuthNotice'))
-        navigate('/account')
-        return
-      }
-
-      const order = await api.claimCheckoutSession(token, session.token)
-      const payment = await api.initMyPayment(token, order.id, provider, `${window.location.origin}/account`)
-      const nextState = { tariffName: tariff.name, provider, order, payment }
-      removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
-      setCheckoutState(nextState)
-      onCheckoutComplete(nextState)
+      navigate('/account')
     } catch (e) {
       setError(getCheckoutErrorMessage(e, content('home.errors.checkoutCreate')))
     } finally {
@@ -518,15 +501,6 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
           <p className="muted">{content('home.checkout.settingsHint')}</p>
         </Card>
       </div>
-
-      {notice && (
-        <div className="section">
-          <Card>
-            <p className="success-text">{notice}</p>
-            <Link to="/account" className="button">Перейти к аккаунту</Link>
-          </Card>
-        </div>
-      )}
 
       {error && (
         <div className="section">
@@ -574,27 +548,6 @@ function TariffsPage({ token, onCheckoutComplete, onPendingCheckout }: {
         })}
       </div>
 
-      {checkoutState && (
-        <div className="section">
-          <Card>
-            <h3>{content('home.checkout.resultTitle')}</h3>
-            <p>Тариф: <strong>{checkoutState.tariffName}</strong></p>
-            <p>Способ оплаты: {checkoutState.provider}</p>
-            <p>Заказ: <StatusBadge value={checkoutState.order.status} /></p>
-            <p>ID заказа: {checkoutState.order.id}</p>
-            <p>Платеж: {checkoutState.payment.paymentId}</p>
-            <p className="muted">{content('home.checkout.afterPaymentText')}</p>
-            <ExternalLinkActions
-              value={checkoutState.payment.redirectUrl}
-              openLabel={content('home.checkout.openPaymentCta')}
-              copyLabel={content('home.checkout.copyPaymentLink')}
-              ariaLabel="Открыть оплату в новой вкладке"
-              invalidMessage="Ссылка оплаты отклонена как некорректная. Обновите страницу или обратитесь в поддержку."
-              valueClassName="mt-16"
-            />
-          </Card>
-        </div>
-      )}
     </PageShell>
   )
 }
@@ -683,6 +636,7 @@ function AccountPage({
   sessionError,
   lastCheckout,
   pendingCheckout,
+  pendingCheckoutOrder,
   checkoutError,
   claimBusy,
   onRetryPendingCheckout,
@@ -697,6 +651,7 @@ function AccountPage({
   sessionError: string
   lastCheckout: CheckoutState
   pendingCheckout: PendingCheckout | null
+  pendingCheckoutOrder: OrderDto | null
   checkoutError: string
   claimBusy: boolean
   onRetryPendingCheckout: () => void
@@ -713,6 +668,14 @@ function AccountPage({
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [resetMessage, setResetMessage] = useState('')
+  const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
+  const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
+
+  useEffect(() => {
+    api.getHomeContent()
+      .then((items) => setPageContent({ ...defaultHomeContent, ...mapContent(items) }))
+      .catch(() => setPageContent(defaultHomeContent))
+  }, [])
 
   const submitLabel = mode === 'login' ? 'Войти' : 'Создать аккаунт'
   const authPanelId = 'public-auth-panel'
@@ -772,7 +735,7 @@ function AccountPage({
     <PageShell title="Аккаунт">
       <div className="grid">
         <StatTile label="Авторизация" value={token ? 'подключен' : 'не выполнена'} />
-        <StatTile label="Покупка" value={pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто'} />
+        <StatTile label="Покупка" value={pendingCheckoutOrder ? 'заказ создан' : pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто'} />
         <StatTile label="Рефералы" value={profile?.referralCode ?? 'будет после входа'} />
       </div>
 
@@ -784,7 +747,7 @@ function AccountPage({
             <ErrorBlock message={checkoutError} />
             {pendingCheckout && token && (
               <div className="form-actions">
-                <PrimaryButton type="button" disabled={claimBusy} aria-busy={claimBusy} onClick={onRetryPendingCheckout}>Повторить привязку</PrimaryButton>
+                <PrimaryButton type="button" disabled={claimBusy} aria-busy={claimBusy} onClick={onRetryPendingCheckout}>{pendingCheckoutOrder ? 'Повторить оплату' : 'Повторить привязку'}</PrimaryButton>
                 <PrimaryButton type="button" className="button-ghost" disabled={claimBusy} onClick={onClearPendingCheckout}>Отменить эту покупку</PrimaryButton>
               </div>
             )}
@@ -808,13 +771,16 @@ function AccountPage({
 
           {pendingCheckout && (
             <Card>
-              <h3>{claimBusy ? 'Привязываем покупку' : 'Покупка ожидает привязки'}</h3>
+              <h3>{claimBusy ? (pendingCheckoutOrder ? 'Готовим оплату' : 'Привязываем покупку') : pendingCheckoutOrder ? 'Заказ создан, оплата не подготовлена' : 'Покупка ожидает привязки'}</h3>
               <p>Тариф: {pendingCheckout.tariffName}</p>
               <p>Способ оплаты: {pendingCheckout.provider}</p>
-              {claimBusy ? <LoadingBlock label="Создаём заказ и готовим оплату..." /> : <p className="muted">Покупка будет привязана к текущему аккаунту, затем появится ссылка на оплату.</p>}
+              {pendingCheckoutOrder && <p>ID заказа: {pendingCheckoutOrder.id}</p>}
+              {claimBusy
+                ? <LoadingBlock label={pendingCheckoutOrder ? 'Повторно готовим ссылку оплаты...' : 'Создаём заказ и готовим оплату...'} />
+                : <p className="muted">{pendingCheckoutOrder ? 'Заказ сохранён. Повторная команда подготовит оплату для этого же заказа.' : 'Покупка будет привязана к текущему аккаунту, затем появится ссылка на оплату.'}</p>}
               {!claimBusy && (
                 <div className="form-actions">
-                  <PrimaryButton type="button" onClick={onRetryPendingCheckout}>Привязать покупку</PrimaryButton>
+                  <PrimaryButton type="button" onClick={onRetryPendingCheckout}>{pendingCheckoutOrder ? 'Повторить оплату' : 'Привязать покупку'}</PrimaryButton>
                   <PrimaryButton type="button" className="button-ghost" onClick={onClearPendingCheckout}>Отменить</PrimaryButton>
                 </div>
               )}
@@ -823,12 +789,17 @@ function AccountPage({
 
           {lastCheckout && (
             <Card>
-              <h3>Последний заказ</h3>
+              <h3>{content('home.checkout.resultTitle')}</h3>
               <p>Тариф: {lastCheckout.tariffName}</p>
+              <p>Способ оплаты: {lastCheckout.provider}</p>
               <p>Статус: <StatusBadge value={lastCheckout.order.status} /></p>
+              <p>ID заказа: {lastCheckout.order.id}</p>
+              <p>ID платежа: {lastCheckout.payment.paymentId}</p>
+              <p className="muted">{content('home.checkout.afterPaymentText')}</p>
               <ExternalLinkActions
                 value={lastCheckout.payment.redirectUrl}
-                openLabel="Открыть оплату"
+                openLabel={content('home.checkout.openPaymentCta')}
+                copyLabel={content('home.checkout.copyPaymentLink')}
                 ariaLabel="Открыть оплату в новой вкладке"
                 invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите оформление или обратитесь в поддержку."
               />
@@ -993,18 +964,26 @@ export function App() {
   const [profile, setProfile] = useState<UserProfileDto | null>(null)
   const [lastCheckout, setLastCheckout] = useState<CheckoutState>(null)
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(readPendingCheckout())
+  const [pendingCheckoutOrder, setPendingCheckoutOrder] = useState<OrderDto | null>(null)
   const [checkoutError, setCheckoutError] = useState('')
   const [claimBusy, setClaimBusy] = useState(false)
   const [claimAttempt, setClaimAttempt] = useState(0)
+  const checkoutClaimInFlightRef = useRef(false)
+  const checkoutClaimAttemptKeyRef = useRef('')
+  const checkoutClaimRequestIdRef = useRef(0)
   const [logoutBusy, setLogoutBusy] = useState(false)
   const [sessionError, setSessionError] = useState('')
 
   const clearSession = () => {
+    checkoutClaimRequestIdRef.current += 1
+    checkoutClaimInFlightRef.current = false
+    setClaimBusy(false)
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
     setToken('')
     setRefreshToken('')
     setProfile(null)
+    setPendingCheckoutOrder(null)
   }
 
   useEffect(() => {
@@ -1045,27 +1024,63 @@ export function App() {
   }
 
   const clearPendingCheckout = () => {
+    checkoutClaimRequestIdRef.current += 1
+    checkoutClaimInFlightRef.current = false
+    setClaimBusy(false)
     setPendingCheckout(null)
+    setPendingCheckoutOrder(null)
     setCheckoutError('')
     removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
   }
 
   useEffect(() => {
-    if (!token || !pendingCheckout || claimBusy) return
+    if (!token || !pendingCheckout || checkoutClaimInFlightRef.current) return
+    const attemptKey = `${pendingCheckout.token}:${claimAttempt}`
+    if (checkoutClaimAttemptKeyRef.current === attemptKey) return
 
+    checkoutClaimAttemptKeyRef.current = attemptKey
+    checkoutClaimInFlightRef.current = true
+    const requestId = ++checkoutClaimRequestIdRef.current
     setClaimBusy(true)
     setCheckoutError('')
-    api.claimCheckoutSession(token, pendingCheckout.token)
-      .then(async (order) => {
+    void (async () => {
+      let order = pendingCheckoutOrder
+      try {
+        if (!order) {
+          order = await api.claimCheckoutSession(token, pendingCheckout.token)
+          if (requestId !== checkoutClaimRequestIdRef.current) return
+          setPendingCheckoutOrder(order)
+        }
         const payment = await api.initMyPayment(token, order.id, pendingCheckout.provider, `${window.location.origin}/account`)
+        if (requestId !== checkoutClaimRequestIdRef.current) return
         const completed = { tariffName: pendingCheckout.tariffName, provider: pendingCheckout.provider, order, payment }
         setLastCheckout(completed)
         setPendingCheckout(null)
+        setPendingCheckoutOrder(null)
         removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
-      })
-      .catch((e: Error) => setCheckoutError(getCheckoutErrorMessage(e, 'Не удалось привязать покупку.')))
-      .finally(() => setClaimBusy(false))
-  }, [token, pendingCheckout, claimAttempt])
+      } catch (e) {
+        if (requestId !== checkoutClaimRequestIdRef.current) return
+        const fallback = order
+          ? `Заказ ${order.id} создан, но ссылку оплаты подготовить не удалось.`
+          : 'Не удалось привязать покупку.'
+        setCheckoutError(getCheckoutErrorMessage(e, fallback))
+      } finally {
+        if (requestId === checkoutClaimRequestIdRef.current) {
+          checkoutClaimInFlightRef.current = false
+          setClaimBusy(false)
+        }
+      }
+    })()
+  }, [token, pendingCheckout, pendingCheckoutOrder, claimAttempt])
+
+  const handlePendingCheckout = (pending: PendingCheckout) => {
+    checkoutClaimRequestIdRef.current += 1
+    checkoutClaimInFlightRef.current = false
+    setClaimBusy(false)
+    setPendingCheckoutOrder(null)
+    setCheckoutError('')
+    setPendingCheckout(pending)
+  }
 
   const navigationLabel = useMemo(() => profile ? `Привет, ${profile.displayName}` : 'Аккаунт', [profile])
 
@@ -1110,9 +1125,7 @@ export function App() {
           path="/tariffs"
           element={(
             <TariffsPage
-              token={token}
-              onCheckoutComplete={setLastCheckout}
-              onPendingCheckout={setPendingCheckout}
+              onPendingCheckout={handlePendingCheckout}
             />
           )}
         />
@@ -1131,6 +1144,7 @@ export function App() {
               sessionError={sessionError}
               lastCheckout={lastCheckout}
               pendingCheckout={pendingCheckout}
+              pendingCheckoutOrder={pendingCheckoutOrder}
               checkoutError={checkoutError}
               claimBusy={claimBusy}
               onRetryPendingCheckout={retryPendingCheckout}

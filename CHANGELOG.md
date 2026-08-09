@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.542.0 - 2026-08-09
+
+Release entry: `2026-08-09-public-checkout-single-flight`.
+
+### Исправлено
+
+- Авторизованная покупка больше не запускает checkout claim и payment init одновременно из страницы тарифов и родительского effect.
+- Ошибка payment init не создает автоматический цикл повторов при сбросе busy или ротации access token; новая попытка выполняется только по команде пользователя.
+- После успешного claim account-card сохраняет ID заказа и повторяет только payment init; поздний provider response после logout не восстанавливает ссылку старой сессии.
+
+### Проверено
+
+- Frontend `104/104`, typecheck/build всех приложений; полный desktop/mobile console-responsive Playwright suite `24/24`.
+- E2E подтверждает authenticated checkout `checkout=1`, `claim=1`, `payment-init=1`; после контролируемого `503` ручной retry сохраняет `checkout=1`, `claim=1`, `payment-init=2`.
+- Delayed payment-init после logout не восстанавливает order/payment UI или browser tokens; CMS-тексты результата и CTA сохранены в account-card.
+- Backend `1112/1112`, Release build `0` warnings/`0` errors; backend order gate и payment idempotency остаются дополнительной защитой, но browser больше не отправляет конкурентные дубли.
+- Fresh local SQLite smoke подтвердил latest release `2026-08-09-public-checkout-single-flight`; dependency audit `0 vulnerabilities`, secret scan `649/0` и strict UTF-8 guards пройдены.
+- `RoadmapCurrentStateTests` фиксирует `555/575` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.541.0 - 2026-08-09
 
 Release entry: `2026-08-09-cabinet-renewal-partial-success`.

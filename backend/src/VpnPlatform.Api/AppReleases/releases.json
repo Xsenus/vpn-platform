@@ -12719,5 +12719,36 @@
         "text": "Roadmap progress is 554/574 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-public-checkout-single-flight",
+    "version": "0.542.0",
+    "releasedAt": "2026-08-09T15:31:49+07:00",
+    "title": "Публичная покупка выполняется один раз",
+    "summary": "Авторизованный checkout больше не дублирует claim и payment init, сохраняет созданный заказ для ручного повтора оплаты и игнорирует поздний ответ после logout.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "TariffsPage создает только checkout session, а единый parent-owned single-flight выполняет claim и payment init без конкурентного дубля."
+      },
+      {
+        "type": "improved",
+        "text": "После ошибки payment init карточка показывает ID уже созданного заказа, а ручная команда повторяет только оплату для этого заказа."
+      },
+      {
+        "type": "fixed",
+        "text": "Token refresh, повторный render и delayed provider response после logout не запускают новую попытку и не восстанавливают stale payment UI."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop и mobile E2E подтверждают request counts 1/1/1, payment-only retry 1/1/2, CMS checkout content и отсутствие late session restore."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 555/575 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -102,7 +102,8 @@ git diff --check
 - Межпанельный VPN client migration использует только валидированный inbound-каталог, исключает unhealthy/full панели и сохраняет production-like 3x-ui evidence открытым: OK.
 - Post-success migration state обновляет только публичные capacity counters и не выполняет второй fallible запрос после подтверждённого provider side effect: OK.
 - Cabinet renewal retry использует уже созданный order ID и не повторяет mutation создания заказа после сбоя payment init: OK.
-- Latest local release: `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`.
+- Public checkout single-flight не дублирует claim/payment init, а request generation не принимает late payment response после logout: OK.
+- Latest local release: `2026-08-09-public-checkout-single-flight`, версия `0.542.0`.
 - Frontend tests: 104/104.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-09-cabinet-renewal-partial-success";
-    private const string CurrentVersion = "0.541.0";
+    private const string CurrentReleaseId = "2026-08-09-public-checkout-single-flight";
+    private const string CurrentVersion = "0.542.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

@@ -115,6 +115,10 @@ async function mockPublicApi(page: Page) {
   let rejectNextProfileRequest = true
   let rejectNextCheckoutPromo = false
   let checkoutDelayMs = 0
+  let checkoutClaimDelayMs = 0
+  let checkoutRequestCount = 0
+  let checkoutClaimRequestCount = 0
+  let paymentInitRequestCount = 0
   let unsafePaymentLink = false
   let invalidCheckoutResponse = false
   let invalidAuthResponse = false
@@ -122,6 +126,8 @@ async function mockPublicApi(page: Page) {
   let wrongShapeTariffsResponse = false
   let invalidItemTariffsResponse = false
   let oversizedTariffsResponse = false
+  let failNextPaymentInit = false
+  let paymentInitDelayMs = 0
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -170,6 +176,7 @@ async function mockPublicApi(page: Page) {
     }
 
     checkoutPayload = route.request().postDataJSON()
+    checkoutRequestCount += 1
     if (checkoutDelayMs > 0) {
       const delay = checkoutDelayMs
       checkoutDelayMs = 0
@@ -279,6 +286,10 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/me/checkout-sessions/public-checkout-token/claim', async (route) => {
+    checkoutClaimRequestCount += 1
+    if (checkoutClaimDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, checkoutClaimDelayMs))
+    }
     await fulfillJson(route, {
       id: 'public-order',
       userId: 'public-user',
@@ -293,6 +304,17 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/me/orders/public-order/payments/YooKassa/init', async (route) => {
+    paymentInitRequestCount += 1
+    if (paymentInitDelayMs > 0) {
+      const delay = paymentInitDelayMs
+      paymentInitDelayMs = 0
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+    if (failNextPaymentInit) {
+      failNextPaymentInit = false
+      await fulfillJson(route, { error: 'payment provider unavailable' }, 503)
+      return
+    }
     await fulfillJson(route, {
       paymentId: 'public-payment',
       redirectUrl: unsafePaymentLink ? 'javascript:alert(1)' : 'https://pay.example.test/public',
@@ -318,6 +340,14 @@ async function mockPublicApi(page: Page) {
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
+    delayCheckoutClaim: (delayMs: number) => { checkoutClaimDelayMs = delayMs },
+    failNextPaymentInit: () => { failNextPaymentInit = true },
+    delayNextPaymentInit: (delayMs: number) => { paymentInitDelayMs = delayMs },
+    getCheckoutRequestCounts: () => ({
+      checkout: checkoutRequestCount,
+      claim: checkoutClaimRequestCount,
+      paymentInit: paymentInitRequestCount
+    }),
     returnUnsafePaymentLink: () => { unsafePaymentLink = true },
     returnInvalidCheckoutResponse: () => { invalidCheckoutResponse = true },
     returnInvalidAuthResponse: () => { invalidAuthResponse = true },
@@ -402,6 +432,57 @@ test('public checkout and auth reject malformed success DTOs without persisting 
   expect(pageErrors).toEqual([])
 })
 
+test('authenticated public checkout owns one claim and payment initialization', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.delayCheckoutClaim(150)
+  api.failNextPaymentInit()
+
+  await page.goto('/tariffs')
+  await expect(page.getByRole('link', { name: /Привет, Public E2E/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+
+  await expect(page).toHaveURL(/\/account$/)
+  await expect(page.getByRole('alert').filter({ hasText: 'payment provider unavailable' })).toBeVisible()
+  await expect(page.getByText('ID заказа: public-order')).toBeVisible()
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 1 })
+  await page.waitForTimeout(250)
+  expect(api.getCheckoutRequestCounts()).toEqual({ checkout: 1, claim: 1, paymentInit: 1 })
+  await page.getByRole('button', { name: 'Повторить оплату' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Последняя покупка' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toBeVisible()
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 2 })
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
+})
+
+test('public checkout ignores a late payment response after logout', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.delayNextPaymentInit(500)
+
+  await page.goto('/tariffs')
+  await expect(page.getByRole('link', { name: /Привет, Public E2E/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+  await expect(page).toHaveURL(/\/account$/)
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 1 })
+  await page.getByRole('button', { name: 'Выйти' }).click()
+
+  await expect(page.getByRole('tab', { name: 'Вход' })).toBeVisible()
+  await page.waitForTimeout(600)
+  await expect(page.getByRole('heading', { name: 'Последняя покупка' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-public-token'),
+    refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+})
+
 test('public website covers landing, tariffs, FAQ and checkout start', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {
@@ -476,6 +557,9 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   await expect(rejectedPaymentLinkAlert).toBeVisible()
   await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Скопировать ссылку: скопировать значение/ })).toHaveCount(0)
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 2, claim: 1, paymentInit: 1 })
+  await page.waitForTimeout(250)
+  expect(api.getCheckoutRequestCounts()).toEqual({ checkout: 2, claim: 1, paymentInit: 1 })
   expect(api.getRefreshPayload()).toEqual({ refreshToken: 'public-refresh-token' })
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-public-refresh-token'))).toBe('public-refreshed-refresh-token')
   const expectedRefreshLogs = consoleErrors.filter((message) => message.includes('401 (Unauthorized)'))

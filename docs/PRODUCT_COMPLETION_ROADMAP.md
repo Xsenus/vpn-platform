@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `554/574` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-public-checkout-single-flight`, версия `0.542.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `555/575` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -1912,6 +1912,10 @@ git diff --check
   - Что сделать: двухшаговый cabinet flow не должен скрывать уже созданный renewal order при ошибке payment init или подталкивать пользователя к созданию дубликата.
   - Что сделано: order сохраняется в UI сразу после успешного create; частичный успех показывает ID и отдельную retry-команду, которая вызывает payment init только по сохраненному `orderId`. Session rejection по-прежнему завершает локальную сессию fail-closed.
   - Доказательство: frontend `104/104`, typecheck/build и desktop/mobile Playwright `20/20`; E2E подтверждает order POST `1`, payment-init POST `2`, видимый первый `503` и успешную повторную ссылку без второго заказа. Backend `1112/1112` и существующий SQLite/service контракт подтверждают идемпотентность pending renewal intent. Реальный live payment evidence остается открытым.
+- [x] `P11-ACC-265` Устранить конкурентный дубль authenticated public checkout. 2026-08-09.
+  - Что сделать: TariffsPage и parent effect не должны одновременно claim-ить одну checkout session, повторять payment init после каждого render/token refresh или принимать поздний результат после logout.
+  - Что сделано: создание session отделено от единственного parent-owned claim/payment-init; попытка имеет stable token+retry generation, runtime-state сохраняет созданный order для payment-only retry, request generation отбрасывает stale completion. Результат использует управляемые CMS-тексты и показывает order/payment IDs.
+  - Доказательство: frontend `104/104`, typecheck/build и desktop/mobile Playwright `24/24`; E2E фиксирует первый путь `1/1/1`, ручной retry `checkout=1/claim=1/payment-init=2`, отсутствие автоматического повтора после `503`/token refresh и отсутствие late UI/session restore после logout. Backend `1112/1112`; real live payment evidence остается открытым.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

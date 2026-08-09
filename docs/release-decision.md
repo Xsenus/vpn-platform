@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `104/104`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `20/20`; responsive all-screens: `6/6`.
+- Browser console smoke: `24/24`; responsive all-screens: `6/6`.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -64,8 +64,9 @@ Production-ready решение заблокировано следующими 
 - Общий inbound-каталог и admin desktop/mobile regression подтверждают межпанельный перенос клиента, автоматическое открытие панели назначения и последующие panel health/sync операции.
 - После межпанельного переноса UI атомарно отражает `UsedCapacity` source/target панелей; desktop/mobile regression подтверждает значения до и после следующего API-refresh.
 - Кабинет сохраняет renewal order при недоступности payment init и повторяет оплату по тому же ID без дубликата; desktop/mobile regression подтверждает запросы и состояние UI.
-- Latest "Что нового": `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
-- Roadmap progress: `554/574` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Public authenticated checkout выполняет единственный claim/payment-init, сохраняет partial order для retry и отбрасывает late response после logout; desktop/mobile regression подтверждает request counts и UI.
+- Latest "Что нового": `2026-08-09-public-checkout-single-flight`, версия `0.542.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `555/575` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

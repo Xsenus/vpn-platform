@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: public authenticated checkout single-flight
+
+Scope:
+- Проверена гонка, в которой TariffsPage и parent effect одновременно выполняли claim одной checkout session и payment init для уже авторизованного пользователя.
+- Проверен автоматический повтор pending checkout после ошибки payment init при изменении `claimBusy` или ротации access token.
+
+Results:
+- Roadmap progress: `555/575` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-public-checkout-single-flight`, version `0.542.0`.
+- Parent effect является единственным владельцем claim/payment-init; single-flight refs дедуплицируют StrictMode, token refresh и повторный render.
+- После claim созданный order остается видимым с ID, а ручной retry повторяет только payment init: `checkout=1`, `claim=1`, `payment-init=2` после первого контролируемого `503`.
+- Delayed provider response после logout игнорируется и не восстанавливает order/payment UI или sessionStorage tokens.
+- Frontend tests: OK, `104/104`; typecheck/build всех приложений: OK; полный desktop/mobile console-responsive suite: `24/24`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; fresh local SQLite smoke: OK, latest release `2026-08-09-public-checkout-single-flight`.
+- Dependency audit: `0 vulnerabilities`; secret scan: `649` files/`0` findings; strict UTF-8 guards пройдены.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: cabinet renewal partial success recovery
 
 Scope:

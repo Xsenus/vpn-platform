@@ -266,9 +266,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - server, provisioning и Telegram bot API DTO проходят runtime-проверку фактического backend-контракта; malformed refresh очищает список серверов, запуски, форму редактирования и устаревшую bot readiness;
 - auth, checkout, payment-init, support status и Telegram link-token ответы проходят runtime-проверку; mutation order проверяется по фактическому минимальному backend DTO, а устаревшие anonymous order/payment client-методы удалены;
 - кабинет сохраняет уже созданный заказ продления при сбое payment init и повторяет подготовку оплаты по тому же `orderId`, не создавая дубликат;
+- public checkout использует один single-flight claim/payment-init, сохраняет созданный order для payment-only retry и игнорирует поздний ответ после logout;
 - общий каталог inbound позволяет админке переносить VPN-клиента между совместимыми доступными 3x-ui панелями и после успеха открывать панель назначения;
 - после межпанельного переноса карточки панелей сразу отражают освобождённую source capacity и занятую target capacity, а следующий API-refresh сохраняет фактические значения;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`;
-- roadmap progress: `554/574` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-public-checkout-single-flight`, версия `0.542.0`;
+- roadmap progress: `555/575` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
