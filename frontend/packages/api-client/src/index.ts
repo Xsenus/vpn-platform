@@ -515,7 +515,7 @@ export type AdminSubscriptionMigrationResultDto = {
   subscriptionId: string
   sourceNodeId: string
   targetNodeId: string | null
-  status: 'planned'
+  status: 'completed'
 }
 
 export type AccessCredentialDto = {
@@ -1702,9 +1702,9 @@ function isAdminSubscriptionMigrationResultDto(
     && value.subscriptionId === expectedSubscriptionId
     && hasString(value, 'sourceNodeId', true)
     && hasNullableString(value, 'targetNodeId')
-    && value.targetNodeId === expectedTargetNodeId
+    && (expectedTargetNodeId === null || value.targetNodeId === expectedTargetNodeId)
     && value.sourceNodeId !== value.targetNodeId
-    && value.status === 'planned'
+    && value.status === 'completed'
 }
 
 function isAdminAccessHistoryDto(value: unknown): value is AccessCredentialHistoryDto {

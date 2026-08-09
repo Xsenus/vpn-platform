@@ -1091,7 +1091,6 @@ export function App() {
   const [vpnClients, setVpnClients] = useState<VpnClientDto[]>([])
   const [vpnClientMigrationTargets, setVpnClientMigrationTargets] = useState<Record<string, string>>({})
   const [subscriptionMigrationTargets, setSubscriptionMigrationTargets] = useState<Record<string, string>>({})
-  const [plannedSubscriptionMigrations, setPlannedSubscriptionMigrations] = useState<Record<string, string>>({})
   const [vpnHealthChecks, setVpnHealthChecks] = useState<PanelHealthCheckDto[]>([])
   const [vpnSyncRuns, setVpnSyncRuns] = useState<PanelSyncRunDto[]>([])
   const [botSettings, setBotSettings] = useState<AdminTelegramBotSettingsDto>(defaultBotSettings)
@@ -2317,9 +2316,8 @@ export function App() {
     const targetNodeId = selectedTarget === 'auto' ? null : selectedTarget
     await runAction(`migrate-${subscription.id}`, async () => {
       const result = await api.migrateAdminSubscription(token, subscription.id, targetNodeId)
-      setPlannedSubscriptionMigrations((current) => ({ ...current, [subscription.id]: result.migrationJobId }))
       setSubscriptionMigrationTargets((current) => ({ ...current, [subscription.id]: '' }))
-      setNotice(`Миграция подписки запланирована: задача ${shortId(result.migrationJobId)}.`)
+      setNotice(`Подписка перенесена на сервер ${shortId(result.targetNodeId)}. Задача ${shortId(result.migrationJobId)} завершена.`)
       await loadAll(token)
     })
   }
@@ -3529,8 +3527,7 @@ export function App() {
               const isActionBusy = actionBusyId.endsWith(subscription.id)
               const actionAvailability = getAdminSubscriptionActionAvailability(subscription)
               const migrationOptions = subscriptionMigrationOptions(subscription)
-              const plannedMigrationJobId = plannedSubscriptionMigrations[subscription.id]
-              const canPlanMigration = Boolean(adminSession?.capabilities.vpnManage && subscription.currentServerId && actionAvailability.canManage)
+              const canMigrate = Boolean(adminSession?.capabilities.vpnManage && subscription.currentServerId && subscription.currentAccessId && actionAvailability.canManage)
               return (
                 <div id={`subscription-${subscription.id}`} key={subscription.id} className="list-item-vertical">
                   <div className="item-head">
@@ -3547,7 +3544,6 @@ export function App() {
                     </div>
                   </div>
                   {actionAvailability.reason && <p className="safe-note" role="status">{actionAvailability.reason}</p>}
-                  {plannedMigrationJobId && <p className="safe-note" role="status">Миграция запланирована: задача {shortId(plannedMigrationJobId)}.</p>}
                   {actionAvailability.canManage && <div className="toolbar" hidden={!canWriteSection('subscriptions')}>
                     <label className="inline-number-field">
                       <span>Дней</span>
@@ -3561,13 +3557,13 @@ export function App() {
                     {actionAvailability.canToggleBlock && <ConfirmButton className="button-secondary" disabled={isActionBusy} message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => void handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton>}
                     {actionAvailability.canCancel && <ConfirmButton className="button-danger" disabled={isActionBusy} message="Отменить подписку без возможности восстановления? VPN-доступ будет отозван и удален с сервера, а занятый слот освободится." onConfirm={() => void handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton>}
                   </div>}
-                  {canPlanMigration && !plannedMigrationJobId && <div className="toolbar">
+                  {canMigrate && <div className="toolbar">
                     <select aria-label={`Целевой сервер для миграции подписки ${shortId(subscription.id)}`} value={subscriptionMigrationTargets[subscription.id] ?? ''} onChange={(event) => setSubscriptionMigrationTargets((current) => ({ ...current, [subscription.id]: event.target.value }))}>
                       <option value="">Сервер для миграции</option>
                       <option value="auto">Автовыбор готового сервера</option>
                       {migrationOptions.map((server) => <option key={server.id} value={server.id}>{server.name} · {server.region} · {server.usedCapacity}/{server.capacity}</option>)}
                     </select>
-                    <ConfirmButton className="button-secondary" disabled={isActionBusy || !subscriptionMigrationTargets[subscription.id]} message="Запланировать межсерверную миграцию подписки? Задача будет создана в статусе planned; повторное планирование запрещено до ее завершения." onConfirm={() => void handleMigrateSubscription(subscription)}>Запланировать перенос</ConfirmButton>
+                    <ConfirmButton className="button-secondary" disabled={isActionBusy || !subscriptionMigrationTargets[subscription.id]} message="Перенести VPN-доступ подписки на другой сервер? Клиент будет создан на целевой панели, удален с исходной, а подписка и ключ будут переключены на новый сервер." onConfirm={() => void handleMigrateSubscription(subscription)}>Перенести</ConfirmButton>
                   </div>}
                 </div>
               )

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
@@ -19,7 +20,7 @@ namespace VpnPlatform.UnitTests;
 public class AdminOperationBoundaryTests
 {
     [Fact]
-    public async Task Subscription_Migration_Should_Validate_Entities_And_Create_Complete_Job()
+    public async Task Subscription_Migration_Should_Execute_And_Complete_Job()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -37,9 +38,22 @@ public class AdminOperationBoundaryTests
         unhealthyTarget.HealthStatus = HealthStatus.Unhealthy;
         var fullTarget = Node("full", NodeStatus.Ready, true);
         fullTarget.UsedCapacity = fullTarget.Capacity;
+        source.PanelBaseUrl = "https://source-panel.example.test";
+        source.UsedCapacity = 1;
+        target.PanelBaseUrl = "https://target-panel.example.test";
+        target.PanelInboundId = 2;
+        unavailableTarget.PanelBaseUrl = "https://archived-panel.example.test";
+        unhealthyTarget.PanelBaseUrl = "https://unhealthy-panel.example.test";
+        fullTarget.PanelBaseUrl = "https://full-panel.example.test";
+        var sourcePanel = new VpnPanel { Name = "source-panel", BaseUrl = source.PanelBaseUrl, Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, UsedCapacity = 1, Capacity = 100 };
+        var targetPanel = new VpnPanel { Name = "target-panel", BaseUrl = target.PanelBaseUrl, Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100 };
+        var sourceInbound = new VpnInbound { VpnPanelId = sourcePanel.Id, ExternalInboundId = "1", Name = "source", Protocol = "vless", Port = 443, IsDefault = true, UsedCapacity = 1, Capacity = 100 };
+        var targetInbound = new VpnInbound { VpnPanelId = targetPanel.Id, ExternalInboundId = "2", Name = "target", Protocol = "vless", Port = 8443, IsDefault = true, Capacity = 100 };
         db.Users.Add(user);
         db.Tariffs.Add(tariff);
         db.VpnNodes.AddRange(source, target, unavailableTarget, unhealthyTarget, fullTarget);
+        db.VpnPanels.AddRange(sourcePanel, targetPanel);
+        db.VpnInbounds.AddRange(sourceInbound, targetInbound);
         await db.SaveChangesAsync();
 
         var subscription = new Subscription
@@ -73,11 +87,31 @@ public class AdminOperationBoundaryTests
             IssuedAt = now
         };
         db.AccessCredentials.Add(access);
+        db.VpnClients.Add(new VpnClient
+        {
+            UserId = user.Id,
+            SubscriptionId = subscription.Id,
+            VpnPanelId = sourcePanel.Id,
+            VpnInboundId = sourceInbound.Id,
+            ExternalClientId = access.ProviderAccessId,
+            Email = "migration@example.test",
+            Uuid = Guid.NewGuid().ToString("D"),
+            LimitIp = 2,
+            ExpiryTime = subscription.EndAt,
+            Enable = true,
+            ConfigUri = access.AccessUri
+        });
         await db.SaveChangesAsync();
         subscription.CurrentAccessId = access.Id;
         await db.SaveChangesAsync();
 
-        var controller = CreateController(db, adminId, new FixedClock(now));
+        var x3Ui = new X3UiPanelService(
+            db,
+            null!,
+            null!,
+            new FixedClock(now),
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Vpn:X3Ui:Mode"] = "Sandbox" }).Build());
+        var controller = CreateController(db, adminId, new FixedClock(now), x3UiPanelService: x3Ui);
 
         Assert.IsType<NotFoundObjectResult>(await controller.MigrateSubscription(Guid.NewGuid(), target.Id, CancellationToken.None));
         Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscriptionWithoutSource.Id, target.Id, CancellationToken.None));
@@ -88,23 +122,40 @@ public class AdminOperationBoundaryTests
         Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, fullTarget.Id, CancellationToken.None));
         Assert.Empty(await db.MigrationJobs.ToListAsync());
 
+        var activeJob = new MigrationJob { SourceNodeId = source.Id, TargetNodeId = target.Id, Status = MigrationJobStatus.Running, Type = "single-subscription", RequestedAt = now };
+        activeJob.Items.Add(new MigrationItem { SubscriptionId = subscription.Id, OldAccessId = access.Id, Status = MigrationJobStatus.Running });
+        db.MigrationJobs.Add(activeJob);
+        await db.SaveChangesAsync();
+        Assert.IsType<ConflictObjectResult>(await controller.MigrateSubscription(subscription.Id, target.Id, CancellationToken.None));
+        db.MigrationJobs.Remove(activeJob);
+        await db.SaveChangesAsync();
+
         Assert.IsType<OkObjectResult>(await controller.MigrateSubscription(subscription.Id, target.Id, CancellationToken.None));
 
         var job = await db.MigrationJobs.Include(x => x.Items).SingleAsync();
         Assert.Equal(source.Id, job.SourceNodeId);
         Assert.Equal(target.Id, job.TargetNodeId);
-        Assert.Equal(MigrationJobStatus.Planned, job.Status);
+        Assert.Equal(MigrationJobStatus.Completed, job.Status);
         Assert.Equal("single-subscription", job.Type);
         Assert.Equal(adminId, job.RequestedByUserId);
         Assert.Equal(now, job.RequestedAt);
+        Assert.Equal(now, job.StartedAt);
+        Assert.Equal(now, job.FinishedAt);
         var item = Assert.Single(job.Items);
         Assert.Equal(subscription.Id, item.SubscriptionId);
         Assert.Equal(access.Id, item.OldAccessId);
-        Assert.Equal(MigrationJobStatus.Planned, item.Status);
-        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "subscription.migration.plan" && x.EntityId == subscription.Id.ToString());
-
-        Assert.IsType<ConflictObjectResult>(await controller.MigrateSubscription(subscription.Id, target.Id, CancellationToken.None));
-        Assert.Single(await db.MigrationJobs.ToListAsync());
+        Assert.Equal(access.Id, item.NewAccessId);
+        Assert.Equal(MigrationJobStatus.Completed, item.Status);
+        Assert.Equal(target.Id, (await db.Subscriptions.AsNoTracking().SingleAsync(x => x.Id == subscription.Id)).CurrentServerId);
+        var migratedAccess = await db.AccessCredentials.AsNoTracking().SingleAsync(x => x.Id == access.Id);
+        Assert.Equal(target.Id, migratedAccess.ServerId);
+        Assert.Contains(":8443", migratedAccess.AccessUri);
+        Assert.Equal(targetInbound.Id, (await db.VpnClients.AsNoTracking().SingleAsync()).VpnInboundId);
+        Assert.Equal(0, (await db.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == source.Id)).UsedCapacity);
+        Assert.Equal(1, (await db.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == target.Id)).UsedCapacity);
+        var audits = await db.AuditLogs.AsNoTracking().ToListAsync();
+        Assert.Contains(audits, x => x.Action == "subscription.migration.start" && x.EntityId == subscription.Id.ToString());
+        Assert.Contains(audits, x => x.Action == "subscription.migration.complete" && x.EntityId == subscription.Id.ToString());
     }
 
     [Fact]
@@ -287,8 +338,9 @@ public class AdminOperationBoundaryTests
         ApplicationDbContext db,
         Guid adminId,
         IClock clock,
-        IQrCodeGenerator? qrCodeGenerator = null)
-        => new(db, new ProvisioningService(db, clock), null!, null!, qrCodeGenerator: qrCodeGenerator, clock: clock)
+        IQrCodeGenerator? qrCodeGenerator = null,
+        X3UiPanelService? x3UiPanelService = null)
+        => new(db, new ProvisioningService(db, clock), null!, null!, qrCodeGenerator: qrCodeGenerator, clock: clock, x3UiPanelService: x3UiPanelService)
         {
             ControllerContext = new ControllerContext
             {

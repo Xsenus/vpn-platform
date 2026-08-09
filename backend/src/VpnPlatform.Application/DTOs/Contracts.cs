@@ -451,7 +451,7 @@ public sealed record VpnClientDto(
     string SyncStatus,
     DateTimeOffset? LastSyncedAt);
 
-public sealed record MigrateVpnClientCommand(Guid TargetInboundId);
+public sealed record MigrateVpnClientCommand(Guid TargetInboundId, Guid? TargetNodeId = null);
 
 public sealed record PanelHealthCheckDto(Guid Id, Guid VpnPanelId, string Status, long? LatencyMs, string Version, string ErrorMessage, DateTimeOffset CheckedAt);
 public sealed record PanelSyncRunDto(Guid Id, Guid VpnPanelId, string Status, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt, string SummaryJson, string ErrorMessage);

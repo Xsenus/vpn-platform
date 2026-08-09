@@ -1629,7 +1629,7 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
               : path.endsWith('/sync-access')
                 ? { id: 'sub-1', currentAccessId: 'access-1', access: accessResult('Active') }
                 : path.endsWith('/migrate')
-                  ? { migrationJobId: 'migration-1', subscriptionId: 'sub-1', sourceNodeId: 'node-1', targetNodeId: 'node-2', status: 'planned' }
+                  ? { migrationJobId: 'migration-1', subscriptionId: 'sub-1', sourceNodeId: 'node-1', targetNodeId: 'node-2', status: 'completed' }
                   : path.endsWith('/disable')
                     ? accessResult('Disabled')
                     : accessResult('Active')

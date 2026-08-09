@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: executable subscription migration
+
+Scope:
+- Проверен обнаруженный сквозной разрыв: admin endpoint создавал migration job без worker/processor, поэтому задание не могло выйти из `Planned`, а прямой 3x-ui перенос не обновлял узел подписки и credential.
+
+Results:
+- Roadmap progress: `551/571` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-subscription-migration-execution`, version `0.538.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; targeted X3Ui/admin SQLite suite: OK, `77/77`; EF model drift: none.
+- SQLite executable migration: OK; job/item `Running -> Completed`, client moved to target inbound, subscription/access point to target node, URI updated, node capacities `source=0`, `target=1`, start/complete audits persisted.
+- Target capacity reservation covers node, panel and inbound transactionally; compensated failure paths release all three reservations.
+- Frontend tests: OK, `104/104`; typecheck/build всех трех приложений: OK; focused admin Playwright migration flow: OK, `1/1`; полный console/responsive suite: OK, `20/20`.
+- Fresh local SQLite purchase/payment/subscription/VPN smoke: OK; latest release `2026-08-09-subscription-migration-execution`. Dependency audit: `0 vulnerabilities`; secret scan: `649` files/`0` findings; release/documentation/strict UTF-8 guards: `57/57`.
+- UI/API contract: migration response must be `completed`; auto allocation returns a concrete validated target node; terminal/RBAC controls remain hidden.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: admin subscription, access action and migration API DTO validation
 
 Scope:

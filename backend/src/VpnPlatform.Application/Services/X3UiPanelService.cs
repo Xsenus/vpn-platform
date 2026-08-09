@@ -1205,6 +1205,39 @@ public class X3UiPanelService
         {
             return Result<VpnClientDto>.Failure("Target inbound not found.");
         }
+        VpnNode? targetNode = null;
+        if (command.TargetNodeId.HasValue)
+        {
+            targetNode = await _db.VpnNodes.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == command.TargetNodeId.Value, cancellationToken);
+            if (targetNode is null)
+            {
+                return Result<VpnClientDto>.Failure("Target VPN server not found.");
+            }
+            if (!string.Equals(targetNode.PanelBaseUrl, targetInbound.VpnPanel.BaseUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                return Result<VpnClientDto>.Failure("Target VPN server does not own the selected panel.");
+            }
+            if (targetNode.Status != NodeStatus.Ready
+                || !targetNode.IsAvailableForNewUsers
+                || targetNode.HealthStatus == HealthStatus.Unhealthy
+                || targetNode.UsedCapacity >= targetNode.Capacity)
+            {
+                return Result<VpnClientDto>.Failure("Target VPN server is not ready for allocation.");
+            }
+        }
+        else
+        {
+            targetNode = await _db.VpnNodes.AsNoTracking()
+                .Where(x => x.PanelBaseUrl == targetInbound.VpnPanel.BaseUrl)
+                .OrderBy(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+        var sourceNodeId = await _db.Subscriptions.AsNoTracking()
+            .Where(x => x.Id == client.SubscriptionId)
+            .Select(x => x.CurrentServerId)
+            .FirstOrDefaultAsync(cancellationToken);
+        var reservedTargetNodeId = targetNode is not null && targetNode.Id != sourceNodeId ? targetNode.Id : (Guid?)null;
         if (!targetInbound.IsActive)
         {
             return Result<VpnClientDto>.Failure("Target inbound is inactive.");
@@ -1240,7 +1273,7 @@ public class X3UiPanelService
             targetPassword = _secretProtector.Unprotect(targetInbound.VpnPanel.EncryptedPassword);
         }
 
-        var capacityResult = await TryReserveMigrationTargetCapacityAsync(targetInbound, cancellationToken);
+        var capacityResult = await TryReserveMigrationTargetCapacityAsync(targetInbound, reservedTargetNodeId, cancellationToken);
         if (!capacityResult.IsSuccess)
         {
             return Result<VpnClientDto>.Failure(capacityResult.Error ?? "Target VPN capacity is unavailable.");
@@ -1251,7 +1284,7 @@ public class X3UiPanelService
         targetInbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == command.TargetInboundId, cancellationToken);
         if (client?.VpnPanel is null || client.VpnInbound is null || targetInbound?.VpnPanel is null)
         {
-            await ReleaseMigrationTargetCapacityAsync(command.TargetInboundId, cancellationToken);
+            await ReleaseMigrationTargetCapacityAsync(command.TargetInboundId, reservedTargetNodeId, cancellationToken);
             return Result<VpnClientDto>.Failure("VPN client or target inbound disappeared during migration.");
         }
 
@@ -1285,7 +1318,8 @@ public class X3UiPanelService
                     client.Uuid,
                     actorUserId,
                     before,
-                    targetCreateError);
+                    targetCreateError,
+                    reservedTargetNodeId);
                 throw;
             }
 
@@ -1300,7 +1334,7 @@ public class X3UiPanelService
                     await _client.AddClientAsync(sourcePanel, sourcePassword!, sourceRequest, CancellationToken.None);
                     await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, CancellationToken.None);
                     ClearTracker();
-                    await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, CancellationToken.None);
+                    await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, reservedTargetNodeId, CancellationToken.None);
                 }
                 catch (Exception compensationError)
                 {
@@ -1335,7 +1369,36 @@ public class X3UiPanelService
             client.SyncStatus = IsSandboxMode() ? "sandbox-migrated" : "migrated";
             client.LastSyncedAt = _clock.UtcNow;
             client.UpdatedAt = _clock.UtcNow;
-            await UpdateLinkedAccessCredentialsAsync(client, cancellationToken);
+            await UpdateLinkedAccessCredentialsAsync(client, cancellationToken, targetNode?.Id);
+            if (targetNode is not null)
+            {
+                var subscription = await _db.Subscriptions.FirstOrDefaultAsync(x => x.Id == client.SubscriptionId, cancellationToken);
+                if (subscription is not null)
+                {
+                    subscription.CurrentServerId = targetNode.Id;
+                    subscription.UpdatedAt = _clock.UtcNow;
+                    if (sourceNodeId.HasValue && sourceNodeId.Value != targetNode.Id)
+                    {
+                        if (_db is DbContext sourceDbContext && sourceDbContext.Database.IsRelational())
+                        {
+                            await _db.VpnNodes
+                                .Where(x => x.Id == sourceNodeId.Value && x.UsedCapacity > 0)
+                                .ExecuteUpdateAsync(setters => setters
+                                    .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1)
+                                    .SetProperty(x => x.UpdatedAt, _clock.UtcNow), cancellationToken);
+                        }
+                        else
+                        {
+                            var trackedSourceNode = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == sourceNodeId.Value, cancellationToken);
+                            if (trackedSourceNode is not null && trackedSourceNode.UsedCapacity > 0)
+                            {
+                                trackedSourceNode.UsedCapacity -= 1;
+                                trackedSourceNode.UpdatedAt = _clock.UtcNow;
+                            }
+                        }
+                    }
+                }
+            }
             AddAudit("vpn_client.migrate", "VpnClient", client.Id, actorUserId, before, ClientAuditSnapshot(client));
             await _db.SaveChangesAsync(cancellationToken);
             if (localTransaction is not null)
@@ -1367,7 +1430,7 @@ public class X3UiPanelService
                     await _client.AddClientAsync(sourcePanel, sourcePassword!, sourceRequest, CancellationToken.None);
                     await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, CancellationToken.None);
                 }
-                await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, CancellationToken.None);
+                await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, reservedTargetNodeId, CancellationToken.None);
             }
             catch (Exception compensationError)
             {
@@ -1582,7 +1645,7 @@ public class X3UiPanelService
         }
     }
 
-    private async Task<Result<bool>> TryReserveMigrationTargetCapacityAsync(VpnInbound targetInbound, CancellationToken cancellationToken)
+    private async Task<Result<bool>> TryReserveMigrationTargetCapacityAsync(VpnInbound targetInbound, Guid? targetNodeId, CancellationToken cancellationToken)
     {
         if (targetInbound.VpnPanel is null)
         {
@@ -1613,6 +1676,24 @@ public class X3UiPanelService
                 return Result<bool>.Failure("Target inbound capacity is exhausted or unavailable.");
             }
 
+            if (targetNodeId.HasValue)
+            {
+                var nodeReserved = await _db.VpnNodes
+                    .Where(x => x.Id == targetNodeId.Value
+                        && x.Status == NodeStatus.Ready
+                        && x.IsAvailableForNewUsers
+                        && x.HealthStatus != HealthStatus.Unhealthy
+                        && x.UsedCapacity < x.Capacity)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity + 1)
+                        .SetProperty(x => x.UpdatedAt, _clock.UtcNow), cancellationToken);
+                if (nodeReserved != 1)
+                {
+                    await transaction.RollbackAsync(CancellationToken.None);
+                    return Result<bool>.Failure("Target VPN server capacity is exhausted or unavailable.");
+                }
+            }
+
             await transaction.CommitAsync(cancellationToken);
             return Result<bool>.Success(true);
         }
@@ -1630,6 +1711,20 @@ public class X3UiPanelService
 
         targetInbound.VpnPanel.UsedCapacity += 1;
         targetInbound.UsedCapacity += 1;
+        VpnNode? targetNode = null;
+        if (targetNodeId.HasValue)
+        {
+            targetNode = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == targetNodeId.Value, cancellationToken);
+            if (targetNode is null || targetNode.Status != NodeStatus.Ready || !targetNode.IsAvailableForNewUsers
+                || targetNode.HealthStatus == HealthStatus.Unhealthy || targetNode.UsedCapacity >= targetNode.Capacity)
+            {
+                targetInbound.VpnPanel.UsedCapacity -= 1;
+                targetInbound.UsedCapacity -= 1;
+                return Result<bool>.Failure("Target VPN server capacity is exhausted or unavailable.");
+            }
+            targetNode.UsedCapacity += 1;
+            targetNode.UpdatedAt = _clock.UtcNow;
+        }
         try
         {
             await _db.SaveChangesAsync(cancellationToken);
@@ -1639,11 +1734,12 @@ public class X3UiPanelService
         {
             targetInbound.VpnPanel.UsedCapacity -= 1;
             targetInbound.UsedCapacity -= 1;
+            if (targetNode is not null) targetNode.UsedCapacity -= 1;
             throw;
         }
     }
 
-    private async Task ReleaseMigrationTargetCapacityAsync(Guid targetInboundId, CancellationToken cancellationToken)
+    private async Task ReleaseMigrationTargetCapacityAsync(Guid targetInboundId, Guid? targetNodeId, CancellationToken cancellationToken)
     {
         if (_db is DbContext dbContext && dbContext.Database.IsRelational())
         {
@@ -1659,7 +1755,12 @@ public class X3UiPanelService
             var panelReleased = await _db.VpnPanels
                 .Where(x => x.Id == targetPanelId && x.UsedCapacity > 0)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1), cancellationToken);
-            if (inboundReleased != 1 || panelReleased != 1)
+            var nodeReleased = !targetNodeId.HasValue || await _db.VpnNodes
+                .Where(x => x.Id == targetNodeId.Value && x.UsedCapacity > 0)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1)
+                    .SetProperty(x => x.UpdatedAt, _clock.UtcNow), cancellationToken) == 1;
+            if (inboundReleased != 1 || panelReleased != 1 || !nodeReleased)
             {
                 await transaction.RollbackAsync(CancellationToken.None);
                 throw new InvalidOperationException("Reserved migration capacity could not be released consistently.");
@@ -1678,6 +1779,16 @@ public class X3UiPanelService
 
         inbound.UsedCapacity -= 1;
         inbound.VpnPanel.UsedCapacity -= 1;
+        if (targetNodeId.HasValue)
+        {
+            var targetNode = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == targetNodeId.Value, cancellationToken);
+            if (targetNode is null || targetNode.UsedCapacity <= 0)
+            {
+                throw new InvalidOperationException("Reserved target VPN server capacity could not be released consistently.");
+            }
+            targetNode.UsedCapacity -= 1;
+            targetNode.UpdatedAt = _clock.UtcNow;
+        }
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -1689,13 +1800,14 @@ public class X3UiPanelService
         string clientUuid,
         Guid? actorUserId,
         object before,
-        Exception migrationError)
+        Exception migrationError,
+        Guid? targetNodeId)
     {
         try
         {
             await _client.DeleteClientAsync(targetInbound.VpnPanel!, targetPassword, targetInbound.ExternalInboundId, clientUuid, CancellationToken.None);
             ClearTracker();
-            await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, CancellationToken.None);
+            await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, targetNodeId, CancellationToken.None);
         }
         catch (Exception compensationError)
         {
@@ -1776,10 +1888,15 @@ public class X3UiPanelService
             ? "Panel not configured: base URL, login and password are required."
             : null;
 
-    private async Task UpdateLinkedAccessCredentialsAsync(VpnClient client, CancellationToken cancellationToken)
+    private async Task UpdateLinkedAccessCredentialsAsync(VpnClient client, CancellationToken cancellationToken, Guid? targetNodeId = null)
     {
+        var currentAccessId = await _db.Subscriptions.AsNoTracking()
+            .Where(x => x.Id == client.SubscriptionId)
+            .Select(x => x.CurrentAccessId)
+            .FirstOrDefaultAsync(cancellationToken);
         var accesses = await _db.AccessCredentials
-            .Where(x => x.SubscriptionId == client.SubscriptionId && (x.ProviderAccessId == client.ExternalClientId || x.ProviderAccessId == client.Id.ToString()))
+            .Where(x => x.SubscriptionId == client.SubscriptionId
+                && (x.Id == currentAccessId || x.ProviderAccessId == client.ExternalClientId || x.ProviderAccessId == client.Id.ToString()))
             .ToListAsync(cancellationToken);
 
         foreach (var access in accesses)
@@ -1787,6 +1904,10 @@ public class X3UiPanelService
             access.ProviderAccessId = client.ExternalClientId;
             access.AccessUri = client.ConfigUri;
             access.QrCodePath = client.QrCodePayload;
+            if (targetNodeId.HasValue)
+            {
+                access.ServerId = targetNodeId.Value;
+            }
             var targetStatus = client.Enable ? AccessCredentialStatus.Active : AccessCredentialStatus.Disabled;
             var statusResult = StatusStateMachine.TrySetAccessStatus(access, targetStatus, _clock.UtcNow);
             if (!statusResult.IsSuccess)

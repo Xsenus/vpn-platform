@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.538.0 - 2026-08-09
+
+Release entry: `2026-08-09-subscription-migration-execution`.
+
+### Исправлено
+
+- Межсерверная миграция подписки больше не создает задание, которое навсегда остается `Planned`: endpoint выбирает совместимые node/panel/inbound, запускает существующий компенсируемый перенос 3x-ui и завершает `MigrationJob`/`MigrationItem` как `Completed` либо `Failed` с audit trail.
+- Общая миграция VPN-клиента согласованно обновляет `Subscription.CurrentServerId`, текущий `AccessCredential.ServerId`, provider ID, URI и счетчики source/target; целевая capacity node/panel/inbound резервируется транзакционно и освобождается во всех компенсируемых ветках.
+- Admin UI выполняет перенос после подтверждения и показывает фактически выбранный сервер и завершенный job; typed API принимает auto-selected target только из проверенного completed-response.
+
+### Проверено
+
+- Backend `1112/1112`, targeted X3Ui/admin SQLite suite `77/77`; исполняемый boundary подтверждает client/inbound, subscription/access, job/audit и capacity `source=0`, `target=1`; Release build `0` warnings/`0` errors, EF model drift отсутствует.
+- Frontend `104/104`, typecheck/build трех приложений, dependency audit `0 vulnerabilities`, полный Playwright console/responsive suite `20/20`; fresh local SQLite purchase/subscription/VPN smoke подтверждает latest release.
+- Secret scan `649` files/`0` findings; release/documentation/strict UTF-8 guards `57/57`.
+- Roadmap progress: `551/571` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.537.0 - 2026-08-09
 
 Release entry: `2026-08-09-admin-subscription-access-action-api-dto-validation`.

@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `550/570` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `551/571` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -125,8 +125,8 @@
 - [x] Refresh token optimistic revision закрывает double rotation; concurrent reuse/logout/admin deactivation fail closed без активной stale branch.
 - [x] Support conversation revision закрывает stale reply/status/note; оба UI обновляют очередь после conflict, pending inbound thread снова становится active.
 - [x] Checkout claim атомарно связывает session/user/order; concurrent same-user получает winner, другой user не создаёт второй заказ, completed status остаётся terminal.
-- [x] Subscription/access action DTO проверяются до рендера; межсерверная миграция подписки доступна в админке с `vpnManage`, target/auto выбором и подтверждением.
-- [x] Latest "Что нового": `2026-08-09-admin-subscription-access-action-api-dto-validation`, версия `0.537.0`.
+- [x] Subscription/access action DTO проверяются до рендера; межсерверная миграция подписки доступна в админке с `vpnManage`, target/auto выбором, подтверждением и фактическим завершением 3x-ui переноса вместо вечного planned job.
+- [x] Latest "Что нового": `2026-08-09-subscription-migration-execution`, версия `0.538.0`.
 
 ## Как вести дальше
 

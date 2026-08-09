@@ -145,6 +145,7 @@ public class AdminOperationsController : ControllerBase
     private readonly IQrCodeGenerator? _qrCodeGenerator;
     private readonly IVpnProviderFactory? _vpnProviderFactory;
     private readonly IClock _clock;
+    private readonly X3UiPanelService? _x3UiPanelService;
 
     public AdminOperationsController(
         IApplicationDbContext db,
@@ -155,7 +156,8 @@ public class AdminOperationsController : ControllerBase
         ISecretProtector? secretProtector = null,
         IQrCodeGenerator? qrCodeGenerator = null,
         IVpnProviderFactory? vpnProviderFactory = null,
-        IClock? clock = null)
+        IClock? clock = null,
+        X3UiPanelService? x3UiPanelService = null)
     {
         _db = db;
         _provisioningService = provisioningService;
@@ -166,6 +168,7 @@ public class AdminOperationsController : ControllerBase
         _qrCodeGenerator = qrCodeGenerator;
         _vpnProviderFactory = vpnProviderFactory;
         _clock = clock ?? new SystemClock();
+        _x3UiPanelService = x3UiPanelService;
     }
 
     [HttpGet("audit-logs")]
@@ -868,86 +871,198 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> MigrateSubscription(Guid id, [FromBody] Guid? targetNodeId, CancellationToken cancellationToken)
     {
-        await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken);
-        var subscription = await _db.Subscriptions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (subscription is null)
-        {
-            return NotFound(new { error = "Subscription not found." });
-        }
+        Guid migrationJobId;
+        Guid sourceNodeId;
+        Guid resolvedTargetNodeId;
+        Guid targetInboundId;
+        var actorUserId = ResolveUserId();
 
-        if (subscription.Status == SubscriptionStatus.Cancelled)
+        await using (var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(id, cancellationToken))
         {
-            return BadRequest(new { error = "Cancelled subscription cannot be migrated." });
-        }
-
-        if (!subscription.CurrentServerId.HasValue)
-        {
-            return BadRequest(new { error = "Subscription does not have a source VPN server." });
-        }
-
-        if (targetNodeId == subscription.CurrentServerId)
-        {
-            return BadRequest(new { error = "Target VPN server must differ from the source server." });
-        }
-
-        if (targetNodeId.HasValue)
-        {
-            var targetNode = await _db.VpnNodes
+            var subscription = await _db.Subscriptions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == targetNodeId.Value, cancellationToken);
-            if (targetNode is null)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (subscription is null)
             {
-                return NotFound(new { error = "Target VPN server not found." });
+                return NotFound(new { error = "Subscription not found." });
             }
 
-            if (targetNode.Status != NodeStatus.Ready
-                || !targetNode.IsAvailableForNewUsers
-                || targetNode.HealthStatus == HealthStatus.Unhealthy
-                || targetNode.UsedCapacity >= targetNode.Capacity)
+            if (subscription.Status == SubscriptionStatus.Cancelled)
             {
-                return BadRequest(new { error = "Target VPN server is not ready for allocation." });
+                return BadRequest(new { error = "Cancelled subscription cannot be migrated." });
             }
+
+            if (!subscription.CurrentServerId.HasValue)
+            {
+                return BadRequest(new { error = "Subscription does not have a source VPN server." });
+            }
+
+            if (_x3UiPanelService is null)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "VPN migration service is unavailable." });
+            }
+
+            sourceNodeId = subscription.CurrentServerId.Value;
+            if (targetNodeId == sourceNodeId)
+            {
+                return BadRequest(new { error = "Target VPN server must differ from the source server." });
+            }
+
+            var vpnClient = await _db.VpnClients.AsNoTracking()
+                .Include(x => x.VpnInbound)
+                .FirstOrDefaultAsync(x => x.SubscriptionId == id, cancellationToken);
+            if (vpnClient?.VpnInbound is null)
+            {
+                return BadRequest(new { error = "Subscription does not have a managed 3x-ui client." });
+            }
+
+            var hasActiveMigration = await _db.MigrationItems
+                .AsNoTracking()
+                .AnyAsync(item => item.SubscriptionId == id
+                    && _db.MigrationJobs.Any(job => job.Id == item.MigrationJobId
+                        && (job.Status == MigrationJobStatus.Planned || job.Status == MigrationJobStatus.Running)), cancellationToken);
+            if (hasActiveMigration)
+            {
+                return Conflict(new { error = "Subscription already has an active migration." });
+            }
+
+            var candidateNodes = await _db.VpnNodes.AsNoTracking()
+                .Where(x => (!targetNodeId.HasValue || x.Id == targetNodeId.Value)
+                    && x.Id != sourceNodeId
+                    && x.Status == NodeStatus.Ready
+                    && x.IsAvailableForNewUsers
+                    && x.HealthStatus != HealthStatus.Unhealthy
+                    && x.UsedCapacity < x.Capacity
+                    && x.PanelBaseUrl != string.Empty)
+                .OrderBy(x => x.UsedCapacity * 1.0 / Math.Max(1, x.Capacity))
+                .ThenBy(x => x.Priority)
+                .ThenBy(x => x.Id)
+                .ToListAsync(cancellationToken);
+            if (targetNodeId.HasValue && candidateNodes.Count == 0)
+            {
+                var targetExists = await _db.VpnNodes.AsNoTracking().AnyAsync(x => x.Id == targetNodeId.Value, cancellationToken);
+                return targetExists
+                    ? BadRequest(new { error = "Target VPN server is not ready for allocation." })
+                    : NotFound(new { error = "Target VPN server not found." });
+            }
+
+            VpnNode? selectedNode = null;
+            VpnInbound? selectedInbound = null;
+            foreach (var candidateNode in candidateNodes)
+            {
+                var panel = await _db.VpnPanels.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.BaseUrl == candidateNode.PanelBaseUrl
+                        && x.Status == VpnPanelStatus.Active
+                        && x.HealthStatus != HealthStatus.Unhealthy
+                        && x.UsedCapacity < x.Capacity, cancellationToken);
+                if (panel is null)
+                {
+                    continue;
+                }
+
+                var inbounds = await _db.VpnInbounds.AsNoTracking()
+                    .Where(x => x.VpnPanelId == panel.Id
+                        && x.IsActive
+                        && x.UsedCapacity < x.Capacity
+                        && x.Protocol == vpnClient.VpnInbound.Protocol)
+                    .OrderByDescending(x => x.IsDefault)
+                    .ThenBy(x => x.UsedCapacity * 1.0 / Math.Max(1, x.Capacity))
+                    .ThenBy(x => x.Id)
+                    .ToListAsync(cancellationToken);
+                selectedInbound = candidateNode.PanelInboundId.HasValue
+                    ? inbounds.FirstOrDefault(x => x.ExternalInboundId == candidateNode.PanelInboundId.Value.ToString())
+                    : inbounds.FirstOrDefault();
+                if (selectedInbound is not null)
+                {
+                    selectedNode = candidateNode;
+                    break;
+                }
+            }
+
+            if (selectedNode is null || selectedInbound is null)
+            {
+                return BadRequest(new { error = "Target VPN server does not have a compatible active inbound." });
+            }
+
+            resolvedTargetNodeId = selectedNode.Id;
+            targetInboundId = selectedInbound.Id;
+            var migrationJob = new MigrationJob
+            {
+                SourceNodeId = sourceNodeId,
+                TargetNodeId = resolvedTargetNodeId,
+                Status = MigrationJobStatus.Running,
+                Type = "single-subscription",
+                RequestedByUserId = actorUserId,
+                RequestedAt = _clock.UtcNow,
+                StartedAt = _clock.UtcNow,
+                Notes = $"Migration requested for subscription {id}"
+            };
+            migrationJob.Items.Add(new MigrationItem
+            {
+                SubscriptionId = subscription.Id,
+                OldAccessId = subscription.CurrentAccessId,
+                Status = MigrationJobStatus.Running
+            });
+
+            _db.MigrationJobs.Add(migrationJob);
+            AddAuditLog(
+                "subscription.migration.start",
+                "Subscription",
+                subscription.Id,
+                JsonSerializer.Serialize(new { subscription.CurrentServerId, subscription.CurrentAccessId }),
+                JsonSerializer.Serialize(new { MigrationJobId = migrationJob.Id, migrationJob.TargetNodeId, TargetInboundId = targetInboundId, migrationJob.Status }));
+            await _db.SaveChangesAsync(cancellationToken);
+            migrationJobId = migrationJob.Id;
         }
 
-        var hasActiveMigration = await _db.MigrationItems
-            .AsNoTracking()
-            .AnyAsync(item => item.SubscriptionId == id
-                && _db.MigrationJobs.Any(job => job.Id == item.MigrationJobId
-                    && (job.Status == MigrationJobStatus.Planned || job.Status == MigrationJobStatus.Running)), cancellationToken);
-        if (hasActiveMigration)
+        async Task MarkJobAsync(MigrationJobStatus status, string? error)
         {
-            return Conflict(new { error = "Subscription already has an active migration." });
+            var job = await _db.MigrationJobs.Include(x => x.Items).FirstAsync(x => x.Id == migrationJobId, CancellationToken.None);
+            job.Status = status;
+            job.FinishedAt = _clock.UtcNow;
+            job.Notes = string.IsNullOrWhiteSpace(error) ? job.Notes : $"{job.Notes}; {error[..Math.Min(error.Length, 1000)]}";
+            foreach (var item in job.Items)
+            {
+                item.Status = status;
+                item.ErrorText = error is null ? string.Empty : error[..Math.Min(error.Length, 2000)];
+                if (status == MigrationJobStatus.Completed)
+                {
+                    item.NewAccessId = await _db.Subscriptions.AsNoTracking()
+                        .Where(x => x.Id == item.SubscriptionId)
+                        .Select(x => x.CurrentAccessId)
+                        .FirstOrDefaultAsync(CancellationToken.None);
+                }
+            }
+            AddAuditLog(
+                status == MigrationJobStatus.Completed ? "subscription.migration.complete" : "subscription.migration.fail",
+                "Subscription",
+                id,
+                JsonSerializer.Serialize(new { SourceNodeId = sourceNodeId }),
+                JsonSerializer.Serialize(new { MigrationJobId = migrationJobId, TargetNodeId = resolvedTargetNodeId, Status = status, Error = error }));
+            await _db.SaveChangesAsync(CancellationToken.None);
         }
 
-        var migrationJob = new MigrationJob
+        try
         {
-            SourceNodeId = subscription.CurrentServerId.Value,
-            TargetNodeId = targetNodeId,
-            Status = MigrationJobStatus.Planned,
-            Type = "single-subscription",
-            RequestedByUserId = ResolveUserId(),
-            RequestedAt = _clock.UtcNow,
-            Notes = $"Migration requested for subscription {id}"
-        };
-        migrationJob.Items.Add(new MigrationItem
+            var result = await _x3UiPanelService.MigrateClientAsync(
+                (await _db.VpnClients.AsNoTracking().SingleAsync(x => x.SubscriptionId == id, cancellationToken)).Id,
+                new MigrateVpnClientCommand(targetInboundId, resolvedTargetNodeId),
+                actorUserId,
+                cancellationToken);
+            if (!result.IsSuccess)
+            {
+                await MarkJobAsync(MigrationJobStatus.Failed, result.Error ?? "VPN client migration failed.");
+                return BadRequest(new { error = result.Error });
+            }
+
+            await MarkJobAsync(MigrationJobStatus.Completed, null);
+            return Ok(new { migrationJobId, subscriptionId = id, sourceNodeId, targetNodeId = resolvedTargetNodeId, status = "completed" });
+        }
+        catch (Exception ex)
         {
-            SubscriptionId = subscription.Id,
-            OldAccessId = subscription.CurrentAccessId,
-            Status = MigrationJobStatus.Planned
-        });
-
-        _db.MigrationJobs.Add(migrationJob);
-        AddAuditLog(
-            "subscription.migration.plan",
-            "Subscription",
-            subscription.Id,
-            JsonSerializer.Serialize(new { subscription.CurrentServerId, subscription.CurrentAccessId }),
-            JsonSerializer.Serialize(new { MigrationJobId = migrationJob.Id, migrationJob.TargetNodeId, migrationJob.Status }));
-
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new { migrationJobId = migrationJob.Id, subscriptionId = id, sourceNodeId = migrationJob.SourceNodeId, targetNodeId, status = "planned" });
+            await MarkJobAsync(MigrationJobStatus.Failed, $"VPN provider migration failed ({ex.GetType().Name}).");
+            return StatusCode(StatusCodes.Status502BadGateway, new { error = "VPN provider migration failed; see the migration job and audit log for details." });
+        }
     }
 
     [HttpGet("orders")]

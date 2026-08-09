@@ -536,7 +536,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/migrate') {
-      await fulfillJson(route, { migrationJobId: 'migration-sub-e2e', subscriptionId: 'sub-e2e', sourceNodeId: 'server-eu', targetNodeId: body, status: 'planned' })
+      await fulfillJson(route, { migrationJobId: 'migration-sub-e2e', subscriptionId: 'sub-e2e', sourceNodeId: 'server-eu', targetNodeId: body ?? 'server-us', status: 'completed' })
       return
     }
 
@@ -936,10 +936,10 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(cancelledSubscriptionRow.getByRole('spinbutton')).toHaveCount(0)
   await expect(cancelledSubscriptionRow.getByRole('combobox')).toHaveCount(0)
   await subscriptionsPanel.getByRole('combobox', { name: /Целевой сервер для миграции/ }).selectOption('auto')
-  await subscriptionsPanel.getByRole('button', { name: 'Запланировать перенос' }).click()
-  await expect(subscriptionsPanel.getByRole('dialog')).toContainText('повторное планирование запрещено')
+  await subscriptionsPanel.getByRole('button', { name: 'Перенести', exact: true }).click()
+  await expect(subscriptionsPanel.getByRole('dialog')).toContainText('Клиент будет создан на целевой панели')
   await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(subscriptionsPanel.getByText(/Миграция запланирована: задача/)).toBeVisible()
+  await expect(page.getByText(/Подписка перенесена на сервер/)).toBeVisible()
   expect(api.getLastRequest('/api/admin/subscriptions/sub-e2e/migrate')?.body).toBeNull()
   await subscriptionsPanel.getByRole('button', { name: 'Отменить' }).click()
   await expect(subscriptionsPanel.getByRole('dialog')).toContainText('VPN-доступ будет отозван и удален с сервера')
@@ -1186,7 +1186,7 @@ test('finance role loads only permitted data and keeps common sections read-only
 
   await openAdminSection(page, 'Подписки', 'subscriptions')
   await expect(page.locator('#subscriptions').getByRole('combobox', { name: /Целевой сервер для миграции/ })).toHaveCount(0)
-  await expect(page.locator('#subscriptions').getByRole('button', { name: 'Запланировать перенос' })).toHaveCount(0)
+  await expect(page.locator('#subscriptions').getByRole('button', { name: 'Перенести', exact: true })).toHaveCount(0)
 
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.locator('#payments form').first()).toBeVisible()
