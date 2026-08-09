@@ -69,6 +69,22 @@ type RetryPaymentState = {
   payment: PaymentInitResult
 } | null
 
+type CabinetActionContext = {
+  operationId: number
+  isCurrent: () => boolean
+  reloadAll: () => Promise<boolean>
+}
+
+type CabinetActionRequest = {
+  id: string
+  operationId: number
+}
+
+type CabinetRequestContext = {
+  operationId: number
+  isCurrent: () => boolean
+}
+
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
@@ -112,9 +128,24 @@ export function App() {
   const [appVersionOpenSignal, setAppVersionOpenSignal] = useState(0)
   const restoredSessionHydrationStarted = useRef(false)
   const sessionOperationId = useRef(0)
+  const loadAllRequestId = useRef(0)
+  const sessionActionInFlight = useRef<CabinetActionRequest | null>(null)
+  const authActionInFlight = useRef<CabinetActionRequest | null>(null)
+  const logoutInFlight = useRef(false)
   const supportMessagesRequestId = useRef(0)
   const supportMessagesEffectSkipId = useRef('')
   const paymentProvidersRequestId = useRef(0)
+  const selectedSupportConversationIdRef = useRef(selectedSupportConversationId)
+  const supportCreateDraftRef = useRef('')
+  const supportReplyTextRef = useRef(supportReplyText)
+  const authFormSnapshotRef = useRef('')
+  const resetEmailRef = useRef(resetEmail)
+  selectedSupportConversationIdRef.current = selectedSupportConversationId
+  supportCreateDraftRef.current = JSON.stringify([supportSubject, supportText, supportOrderId, supportSubscriptionId])
+  supportReplyTextRef.current = supportReplyText
+  authFormSnapshotRef.current = JSON.stringify([authMode, authEmail, authPassword, authDisplayName, authReferralCode])
+  resetEmailRef.current = resetEmail
+  const renderSessionOperationId = sessionOperationId.current
   const authPanelId = 'cabinet-auth-panel'
   const activeAuthTabId = authMode === 'login' ? 'cabinet-auth-login-tab' : 'cabinet-auth-register-tab'
   const authValidationErrors = validateAuthInput(authMode, authEmail, authPassword, authDisplayName)
@@ -169,8 +200,22 @@ export function App() {
     : cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
   const currentQrAvailability = getAccessQrAvailability(linkedCurrentAccess ?? cabinetSummary.currentAccess)
 
+  const selectSupportConversation = (conversationId: string) => {
+    if (selectedSupportConversationIdRef.current === conversationId) return
+    selectedSupportConversationIdRef.current = conversationId
+    supportMessagesRequestId.current += 1
+    setSupportMessages([])
+    setSupportLoading(false)
+    setSupportReplyText('')
+    setSelectedSupportConversationId(conversationId)
+  }
+
   const clearSession = () => {
     sessionOperationId.current += 1
+    loadAllRequestId.current += 1
+    sessionActionInFlight.current = null
+    authActionInFlight.current = null
+    logoutInFlight.current = false
     supportMessagesRequestId.current += 1
     supportMessagesEffectSkipId.current = ''
     paymentProvidersRequestId.current += 1
@@ -186,6 +231,7 @@ export function App() {
     setReferrals([])
     setSupportConversations([])
     setSupportMessages([])
+    selectedSupportConversationIdRef.current = ''
     setSelectedSupportConversationId('')
     setSupportSubject('')
     setSupportText('')
@@ -223,8 +269,8 @@ export function App() {
     setError(error instanceof Error ? error.message : fallback)
   }
 
-  const storeSession = async (response: AuthResponse) => {
-    const operationId = ++sessionOperationId.current
+  const storeSession = async (response: AuthResponse, operationId: number) => {
+    if (sessionOperationId.current !== operationId) return false
     setToken(response.accessToken)
     setRefreshToken(response.refreshToken)
     writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
@@ -235,8 +281,11 @@ export function App() {
   const loadAll = async (currentToken: string, options?: { operationId?: number, throwOnError?: boolean }) => {
     if (!currentToken) return false
 
-    const operationId = options?.operationId ?? sessionOperationId.current
+    const operationId = options?.operationId ?? renderSessionOperationId
+    if (sessionOperationId.current !== operationId) return false
+    const requestId = ++loadAllRequestId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
+      && loadAllRequestId.current === requestId
 
     if (operationIsCurrent()) {
       setBusy(true)
@@ -264,8 +313,11 @@ export function App() {
       setAccesses(nextAccesses)
       setReferrals(nextReferrals)
       setSupportConversations(nextSupportConversations)
-      if (!selectedSupportConversationId && nextSupportConversations.length > 0) {
-        setSelectedSupportConversationId(nextSupportConversations[0].id)
+      const nextSelectedConversationId = nextSupportConversations.some((item) => item.id === selectedSupportConversationIdRef.current)
+        ? selectedSupportConversationIdRef.current
+        : nextSupportConversations[0]?.id ?? ''
+      if (nextSelectedConversationId !== selectedSupportConversationIdRef.current) {
+        selectSupportConversation(nextSelectedConversationId)
       }
       setTelegramStatus(nextTelegramStatus)
       return true
@@ -276,6 +328,65 @@ export function App() {
       return false
     } finally {
       if (operationIsCurrent()) setBusy(false)
+    }
+  }
+
+  const runSessionAction = async (
+    id: string,
+    fallback: string,
+    action: (context: CabinetActionContext) => Promise<void>
+  ) => {
+    if (!token || sessionOperationId.current !== renderSessionOperationId || sessionActionInFlight.current) return false
+    const request: CabinetActionRequest = { id, operationId: renderSessionOperationId }
+    const isCurrent = () => sessionOperationId.current === request.operationId
+      && sessionActionInFlight.current === request
+    sessionActionInFlight.current = request
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await action({
+        operationId: request.operationId,
+        isCurrent,
+        reloadAll: () => isCurrent()
+          ? loadAll(token, { operationId: request.operationId })
+          : Promise.resolve(false)
+      })
+      return isCurrent()
+    } catch (e) {
+      if (isCurrent()) handleAuthenticatedError(e, fallback)
+      return false
+    } finally {
+      if (sessionActionInFlight.current === request) sessionActionInFlight.current = null
+      if (sessionOperationId.current === request.operationId) setBusy(false)
+    }
+  }
+
+  const runAuthAction = async (
+    id: string,
+    startSessionOperation: boolean,
+    onError: (error: unknown) => void,
+    action: (context: CabinetRequestContext) => Promise<void>
+  ) => {
+    if (authActionInFlight.current || sessionActionInFlight.current) return false
+    const operationId = startSessionOperation ? ++sessionOperationId.current : renderSessionOperationId
+    if (sessionOperationId.current !== operationId) return false
+    const request: CabinetActionRequest = { id, operationId }
+    const isCurrent = () => sessionOperationId.current === operationId
+      && authActionInFlight.current === request
+    authActionInFlight.current = request
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await action({ operationId, isCurrent })
+      return isCurrent()
+    } catch (e) {
+      if (isCurrent()) onError(e)
+      return false
+    } finally {
+      if (authActionInFlight.current === request) authActionInFlight.current = null
+      if (sessionOperationId.current === operationId) setBusy(false)
     }
   }
 
@@ -321,17 +432,13 @@ export function App() {
   const loadSupportMessages = async (
     conversationId: string,
     currentToken = token,
-    operationId = sessionOperationId.current
+    operationId = renderSessionOperationId
   ) => {
+    if (!currentToken || !conversationId || sessionOperationId.current !== operationId || selectedSupportConversationIdRef.current !== conversationId) return false
     const requestId = ++supportMessagesRequestId.current
     const requestIsCurrent = () => sessionOperationId.current === operationId
       && supportMessagesRequestId.current === requestId
-
-    if (!currentToken || !conversationId) {
-      setSupportMessages([])
-      setSupportLoading(false)
-      return false
-    }
+      && selectedSupportConversationIdRef.current === conversationId
 
     setSupportMessages([])
     setSupportLoading(true)
@@ -415,22 +522,28 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const response = authMode === 'login'
-        ? await api.login(authEmail.trim(), authPassword)
-        : await api.register(authEmail.trim(), authPassword, authDisplayName.trim() || authEmail.trim(), authReferralCode)
-      if (!await storeSession(response)) return
-      setAuthPassword('')
-      setAuthReferralCode('')
-      setNotice(authMode === 'login' ? 'Вход выполнен.' : 'Аккаунт создан.')
-    } catch (e) {
-      setError(translateAuthError(e, authMode === 'login' ? 'Не удалось войти' : 'Не удалось зарегистрироваться'))
-    } finally {
-      setBusy(false)
-    }
+    const mode = authMode
+    const email = authEmail.trim()
+    const password = authPassword
+    const displayName = authDisplayName.trim() || email
+    const referralCode = authReferralCode
+    const submittedForm = authFormSnapshotRef.current
+    await runAuthAction(
+      'auth-submit',
+      true,
+      (e) => setError(translateAuthError(e, mode === 'login' ? 'Не удалось войти' : 'Не удалось зарегистрироваться')),
+      async (action) => {
+        const response = mode === 'login'
+          ? await api.login(email, password)
+          : await api.register(email, password, displayName, referralCode)
+        if (!action.isCurrent() || !await storeSession(response, action.operationId)) return
+        if (authFormSnapshotRef.current === submittedForm) {
+          setAuthPassword('')
+          setAuthReferralCode('')
+        }
+        setNotice(mode === 'login' ? 'Вход выполнен.' : 'Аккаунт создан.')
+      }
+    )
   }
 
   const switchAuthMode = (nextMode: 'login' | 'register') => {
@@ -444,30 +557,27 @@ export function App() {
       setError('Сессия не найдена. Войдите заново.')
       return
     }
-    const operationId = ++sessionOperationId.current
-    const operationIsCurrent = () => sessionOperationId.current === operationId
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const response = await api.refresh(refreshToken)
-      if (!operationIsCurrent()) return
-      setToken(response.accessToken)
-      setRefreshToken(response.refreshToken)
-      writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
-      writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-      if (!await loadAll(response.accessToken, { operationId })) return
-      setNotice('Сессия обновлена.')
-    } catch (e) {
-      if (!operationIsCurrent()) return
-      handleAuthenticatedError(e, 'Не удалось обновить сессию')
-    } finally {
-      if (operationIsCurrent()) setBusy(false)
-    }
+    const currentRefreshToken = refreshToken
+    await runAuthAction(
+      'refresh-session',
+      true,
+      (e) => handleAuthenticatedError(e, 'Не удалось обновить сессию'),
+      async (action) => {
+        const response = await api.refresh(currentRefreshToken)
+        if (!action.isCurrent()) return
+        setToken(response.accessToken)
+        setRefreshToken(response.refreshToken)
+        writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+        writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
+        if (!await loadAll(response.accessToken, { operationId: action.operationId })) return
+        setNotice('Сессия обновлена.')
+      }
+    )
   }
 
   const handleLogout = async () => {
-    if (logoutBusy) return
+    if (logoutBusy || logoutInFlight.current) return
+    logoutInFlight.current = true
     sessionOperationId.current += 1
     setSessionHydrating(false)
     setLogoutBusy(true)
@@ -480,6 +590,7 @@ export function App() {
       setError('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')
     } finally {
       clearSession()
+      logoutInFlight.current = false
       setBusy(false)
       setLogoutBusy(false)
     }
@@ -491,18 +602,18 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const response = await api.forgotPassword(resetEmail)
-      if (response.validationResetToken) setResetToken(response.validationResetToken)
-      setNotice(translateAuthMessage(response.message))
-    } catch (e) {
-      setError(translateAuthError(e, 'Не удалось запросить сброс пароля'))
-    } finally {
-      setBusy(false)
-    }
+    const email = resetEmail
+    await runAuthAction(
+      'forgot-password',
+      false,
+      (e) => setError(translateAuthError(e, 'Не удалось запросить сброс пароля')),
+      async (action) => {
+        const response = await api.forgotPassword(email)
+        if (!action.isCurrent()) return
+        if (response.validationResetToken && resetEmailRef.current === email) setResetToken(response.validationResetToken)
+        setNotice(translateAuthMessage(response.message))
+      }
+    )
   }
 
   const handleResetPassword = async () => {
@@ -511,19 +622,19 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      await api.resetPassword(resetToken, newPassword)
-      clearSession()
-      setNewPassword('')
-      setNotice('Пароль изменён. Войдите с новым паролем.')
-    } catch (e) {
-      setError(translateAuthError(e, 'Не удалось сбросить пароль'))
-    } finally {
-      setBusy(false)
-    }
+    const submittedToken = resetToken
+    const submittedPassword = newPassword
+    await runAuthAction(
+      'reset-password',
+      false,
+      (e) => setError(translateAuthError(e, 'Не удалось сбросить пароль')),
+      async (action) => {
+        await api.resetPassword(submittedToken, submittedPassword)
+        if (!action.isCurrent()) return
+        clearSession()
+        setNotice('Пароль изменён. Войдите с новым паролем.')
+      }
+    )
   }
 
   const handleLoadQr = async (accessId: string) => {
@@ -533,52 +644,34 @@ export function App() {
       setError(qrAvailability.reason ?? 'QR-код пока недоступен.')
       return
     }
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
+    await runSessionAction(`qr-${accessId}`, 'Не удалось загрузить QR', async (action) => {
       const svg = await api.getMyAccessQrSvg(token, accessId)
+      if (!action.isCurrent()) return
       setQrSvgs((current) => ({ ...current, [accessId]: svg }))
       setNotice('QR-код загружен.')
-    } catch (e) {
-      handleAuthenticatedError(e, 'Не удалось загрузить QR')
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
   const handleCreateTelegramLink = async () => {
     if (!token) return
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
+    await runSessionAction('telegram-link', 'Не удалось создать ссылку Telegram', async (action) => {
       const link = await api.createTelegramLinkToken(token)
+      if (!action.isCurrent()) return
       setTelegramLink(link)
-      if (!await loadAll(token)) return
+      if (!await action.reloadAll()) return
       setNotice('Ссылка на Telegram-бота создана.')
-    } catch (e) {
-      handleAuthenticatedError(e, 'Не удалось создать ссылку Telegram')
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
   const handleUnlinkTelegram = async () => {
     if (!token) return
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
+    await runSessionAction('telegram-unlink', 'Не удалось отвязать Telegram', async (action) => {
       const status = await api.unlinkTelegram(token)
+      if (!action.isCurrent()) return
       setTelegramStatus(status)
       setTelegramLink(null)
       setNotice('Telegram отвязан от аккаунта.')
-    } catch (e) {
-      handleAuthenticatedError(e, 'Не удалось отвязать Telegram')
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
   const handleCreateSupportConversation = async () => {
@@ -589,32 +682,32 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
+    const submittedDraft = supportCreateDraftRef.current
+    const payload = {
+      subject: supportSubject.trim(),
+      text: supportText.trim(),
+      orderId: supportOrderId || null,
+      subscriptionId: supportSubscriptionId || null
+    }
+    await runSessionAction('support-create', 'Не удалось создать обращение в поддержку', async (action) => {
       const conversation = await api.createMySupportConversation(token, {
-        subject: supportSubject.trim(),
-        text: supportText.trim(),
-        orderId: supportOrderId || null,
-        subscriptionId: supportSubscriptionId || null
+        ...payload
       })
+      if (!action.isCurrent()) return
       setSupportConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)])
-      if (selectedSupportConversationId !== conversation.id) {
+      if (selectedSupportConversationIdRef.current !== conversation.id) {
         supportMessagesEffectSkipId.current = conversation.id
       }
-      setSelectedSupportConversationId(conversation.id)
-      setSupportSubject('')
-      setSupportText('')
-      setSupportOrderId('')
-      setSupportSubscriptionId('')
-      if (!await loadSupportMessages(conversation.id, token, sessionOperationId.current)) return
+      selectSupportConversation(conversation.id)
+      if (supportCreateDraftRef.current === submittedDraft) {
+        setSupportSubject('')
+        setSupportText('')
+        setSupportOrderId('')
+        setSupportSubscriptionId('')
+      }
+      if (!await loadSupportMessages(conversation.id, token, action.operationId)) return
       setNotice('Обращение в поддержку создано.')
-    } catch (e) {
-      handleAuthenticatedError(e, 'Не удалось создать обращение в поддержку')
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
   const handleReplySupportConversation = async () => {
@@ -625,48 +718,55 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const message = await api.replyMySupportConversation(token, selectedSupportConversation.id, supportReplyText.trim(), selectedSupportConversation.revision)
-      setSupportMessages((current) => [...current, message])
-      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: 'open', revision: item.revision + 1, updatedAt: new Date().toISOString(), closedAt: null } : item))
-      setSupportReplyText('')
-      setNotice('Сообщение отправлено в поддержку.')
-    } catch (e) {
-      if (e instanceof ApiClientError && e.status === 409) {
-        const operationId = sessionOperationId.current
-        if (await loadAll(token, { operationId })) {
-          await loadSupportMessages(selectedSupportConversation.id, token, operationId)
+    const conversation = selectedSupportConversation
+    const submittedReply = supportReplyText
+    await runSessionAction(`support-reply-${conversation.id}`, 'Не удалось отправить сообщение в поддержку', async (action) => {
+      let message: SupportMessageDto
+      try {
+        message = await api.replyMySupportConversation(token, conversation.id, submittedReply.trim(), conversation.revision)
+      } catch (e) {
+        if (!action.isCurrent()) return
+        if (e instanceof ApiClientError && e.status === 409) {
+          await action.reloadAll()
+          const currentConversationId = selectedSupportConversationIdRef.current
+          if (action.isCurrent() && currentConversationId) {
+            await loadSupportMessages(currentConversationId, token, action.operationId)
+          }
         }
+        throw e
       }
-      handleAuthenticatedError(e, 'Не удалось отправить сообщение в поддержку')
-    } finally {
-      setBusy(false)
-    }
+      if (!action.isCurrent()) return
+      if (selectedSupportConversationIdRef.current === conversation.id) {
+        setSupportMessages((current) => [...current, message])
+        if (supportReplyTextRef.current === submittedReply) setSupportReplyText('')
+      }
+      setSupportConversations((current) => current.map((item) => item.id === conversation.id ? { ...item, status: 'open', revision: item.revision + 1, updatedAt: new Date().toISOString(), closedAt: null } : item))
+      setNotice('Сообщение отправлено в поддержку.')
+    })
   }
 
   const handleSupportConversationStatus = async (status: 'open' | 'closed') => {
     if (!token || !selectedSupportConversation) return
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const result = await api.updateMySupportConversationStatus(token, selectedSupportConversation.id, status, selectedSupportConversation.revision)
-      setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: result.status, revision: result.revision, closedAt: result.status === 'closed' ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : item))
-      setNotice(result.status === 'closed' ? 'Обращение закрыто.' : 'Обращение переоткрыто.')
-    } catch (e) {
-      if (e instanceof ApiClientError && e.status === 409) {
-        const operationId = sessionOperationId.current
-        if (await loadAll(token, { operationId })) {
-          await loadSupportMessages(selectedSupportConversation.id, token, operationId)
+    const conversation = selectedSupportConversation
+    await runSessionAction(`support-status-${conversation.id}`, 'Не удалось изменить статус обращения', async (action) => {
+      let result: { status: string; revision: number }
+      try {
+        result = await api.updateMySupportConversationStatus(token, conversation.id, status, conversation.revision)
+      } catch (e) {
+        if (!action.isCurrent()) return
+        if (e instanceof ApiClientError && e.status === 409) {
+          await action.reloadAll()
+          const currentConversationId = selectedSupportConversationIdRef.current
+          if (action.isCurrent() && currentConversationId) {
+            await loadSupportMessages(currentConversationId, token, action.operationId)
+          }
         }
+        throw e
       }
-      handleAuthenticatedError(e, 'Не удалось изменить статус обращения')
-    } finally {
-      setBusy(false)
-    }
+      if (!action.isCurrent()) return
+      setSupportConversations((current) => current.map((item) => item.id === conversation.id ? { ...item, status: result.status, revision: result.revision, closedAt: result.status === 'closed' ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : item))
+      setNotice(result.status === 'closed' ? 'Обращение закрыто.' : 'Обращение переоткрыто.')
+    })
   }
 
   const handleRetryOrderPayment = async (order: OrderDto) => {
@@ -680,19 +780,14 @@ export function App() {
       setError('Нет доступных платежных провайдеров для повторной оплаты.')
       return
     }
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const payment = await api.initMyPayment(token, order.id, provider, window.location.href)
+    const selectedProvider = provider
+    await runSessionAction(`payment-retry-${order.id}`, 'Не удалось повторить оплату', async (action) => {
+      const payment = await api.initMyPayment(token, order.id, selectedProvider, window.location.href)
+      if (!action.isCurrent()) return
       setRetryPaymentState({ order, payment })
-      if (!await loadAll(token)) return
+      if (!await action.reloadAll()) return
       setNotice('Ссылка для повторной оплаты подготовлена.')
-    } catch (e) {
-      handleAuthenticatedError(e, 'Не удалось повторить оплату')
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
   const handleRenew = async (subscription: SubscriptionDto) => {
@@ -707,36 +802,36 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    setNotice('')
-    let createdOrder: OrderDto | null = null
-
-    try {
-      const order = await api.createMyOrder(token, {
+    const selectedProvider = provider
+    await runSessionAction(`renew-${subscription.id}`, 'Не удалось создать продление', async (action) => {
+      let createdOrder: OrderDto | null = null
+      try {
+        const order = await api.createMyOrder(token, {
         tariffId: subscription.tariffId,
         type: 'Renewal',
-        paymentProvider: provider,
+        paymentProvider: selectedProvider,
         promoCode: null,
         subscriptionId: subscription.id
-      })
-      createdOrder = order
-      setOrders((current) => [order, ...current.filter((item) => item.id !== order.id)])
-      setRenewalState({ subscriptionId: subscription.id, order, payment: null })
-      const payment = await api.initMyPayment(token, order.id, provider, window.location.origin)
-      setRenewalState({ subscriptionId: subscription.id, order, payment })
-      if (!await loadAll(token)) return
-      setNotice('Продление создано. Откройте оплату в карточке последнего продления.')
-    } catch (e) {
-      if (createdOrder && !isCabinetSessionRejected(e)) {
-        const details = e instanceof Error && e.message.trim() ? ` ${e.message}` : ''
-        setError(`Заказ на продление ${createdOrder.id} создан, но ссылку оплаты подготовить не удалось. Повторите подготовку оплаты для этого заказа.${details}`)
-      } else {
-        handleAuthenticatedError(e, 'Не удалось создать продление')
+        })
+        if (!action.isCurrent()) return
+        createdOrder = order
+        setOrders((current) => [order, ...current.filter((item) => item.id !== order.id)])
+        setRenewalState({ subscriptionId: subscription.id, order, payment: null })
+        const payment = await api.initMyPayment(token, order.id, selectedProvider, window.location.origin)
+        if (!action.isCurrent()) return
+        setRenewalState({ subscriptionId: subscription.id, order, payment })
+        if (!await action.reloadAll()) return
+        setNotice('Продление создано. Откройте оплату в карточке последнего продления.')
+      } catch (e) {
+        if (!action.isCurrent()) return
+        if (createdOrder && !isCabinetSessionRejected(e)) {
+          const details = e instanceof Error && e.message.trim() ? ` ${e.message}` : ''
+          setError(`Заказ на продление ${createdOrder.id} создан, но ссылку оплаты подготовить не удалось. Повторите подготовку оплаты для этого заказа.${details}`)
+          return
+        }
+        throw e
       }
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
   const handleRetryRenewalPayment = async () => {
@@ -747,26 +842,24 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const payment = await api.initMyPayment(token, renewalState.order.id, provider, window.location.origin)
-      setRenewalState((current) => current && current.order.id === renewalState.order.id
+    const renewal = renewalState
+    const selectedProvider = provider
+    await runSessionAction(`renewal-payment-${renewal.order.id}`, 'Не удалось подготовить оплату продления', async (action) => {
+      try {
+        const payment = await api.initMyPayment(token, renewal.order.id, selectedProvider, window.location.origin)
+        if (!action.isCurrent()) return
+        setRenewalState((current) => current && current.order.id === renewal.order.id
         ? { ...current, payment }
         : current)
-      if (!await loadAll(token)) return
-      setNotice('Ссылка оплаты для созданного продления подготовлена.')
-    } catch (e) {
-      if (isCabinetSessionRejected(e)) {
-        handleAuthenticatedError(e, 'Не удалось подготовить оплату продления')
-      } else {
+        if (!await action.reloadAll()) return
+        setNotice('Ссылка оплаты для созданного продления подготовлена.')
+      } catch (e) {
+        if (!action.isCurrent()) return
+        if (isCabinetSessionRejected(e)) throw e
         const details = e instanceof Error && e.message.trim() ? ` ${e.message}` : ''
-        setError(`Заказ на продление ${renewalState.order.id} сохранён, но ссылку оплаты снова подготовить не удалось.${details}`)
+        setError(`Заказ на продление ${renewal.order.id} сохранён, но ссылку оплаты снова подготовить не удалось.${details}`)
       }
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
   return (
@@ -951,7 +1044,7 @@ export function App() {
                 <PrimaryButton disabled={!token || busy} aria-busy={busy} onClick={() => void loadAll(token)}>
                   {busy ? 'Обновляем...' : 'Обновить данные'}
                 </PrimaryButton>
-                <PrimaryButton disabled={busy || logoutBusy} aria-busy={logoutBusy} className="button-secondary" onClick={() => void handleLogout()}>Выйти</PrimaryButton>
+                <PrimaryButton disabled={logoutBusy} aria-busy={logoutBusy} className="button-secondary" onClick={() => void handleLogout()}>Выйти</PrimaryButton>
               </div>
               <p className="muted">Вы вошли как {profile?.email ?? profile?.displayName ?? 'пользователь'}.</p>
               {paymentProvidersLoading && <p className="muted">Загружаем доступные способы оплаты...</p>}
@@ -1296,7 +1389,7 @@ export function App() {
                     className={`support-ticket${selectedSupportConversation?.id === conversation.id ? ' selected-item' : ''}`}
                     aria-pressed={selectedSupportConversation?.id === conversation.id}
                     aria-label={`${conversation.subject || 'Обращение в поддержку'}, статус ${conversation.status}`}
-                    onClick={() => setSelectedSupportConversationId(conversation.id)}
+                    onClick={() => selectSupportConversation(conversation.id)}
                   >
                     <span>
                       <strong>{conversation.subject || 'Обращение в поддержку'}</strong>

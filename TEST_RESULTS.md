@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: public and cabinet mutation request lifecycle
+
+Scope:
+- Проверены duplicate auth/manual refresh/QR/support actions, delayed completion после logout/new login, смена support conversation и новый draft во время pending request.
+- Проверены public checkout completion после ухода со страницы, повторный вход с тем же access token и сохранность более нового password-reset ввода.
+
+Results:
+- Roadmap progress: `563/583` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-public-cabinet-mutation-request-lifecycle`, version `0.550.0`.
+- Синхронные повторные события создают один API request; delayed completion старой cabinet session не возвращает QR/notice после нового входа.
+- Новый support/reset draft сохраняется, reply draft очищается при смене thread, а отменённый public checkout не меняет маршрут или browser storage.
+- Frontend tests: `110/110`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite: `78/78`.
+- Backend full suite: `1112/1112`; solution Release build: `0` warnings/`0` errors; EF model drift: отсутствует; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- Secret scan `655/0`, strict UTF-8 guards и artifact cleanup: OK.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: admin mutation request lifecycle
 
 Scope:

@@ -113,7 +113,8 @@ async function mockPublicApi(page: Page) {
   let logoutShouldFail = false
   let refreshPayload: unknown = null
   let refreshRequestCount = 0
-  let refreshDelayMs = 0
+  let delayNextRefreshRequest = false
+  let releaseDelayedRefresh: (() => void) | null = null
   let profileRequestCount = 0
   const profileRequestCountsByToken = new Map<string, number>()
   let forcedProfileFailure: { accessToken: string; status: number; error: string } | null = null
@@ -133,6 +134,15 @@ async function mockPublicApi(page: Page) {
   let oversizedTariffsResponse = false
   let failNextPaymentInit = false
   let paymentInitDelayMs = 0
+  let registerRequestCount = 0
+  let loginRequestCount = 0
+  let forgotPasswordRequestCount = 0
+  let resetPasswordRequestCount = 0
+  let logoutRequestCount = 0
+  let delayNextForgotPasswordRequest = false
+  let releaseDelayedForgotPassword: (() => void) | null = null
+  let delayNextResetPasswordRequest = false
+  let releaseDelayedResetPassword: (() => void) | null = null
 
   await page.route('**/api/public/content/home', async (route) => {
     await fulfillJson(route, homeContent)
@@ -216,6 +226,7 @@ async function mockPublicApi(page: Page) {
       await route.fulfill({ status: 204, headers: corsHeaders })
       return
     }
+    registerRequestCount += 1
     if (invalidAuthResponse) {
       invalidAuthResponse = false
       await fulfillJson(route, {})
@@ -236,6 +247,7 @@ async function mockPublicApi(page: Page) {
       await route.fulfill({ status: 204, headers: corsHeaders })
       return
     }
+    loginRequestCount += 1
     await fulfillJson(route, {
       accessToken: 'public-access-token-2',
       refreshToken: 'public-refresh-token-2',
@@ -247,6 +259,14 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/auth/forgot-password', async (route) => {
+    if (route.request().method() === 'POST') {
+      forgotPasswordRequestCount += 1
+      if (delayNextForgotPasswordRequest) {
+        delayNextForgotPasswordRequest = false
+        await new Promise<void>((resolve) => { releaseDelayedForgotPassword = resolve })
+        releaseDelayedForgotPassword = null
+      }
+    }
     await fulfillJson(route, {
       accepted: true,
       message: 'If the account exists, a password reset instruction has been queued for the configured delivery channel.',
@@ -255,6 +275,14 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/auth/reset-password', async (route) => {
+    if (route.request().method() === 'POST') {
+      resetPasswordRequestCount += 1
+      if (delayNextResetPasswordRequest) {
+        delayNextResetPasswordRequest = false
+        await new Promise<void>((resolve) => { releaseDelayedResetPassword = resolve })
+        releaseDelayedResetPassword = null
+      }
+    }
     await fulfillJson(route, { status: 'password_changed' })
   })
 
@@ -265,10 +293,10 @@ async function mockPublicApi(page: Page) {
     }
     refreshRequestCount += 1
     refreshPayload = route.request().postDataJSON()
-    if (refreshDelayMs > 0) {
-      const delay = refreshDelayMs
-      refreshDelayMs = 0
-      await new Promise((resolve) => setTimeout(resolve, delay))
+    if (delayNextRefreshRequest) {
+      delayNextRefreshRequest = false
+      await new Promise<void>((resolve) => { releaseDelayedRefresh = resolve })
+      releaseDelayedRefresh = null
     }
     await fulfillJson(route, {
       accessToken: 'public-refreshed-access-token',
@@ -345,6 +373,7 @@ async function mockPublicApi(page: Page) {
       await route.fulfill({ status: 204, headers: corsHeaders })
       return
     }
+    logoutRequestCount += 1
     logoutPayload = route.request().postDataJSON()
     logoutAuthorization = route.request().headers().authorization ?? ''
     await fulfillJson(route, logoutShouldFail ? { error: 'logout unavailable' } : { status: 'ok' }, logoutShouldFail ? 503 : 200)
@@ -368,13 +397,25 @@ async function mockPublicApi(page: Page) {
       rejectNextProfileRequest = false
       forcedProfileFailure = null
     },
-    delayNextRefresh: (delayMs: number) => { refreshDelayMs = delayMs },
+    delayNextRefresh: () => { delayNextRefreshRequest = true },
+    releaseRefresh: () => { releaseDelayedRefresh?.() },
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
     delayCheckoutClaim: (delayMs: number) => { checkoutClaimDelayMs = delayMs },
     failNextPaymentInit: () => { failNextPaymentInit = true },
     delayNextPaymentInit: (delayMs: number) => { paymentInitDelayMs = delayMs },
+    delayNextForgotPassword: () => { delayNextForgotPasswordRequest = true },
+    releaseForgotPassword: () => { releaseDelayedForgotPassword?.() },
+    delayNextResetPassword: () => { delayNextResetPasswordRequest = true },
+    releaseResetPassword: () => { releaseDelayedResetPassword?.() },
+    getAccountRequestCounts: () => ({
+      register: registerRequestCount,
+      login: loginRequestCount,
+      forgotPassword: forgotPasswordRequestCount,
+      resetPassword: resetPasswordRequestCount,
+      logout: logoutRequestCount
+    }),
     getCheckoutRequestCounts: () => ({
       checkout: checkoutRequestCount,
       claim: checkoutClaimRequestCount,
@@ -464,6 +505,102 @@ test('public checkout and auth reject malformed success DTOs without persisting 
   expect(pageErrors).toEqual([])
 })
 
+test('public checkout ignores duplicate clicks and completion after leaving tariffs', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.delayNextCheckout(400)
+
+  await page.goto('/tariffs')
+  const buyButton = page.getByRole('button', { name: 'Купить' }).first()
+  await expect(buyButton).toBeEnabled()
+  await buyButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect.poll(() => api.getCheckoutRequestCounts().checkout).toBe(1)
+
+  await page.getByRole('link', { name: 'Помощь' }).click()
+  await expect(page).toHaveURL(/\/help$/)
+  await page.waitForTimeout(500)
+
+  await expect(page).toHaveURL(/\/help$/)
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
+  expect(api.getCheckoutRequestCounts()).toEqual({ checkout: 1, claim: 0, paymentInit: 0 })
+})
+
+test('public account actions are single-flight and preserve newer reset input', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.allowProfileRequests()
+
+  await page.goto('/account')
+  const resetCard = page.getByRole('heading', { name: 'Сброс пароля' }).locator('..')
+  await resetCard.getByLabel('Email').fill('first@example.test')
+  api.delayNextForgotPassword()
+  const forgotButton = resetCard.getByRole('button', { name: 'Запросить код' })
+  await forgotButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect.poll(() => api.getAccountRequestCounts().forgotPassword).toBe(1)
+  await resetCard.getByLabel('Email').fill('second@example.test')
+  api.releaseForgotPassword()
+  await expect(page.getByText('Если аккаунт существует, инструкция по сбросу пароля поставлена в очередь отправки.')).toBeVisible()
+  await expect(resetCard.getByLabel('Email')).toHaveValue('second@example.test')
+  await expect(resetCard.getByRole('textbox', { name: 'Код сброса', exact: true })).toHaveValue('')
+
+  await resetCard.getByRole('textbox', { name: 'Код сброса', exact: true }).fill('manual-reset-token')
+  await resetCard.getByRole('textbox', { name: 'Новый пароль', exact: true }).fill('OriginalPassword123!')
+  api.delayNextResetPassword()
+  const resetButton = resetCard.getByRole('button', { name: 'Изменить пароль' })
+  await resetButton.evaluate((button) => {
+    const form = (button as HTMLButtonElement).form
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  await expect.poll(() => api.getAccountRequestCounts().resetPassword).toBe(1)
+  await resetCard.getByRole('textbox', { name: 'Новый пароль', exact: true }).fill('NewerPassword123!')
+  api.releaseResetPassword()
+  await expect(page.getByText('Пароль изменён. Войдите с новым паролем.')).toBeVisible()
+  await expect(resetCard.getByRole('textbox', { name: 'Новый пароль', exact: true })).toHaveValue('NewerPassword123!')
+
+  const authPanel = page.locator('#public-auth-panel')
+  await authPanel.getByLabel('Email').fill('public@example.test')
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  const loginButton = authPanel.getByRole('button', { name: 'Войти' })
+  await loginButton.evaluate((button) => {
+    const form = (button as HTMLButtonElement).form
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  await expect(page.getByText('Public E2E').first()).toBeVisible()
+  expect(api.getAccountRequestCounts()).toEqual({ register: 0, login: 1, forgotPassword: 1, resetPassword: 1, logout: 0 })
+})
+
+test('public can hydrate the same login token after a duplicate-safe logout', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.allowProfileRequests()
+
+  await page.goto('/account')
+  const authPanel = page.locator('#public-auth-panel')
+  const login = async () => {
+    await authPanel.getByLabel('Email').fill('public@example.test')
+    await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+    await authPanel.getByRole('button', { name: 'Войти' }).click()
+    await expect(page.getByText('Public E2E').first()).toBeVisible()
+  }
+
+  await login()
+  const logoutButton = page.getByRole('button', { name: 'Выйти' })
+  await logoutButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect(page.getByRole('tab', { name: 'Вход' })).toBeVisible()
+  await login()
+
+  await expect.poll(() => api.getSessionRequestCounts().profileByToken['public-access-token-2']).toBe(2)
+  expect(api.getAccountRequestCounts()).toEqual({ register: 0, login: 2, forgotPassword: 0, resetPassword: 0, logout: 1 })
+})
+
 test('public account discards an unsafe persisted checkout before authorized requests', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -548,13 +685,13 @@ test('public logout invalidates a delayed refresh response', async ({ page }) =>
   })
   const api = await mockPublicApi(page)
   api.rejectProfileForAccessToken('public-access-token', 401, 'expired access token')
-  api.delayNextRefresh(500)
+  api.delayNextRefresh()
 
   await page.goto('/account')
   await expect.poll(() => api.getSessionRequestCounts().refresh).toBe(1)
   await page.getByRole('button', { name: 'Завершить сессию' }).click()
   await expect(page.getByRole('tab', { name: 'Вход' })).toBeVisible()
-  await page.waitForTimeout(600)
+  api.releaseRefresh()
 
   await expect(page.getByText('Public E2E')).toHaveCount(0)
   await expect.poll(() => page.evaluate(() => ({

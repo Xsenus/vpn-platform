@@ -403,6 +403,7 @@ function TariffsPage({ onPendingCheckout }: {
   const [pendingTariffId, setPendingTariffId] = useState<string>('')
   const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
   const checkoutInFlightRef = useRef(false)
+  const checkoutRequestIdRef = useRef(0)
   const navigate = useNavigate()
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
   const checkoutUnavailableReason = getCheckoutUnavailableReason(paymentProvidersLoading, paymentProviders, provider, {
@@ -428,6 +429,11 @@ function TariffsPage({ onPendingCheckout }: {
         setError(content('home.errors.paymentProvidersLoad'))
       })
       .finally(() => setPaymentProvidersLoading(false))
+
+    return () => {
+      checkoutRequestIdRef.current += 1
+      checkoutInFlightRef.current = false
+    }
   }, [])
 
   const handleCheckout = async (tariff: TariffDto) => {
@@ -441,6 +447,7 @@ function TariffsPage({ onPendingCheckout }: {
     }
 
     checkoutInFlightRef.current = true
+    const requestId = ++checkoutRequestIdRef.current
     setPendingTariffId(tariff.id)
     try {
       const session = await api.createCheckoutSession({
@@ -451,16 +458,21 @@ function TariffsPage({ onPendingCheckout }: {
         emailHint: null,
         returnUrl: `${window.location.origin}/account`
       })
+      if (requestId !== checkoutRequestIdRef.current) return
 
       const pending = { token: session.token, tariffName: tariff.name, provider }
       writeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY, JSON.stringify(pending))
       onPendingCheckout(pending)
       navigate('/account')
     } catch (e) {
-      setError(getCheckoutErrorMessage(e, content('home.errors.checkoutCreate')))
+      if (requestId === checkoutRequestIdRef.current) {
+        setError(getCheckoutErrorMessage(e, content('home.errors.checkoutCreate')))
+      }
     } finally {
-      checkoutInFlightRef.current = false
-      setPendingTariffId('')
+      if (requestId === checkoutRequestIdRef.current) {
+        checkoutInFlightRef.current = false
+        setPendingTariffId('')
+      }
     }
   }
 
@@ -669,12 +681,23 @@ function AccountPage({
   const [newPassword, setNewPassword] = useState('')
   const [resetMessage, setResetMessage] = useState('')
   const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
+  const accountActionInFlightRef = useRef<string | null>(null)
+  const accountActionRequestIdRef = useRef(0)
+  const resetEmailRef = useRef(resetEmail)
+  const newPasswordRef = useRef(newPassword)
+  resetEmailRef.current = resetEmail
+  newPasswordRef.current = newPassword
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
 
   useEffect(() => {
     api.getHomeContent()
       .then((items) => setPageContent({ ...defaultHomeContent, ...mapContent(items) }))
       .catch(() => setPageContent(defaultHomeContent))
+  }, [])
+
+  useEffect(() => () => {
+    accountActionRequestIdRef.current += 1
+    accountActionInFlightRef.current = null
   }, [])
 
   const submitLabel = mode === 'login' ? 'Войти' : 'Создать аккаунт'
@@ -692,23 +715,77 @@ function AccountPage({
     setResetMessage('')
   }
 
+  const runAccountAction = async (
+    id: string,
+    onError: (error: unknown) => void,
+    action: (isCurrent: () => boolean) => Promise<void>
+  ) => {
+    if (accountActionInFlightRef.current) return
+    accountActionInFlightRef.current = id
+    const requestId = ++accountActionRequestIdRef.current
+    const isCurrent = () => requestId === accountActionRequestIdRef.current
+      && accountActionInFlightRef.current === id
+    setBusy(true)
+    setError('')
+    try {
+      await action(isCurrent)
+    } catch (error) {
+      if (isCurrent()) onError(error)
+    } finally {
+      if (isCurrent()) {
+        accountActionInFlightRef.current = null
+        setBusy(false)
+      }
+    }
+  }
+
+  const handleAuthSubmit = async () => {
+    if (authValidationErrors.length > 0) {
+      setError(authValidationErrors.join(' '))
+      return
+    }
+
+    const submittedMode = mode
+    const submittedEmail = email
+    const submittedPassword = password
+    const submittedDisplayName = displayName
+    const submittedReferralCode = referralCode
+    await runAccountAction(
+      `auth-${submittedMode}`,
+      (error) => setError(translateAuthError(error, 'Ошибка авторизации')),
+      async (isCurrent) => {
+        const response = submittedMode === 'login'
+          ? await api.login(submittedEmail, submittedPassword)
+          : await api.register(
+            submittedEmail,
+            submittedPassword,
+            submittedDisplayName.trim() || submittedEmail.trim(),
+            submittedReferralCode
+          )
+        if (isCurrent()) onAuthenticated(response)
+      }
+    )
+  }
+
   const handleForgotPassword = async () => {
     if (resetRequestErrors.length > 0) {
       setError(resetRequestErrors.join(' '))
       return
     }
 
-    setBusy(true)
-    setError('')
-    try {
-      const response = await api.forgotPassword(resetEmail)
-      if (response.validationResetToken) setResetToken(response.validationResetToken)
-      setResetMessage(translateAuthMessage(response.message))
-    } catch (e) {
-      setError(translateAuthError(e, 'Не удалось запросить сброс пароля'))
-    } finally {
-      setBusy(false)
-    }
+    const submittedEmail = resetEmail
+    await runAccountAction(
+      'forgot-password',
+      (error) => setError(translateAuthError(error, 'Не удалось запросить сброс пароля')),
+      async (isCurrent) => {
+        const response = await api.forgotPassword(submittedEmail)
+        if (!isCurrent()) return
+        if (response.validationResetToken && resetEmailRef.current === submittedEmail) {
+          setResetToken(response.validationResetToken)
+        }
+        setResetMessage(translateAuthMessage(response.message))
+      }
+    )
   }
 
   const handleResetPassword = async () => {
@@ -717,18 +794,19 @@ function AccountPage({
       return
     }
 
-    setBusy(true)
-    setError('')
-    try {
-      await api.resetPassword(resetToken, newPassword)
-      onPasswordReset()
-      setNewPassword('')
-      setResetMessage('Пароль изменён. Войдите с новым паролем.')
-    } catch (e) {
-      setError(translateAuthError(e, 'Не удалось изменить пароль'))
-    } finally {
-      setBusy(false)
-    }
+    const submittedToken = resetToken
+    const submittedPassword = newPassword
+    await runAccountAction(
+      'reset-password',
+      (error) => setError(translateAuthError(error, 'Не удалось изменить пароль')),
+      async (isCurrent) => {
+        await api.resetPassword(submittedToken, submittedPassword)
+        if (!isCurrent()) return
+        onPasswordReset()
+        if (newPasswordRef.current === submittedPassword) setNewPassword('')
+        setResetMessage('Пароль изменён. Войдите с новым паролем.')
+      }
+    )
   }
 
   return (
@@ -857,25 +935,9 @@ function AccountPage({
               role="tabpanel"
               aria-labelledby={activeAuthTabId}
               aria-busy={busy}
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault()
-                if (authValidationErrors.length > 0) {
-                  setError(authValidationErrors.join(' '))
-                  return
-                }
-
-                setBusy(true)
-                setError('')
-                try {
-                  const response = mode === 'login'
-                    ? await api.login(email, password)
-                    : await api.register(email, password, displayName.trim() || email.trim(), referralCode)
-                  onAuthenticated(response)
-                } catch (e) {
-                  setError(translateAuthError(e, 'Ошибка авторизации'))
-                } finally {
-                  setBusy(false)
-                }
+                void handleAuthSubmit()
               }}
             >
               {mode === 'register' && <label><span>Имя</span><input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Как к вам обращаться" autoComplete="name" /></label>}
@@ -993,6 +1055,7 @@ export function App() {
   const sessionHydrationInFlightRef = useRef(false)
   const sessionHydrationAttemptKeyRef = useRef('')
   const sessionHydrationRequestIdRef = useRef(0)
+  const logoutInFlightRef = useRef(false)
 
   const invalidateSessionHydration = () => {
     sessionHydrationRequestIdRef.current += 1
@@ -1002,8 +1065,10 @@ export function App() {
 
   const clearSession = () => {
     invalidateSessionHydration()
+    sessionHydrationAttemptKeyRef.current = ''
     checkoutClaimRequestIdRef.current += 1
     checkoutClaimInFlightRef.current = false
+    checkoutClaimAttemptKeyRef.current = ''
     setClaimBusy(false)
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
@@ -1093,6 +1158,7 @@ export function App() {
   const clearPendingCheckout = () => {
     checkoutClaimRequestIdRef.current += 1
     checkoutClaimInFlightRef.current = false
+    checkoutClaimAttemptKeyRef.current = ''
     setClaimBusy(false)
     setPendingCheckout(null)
     setPendingCheckoutOrder(null)
@@ -1102,7 +1168,7 @@ export function App() {
 
   useEffect(() => {
     if (!token || !profile || !pendingCheckout || checkoutClaimInFlightRef.current) return
-    const attemptKey = `${pendingCheckout.token}:${claimAttempt}`
+    const attemptKey = `${token}:${pendingCheckout.token}:${claimAttempt}`
     if (checkoutClaimAttemptKeyRef.current === attemptKey) return
 
     checkoutClaimAttemptKeyRef.current = attemptKey
@@ -1143,6 +1209,7 @@ export function App() {
   const handlePendingCheckout = (pending: PendingCheckout) => {
     checkoutClaimRequestIdRef.current += 1
     checkoutClaimInFlightRef.current = false
+    checkoutClaimAttemptKeyRef.current = ''
     setClaimBusy(false)
     setPendingCheckoutOrder(null)
     setCheckoutError('')
@@ -1153,6 +1220,7 @@ export function App() {
 
   const handleAuthenticated = (response: AuthResponse) => {
     invalidateSessionHydration()
+    sessionHydrationAttemptKeyRef.current = ''
     writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
     writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
     setToken(response.accessToken)
@@ -1162,6 +1230,8 @@ export function App() {
   }
 
   const handleLogout = async () => {
+    if (logoutInFlightRef.current) return
+    logoutInFlightRef.current = true
     setLogoutBusy(true)
     setSessionError('')
     try {
@@ -1170,6 +1240,7 @@ export function App() {
       setSessionError('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')
     } finally {
       clearSession()
+      logoutInFlightRef.current = false
       setLogoutBusy(false)
     }
   }

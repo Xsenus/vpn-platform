@@ -328,6 +328,12 @@ async function mockCabinetApi(page: Page) {
   let delayNextRefresh = false
   let delayedRefreshReleased = false
   let releaseDelayedRefresh: (() => void) | null = null
+  let delayNextSupportCreate = false
+  let delayedSupportCreateReleased = false
+  let releaseDelayedSupportCreate: (() => void) | null = null
+  let delayNextQr = false
+  let delayedQrReleased = false
+  let releaseDelayedQr: (() => void) | null = null
   let unsafeQrSvg = false
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
@@ -485,6 +491,14 @@ async function mockCabinetApi(page: Page) {
 
     if (method === 'POST' && path === '/api/me/support/conversations') {
       const payload = request.postDataJSON()
+      if (delayNextSupportCreate) {
+        delayNextSupportCreate = false
+        if (!delayedSupportCreateReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedSupportCreate = resolve })
+        }
+        delayedSupportCreateReleased = false
+        releaseDelayedSupportCreate = null
+      }
       const conversation = {
         id: 'support-created',
         userId: user.id,
@@ -603,6 +617,14 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/cabinet/access/access-active/qr') {
+      if (delayNextQr) {
+        delayNextQr = false
+        if (!delayedQrReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedQr = resolve })
+        }
+        delayedQrReleased = false
+        releaseDelayedQr = null
+      }
       await route.fulfill({
         status: 200,
         headers: {
@@ -642,6 +664,16 @@ async function mockCabinetApi(page: Page) {
       delayedRefreshReleased = true
       releaseDelayedRefresh?.()
     },
+    delayNextSupportCreateRequest: () => { delayNextSupportCreate = true },
+    releaseSupportCreateRequest: () => {
+      delayedSupportCreateReleased = true
+      releaseDelayedSupportCreate?.()
+    },
+    delayNextQrRequest: () => { delayNextQr = true },
+    releaseQrRequest: () => {
+      delayedQrReleased = true
+      releaseDelayedQr?.()
+    },
     useSupportConversationRaceFixture: () => {
       supportConversations = [
         supportConversation('support-first', 'Первая переписка'),
@@ -664,6 +696,10 @@ async function mockCabinetApi(page: Page) {
     rejectNextAuthorizedPath: (path: string) => { rejectedAuthorizedPath = path },
     getRequestCount: (path: string, method = 'GET') =>
       requests.filter((item) => item.method === method && new URL(item.url).pathname === path).length,
+    getAuthorizedRequestCount: (path: string, authorization: string, method = 'GET') =>
+      requests.filter((item) => item.method === method
+        && item.authorization === authorization
+        && new URL(item.url).pathname === path).length,
     getLastRequest: (path: string, method = 'POST') =>
       requests.findLast((item) => item.method === method && new URL(item.url).pathname === path)
   }
@@ -686,7 +722,9 @@ test('cabinet keeps the selected support thread when an older request finishes l
 
   await expect(page.getByRole('button', { name: /Первая переписка/ })).toBeVisible()
   await expect.poll(() => api.getRequestCount('/api/me/support/conversations/support-first/messages')).toBe(1)
+  await page.getByLabel('Ответ').fill('Черновик первой переписки')
   await page.getByRole('button', { name: /Вторая переписка/ }).click()
+  await expect(page.getByLabel('Ответ')).toHaveValue('')
   await expect(page.getByText('Ответ второй переписки', { exact: true })).toBeVisible()
 
   api.releaseSupportMessages()
@@ -728,6 +766,35 @@ test('cabinet logout invalidates delayed support data and clears private drafts'
   await expect(page.getByLabel('Связанная подписка')).toHaveValue('')
   await expect(page.getByLabel('Сообщение')).toHaveValue('')
   await expect(page.getByLabel('Ответ')).toHaveValue('')
+})
+
+test('cabinet keeps a newer support draft and rejects duplicate creation', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.delayNextSupportCreateRequest()
+  await seedCabinetSession(page, 'access-token-support-create', 'refresh-token-support-create')
+
+  await page.goto('/')
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await page.getByLabel('Тема').fill('Исходная тема обращения')
+  await page.getByLabel('Сообщение').fill('Исходный текст обращения')
+
+  const createButton = page.getByRole('button', { name: 'Создать обращение' })
+  await createButton.evaluate((button) => {
+    const form = (button as HTMLButtonElement).form
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  await expect.poll(() => api.getRequestCount('/api/me/support/conversations', 'POST')).toBe(1)
+
+  await page.getByLabel('Тема').fill('Новый черновик после отправки')
+  await page.getByLabel('Сообщение').fill('Новый текст не должен исчезнуть')
+  api.releaseSupportCreateRequest()
+
+  await expect(page.getByRole('button', { name: /Исходная тема обращения/ })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Тема' })).toHaveValue('Новый черновик после отправки')
+  await expect(page.getByLabel('Сообщение')).toHaveValue('Новый текст не должен исчезнуть')
+  expect(api.getRequestCount('/api/me/support/conversations', 'POST')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('cabinet rotates an expired restored access token once', async ({ page }) => {
@@ -805,6 +872,56 @@ test('cabinet ignores a delayed restored-session refresh after logout', async ({
     refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
   }))).toEqual({ access: null, refresh: null })
   await expect(page.getByText(user.email, { exact: true })).toHaveCount(0)
+})
+
+test('cabinet keeps manual refresh single-flight', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  await seedCabinetSession(page, 'access-token-manual-refresh', 'refresh-token-manual-refresh')
+
+  await page.goto('/')
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  api.delayNextRefreshRequest()
+
+  const refreshButton = page.getByRole('button', { name: 'Обновить сессию' })
+  await refreshButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect.poll(() => api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+  api.releaseRefreshRequest()
+
+  await expect(page.getByText('Сессия обновлена.')).toBeVisible()
+  expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+})
+
+test('cabinet ignores a delayed action after logout and a new login', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.delayNextQrRequest()
+  await seedCabinetSession(page, 'access-token-old-action', 'refresh-token-old-action')
+
+  await page.goto('/')
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  const qrButton = page.getByRole('button', { name: 'Показать QR-код' }).first()
+  await qrButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect.poll(() => api.getRequestCount('/api/cabinet/access/access-active/qr')).toBe(1)
+
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  const authPanel = page.locator('#cabinet-auth-panel')
+  await authPanel.getByLabel('Email').fill(user.email)
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  api.releaseQrRequest()
+  await expect(page.locator('.qr-preview')).toHaveCount(0)
+  await expect(page.getByText('QR-код загружен.')).toHaveCount(0)
+  expect(api.getRequestCount('/api/cabinet/access/access-active/qr')).toBe(1)
+  expect(api.getAuthorizedRequestCount('/api/cabinet/access/access-active/qr', 'Bearer access-token-old-action')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('cabinet covers register, login, payments, subscription access and support', async ({ page }, testInfo) => {

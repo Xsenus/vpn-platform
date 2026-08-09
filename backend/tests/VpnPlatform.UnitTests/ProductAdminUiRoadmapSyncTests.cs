@@ -20,13 +20,13 @@ public class ProductAdminUiRoadmapSyncTests
                      "staging-ready baseline",
                      "Backend full suite: `1112/1112`",
                      "Frontend unit tests: `110/110`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `66/66`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `78/78`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-09-admin-mutation-request-lifecycle",
-                     "0.549.0"
+                     "2026-08-09-public-cabinet-mutation-request-lifecycle",
+                     "0.550.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-09-admin-mutation-request-lifecycle", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-09-admin-mutation-request-lifecycle", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-public-cabinet-mutation-request-lifecycle", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-public-cabinet-mutation-request-lifecycle", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Frontend unit tests: `110/110`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-09-admin-mutation-request-lifecycle",
-                     "0.549.0",
+                     "2026-08-09-public-cabinet-mutation-request-lifecycle",
+                     "0.550.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

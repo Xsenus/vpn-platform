@@ -12967,5 +12967,36 @@
         "text": "Roadmap progress is 562/582 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-public-cabinet-mutation-request-lifecycle",
+    "version": "0.550.0",
+    "releasedAt": "2026-08-09T18:55:25+07:00",
+    "title": "Публичные и кабинетные действия защищены от устаревших ответов",
+    "summary": "Auth, refresh, checkout и кабинетные действия имеют единственного владельца, не применяют delayed completion старой сессии и сохраняют более новый пользовательский ввод.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Cabinet QR, Telegram, support, payment и renewal actions больше не меняют UI и не запускают reload после logout или нового входа."
+      },
+      {
+        "type": "fixed",
+        "text": "Два синхронных auth, refresh, support или action события создают только один API request благодаря немедленному in-flight guard."
+      },
+      {
+        "type": "fixed",
+        "text": "Завершение старой отправки не стирает более новый support/reset draft, а смена обращения очищает reply предыдущего thread."
+      },
+      {
+        "type": "improved",
+        "text": "Public checkout отменяет ownership при уходе со страницы; повторный вход с тем же token снова выполняет profile hydration и checkout claim в новой сессии."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 563/583 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.550.0 - 2026-08-09
+
+Release entry: `2026-08-09-public-cabinet-mutation-request-lifecycle`.
+
+### Исправлено
+
+- Cabinet QR, Telegram, support, payment и renewal actions применяют результат только в исходной session operation; delayed completion после logout/new login не возвращает старый UI.
+- Cabinet auth/manual refresh и публичные auth/reset формы получили синхронный in-flight guard, поэтому два события до React-render создают один API request и не переиспользуют rotating refresh-token.
+- Новый support/reset draft не стирается завершением старой отправки; смена support conversation очищает reply draft и исключает перенос текста между обращениями.
+- Public checkout инвалидируется при уходе со страницы, session hydration допускает повторный вход с тем же access token, а checkout claim key учитывает текущую сессию.
+
+### Проверено
+
+- Frontend `110/110`, typecheck/build всех приложений и dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `78/78`; новые public/cabinet lifecycle regressions проходят на обоих viewport.
+- Backend `1112/1112`, solution Release build `0` warnings/`0` errors, EF model drift отсутствует и fresh local SQLite checkout/payment/subscription/VPN smoke пройден.
+- Strict UTF-8 guards, secret scan `655/0` и artifact cleanup пройдены.
+- `RoadmapCurrentStateTests` фиксирует `563/583` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.549.0 - 2026-08-09
 
 Release entry: `2026-08-09-admin-mutation-request-lifecycle`.
