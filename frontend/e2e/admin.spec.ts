@@ -315,7 +315,14 @@ async function mockAdminApi(page: Page) {
   const requests: Array<{ method: string; path: string; body: unknown; authorization: string }> = []
   let logoutShouldFail = false
   let dashboardShouldDeny = false
+  const expiredAdminAccessTokens = new Set<string>()
+  let failNextAdminSessionStatus: number | null = null
+  let refreshFailureStatus: number | null = null
+  let delayNextRefresh = false
+  let delayedRefreshReleased = false
+  let releaseDelayedRefresh: (() => void) | null = null
   let invalidUsersResponse = false
+  let emptyAuditLogsResponse = false
   let invalidPaymentProviderAccountsResponse = false
   let invalidTariffsResponse = false
   let invalidVpnPanelsResponse = false
@@ -410,6 +417,18 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/auth/refresh') {
+      if (refreshFailureStatus !== null) {
+        await fulfillJson(route, { error: 'invalid_refresh_token' }, refreshFailureStatus)
+        return
+      }
+      if (delayNextRefresh) {
+        delayNextRefresh = false
+        if (!delayedRefreshReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedRefresh = resolve })
+        }
+        delayedRefreshReleased = false
+        releaseDelayedRefresh = null
+      }
       await fulfillJson(route, {
         accessToken: 'admin-e2e-token-rotated',
         refreshToken: 'admin-e2e-refresh-rotated',
@@ -425,6 +444,16 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/session') {
+      if (expiredAdminAccessTokens.has(request.headers().authorization ?? '')) {
+        await fulfillJson(route, { error: 'access_token_expired' }, 401)
+        return
+      }
+      if (failNextAdminSessionStatus !== null) {
+        const status = failNextAdminSessionStatus
+        failNextAdminSessionStatus = null
+        await fulfillJson(route, { error: 'admin_session_temporarily_unavailable' }, status)
+        return
+      }
       if (request.headers().authorization === 'Bearer user-e2e-token' || dashboardShouldDeny) {
         dashboardShouldDeny = false
         await fulfillJson(route, { error: 'forbidden' }, 403)
@@ -493,6 +522,10 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/audit-logs') {
+      if (emptyAuditLogsResponse) {
+        await fulfillJson(route, [])
+        return
+      }
       const financeVisible = request.headers().authorization !== 'Bearer support-e2e-token'
       const supportVisible = request.headers().authorization !== 'Bearer finance-e2e-token'
       const botVisible = request.headers().authorization !== 'Bearer finance-e2e-token' && request.headers().authorization !== 'Bearer support-e2e-token'
@@ -835,8 +868,19 @@ async function mockAdminApi(page: Page) {
   return {
     getLastRequest: (path: string, method = 'POST') =>
       requests.findLast((item) => item.method === method && item.path === path),
+    getRequestCount: (path: string, method = 'GET') =>
+      requests.filter((item) => item.method === method && item.path === path).length,
     denyNextDashboard: () => { dashboardShouldDeny = true },
+    expireAccessToken: (accessToken: string) => { expiredAdminAccessTokens.add(`Bearer ${accessToken}`) },
+    failNextAdminSessionRequest: (status = 503) => { failNextAdminSessionStatus = status },
+    failRefreshRequest: (status = 401) => { refreshFailureStatus = status },
+    delayNextRefreshRequest: () => { delayNextRefresh = true },
+    releaseRefreshRequest: () => {
+      delayedRefreshReleased = true
+      releaseDelayedRefresh?.()
+    },
     returnInvalidUsersResponse: () => { invalidUsersResponse = true },
+    returnEmptyAuditLogsResponse: () => { emptyAuditLogsResponse = true },
     returnInvalidPaymentProviderAccountsResponse: () => { invalidPaymentProviderAccountsResponse = true },
     returnInvalidTariffsResponse: () => { invalidTariffsResponse = true },
     returnInvalidVpnPanelsResponse: () => { invalidVpnPanelsResponse = true },
@@ -848,6 +892,147 @@ async function mockAdminApi(page: Page) {
     failLogout: () => { logoutShouldFail = true }
   }
 }
+
+async function seedAdminSession(page: Page, accessToken: string, refreshToken: string) {
+  await page.addInitScript(({ accessToken: access, refreshToken: refresh }) => {
+    sessionStorage.setItem('vpn-platform-admin-token', access)
+    sessionStorage.setItem('vpn-platform-admin-refresh-token', refresh)
+  }, { accessToken, refreshToken })
+}
+
+test('admin restores a valid session once under StrictMode', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-e2e-token', 'admin-e2e-refresh')
+
+  await page.goto('/')
+
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/admin/session')).toBe(1)
+  expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(0)
+})
+
+test('admin rotates an expired restored access token once', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.expireAccessToken('admin-e2e-token-expired')
+  await seedAdminSession(page, 'admin-e2e-token-expired', 'admin-e2e-refresh')
+
+  await page.goto('/')
+
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+  expect(api.getRequestCount('/api/admin/session')).toBe(2)
+  await expect(page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).resolves.toEqual({
+    access: 'admin-e2e-token-rotated',
+    refresh: 'admin-e2e-refresh-rotated'
+  })
+})
+
+test('admin preserves a restored session after a transient admission failure', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.failNextAdminSessionRequest()
+  await seedAdminSession(page, 'admin-e2e-token', 'admin-e2e-refresh')
+
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { name: 'Восстановление admin-сессии' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Повторить проверку' })).toBeEnabled()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await expect(page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).resolves.toEqual({ access: 'admin-e2e-token', refresh: 'admin-e2e-refresh' })
+
+  await page.getByRole('button', { name: 'Повторить проверку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  expect(api.getRequestCount('/api/admin/session')).toBe(2)
+  expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(0)
+})
+
+test('admin clears a restored session when refresh is rejected', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.expireAccessToken('admin-e2e-token-expired')
+  api.failRefreshRequest()
+  await seedAdminSession(page, 'admin-e2e-token-expired', 'admin-e2e-refresh-invalid')
+
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  await expect(page.getByText('Сессия администратора завершена. Войдите заново.')).toBeVisible()
+  await expect(page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).resolves.toEqual({ access: null, refresh: null })
+  expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+})
+
+test('admin preserves rotated tokens when manual session verification is transient', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-e2e-token', 'admin-e2e-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  api.failNextAdminSessionRequest()
+  await page.getByRole('button', { name: 'Обновить сессию' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Восстановление admin-сессии' })).toBeVisible()
+  await expect(page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).resolves.toEqual({
+    access: 'admin-e2e-token-rotated',
+    refresh: 'admin-e2e-refresh-rotated'
+  })
+
+  await page.getByRole('button', { name: 'Повторить проверку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+})
+
+test('admin ignores a delayed restored-session refresh after logout', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.expireAccessToken('admin-e2e-token-expired')
+  api.delayNextRefreshRequest()
+  await seedAdminSession(page, 'admin-e2e-token-expired', 'admin-e2e-refresh')
+
+  await page.goto('/')
+  await expect.poll(() => api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+
+  api.releaseRefreshRequest()
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-admin-token'),
+    refresh: sessionStorage.getItem('vpn-platform-admin-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+  await expect(page.locator('.admin-shell')).toHaveCount(0)
+})
+
+test('admin clears private data and filters before a new login', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-e2e-token', 'admin-e2e-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Аудит', 'audit')
+  await expect(page.getByText('auth.login', { exact: true })).toBeVisible()
+  await page.locator('#audit').getByLabel('Действие').fill('stale-filter')
+
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  api.returnEmptyAuditLogsResponse()
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Аудит', 'audit')
+  await expect(page.getByText('Записей аудита нет')).toBeVisible()
+  await expect(page.locator('#audit').getByLabel('Действие')).toHaveValue('')
+  await expect(page.getByText('auth.login', { exact: true })).toHaveCount(0)
+})
 
 async function openAdminSection(page: Page, name: string, id: string) {
   const tab = page.getByRole('tab', { name })

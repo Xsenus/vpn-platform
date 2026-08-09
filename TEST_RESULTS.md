@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: admin restored session refresh
+
+Scope:
+- Проверены восстановленная и вручную ротированная admin access/refresh session под `React.StrictMode`, admission/capability check, transient failure, rejected refresh и logout во время delayed response.
+- Проверена полная очистка приватных admin-данных, фильтров и черновиков перед новой авторизацией.
+
+Results:
+- Roadmap progress: `559/579` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-admin-restored-session-refresh`, version `0.546.0`.
+- Valid restore отправляет один `/api/admin/session`; access-token `401` выполняет один refresh и повторную capability-проверку без конкурентной rotation.
+- Transient admission сохраняет старую или уже ротированную пару и открывает retry; rejected refresh/`403` очищает сессию, delayed response после logout игнорируется.
+- Logout/new login не восстанавливает старые audit rows, filters, forms или VPN migration drafts.
+- Frontend tests: `110/110`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Admin desktop/mobile: `20/20`; полный desktop/mobile console-responsive Playwright suite: `54/54`.
+- Backend full suite: `1112/1112`; Release build: `0` warnings/`0` errors; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- Secret scan, strict UTF-8 guards и artifact cleanup: OK.
+- `STATE-014` остаётся локально закрытым; external evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: cabinet restored session refresh
 
 Scope:

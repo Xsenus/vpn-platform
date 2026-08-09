@@ -57,6 +57,7 @@ import { canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, typ
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
+import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -65,7 +66,6 @@ const ADMIN_EMAIL_STORAGE_KEY = 'vpn-platform-admin-email'
 const yookassaAllowedIps = '185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32'
 const paymentProviderOptions: PaymentProvider[] = ['YooKassa', 'RoboKassa', 'YooMoney', 'TelegramStars', 'CloudPayments', 'TBankAcquiring', 'Prodamus', 'Stripe', 'PayPal']
 const adminAuthRequiredMessage = 'Войдите как администратор, чтобы включить загрузку данных и действия в разделах.'
-const adminAccessDeniedMessage = 'У этой учетной записи нет доступа к админ-панели. Войдите с административной ролью.'
 
 type PaymentProviderSetup = {
   title: string
@@ -1102,6 +1102,8 @@ export function App() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [sessionHydrating, setSessionHydrating] = useState(Boolean(token))
+  const [logoutBusy, setLogoutBusy] = useState(false)
   const [actionBusyId, setActionBusyId] = useState('')
   const [serverForm, setServerForm] = useState<ServerFormState>(defaultServerForm)
   const [editingServerId, setEditingServerId] = useState<string | null>(null)
@@ -1112,6 +1114,8 @@ export function App() {
   const [editingInboundId, setEditingInboundId] = useState<string | null>(null)
   const [subscriptionExtendDays, setSubscriptionExtendDays] = useState<Record<string, number>>({})
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
+  const restoredSessionHydrationStarted = useRef(false)
+  const sessionOperationId = useRef(0)
   const availableAdminSections = useMemo(
     () => adminSession ? adminSections.filter(([id]) => canAccessAdminSection(adminSession.capabilities, id)) : [],
     [adminSession]
@@ -1196,10 +1200,15 @@ export function App() {
     }
   }
 
-  const loadAll = async (currentToken: string, currentSession: AdminSessionDto | null = adminSession) => {
-    if (!currentToken || !currentSession) return
-    setBusy(true)
-    setError('')
+  const loadAll = async (currentToken: string, currentSession: AdminSessionDto | null = adminSession, options?: { operationId?: number }) => {
+    if (!currentToken || !currentSession) return false
+
+    const operationId = options?.operationId ?? sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
+    if (operationIsCurrent()) {
+      setBusy(true)
+      setError('')
+    }
     const errors: LoadError[] = []
     const capabilities = currentSession.capabilities
 
@@ -1258,6 +1267,8 @@ export function App() {
       safeLoad('VPN-панели', () => api.getAdminVpnPanels(currentToken), [], errors),
       capabilities.botManage ? safeLoad('настройки Telegram-бота', () => api.getAdminTelegramBotSettings(currentToken), defaultBotSettings, errors) : defaultBotSettings
     ])
+
+    if (!operationIsCurrent()) return false
 
     setSummary(nextSummary)
     setAuditLogs(nextAuditLogs)
@@ -1318,57 +1329,87 @@ export function App() {
       setUserOverview(null)
     }
     setBusy(false)
+    return true
   }
-
-  const isAdminAccessDenied = (error: unknown) =>
-    error instanceof ApiClientError && (error.status === 401 || error.status === 403)
 
   const verifyAdminSession = async (accessToken: string, currentRefreshToken: string, revokeOnFailure = false) => {
     try {
       return await api.getAdminSession(accessToken)
     } catch (error) {
-      if (revokeOnFailure || isAdminAccessDenied(error)) {
+      if (revokeOnFailure) {
         try {
           await api.logout(accessToken, currentRefreshToken || null)
         } catch {
           // Local admission still fails closed when server-side cleanup cannot be confirmed.
         }
       }
-      if (!isAdminAccessDenied(error)) throw error
+      if (!isAdminSessionRejected(error)) throw error
 
       const denied = error as ApiClientError
       throw new ApiClientError(adminAccessDeniedMessage, denied.status, denied.payload)
     }
   }
 
-  useEffect(() => {
-    if (!token || adminSession) return
-    let cancelled = false
+  const hydrateRestoredAdminSession = async (currentToken: string, currentRefreshToken: string) => {
+    if (!currentToken) return false
+
+    const operationId = ++sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
+    let activeAccessToken = currentToken
+    let activeRefreshToken = currentRefreshToken
+    setSessionHydrating(true)
     setBusy(true)
     setError('')
-    void verifyAdminSession(token, refreshToken)
-      .then(async (verifiedSession) => {
-        if (cancelled) return
-        setAdminSession(verifiedSession)
-        await loadAll(token, verifiedSession)
-      })
-      .catch((error) => {
-        if (cancelled) return
-        setAdminSession(null)
-        if (isAdminAccessDenied(error)) {
-          removeSessionStorageItem(TOKEN_STORAGE_KEY)
-          removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
-          setToken('')
-          setRefreshToken('')
-        }
-        setError(error instanceof Error ? error.message : 'Не удалось проверить административный доступ')
-      })
-      .finally(() => {
-        if (!cancelled) setBusy(false)
-      })
+    setNotice('')
 
-    return () => { cancelled = true }
-  }, [token, refreshToken, adminSession])
+    try {
+      let verifiedSession: AdminSessionDto
+      try {
+        verifiedSession = await verifyAdminSession(activeAccessToken, activeRefreshToken)
+      } catch (error) {
+        if (!operationIsCurrent()) return false
+        if (!activeRefreshToken || !isAdminAccessTokenExpired(error)) throw error
+
+        const response = await api.refresh(activeRefreshToken)
+        if (!operationIsCurrent()) return false
+
+        activeAccessToken = response.accessToken
+        activeRefreshToken = response.refreshToken
+        writeSessionStorageItem(TOKEN_STORAGE_KEY, activeAccessToken)
+        writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, activeRefreshToken)
+        setToken(activeAccessToken)
+        setRefreshToken(activeRefreshToken)
+        verifiedSession = await verifyAdminSession(activeAccessToken, activeRefreshToken)
+      }
+
+      if (!operationIsCurrent()) return false
+      setAdminSession(verifiedSession)
+      return await loadAll(activeAccessToken, verifiedSession, { operationId })
+    } catch (error) {
+      if (!operationIsCurrent()) return false
+      if (isAdminSessionRejected(error)) {
+        const revokeRequest = api.logout(activeAccessToken || null, activeRefreshToken || null).catch(() => undefined)
+        clearAdminSession()
+        setError(error instanceof ApiClientError && error.status === 403 ? adminAccessDeniedMessage : adminSessionEndedMessage)
+        await revokeRequest
+      } else {
+        clearAdminData()
+        setError(error instanceof Error ? error.message : 'Не удалось восстановить сессию администратора')
+      }
+      return false
+    } finally {
+      if (operationIsCurrent()) {
+        setSessionHydrating(false)
+        setBusy(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (restoredSessionHydrationStarted.current) return
+    restoredSessionHydrationStarted.current = true
+    void hydrateRestoredAdminSession(token, refreshToken)
+  }, [])
 
   useEffect(() => {
     if (!adminSession || availableAdminSections.length === 0 || availableAdminSectionIds.has(activeSection)) return
@@ -1502,22 +1543,27 @@ export function App() {
     }
   }
 
-  const clearAdminSession = () => {
-    removeSessionStorageItem(TOKEN_STORAGE_KEY)
-    removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
-    setToken('')
-    setRefreshToken('')
+  const clearAdminData = () => {
     setAdminSession(null)
     setPassword('')
     setUsers([])
     setSelectedUserId('')
     setUserOverview(null)
+    setUserSearch('')
+    setUserStatusFilter('')
     setSummary(null)
+    setAuditLogs([])
+    setAuditActionFilter('')
+    setAuditEntityTypeFilter('')
+    setAuditActorTypeFilter('')
+    setAuditSearch('')
     setNotificationDeliveries([])
     setSubscriptions([])
     setAccessCredentials([])
     setAdminQrSvgs({})
     setOrders([])
+    setOrderStatusFilter('all')
+    setOrderSearch('')
     setPayments([])
     setRefundAmounts({})
     setRefundReasons({})
@@ -1528,6 +1574,8 @@ export function App() {
     setSupportConversations([])
     setSelectedSupportConversationId('')
     setSupportMessages([])
+    setSupportReplyText('')
+    setSupportNoteText('')
     setTariffs([])
     setTariffForm(defaultTariffForm)
     setTariffFeaturesText('')
@@ -1536,6 +1584,7 @@ export function App() {
     setReferralRewards([])
     setReferralProgramForm(defaultReferralProgramForm)
     setEditingReferralProgramId('')
+    setEditingProviderAccountId('')
     setAppReleases([])
     setAppReleaseOverview(null)
     setReleaseVisibilityFilter('all')
@@ -1566,16 +1615,33 @@ export function App() {
     setVpnInbounds([])
     setVpnMigrationInbounds([])
     setVpnClients([])
+    setVpnClientMigrationTargets({})
+    setSubscriptionMigrationTargets({})
     setVpnHealthChecks([])
     setVpnSyncRuns([])
     setVpnPanelForm(defaultVpnPanelForm)
     setEditingVpnPanelId(null)
+    setInboundForm(defaultInboundForm)
+    setEditingInboundId(null)
+    setSubscriptionExtendDays({})
+    setProviderForm(defaultProviderForm)
     setBotSettings(defaultBotSettings)
     botSettingsCheckRequestId.current += 1
     setBotSettingsForm({})
     setBotSettingsCheck(null)
     setLoadErrors([])
     setActionBusyId('')
+  }
+
+  const clearAdminSession = () => {
+    sessionOperationId.current += 1
+    removeSessionStorageItem(TOKEN_STORAGE_KEY)
+    removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
+    setToken('')
+    setRefreshToken('')
+    setSessionHydrating(false)
+    setBusy(false)
+    clearAdminData()
   }
 
   const handleLogin = async () => {
@@ -1585,13 +1651,17 @@ export function App() {
       return
     }
 
+    const operationId = ++sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
     setBusy(true)
     setError('')
     setNotice('')
     try {
       const normalizedEmail = email.trim()
       const response = await api.login(normalizedEmail, password)
+      if (!operationIsCurrent()) return
       const verifiedSession = await verifyAdminSession(response.accessToken, response.refreshToken, true)
+      if (!operationIsCurrent()) return
       writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
       writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
       if (rememberAdminEmail) {
@@ -1604,11 +1674,12 @@ export function App() {
       setRefreshToken(response.refreshToken)
       setPassword('')
       setNotice('Сессия администратора открыта. Токены сохранены в sessionStorage и не показываются в UI.')
-      await loadAll(response.accessToken, verifiedSession)
+      await loadAll(response.accessToken, verifiedSession, { operationId })
     } catch (e) {
+      if (!operationIsCurrent()) return
       setError(e instanceof Error ? e.message : 'Не удалось получить admin token')
     } finally {
-      setBusy(false)
+      if (operationIsCurrent()) setBusy(false)
     }
   }
 
@@ -1618,30 +1689,53 @@ export function App() {
       return
     }
 
+    const operationId = ++sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
+    let activeAccessToken = token
+    let activeRefreshToken = refreshToken
     setBusy(true)
     setError('')
     setNotice('')
     let refreshRotated = false
     try {
       const response = await api.refresh(refreshToken)
+      if (!operationIsCurrent()) return
       refreshRotated = true
-      const verifiedSession = await verifyAdminSession(response.accessToken, response.refreshToken, true)
-      writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
-      writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
+      activeAccessToken = response.accessToken
+      activeRefreshToken = response.refreshToken
+      writeSessionStorageItem(TOKEN_STORAGE_KEY, activeAccessToken)
+      writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, activeRefreshToken)
+      setToken(activeAccessToken)
+      setRefreshToken(activeRefreshToken)
+      const verifiedSession = await verifyAdminSession(activeAccessToken, activeRefreshToken)
+      if (!operationIsCurrent()) return
       setAdminSession(verifiedSession)
-      setToken(response.accessToken)
-      setRefreshToken(response.refreshToken)
-      await loadAll(response.accessToken, verifiedSession)
+      await loadAll(activeAccessToken, verifiedSession, { operationId })
       setNotice('Сессия администратора обновлена.')
     } catch (e) {
-      if (refreshRotated || isAdminAccessDenied(e)) clearAdminSession()
-      setError(e instanceof Error ? e.message : 'Не удалось обновить сессию администратора')
+      if (!operationIsCurrent()) return
+      if (isAdminSessionRejected(e)) {
+        const revokeRequest = api.logout(activeAccessToken || null, activeRefreshToken || null).catch(() => undefined)
+        clearAdminSession()
+        setError(e instanceof ApiClientError && e.status === 403 ? adminAccessDeniedMessage : adminSessionEndedMessage)
+        await revokeRequest
+      } else if (refreshRotated) {
+        clearAdminData()
+        setSessionHydrating(false)
+        setError(e instanceof Error ? e.message : 'Не удалось проверить обновлённую сессию администратора')
+      } else {
+        setError(e instanceof Error ? e.message : 'Не удалось обновить сессию администратора')
+      }
     } finally {
-      setBusy(false)
+      if (operationIsCurrent()) setBusy(false)
     }
   }
 
   const handleLogout = async () => {
+    if (logoutBusy) return
+    sessionOperationId.current += 1
+    setSessionHydrating(false)
+    setLogoutBusy(true)
     setBusy(true)
     setError('')
     setNotice('')
@@ -1658,6 +1752,7 @@ export function App() {
         setNotice('Сессия администратора завершена. Данные панели очищены.')
       }
       setBusy(false)
+      setLogoutBusy(false)
     }
   }
 
@@ -2770,7 +2865,47 @@ export function App() {
   const inboundFormErrors = validateInboundForm(inboundForm, selectedVpnPanelId)
   const workScenarioFormErrors = validateWorkScenarioForm(workScenarioForm)
 
-  if (!token || !adminAccessVerified) {
+  if (token && !adminAccessVerified) {
+    return (
+      <PageShell title="Админ-панель VPN Platform">
+        <SkipLink href="#admin-session-recovery" />
+        <main id="admin-session-recovery" className="admin-login-shell" tabIndex={-1}>
+          <section className="admin-login-intro" aria-label="Возможности админ-панели">
+            <p className="eyebrow">VPN Platform Admin</p>
+            <h2>Единый центр управления продажей VPN</h2>
+            <p>Настраивайте тарифы, платежных провайдеров, Telegram-ботов, VPN-серверы, панели 3x-ui и выдачу доступов из одной панели.</p>
+            <div className="admin-login-metrics">
+              <span><strong>{adminSections.length}</strong> разделов</span>
+              <span><strong>9</strong> провайдеров</span>
+              <span><strong>24/7</strong> контроль</span>
+            </div>
+          </section>
+          <Card>
+            <div className="login-panel-header">
+              <div>
+                <p className="eyebrow">Защищённый доступ</p>
+                <h2 className="page-heading">Восстановление admin-сессии</h2>
+                <p className="muted no-margin-bottom">
+                  {sessionHydrating
+                    ? 'Проверяем сохранённую сессию и административные полномочия.'
+                    : 'Не удалось подтвердить административный доступ. Сессия сохранена для повторной проверки.'}
+                </p>
+              </div>
+              <ValidationModeBadge label="Доступ только для администраторов" />
+            </div>
+            <div className="toolbar mt-12">
+              <PrimaryButton type="button" disabled={sessionHydrating || logoutBusy} aria-busy={sessionHydrating} onClick={() => void hydrateRestoredAdminSession(token, refreshToken)}>Повторить проверку</PrimaryButton>
+              <PrimaryButton type="button" disabled={logoutBusy} aria-busy={logoutBusy} className="button-secondary" onClick={() => void handleLogout()}>Завершить сессию</PrimaryButton>
+            </div>
+            {busy && <LoadingBlock label="Проверяем административный доступ..." />}
+            {error && <ErrorBlock message={error} />}
+          </Card>
+        </main>
+      </PageShell>
+    )
+  }
+
+  if (!token) {
     return (
       <PageShell title="Админ-панель VPN Platform">
         <SkipLink href="#admin-login" />

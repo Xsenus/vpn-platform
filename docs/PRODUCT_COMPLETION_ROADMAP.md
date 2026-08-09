@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-cabinet-restored-session-refresh`, версия `0.545.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `558/578` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-admin-restored-session-refresh`, версия `0.546.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `559/579` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-09:
 
 - [x] `STATE-001` Backend test suite проходит: `1112/1112`.
-- [x] `STATE-002` Frontend test suite проходит: `109/109`.
+- [x] `STATE-002` Frontend test suite проходит: `110/110`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -1928,6 +1928,10 @@ git diff --check
   - Что сделать: истёкший access-token не должен удалять действующий refresh-token до попытки ротации; временный bootstrap-сбой должен оставлять retry, а поздний refresh после logout не должен возвращать приватный UI или токены.
   - Что сделано: восстановление кабинета различает access-token `401`, terminal `401/403` refresh и transient ошибки, сохраняет ротированную пару до повторной загрузки, применяет данные только для актуального session operation и показывает отдельные loading/retry/logout состояния до подтверждения профиля.
   - Доказательство: frontend `109/109`, cabinet desktop/mobile `10/10`, полный console-responsive Playwright `40/40`; E2E подтверждает одну ротацию под StrictMode, сохранение токенов после `503`, очистку после rejected refresh и отсутствие late restore после logout. Backend `1112/1112`, fresh SQLite, audit, secret scan и UTF-8 guards пройдены; внешние evidence-пункты не закрывались.
+- [x] `P11-ACC-269` Защитить восстановление и ротацию admin-сессии от потери refresh-token и stale state. 2026-08-09.
+  - Что сделать: StrictMode не должен дважды проверять сохранённую admin-сессию; access-token `401` должен использовать действующий refresh-token, transient admission failure не должен уничтожать сессию, а logout обязан инвалидировать поздние ответы и очистить приватные данные/черновики.
+  - Что сделано: admin hydration получил single-flight guard и session operation generation; новая пара сохраняется до повторной capability-проверки, `401/403` завершают сессию fail-closed, `5xx` открывает recovery UI, а общий cleanup удаляет audit rows, фильтры, формы и migration drafts.
+  - Доказательство: frontend `110/110`, admin desktop/mobile `20/20`, полный console-responsive Playwright `54/54`; E2E фиксирует один StrictMode admission, одну ротацию, transient retry до и после ручного refresh, rejected refresh, delayed completion после logout и отсутствие stale audit/filter state после нового входа. Backend `1112/1112`, fresh SQLite, audit, secret scan и UTF-8 guards пройдены; внешние evidence-пункты не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2504,6 +2508,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-08-09 | Codex | Восстановление и ручная ротация admin-сессии, cleanup приватного состояния | Зеленое локально | Frontend `110/110`, admin desktop/mobile `20/20`, полный console-responsive suite `54/54`, typecheck/build, backend `1112/1112`, fresh SQLite smoke, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-09 | Codex | Восстановление сохранённой cabinet session, retry и late-response invalidation | Зеленое локально | Frontend `109/109`, cabinet desktop/mobile `10/10`, полный console-responsive suite `40/40`, typecheck/build, backend `1112/1112`, fresh SQLite smoke, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-05 | Codex | Общий frontend API timeout для fetch и response body, cleanup transport lifecycle | Зеленое локально | Frontend `97/97`, timeout/cleanup `2/2`, полный responsive/console suite `16/16`, build/typecheck, backend `1112/1112`, EF drift guard, fresh SQLite smoke, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-05 | Codex | Production-readiness actionHref allow-list и role-aware internal navigation | Зеленое локально | Frontend `95/95`, admin desktop/mobile `6/6`, полный responsive/console suite `16/16`, build/typecheck, backend `1112/1112`, EF drift guard, fresh SQLite smoke, audit/secret scan; external live evidence не переиспользовалось |
@@ -2568,6 +2573,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-09-002` | P0 | Admin restored session | Сохранённый access-token `401` вызывал logout до refresh, StrictMode дважды проверял admission, post-rotation `5xx` удалял новую пару, а cleanup оставлял audit rows и черновики в памяти. | Исправлено локально | Single-flight hydration, operation generation, terminal/transient разделение, recovery UI и полный private-state cleanup покрыты unit и desktop/mobile E2E. |
 | `BUG-2026-08-09-001` | P0 | Cabinet restored session | Первый `401` сохранённого access-token очищал access/refresh storage до попытки ротации; transient bootstrap оставлял неподтверждённый пустой кабинет, а поздний refresh мог вернуть состояние после logout. | Исправлено локально | Одноразовая `401`-ротация, operation generation, сохранение токенов при `5xx`, terminal cleanup и отдельный recovery UI покрыты desktop/mobile E2E. |
 | `BUG-2026-08-05-066` | P0 | Frontend API response shape | Typed transport принимал любой JSON object/array независимо от ожидаемого типа метода; `{}` вместо list доходил до `.map/.filter`, а `[]` вместо DTO оставлял обязательные поля `undefined`. | Исправлено локально | Явные object/array contracts для всех typed calls, inventory `41/41` list methods и wrong-shape desktop/mobile regression завершают mismatch controlled `502` до UI. |
 | `BUG-2026-08-05-065` | P0 | Frontend API memory boundary | JSON и error response не имели size limit, а QR проверял длину только после `response.text()`; чрезмерный backend/proxy body мог полностью буферизоваться в памяти браузера до controlled error. | Исправлено локально | Byte-based streaming limits, ранний `Content-Length` отказ, `ReadableStream.cancel()` и oversized desktop/mobile regression покрывают JSON, error и QR paths. |

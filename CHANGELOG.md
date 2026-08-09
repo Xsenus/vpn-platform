@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.546.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-restored-session-refresh`.
+
+### Исправлено
+
+- Восстановленная admin-сессия выполняет одну admission-проверку под `React.StrictMode`; access-token `401` один раз ротирует сохранённый refresh-token вместо преждевременного logout.
+- Новая пара токенов сохраняется до capability-проверки, поэтому transient `5xx` после автоматического или ручного refresh допускает retry без потери уже ротированной сессии.
+- Session operation generation блокирует поздние admission/refresh/data ответы после logout или нового входа; rejected refresh и потеря административной роли завершают сессию fail-closed.
+- Logout и transient cleanup удаляют audit rows, фильтры, support drafts, provider/inbound forms и VPN migration targets, исключая stale state после следующей авторизации.
+
+### Улучшено
+
+- До подтверждения административных полномочий показывается отдельный recovery-экран с loading, retry и logout; форма нового входа и приватные разделы в этот момент не отображаются.
+
+### Проверено
+
+- Frontend `110/110`, typecheck/build всех приложений и dependency audit `0 vulnerabilities`.
+- Admin desktop/mobile `20/20`; полный desktop/mobile console-responsive Playwright suite `54/54` покрывает single admission/refresh, transient retry, rejected refresh, delayed logout completion и private-state cleanup.
+- Backend `1112/1112`, Release build `0` warnings/`0` errors и fresh local SQLite checkout/payment/subscription/VPN smoke пройдены.
+- Secret scan, strict UTF-8 guards и artifact cleanup пройдены.
+- `RoadmapCurrentStateTests` фиксирует `559/579` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остаётся `staging-ready baseline`, not production-ready.
+
 ## 0.545.0 - 2026-08-09
 
 Release entry: `2026-08-09-cabinet-restored-session-refresh`.
