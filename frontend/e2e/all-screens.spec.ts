@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test'
+import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test'
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -35,11 +35,24 @@ const responsiveViewports = [
   { name: 'compact-mobile', width: 320, height: 568 },
   { name: 'mobile', width: 360, height: 800 },
   { name: 'large-mobile', width: 390, height: 844 },
+  { name: 'above-large-mobile', width: 391, height: 844 },
+  { name: 'above-compact-layout', width: 521, height: 800 },
+  { name: 'mobile-landscape', width: 568, height: 320 },
+  { name: 'above-mobile-layout', width: 641, height: 900 },
   { name: 'tablet', width: 768, height: 1024 },
+  { name: 'above-tablet-layout', width: 769, height: 1024 },
+  { name: 'above-cabinet-layout', width: 821, height: 1180 },
+  { name: 'above-shared-shell-layout', width: 901, height: 768 },
+  { name: 'above-public-layout', width: 961, height: 800 },
   { name: 'small-desktop', width: 1024, height: 768 },
+  { name: 'above-small-desktop', width: 1025, height: 800 },
+  { name: 'above-wide-layout', width: 1281, height: 900 },
   { name: 'desktop', width: 1440, height: 900 },
-  { name: 'wide-desktop', width: 1920, height: 1080 }
+  { name: 'wide-desktop', width: 1920, height: 1080 },
+  { name: '2k-desktop', width: 2560, height: 1440 }
 ]
+
+const captureVisualAudit = process.env.VPN_PLATFORM_VISUAL_AUDIT === '1'
 
 const user = {
   id: 'all-screens-user',
@@ -718,6 +731,15 @@ function collectBrowserErrors(page: Page) {
   return errors
 }
 
+async function captureAuditScreenshot(page: Page, testInfo: TestInfo, name: string) {
+  if (!captureVisualAudit) return
+  await page.screenshot({
+    path: testInfo.outputPath(`${name}.png`),
+    fullPage: true,
+    style: '.skip-link { visibility: hidden !important; }'
+  })
+}
+
 async function expectNonBlankPage(page: Page) {
   await expect(page.locator('body')).toBeVisible()
   await expect.poll(async () => page.locator('body').innerText().then((text) => text.trim().length)).toBeGreaterThan(30)
@@ -781,6 +803,48 @@ async function expectPageQuality(page: Page, screenName: string) {
   expect(issues, `${screenName} must meet the page quality baseline`).toEqual([])
 }
 
+async function expectLocalBackgroundAssets(page: Page, selectors: string[]) {
+  const issues = await page.evaluate(async (targetSelectors) => {
+    const problems: string[] = []
+    const assetUrls = new Set<string>()
+
+    for (const selector of targetSelectors) {
+      const element = document.querySelector<HTMLElement>(selector)
+      if (!element) {
+        problems.push(`background owner is missing: ${selector}`)
+        continue
+      }
+
+      const imageValue = getComputedStyle(element).backgroundImage
+      const urls = Array.from(imageValue.matchAll(/url\(["']?(.*?)["']?\)/g), (match) => match[1])
+      if (urls.length === 0) problems.push(`background image is missing: ${selector}`)
+      for (const url of urls) assetUrls.add(new URL(url, window.location.href).href)
+    }
+
+    for (const url of assetUrls) {
+      if (new URL(url).origin !== window.location.origin) {
+        problems.push(`background image is external: ${url}`)
+        continue
+      }
+
+      try {
+        const image = new Image()
+        image.src = url
+        await image.decode()
+        if (image.naturalWidth < 1200 || image.naturalHeight < 800) {
+          problems.push(`background image is undersized: ${url} (${image.naturalWidth}x${image.naturalHeight})`)
+        }
+      } catch {
+        problems.push(`background image did not load: ${url}`)
+      }
+    }
+
+    return problems
+  }, selectors)
+
+  expect(issues, 'visual backgrounds must be local, loaded and large enough for responsive crops').toEqual([])
+}
+
 async function expectResponsiveLayout(page: Page, screenName: string) {
   await expectNonBlankPage(page)
   const issues = await page.evaluate(() => {
@@ -809,7 +873,7 @@ async function expectResponsiveLayout(page: Page, screenName: string) {
   expect(issues, `${screenName} must fit the viewport`).toEqual([])
 }
 
-test('all public routes render without blank screens or browser errors', async ({ page }) => {
+test('all public routes render without blank screens or browser errors', async ({ page }, testInfo) => {
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
@@ -817,18 +881,24 @@ test('all public routes render without blank screens or browser errors', async (
     await page.goto(route)
     await expectNonBlankPage(page)
     await expectPageQuality(page, route)
+    if (route === '/') {
+      await expectLocalBackgroundAssets(page, ['.landing-hero', '.landing-illustration', '.coverage-map'])
+      await captureAuditScreenshot(page, testInfo, 'public-home-desktop')
+    }
+    if (route === '/account') await captureAuditScreenshot(page, testInfo, 'public-account-desktop')
   }
 
   expect(browserErrors).toEqual([])
 })
 
-test('cabinet auth and dashboard surfaces render without blank screens or browser errors', async ({ page }) => {
+test('cabinet auth and dashboard surfaces render without blank screens or browser errors', async ({ page }, testInfo) => {
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
   await page.goto('http://127.0.0.1:5294/')
   await expectNonBlankPage(page)
   await expectPageQuality(page, 'cabinet auth')
+  await captureAuditScreenshot(page, testInfo, 'cabinet-auth-desktop')
 
   const authForm = page.locator('#cabinet-auth-panel')
   await authForm.locator('input[type="email"]').fill(user.email)
@@ -837,16 +907,19 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
   await expect(page.locator('.code-block').filter({ hasText: 'vless://' }).first()).toBeVisible()
   await expectNonBlankPage(page)
   await expectPageQuality(page, 'cabinet dashboard')
+  await captureAuditScreenshot(page, testInfo, 'cabinet-dashboard-desktop')
 
   expect(browserErrors).toEqual([])
 })
 
-test('every admin section renders without blank screens or browser errors', async ({ page }) => {
+test('every admin section renders without blank screens or browser errors', async ({ page }, testInfo) => {
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
   await page.goto('http://127.0.0.1:5295/')
   await expectPageQuality(page, 'admin auth')
+  await expectLocalBackgroundAssets(page, ['.admin-login-intro'])
+  await captureAuditScreenshot(page, testInfo, 'admin-auth-desktop')
   await page.locator('input[type="email"]').fill('admin@example.test')
   await page.locator('input[type="password"]').fill('Password123!')
   await page.locator('form').locator('button[type="submit"]').click()
@@ -857,13 +930,16 @@ test('every admin section renders without blank screens or browser errors', asyn
     await expect(page.locator('.admin-shell')).toBeVisible()
     await expectNonBlankPage(page)
     await expectPageQuality(page, `admin ${section}`)
+    if (section === 'dashboard' || section === 'panels') {
+      await captureAuditScreenshot(page, testInfo, `admin-${section}-desktop`)
+    }
   }
 
   expect(browserErrors).toEqual([])
 })
 
-test('all public routes fit representative responsive viewports', async ({ page }) => {
-  test.setTimeout(120_000)
+test('all public routes fit representative responsive viewports', async ({ page }, testInfo) => {
+  test.setTimeout(240_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
@@ -872,14 +948,17 @@ test('all public routes fit representative responsive viewports', async ({ page 
     for (const route of publicRoutes) {
       await page.goto(route)
       await expectResponsiveLayout(page, `${route} at ${viewport.name}`)
+      if (viewport.name === 'compact-mobile' && (route === '/' || route === '/account')) {
+        await captureAuditScreenshot(page, testInfo, `public-${route === '/' ? 'home' : 'account'}-mobile`)
+      }
     }
   }
 
   expect(browserErrors).toEqual([])
 })
 
-test('cabinet fits representative responsive viewports after authentication', async ({ page }) => {
-  test.setTimeout(120_000)
+test('cabinet fits representative responsive viewports after authentication', async ({ page }, testInfo) => {
+  test.setTimeout(240_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
@@ -894,13 +973,14 @@ test('cabinet fits representative responsive viewports after authentication', as
       await expect(page.locator('.code-block').filter({ hasText: 'vless://' }).first()).toBeVisible()
     }
     await expectResponsiveLayout(page, `cabinet at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await captureAuditScreenshot(page, testInfo, 'cabinet-dashboard-mobile')
   }
 
   expect(browserErrors).toEqual([])
 })
 
-test('every admin section fits representative responsive viewports', async ({ page }) => {
-  test.setTimeout(240_000)
+test('every admin section fits representative responsive viewports', async ({ page }, testInfo) => {
+  test.setTimeout(480_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
@@ -921,6 +1001,9 @@ test('every admin section fits representative responsive viewports', async ({ pa
     for (const section of adminSections) {
       await page.goto(`http://127.0.0.1:5295/#${section}`)
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
+      if (viewport.name === 'compact-mobile' && (section === 'dashboard' || section === 'panels')) {
+        await captureAuditScreenshot(page, testInfo, `admin-${section}-mobile`)
+      }
     }
   }
 

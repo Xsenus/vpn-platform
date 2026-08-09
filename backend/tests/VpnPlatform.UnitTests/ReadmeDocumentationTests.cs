@@ -39,13 +39,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1112/1112", readme, StringComparison.Ordinal);
-        Assert.Contains("110/110", readme, StringComparison.Ordinal);
+        Assert.Contains("111/111", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-09-public-cabinet-mutation-request-lifecycle", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-local-visual-assets-responsive-boundaries", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1112/1112",
-                     "2026-08-09-public-cabinet-mutation-request-lifecycle",
-                     "0.550.0",
+                     "2026-08-09-local-visual-assets-responsive-boundaries",
+                     "0.551.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

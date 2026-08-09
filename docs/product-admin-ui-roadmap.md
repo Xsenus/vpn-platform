@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `563/583` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `564/584` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -86,11 +86,12 @@
 ## Проверки, которыми закрыт локальный продуктовый слой
 
 - [x] Backend full suite: `1112/1112`.
-- [x] Frontend unit tests: `110/110`.
+- [x] Frontend unit tests: `111/111`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
 - [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `78/78`.
+- [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
@@ -136,7 +137,7 @@
 - [x] Admin user/support detail views отбрасывают out-of-order и post-logout responses, очищают drafts при смене обращения и не загружают thread невыбранной status action.
 - [x] Admin mutations применяют state/reload только в исходной session operation, отклоняют duplicate submit и сохраняют новый form draft при delayed completion.
 - [x] Public/cabinet mutations отклоняют duplicate events, late session/unmount completion и сохраняют более новый support/reset draft.
-- [x] Latest "Что нового": `2026-08-09-public-cabinet-mutation-request-lifecycle`, версия `0.550.0`.
+- [x] Latest "Что нового": `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`.
 
 ## Как вести дальше
 

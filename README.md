@@ -211,15 +211,15 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1112/1112` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `110/110`;
+- frontend unit tests: `111/111`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `78/78`; responsive matrix проверяет ширины `305..1920` px;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `78/78`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
 - checkout, кабинет и административные PATCH/API-операции отклоняют некорректные enum/JSON-значения ответом 400 без частичного изменения данных;
-- browser gate дополнительно проверяет landmark, уникальные ID, alt-тексты и доступные имена контролов на public, cabinet и 16 admin экранах;
+- browser gate дополнительно проверяет landmark, уникальные ID, alt-тексты, доступные имена контролов и same-origin decode фоновых assets на public, cabinet и 17 admin экранах;
 - миграция подписки валидирует источник, целевой сервер и дубли; архивные серверы нельзя вернуть в работу через административные mode-actions;
 - команды `extend/activate/block/unblock/cancel` не изменяют подписку при ошибке VPN-провайдера; unhealthy/full migration target отклоняется;
 - удаление VPN-сервера сохраняет health-check и migration history через архивирование, а связанный ключ рабочего сценария нельзя переименовать;
@@ -275,7 +275,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - после межпанельного переноса карточки панелей сразу отражают освобождённую source capacity и занятую target capacity, а следующий API-refresh сохраняет фактические значения;
 - admin mutation lifecycle привязывает CRUD/payment/subscription/VPN/provisioning/bot completion к исходной сессии, блокирует duplicate submit и сохраняет новые form drafts при delayed save/reload;
 - public/cabinet mutation lifecycle блокирует duplicate auth/refresh/action requests, отбрасывает completion старой сессии и сохраняет более новые support/reset drafts;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-public-cabinet-mutation-request-lifecycle`, версия `0.550.0`;
-- roadmap progress: `563/583` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- публичная витрина и admin login используют три локальных WebP из production bundle вместо runtime Unsplash; desktop/mobile screenshots и 18 viewport-конфигураций проверены без overflow и clipped controls;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`;
+- roadmap progress: `564/584` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

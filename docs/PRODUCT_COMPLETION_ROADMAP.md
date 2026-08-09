@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-public-cabinet-mutation-request-lifecycle`, версия `0.550.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `563/583` проверяемых пунктов, готовность `96.6%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `564/584` проверяемых пунктов, готовность `96.6%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-09:
 
 - [x] `STATE-001` Backend test suite проходит: `1112/1112`.
-- [x] `STATE-002` Frontend test suite проходит: `110/110`.
+- [x] `STATE-002` Frontend test suite проходит: `111/111`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -1948,6 +1948,10 @@ git diff --check
   - Что сделать: кабинетные QR/Telegram/support/payment/renewal actions и публичные auth/reset/checkout операции должны иметь единственного владельца, не применять delayed response после logout/new login или ухода со страницы и не стирать более новый пользовательский ввод.
   - Что сделано: cabinet mutations и loaders получили session/request generation, synchronous action/auth locks и snapshot-owned form reset; manual refresh защищён от повторного использования rotating token, logout доступен во время pending action. Public auth/reset использует единый action owner, checkout инвалидируется при unmount, а hydration/claim keys сбрасываются на границе сессии и учитывают текущий token.
   - Доказательство: frontend `110/110`, полный desktop/mobile console-responsive Playwright `78/78`; E2E синхронно отправляет два события, задерживает QR/support/auth/reset/refresh, завершает и создаёт новую сессию, меняет support/reset drafts и уходит со страницы checkout. Backend `1112/1112`, Release build `0` warnings/`0` errors, EF drift отсутствует, fresh SQLite smoke и dependency audit пройдены; внешние evidence-пункты не закрывались.
+- [x] `P11-ACC-274` Локализовать визуальные assets и проверить responsive breakpoint boundaries. 2026-08-09.
+  - Что сделать: ключевые фоны public/admin не должны зависеть от стороннего CDN; browser gate должен подтверждать загрузку изображений и отсутствие визуального overflow не только на стандартных desktop/mobile, но и сразу после каждого CSS-breakpoint.
+  - Что сделано: три оптимизированных WebP добавлены в общий UI asset-контур и включаются Vite с хешированными именами; external CSS URLs и viewport-scaled fonts удалены. All-screens matrix расширена до 18 viewport-конфигураций `305x568..2560x1440`, добавлена same-origin/decode/dimension проверка background assets и опциональный screenshot audit без постоянных CI-артефактов.
+  - Доказательство: frontend `111/111`, typecheck/build и audit; полный console-responsive Playwright `78/78`, all-screens `6/6` на 18 конфигурациях, manual desktop/mobile screenshot review; backend `1112/1112`, Release build `0` warnings/`0` errors. Внешние evidence-пункты не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2524,6 +2528,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-08-09 | Codex | Local visual assets, runtime decode, breakpoint-edge responsive и manual screenshots | Зеленое локально | Frontend `111/111`, all-screens `6/6` на 18 viewport, полный console-responsive suite `78/78`, production build, backend `1112/1112`; external live evidence не переиспользовалось |
 | 2026-08-09 | Codex | Public/cabinet mutation ownership, duplicate events, stale completion и draft preservation | Зеленое локально | Frontend `110/110`, полный console-responsive desktop/mobile suite `78/78`, backend `1112/1112`, Release build, fresh SQLite, EF drift и audit; external live evidence не переиспользовалось |
 | 2026-08-09 | Codex | Admin mutation session ownership, duplicate submit и form draft preservation | Зеленое локально | Frontend `110/110`, admin desktop/mobile `28/28`, полный console-responsive suite `66/66`, backend `1112/1112`, fresh SQLite, EF drift, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-09 | Codex | Admin user/support detail ordering, status scope и post-logout invalidation | Зеленое локально | Frontend `110/110`, admin desktop/mobile `24/24`, полный console-responsive suite `62/62`, typecheck/build и dependency audit; external live evidence не переиспользовалось |
@@ -2593,6 +2598,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-09-007` | P1 | Frontend visual assets | Четыре ключевых background загружались с Unsplash во время runtime и могли исчезнуть из public/admin UI при CSP, offline/CDN failure; responsive gate не проверял decode assets и ширины сразу после CSS-breakpoints. | Исправлено локально | Локальные WebP bundles, same-origin decode/dimension guard, 18 viewport-конфигураций и manual screenshot review подтверждают визуальный контракт. |
 | `BUG-2026-08-09-006` | P0 | Public/cabinet mutation lifecycle | Cabinet actions и public auth/reset полагались на React busy после render: синхронный повтор мог дублировать запрос, late response мог изменить новую сессию или маршрут, а завершение старой отправки стирало новый draft. | Исправлено локально | Session/request ownership, synchronous locks, unmount invalidation и snapshot-owned reset покрыты полным desktop/mobile E2E `78/78`. |
 | `BUG-2026-08-09-005` | P0 | Admin mutation lifecycle | Delayed mutation могла после logout/new login сбросить форму, показать старое уведомление и запустить reload старым токеном; синхронный double-submit дублировал запрос, а общий reload стирал dirty bot draft. | Исправлено локально | Session-owned action context, request/in-flight generation и snapshot-owned form reset покрыты desktop/mobile E2E. |
 | `BUG-2026-08-09-004` | P0 | Admin detail lifecycle | Поздний user/support response мог заменить выбранную карточку или диалог и вернуться после logout; status action другой записи загружала ее сообщения в текущий thread, а drafts переносились между обращениями. | Исправлено локально | Selected/session request generation, scoped mutation reload, loading/empty UI и draft cleanup покрыты desktop/mobile E2E. |

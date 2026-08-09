@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: local visual assets and responsive breakpoint boundaries
+
+Scope:
+- Проверены runtime background assets публичной витрины и admin login, их наличие в production bundle, декодирование в браузере и независимость от внешнего CDN.
+- Проверены public, cabinet и все 17 admin sections на 18 viewport-конфигурациях, включая mobile landscape, стороны CSS-breakpoints и 2K desktop; выполнен ручной просмотр representative screenshots.
+
+Results:
+- Roadmap progress: `564/584` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-local-visual-assets-responsive-boundaries`, version `0.551.0`.
+- Три локальных WebP входят в Vite bundles; CSS не содержит external runtime backgrounds и viewport-scaled font sizes.
+- Frontend tests: `111/111`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `78/78`; all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`.
+- Backend full suite: `1112/1112`; solution Release build: `0` warnings/`0` errors.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: public and cabinet mutation request lifecycle
 
 Scope:

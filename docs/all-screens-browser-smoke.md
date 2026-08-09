@@ -11,7 +11,12 @@
 - все admin sections (`all admin sections`): `dashboard`, `users`, `payments`, `tariffs`, `referrals`, `subscriptions`, `vpn`, `nodes`, `panels`, `support`, `audit`, `bot`, `releases`, `faq`, `content`, `scenarios`, `provisioning`;
 - отсутствие пустого `body`;
 - отсутствие `console.error`;
-- отсутствие `pageerror`.
+- отсутствие `pageerror`;
+- landmark, уникальные DOM `id`, `alt` у изображений и доступные имена controls/actions;
+- отсутствие document overflow и горизонтально обрезанных interactive controls;
+- responsive layout на 18 конфигурациях от `305x568` и `568x320` mobile landscape до `2560x1440`;
+- ширины сразу после CSS-breakpoints: `391`, `521`, `641`, `769`, `821`, `901`, `961`, `1025`, `1281` px;
+- same-origin URL, browser decode и минимальный размер `1200x800` для ключевых background assets public/admin.
 
 Smoke использует mock API внутри Playwright. Он не подтверждает live-платежи, live 3x-ui и реальный VPS, но ловит сломанные маршруты, белые экраны, JavaScript exceptions и грубые ошибки интеграции UI с API DTO.
 
@@ -27,12 +32,22 @@ npm run e2e:all-screens --prefix frontend
 npm run e2e:console --prefix frontend
 ```
 
+Для локальной ручной приёмки representative desktop/mobile screenshots:
+
+```powershell
+$env:VPN_PLATFORM_VISUAL_AUDIT='1'
+npm run e2e:all-screens --prefix frontend
+Remove-Item Env:VPN_PLATFORM_VISUAL_AUDIT
+```
+
+PNG создаются только при явном флаге внутри `frontend/test-results` и после просмотра должны быть удалены. Screenshot helper скрывает skip-link только на изображении, чтобы Playwright full-page stitching не дублировал fixed accessibility control; runtime UI не изменяется.
+
 ## Что остается вне проверки
 
 - Реальная оплата у провайдеров.
 - Реальная выдача через 3x-ui.
 - VPS admin login под production admin account.
-- Скриншотная ручная UX-проверка после deploy.
+- Скриншотная ручная UX-проверка после deploy на реальном контенте и шрифтах.
 
 Эти пункты остаются в live/staging задачах roadmap и не закрываются mock-based E2E.
 
@@ -43,3 +58,11 @@ npm run e2e:console --prefix frontend
 - `e2e:console` расширен project-ом `all-screens`.
 - Добавлен guard `AllScreensBrowserSmokeTests`.
 - Добавлена запись "Что нового" `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`.
+
+## Результат 2026-08-09
+
+- Responsive matrix расширена с 8 до 18 viewport-конфигураций и покрывает обе стороны всех используемых CSS-breakpoints.
+- Встроена проверка local/same-origin decode фоновых WebP и их размеров.
+- Representative public, account, cabinet и admin screenshots проверены вручную на desktop/mobile; временные PNG очищены.
+- `npm run e2e:all-screens --prefix frontend`: `6/6`; полный `npm run e2e:console --prefix frontend`: `78/78`.
+- Latest "Что нового": `2026-08-09-local-visual-assets-responsive-boundaries`, версия `0.551.0`.

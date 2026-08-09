@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.551.0 - 2026-08-09
+
+Release entry: `2026-08-09-local-visual-assets-responsive-boundaries`.
+
+### Исправлено
+
+- Публичная витрина и экран входа администратора больше не загружают четыре фоновых изображения с внешнего Unsplash: три оптимизированных WebP входят в frontend bundle и доступны независимо от сети, CSP и стороннего CDN.
+- Рабочая и глобальная сцены получили проверенный overlay-контраст, при котором изображение остаётся различимым, а карточки и текст сохраняют читаемость.
+- Hero и admin-login typography больше не масштабируется через viewport width; размеры фиксированы на явных responsive breakpoints.
+
+### Проверено
+
+- Frontend `111/111`, typecheck/build всех приложений; production bundle содержит локальные хешированные WebP assets, dependency audit сообщает `0 vulnerabilities`.
+- Полный console-responsive Playwright suite `78/78`; all-screens `6/6` проходит `18` viewport-конфигураций от `305x568` и mobile landscape до `2560x1440`, включая обе стороны CSS-breakpoints.
+- Browser test декодирует каждый runtime background, проверяет same-origin, минимальный размер `1200x800`, отсутствие overflow/clipped controls, console errors и blank screens на 5 public routes, cabinet и 17 admin sections.
+- Desktop/mobile screenshots публичной витрины, account, cabinet и admin просмотрены вручную; временные screenshots и build artifacts очищаются перед коммитом.
+- Backend `1112/1112`, solution Release build `0` warnings/`0` errors; external VPS/staging/live payment/production-like 3x-ui и SMTP evidence не переиспользовалось.
+- Roadmap: `564/584` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.550.0 - 2026-08-09
 
 Release entry: `2026-08-09-public-cabinet-mutation-request-lifecycle`.
