@@ -250,6 +250,37 @@ const provider = {
   healthStatus: 'Healthy'
 }
 
+function supportConversation(id: string, subject: string) {
+  return {
+    id,
+    userId: user.id,
+    telegramUserId: null,
+    channel: 'web',
+    status: 'open',
+    subject,
+    assignedToUserId: null,
+    internalNote: '',
+    revision: 0,
+    closedAt: null,
+    createdAt: now,
+    updatedAt: now
+  }
+}
+
+function supportMessage(id: string, conversationId: string, text: string) {
+  return {
+    id,
+    supportConversationId: conversationId,
+    userId: user.id,
+    telegramUserId: null,
+    direction: 'inbound',
+    text,
+    attachmentsJson: '[]',
+    isInternalNote: false,
+    createdAt: now
+  }
+}
+
 function authResponse(email = user.email) {
   return {
     accessToken: `access-token-${email}`,
@@ -284,7 +315,10 @@ async function fulfillOptions(route: Route) {
 async function mockCabinetApi(page: Page) {
   const requests: Array<{ method: string; url: string; body: unknown; authorization: string }> = []
   let supportConversations: unknown[] = []
-  let supportMessages: unknown[] = []
+  const supportMessagesByConversationId = new Map<string, unknown[]>()
+  let delayedSupportConversationId: string | null = null
+  let delayedSupportMessagesReleased = false
+  let releaseDelayedSupportMessages: (() => void) | null = null
   let logoutShouldFail = false
   let authorizedRequestsRejected = false
   let rejectedAuthorizedPath: string | null = null
@@ -477,13 +511,23 @@ async function mockCabinetApi(page: Page) {
         createdAt: now
       }
       supportConversations = [conversation]
-      supportMessages = [firstMessage]
+      supportMessagesByConversationId.set(conversation.id, [firstMessage])
       await fulfillJson(route, conversation)
       return
     }
 
-    if (method === 'GET' && path === '/api/me/support/conversations/support-created/messages') {
-      await fulfillJson(route, supportMessages)
+    const supportMessagesMatch = path.match(/^\/api\/me\/support\/conversations\/([^/]+)\/messages$/)
+    if (method === 'GET' && supportMessagesMatch) {
+      const conversationId = decodeURIComponent(supportMessagesMatch[1])
+      if (delayedSupportConversationId === conversationId) {
+        if (!delayedSupportMessagesReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedSupportMessages = resolve })
+        }
+        delayedSupportConversationId = null
+        delayedSupportMessagesReleased = false
+        releaseDelayedSupportMessages = null
+      }
+      await fulfillJson(route, supportMessagesByConversationId.get(conversationId) ?? [])
       return
     }
 
@@ -500,7 +544,10 @@ async function mockCabinetApi(page: Page) {
         isInternalNote: false,
         createdAt: now
       }
-      supportMessages = [...supportMessages, message]
+      supportMessagesByConversationId.set('support-created', [
+        ...(supportMessagesByConversationId.get('support-created') ?? []),
+        message
+      ])
       await fulfillJson(route, message)
       return
     }
@@ -595,6 +642,22 @@ async function mockCabinetApi(page: Page) {
       delayedRefreshReleased = true
       releaseDelayedRefresh?.()
     },
+    useSupportConversationRaceFixture: () => {
+      supportConversations = [
+        supportConversation('support-first', 'Первая переписка'),
+        supportConversation('support-second', 'Вторая переписка')
+      ]
+      supportMessagesByConversationId.set('support-first', [supportMessage('message-first', 'support-first', 'Секрет первой переписки')])
+      supportMessagesByConversationId.set('support-second', [supportMessage('message-second', 'support-second', 'Ответ второй переписки')])
+    },
+    delaySupportMessages: (conversationId: string) => {
+      delayedSupportConversationId = conversationId
+      delayedSupportMessagesReleased = false
+    },
+    releaseSupportMessages: () => {
+      delayedSupportMessagesReleased = true
+      releaseDelayedSupportMessages?.()
+    },
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
@@ -612,6 +675,60 @@ async function seedCabinetSession(page: Page, accessToken: string, refreshToken:
     sessionStorage.setItem('vpn-platform-cabinet-refresh-token', refresh)
   }, { accessToken, refreshToken })
 }
+
+test('cabinet keeps the selected support thread when an older request finishes late', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.useSupportConversationRaceFixture()
+  api.delaySupportMessages('support-first')
+  await seedCabinetSession(page, 'access-token-support-race', 'refresh-token-support-race')
+
+  await page.goto('/')
+
+  await expect(page.getByRole('button', { name: /Первая переписка/ })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/me/support/conversations/support-first/messages')).toBe(1)
+  await page.getByRole('button', { name: /Вторая переписка/ }).click()
+  await expect(page.getByText('Ответ второй переписки', { exact: true })).toBeVisible()
+
+  api.releaseSupportMessages()
+  await expect.poll(() => api.getRequestCount('/api/me/support/conversations/support-second/messages')).toBe(1)
+  await expect(page.getByText('Ответ второй переписки', { exact: true })).toBeVisible()
+  await expect(page.getByText('Секрет первой переписки', { exact: true })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet logout invalidates delayed support data and clears private drafts', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.useSupportConversationRaceFixture()
+  await seedCabinetSession(page, 'access-token-support-cleanup', 'refresh-token-support-cleanup')
+
+  await page.goto('/')
+  await expect(page.getByText('Секрет первой переписки', { exact: true })).toBeVisible()
+  await page.getByLabel('Тема').fill('Черновик старого пользователя')
+  await page.getByLabel('Связанный заказ').selectOption(paidOrder.id)
+  await page.getByLabel('Связанная подписка').selectOption(subscription.id)
+  await page.getByLabel('Сообщение').fill('Приватный текст старого пользователя')
+  await page.getByLabel('Ответ').fill('Приватный ответ старого пользователя')
+
+  api.delaySupportMessages('support-second')
+  await page.getByRole('button', { name: /Вторая переписка/ }).click()
+  await expect.poll(() => api.getRequestCount('/api/me/support/conversations/support-second/messages')).toBe(1)
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Вход в личный кабинет' })).toBeVisible()
+
+  api.releaseSupportMessages()
+  const authPanel = page.locator('#cabinet-auth-panel')
+  await authPanel.getByLabel('Email').fill(user.email)
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Войти' }).click()
+
+  await expect(page.getByText('Секрет первой переписки', { exact: true })).toBeVisible()
+  await expect(page.getByText('Ответ второй переписки', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Тема')).toHaveValue('')
+  await expect(page.getByLabel('Связанный заказ')).toHaveValue('')
+  await expect(page.getByLabel('Связанная подписка')).toHaveValue('')
+  await expect(page.getByLabel('Сообщение')).toHaveValue('')
+  await expect(page.getByLabel('Ответ')).toHaveValue('')
+})
 
 test('cabinet rotates an expired restored access token once', async ({ page }) => {
   const api = await mockCabinetApi(page)

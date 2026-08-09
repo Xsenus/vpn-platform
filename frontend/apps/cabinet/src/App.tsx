@@ -112,6 +112,9 @@ export function App() {
   const [appVersionOpenSignal, setAppVersionOpenSignal] = useState(0)
   const restoredSessionHydrationStarted = useRef(false)
   const sessionOperationId = useRef(0)
+  const supportMessagesRequestId = useRef(0)
+  const supportMessagesEffectSkipId = useRef('')
+  const paymentProvidersRequestId = useRef(0)
   const authPanelId = 'cabinet-auth-panel'
   const activeAuthTabId = authMode === 'login' ? 'cabinet-auth-login-tab' : 'cabinet-auth-register-tab'
   const authValidationErrors = validateAuthInput(authMode, authEmail, authPassword, authDisplayName)
@@ -168,6 +171,9 @@ export function App() {
 
   const clearSession = () => {
     sessionOperationId.current += 1
+    supportMessagesRequestId.current += 1
+    supportMessagesEffectSkipId.current = ''
+    paymentProvidersRequestId.current += 1
     setToken('')
     setRefreshToken('')
     setSessionHydrating(false)
@@ -181,11 +187,28 @@ export function App() {
     setSupportConversations([])
     setSupportMessages([])
     setSelectedSupportConversationId('')
+    setSupportSubject('')
+    setSupportText('')
+    setSupportReplyText('')
+    setSupportOrderId('')
+    setSupportSubscriptionId('')
+    setSupportLoading(false)
     setTelegramStatus(null)
     setTelegramLink(null)
+    setPaymentProviders([])
+    setPaymentProvidersLoading(false)
+    setPaymentProvidersError('')
+    setProvider('')
     setRenewalState(null)
     setRetryPaymentState(null)
     setQrSvgs({})
+    setAuthEmail('')
+    setAuthPassword('')
+    setAuthDisplayName('')
+    setAuthReferralCode('')
+    setResetEmail('')
+    setResetToken('')
+    setNewPassword('')
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
   }
@@ -295,21 +318,34 @@ export function App() {
     }
   }
 
-  const loadSupportMessages = async (conversationId: string) => {
-    if (!token || !conversationId) {
+  const loadSupportMessages = async (
+    conversationId: string,
+    currentToken = token,
+    operationId = sessionOperationId.current
+  ) => {
+    const requestId = ++supportMessagesRequestId.current
+    const requestIsCurrent = () => sessionOperationId.current === operationId
+      && supportMessagesRequestId.current === requestId
+
+    if (!currentToken || !conversationId) {
       setSupportMessages([])
+      setSupportLoading(false)
       return false
     }
 
+    setSupportMessages([])
     setSupportLoading(true)
     try {
-      setSupportMessages(await api.getMySupportMessages(token, conversationId))
+      const messages = await api.getMySupportMessages(currentToken, conversationId)
+      if (!requestIsCurrent()) return false
+      setSupportMessages(messages)
       return true
     } catch (e) {
+      if (!requestIsCurrent()) return false
       handleAuthenticatedError(e, 'Не удалось загрузить переписку поддержки')
       return false
     } finally {
-      setSupportLoading(false)
+      if (requestIsCurrent()) setSupportLoading(false)
     }
   }
 
@@ -322,14 +358,24 @@ export function App() {
 
   useEffect(() => {
     if (!token || !selectedSupportConversation?.id) {
+      supportMessagesRequestId.current += 1
       setSupportMessages([])
+      setSupportLoading(false)
       return
     }
 
-    void loadSupportMessages(selectedSupportConversation.id)
+    if (supportMessagesEffectSkipId.current === selectedSupportConversation.id) {
+      supportMessagesEffectSkipId.current = ''
+      return
+    }
+
+    void loadSupportMessages(selectedSupportConversation.id, token, sessionOperationId.current)
   }, [token, selectedSupportConversation?.id])
 
   useEffect(() => {
+    const requestId = ++paymentProvidersRequestId.current
+    const requestIsCurrent = () => paymentProvidersRequestId.current === requestId
+
     if (!token) {
       setPaymentProvidersLoading(false)
       setPaymentProvidersError('')
@@ -341,16 +387,24 @@ export function App() {
     setPaymentProvidersLoading(true)
     api.getPublicPaymentProviders()
       .then((items) => {
+        if (!requestIsCurrent()) return
         setPaymentProviders(items)
         setPaymentProvidersError('')
         setProvider((current) => current && items.some((item) => item.provider === current) ? current : (items[0]?.provider ?? ''))
       })
       .catch((e: Error) => {
+        if (!requestIsCurrent()) return
         setPaymentProviders([])
         setProvider('')
         setPaymentProvidersError(e.message)
       })
-      .finally(() => setPaymentProvidersLoading(false))
+      .finally(() => {
+        if (requestIsCurrent()) setPaymentProvidersLoading(false)
+      })
+
+    return () => {
+      if (paymentProvidersRequestId.current === requestId) paymentProvidersRequestId.current += 1
+    }
   }, [token])
 
 
@@ -546,12 +600,15 @@ export function App() {
         subscriptionId: supportSubscriptionId || null
       })
       setSupportConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)])
+      if (selectedSupportConversationId !== conversation.id) {
+        supportMessagesEffectSkipId.current = conversation.id
+      }
       setSelectedSupportConversationId(conversation.id)
       setSupportSubject('')
       setSupportText('')
       setSupportOrderId('')
       setSupportSubscriptionId('')
-      if (!await loadSupportMessages(conversation.id)) return
+      if (!await loadSupportMessages(conversation.id, token, sessionOperationId.current)) return
       setNotice('Обращение в поддержку создано.')
     } catch (e) {
       handleAuthenticatedError(e, 'Не удалось создать обращение в поддержку')
@@ -578,7 +635,12 @@ export function App() {
       setSupportReplyText('')
       setNotice('Сообщение отправлено в поддержку.')
     } catch (e) {
-      if (e instanceof ApiClientError && e.status === 409) await loadAll(token)
+      if (e instanceof ApiClientError && e.status === 409) {
+        const operationId = sessionOperationId.current
+        if (await loadAll(token, { operationId })) {
+          await loadSupportMessages(selectedSupportConversation.id, token, operationId)
+        }
+      }
       handleAuthenticatedError(e, 'Не удалось отправить сообщение в поддержку')
     } finally {
       setBusy(false)
@@ -595,7 +657,12 @@ export function App() {
       setSupportConversations((current) => current.map((item) => item.id === selectedSupportConversation.id ? { ...item, status: result.status, revision: result.revision, closedAt: result.status === 'closed' ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : item))
       setNotice(result.status === 'closed' ? 'Обращение закрыто.' : 'Обращение переоткрыто.')
     } catch (e) {
-      if (e instanceof ApiClientError && e.status === 409) await loadAll(token)
+      if (e instanceof ApiClientError && e.status === 409) {
+        const operationId = sessionOperationId.current
+        if (await loadAll(token, { operationId })) {
+          await loadSupportMessages(selectedSupportConversation.id, token, operationId)
+        }
+      }
       handleAuthenticatedError(e, 'Не удалось изменить статус обращения')
     } finally {
       setBusy(false)

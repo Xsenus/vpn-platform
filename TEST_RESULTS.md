@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: cabinet support request lifecycle
+
+Scope:
+- Проверены переключение между support conversations при out-of-order ответах, logout во время delayed messages request и новый вход после очистки приватного состояния.
+- Проверен single-owner reload после создания обращения и сохранен terminal `401` fail-closed контракт.
+
+Results:
+- Roadmap progress: `560/580` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-cabinet-support-request-lifecycle`, version `0.547.0`.
+- Медленный ответ первого thread игнорируется после выбора второго; сообщения очищаются на старте загрузки и не возвращаются после logout.
+- Повторный вход не восстанавливает support subject/text/reply, order/subscription links, auth/reset fields или старые сообщения.
+- Frontend tests: `110/110`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Cabinet desktop/mobile: `14/14`; полный desktop/mobile console-responsive Playwright suite: `58/58`.
+- Backend full suite: `1112/1112`; Release build: `0` warnings/`0` errors; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- EF drift, secret scan, strict UTF-8 guards и artifact cleanup: OK.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: admin restored session refresh
 
 Scope:
