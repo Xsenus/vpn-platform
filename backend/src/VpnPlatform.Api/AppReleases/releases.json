@@ -12557,5 +12557,32 @@
         "text": "Roadmap progress is 548/568 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-auth-checkout-action-api-dto-validation",
+    "version": "0.536.0",
+    "releasedAt": "2026-08-09T13:18:03+07:00",
+    "title": "Критические операции проверяют фактические DTO",
+    "summary": "Auth, checkout, payment-init, support status и Telegram link-token ответы теперь валидируются до сохранения токенов, pending purchase или external link; order mutations принимают реальный минимальный backend DTO.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Все 13 активных success-ответов critical flow проверяют обязательные token/status/date/nullable поля, route identity и безопасные external URL до TypeScript cast."
+      },
+      {
+        "type": "fixed",
+        "text": "Create order и checkout claim больше не требуют расширенные поля list-проекции, которых фактический mutation endpoint не возвращает."
+      },
+      {
+        "type": "improved",
+        "text": "Удалены два неиспользуемых frontend client-метода к intentionally disabled anonymous order/payment endpoint с постоянным 410 Gone; desktop/mobile regression подтверждает отсутствие ложной session и pending purchase после malformed DTO."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 549/569 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

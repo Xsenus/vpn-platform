@@ -340,7 +340,10 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/public/checkout-sessions') {
-      await fulfillJson(route, { id: 'checkout-all-screens', token: 'checkout-all-screens-token', tariffId: tariff.id, status: 'PendingAuth' })
+      await fulfillJson(route, {
+        id: 'checkout-all-screens', token: 'checkout-all-screens-token', tariffId: tariff.id,
+        userId: null, orderId: null, status: 'open', expiresAt: now, emailHint: null
+      })
       return
     }
 

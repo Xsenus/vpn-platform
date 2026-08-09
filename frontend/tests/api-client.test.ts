@@ -977,21 +977,11 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
       id: 'order-1',
       userId: 'user-1',
       tariffId: 'tariff-1',
-      tariffName: null,
       amount: 490,
       currency: 'RUB',
       status: 'PendingPayment',
-      type: 'NewSubscription',
-      channel: 'Web',
-      paymentProvider: 'YooKassa',
-      checkoutSessionId: null,
       expiresAt: timestamp,
-      paidAt: null,
-      isFirstPurchase: false,
-      paymentAttemptsCount: 0,
-      linkedSubscriptionId: null,
-      createdAt: timestamp,
-      updatedAt: timestamp
+      linkedSubscriptionId: null
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -1296,7 +1286,7 @@ test('ApiClient.createCheckoutSession calls public checkout-session endpoint', a
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'session-1', token: 'checkout-token', tariffId: 'tariff-1', status: 'open', expiresAt: new Date().toISOString() }), {
+    return new Response(JSON.stringify({ id: 'session-1', token: 'checkout-token', tariffId: 'tariff-1', userId: null, orderId: null, status: 'open', expiresAt: new Date().toISOString(), emailHint: null }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1323,7 +1313,7 @@ test('ApiClient.claimCheckoutSession binds session through authenticated endpoin
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'order-1', userId: 'user-1', tariffId: 'tariff-1', amount: 490, currency: 'RUB', status: 'PendingPayment', expiresAt: new Date().toISOString() }), {
+    return new Response(JSON.stringify({ id: 'order-1', userId: 'user-1', tariffId: 'tariff-1', amount: 490, currency: 'RUB', status: 'PendingPayment', expiresAt: new Date().toISOString(), linkedSubscriptionId: null }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -2276,6 +2266,75 @@ test('ApiClient rejects malformed server, provisioning and Telegram bot DTOs', a
     await assert.rejects(operation, isInvalidResponseDataError)
   }
   assert.equal(responses.length, 0)
+})
+
+test('ApiClient rejects malformed auth, checkout, payment and cabinet action DTOs', async () => {
+  const now = new Date().toISOString()
+  const checkout = {
+    id: 'checkout-1',
+    token: 'checkout-token',
+    tariffId: 'tariff-1',
+    userId: null,
+    orderId: null,
+    status: 'open',
+    expiresAt: now,
+    emailHint: null
+  }
+  const order = {
+    id: 'order-1',
+    userId: 'user-1',
+    tariffId: 'tariff-1',
+    amount: 490,
+    currency: 'RUB',
+    status: 'PendingPayment',
+    expiresAt: now,
+    linkedSubscriptionId: null
+  }
+  const responses = [
+    { accessToken: 'same-token', refreshToken: 'same-token', email: 'user@example.test', displayName: 'User' },
+    { accessToken: 'access-1', refreshToken: 'refresh-1', email: 'invalid-email', displayName: 'User' },
+    {},
+    { status: 'revoked' },
+    { accepted: false, message: 'queued', validationResetToken: null },
+    { status: 'ok' },
+    { ...checkout, status: 'PendingAuth' },
+    { ...checkout, token: 'checkout-other' },
+    { ...order, linkedSubscriptionId: undefined },
+    { ...order, status: 'UnknownOrderStatus' },
+    { paymentId: 'payment-1', redirectUrl: 'https://user:password@pay.example.test/order-1', rawResponse: '{}' },
+    { conversationId: 'support-other', status: 'closed', revision: 2 },
+    { token: 'link-token', deepLinkUrl: 'https://t.me/vpn_bot?start=link_other-token', expiresAt: now }
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const operations = [
+    () => client.register('user@example.test', 'Password123!', 'User'),
+    () => client.login('user@example.test', 'Password123!'),
+    () => client.refresh('refresh-token'),
+    () => client.logout('access-token', 'refresh-token'),
+    () => client.forgotPassword('user@example.test'),
+    () => client.resetPassword('reset-token', 'NewPassword123!'),
+    () => client.createCheckoutSession({ tariffId: 'tariff-1', type: 'NewSubscription', paymentProvider: 'YooKassa' }),
+    () => client.getCheckoutSession('checkout-token'),
+    () => client.claimCheckoutSession('access-token', 'checkout-token'),
+    () => client.createMyOrder('access-token', { tariffId: 'tariff-1', type: 'Renewal', paymentProvider: 'YooKassa', subscriptionId: 'subscription-1' }),
+    () => client.initMyPayment('access-token', 'order-1', 'YooKassa'),
+    () => client.updateMySupportConversationStatus('access-token', 'support-1', 'closed', 1),
+    () => client.createTelegramLinkToken('access-token')
+  ]
+  const isInvalidResponseDataError = (error: unknown) =>
+    error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+
+  for (const operation of operations) {
+    await assert.rejects(operation, isInvalidResponseDataError)
+  }
+  assert.equal(responses.length, 0)
+  assert.equal((client as unknown as Record<string, unknown>).createPublicOrder, undefined)
+  assert.equal((client as unknown as Record<string, unknown>).initPayment, undefined)
 })
 
 test('ApiClient times out stalled fetches and response bodies with controlled errors', async () => {

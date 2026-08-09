@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.536.0 - 2026-08-09
+
+Release entry: `2026-08-09-auth-checkout-action-api-dto-validation`.
+
+### Исправлено
+
+- Auth, checkout, payment-init, cabinet support status и Telegram link-token success-ответы больше не проходят в UI без проверки обязательных полей и backend semantics.
+- `createMyOrder` и checkout claim теперь принимают фактический минимальный `OrderDto` backend вместо ошибочно ожидаемой расширенной list-проекции; реальное продление больше не зависит от полей, которых mutation endpoint не возвращает.
+- Удалены два неиспользуемых frontend client-метода anonymous order/payment к endpoint-ам, которые backend намеренно завершает `410 Gone`.
+- Payment redirect проверяется как credential-free absolute `http/https`, checkout token/status/nullable-связи сверяются с маршрутом, Telegram deep link обязан вести на `https://t.me` с соответствующим одноразовым token.
+
+### Проверено
+
+- Frontend `103/103`, включая malformed DTO всех 13 активных critical-flow операций; typecheck и production build всех трех приложений.
+- Public critical-flow regression desktop/mobile `2/2`, public/cabinet focused matrix `8/8`; полный console/responsive suite `20/20`.
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует; fresh local SQLite checkout/payment/subscription/VPN smoke пройден.
+- Dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings; release/documentation/UTF-8 guards подтверждают latest `2026-08-09-auth-checkout-action-api-dto-validation`, версию `0.536.0` и roadmap `549/569`.
+- Roadmap progress: `549/569` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.535.0 - 2026-08-09
 
 Release entry: `2026-08-09-admin-infrastructure-api-dto-validation`.

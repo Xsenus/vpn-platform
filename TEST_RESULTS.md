@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: auth, checkout and cabinet action API DTO validation
+
+Scope:
+- Проверены runtime-контракты 13 активных success-ответов register/login/refresh/logout/password reset, checkout create/get/claim, order/payment mutations, cabinet support status и Telegram link-token.
+
+Results:
+- Roadmap progress: `549/569` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-auth-checkout-action-api-dto-validation`, version `0.536.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `103/103`; typecheck и production build всех трех приложений: OK.
+- Реальный backend mutation contract подтвержден: create order и checkout claim возвращают минимальный `OrderDto`; расширенные поля list-проекции больше не требуются для продления или checkout.
+- Все 13 активных маршрутов отклоняют неполные auth/session/order/payment/support/Telegram DTO, неверные status/token/route identity связи и unsafe credential-bearing/non-http redirect до TypeScript cast.
+- Два неиспользуемых frontend client-метода к intentionally disabled anonymous order/payment endpoint удалены; backend `410 Gone` policy не дублируется как доступная операция клиента.
+- Malformed critical-flow regression: OK, public desktop/mobile `2/2`; поврежденные checkout/auth ответы оставляют пользователя без ложной локальной сессии и pending purchase, controlled `ApiClientError` `502` виден без `pageerror`.
+- Browser responsive/console suite: OK, `20/20`, включая все public/cabinet/admin разделы и widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены, latest release подтвержден.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: admin infrastructure API DTO field validation
 
 Scope:

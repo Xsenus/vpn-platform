@@ -19,14 +19,14 @@ public class ProductAdminUiRoadmapSyncTests
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
                      "Backend full suite: `1112/1112`",
-                     "Frontend unit tests: `102/102`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `18/18`",
+                     "Frontend unit tests: `103/103`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `20/20`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-09-admin-infrastructure-api-dto-validation",
-                     "0.535.0"
+                     "2026-08-09-auth-checkout-action-api-dto-validation",
+                     "0.536.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-09-admin-infrastructure-api-dto-validation", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-09-admin-infrastructure-api-dto-validation", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-auth-checkout-action-api-dto-validation", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-auth-checkout-action-api-dto-validation", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,11 +72,11 @@ public class ProductAdminUiRoadmapSyncTests
         foreach (var expected in new[]
                  {
                      "Backend full suite: `1112/1112`",
-                     "Frontend unit tests: `102/102`",
+                     "Frontend unit tests: `103/103`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-09-admin-infrastructure-api-dto-validation",
-                     "0.535.0",
+                     "2026-08-09-auth-checkout-action-api-dto-validation",
+                     "0.536.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

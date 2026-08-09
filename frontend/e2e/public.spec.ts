@@ -116,6 +116,8 @@ async function mockPublicApi(page: Page) {
   let rejectNextCheckoutPromo = false
   let checkoutDelayMs = 0
   let unsafePaymentLink = false
+  let invalidCheckoutResponse = false
+  let invalidAuthResponse = false
   let invalidTariffsResponse = false
   let wrongShapeTariffsResponse = false
   let invalidItemTariffsResponse = false
@@ -179,13 +181,19 @@ async function mockPublicApi(page: Page) {
       return
     }
 
+    if (invalidCheckoutResponse) {
+      invalidCheckoutResponse = false
+      await fulfillJson(route, {})
+      return
+    }
+
     await fulfillJson(route, {
       id: 'checkout-session-1',
       token: 'public-checkout-token',
       tariffId: 'tariff-start',
       userId: null,
       orderId: null,
-      status: 'PendingAuth',
+      status: 'open',
       expiresAt: '2026-06-14T00:00:00Z',
       emailHint: null
     })
@@ -194,6 +202,11 @@ async function mockPublicApi(page: Page) {
   await page.route('**/api/auth/register', async (route) => {
     if (route.request().method() === 'OPTIONS') {
       await route.fulfill({ status: 204, headers: corsHeaders })
+      return
+    }
+    if (invalidAuthResponse) {
+      invalidAuthResponse = false
+      await fulfillJson(route, {})
       return
     }
     await fulfillJson(route, {
@@ -274,14 +287,16 @@ async function mockPublicApi(page: Page) {
       amount: 299,
       currency: 'RUB',
       status: 'PendingPayment',
-      expiresAt: '2026-06-14T00:00:00Z'
+      expiresAt: '2026-06-14T00:00:00Z',
+      linkedSubscriptionId: null
     })
   })
 
   await page.route('**/api/me/orders/public-order/payments/YooKassa/init', async (route) => {
     await fulfillJson(route, {
       paymentId: 'public-payment',
-      redirectUrl: unsafePaymentLink ? 'javascript:alert(1)' : 'https://pay.example.test/public'
+      redirectUrl: unsafePaymentLink ? 'javascript:alert(1)' : 'https://pay.example.test/public',
+      rawResponse: '{"sandbox":true}'
     })
   })
 
@@ -304,6 +319,8 @@ async function mockPublicApi(page: Page) {
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
     returnUnsafePaymentLink: () => { unsafePaymentLink = true },
+    returnInvalidCheckoutResponse: () => { invalidCheckoutResponse = true },
+    returnInvalidAuthResponse: () => { invalidAuthResponse = true },
     returnInvalidTariffsResponse: () => { invalidTariffsResponse = true },
     returnWrongShapeTariffsResponse: () => {
       invalidTariffsResponse = false
@@ -352,6 +369,36 @@ test('public tariffs handles invalid MIME, shape, item and size without a render
   await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
   await expect(page.getByRole('alert')).toContainText('Не удалось загрузить тарифы')
   await expect(page.getByText('Start 30 дней')).toHaveCount(0)
+  expect(pageErrors).toEqual([])
+})
+
+test('public checkout and auth reject malformed success DTOs without persisting stale state', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  const api = await mockPublicApi(page)
+
+  await page.goto('/tariffs')
+  api.returnInvalidCheckoutResponse()
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+  await expect(page).toHaveURL(/\/tariffs$/)
+  await expect(page.getByRole('alert')).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
+
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+  await expect(page).toHaveURL(/\/account$/)
+  await page.getByRole('tab', { name: 'Регистрация' }).click()
+  const authPanel = page.locator('#public-auth-panel')
+  await authPanel.getByLabel('Имя').fill('Malformed DTO')
+  await authPanel.getByLabel('Email').fill('malformed@example.test')
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  api.returnInvalidAuthResponse()
+  await authPanel.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('alert')).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-public-token'),
+    refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+  await expect(page.getByText('Malformed DTO').first()).toHaveCount(0)
   expect(pageErrors).toEqual([])
 })
 
@@ -425,7 +472,7 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   const registrationRequest = await registrationRequestPromise
   expect(registrationRequest.postDataJSON()).toMatchObject({ referralCode: 'PUBLIC-REF' })
   await expect(page.getByText('Public E2E').first()).toBeVisible()
-  const rejectedPaymentLinkAlert = page.getByRole('alert').filter({ hasText: 'Ссылка оплаты отклонена как некорректная' })
+  const rejectedPaymentLinkAlert = page.getByRole('alert').filter({ hasText: 'Сервер вернул JSON-ответ с некорректными данными' })
   await expect(rejectedPaymentLinkAlert).toBeVisible()
   await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Скопировать ссылку: скопировать значение/ })).toHaveCount(0)

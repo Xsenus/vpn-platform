@@ -173,18 +173,18 @@ export type AuthFormMode = 'login' | 'register'
 export type ForgotPasswordResponse = {
   accepted: boolean
   message: string
-  validationResetToken?: string | null
+  validationResetToken: string | null
 }
 
 export type CheckoutSessionDto = {
   id: string
   token: string
   tariffId: string
-  userId?: string | null
-  orderId?: string | null
+  userId: string | null
+  orderId: string | null
   status: string
   expiresAt: string
-  emailHint?: string | null
+  emailHint: string | null
 }
 
 export type OrderDto = {
@@ -208,7 +208,7 @@ export type OrderDto = {
   lastPaymentId?: string | null
   lastPaymentStatus?: string | null
   lastPaymentProvider?: string | null
-  linkedSubscriptionId?: string | null
+  linkedSubscriptionId: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -1112,16 +1112,6 @@ export type CreateCheckoutSessionPayload = {
   returnUrl?: string | null
 }
 
-export type CreatePublicOrderPayload = {
-  userId: string
-  tariffId: string
-  type: OrderType
-  channel: ChannelType
-  paymentProvider: PaymentProvider
-  promoCode?: string | null
-  isFirstPurchase: boolean
-}
-
 export type CreateMyOrderPayload = {
   tariffId: string
   type: OrderType
@@ -1261,6 +1251,7 @@ const provisioningModeValues = new Map([
 ])
 const telegramBotModeValues = new Set(['LongPolling', 'Webhook'])
 const telegramBotCheckStatusValues = new Set(['ready', 'needs_configuration'])
+const checkoutSessionStatusValues = new Set(['open', 'claiming', 'claimed', 'completed', 'expired'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -1341,6 +1332,12 @@ function hasAbsoluteHttpUrl(record: Record<string, unknown>, key: string) {
   } catch {
     return false
   }
+}
+
+function hasSafeAbsoluteHttpUrl(record: Record<string, unknown>, key: string) {
+  if (!hasAbsoluteHttpUrl(record, key)) return false
+  const url = new URL(record[key] as string)
+  return url.username.length === 0 && url.password.length === 0
 }
 
 function hasProvisioningModeDescriptor(
@@ -2468,6 +2465,88 @@ function isUserProfileDto(value: unknown): value is UserProfileDto {
     && userStatusValues.has(value.status as string)
 }
 
+function isAuthResponse(value: unknown): value is AuthResponse {
+  return isRecord(value)
+    && hasString(value, 'accessToken', true)
+    && hasString(value, 'refreshToken', true)
+    && value.accessToken !== value.refreshToken
+    && hasString(value, 'email', true)
+    && isValidEmail(value.email as string)
+    && hasString(value, 'displayName')
+}
+
+function isForgotPasswordResponse(value: unknown): value is ForgotPasswordResponse {
+  return isRecord(value)
+    && value.accepted === true
+    && hasString(value, 'message', true)
+    && hasNullableString(value, 'validationResetToken')
+    && (value.validationResetToken === null || (value.validationResetToken as string).trim().length > 0)
+}
+
+function isCheckoutSessionDto(value: unknown): value is CheckoutSessionDto {
+  if (!isRecord(value)
+    || !hasString(value, 'id', true)
+    || !hasString(value, 'token', true)
+    || !hasString(value, 'tariffId', true)
+    || !hasNullableString(value, 'userId')
+    || !hasNullableString(value, 'orderId')
+    || !hasString(value, 'status', true)
+    || !checkoutSessionStatusValues.has(value.status as string)
+    || !hasDateString(value, 'expiresAt')
+    || !hasNullableString(value, 'emailHint')) return false
+
+  if (value.status === 'open' || value.status === 'expired') {
+    return value.userId === null && value.orderId === null
+  }
+  if (value.status === 'claiming') {
+    return typeof value.userId === 'string' && value.userId.trim().length > 0 && value.orderId === null
+  }
+  return typeof value.userId === 'string'
+    && value.userId.trim().length > 0
+    && typeof value.orderId === 'string'
+    && value.orderId.trim().length > 0
+}
+
+function isOrderCommandDto(value: unknown): value is OrderDto {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasString(value, 'userId', true)
+    && hasString(value, 'tariffId', true)
+    && hasFiniteNumber(value, 'amount', 0)
+    && hasString(value, 'currency', true)
+    && hasString(value, 'status', true)
+    && orderStatusValues.has(value.status as string)
+    && hasDateString(value, 'expiresAt')
+    && hasNullableString(value, 'linkedSubscriptionId')
+}
+
+function isPaymentInitResult(value: unknown): value is PaymentInitResult {
+  return isRecord(value)
+    && hasString(value, 'paymentId', true)
+    && hasSafeAbsoluteHttpUrl(value, 'redirectUrl')
+    && hasString(value, 'rawResponse')
+}
+
+function isSupportMutationResult(value: unknown): value is { conversationId: string; status: string; revision: number } {
+  return isRecord(value)
+    && hasString(value, 'conversationId', true)
+    && hasString(value, 'status', true)
+    && supportStatusValues.has(value.status as string)
+    && hasInteger(value, 'revision', 1)
+}
+
+function isTelegramLinkTokenDto(value: unknown): value is TelegramLinkTokenDto {
+  if (!isRecord(value)
+    || !hasString(value, 'token', true)
+    || !hasSafeAbsoluteHttpUrl(value, 'deepLinkUrl')
+    || !hasDateString(value, 'expiresAt')) return false
+
+  const url = new URL(value.deepLinkUrl as string)
+  return url.protocol === 'https:'
+    && url.hostname.toLowerCase() === 't.me'
+    && url.searchParams.get('start') === `link_${value.token}`
+}
+
 function isCabinetSubscriptionDto(value: unknown): value is SubscriptionDto {
   if (!isRecord(value)) return false
 
@@ -2886,7 +2965,7 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ email, password, displayName, referralCode: referralCode?.trim() || null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAuthResponse)
   }
 
   login(email: string, password: string): Promise<AuthResponse> {
@@ -2894,7 +2973,7 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ email, password }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAuthResponse)
   }
 
   refresh(refreshToken: string): Promise<AuthResponse> {
@@ -2902,7 +2981,7 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isAuthResponse)
   }
 
   logout(token?: string | null, refreshToken?: string | null): Promise<{ status: string }> {
@@ -2911,7 +2990,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ refreshToken: refreshToken ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is { status: string } => isRecord(value) && value.status === 'ok')
   }
 
   forgotPassword(email: string): Promise<ForgotPasswordResponse> {
@@ -2919,7 +2998,7 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ email }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isForgotPasswordResponse)
   }
 
   resetPassword(resetToken: string, newPassword: string): Promise<{ status: string }> {
@@ -2927,7 +3006,7 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ token: resetToken, newPassword }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is { status: string } => isRecord(value) && value.status === 'password_changed')
   }
 
   getMe(token: string): Promise<UserProfileDto> {
@@ -2939,13 +3018,13 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is CheckoutSessionDto => isCheckoutSessionDto(value) && value.status === 'open')
   }
 
   getCheckoutSession(token: string): Promise<CheckoutSessionDto> {
     return this.request<CheckoutSessionDto>(`/api/public/checkout-sessions/${encodeURIComponent(token)}`, {
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is CheckoutSessionDto => isCheckoutSessionDto(value) && value.token === token)
   }
 
   claimCheckoutSession(token: string, checkoutToken: string): Promise<OrderDto> {
@@ -2954,23 +3033,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
-  }
-
-  createPublicOrder(payload: CreatePublicOrderPayload): Promise<OrderDto> {
-    return this.request<OrderDto>('/api/public/orders', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      errorMessage: apiFallbackErrorMessage
-    })
-  }
-
-  initPayment(orderId: string, provider: PaymentProvider): Promise<PaymentInitResult> {
-    return this.request<PaymentInitResult>(`/api/public/payments/${provider}/init`, {
-      method: 'POST',
-      body: JSON.stringify({ orderId }),
-      errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isOrderCommandDto)
   }
 
   createMyOrder(token: string, payload: CreateMyOrderPayload): Promise<OrderDto> {
@@ -2979,7 +3042,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isCabinetOrderDto)
+    }, 'object', isOrderCommandDto)
   }
 
   initMyPayment(token: string, orderId: string, provider: PaymentProvider, returnUrl?: string | null): Promise<PaymentInitResult> {
@@ -2988,7 +3051,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ returnUrl: returnUrl ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isPaymentInitResult)
   }
 
   getMySubscriptions(token: string): Promise<SubscriptionDto[]> {
@@ -3044,7 +3107,9 @@ export class ApiClient {
       token,
       body: JSON.stringify({ status, revision }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is { conversationId: string; status: string; revision: number } => isSupportMutationResult(value)
+      && value.conversationId === conversationId
+      && value.status === status)
   }
 
 
@@ -3054,7 +3119,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isTelegramLinkTokenDto)
   }
 
   getTelegramStatus(token: string): Promise<TelegramStatusDto> {

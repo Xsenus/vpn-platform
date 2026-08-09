@@ -476,7 +476,16 @@ async function mockCabinetApi(page: Page) {
         tariffId: payload.tariffId,
         paymentProvider: payload.paymentProvider
       }
-      await fulfillJson(route, renewalOrder)
+      await fulfillJson(route, {
+        id: renewalOrder.id,
+        userId: renewalOrder.userId,
+        tariffId: renewalOrder.tariffId,
+        amount: renewalOrder.amount,
+        currency: renewalOrder.currency,
+        status: renewalOrder.status,
+        expiresAt: renewalOrder.expiresAt,
+        linkedSubscriptionId: renewalOrder.linkedSubscriptionId
+      })
       return
     }
 
