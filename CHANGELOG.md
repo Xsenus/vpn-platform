@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.545.0 - 2026-08-09
+
+Release entry: `2026-08-09-cabinet-restored-session-refresh`.
+
+### Исправлено
+
+- Кабинет при восстановлении сохранённой сессии сначала пробует загрузить данные, а после access-token `401` ровно один раз ротирует действующий refresh-token вместо немедленного удаления обоих токенов.
+- Transient bootstrap-ошибка сохраняет текущую или уже ротированную пару токенов и оставляет явную повторную загрузку; rejected refresh `401/403` завершает сессию fail-closed.
+- Session operation generation отбрасывает поздние refresh/profile ответы после logout или новой авторизации и не позволяет вернуть приватные данные или browser storage.
+
+### Улучшено
+
+- До подтверждения профиля кабинет показывает отдельное состояние восстановления с loading, retry и logout, не выводит пустой VPN-доступ и не сообщает ложный вход как «пользователь».
+
+### Проверено
+
+- Frontend `109/109`, typecheck/build всех приложений и dependency audit `0 vulnerabilities`.
+- Cabinet desktop/mobile `10/10`; полный desktop/mobile console-responsive Playwright suite `40/40` покрывает single refresh, transient `503`, rejected refresh и delayed completion после logout.
+- Backend `1112/1112`, Release build `0` warnings/`0` errors и fresh local SQLite checkout/payment/subscription/VPN smoke пройдены.
+- Secret scan, strict UTF-8 guards и artifact cleanup пройдены.
+- `RoadmapCurrentStateTests` фиксирует `558/578` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остаётся `staging-ready baseline`, not production-ready.
+
 ## 0.544.0 - 2026-08-09
 
 Release entry: `2026-08-09-public-session-refresh-single-flight`.

@@ -259,6 +259,12 @@ function authResponse(email = user.email) {
   }
 }
 
+const restoredAuthResponse = {
+  ...authResponse(),
+  accessToken: 'access-token-restored-rotated',
+  refreshToken: 'refresh-token-restored-rotated'
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return {
     status,
@@ -282,6 +288,12 @@ async function mockCabinetApi(page: Page) {
   let logoutShouldFail = false
   let authorizedRequestsRejected = false
   let rejectedAuthorizedPath: string | null = null
+  const expiredAccessTokens = new Set<string>()
+  let failNextProfileStatus: number | null = null
+  let refreshFailureStatus: number | null = null
+  let delayNextRefresh = false
+  let delayedRefreshReleased = false
+  let releaseDelayedRefresh: (() => void) | null = null
   let unsafeQrSvg = false
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
@@ -339,6 +351,23 @@ async function mockCabinetApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/auth/refresh') {
+      if (refreshFailureStatus !== null) {
+        await fulfillJson(route, { error: 'invalid_refresh_token' }, refreshFailureStatus)
+        return
+      }
+      if (delayNextRefresh) {
+        delayNextRefresh = false
+        if (!delayedRefreshReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedRefresh = resolve })
+        }
+        delayedRefreshReleased = false
+        releaseDelayedRefresh = null
+      }
+      await fulfillJson(route, restoredAuthResponse)
+      return
+    }
+
     if (method === 'POST' && path === '/api/auth/forgot-password') {
       await fulfillJson(route, {
         accepted: true,
@@ -365,6 +394,12 @@ async function mockCabinetApi(page: Page) {
       return
     }
 
+    if (expiredAccessTokens.has(request.headers().authorization ?? '')
+      && (path.startsWith('/api/me') || path.startsWith('/api/cabinet/'))) {
+      await fulfillJson(route, { error: 'access_token_expired' }, 401)
+      return
+    }
+
     if (rejectedAuthorizedPath === path && request.headers().authorization) {
       rejectedAuthorizedPath = null
       await fulfillJson(route, { error: 'user_not_active' }, 401)
@@ -372,6 +407,12 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me') {
+      if (failNextProfileStatus !== null) {
+        const status = failNextProfileStatus
+        failNextProfileStatus = null
+        await fulfillJson(route, { error: 'profile_temporarily_unavailable' }, status)
+        return
+      }
       await fulfillJson(route, user)
       return
     }
@@ -546,6 +587,14 @@ async function mockCabinetApi(page: Page) {
     failLogout: () => { logoutShouldFail = true },
     rejectAuthorizedRequests: () => { authorizedRequestsRejected = true },
     allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
+    expireAccessToken: (accessToken: string) => { expiredAccessTokens.add(`Bearer ${accessToken}`) },
+    failNextProfileRequest: (status = 503) => { failNextProfileStatus = status },
+    failRefreshRequest: (status = 401) => { refreshFailureStatus = status },
+    delayNextRefreshRequest: () => { delayNextRefresh = true },
+    releaseRefreshRequest: () => {
+      delayedRefreshReleased = true
+      releaseDelayedRefresh?.()
+    },
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
@@ -556,6 +605,90 @@ async function mockCabinetApi(page: Page) {
       requests.findLast((item) => item.method === method && new URL(item.url).pathname === path)
   }
 }
+
+async function seedCabinetSession(page: Page, accessToken: string, refreshToken: string) {
+  await page.addInitScript(({ accessToken: access, refreshToken: refresh }) => {
+    sessionStorage.setItem('vpn-platform-cabinet-token', access)
+    sessionStorage.setItem('vpn-platform-cabinet-refresh-token', refresh)
+  }, { accessToken, refreshToken })
+}
+
+test('cabinet rotates an expired restored access token once', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.expireAccessToken('access-token-restored-expired')
+  await seedCabinetSession(page, 'access-token-restored-expired', 'refresh-token-restored-valid')
+
+  await page.goto('/')
+
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+  await expect(page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).resolves.toEqual({
+    access: restoredAuthResponse.accessToken,
+    refresh: restoredAuthResponse.refreshToken
+  })
+})
+
+test('cabinet preserves a restored session after a transient profile failure', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.failNextProfileRequest()
+  await seedCabinetSession(page, 'access-token-restored-valid', 'refresh-token-restored-valid')
+
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { name: 'Восстановление сессии' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Повторить загрузку' })).toBeEnabled()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await expect(page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).resolves.toEqual({
+    access: 'access-token-restored-valid',
+    refresh: 'refresh-token-restored-valid'
+  })
+
+  await page.getByRole('button', { name: 'Повторить загрузку' }).click()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(0)
+})
+
+test('cabinet clears a restored session when refresh is rejected', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.expireAccessToken('access-token-restored-expired')
+  api.failRefreshRequest()
+  await seedCabinetSession(page, 'access-token-restored-expired', 'refresh-token-restored-invalid')
+
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { name: 'Вход в личный кабинет' })).toBeVisible()
+  await expect(page.getByText('Сессия завершена или доступ к аккаунту ограничен. Войдите заново.')).toBeVisible()
+  await expect(page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).resolves.toEqual({ access: null, refresh: null })
+  expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+})
+
+test('cabinet ignores a delayed restored-session refresh after logout', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.expireAccessToken('access-token-restored-expired')
+  api.delayNextRefreshRequest()
+  await seedCabinetSession(page, 'access-token-restored-expired', 'refresh-token-restored-valid')
+
+  await page.goto('/')
+  await expect.poll(() => api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход в личный кабинет' })).toBeVisible()
+
+  api.releaseRefreshRequest()
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-cabinet-token'),
+    refresh: sessionStorage.getItem('vpn-platform-cabinet-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+  await expect(page.getByText(user.email, { exact: true })).toHaveCount(0)
+})
 
 test('cabinet covers register, login, payments, subscription access and support', async ({ page }, testInfo) => {
   test.slow()

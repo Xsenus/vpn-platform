@@ -25,7 +25,7 @@ import {
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
-import { cabinetSessionEndedMessage, isCabinetSessionRejected } from './cabinet-session'
+import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
 import { buildOrderExportText, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -96,6 +96,8 @@ export function App() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [sessionHydrating, setSessionHydrating] = useState(Boolean(token))
+  const [logoutBusy, setLogoutBusy] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -109,6 +111,7 @@ export function App() {
   const [newPassword, setNewPassword] = useState('')
   const [appVersionOpenSignal, setAppVersionOpenSignal] = useState(0)
   const restoredSessionHydrationStarted = useRef(false)
+  const sessionOperationId = useRef(0)
   const authPanelId = 'cabinet-auth-panel'
   const activeAuthTabId = authMode === 'login' ? 'cabinet-auth-login-tab' : 'cabinet-auth-register-tab'
   const authValidationErrors = validateAuthInput(authMode, authEmail, authPassword, authDisplayName)
@@ -164,8 +167,11 @@ export function App() {
   const currentQrAvailability = getAccessQrAvailability(linkedCurrentAccess ?? cabinetSummary.currentAccess)
 
   const clearSession = () => {
+    sessionOperationId.current += 1
     setToken('')
     setRefreshToken('')
+    setSessionHydrating(false)
+    setBusy(false)
     setProfile(null)
     setSubscriptions([])
     setOrders([])
@@ -195,18 +201,24 @@ export function App() {
   }
 
   const storeSession = async (response: AuthResponse) => {
+    const operationId = ++sessionOperationId.current
     setToken(response.accessToken)
     setRefreshToken(response.refreshToken)
     writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
     writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-    return await loadAll(response.accessToken)
+    return await loadAll(response.accessToken, { operationId })
   }
 
-  const loadAll = async (currentToken: string) => {
+  const loadAll = async (currentToken: string, options?: { operationId?: number, throwOnError?: boolean }) => {
     if (!currentToken) return false
 
-    setBusy(true)
-    setError('')
+    const operationId = options?.operationId ?? sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
+
+    if (operationIsCurrent()) {
+      setBusy(true)
+      setError('')
+    }
 
     try {
       const [nextProfile, nextSubscriptions, nextOrders, nextPayments, nextAccesses, nextReferrals, nextSupportConversations, nextTelegramStatus] = await Promise.all([
@@ -219,6 +231,8 @@ export function App() {
         api.getMySupportConversations(currentToken),
         api.getTelegramStatus(currentToken)
       ])
+
+      if (!operationIsCurrent()) return false
 
       setProfile(nextProfile)
       setSubscriptions(nextSubscriptions)
@@ -233,10 +247,51 @@ export function App() {
       setTelegramStatus(nextTelegramStatus)
       return true
     } catch (e) {
+      if (!operationIsCurrent()) return false
+      if (options?.throwOnError) throw e
       handleAuthenticatedError(e, 'Не удалось загрузить кабинет')
       return false
     } finally {
-      setBusy(false)
+      if (operationIsCurrent()) setBusy(false)
+    }
+  }
+
+  const hydrateRestoredSession = async (currentToken: string, currentRefreshToken: string) => {
+    if (!currentToken) return false
+
+    const operationId = ++sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
+    setSessionHydrating(true)
+    setError('')
+    setNotice('')
+
+    try {
+      try {
+        return await loadAll(currentToken, { operationId, throwOnError: true })
+      } catch (e) {
+        if (!operationIsCurrent()) return false
+        if (!currentRefreshToken || !isCabinetAccessTokenExpired(e)) throw e
+
+        const response = await api.refresh(currentRefreshToken)
+        if (!operationIsCurrent()) return false
+
+        setToken(response.accessToken)
+        setRefreshToken(response.refreshToken)
+        writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+        writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
+        return await loadAll(response.accessToken, { operationId, throwOnError: true })
+      }
+    } catch (e) {
+      if (!operationIsCurrent()) return false
+      if (isCabinetSessionRejected(e)) {
+        clearSession()
+        setError(cabinetSessionEndedMessage)
+      } else {
+        setError(e instanceof Error ? e.message : 'Не удалось восстановить сессию')
+      }
+      return false
+    } finally {
+      if (operationIsCurrent()) setSessionHydrating(false)
     }
   }
 
@@ -262,7 +317,7 @@ export function App() {
     if (restoredSessionHydrationStarted.current) return
     restoredSessionHydrationStarted.current = true
     // New login and refresh sessions are loaded by their handlers; this hydrates only a restored session.
-    void loadAll(token)
+    void hydrateRestoredSession(token, refreshToken)
   }, [])
 
   useEffect(() => {
@@ -335,25 +390,33 @@ export function App() {
       setError('Сессия не найдена. Войдите заново.')
       return
     }
+    const operationId = ++sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
     setBusy(true)
     setError('')
     setNotice('')
     try {
       const response = await api.refresh(refreshToken)
+      if (!operationIsCurrent()) return
       setToken(response.accessToken)
       setRefreshToken(response.refreshToken)
       writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
       writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-      if (!await loadAll(response.accessToken)) return
+      if (!await loadAll(response.accessToken, { operationId })) return
       setNotice('Сессия обновлена.')
     } catch (e) {
+      if (!operationIsCurrent()) return
       handleAuthenticatedError(e, 'Не удалось обновить сессию')
     } finally {
-      setBusy(false)
+      if (operationIsCurrent()) setBusy(false)
     }
   }
 
   const handleLogout = async () => {
+    if (logoutBusy) return
+    sessionOperationId.current += 1
+    setSessionHydrating(false)
+    setLogoutBusy(true)
     setBusy(true)
     setError('')
     setNotice('')
@@ -364,6 +427,7 @@ export function App() {
     } finally {
       clearSession()
       setBusy(false)
+      setLogoutBusy(false)
     }
   }
 
@@ -684,7 +748,7 @@ export function App() {
         </Card>
       </div>
 
-      {token && (
+      {profile && (
         <div className="section">
           <Card className="cabinet-current-card">
             <div className="cabinet-current-main">
@@ -791,6 +855,19 @@ export function App() {
                 </div>
               </form>
             </>
+          ) : !profile ? (
+            <>
+              <h3>Восстановление сессии</h3>
+              <p className="muted">
+                {sessionHydrating
+                  ? 'Проверяем сохранённую сессию и загружаем данные кабинета.'
+                  : 'Не удалось загрузить данные кабинета. Сессия сохранена, можно повторить попытку.'}
+              </p>
+              <div className="toolbar">
+                <PrimaryButton disabled={sessionHydrating || logoutBusy} aria-busy={sessionHydrating} onClick={() => void hydrateRestoredSession(token, refreshToken)}>Повторить загрузку</PrimaryButton>
+                <PrimaryButton disabled={logoutBusy} aria-busy={logoutBusy} className="button-secondary" onClick={() => void handleLogout()}>Выйти</PrimaryButton>
+              </div>
+            </>
           ) : (
             <>
               <h3>Сессия и оплата</h3>
@@ -807,7 +884,7 @@ export function App() {
                 <PrimaryButton disabled={!token || busy} aria-busy={busy} onClick={() => void loadAll(token)}>
                   {busy ? 'Обновляем...' : 'Обновить данные'}
                 </PrimaryButton>
-                <PrimaryButton disabled={busy} className="button-secondary" onClick={() => void handleLogout()}>Выйти</PrimaryButton>
+                <PrimaryButton disabled={busy || logoutBusy} aria-busy={logoutBusy} className="button-secondary" onClick={() => void handleLogout()}>Выйти</PrimaryButton>
               </div>
               <p className="muted">Вы вошли как {profile?.email ?? profile?.displayName ?? 'пользователь'}.</p>
               {paymentProvidersLoading && <p className="muted">Загружаем доступные способы оплаты...</p>}

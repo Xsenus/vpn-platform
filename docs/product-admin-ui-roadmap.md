@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `557/577` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `558/578` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `32/32`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `40/40`.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
@@ -132,7 +132,7 @@
 - [x] Public checkout имеет один owner для claim/payment-init, сохраняет partial order для retry и отбрасывает late response после logout.
 - [x] Persisted public checkout проходит bounded token/provider/shape validation и очищается до API-запросов при повреждённом browser state.
 - [x] Public session hydration выполняет одну refresh-token rotation под StrictMode, сохраняет transient state для retry и отбрасывает late response после logout.
-- [x] Latest "Что нового": `2026-08-09-public-session-refresh-single-flight`, версия `0.544.0`.
+- [x] Latest "Что нового": `2026-08-09-cabinet-restored-session-refresh`, версия `0.545.0`.
 
 ## Как вести дальше
 

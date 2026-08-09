@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: cabinet restored session refresh
+
+Scope:
+- Проверено восстановление cabinet access/refresh session под `React.StrictMode`, включая истёкший access-token, временный bootstrap-сбой, rejected refresh и logout во время задержанного ответа.
+- Проверено, что неподтверждённая сессия не показывает пустой приватный UI и допускает retry или локальный выход.
+
+Results:
+- Roadmap progress: `558/578` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-cabinet-restored-session-refresh`, version `0.545.0`.
+- Access-token `401` запускает одну refresh-ротацию; новые токены сохраняются до повторного bootstrap, terminal refresh `401/403` очищает сессию.
+- Transient `503` сохраняет токены и открывает повторную загрузку без refresh; session operation generation игнорирует delayed completion после logout.
+- Frontend tests: `109/109`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Cabinet desktop/mobile: `10/10`; полный desktop/mobile console-responsive Playwright suite: `40/40`.
+- Backend full suite: `1112/1112`; Release build: `0` warnings/`0` errors; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- Secret scan, strict UTF-8 guards и artifact cleanup: OK.
+- `STATE-014` остаётся локально закрытым; external evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: public session refresh single-flight
 
 Scope:
