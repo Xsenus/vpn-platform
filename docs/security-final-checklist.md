@@ -99,7 +99,8 @@ git diff --check
 - Support conversation revision rejects stale mutations; internal messages fail closed and assignment requires active support capability: OK.
 - Checkout claim transaction prevents cross-user order duplication and preserves terminal completed state: OK.
 - Promo lifecycle validation, relational redemption limits and paid free-days snapshot fail closed across checkout, order and subscription activation: OK.
-- Latest local release: `2026-08-09-subscription-migration-execution`, версия `0.538.0`.
+- Межпанельный VPN client migration использует только валидированный inbound-каталог, исключает unhealthy/full панели и сохраняет production-like 3x-ui evidence открытым: OK.
+- Latest local release: `2026-08-09-cross-panel-client-migration-ui`, версия `0.539.0`.
 - Frontend tests: 104/104.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

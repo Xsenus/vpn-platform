@@ -82,6 +82,10 @@ public class AdminVpnPanelsController : ControllerBase
     public async Task<IActionResult> GetInbounds(Guid id, CancellationToken cancellationToken)
         => Ok(await _panels.GetInboundsAsync(id, cancellationToken));
 
+    [HttpGet("vpn-inbounds")]
+    public async Task<IActionResult> GetAllInbounds(CancellationToken cancellationToken)
+        => Ok(await _panels.GetInboundsAsync(cancellationToken));
+
     [HttpPost("vpn-panels/{id:guid}/inbounds")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> CreateInbound(Guid id, [FromBody] CreateVpnInboundCommand request, CancellationToken cancellationToken)

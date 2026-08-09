@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: cross-panel VPN client migration UI
+
+Scope:
+- Проверен разрыв между backend-командой, допускающей target inbound другой панели, и admin UI, который ранее показывал только inbound выбранной панели.
+
+Results:
+- Roadmap progress: `552/572` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-cross-panel-client-migration-ui`, version `0.539.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; агрегированный inbound controller/SQLite regression: OK.
+- Общий `GET /api/admin/vpn-inbounds` и API-клиент проверяют internal ID, составной `panel + externalInboundId` и default invariant в границах панели.
+- Admin UI группирует совместимые цели по активным здоровым панелям с capacity, подтверждает временный резерв panel/inbound/server и после успеха открывает destination panel.
+- Frontend tests: OK, `104/104`; typecheck/build всех приложений: OK; admin Playwright: `3/3`; полный desktop/mobile console-responsive suite: `20/20`.
+- E2E подтверждает `targetInboundId=inbound-us`, смену `vpnPanelId`, destination client/inbound и последующие health/sync операции без page errors или horizontal overflow.
+- Fresh local SQLite purchase/payment/subscription/VPN smoke: OK; latest release `2026-08-09-cross-panel-client-migration-ui`. Dependency audit: `0 vulnerabilities`; secret scan: `649` files/`0` findings; `RoadmapCurrentStateTests`, release/documentation и strict UTF-8 guards пройдены.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: executable subscription migration
 
 Scope:

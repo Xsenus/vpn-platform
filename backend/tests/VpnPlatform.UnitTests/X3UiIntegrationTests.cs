@@ -941,6 +941,28 @@ public class X3UiIntegrationTests
             Status = VpnPanelStatus.Active,
             Capacity = 100
         });
+        var otherPanelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = otherPanelId,
+            Name = "other-panel",
+            BaseUrl = "https://other-panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "us",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        });
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            VpnPanelId = otherPanelId,
+            ExternalInboundId = "10",
+            Name = "other-vless",
+            Protocol = "vless",
+            Port = 9443,
+            IsActive = true,
+            Capacity = 100
+        });
         await db.SaveChangesAsync();
 
         var first = Assert.IsType<VpnInboundDto>(Assert.IsType<OkObjectResult>(await controller.CreateInbound(panelId, NewInboundCommand(name: "main-vless", isDefault: true), CancellationToken.None)).Value);
@@ -951,7 +973,11 @@ public class X3UiIntegrationTests
         var secondInbound = await db.VpnInbounds.SingleAsync(x => x.Id == second.Id);
         Assert.True(secondInbound.IsDefault);
         Assert.Equal("vmess", secondInbound.Protocol);
-        Assert.IsType<OkObjectResult>(await controller.GetInbounds(panelId, CancellationToken.None));
+        var panelInbounds = Assert.IsAssignableFrom<IReadOnlyCollection<VpnInboundDto>>(Assert.IsType<OkObjectResult>(await controller.GetInbounds(panelId, CancellationToken.None)).Value);
+        var allInbounds = Assert.IsAssignableFrom<IReadOnlyCollection<VpnInboundDto>>(Assert.IsType<OkObjectResult>(await controller.GetAllInbounds(CancellationToken.None)).Value);
+        Assert.Equal(2, panelInbounds.Count);
+        Assert.Equal(3, allInbounds.Count);
+        Assert.Contains(allInbounds, x => x.VpnPanelId == otherPanelId && x.Name == "other-vless");
 
         var disabled = Assert.IsType<VpnInboundDto>(Assert.IsType<OkObjectResult>(await controller.PatchInbound(secondInbound.Id, NewInboundCommand(
             name: "backup-disabled",

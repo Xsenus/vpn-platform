@@ -764,6 +764,17 @@ public class X3UiPanelService
         return inbounds.Select(MapInbound).ToList();
     }
 
+    public async Task<IReadOnlyCollection<VpnInboundDto>> GetInboundsAsync(CancellationToken cancellationToken = default)
+    {
+        var inbounds = await _db.VpnInbounds.AsNoTracking()
+            .OrderBy(x => x.VpnPanelId)
+            .ThenByDescending(x => x.IsDefault)
+            .ThenBy(x => x.Port)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+        return inbounds.Select(MapInbound).ToList();
+    }
+
     public Task<Result<VpnInboundDto>> PatchInboundAsync(Guid inboundId, CreateVpnInboundCommand command, CancellationToken cancellationToken = default)
         => PatchInboundAsync(inboundId, command, null, cancellationToken);
 

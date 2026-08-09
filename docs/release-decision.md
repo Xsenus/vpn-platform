@@ -61,8 +61,9 @@ Production-ready решение заблокировано следующими 
 - Support conversation revision rejects stale reply/status/note, reopens pending inbound threads and validates assigned support agents without closing external evidence gates.
 - Checkout claim reserves the session, creates the order and publishes the final link in one transaction; same-user retries resolve the winner and another user cannot persist a second order.
 - Promo validation is fail-closed across checkout and order creation; relational redemption limits, paid free-days snapshot and activation/renewal duration are covered by deterministic SQLite and browser regression.
-- Latest "Что нового": `2026-08-09-subscription-migration-execution`, версия `0.538.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
-- Roadmap progress: `551/571` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Общий inbound-каталог и admin desktop/mobile regression подтверждают межпанельный перенос клиента, автоматическое открытие панели назначения и последующие panel health/sync операции.
+- Latest "Что нового": `2026-08-09-cross-panel-client-migration-ui`, версия `0.539.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `552/572` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

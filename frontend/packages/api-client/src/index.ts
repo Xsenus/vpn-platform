@@ -3610,6 +3610,20 @@ export class ApiClient {
       && items.filter((item) => item.isDefault).length <= 1)
   }
 
+  getAdminVpnInbounds(token: string): Promise<VpnInboundDto[]> {
+    return this.requestArray<VpnInboundDto>('/api/admin/vpn-inbounds', { token, errorMessage: apiFallbackErrorMessage }, isVpnInboundDto, (items) => {
+      const externalIds = new Set<string>()
+      const defaultPanels = new Set<string>()
+      return hasUniqueStringKey(items, 'id') && items.every((item) => {
+        const externalId = `${item.vpnPanelId}\u0000${item.externalInboundId}`
+        if (externalIds.has(externalId) || (item.isDefault && defaultPanels.has(item.vpnPanelId))) return false
+        externalIds.add(externalId)
+        if (item.isDefault) defaultPanels.add(item.vpnPanelId)
+        return true
+      })
+    })
+  }
+
   createAdminVpnPanelInbound(token: string, id: string, payload: CreateVpnInboundPayload): Promise<VpnInboundDto> {
     return this.request<VpnInboundDto>(`/api/admin/vpn-panels/${id}/inbounds`, {
       method: 'POST',

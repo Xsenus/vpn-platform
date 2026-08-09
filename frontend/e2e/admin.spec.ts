@@ -329,14 +329,26 @@ async function mockAdminApi(page: Page) {
   const referralPrograms = [referralProgram()]
   const releases = [release()]
   const scenarios = [workScenario()]
-  const panels = [vpnPanel()]
+  const panels = [
+    vpnPanel(),
+    vpnPanel({
+      id: 'panel-us',
+      name: 'US 3x-ui Sandbox',
+      baseUrl: 'https://panel-us.example.test',
+      region: 'US',
+      usedCapacity: 4,
+      version: '2.4.9',
+      lastError: ''
+    })
+  ]
   const subscriptions: Array<Record<string, unknown>> = [
     { id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, blockReason: null, suspendedAt: null, cancelledAt: null, lifecycleAttemptCount: 0, lifecycleProcessingStartedAt: null, lifecycleLeaseExpiresAt: null, lifecycleNextAttemptAt: null, lifecycleLastError: null, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now },
     { id: 'sub-cancelled', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Отменённая подписка', status: 'Cancelled', startAt: '2026-05-01T00:00:00Z', endAt: now, cancelledAt: now, gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-revoked', lastPaymentId: 'payment-old', renewalCount: 0, blockReason: null, suspendedAt: null, lifecycleAttemptCount: 0, lifecycleProcessingStartedAt: null, lifecycleLeaseExpiresAt: null, lifecycleNextAttemptAt: null, lifecycleLastError: null, accessUri: 'vless://cancelled-stale-secret@example.test', qrCodePath: 'qr://cancelled-stale-secret', configPath: 'config://cancelled-stale-secret', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }
   ]
   const inbounds: Array<Record<string, unknown>> = [
     { id: 'inbound-default', vpnPanelId: 'panel-eu', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 1000, usedCapacity: 12 },
-    { id: 'inbound-backup', vpnPanelId: 'panel-eu', externalInboundId: '2', name: 'backup-vless', protocol: 'vless', port: 8443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: false, isActive: true, capacity: 20, usedCapacity: 3 }
+    { id: 'inbound-backup', vpnPanelId: 'panel-eu', externalInboundId: '2', name: 'backup-vless', protocol: 'vless', port: 8443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: false, isActive: true, capacity: 20, usedCapacity: 3 },
+    { id: 'inbound-us', vpnPanelId: 'panel-us', externalInboundId: '1', name: 'us-vless', protocol: 'vless', port: 9443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 100, usedCapacity: 4 }
   ]
   const clients: Array<Record<string, unknown>> = [{ id: 'client-e2e', userId: 'user-e2e', subscriptionId: 'sub-e2e', vpnPanelId: 'panel-eu', vpnInboundId: 'inbound-default', externalClientId: 'client-e2e', email: 'client@example.test', uuid: '00000000-0000-4000-8000-000000000001', flow: 'xtls-rprx-vision', limitIp: 3, totalGb: null, expiryTime: '2026-07-13T07:00:00Z', enable: true, configUri: 'vless://client@example.test', qrCodePayload: 'vless://client@example.test', syncStatus: 'Synced', lastSyncedAt: now }]
 
@@ -736,27 +748,36 @@ async function mockAdminApi(page: Page) {
       return
     }
 
-    if (method === 'POST' && path === '/api/admin/vpn-panels/panel-eu/test-connection') {
-      await fulfillJson(route, { id: 'panel-health-e2e', vpnPanelId: 'panel-eu', status: 'Healthy', latencyMs: 22, version: '2.4.9', errorMessage: '', checkedAt: '2026-06-13T07:06:00Z' })
+    const panelTestMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/test-connection$/)
+    if (method === 'POST' && panelTestMatch) {
+      await fulfillJson(route, { id: `panel-health-${panelTestMatch[1]}`, vpnPanelId: panelTestMatch[1], status: 'Healthy', latencyMs: 22, version: '2.4.9', errorMessage: '', checkedAt: '2026-06-13T07:06:00Z' })
       return
     }
 
-    if (method === 'POST' && path === '/api/admin/vpn-panels/panel-eu/sync') {
-      await fulfillJson(route, { id: 'panel-sync-e2e', vpnPanelId: 'panel-eu', status: 'Succeeded', startedAt: '2026-06-13T07:07:00Z', finishedAt: '2026-06-13T07:07:10Z', summaryJson: '{"clients":1}', errorMessage: '' })
+    const panelSyncMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/sync$/)
+    if (method === 'POST' && panelSyncMatch) {
+      await fulfillJson(route, { id: `panel-sync-${panelSyncMatch[1]}`, vpnPanelId: panelSyncMatch[1], status: 'Succeeded', startedAt: '2026-06-13T07:07:00Z', finishedAt: '2026-06-13T07:07:10Z', summaryJson: '{"clients":1}', errorMessage: '' })
       return
     }
 
-    if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/inbounds') {
-      if (delayNextVpnPanelInboundsResponse) {
-        delayNextVpnPanelInboundsResponse = false
-        await new Promise((resolve) => setTimeout(resolve, 1200))
-      }
+    if (method === 'GET' && path === '/api/admin/vpn-inbounds') {
       await fulfillJson(route, inbounds)
       return
     }
 
-    if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/clients') {
-      await fulfillJson(route, clients)
+    const panelInboundsMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/inbounds$/)
+    if (method === 'GET' && panelInboundsMatch) {
+      if (panelInboundsMatch[1] === 'panel-eu' && delayNextVpnPanelInboundsResponse) {
+        delayNextVpnPanelInboundsResponse = false
+        await new Promise((resolve) => setTimeout(resolve, 1200))
+      }
+      await fulfillJson(route, inbounds.filter((item) => item.vpnPanelId === panelInboundsMatch[1]))
+      return
+    }
+
+    const panelClientsMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/clients$/)
+    if (method === 'GET' && panelClientsMatch) {
+      await fulfillJson(route, clients.filter((item) => item.vpnPanelId === panelClientsMatch[1]))
       return
     }
 
@@ -770,18 +791,20 @@ async function mockAdminApi(page: Page) {
       const source = inbounds.find((item) => item.id === clients[0].vpnInboundId)
       if (source) source.usedCapacity = Number(source.usedCapacity) - 1
       target.usedCapacity = Number(target.usedCapacity) + 1
-      clients[0] = { ...clients[0], vpnInboundId: target.id, syncStatus: 'migrated', configUri: 'vless://client@backup.example.test:8443', qrCodePayload: 'vless://client@backup.example.test:8443', lastSyncedAt: now }
+      clients[0] = { ...clients[0], vpnPanelId: target.vpnPanelId, vpnInboundId: target.id, syncStatus: 'migrated', configUri: 'vless://client@us.example.test:9443', qrCodePayload: 'vless://client@us.example.test:9443', lastSyncedAt: now }
       await fulfillJson(route, clients[0])
       return
     }
 
-    if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/health-checks') {
-      await fulfillJson(route, [{ id: 'panel-health-e2e', vpnPanelId: 'panel-eu', status: 'Healthy', latencyMs: 22, version: '2.4.9', errorMessage: '', checkedAt: now }])
+    const panelHealthChecksMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/health-checks$/)
+    if (method === 'GET' && panelHealthChecksMatch) {
+      await fulfillJson(route, panelHealthChecksMatch[1] === 'panel-eu' ? [{ id: 'panel-health-e2e', vpnPanelId: 'panel-eu', status: 'Healthy', latencyMs: 22, version: '2.4.9', errorMessage: '', checkedAt: now }] : [])
       return
     }
 
-    if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/sync-runs') {
-      await fulfillJson(route, [{ id: 'panel-sync-e2e', vpnPanelId: 'panel-eu', status: 'Failed', startedAt: now, finishedAt: now, summaryJson: '{}', errorMessage: 'Remote panel sync failed.' }])
+    const panelSyncRunsMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/sync-runs$/)
+    if (method === 'GET' && panelSyncRunsMatch) {
+      await fulfillJson(route, panelSyncRunsMatch[1] === 'panel-eu' ? [{ id: 'panel-sync-e2e', vpnPanelId: 'panel-eu', status: 'Failed', startedAt: now, finishedAt: now, summaryJson: '{}', errorMessage: 'Remote panel sync failed.' }] : [])
       return
     }
 
@@ -967,17 +990,21 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(page.locator('#panels').getByRole('dialog')).toContainText('ручной сверки')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.locator('#panels').getByRole('button', { name: 'Отмена' }).click()
-  await page.getByLabel('Целевой inbound для client@example.test').selectOption('inbound-backup')
+  const migrationTarget = page.getByLabel('Целевой inbound для client@example.test')
+  await expect(migrationTarget.locator('optgroup[label="US 3x-ui Sandbox · US"]')).toHaveCount(1)
+  await migrationTarget.selectOption('inbound-us')
   await page.locator('#panels').getByRole('button', { name: 'Перенести' }).click()
-  await expect(page.locator('#panels').getByRole('dialog')).toContainText('временному slot панели и target inbound')
+  await expect(page.locator('#panels').getByRole('dialog')).toContainText('slot целевой панели, inbound и связанного VPN-сервера')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.locator('#panels').getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(page.getByText('VPN-клиент client@example.test перенесен на выбранный inbound.')).toBeVisible()
-  await expect(page.locator('#panels').getByText('inbound backup-vless')).toBeVisible()
-  expect(api.getLastRequest('/api/admin/vpn-clients/client-e2e/migrate')).toBeTruthy()
-  await page.locator('#panels').getByRole('button', { name: 'Проверить' }).click()
+  await expect(page.getByText('VPN-клиент client@example.test перенесен: US 3x-ui Sandbox · us-vless.')).toBeVisible()
+  await expect(page.locator('#panels').getByRole('combobox', { name: 'Панель' })).toHaveValue('panel-us')
+  await expect(page.locator('#panels').getByText('inbound us-vless')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-clients/client-e2e/migrate')?.body).toEqual({ targetInboundId: 'inbound-us' })
+  const usPanelRow = page.locator('#panels .list-item-vertical').filter({ has: page.locator('strong', { hasText: 'US 3x-ui Sandbox' }) })
+  await usPanelRow.getByRole('button', { name: 'Проверить' }).click()
   await expect(page.getByText('Проверка панели: Healthy (2.4.9)')).toBeVisible()
-  await page.locator('#panels').getByRole('button', { name: 'Синхронизировать' }).first().click()
+  await usPanelRow.getByRole('button', { name: 'Синхронизировать' }).click()
   await expect(page.getByText('Синхронизация Succeeded: {"clients":1}')).toBeVisible()
 
   await openAdminSection(page, 'Сценарии', 'scenarios')

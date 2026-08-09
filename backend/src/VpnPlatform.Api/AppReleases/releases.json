@@ -12638,5 +12638,32 @@
         "text": "Roadmap progress is 551/571 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-cross-panel-client-migration-ui",
+    "version": "0.539.0",
+    "releasedAt": "2026-08-09T14:35:32+07:00",
+    "title": "VPN-клиента можно перенести между панелями",
+    "summary": "Админка показывает совместимые inbound всех доступных 3x-ui панелей, выполняет межпанельный перенос и сразу открывает панель назначения с перемещенным клиентом.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Добавлен общий admin-каталог inbound с проверкой уникальности внешнего ID внутри каждой панели и единственного default inbound на панель."
+      },
+      {
+        "type": "improved",
+        "text": "Цели переноса сгруппированы по активным и доступным панелям; UI учитывает здоровье, capacity и совместимость протокола."
+      },
+      {
+        "type": "fixed",
+        "text": "После успешной межпанельной миграции админка переключается на панель назначения и показывает обновленные client/inbound данные; desktop и mobile Playwright подтверждают запрос и состояние UI."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 552/572 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

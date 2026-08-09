@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.539.0 - 2026-08-09
+
+Release entry: `2026-08-09-cross-panel-client-migration-ui`.
+
+### Исправлено
+
+- Админка больше не ограничивает перенос VPN-клиента inbound-ами выбранной панели: новый `GET /api/admin/vpn-inbounds` возвращает общий read-only каталог.
+- API-клиент fail-closed проверяет уникальные internal ID, составной `panel + externalInboundId` и единственный default inbound в границах каждой панели.
+- Цели переноса сгруппированы по активным и не `Unhealthy` панелям с доступной capacity и совместимым протоколом; после успеха UI автоматически открывает destination panel.
+
+### Проверено
+
+- Backend full suite `1112/1112`; Release build `0` warnings/`0` errors; контроллерный SQLite test подтверждает агрегат нескольких панелей.
+- Frontend `104/104`, typecheck/build всех трех приложений; admin Playwright `3/3`, полный desktop/mobile console-responsive suite `20/20`.
+- E2E подтверждает выбор `inbound-us`, POST body, смену панели клиента, destination UI и последующие health/sync операции; fresh local SQLite smoke подтверждает latest release.
+- Dependency audit `0 vulnerabilities`; secret scan `649` files/`0` findings; release/documentation/strict UTF-8 guards пройдены.
+- `RoadmapCurrentStateTests` фиксирует `552/572` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.538.0 - 2026-08-09
 
 Release entry: `2026-08-09-subscription-migration-execution`.

@@ -1405,6 +1405,12 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
     if (path === '/api/admin/vpn-panels/panel-1/inbounds') {
       return new Response(JSON.stringify(method === 'POST' ? vpnInboundFixture() : [vpnInboundFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
+    if (path === '/api/admin/vpn-inbounds') {
+      return new Response(JSON.stringify([
+        vpnInboundFixture(),
+        vpnInboundFixture({ id: 'inbound-2', vpnPanelId: 'panel-2', externalInboundId: '1' })
+      ]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
     if (path.includes('/api/admin/vpn-inbounds/')) {
       return new Response(JSON.stringify(vpnInboundFixture(path.endsWith('/set-default')
         ? {}
@@ -1426,6 +1432,7 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   await client.testAdminVpnPanel('admin-token', 'panel-1')
   await client.syncAdminVpnPanel('admin-token', 'panel-1')
   await client.getAdminVpnPanelInbounds('admin-token', 'panel-1')
+  await client.getAdminVpnInbounds('admin-token')
   await client.createAdminVpnPanelInbound('admin-token', 'panel-1', { name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{"network":"tcp"}', sniffingJson: '{}', isDefault: true, capacity: 5000, isActive: true })
   await client.updateAdminVpnInbound('admin-token', 'inbound-1', { name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{"network":"tcp"}', sniffingJson: '{}', isDefault: false, capacity: 5000, isActive: false })
   await client.setAdminVpnInboundDefault('admin-token', 'inbound-1')
@@ -1449,26 +1456,27 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/test-connection')
   assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/sync')
   assert.equal(calls[5]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/inbounds')
-  assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/inbounds')
-  assert.match(String(calls[6]?.init?.body), /"isActive":true/)
-  assert.equal(calls[7]?.url, 'http://localhost:8080/api/admin/vpn-inbounds/inbound-1')
-  assert.equal(calls[7]?.init?.method, 'PATCH')
-  assert.match(String(calls[7]?.init?.body), /"isActive":false/)
-  assert.equal(calls[8]?.url, 'http://localhost:8080/api/admin/vpn-inbounds/inbound-1/set-default')
-  assert.equal(calls[8]?.init?.method, 'POST')
-  assert.equal(calls[9]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/clients')
-  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/disable')
-  assert.equal(calls[10]?.init?.method, 'POST')
-  assert.equal(calls[11]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/enable')
-  assert.equal(calls[12]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/sync')
-  assert.equal(calls[13]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/reset-traffic')
-  assert.equal(calls[14]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/migrate')
-  assert.match(String(calls[14]?.init?.body), /inbound-2/)
-  assert.equal(calls[15]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/sync-runs')
-  assert.equal(calls[16]?.url, 'http://localhost:8080/api/admin/vpn-panel-sync-runs/sync-1/events')
-  assert.equal(calls[17]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
-  assert.equal(calls[18]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
-  assert.equal(calls[18]?.init?.method, 'DELETE')
+  assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/vpn-inbounds')
+  assert.equal(calls[7]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/inbounds')
+  assert.match(String(calls[7]?.init?.body), /"isActive":true/)
+  assert.equal(calls[8]?.url, 'http://localhost:8080/api/admin/vpn-inbounds/inbound-1')
+  assert.equal(calls[8]?.init?.method, 'PATCH')
+  assert.match(String(calls[8]?.init?.body), /"isActive":false/)
+  assert.equal(calls[9]?.url, 'http://localhost:8080/api/admin/vpn-inbounds/inbound-1/set-default')
+  assert.equal(calls[9]?.init?.method, 'POST')
+  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/clients')
+  assert.equal(calls[11]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/disable')
+  assert.equal(calls[11]?.init?.method, 'POST')
+  assert.equal(calls[12]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/enable')
+  assert.equal(calls[13]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/sync')
+  assert.equal(calls[14]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/reset-traffic')
+  assert.equal(calls[15]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/migrate')
+  assert.match(String(calls[15]?.init?.body), /inbound-2/)
+  assert.equal(calls[16]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/sync-runs')
+  assert.equal(calls[17]?.url, 'http://localhost:8080/api/admin/vpn-panel-sync-runs/sync-1/events')
+  assert.equal(calls[18]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
+  assert.equal(calls[19]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
+  assert.equal(calls[19]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
@@ -2178,6 +2186,7 @@ test('ApiClient rejects malformed VPN panel, inbound, client and observation DTO
     JSON.stringify(panelHealthCheckFixture({ vpnPanelId: 'panel-other' })),
     JSON.stringify(panelSyncRunFixture({ vpnPanelId: 'panel-other' })),
     JSON.stringify([vpnInboundFixture({ vpnPanelId: 'panel-other' })]),
+    JSON.stringify([vpnInboundFixture(), vpnInboundFixture({ id: 'inbound-2' })]),
     JSON.stringify(vpnInboundFixture({ vpnPanelId: 'panel-other' })),
     JSON.stringify(vpnInboundFixture({ id: 'inbound-other' })),
     JSON.stringify(vpnInboundFixture({ id: 'inbound-other' })),
@@ -2229,6 +2238,7 @@ test('ApiClient rejects malformed VPN panel, inbound, client and observation DTO
     () => client.testAdminVpnPanel('admin-token', 'panel-1'),
     () => client.syncAdminVpnPanel('admin-token', 'panel-1'),
     () => client.getAdminVpnPanelInbounds('admin-token', 'panel-1'),
+    () => client.getAdminVpnInbounds('admin-token'),
     () => client.createAdminVpnPanelInbound('admin-token', 'panel-1', inboundPayload),
     () => client.setAdminVpnInboundDefault('admin-token', 'inbound-1'),
     () => client.updateAdminVpnInbound('admin-token', 'inbound-1', inboundPayload),
@@ -2599,7 +2609,9 @@ test('admin UI source keeps secret fields write-only and validation mode visible
   assert.match(source, /VPN-доступ будет отозван и удален с сервера, а занятый слот освободится/)
   assert.match(source, /Подписка отменена, VPN-доступ отозван и удален с сервера/)
   assert.match(source, /inbound\.usedCapacity < inbound\.capacity/)
-  assert.match(source, /Сначала будет занято по одному временному slot панели и target inbound/)
+  assert.match(source, /Сначала будет занято по одному временному slot целевой панели, inbound и связанного VPN-сервера/)
+  assert.match(source, /migrationOptionGroupsForClient/)
+  assert.match(source, /getAdminVpnInbounds/)
   assert.match(source, /syncStatus\.includes\('uncertain'\)/)
   assert.match(source, /syncStatus\.includes\('compensation-failed'\)/)
   assert.match(source, /Необратимо обнулить счётчики трафика VPN-клиента/)
