@@ -12584,5 +12584,32 @@
         "text": "Roadmap progress is 549/569 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-09-admin-subscription-access-action-api-dto-validation",
+    "version": "0.537.0",
+    "releasedAt": "2026-08-09T13:40:22+07:00",
+    "title": "Команды подписок и доступов проверяют DTO",
+    "summary": "Lifecycle-команды подписки и VPN-доступа теперь проверяют фактические route-specific ответы, fallback-контракт унифицирован, а межсерверную миграцию подписки можно запланировать из админки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Десять subscription/access action routes отклоняют неверные id, status, date, nullable, revision и nested access связи до TypeScript cast."
+      },
+      {
+        "type": "fixed",
+        "text": "Fallback enable/disable возвращает полный AdminAccessActionResult с теми же полями, что основной VPN lifecycle service."
+      },
+      {
+        "type": "improved",
+        "text": "Оператор с vpnManage может выбрать готовый target VPN-узел или auto allocation, подтвердить межсерверную миграцию подписки и получить проверенный planned migration job."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 550/570 closed, readiness 96.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

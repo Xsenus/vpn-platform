@@ -2,6 +2,26 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: admin subscription, access action and migration API DTO validation
+
+Scope:
+- Проверены runtime-контракты десяти lifecycle-команд подписки/VPN-доступа и выведена в админку ранее доступная только через API операция планирования межсерверной миграции подписки.
+
+Results:
+- Roadmap progress: `550/570` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-admin-subscription-access-action-api-dto-validation`, version `0.537.0`.
+- Backend full suite: OK, `1112/1112`; targeted subscription/access/admin boundary: OK, `44/44`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `104/104`; typecheck и production build всех трех приложений: OK.
+- Extend/activate/block/unblock/cancel/sync subscription и enable/disable/sync/reset access отклоняют неверные route ID, status/date/nullable/revision связи и malformed nested access DTO до TypeScript cast.
+- Backend fallback enable/disable сериализует полный `AdminAccessActionResult`, поэтому основной и fallback API-контракты совпадают.
+- Межсерверная миграция доступна оператору с `vpnManage`: raw nullable target GUID соответствует backend binding, выбор ограничен готовыми узлами, destructive confirmation обязателен, успешный ответ проверяет job/subscription/source/target/status.
+- Admin desktop/mobile regression: OK, `6/6`; миграция планируется с auto target, повторная команда скрыта в текущей сессии, terminal subscription не получает controls, horizontal overflow и page errors отсутствуют.
+- Browser responsive/console suite: OK, `20/20`, включая все public/cabinet/admin разделы и widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены, latest release подтвержден.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: auth, checkout and cabinet action API DTO validation
 
 Scope:

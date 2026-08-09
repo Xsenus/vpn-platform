@@ -1614,7 +1614,26 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'ok', status: 'Active' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    const path = new URL(String(url)).pathname
+    const accessResult = (status: string) => ({ id: 'access-1', status, disabledAt: status === 'Disabled' ? '2026-08-09T08:00:00Z' : null, lastSyncedAt: '2026-08-09T08:00:00Z', revision: 2, usedTrafficBytes: 0, message: 'ok' })
+    const body = path.endsWith('/extend')
+      ? { id: 'sub-1', status: 'Active', endAt: '2026-09-08T08:00:00Z', gracePeriodEndAt: '2026-09-11T08:00:00Z' }
+      : path.endsWith('/activate')
+        ? { id: 'sub-1', status: 'Active', endAt: '2026-09-08T08:00:00Z', currentAccessId: null, access: null }
+        : path.endsWith('/block')
+          ? { id: 'sub-1', status: 'Blocked', blockReason: 'abuse' }
+          : path.endsWith('/unblock')
+            ? { id: 'sub-1', status: 'Active' }
+            : path.endsWith('/cancel')
+              ? { id: 'sub-1', status: 'Cancelled', cancelledAt: '2026-08-09T08:00:00Z' }
+              : path.endsWith('/sync-access')
+                ? { id: 'sub-1', currentAccessId: 'access-1', access: accessResult('Active') }
+                : path.endsWith('/migrate')
+                  ? { migrationJobId: 'migration-1', subscriptionId: 'sub-1', sourceNodeId: 'node-1', targetNodeId: 'node-2', status: 'planned' }
+                  : path.endsWith('/disable')
+                    ? accessResult('Disabled')
+                    : accessResult('Active')
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
@@ -1624,6 +1643,7 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
   await client.unblockAdminSubscription('admin-token', 'sub-1', 'resolved')
   await client.cancelAdminSubscription('admin-token', 'sub-1', 'customer request')
   await client.syncAdminSubscriptionAccess('admin-token', 'sub-1', 'manual subscription sync')
+  await client.migrateAdminSubscription('admin-token', 'sub-1', 'node-2')
   await client.disableAdminAccess('admin-token', 'access-1', 'expired')
   await client.enableAdminAccess('admin-token', 'access-1', 'paid')
   await client.syncAdminAccess('admin-token', 'access-1', 'manual sync')
@@ -1635,12 +1655,41 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
   assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/unblock')
   assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/cancel')
   assert.equal(calls[5]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/sync-access')
-  assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/disable')
-  assert.equal(calls[7]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/enable')
-  assert.equal(calls[8]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/sync')
-  assert.equal(calls[9]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/reset-traffic')
+  assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/migrate')
+  assert.equal(calls[6]?.init?.body, '"node-2"')
+  assert.equal(calls[7]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/disable')
+  assert.equal(calls[8]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/enable')
+  assert.equal(calls[9]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/sync')
+  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/access-credentials/access-1/reset-traffic')
   assert.equal(calls[0]?.init?.method, 'POST')
-  assert.equal(new Headers(calls[9]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(new Headers(calls[10]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
+test('ApiClient rejects malformed admin subscription and VPN access action results', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify({}), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const actions: Array<() => Promise<unknown>> = [
+    () => client.extendAdminSubscription('admin-token', 'sub-1', 30),
+    () => client.activateAdminSubscription('admin-token', 'sub-1'),
+    () => client.blockAdminSubscription('admin-token', 'sub-1'),
+    () => client.unblockAdminSubscription('admin-token', 'sub-1'),
+    () => client.cancelAdminSubscription('admin-token', 'sub-1'),
+    () => client.syncAdminSubscriptionAccess('admin-token', 'sub-1'),
+    () => client.migrateAdminSubscription('admin-token', 'sub-1', null),
+    () => client.disableAdminAccess('admin-token', 'access-1'),
+    () => client.enableAdminAccess('admin-token', 'access-1'),
+    () => client.syncAdminAccess('admin-token', 'access-1'),
+    () => client.resetAdminAccessTraffic('admin-token', 'access-1')
+  ]
+
+  for (const action of actions) {
+    await assert.rejects(action, (error: unknown) =>
+      error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message))
+  }
 })
 
 test('ApiClient admin order filters and recheck endpoints use finance-safe routes', async () => {

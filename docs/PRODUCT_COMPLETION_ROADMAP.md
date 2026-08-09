@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-auth-checkout-action-api-dto-validation`, версия `0.536.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `549/569` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-admin-subscription-access-action-api-dto-validation`, версия `0.537.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `550/570` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-09:
 
 - [x] `STATE-001` Backend test suite проходит: `1112/1112`.
-- [x] `STATE-002` Frontend test suite проходит: `99/99`.
+- [x] `STATE-002` Frontend test suite проходит: `104/104`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -1892,6 +1892,10 @@ git diff --check
   - Что сделать: успешный auth/checkout/payment/support/Telegram ответ не должен сохранять токены, pending purchase или external link до проверки обязательных полей; create order не должен ошибочно требовать поля list-проекции, которых mutation endpoint не возвращает.
   - Что сделано: 13 активных success-маршрутов получили runtime-валидаторы token/status/date/nullable/route identity и credential-free URL semantics. `createMyOrder` и checkout claim переведены на минимальный `OrderDto` backend; удалены два неиспользуемых client-метода к anonymous order/payment endpoint с постоянным `410 Gone`.
   - Доказательство: frontend `103/103`, включая malformed DTO всех 13 операций и минимальный mutation order, public critical-flow desktop/mobile `2/2` без ложной session/pending state и `pageerror`, public/cabinet focused matrix `8/8`, полный responsive/console suite `20/20`, backend `1112/1112`, EF model drift отсутствует, fresh local SQLite checkout/payment/subscription/VPN smoke, dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings. External live payment/VPS/3x-ui/SMTP evidence остается открытым.
+- [x] `P11-ACC-260` Проверять action DTO подписок и VPN-доступов и открыть планирование миграции в админке. 2026-08-09.
+  - Что сделать: lifecycle mutation не должен принимать сокращенный или несовместимый success JSON; доступная backend-команда межсерверной миграции подписки не должна оставаться недоступной оператору админки.
+  - Что сделано: десять subscription/access action routes получили route-specific runtime-валидаторы ID/status/date/nullable/revision/nested-access связей; fallback enable/disable возвращает полный `AdminAccessActionResult`. В карточку подписки добавлены `vpnManage`-ограниченный выбор готового target или auto allocation, подтверждение, raw nullable GUID binding и проверенный planned-job result; terminal subscription не получает команду.
+  - Доказательство: frontend `104/104`, включая malformed DTO всех 11 action/migration операций, typecheck/build, admin desktop/mobile `6/6` с migration/RBAC/confirmation/no-overflow regression, полный responsive/console suite `20/20`, targeted backend `44/44`, backend `1112/1112`, EF model drift отсутствует, fresh local SQLite smoke, dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings. External live payment/VPS/3x-ui/SMTP evidence остается открытым.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

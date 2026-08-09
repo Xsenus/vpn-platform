@@ -768,7 +768,13 @@ public class AdminOperationsController : ControllerBase
         });
         AddAuditLog("access.disable", "AccessCredential", id, before, JsonSerializer.Serialize(new { access.Status, access.DisabledAt, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new { access.Id, Status = access.Status.ToString(), access.DisabledAt });
+        return Ok(new AdminAccessActionResult(
+            access.Id,
+            access.Status.ToString(),
+            access.DisabledAt,
+            access.LastSyncedAt,
+            access.Revision,
+            Message: "Access disabled."));
     }
 
     [HttpPost("access-credentials/{id:guid}/enable")]
@@ -809,7 +815,13 @@ public class AdminOperationsController : ControllerBase
         });
         AddAuditLog("access.enable", "AccessCredential", id, before, JsonSerializer.Serialize(new { access.Status, request?.Reason }));
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new { access.Id, Status = access.Status.ToString() });
+        return Ok(new AdminAccessActionResult(
+            access.Id,
+            access.Status.ToString(),
+            access.DisabledAt,
+            access.LastSyncedAt,
+            access.Revision,
+            Message: "Access enabled."));
     }
 
     [HttpPost("access-credentials/{id:guid}/sync")]

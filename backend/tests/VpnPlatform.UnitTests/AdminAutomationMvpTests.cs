@@ -575,8 +575,16 @@ public class AdminAutomationMvpTests
         var disable = await controller.DisableAccessCredential(accessId, new AdminAccessActionHttpRequest("abuse"), CancellationToken.None);
         var enable = await controller.EnableAccessCredential(accessId, new AdminAccessActionHttpRequest("resolved"), CancellationToken.None);
 
-        Assert.IsType<OkObjectResult>(disable);
-        Assert.IsType<OkObjectResult>(enable);
+        var disableResult = Assert.IsType<AdminAccessActionResult>(Assert.IsType<OkObjectResult>(disable).Value);
+        var enableResult = Assert.IsType<AdminAccessActionResult>(Assert.IsType<OkObjectResult>(enable).Value);
+        Assert.Equal(accessId, disableResult.Id);
+        Assert.Equal(AccessCredentialStatus.Disabled.ToString(), disableResult.Status);
+        Assert.NotNull(disableResult.DisabledAt);
+        Assert.Equal(1, disableResult.Revision);
+        Assert.Equal(accessId, enableResult.Id);
+        Assert.Equal(AccessCredentialStatus.Active.ToString(), enableResult.Status);
+        Assert.Null(enableResult.DisabledAt);
+        Assert.Equal(1, enableResult.Revision);
         var access = await db.AccessCredentials.SingleAsync(x => x.Id == accessId);
         Assert.Equal(AccessCredentialStatus.Active, access.Status);
         Assert.Null(access.DisabledAt);

@@ -465,11 +465,57 @@ export type AccessCredentialHistoryDto = {
 export type AccessActionResultDto = {
   id: string
   status: string
-  disabledAt?: string | null
-  lastSyncedAt?: string | null
+  disabledAt: string | null
+  lastSyncedAt: string | null
   revision: number
-  usedTrafficBytes?: number | null
-  message?: string | null
+  usedTrafficBytes: number | null
+  message: string | null
+}
+
+export type AdminSubscriptionExtendResultDto = {
+  id: string
+  status: 'Active'
+  endAt: string
+  gracePeriodEndAt: string
+}
+
+export type AdminSubscriptionActivateResultDto = {
+  id: string
+  status: 'Active'
+  endAt: string
+  currentAccessId: string | null
+  access: AccessActionResultDto | null
+}
+
+export type AdminSubscriptionBlockResultDto = {
+  id: string
+  status: 'Blocked'
+  blockReason: string
+}
+
+export type AdminSubscriptionStatusResultDto = {
+  id: string
+  status: string
+}
+
+export type AdminSubscriptionCancelResultDto = {
+  id: string
+  status: 'Cancelled'
+  cancelledAt: string
+}
+
+export type AdminSubscriptionAccessSyncResultDto = {
+  id: string
+  currentAccessId: string
+  access: AccessActionResultDto
+}
+
+export type AdminSubscriptionMigrationResultDto = {
+  migrationJobId: string
+  subscriptionId: string
+  sourceNodeId: string
+  targetNodeId: string | null
+  status: 'planned'
 }
 
 export type AccessCredentialDto = {
@@ -1578,6 +1624,87 @@ function isAdminSubscriptionDto(value: unknown): value is SubscriptionDto {
     && hasNullableString(value, 'lifecycleLastError')
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
+}
+
+function isAccessActionResultDto(value: unknown, expectedId?: string): value is AccessActionResultDto {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && (expectedId === undefined || value.id === expectedId)
+    && hasString(value, 'status', true)
+    && accessCredentialStatusValues.has(value.status as string)
+    && hasNullableDateString(value, 'disabledAt')
+    && hasNullableDateString(value, 'lastSyncedAt')
+    && hasInteger(value, 'revision', 0)
+    && hasNullableInteger(value, 'usedTrafficBytes', 0)
+    && hasNullableString(value, 'message')
+}
+
+function isAdminSubscriptionExtendResultDto(value: unknown, expectedId: string): value is AdminSubscriptionExtendResultDto {
+  return isRecord(value)
+    && value.id === expectedId
+    && value.status === 'Active'
+    && hasDateString(value, 'endAt')
+    && hasDateString(value, 'gracePeriodEndAt')
+    && Date.parse(value.gracePeriodEndAt as string) >= Date.parse(value.endAt as string)
+}
+
+function isAdminSubscriptionActivateResultDto(value: unknown, expectedId: string): value is AdminSubscriptionActivateResultDto {
+  if (!isRecord(value)
+    || value.id !== expectedId
+    || value.status !== 'Active'
+    || !hasDateString(value, 'endAt')
+    || !hasNullableString(value, 'currentAccessId')
+    || (value.access !== null && !isAccessActionResultDto(value.access))) return false
+
+  return value.access === null
+    || (typeof value.currentAccessId === 'string' && value.currentAccessId === value.access.id)
+}
+
+function isAdminSubscriptionBlockResultDto(value: unknown, expectedId: string): value is AdminSubscriptionBlockResultDto {
+  return isRecord(value)
+    && value.id === expectedId
+    && value.status === 'Blocked'
+    && hasString(value, 'blockReason', true)
+}
+
+function isAdminSubscriptionStatusResultDto(
+  value: unknown,
+  expectedId: string,
+  allowedStatuses: ReadonlySet<string>
+): value is AdminSubscriptionStatusResultDto {
+  return isRecord(value)
+    && value.id === expectedId
+    && hasString(value, 'status', true)
+    && allowedStatuses.has(value.status as string)
+}
+
+function isAdminSubscriptionCancelResultDto(value: unknown, expectedId: string): value is AdminSubscriptionCancelResultDto {
+  return isRecord(value)
+    && value.id === expectedId
+    && value.status === 'Cancelled'
+    && hasDateString(value, 'cancelledAt')
+}
+
+function isAdminSubscriptionAccessSyncResultDto(value: unknown, expectedId: string): value is AdminSubscriptionAccessSyncResultDto {
+  return isRecord(value)
+    && value.id === expectedId
+    && hasString(value, 'currentAccessId', true)
+    && isAccessActionResultDto(value.access, value.currentAccessId as string)
+}
+
+function isAdminSubscriptionMigrationResultDto(
+  value: unknown,
+  expectedSubscriptionId: string,
+  expectedTargetNodeId: string | null
+): value is AdminSubscriptionMigrationResultDto {
+  return isRecord(value)
+    && hasString(value, 'migrationJobId', true)
+    && value.subscriptionId === expectedSubscriptionId
+    && hasString(value, 'sourceNodeId', true)
+    && hasNullableString(value, 'targetNodeId')
+    && value.targetNodeId === expectedTargetNodeId
+    && value.sourceNodeId !== value.targetNodeId
+    && value.status === 'planned'
 }
 
 function isAdminAccessHistoryDto(value: unknown): value is AccessCredentialHistoryDto {
@@ -3213,43 +3340,52 @@ export class ApiClient {
     return this.requestArray<SubscriptionDto>('/api/admin/subscriptions', { token, errorMessage: apiFallbackErrorMessage }, isAdminSubscriptionDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
-  extendAdminSubscription(token: string, id: string, days: number, reason?: string | null): Promise<{ id: string; status: string; endAt: string }> {
-    return this.request<{ id: string; status: string; endAt: string }>(`/api/admin/subscriptions/${id}/extend`, {
+  extendAdminSubscription(token: string, id: string, days: number, reason?: string | null): Promise<AdminSubscriptionExtendResultDto> {
+    return this.request<AdminSubscriptionExtendResultDto>(`/api/admin/subscriptions/${id}/extend`, {
       method: 'POST',
       token,
       body: JSON.stringify({ days, reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is AdminSubscriptionExtendResultDto => isAdminSubscriptionExtendResultDto(value, id))
   }
 
-  activateAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string; endAt: string; currentAccessId?: string | null; access?: AccessActionResultDto | null }> {
-    return this.request<{ id: string; status: string; endAt: string; currentAccessId?: string | null; access?: AccessActionResultDto | null }>(`/api/admin/subscriptions/${id}/activate`, {
+  activateAdminSubscription(token: string, id: string, reason?: string | null): Promise<AdminSubscriptionActivateResultDto> {
+    return this.request<AdminSubscriptionActivateResultDto>(`/api/admin/subscriptions/${id}/activate`, {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is AdminSubscriptionActivateResultDto => isAdminSubscriptionActivateResultDto(value, id))
   }
 
-  blockAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
-    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/block`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage })
+  blockAdminSubscription(token: string, id: string, reason?: string | null): Promise<AdminSubscriptionBlockResultDto> {
+    return this.request<AdminSubscriptionBlockResultDto>(`/api/admin/subscriptions/${id}/block`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is AdminSubscriptionBlockResultDto => isAdminSubscriptionBlockResultDto(value, id))
   }
 
-  unblockAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
-    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/unblock`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage })
+  unblockAdminSubscription(token: string, id: string, reason?: string | null): Promise<AdminSubscriptionStatusResultDto> {
+    return this.request<AdminSubscriptionStatusResultDto>(`/api/admin/subscriptions/${id}/unblock`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is AdminSubscriptionStatusResultDto => isAdminSubscriptionStatusResultDto(value, id, new Set(['Active', 'Expired'])))
   }
 
-  cancelAdminSubscription(token: string, id: string, reason?: string | null): Promise<{ id: string; status: string }> {
-    return this.request<{ id: string; status: string }>(`/api/admin/subscriptions/${id}/cancel`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage })
+  cancelAdminSubscription(token: string, id: string, reason?: string | null): Promise<AdminSubscriptionCancelResultDto> {
+    return this.request<AdminSubscriptionCancelResultDto>(`/api/admin/subscriptions/${id}/cancel`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is AdminSubscriptionCancelResultDto => isAdminSubscriptionCancelResultDto(value, id))
   }
 
-  syncAdminSubscriptionAccess(token: string, id: string, reason?: string | null): Promise<{ id: string; currentAccessId?: string | null; access: AccessActionResultDto }> {
-    return this.request<{ id: string; currentAccessId?: string | null; access: AccessActionResultDto }>(`/api/admin/subscriptions/${id}/sync-access`, {
+  syncAdminSubscriptionAccess(token: string, id: string, reason?: string | null): Promise<AdminSubscriptionAccessSyncResultDto> {
+    return this.request<AdminSubscriptionAccessSyncResultDto>(`/api/admin/subscriptions/${id}/sync-access`, {
       method: 'POST',
       token,
       body: JSON.stringify({ reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is AdminSubscriptionAccessSyncResultDto => isAdminSubscriptionAccessSyncResultDto(value, id))
+  }
+
+  migrateAdminSubscription(token: string, id: string, targetNodeId: string | null): Promise<AdminSubscriptionMigrationResultDto> {
+    return this.request<AdminSubscriptionMigrationResultDto>(`/api/admin/subscriptions/${id}/migrate`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify(targetNodeId),
+      errorMessage: apiFallbackErrorMessage
+    }, 'object', (value): value is AdminSubscriptionMigrationResultDto => isAdminSubscriptionMigrationResultDto(value, id, targetNodeId))
   }
 
   getAdminAccesses(token: string): Promise<AccessCredentialDto[]> {
@@ -3266,7 +3402,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is AccessActionResultDto => isAccessActionResultDto(value, id))
   }
 
   disableAdminAccess(token: string, id: string, reason?: string | null): Promise<AccessActionResultDto> {
@@ -3275,7 +3411,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is AccessActionResultDto => isAccessActionResultDto(value, id))
   }
 
 
@@ -3285,7 +3421,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is AccessActionResultDto => isAccessActionResultDto(value, id))
   }
 
   resetAdminAccessTraffic(token: string, id: string, reason?: string | null): Promise<AccessActionResultDto> {
@@ -3294,7 +3430,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({ reason: reason ?? null }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is AccessActionResultDto => isAccessActionResultDto(value, id))
   }
 
   getAdminOrders(token: string, filters: AdminOrderFilters = {}): Promise<OrderDto[]> {

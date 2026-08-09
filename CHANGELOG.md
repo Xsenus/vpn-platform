@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.537.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-subscription-access-action-api-dto-validation`.
+
+### Исправлено
+
+- Все десять административных команд lifecycle подписки и VPN-доступа проверяют route-specific success DTO до передачи результата в React: обязательные даты, статусы, nullable-поля, revision и соответствие route ID.
+- Fallback-ветки enable/disable backend теперь возвращают тот же полный `AdminAccessActionResult`, что и основной lifecycle service, вместо сокращенного анонимного объекта без revision/sync-полей.
+- Межсерверная миграция подписки больше не скрыта за backend API: оператор с `vpnManage` может выбрать готовый VPN-узел или автоматическое распределение, подтвердить команду и получить номер planned migration job.
+
+### Проверено
+
+- Frontend `104/104`, включая malformed DTO всех 11 subscription/access/migration операций; typecheck и production build всех трех приложений.
+- Admin desktop/mobile `6/6`, включая планирование миграции, RBAC, confirmation и отсутствие horizontal overflow; полный console/responsive suite `20/20`.
+- Backend full suite `1112/1112`, targeted subscription/access/admin boundary `44/44`, Release build `0` warnings/`0` errors, EF model drift отсутствует; fresh local SQLite checkout/payment/subscription/VPN smoke пройден.
+- Dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings; release/documentation/UTF-8 guards подтверждают latest `2026-08-09-admin-subscription-access-action-api-dto-validation`, версию `0.537.0` и roadmap `550/570`.
+- Roadmap progress: `550/570` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.536.0 - 2026-08-09
 
 Release entry: `2026-08-09-auth-checkout-action-api-dto-validation`.

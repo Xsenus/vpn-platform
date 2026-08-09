@@ -535,6 +535,11 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/migrate') {
+      await fulfillJson(route, { migrationJobId: 'migration-sub-e2e', subscriptionId: 'sub-e2e', sourceNodeId: 'server-eu', targetNodeId: body, status: 'planned' })
+      return
+    }
+
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/cancel') {
       subscriptions[0] = { ...subscriptions[0], status: 'Cancelled', currentServerId: null, currentAccessId: null, updatedAt: now }
       await fulfillJson(route, { id: 'sub-e2e', status: 'Cancelled', cancelledAt: now })
@@ -929,6 +934,13 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(cancelledSubscriptionRow.getByText('Отменённая подписка является терминальной. Доступны только просмотр и история.')).toBeVisible()
   await expect(cancelledSubscriptionRow.getByRole('button')).toHaveCount(0)
   await expect(cancelledSubscriptionRow.getByRole('spinbutton')).toHaveCount(0)
+  await expect(cancelledSubscriptionRow.getByRole('combobox')).toHaveCount(0)
+  await subscriptionsPanel.getByRole('combobox', { name: /Целевой сервер для миграции/ }).selectOption('auto')
+  await subscriptionsPanel.getByRole('button', { name: 'Запланировать перенос' }).click()
+  await expect(subscriptionsPanel.getByRole('dialog')).toContainText('повторное планирование запрещено')
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(subscriptionsPanel.getByText(/Миграция запланирована: задача/)).toBeVisible()
+  expect(api.getLastRequest('/api/admin/subscriptions/sub-e2e/migrate')?.body).toBeNull()
   await subscriptionsPanel.getByRole('button', { name: 'Отменить' }).click()
   await expect(subscriptionsPanel.getByRole('dialog')).toContainText('VPN-доступ будет отозван и удален с сервера')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
@@ -1171,6 +1183,10 @@ test('finance role loads only permitted data and keeps common sections read-only
   await expect(page.getByText('Только просмотр', { exact: true })).toBeVisible()
   await expect(page.locator('#tariffs form').first()).toBeHidden()
   await expect(page.locator('#tariffs').getByRole('button', { name: 'Редактировать' })).toHaveCount(0)
+
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+  await expect(page.locator('#subscriptions').getByRole('combobox', { name: /Целевой сервер для миграции/ })).toHaveCount(0)
+  await expect(page.locator('#subscriptions').getByRole('button', { name: 'Запланировать перенос' })).toHaveCount(0)
 
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.locator('#payments form').first()).toBeVisible()
