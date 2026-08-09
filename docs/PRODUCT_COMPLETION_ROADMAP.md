@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-cross-panel-client-migration-ui`, версия `0.539.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `552/572` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-vpn-migration-capacity-ui-sync`, версия `0.540.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `553/573` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -1904,6 +1904,10 @@ git diff --check
   - Что сделать: UI не должен ограничивать backend-команду переноса inbound-ами выбранной панели; оператору нужны совместимые цели на других доступных панелях и наблюдаемое состояние после завершения.
   - Что сделано: добавлен общий read-only каталог inbound; API-клиент проверяет ID, внешний ID в границах панели и default invariant. Админка группирует цели по активным здоровым панелям с capacity и совместимым протоколом, подтверждает резерв панели/inbound/сервера и после переноса открывает панель назначения.
   - Доказательство: backend `1112/1112`, frontend `104/104`, admin Playwright `3/3` и полный desktop/mobile console-responsive suite `20/20`; E2E подтверждает target `inbound-us`, смену `vpnPanelId`, автоматическое переключение панели и последующие health/sync операции. Typecheck/build, fresh local SQLite smoke, dependency audit, secret scan и strict UTF-8 guards пройдены. Реальный production-like 3x-ui/VPS evidence остается открытым.
+- [x] `P11-ACC-263` Синхронизировать capacity панелей в UI после миграции клиента. 2026-08-09.
+  - Что сделать: успешный межпанельный перенос не должен оставлять в карточках старые `UsedCapacity`, иначе оператор видит неверную доступность и может выбрать фактически заполненную цель.
+  - Что сделано: post-success reducer уменьшает source panel и увеличивает destination panel только при смене панели; same-panel migration не меняет общий счётчик. Обновление не зависит от дополнительного network call после уже выполненного side effect.
+  - Доказательство: frontend `104/104`, admin Playwright `3/3`, полный desktop/mobile console-responsive suite `20/20`, typecheck/build пройдены; E2E подтверждает `EU 12 -> 11`, `US 4 -> 5` сразу после операции и после следующего API-refresh. Backend `1112/1112`, fresh local SQLite smoke, dependency audit, secret scan и strict UTF-8 guards пройдены. Внешний production-like 3x-ui evidence не закрывался.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

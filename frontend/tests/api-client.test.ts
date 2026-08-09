@@ -2612,6 +2612,8 @@ test('admin UI source keeps secret fields write-only and validation mode visible
   assert.match(source, /Сначала будет занято по одному временному slot целевой панели, inbound и связанного VPN-сервера/)
   assert.match(source, /migrationOptionGroupsForClient/)
   assert.match(source, /getAdminVpnInbounds/)
+  assert.match(source, /client\.vpnPanelId !== saved\.vpnPanelId/)
+  assert.match(source, /Math\.max\(0, panel\.usedCapacity - 1\)/)
   assert.match(source, /syncStatus\.includes\('uncertain'\)/)
   assert.match(source, /syncStatus\.includes\('compensation-failed'\)/)
   assert.match(source, /Необратимо обнулить счётчики трафика VPN-клиента/)

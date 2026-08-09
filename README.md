@@ -266,7 +266,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - server, provisioning и Telegram bot API DTO проходят runtime-проверку фактического backend-контракта; malformed refresh очищает список серверов, запуски, форму редактирования и устаревшую bot readiness;
 - auth, checkout, payment-init, support status и Telegram link-token ответы проходят runtime-проверку; mutation order проверяется по фактическому минимальному backend DTO, а устаревшие anonymous order/payment client-методы удалены;
 - общий каталог inbound позволяет админке переносить VPN-клиента между совместимыми доступными 3x-ui панелями и после успеха открывать панель назначения;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-cross-panel-client-migration-ui`, версия `0.539.0`;
-- roadmap progress: `552/572` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- после межпанельного переноса карточки панелей сразу отражают освобождённую source capacity и занятую target capacity, а следующий API-refresh сохраняет фактические значения;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-vpn-migration-capacity-ui-sync`, версия `0.540.0`;
+- roadmap progress: `553/573` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

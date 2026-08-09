@@ -2574,6 +2574,13 @@ export function App() {
     const targetInbound = vpnMigrationInbounds.find((inbound) => inbound.id === targetInboundId)
     const targetPanel = vpnPanels.find((panel) => panel.id === targetInbound?.vpnPanelId)
     const saved = await api.migrateAdminVpnClient(token, client.id, targetInboundId)
+    if (client.vpnPanelId !== saved.vpnPanelId) {
+      setVpnPanels((current) => current.map((panel) => {
+        if (panel.id === client.vpnPanelId) return { ...panel, usedCapacity: Math.max(0, panel.usedCapacity - 1) }
+        if (panel.id === saved.vpnPanelId) return { ...panel, usedCapacity: panel.usedCapacity + 1 }
+        return panel
+      }))
+    }
     setNotice(`VPN-клиент ${saved.email} перенесен: ${targetPanel?.name ?? shortId(saved.vpnPanelId)} · ${targetInbound?.name ?? shortId(saved.vpnInboundId)}.`)
     if (saved.vpnPanelId !== selectedVpnPanelId) {
       setSelectedVpnPanelId(saved.vpnPanelId)

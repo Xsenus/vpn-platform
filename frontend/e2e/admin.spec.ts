@@ -789,8 +789,15 @@ async function mockAdminApi(page: Page) {
         return
       }
       const source = inbounds.find((item) => item.id === clients[0].vpnInboundId)
+      const sourcePanelId = clients[0].vpnPanelId
       if (source) source.usedCapacity = Number(source.usedCapacity) - 1
       target.usedCapacity = Number(target.usedCapacity) + 1
+      if (sourcePanelId !== target.vpnPanelId) {
+        const sourcePanel = panels.find((item) => item.id === sourcePanelId)
+        const targetPanel = panels.find((item) => item.id === target.vpnPanelId)
+        if (sourcePanel) sourcePanel.usedCapacity = Math.max(0, Number(sourcePanel.usedCapacity) - 1)
+        if (targetPanel) targetPanel.usedCapacity = Number(targetPanel.usedCapacity) + 1
+      }
       clients[0] = { ...clients[0], vpnPanelId: target.vpnPanelId, vpnInboundId: target.id, syncStatus: 'migrated', configUri: 'vless://client@us.example.test:9443', qrCodePayload: 'vless://client@us.example.test:9443', lastSyncedAt: now }
       await fulfillJson(route, clients[0])
       return
@@ -1001,9 +1008,14 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(page.locator('#panels').getByRole('combobox', { name: 'Панель' })).toHaveValue('panel-us')
   await expect(page.locator('#panels').getByText('inbound us-vless')).toBeVisible()
   expect(api.getLastRequest('/api/admin/vpn-clients/client-e2e/migrate')?.body).toEqual({ targetInboundId: 'inbound-us' })
+  const euPanelRow = page.locator('#panels .list-item-vertical').filter({ has: page.locator('strong', { hasText: 'EU 3x-ui Sandbox' }) })
   const usPanelRow = page.locator('#panels .list-item-vertical').filter({ has: page.locator('strong', { hasText: 'US 3x-ui Sandbox' }) })
+  await expect(euPanelRow).toContainText('Емкость 11/1000')
+  await expect(usPanelRow).toContainText('Емкость 5/1000')
   await usPanelRow.getByRole('button', { name: 'Проверить' }).click()
   await expect(page.getByText('Проверка панели: Healthy (2.4.9)')).toBeVisible()
+  await expect(euPanelRow).toContainText('Емкость 11/1000')
+  await expect(usPanelRow).toContainText('Емкость 5/1000')
   await usPanelRow.getByRole('button', { name: 'Синхронизировать' }).click()
   await expect(page.getByText('Синхронизация Succeeded: {"clients":1}')).toBeVisible()
 

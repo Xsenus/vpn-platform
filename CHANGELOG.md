@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.540.0 - 2026-08-09
+
+Release entry: `2026-08-09-vpn-migration-capacity-ui-sync`.
+
+### Исправлено
+
+- Карточки 3x-ui панелей больше не показывают stale `UsedCapacity` после успешного межпанельного переноса VPN-клиента.
+- Source capacity уменьшается, destination capacity увеличивается из подтверждённого migration result; same-panel migration сохраняет общий счётчик.
+- Обновление не добавляет fallible fetch после выполненного side effect и поэтому не превращает успешный перенос в ложную ошибку UI.
+
+### Проверено
+
+- Frontend `104/104`, typecheck/build всех приложений; admin Playwright `3/3`, полный desktop/mobile console-responsive suite `20/20`.
+- E2E подтверждает `EU 12 -> 11` и `US 4 -> 5` сразу после переноса и после последующего refresh через panel health action.
+- Backend `1112/1112`, Release build `0` warnings/`0` errors, fresh local SQLite smoke, EF model drift, dependency audit `0 vulnerabilities`, secret scan `649/0` и strict UTF-8 guards пройдены.
+- `RoadmapCurrentStateTests` фиксирует `553/573` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.539.0 - 2026-08-09
 
 Release entry: `2026-08-09-cross-panel-client-migration-ui`.

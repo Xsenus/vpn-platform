@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-09-cross-panel-client-migration-ui";
-    private const string CurrentVersion = "0.539.0";
+    private const string CurrentReleaseId = "2026-08-09-vpn-migration-capacity-ui-sync";
+    private const string CurrentVersion = "0.540.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()

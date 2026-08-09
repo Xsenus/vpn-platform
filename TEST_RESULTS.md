@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: VPN migration capacity UI synchronization
+
+Scope:
+- Проверено post-success состояние межпанельного переноса: backend менял source/target `UsedCapacity`, но карточки админки сохраняли старые значения до полной перезагрузки.
+
+Results:
+- Roadmap progress: `553/573` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-vpn-migration-capacity-ui-sync`, version `0.540.0`.
+- Source panel capacity уменьшается, destination увеличивается только при реальной смене панели; same-panel migration не меняет общий panel counter.
+- Post-success state не зависит от дополнительного network call после подтверждённого provider/database side effect.
+- Frontend tests: OK, `104/104`; typecheck/build всех приложений: OK; admin Playwright: `3/3`; полный desktop/mobile console-responsive suite: `20/20`.
+- E2E подтверждает `EU 12 -> 11`, `US 4 -> 5`, destination client/inbound и сохранение counters после штатного `GET /api/admin/vpn-panels` refresh; page errors и horizontal overflow отсутствуют.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; fresh local SQLite smoke: OK, latest release `2026-08-09-vpn-migration-capacity-ui-sync`; EF model drift отсутствует.
+- Dependency audit: `0 vulnerabilities`; secret scan: `649` files/`0` findings; `RoadmapCurrentStateTests`, release/documentation и strict UTF-8 guards пройдены.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: cross-panel VPN client migration UI
 
 Scope:
