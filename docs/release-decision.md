@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `110/110`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `62/62`; responsive all-screens: `6/6`.
+- Browser console smoke: `66/66`; responsive all-screens: `6/6`.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -69,8 +69,9 @@ Production-ready решение заблокировано следующими 
 - Public session hydration single-flight исключает concurrent refresh-token reuse, сохраняет transient state для retry и инвалидирует late response после logout.
 - Cabinet support request generation исключает out-of-order thread и late logout completion; private support/auth/reset drafts очищаются до следующего входа.
 - Admin detail request generation исключает out-of-order user/support state и post-logout completion; status action не подменяет выбранный support thread.
-- Latest "Что нового": `2026-08-09-admin-detail-request-lifecycle`, версия `0.548.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
-- Roadmap progress: `561/581` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
+- Latest "Что нового": `2026-08-09-admin-mutation-request-lifecycle`, версия `0.549.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `562/582` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

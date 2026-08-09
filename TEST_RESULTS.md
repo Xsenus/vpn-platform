@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: admin mutation request lifecycle
+
+Scope:
+- Проверены duplicate submit, delayed CRUD completion после logout/new login, новый draft во время pending save и сохранение dirty Telegram bot form при общем reload.
+- Проверены request generation полного admin reload, user filter и VPN panel details, а также session ownership всех mutation handlers.
+
+Results:
+- Roadmap progress: `562/582` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-admin-mutation-request-lifecycle`, version `0.549.0`.
+- Два синхронных submit события создают один API request; delayed completion старой сессии не меняет notice/form/data и не запускает old-token reload.
+- Новый form draft сохраняется после завершения ранее отправленного save; dirty bot settings не перезаписываются mutation/background reload.
+- Frontend tests: `110/110`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Admin desktop/mobile: `28/28`; полный desktop/mobile console-responsive Playwright suite: `66/66`.
+- Backend full suite: `1112/1112`; API/TelegramBot Release build: `0` warnings/`0` errors; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- EF drift, secret scan `655/0`, strict UTF-8 guards и artifact cleanup: OK.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: admin detail request lifecycle
 
 Scope:

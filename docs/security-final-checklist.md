@@ -107,7 +107,8 @@ git diff --check
 - Public session hydration выполняет только одну rotating refresh операцию, не ротирует токен на transient `5xx` и инвалидирует delayed completion после logout: OK.
 - Cabinet support принимает только актуальный thread response, инвалидирует delayed completion после logout и очищает private drafts/reset state: OK.
 - Admin user/support detail requests принимают только актуальный selected/session response и не возвращают старые данные после logout: OK.
-- Latest local release: `2026-08-09-admin-detail-request-lifecycle`, версия `0.548.0`.
+- Admin mutation completion, reload и form reset ограничены исходной session operation и отправленным snapshot; duplicate submit блокируется синхронно: OK.
+- Latest local release: `2026-08-09-admin-mutation-request-lifecycle`, версия `0.549.0`.
 - Frontend tests: 110/110.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

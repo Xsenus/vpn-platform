@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.549.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-mutation-request-lifecycle`.
+
+### Исправлено
+
+- CRUD/payment/subscription/VPN/provisioning/bot actions применяют setter и reload только в исходной admin session operation; delayed completion после logout/new login не затрагивает новую сессию.
+- `runAction` немедленно регистрирует in-flight operation, поэтому два синхронных submit события одного действия создают только один API request.
+- Завершение старого save сбрасывает форму только при совпадении отправленного snapshot; новый draft и несохраненные настройки Telegram-бота сохраняются при mutation/background reload.
+- Full admin reload, user filter и VPN panel details используют request/session generation и принимают только последний актуальный ответ.
+
+### Проверено
+
+- Frontend `110/110`, typecheck/build всех приложений и dependency audit `0 vulnerabilities`.
+- Admin desktop/mobile `28/28`; полный desktop/mobile console-responsive Playwright suite `66/66` покрывает duplicate submit, post-logout completion, новый draft во время pending save и dirty bot form reload.
+- Backend `1112/1112`, API/TelegramBot Release build `0` warnings/`0` errors и fresh local SQLite checkout/payment/subscription/VPN smoke пройдены.
+- EF drift, secret scan `655/0`, strict UTF-8 guards и artifact cleanup пройдены.
+- `RoadmapCurrentStateTests` фиксирует `562/582` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.548.0 - 2026-08-09
 
 Release entry: `2026-08-09-admin-detail-request-lifecycle`.

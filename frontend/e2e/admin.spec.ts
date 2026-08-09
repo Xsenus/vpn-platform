@@ -403,6 +403,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedUserOverview: (() => void) | null = null
   let delayedSupportMessagesId: string | null = null
   let releaseDelayedSupportMessages: (() => void) | null = null
+  let delayNextTariffCreateResponse = false
+  let releaseDelayedTariffCreate: (() => void) | null = null
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const referralPrograms = [referralProgram()]
@@ -765,6 +767,10 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/tariffs') {
+      if (delayNextTariffCreateResponse) {
+        delayNextTariffCreateResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedTariffCreate = resolve })
+      }
       const created = tariff({ ...(body as Record<string, unknown>), id: 'tariff-created-e2e', createdAt: now, updatedAt: now })
       tariffs.push(created)
       await fulfillJson(route, created, 201)
@@ -966,6 +972,8 @@ async function mockAdminApi(page: Page) {
       requests.findLast((item) => item.method === method && item.path === path),
     getRequestCount: (path: string, method = 'GET') =>
       requests.filter((item) => item.method === method && item.path === path).length,
+    getAuthorizedRequestCount: (path: string, method: string, authorization: string) =>
+      requests.filter((item) => item.method === method && item.path === path && item.authorization === authorization).length,
     denyNextDashboard: () => { dashboardShouldDeny = true },
     expireAccessToken: (accessToken: string) => { expiredAdminAccessTokens.add(`Bearer ${accessToken}`) },
     failNextAdminSessionRequest: (status = 503) => { failNextAdminSessionStatus = status },
@@ -1004,6 +1012,8 @@ async function mockAdminApi(page: Page) {
     releaseUserOverview: () => { releaseDelayedUserOverview?.() },
     delaySupportMessages: (conversationId: string) => { delayedSupportMessagesId = conversationId },
     releaseSupportMessages: () => { releaseDelayedSupportMessages?.() },
+    delayNextTariffCreate: () => { delayNextTariffCreateResponse = true },
+    releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
     updateFirstDetailFixture: (userDisplayName: string, messageText: string) => {
       const nextUser = adminUser('user-first', userDisplayName, 'first@example.test')
       users = [nextUser, users.find((item) => item.id === 'user-second') ?? adminUser('user-second', 'Второй пользователь', 'second@example.test')]
@@ -1107,6 +1117,96 @@ test('admin detail requests cannot restore old data after logout and new login',
   await openAdminSection(page, 'Поддержка', 'support')
   await expect(supportSection.getByText('Сообщение новой сессии', { exact: true })).toBeVisible()
   await expect(supportSection.getByText('Старое сообщение первого обращения', { exact: true })).toHaveCount(0)
+})
+
+test('admin mutations reject duplicate submits and ignore completion from an old session', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.delayNextTariffCreate()
+  await seedAdminSession(page, 'admin-mutation-old-token', 'admin-mutation-old-refresh')
+
+  await page.goto('http://127.0.0.1:5295/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Тарифы', 'tariffs')
+  const tariffsSection = page.locator('#tariffs')
+  await tariffsSection.getByLabel('Название').fill('Тариф старой сессии')
+  await tariffsSection.getByLabel('Slug').fill('old-session-tariff')
+  await tariffsSection.getByRole('spinbutton', { name: 'Цена' }).fill('690')
+  await tariffsSection.getByLabel('Короткое описание').fill('Не должен менять UI новой сессии.')
+
+  await tariffsSection.locator('form').evaluate((form) => {
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  await expect.poll(() => api.getRequestCount('/api/admin/tariffs', 'POST')).toBe(1)
+  await expect(tariffsSection.getByRole('button', { name: 'Создать тариф' })).toHaveAttribute('aria-busy', 'true')
+
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Тарифы', 'tariffs')
+  await tariffsSection.getByLabel('Название').fill('Черновик новой сессии')
+  await tariffsSection.getByLabel('Slug').fill('new-session-draft')
+  const oldSessionTariffGets = api.getAuthorizedRequestCount('/api/admin/tariffs', 'GET', 'Bearer admin-mutation-old-token')
+  const delayedResponse = page.waitForResponse((response) => response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/admin/tariffs'
+    && response.request().headers().authorization === 'Bearer admin-mutation-old-token')
+  api.releaseTariffCreate()
+  await delayedResponse
+
+  await expect(tariffsSection.getByLabel('Название')).toHaveValue('Черновик новой сессии')
+  await expect(tariffsSection.getByLabel('Slug')).toHaveValue('new-session-draft')
+  await expect(page.getByText('Тариф создан.', { exact: true })).toHaveCount(0)
+  await expect(tariffsSection.getByText('Тариф старой сессии', { exact: true })).toHaveCount(0)
+  expect(api.getRequestCount('/api/admin/tariffs', 'POST')).toBe(1)
+  expect(api.getAuthorizedRequestCount('/api/admin/tariffs', 'GET', 'Bearer admin-mutation-old-token')).toBe(oldSessionTariffGets)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin reloads preserve newer form drafts while an older save is pending', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.delayNextTariffCreate()
+
+  await page.goto('http://127.0.0.1:5295/')
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+  const botSection = page.locator('#bot')
+  await botSection.getByLabel('Username публичного бота').fill('draft_bot_username')
+  const botReload = page.waitForResponse((response) => response.request().method() === 'GET'
+    && new URL(response.url()).pathname === '/api/admin/telegram-bot/settings')
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await botReload
+  await expect(botSection.getByLabel('Username публичного бота')).toHaveValue('draft_bot_username')
+
+  await openAdminSection(page, 'Тарифы', 'tariffs')
+  const tariffsSection = page.locator('#tariffs')
+  await tariffsSection.getByLabel('Название').fill('Отправленный тариф')
+  await tariffsSection.getByLabel('Slug').fill('submitted-tariff')
+  await tariffsSection.getByRole('spinbutton', { name: 'Цена' }).fill('590')
+  await tariffsSection.getByLabel('Короткое описание').fill('Снимок формы для сохранения.')
+  await tariffsSection.getByRole('button', { name: 'Создать тариф' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/tariffs', 'POST')).toBe(1)
+
+  await tariffsSection.getByLabel('Название').fill('Новый несохранённый черновик')
+  await tariffsSection.getByLabel('Slug').fill('new-unsaved-draft')
+  const delayedResponse = page.waitForResponse((response) => response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/admin/tariffs')
+  api.releaseTariffCreate()
+  await delayedResponse
+  await expect(tariffsSection.getByText('Отправленный тариф', { exact: true })).toBeVisible()
+  await expect(tariffsSection.getByLabel('Название')).toHaveValue('Новый несохранённый черновик')
+  await expect(tariffsSection.getByLabel('Slug')).toHaveValue('new-unsaved-draft')
+
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+  await expect(botSection.getByLabel('Username публичного бота')).toHaveValue('draft_bot_username')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('admin restores a valid session once under StrictMode', async ({ page }) => {

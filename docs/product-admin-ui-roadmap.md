@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `561/581` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `562/582` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `62/62`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `66/66`.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
@@ -134,7 +134,8 @@
 - [x] Public session hydration выполняет одну refresh-token rotation под StrictMode, сохраняет transient state для retry и отбрасывает late response после logout.
 - [x] Cabinet support отбрасывает out-of-order и post-logout message responses, а новый вход начинается без support/auth/reset drafts предыдущей сессии.
 - [x] Admin user/support detail views отбрасывают out-of-order и post-logout responses, очищают drafts при смене обращения и не загружают thread невыбранной status action.
-- [x] Latest "Что нового": `2026-08-09-admin-detail-request-lifecycle`, версия `0.548.0`.
+- [x] Admin mutations применяют state/reload только в исходной session operation, отклоняют duplicate submit и сохраняют новый form draft при delayed completion.
+- [x] Latest "Что нового": `2026-08-09-admin-mutation-request-lifecycle`, версия `0.549.0`.
 
 ## Как вести дальше
 

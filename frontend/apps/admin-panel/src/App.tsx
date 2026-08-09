@@ -520,6 +520,12 @@ function readAdminSectionFromHash(): AdminSectionId {
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
+
+type AdminActionContext = {
+  operationId: number
+  isCurrent: () => boolean
+  reloadAll: () => Promise<boolean>
+}
 type ReferralProgramFormState = {
   name: string
   status: 'draft' | 'active' | 'paused' | 'archived'
@@ -1118,12 +1124,63 @@ export function App() {
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
   const restoredSessionHydrationStarted = useRef(false)
   const sessionOperationId = useRef(0)
+  const loadAllRequestId = useRef(0)
+  const usersRequestId = useRef(0)
+  const actionRequestsInFlight = useRef(new Set<string>())
   const userOverviewRequestId = useRef(0)
   const supportMessagesRequestId = useRef(0)
   const selectedUserIdRef = useRef(selectedUserId)
   const selectedSupportConversationIdRef = useRef(selectedSupportConversationId)
+  const selectedVpnPanelIdRef = useRef(selectedVpnPanelId)
+  const providerFormRef = useRef(providerForm)
+  const editingProviderAccountIdRef = useRef(editingProviderAccountId)
+  const tariffFormRef = useRef(tariffForm)
+  const tariffFeaturesTextRef = useRef(tariffFeaturesText)
+  const editingTariffIdRef = useRef(editingTariffId)
+  const referralProgramFormRef = useRef(referralProgramForm)
+  const editingReferralProgramIdRef = useRef(editingReferralProgramId)
+  const releaseFormRef = useRef(releaseForm)
+  const editingReleaseIdRef = useRef(editingReleaseId)
+  const faqFormRef = useRef(faqForm)
+  const editingFaqIdRef = useRef(editingFaqId)
+  const siteContentFormRef = useRef(siteContentForm)
+  const editingSiteContentIdRef = useRef(editingSiteContentId)
+  const workScenarioFormRef = useRef(workScenarioForm)
+  const editingWorkScenarioIdRef = useRef(editingWorkScenarioId)
+  const vpnPanelFormRef = useRef(vpnPanelForm)
+  const editingVpnPanelIdRef = useRef(editingVpnPanelId)
+  const inboundFormRef = useRef(inboundForm)
+  const editingInboundIdRef = useRef(editingInboundId)
+  const serverFormRef = useRef(serverForm)
+  const editingServerIdRef = useRef(editingServerId)
+  const botSettingsFormRef = useRef(botSettingsForm)
+  const botSettingsFormDirty = useRef(false)
   selectedUserIdRef.current = selectedUserId
   selectedSupportConversationIdRef.current = selectedSupportConversationId
+  selectedVpnPanelIdRef.current = selectedVpnPanelId
+  providerFormRef.current = providerForm
+  editingProviderAccountIdRef.current = editingProviderAccountId
+  tariffFormRef.current = tariffForm
+  tariffFeaturesTextRef.current = tariffFeaturesText
+  editingTariffIdRef.current = editingTariffId
+  referralProgramFormRef.current = referralProgramForm
+  editingReferralProgramIdRef.current = editingReferralProgramId
+  releaseFormRef.current = releaseForm
+  editingReleaseIdRef.current = editingReleaseId
+  faqFormRef.current = faqForm
+  editingFaqIdRef.current = editingFaqId
+  siteContentFormRef.current = siteContentForm
+  editingSiteContentIdRef.current = editingSiteContentId
+  workScenarioFormRef.current = workScenarioForm
+  editingWorkScenarioIdRef.current = editingWorkScenarioId
+  vpnPanelFormRef.current = vpnPanelForm
+  editingVpnPanelIdRef.current = editingVpnPanelId
+  inboundFormRef.current = inboundForm
+  editingInboundIdRef.current = editingInboundId
+  serverFormRef.current = serverForm
+  editingServerIdRef.current = editingServerId
+  botSettingsFormRef.current = botSettingsForm
+  const renderSessionOperationId = sessionOperationId.current
   const availableAdminSections = useMemo(
     () => adminSession ? adminSections.filter(([id]) => canAccessAdminSection(adminSession.capabilities, id)) : [],
     [adminSession]
@@ -1218,20 +1275,34 @@ export function App() {
     setSelectedSupportConversationId(conversationId)
   }
 
-  const loadUsers = async (currentToken = token) => {
-    if (!currentToken) return
+  const selectVpnPanel = (panelId: string) => {
+    if (selectedVpnPanelIdRef.current === panelId) return
+    selectedVpnPanelIdRef.current = panelId
+    clearVpnPanelDetails()
+    setSelectedVpnPanelId(panelId)
+  }
+
+  const loadUsers = async (currentToken = token, operationId = renderSessionOperationId) => {
+    if (!currentToken || sessionOperationId.current !== operationId) return false
+    const requestId = ++usersRequestId.current
     const nextUsers = await api.getAdminUsers(currentToken, { search: userSearch, status: userStatusFilter })
+    if (sessionOperationId.current !== operationId || usersRequestId.current !== requestId) return false
     setUsers(nextUsers)
     if (!nextUsers.some((item) => String(item.id) === selectedUserIdRef.current)) {
       selectAdminUser(String(nextUsers[0]?.id ?? ''))
     }
+    return true
   }
 
   const loadAll = async (currentToken: string, currentSession: AdminSessionDto | null = adminSession, options?: { operationId?: number }) => {
     if (!currentToken || !currentSession) return false
 
-    const operationId = options?.operationId ?? sessionOperationId.current
+    const operationId = options?.operationId ?? renderSessionOperationId
+    if (sessionOperationId.current !== operationId) return false
+    const requestId = ++loadAllRequestId.current
+    const userListRequestId = ++usersRequestId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
+      && loadAllRequestId.current === requestId
     if (operationIsCurrent()) {
       setBusy(true)
       setError('')
@@ -1300,7 +1371,7 @@ export function App() {
     setSummary(nextSummary)
     setAuditLogs(nextAuditLogs)
     setNotificationDeliveries(nextNotificationDeliveries)
-    setUsers(nextUsers)
+    if (usersRequestId.current === userListRequestId) setUsers(nextUsers)
     setSubscriptions(nextSubscriptions)
     setAccessCredentials(nextAccessCredentials)
     setOrders(nextOrders)
@@ -1322,33 +1393,34 @@ export function App() {
     setServers(nextServers)
     setProvisioningRuns(nextRuns)
     setVpnPanels(nextVpnPanels)
-    const nextSelectedVpnPanelId = nextVpnPanels.some((panel) => panel.id === selectedVpnPanelId)
-      ? selectedVpnPanelId
+    const nextSelectedVpnPanelId = nextVpnPanels.some((panel) => panel.id === selectedVpnPanelIdRef.current)
+      ? selectedVpnPanelIdRef.current
       : nextVpnPanels[0]?.id ?? ''
-    if (nextSelectedVpnPanelId !== selectedVpnPanelId) {
-      setSelectedVpnPanelId(nextSelectedVpnPanelId)
-      clearVpnPanelDetails()
+    if (nextSelectedVpnPanelId !== selectedVpnPanelIdRef.current) {
+      selectVpnPanel(nextSelectedVpnPanelId)
     }
     setBotSettings(nextBotSettings)
     botSettingsCheckRequestId.current += 1
     setBotSettingsCheck(null)
-    setBotSettingsForm({
-      enabled: nextBotSettings.enabled,
-      mode: nextBotSettings.mode,
-      publicBotUsername: nextBotSettings.publicBotUsername,
-      botToken: '',
-      webhookUrl: nextBotSettings.webhookUrl,
-      secretToken: '',
-      adminChatId: nextBotSettings.adminChatId,
-      webAppUrl: nextBotSettings.webAppUrl,
-      welcomeText: nextBotSettings.welcomeText,
-      instructionText: nextBotSettings.instructionText,
-      supportText: nextBotSettings.supportText,
-      afterPaymentTextTemplate: nextBotSettings.afterPaymentTextTemplate,
-      renewalTextTemplate: nextBotSettings.renewalTextTemplate,
-      paymentFailedTextTemplate: nextBotSettings.paymentFailedTextTemplate,
-      subscriptionExpiredTextTemplate: nextBotSettings.subscriptionExpiredTextTemplate
-    })
+    if (!botSettingsFormDirty.current) {
+      setBotSettingsForm({
+        enabled: nextBotSettings.enabled,
+        mode: nextBotSettings.mode,
+        publicBotUsername: nextBotSettings.publicBotUsername,
+        botToken: '',
+        webhookUrl: nextBotSettings.webhookUrl,
+        secretToken: '',
+        adminChatId: nextBotSettings.adminChatId,
+        webAppUrl: nextBotSettings.webAppUrl,
+        welcomeText: nextBotSettings.welcomeText,
+        instructionText: nextBotSettings.instructionText,
+        supportText: nextBotSettings.supportText,
+        afterPaymentTextTemplate: nextBotSettings.afterPaymentTextTemplate,
+        renewalTextTemplate: nextBotSettings.renewalTextTemplate,
+        paymentFailedTextTemplate: nextBotSettings.paymentFailedTextTemplate,
+        subscriptionExpiredTextTemplate: nextBotSettings.subscriptionExpiredTextTemplate
+      })
+    }
     setLoadErrors(errors)
     const nextSelectedSupportConversationId = nextSupportConversations.some((item) => item.id === selectedSupportConversationIdRef.current)
       ? selectedSupportConversationIdRef.current
@@ -1356,7 +1428,7 @@ export function App() {
     if (nextSelectedSupportConversationId !== selectedSupportConversationIdRef.current) {
       selectSupportConversation(nextSelectedSupportConversationId)
     }
-    if (!nextUsers.some((item) => String(item.id) === selectedUserIdRef.current)) {
+    if (usersRequestId.current === userListRequestId && !nextUsers.some((item) => String(item.id) === selectedUserIdRef.current)) {
       selectAdminUser(String(nextUsers[0]?.id ?? ''))
     }
     setBusy(false)
@@ -1463,7 +1535,7 @@ export function App() {
     setEditingInboundId(null)
     setInboundForm(defaultInboundForm)
     if (token && selectedVpnPanelId) {
-      void loadVpnPanelDetails(selectedVpnPanelId)
+      void loadVpnPanelDetails(selectedVpnPanelId, token, sessionOperationId.current)
     } else {
       clearVpnPanelDetails()
     }
@@ -1531,7 +1603,10 @@ export function App() {
     ...current,
     items: current.items.length <= 1 ? current.items : current.items.filter((_, itemIndex) => itemIndex !== index)
   }))
-  const updateBotForm = <K extends keyof UpdateTelegramBotSettingsPayload>(key: K, value: UpdateTelegramBotSettingsPayload[K]) => setBotSettingsForm((current) => ({ ...current, [key]: value }))
+  const updateBotForm = <K extends keyof UpdateTelegramBotSettingsPayload>(key: K, value: UpdateTelegramBotSettingsPayload[K]) => {
+    botSettingsFormDirty.current = true
+    setBotSettingsForm((current) => ({ ...current, [key]: value }))
+  }
 
   const focusAdminSectionTab = (sectionId: AdminSectionId) => {
     if (typeof document === 'undefined') return
@@ -1569,26 +1644,38 @@ export function App() {
     goToAdminSection(availableAdminSections[nextIndex][0], 'tab')
   }
 
-  const runAction = async (id: string, action: () => Promise<void>, requiresWrite = true) => {
+  const runAction = async (id: string, action: (context: AdminActionContext) => Promise<void>, requiresWrite = true) => {
     if (requiresWrite && !canWriteActiveSection) {
       setError(`Роль ${adminSession?.roles.join(', ') || 'текущей сессии'} не разрешает изменять раздел «${activeSectionLabel}».`)
       return
     }
     const operationId = sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
+    const requestKey = `${operationId}:${id}`
+    if (actionRequestsInFlight.current.has(requestKey)) return
+    actionRequestsInFlight.current.add(requestKey)
     setActionBusyId(id)
     setError('')
     setNotice('')
     try {
-      await action()
+      await action({
+        operationId,
+        isCurrent: operationIsCurrent,
+        reloadAll: () => operationIsCurrent()
+          ? loadAll(token, adminSession, { operationId })
+          : Promise.resolve(false)
+      })
     } catch (e) {
       if (operationIsCurrent()) setError(e instanceof Error ? e.message : 'Action failed')
     } finally {
-      if (operationIsCurrent()) setActionBusyId('')
+      actionRequestsInFlight.current.delete(requestKey)
+      if (operationIsCurrent()) setActionBusyId((current) => current === id ? '' : current)
     }
   }
 
   const clearAdminData = () => {
+    loadAllRequestId.current += 1
+    usersRequestId.current += 1
     setAdminSession(null)
     setPassword('')
     setUsers([])
@@ -1662,6 +1749,7 @@ export function App() {
     setEditingServerId(null)
     setProvisioningRuns([])
     setVpnPanels([])
+    selectedVpnPanelIdRef.current = ''
     setSelectedVpnPanelId('')
     setVpnInbounds([])
     setVpnMigrationInbounds([])
@@ -1678,9 +1766,11 @@ export function App() {
     setProviderForm(defaultProviderForm)
     setBotSettings(defaultBotSettings)
     botSettingsCheckRequestId.current += 1
+    botSettingsFormDirty.current = false
     setBotSettingsForm({})
     setBotSettingsCheck(null)
     setLoadErrors([])
+    actionRequestsInFlight.current.clear()
     setActionBusyId('')
   }
 
@@ -1869,18 +1959,25 @@ export function App() {
     setVpnSyncRuns([])
   }
 
-  const loadVpnPanelDetails = async (panelId: string) => {
-    if (!token || !panelId) return
+  const loadVpnPanelDetails = async (
+    panelId: string,
+    currentToken = token,
+    operationId = renderSessionOperationId
+  ) => {
+    if (!currentToken || !panelId || sessionOperationId.current !== operationId || selectedVpnPanelIdRef.current !== panelId) return false
     const requestId = ++vpnPanelDetailsRequestId.current
+    const requestIsCurrent = () => sessionOperationId.current === operationId
+      && requestId === vpnPanelDetailsRequestId.current
+      && selectedVpnPanelIdRef.current === panelId
     try {
       const [nextInbounds, nextMigrationInbounds, nextClients, nextHealthChecks, nextSyncRuns] = await Promise.all([
-        api.getAdminVpnPanelInbounds(token, panelId),
-        api.getAdminVpnInbounds(token),
-        api.getAdminVpnPanelClients(token, panelId),
-        api.getAdminVpnPanelHealthChecks(token, panelId),
-        api.getAdminVpnPanelSyncRuns(token, panelId)
+        api.getAdminVpnPanelInbounds(currentToken, panelId),
+        api.getAdminVpnInbounds(currentToken),
+        api.getAdminVpnPanelClients(currentToken, panelId),
+        api.getAdminVpnPanelHealthChecks(currentToken, panelId),
+        api.getAdminVpnPanelSyncRuns(currentToken, panelId)
       ])
-      if (requestId !== vpnPanelDetailsRequestId.current) return
+      if (!requestIsCurrent()) return false
       setVpnInbounds(nextInbounds)
       setVpnMigrationInbounds(nextMigrationInbounds)
       setVpnClients(nextClients)
@@ -1894,10 +1991,12 @@ export function App() {
       })
       setVpnHealthChecks(nextHealthChecks)
       setVpnSyncRuns(nextSyncRuns)
+      return true
     } catch (e) {
-      if (requestId !== vpnPanelDetailsRequestId.current) return
+      if (!requestIsCurrent()) return false
       clearVpnPanelDetails()
       setError(e instanceof Error ? e.message : 'Не удалось загрузить детали VPN-панели')
+      return false
     }
   }
 
@@ -1931,50 +2030,50 @@ export function App() {
 
   const handleSaveProviderAccount = async () => {
     if (!token || !canWriteActiveSection) return
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const saved = editingProviderAccountId
-        ? await api.updateAdminPaymentProviderAccount(token, editingProviderAccountId, providerForm)
-        : await api.createAdminPaymentProviderAccount(token, providerForm)
-      setNotice(`Способ оплаты ${saved.name} ${editingProviderAccountId ? 'обновлен' : 'сохранен'}. Секреты не отображаются.`)
-      resetProviderForm()
-      await loadAll(token)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить способ оплаты')
-    } finally {
-      setBusy(false)
-    }
+    const editingId = editingProviderAccountId
+    const submittedForm = providerForm
+    await runAction('provider-save', async (action) => {
+      const saved = editingId
+        ? await api.updateAdminPaymentProviderAccount(token, editingId, submittedForm)
+        : await api.createAdminPaymentProviderAccount(token, submittedForm)
+      if (!action.isCurrent()) return
+      setNotice(`Способ оплаты ${saved.name} ${editingId ? 'обновлен' : 'сохранен'}. Секреты не отображаются.`)
+      if (providerFormRef.current === submittedForm && editingProviderAccountIdRef.current === editingId) resetProviderForm()
+      await action.reloadAll()
+    })
   }
 
   const handleSetProviderEnabled = async (account: PaymentProviderAccountDto, enabled: boolean) => {
-    await runAction(account.id, async () => {
+    await runAction(account.id, async (action) => {
       await api.setAdminPaymentProviderAccountEnabled(token, account.id, enabled)
+      if (!action.isCurrent()) return
       setNotice(`${account.name}: ${enabled ? 'включен' : 'выключен'}`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
   const handleCheckProviderAccount = async (account: PaymentProviderAccountDto) => {
-    await runAction(`provider-check-${account.id}`, async () => {
+    await runAction(`provider-check-${account.id}`, async (action) => {
       const result = await api.checkAdminPaymentProviderAccount(token, account.id)
+      if (!action.isCurrent()) return
       setProviderCheckResults((current) => ({ ...current, [account.id]: result }))
       setPaymentProviderAccounts((current) => current.map((item) => item.id === account.id ? result.account : item))
       setNotice(`${account.name}: ${result.isReady ? 'настройки готовы' : 'в настройках найдены проблемы'}.`)
     })
   }
 
-  const handleRecheckPayment = async (paymentId: string) => runAction(paymentId, async () => {
+  const handleRecheckPayment = async (paymentId: string) => runAction(paymentId, async (action) => {
     const payment = await api.recheckAdminPayment(token, paymentId)
+    if (!action.isCurrent()) return
     setNotice(`Платеж ${shortId(payment.paymentId)} проверен: ${payment.status}`)
-    await loadAll(token)
+    await action.reloadAll()
   })
 
-  const handleRecheckOrderPayment = async (order: OrderDto) => runAction(`order-recheck-${order.id}`, async () => {
+  const handleRecheckOrderPayment = async (order: OrderDto) => runAction(`order-recheck-${order.id}`, async (action) => {
     const payment = await api.recheckAdminOrderPayment(token, order.id)
+    if (!action.isCurrent()) return
     setNotice(`Заказ ${shortId(order.id)}: последний платеж ${shortId(payment.paymentId)} проверен, статус ${payment.status}.`)
-    await loadAll(token)
+    await action.reloadAll()
   })
 
   const openOrderUser = (order: OrderDto) => {
@@ -2003,14 +2102,15 @@ export function App() {
   }
 
   const handleRefundPayment = async (payment: PaymentAttemptDto) => {
-    await runAction(payment.id, async () => {
+    await runAction(payment.id, async (action) => {
       const amount = refundAmounts[payment.id] ?? getRefundableAmount(payment)
       const reason = refundReasons[payment.id]?.trim() || 'manual_admin_refund'
       const refund = await api.refundAdminPayment(token, payment.id, amount, reason)
+      if (!action.isCurrent()) return
       setNotice(`Возврат ${refund.providerRefundId || refund.id}: ${refund.status}`)
       setRefundAmounts((current) => ({ ...current, [payment.id]: getRefundableAmount(payment) }))
       setRefundReasons((current) => ({ ...current, [payment.id]: '' }))
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2063,39 +2163,40 @@ export function App() {
       currency: String(tariffForm.currency ?? 'RUB').trim().toUpperCase(),
       featuresJson: featuresTextToJson(tariffFeaturesText)
     }
-    setBusy(true)
-    setError('')
-    try {
-      if (editingTariffId) {
-        await api.updateAdminTariff(token, editingTariffId, payload)
-        setNotice('Тариф обновлён.')
+    const editingId = editingTariffId
+    const submittedForm = tariffForm
+    const submittedFeaturesText = tariffFeaturesText
+    await runAction('tariff-save', async (action) => {
+      if (editingId) {
+        await api.updateAdminTariff(token, editingId, payload)
       } else {
         await api.createAdminTariff(token, payload)
-        setNotice('Тариф создан.')
       }
-      resetTariffForm()
-      await loadAll(token)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить тариф')
-    } finally {
-      setBusy(false)
-    }
+      if (!action.isCurrent()) return
+      setNotice(editingId ? 'Тариф обновлён.' : 'Тариф создан.')
+      if (tariffFormRef.current === submittedForm
+        && tariffFeaturesTextRef.current === submittedFeaturesText
+        && editingTariffIdRef.current === editingId) resetTariffForm()
+      await action.reloadAll()
+    })
   }
 
   const handleToggleTariff = async (tariff: TariffDto) => {
-    await runAction(tariff.id, async () => {
+    await runAction(tariff.id, async (action) => {
       await api.updateAdminTariff(token, tariff.id, { isActive: tariff.isActive === false })
+      if (!action.isCurrent()) return
       setNotice(`Тариф ${tariff.name} обновлён.`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
   const handleDeleteTariff = async (tariff: TariffDto) => {
-    await runAction(`delete-${tariff.id}`, async () => {
+    await runAction(`delete-${tariff.id}`, async (action) => {
       const result = await api.deleteAdminTariff(token, tariff.id)
-      if (editingTariffId === tariff.id) resetTariffForm()
+      if (!action.isCurrent()) return
+      if (editingTariffIdRef.current === tariff.id) resetTariffForm()
       setNotice(result.archived ? `Тариф ${tariff.name} архивирован и скрыт с витрины.` : `Тариф ${tariff.name} удалён.`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2131,24 +2232,20 @@ export function App() {
       return
     }
 
-    setBusy(true)
-    setError('')
-    try {
-      const payload = buildReferralProgramPayload(referralProgramForm)
-      if (editingReferralProgramId) {
-        await api.updateAdminReferralProgram(token, editingReferralProgramId, payload)
-        setNotice('Реферальная программа обновлена.')
+    const editingId = editingReferralProgramId
+    const submittedForm = referralProgramForm
+    await runAction('referral-program-save', async (action) => {
+      const payload = buildReferralProgramPayload(submittedForm)
+      if (editingId) {
+        await api.updateAdminReferralProgram(token, editingId, payload)
       } else {
         await api.createAdminReferralProgram(token, payload)
-        setNotice('Реферальная программа создана.')
       }
-      resetReferralProgramForm()
-      await loadAll(token)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить реферальную программу')
-    } finally {
-      setBusy(false)
-    }
+      if (!action.isCurrent()) return
+      setNotice(editingId ? 'Реферальная программа обновлена.' : 'Реферальная программа создана.')
+      if (referralProgramFormRef.current === submittedForm && editingReferralProgramIdRef.current === editingId) resetReferralProgramForm()
+      await action.reloadAll()
+    })
   }
 
   const resetReleaseForm = () => {
@@ -2179,13 +2276,15 @@ export function App() {
 
   const handleSaveRelease = async () => {
     if (!token) return
+    const submittedForm = releaseForm
+    const editingId = editingReleaseId
     const payload = {
-      ...releaseForm,
-      releaseId: releaseForm.releaseId.trim(),
-      version: releaseForm.version.trim(),
-      title: releaseForm.title.trim(),
-      summary: releaseForm.summary.trim(),
-      items: releaseForm.items
+      ...submittedForm,
+      releaseId: submittedForm.releaseId.trim(),
+      version: submittedForm.version.trim(),
+      title: submittedForm.title.trim(),
+      summary: submittedForm.summary.trim(),
+      items: submittedForm.items
         .filter((item) => item.text.trim())
         .map((item, index) => ({ ...item, text: item.text.trim(), sortOrder: item.sortOrder || (index + 1) * 10 }))
     }
@@ -2195,25 +2294,26 @@ export function App() {
       return
     }
 
-    await runAction(editingReleaseId ? `release-update-${editingReleaseId}` : 'release-create', async () => {
-      if (editingReleaseId) {
-        await api.updateAdminAppRelease(token, editingReleaseId, payload)
-        setNotice('Релиз обновлен.')
+    await runAction(editingId ? `release-update-${editingId}` : 'release-create', async (action) => {
+      if (editingId) {
+        await api.updateAdminAppRelease(token, editingId, payload)
       } else {
         await api.createAdminAppRelease(token, payload)
-        setNotice('Релиз создан.')
       }
-      resetReleaseForm()
-      await loadAll(token)
+      if (!action.isCurrent()) return
+      setNotice(editingId ? 'Релиз обновлен.' : 'Релиз создан.')
+      if (releaseFormRef.current === submittedForm && editingReleaseIdRef.current === editingId) resetReleaseForm()
+      await action.reloadAll()
     })
   }
 
   const handleDeleteRelease = async (release: AppReleaseDto) => {
-    await runAction(`release-delete-${release.id}`, async () => {
+    await runAction(`release-delete-${release.id}`, async (action) => {
       await api.deleteAdminAppRelease(token, release.id)
-      if (editingReleaseId === release.id) resetReleaseForm()
+      if (!action.isCurrent()) return
+      if (editingReleaseIdRef.current === release.id) resetReleaseForm()
       setNotice(`Релиз ${release.version} удален.`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2240,12 +2340,14 @@ export function App() {
 
   const handleSaveFaq = async () => {
     if (!token) return
+    const submittedForm = faqForm
+    const editingId = editingFaqId
     const payload: FaqUpsertPayload = {
-      ...faqForm,
-      question: faqForm.question.trim(),
-      answer: faqForm.answer.trim(),
-      category: faqForm.category?.trim() || 'Общее',
-      sortOrder: Number(faqForm.sortOrder) || 0
+      ...submittedForm,
+      question: submittedForm.question.trim(),
+      answer: submittedForm.answer.trim(),
+      category: submittedForm.category?.trim() || 'Общее',
+      sortOrder: Number(submittedForm.sortOrder) || 0
     }
 
     if (!payload.question || !payload.answer) {
@@ -2253,27 +2355,28 @@ export function App() {
       return
     }
 
-    await runAction(editingFaqId ? `faq-update-${editingFaqId}` : 'faq-create', async () => {
-      if (editingFaqId) {
-        await api.updateAdminFaq(token, editingFaqId, payload)
-        setNotice('Вопрос FAQ обновлен.')
+    await runAction(editingId ? `faq-update-${editingId}` : 'faq-create', async (action) => {
+      if (editingId) {
+        await api.updateAdminFaq(token, editingId, payload)
       } else {
         await api.createAdminFaq(token, payload)
-        setNotice('Вопрос FAQ создан.')
       }
-      resetFaqForm()
-      await loadAll(token)
+      if (!action.isCurrent()) return
+      setNotice(editingId ? 'Вопрос FAQ обновлен.' : 'Вопрос FAQ создан.')
+      if (faqFormRef.current === submittedForm && editingFaqIdRef.current === editingId) resetFaqForm()
+      await action.reloadAll()
     })
   }
 
   const handleDeleteFaq = async (entry: FaqItem) => {
     const faqId = entry.id
     if (!faqId) return
-    await runAction(`faq-delete-${faqId}`, async () => {
+    await runAction(`faq-delete-${faqId}`, async (action) => {
       await api.deleteAdminFaq(token, faqId)
-      if (editingFaqId === faqId) resetFaqForm()
+      if (!action.isCurrent()) return
+      if (editingFaqIdRef.current === faqId) resetFaqForm()
       setNotice('Вопрос FAQ удален.')
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2300,50 +2403,54 @@ export function App() {
 
   const handleSaveSiteContent = async () => {
     if (!token) return
-    const key = siteContentForm.key.trim()
-    const label = siteContentForm.label?.trim() || key
+    const submittedForm = siteContentForm
+    const editingId = editingSiteContentId
+    const key = submittedForm.key.trim()
+    const label = submittedForm.label?.trim() || key
     if (!key || !label) {
       setError('Контент сайта: заполните ключ и название поля.')
       return
     }
     const payload: SiteContentBlockUpsertPayload = {
-      ...siteContentForm,
+      ...submittedForm,
       key,
       label,
-      group: siteContentForm.group?.trim() || 'home',
-      inputType: siteContentForm.inputType?.trim() || 'text',
-      sortOrder: Number(siteContentForm.sortOrder) || 0
+      group: submittedForm.group?.trim() || 'home',
+      inputType: submittedForm.inputType?.trim() || 'text',
+      sortOrder: Number(submittedForm.sortOrder) || 0
     }
 
-    await runAction(editingSiteContentId ? `content-update-${editingSiteContentId}` : 'content-create', async () => {
-      if (editingSiteContentId) {
-        await api.updateAdminSiteContent(token, editingSiteContentId, payload)
-        setNotice('Блок контента обновлен.')
+    await runAction(editingId ? `content-update-${editingId}` : 'content-create', async (action) => {
+      if (editingId) {
+        await api.updateAdminSiteContent(token, editingId, payload)
       } else {
         await api.createAdminSiteContent(token, payload)
-        setNotice('Блок контента создан.')
       }
-      resetSiteContentForm()
-      await loadAll(token)
+      if (!action.isCurrent()) return
+      setNotice(editingId ? 'Блок контента обновлен.' : 'Блок контента создан.')
+      if (siteContentFormRef.current === submittedForm && editingSiteContentIdRef.current === editingId) resetSiteContentForm()
+      await action.reloadAll()
     })
   }
 
   const handleDeleteSiteContent = async (block: SiteContentBlockDto) => {
-    await runAction(`content-delete-${block.id}`, async () => {
+    await runAction(`content-delete-${block.id}`, async (action) => {
       await api.deleteAdminSiteContent(token, block.id)
-      if (editingSiteContentId === block.id) resetSiteContentForm()
+      if (!action.isCurrent()) return
+      if (editingSiteContentIdRef.current === block.id) resetSiteContentForm()
       setNotice('Блок контента удален.')
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
   const handleRestoreHomeContentDefaults = async () => {
     if (!token) return
-    await runAction('content-restore-defaults', async () => {
+    await runAction('content-restore-defaults', async (action) => {
       const result = await api.restoreAdminHomeContentDefaults(token)
+      if (!action.isCurrent()) return
       setHomeContentReadiness(result.readiness)
       setNotice(`Главная обновлена: создано ${result.created}, восстановлено ${result.restored}.`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2381,41 +2488,44 @@ export function App() {
 
   const handleSaveWorkScenario = async () => {
     if (!token) return
-    const validationErrors = validateWorkScenarioForm(workScenarioForm)
+    const submittedForm = workScenarioForm
+    const editingId = editingWorkScenarioId
+    const validationErrors = validateWorkScenarioForm(submittedForm)
     if (validationErrors.length > 0) {
       setError(`Сценарий: ${validationErrors.join(' ')}`)
       return
     }
 
     const payload: WorkScenarioUpsertPayload = {
-      ...workScenarioForm,
-      name: workScenarioForm.name.trim(),
-      key: workScenarioForm.key.trim().toLowerCase(),
-      allowedTariffIdsJson: scenarioTariffIdsToJson(parseWorkScenarioTariffIds(workScenarioForm.allowedTariffIdsJson)),
-      provisioningMode: workScenarioForm.provisioningMode.trim().toLowerCase(),
-      maxDevices: Number(workScenarioForm.maxDevices) || 1,
-      sortOrder: Number(workScenarioForm.sortOrder) || 0
+      ...submittedForm,
+      name: submittedForm.name.trim(),
+      key: submittedForm.key.trim().toLowerCase(),
+      allowedTariffIdsJson: scenarioTariffIdsToJson(parseWorkScenarioTariffIds(submittedForm.allowedTariffIdsJson)),
+      provisioningMode: submittedForm.provisioningMode.trim().toLowerCase(),
+      maxDevices: Number(submittedForm.maxDevices) || 1,
+      sortOrder: Number(submittedForm.sortOrder) || 0
     }
 
-    await runAction(editingWorkScenarioId ? `scenario-update-${editingWorkScenarioId}` : 'scenario-create', async () => {
-      if (editingWorkScenarioId) {
-        await api.updateAdminWorkScenario(token, editingWorkScenarioId, payload)
-        setNotice('Сценарий работы обновлен.')
+    await runAction(editingId ? `scenario-update-${editingId}` : 'scenario-create', async (action) => {
+      if (editingId) {
+        await api.updateAdminWorkScenario(token, editingId, payload)
       } else {
         await api.createAdminWorkScenario(token, payload)
-        setNotice('Сценарий работы создан.')
       }
-      resetWorkScenarioForm()
-      await loadAll(token)
+      if (!action.isCurrent()) return
+      setNotice(editingId ? 'Сценарий работы обновлен.' : 'Сценарий работы создан.')
+      if (workScenarioFormRef.current === submittedForm && editingWorkScenarioIdRef.current === editingId) resetWorkScenarioForm()
+      await action.reloadAll()
     })
   }
 
   const handleDeleteWorkScenario = async (scenario: WorkScenarioDto) => {
-    await runAction(`scenario-delete-${scenario.id}`, async () => {
+    await runAction(`scenario-delete-${scenario.id}`, async (action) => {
       await api.deleteAdminWorkScenario(token, scenario.id)
-      if (editingWorkScenarioId === scenario.id) resetWorkScenarioForm()
+      if (!action.isCurrent()) return
+      if (editingWorkScenarioIdRef.current === scenario.id) resetWorkScenarioForm()
       setNotice('Сценарий работы удален.')
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2427,10 +2537,11 @@ export function App() {
     }
 
     if (action === 'activate') {
-      await runAction(`${action}-${subscription.id}`, async () => {
+      await runAction(`${action}-${subscription.id}`, async (adminAction) => {
         await api.activateAdminSubscription(token, subscription.id, 'manual_subscription_activate')
+        if (!adminAction.isCurrent()) return
         setNotice('Подписка активирована, текущий VPN-доступ включен при наличии.')
-        await loadAll(token)
+        await adminAction.reloadAll()
       })
       return
     }
@@ -2441,10 +2552,11 @@ export function App() {
         setError('Укажите положительное количество дней для продления подписки.')
         return
       }
-      await runAction(`${action}-${subscription.id}`, async () => {
+      await runAction(`${action}-${subscription.id}`, async (adminAction) => {
         await api.extendAdminSubscription(token, subscription.id, days, 'manual_admin_extend')
+        if (!adminAction.isCurrent()) return
         setNotice(`Подписка продлена на ${days} дней.`)
-        await loadAll(token)
+        await adminAction.reloadAll()
       })
       return
     }
@@ -2455,10 +2567,11 @@ export function App() {
         return
       }
 
-      await runAction(`${action}-${subscription.id}`, async () => {
+      await runAction(`${action}-${subscription.id}`, async (adminAction) => {
         await api.syncAdminSubscriptionAccess(token, subscription.id, 'manual_subscription_sync')
+        if (!adminAction.isCurrent()) return
         setNotice('Текущий VPN-доступ подписки синхронизирован.')
-        await loadAll(token)
+        await adminAction.reloadAll()
       })
       return
     }
@@ -2468,12 +2581,13 @@ export function App() {
       unblock: () => api.unblockAdminSubscription(token, subscription.id, 'manual_admin_action'),
       cancel: () => api.cancelAdminSubscription(token, subscription.id, 'manual_admin_action')
     }
-    await runAction(`${action}-${subscription.id}`, async () => {
+    await runAction(`${action}-${subscription.id}`, async (adminAction) => {
       await map[action]()
+      if (!adminAction.isCurrent()) return
       setNotice(action === 'cancel'
         ? 'Подписка отменена, VPN-доступ отозван и удален с сервера.'
         : `Подписка обновлена: ${shortId(subscription.id)}`)
-      await loadAll(token)
+      await adminAction.reloadAll()
     })
   }
 
@@ -2496,11 +2610,12 @@ export function App() {
     }
 
     const targetNodeId = selectedTarget === 'auto' ? null : selectedTarget
-    await runAction(`migrate-${subscription.id}`, async () => {
+    await runAction(`migrate-${subscription.id}`, async (action) => {
       const result = await api.migrateAdminSubscription(token, subscription.id, targetNodeId)
+      if (!action.isCurrent()) return
       setSubscriptionMigrationTargets((current) => ({ ...current, [subscription.id]: '' }))
       setNotice(`Подписка перенесена на сервер ${shortId(result.targetNodeId)}. Задача ${shortId(result.migrationJobId)} завершена.`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2511,11 +2626,12 @@ export function App() {
       return
     }
 
-    await runAction(`${enable ? 'enable' : 'disable'}-${access.id}`, async () => {
+    await runAction(`${enable ? 'enable' : 'disable'}-${access.id}`, async (action) => {
       if (enable) await api.enableAdminAccess(token, access.id, 'manual_admin_action')
       else await api.disableAdminAccess(token, access.id, 'manual_admin_action')
+      if (!action.isCurrent()) return
       setNotice(`VPN-доступ ${enable ? 'включен' : 'отключен'}.`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2526,10 +2642,11 @@ export function App() {
       return
     }
 
-    await runAction(`sync-${access.id}`, async () => {
+    await runAction(`sync-${access.id}`, async (action) => {
       await api.syncAdminAccess(token, access.id, 'manual_admin_sync')
+      if (!action.isCurrent()) return
       setNotice('VPN-доступ синхронизирован.')
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
@@ -2540,12 +2657,13 @@ export function App() {
       return
     }
 
-    await runAction(`reset-${access.id}`, async () => {
+    await runAction(`reset-${access.id}`, async (action) => {
       try {
         await api.resetAdminAccessTraffic(token, access.id, 'manual_admin_reset_traffic')
+        if (!action.isCurrent()) return
         setNotice('Трафик VPN-доступа сброшен.')
       } finally {
-        await loadAll(token)
+        await action.reloadAll()
       }
     })
   }
@@ -2558,8 +2676,9 @@ export function App() {
       return
     }
 
-    await runAction(`qr-${access.id}`, async () => {
+    await runAction(`qr-${access.id}`, async (action) => {
       const svg = await api.getAdminAccessQrSvg(token, access.id)
+      if (!action.isCurrent()) return
       setAdminQrSvgs((current) => ({ ...current, [access.id]: svg }))
       setNotice('QR-код загружен. Он содержит ссылку подключения и не добавляет дополнительных секретов.')
     }, false)
@@ -2658,7 +2777,7 @@ export function App() {
 
   const editVpnPanel = (panel: VpnPanelDto) => {
     setEditingVpnPanelId(panel.id)
-    setSelectedVpnPanelId(panel.id)
+    selectVpnPanel(panel.id)
     setVpnPanelForm({
       name: panel.name,
       baseUrl: panel.baseUrl,
@@ -2680,85 +2799,106 @@ export function App() {
 
   const handleSaveVpnPanel = async () => {
     if (!token || !canWriteActiveSection) return
-    setBusy(true)
-    setError('')
-    try {
-      const saved = editingVpnPanelId
-        ? await api.updateAdminVpnPanel(token, editingVpnPanelId, vpnPanelForm)
-        : await api.createAdminVpnPanel(token, vpnPanelForm)
-      setNotice(`VPN-панель ${saved.name} ${editingVpnPanelId ? 'обновлена' : 'сохранена'}. Пароль не возвращается из API.`)
-      setSelectedVpnPanelId(saved.id)
-      setEditingVpnPanelId(null)
-      setVpnPanelForm({ ...defaultVpnPanelForm, region: vpnPanelForm.region })
-      await loadAll(token)
-      await loadVpnPanelDetails(saved.id)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить VPN-панель')
-    } finally {
-      setBusy(false)
-    }
+    const editingId = editingVpnPanelId
+    const submittedForm = vpnPanelForm
+    const selectedPanelId = selectedVpnPanelIdRef.current
+    await runAction('vpn-panel-save', async (action) => {
+      const saved = editingId
+        ? await api.updateAdminVpnPanel(token, editingId, submittedForm)
+        : await api.createAdminVpnPanel(token, submittedForm)
+      if (!action.isCurrent()) return
+      setNotice(`VPN-панель ${saved.name} ${editingId ? 'обновлена' : 'сохранена'}. Пароль не возвращается из API.`)
+      const formIsCurrent = vpnPanelFormRef.current === submittedForm
+        && editingVpnPanelIdRef.current === editingId
+        && selectedVpnPanelIdRef.current === selectedPanelId
+      if (formIsCurrent) {
+        selectVpnPanel(saved.id)
+        setEditingVpnPanelId(null)
+        setVpnPanelForm({ ...defaultVpnPanelForm, region: submittedForm.region })
+      }
+      await action.reloadAll()
+      if (formIsCurrent && action.isCurrent() && selectedVpnPanelIdRef.current === saved.id) {
+        await loadVpnPanelDetails(saved.id, token, action.operationId)
+      }
+    })
   }
 
-  const handleTestVpnPanel = (panelId: string) => runAction(`test-${panelId}`, async () => {
+  const handleTestVpnPanel = (panelId: string) => runAction(`test-${panelId}`, async (action) => {
     const result = await api.testAdminVpnPanel(token, panelId)
+    if (!action.isCurrent()) return
     setNotice(`Проверка панели: ${result.status} (${result.version || 'версия неизвестна'})`)
-    await loadAll(token)
-    await loadVpnPanelDetails(panelId)
+    await action.reloadAll()
+    await loadVpnPanelDetails(panelId, token, action.operationId)
   })
 
-  const handleSyncVpnPanel = (panelId: string) => runAction(`sync-${panelId}`, async () => {
+  const handleSyncVpnPanel = (panelId: string) => runAction(`sync-${panelId}`, async (action) => {
     const result = await api.syncAdminVpnPanel(token, panelId)
+    if (!action.isCurrent()) return
     setNotice(`Синхронизация ${result.status}: ${result.summaryJson || result.errorMessage}`)
-    await loadAll(token)
-    await loadVpnPanelDetails(panelId)
+    await action.reloadAll()
+    await loadVpnPanelDetails(panelId, token, action.operationId)
   })
 
-  const handleSetVpnPanelStatus = (panel: VpnPanelDto, status: 'Active' | 'Disabled') => runAction(`panel-status-${panel.id}`, async () => {
+  const handleSetVpnPanelStatus = (panel: VpnPanelDto, status: 'Active' | 'Disabled') => runAction(`panel-status-${panel.id}`, async (action) => {
     const saved = await api.updateAdminVpnPanel(token, panel.id, { status })
+    if (!action.isCurrent()) return
     setNotice(`Панель ${saved.name}: статус ${saved.status}.`)
-    await loadAll(token)
-    await loadVpnPanelDetails(panel.id)
+    await action.reloadAll()
+    await loadVpnPanelDetails(panel.id, token, action.operationId)
   })
 
-  const handleDeleteVpnPanel = (panel: VpnPanelDto) => runAction(`panel-delete-${panel.id}`, async () => {
+  const handleDeleteVpnPanel = (panel: VpnPanelDto) => runAction(`panel-delete-${panel.id}`, async (action) => {
     const result = await api.deleteAdminVpnPanel(token, panel.id)
+    if (!action.isCurrent()) return
     setNotice(result.archived
       ? `Панель ${panel.name} отключена и сохранена в истории: связей ${result.linkedInbounds + result.linkedClients + result.linkedSyncRuns + result.linkedHealthChecks}.`
       : `Панель ${panel.name} удалена.`)
-    if (selectedVpnPanelId === panel.id && result.deleted) setSelectedVpnPanelId('')
-    if (editingVpnPanelId === panel.id) cancelVpnPanelEdit()
-    await loadAll(token)
+    if (selectedVpnPanelIdRef.current === panel.id && result.deleted) selectVpnPanel('')
+    if (editingVpnPanelIdRef.current === panel.id) cancelVpnPanelEdit()
+    await action.reloadAll()
   })
 
-  const handleSaveInbound = () => runAction(editingInboundId ? `update-inbound-${editingInboundId}` : 'create-inbound', async () => {
-    if (!selectedVpnPanelId) return
-    const saved = editingInboundId
-      ? await api.updateAdminVpnInbound(token, editingInboundId, inboundForm)
-      : await api.createAdminVpnPanelInbound(token, selectedVpnPanelId, inboundForm)
-    setNotice(editingInboundId ? `Inbound-правило ${saved.name} обновлено.` : `Inbound-правило ${saved.name} создано.`)
-    setEditingInboundId(null)
-    setInboundForm(defaultInboundForm)
-    await loadVpnPanelDetails(selectedVpnPanelId)
-  })
+  const handleSaveInbound = () => {
+    const editingId = editingInboundId
+    const submittedForm = inboundForm
+    const panelId = selectedVpnPanelId
+    return runAction(editingId ? `update-inbound-${editingId}` : 'create-inbound', async (action) => {
+      if (!panelId) return
+      const saved = editingId
+        ? await api.updateAdminVpnInbound(token, editingId, submittedForm)
+        : await api.createAdminVpnPanelInbound(token, panelId, submittedForm)
+      if (!action.isCurrent()) return
+      setNotice(editingId ? `Inbound-правило ${saved.name} обновлено.` : `Inbound-правило ${saved.name} создано.`)
+      if (inboundFormRef.current === submittedForm
+        && editingInboundIdRef.current === editingId
+        && selectedVpnPanelIdRef.current === panelId) {
+        setEditingInboundId(null)
+        setInboundForm(defaultInboundForm)
+      }
+      await loadVpnPanelDetails(panelId, token, action.operationId)
+    })
+  }
 
-  const handleSetDefaultInbound = (inboundId: string) => runAction(inboundId, async () => {
+  const handleSetDefaultInbound = (inboundId: string) => runAction(inboundId, async (action) => {
     await api.setAdminVpnInboundDefault(token, inboundId)
+    if (!action.isCurrent()) return
     setNotice('Основное inbound-правило обновлено.')
-    await loadVpnPanelDetails(selectedVpnPanelId)
+    await loadVpnPanelDetails(selectedVpnPanelId, token, action.operationId)
   })
 
-  const handleToggleInboundActive = (inbound: VpnInboundDto) => runAction(`toggle-inbound-${inbound.id}`, async () => {
+  const handleToggleInboundActive = (inbound: VpnInboundDto) => runAction(`toggle-inbound-${inbound.id}`, async (action) => {
     const nextIsActive = !inbound.isActive
     const saved = await api.updateAdminVpnInbound(token, inbound.id, inboundToForm(inbound, {
       isActive: nextIsActive,
       isDefault: nextIsActive ? inbound.isDefault : false
     }))
+    if (!action.isCurrent()) return
     setNotice(nextIsActive ? `Inbound-правило ${saved.name} включено.` : `Inbound-правило ${saved.name} выключено.`)
-    if (editingInboundId === inbound.id) {
+    if (editingInboundIdRef.current === inbound.id) {
       setEditingInboundId(null)
       setInboundForm(defaultInboundForm)
     }
-    await loadVpnPanelDetails(selectedVpnPanelId)
+    await loadVpnPanelDetails(selectedVpnPanelId, token, action.operationId)
   })
 
   const editInbound = (inbound: VpnInboundDto) => {
@@ -2771,7 +2911,7 @@ export function App() {
     setInboundForm(defaultInboundForm)
   }
 
-  const handleVpnClientAction = (client: VpnClientDto, action: 'enable' | 'disable' | 'sync' | 'reset') => runAction(`vpn-client-${action}-${client.id}`, async () => {
+  const handleVpnClientAction = (client: VpnClientDto, action: 'enable' | 'disable' | 'sync' | 'reset') => runAction(`vpn-client-${action}-${client.id}`, async (adminAction) => {
     try {
       const saved = action === 'enable'
         ? await api.enableAdminVpnClient(token, client.id)
@@ -2780,18 +2920,20 @@ export function App() {
           : action === 'sync'
             ? await api.syncAdminVpnClient(token, client.id)
             : await api.resetAdminVpnClientTraffic(token, client.id)
+      if (!adminAction.isCurrent()) return
       setNotice(`VPN-клиент ${saved.email} обновлен: ${saved.syncStatus}.`)
     } finally {
-      await loadVpnPanelDetails(selectedVpnPanelId)
+      await loadVpnPanelDetails(selectedVpnPanelId, token, adminAction.operationId)
     }
   })
 
-  const handleMigrateVpnClient = (client: VpnClientDto) => runAction(`vpn-client-migrate-${client.id}`, async () => {
+  const handleMigrateVpnClient = (client: VpnClientDto) => runAction(`vpn-client-migrate-${client.id}`, async (action) => {
     const targetInboundId = vpnClientMigrationTargets[client.id]
     if (!targetInboundId) return
     const targetInbound = vpnMigrationInbounds.find((inbound) => inbound.id === targetInboundId)
     const targetPanel = vpnPanels.find((panel) => panel.id === targetInbound?.vpnPanelId)
     const saved = await api.migrateAdminVpnClient(token, client.id, targetInboundId)
+    if (!action.isCurrent()) return
     if (client.vpnPanelId !== saved.vpnPanelId) {
       setVpnPanels((current) => current.map((panel) => {
         if (panel.id === client.vpnPanelId) return { ...panel, usedCapacity: Math.max(0, panel.usedCapacity - 1) }
@@ -2800,10 +2942,10 @@ export function App() {
       }))
     }
     setNotice(`VPN-клиент ${saved.email} перенесен: ${targetPanel?.name ?? shortId(saved.vpnPanelId)} · ${targetInbound?.name ?? shortId(saved.vpnInboundId)}.`)
-    if (saved.vpnPanelId !== selectedVpnPanelId) {
-      setSelectedVpnPanelId(saved.vpnPanelId)
+    if (saved.vpnPanelId !== selectedVpnPanelIdRef.current) {
+      selectVpnPanel(saved.vpnPanelId)
     } else {
-      await loadVpnPanelDetails(saved.vpnPanelId)
+      await loadVpnPanelDetails(saved.vpnPanelId, token, action.operationId)
     }
   })
 
@@ -2862,117 +3004,131 @@ export function App() {
 
   const handleSaveServer = async () => {
     if (!token || !canWriteActiveSection) return
-    setBusy(true)
-    setError('')
-    try {
-      const saved = editingServerId
-        ? await api.updateAdminServer(token, editingServerId, serverForm)
-        : await api.createAdminServer(token, serverForm)
-      setNotice(`Сервер ${saved.name} ${editingServerId ? 'обновлен' : 'создан'}. Секреты не возвращаются из API.`)
-      setEditingServerId(null)
-      setServerForm((current) => ({ ...defaultServerForm, provider: current.provider, region: current.region, country: current.country, datacenter: current.datacenter }))
-      await loadAll(token)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить сервер')
-    } finally {
-      setBusy(false)
-    }
+    const editingId = editingServerId
+    const submittedForm = serverForm
+    await runAction('server-save', async (action) => {
+      const saved = editingId
+        ? await api.updateAdminServer(token, editingId, submittedForm)
+        : await api.createAdminServer(token, submittedForm)
+      if (!action.isCurrent()) return
+      setNotice(`Сервер ${saved.name} ${editingId ? 'обновлен' : 'создан'}. Секреты не возвращаются из API.`)
+      if (serverFormRef.current === submittedForm && editingServerIdRef.current === editingId) {
+        setEditingServerId(null)
+        setServerForm({ ...defaultServerForm, provider: submittedForm.provider, region: submittedForm.region, country: submittedForm.country, datacenter: submittedForm.datacenter })
+      }
+      await action.reloadAll()
+    })
   }
 
   const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate' | 'disable') => {
     const actionLabel = action === 'maintenance' ? 'перевести в обслуживание' : action === 'ready' ? 'вернуть в работу' : action === 'drain' ? 'закрыть набор пользователей' : action === 'disable' ? 'отключить сервер' : 'открыть набор пользователей'
-    await runAction(`${action}-${server.id}`, async () => {
+    await runAction(`${action}-${server.id}`, async (adminAction) => {
       if (action === 'maintenance') await api.enableAdminServerMaintenance(token, server.id)
       if (action === 'ready') await api.disableAdminServerMaintenance(token, server.id)
       if (action === 'drain') await api.disableAdminServerAllocation(token, server.id)
       if (action === 'allocate') await api.enableAdminServerAllocation(token, server.id)
       if (action === 'disable') await api.disableAdminServer(token, server.id)
+      if (!adminAction.isCurrent()) return
       setNotice(`Сервер ${server.name}: ${actionLabel}.`)
-      await loadAll(token)
+      await adminAction.reloadAll()
     })
   }
 
-  const handleDeleteServer = (server: VpnNodeDto) => runAction(`delete-server-${server.id}`, async () => {
+  const handleDeleteServer = (server: VpnNodeDto) => runAction(`delete-server-${server.id}`, async (action) => {
     const result = await api.deleteAdminServer(token, server.id)
+    if (!action.isCurrent()) return
     setNotice(result.archived
       ? `Сервер ${server.name} архивирован: связей ${result.linkedSubscriptions + result.linkedAccesses + result.linkedProvisioningRuns + result.linkedHealthChecks + result.linkedMigrationJobs}.`
       : `Сервер ${server.name} удалён.`)
-    if (editingServerId === server.id) cancelServerEdit()
-    await loadAll(token)
+    if (editingServerIdRef.current === server.id) cancelServerEdit()
+    await action.reloadAll()
   })
 
-  const handleCheckServerHealth = (server: VpnNodeDto) => runAction(`health-server-${server.id}`, async () => {
+  const handleCheckServerHealth = (server: VpnNodeDto) => runAction(`health-server-${server.id}`, async (action) => {
     const check = await api.checkAdminServerHealth(token, server.id)
+    if (!action.isCurrent()) return
     setNotice(`Health-check ${server.name}: ${check.status}${check.errorText ? ` · ${check.errorText}` : ''}`)
-    await loadAll(token)
+    await action.reloadAll()
   })
 
-  const handleQueuePrecheck = (serverId: string) => runAction(`precheck-${serverId}`, async () => {
+  const handleQueuePrecheck = (serverId: string) => runAction(`precheck-${serverId}`, async (action) => {
     const response = await api.precheckAdminServer(token, serverId)
+    if (!action.isCurrent()) return
     setNotice(`Проверка поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. ID запуска: ${response.runId}`)
-    await loadAll(token)
+    await action.reloadAll()
   })
 
   const handleQueueProvision = async (serverId: string) => {
-    await runAction(`provision-${serverId}`, async () => {
+    await runAction(`provision-${serverId}`, async (action) => {
       const response = await api.queueAdminProvision(token, serverId, false)
+      if (!action.isCurrent()) return
       setNotice(`Подготовка сервера поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
-  const handleRetryProvisioningRun = (runId: string) => runAction(`retry-${runId}`, async () => {
+  const handleRetryProvisioningRun = (runId: string) => runAction(`retry-${runId}`, async (action) => {
     const response = await api.retryAdminProvisioningRun(token, runId)
+    if (!action.isCurrent()) return
     setNotice(`Повтор поставлен в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. Новый ID запуска: ${response.runId}`)
-    await loadAll(token)
+    await action.reloadAll()
   })
 
-  const handleRetryNotificationDelivery = (deliveryId: string) => runAction(`retry-notification-${deliveryId}`, async () => {
+  const handleRetryNotificationDelivery = (deliveryId: string) => runAction(`retry-notification-${deliveryId}`, async (action) => {
     await api.retryAdminNotificationDelivery(token, deliveryId)
+    if (!action.isCurrent()) return
     setNotice('Email-уведомление возвращено в очередь доставки.')
-    await loadAll(token)
+    await action.reloadAll()
   })
 
   const handleDeployProvisioningRun = (runId: string) => {
-    return runAction(`deploy-run-${runId}`, async () => {
+    return runAction(`deploy-run-${runId}`, async (action) => {
       const response = await api.deployAdminProvisioningRun(token, runId)
+      if (!action.isCurrent()) return
       setNotice(`Развертывание поставлено в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
   const handleCancelProvisioningRun = (runId: string) => {
-    return runAction(`cancel-run-${runId}`, async () => {
+    return runAction(`cancel-run-${runId}`, async (action) => {
       try {
         await api.cancelAdminProvisioningRun(token, runId)
       } catch (error) {
-        if (isProvisioningStateConflict(error)) await loadAll(token)
+        if (isProvisioningStateConflict(error)) await action.reloadAll()
         throw error
       }
+      if (!action.isCurrent()) return
       setNotice('Запуск подготовки сервера отменен.')
-      await loadAll(token)
+      await action.reloadAll()
     })
   }
 
-  const handleProvisioningSupportNeeded = (runId: string) => runAction(`support-run-${runId}`, async () => {
+  const handleProvisioningSupportNeeded = (runId: string) => runAction(`support-run-${runId}`, async (action) => {
     const response = await api.markAdminProvisioningSupportNeeded(token, runId)
+    if (!action.isCurrent()) return
     setNotice(`Обращение в поддержку: ${response.supportConversationId}`)
-    await loadAll(token)
+    await action.reloadAll()
   })
 
-  const handleSaveBotSettings = () => runAction('bot-settings', async () => {
-    const saved = await api.updateAdminTelegramBotSettings(token, botSettingsForm)
+  const handleSaveBotSettings = () => runAction('bot-settings', async (action) => {
+    const submittedForm = botSettingsForm
+    const saved = await api.updateAdminTelegramBotSettings(token, submittedForm)
+    if (!action.isCurrent()) return
     setBotSettings(saved)
-    setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+    if (botSettingsFormRef.current === submittedForm) {
+      botSettingsFormDirty.current = false
+      setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+    }
     botSettingsCheckRequestId.current += 1
     setBotSettingsCheck(null)
     setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
   })
 
-  const handleTestBotSettings = () => runAction('bot-settings-test', async () => {
+  const handleTestBotSettings = () => runAction('bot-settings-test', async (action) => {
     const requestId = ++botSettingsCheckRequestId.current
     const result = await api.testAdminTelegramBotSettings(token)
-    if (requestId !== botSettingsCheckRequestId.current) return
+    if (!action.isCurrent() || requestId !== botSettingsCheckRequestId.current) return
     setBotSettingsCheck(result)
     setNotice(result.isReady ? 'Telegram-бот готов к работе.' : 'Проверка Telegram-бота нашла настройки, которые нужно заполнить.')
   })
@@ -3469,7 +3625,7 @@ export function App() {
         <Card>
           <h3>{editingProviderAccountId ? 'Редактирование способа оплаты' : 'Способы оплаты'}</h3>
           <p className="muted">Добавьте платежный аккаунт, включите его и проверьте готовность к оплатам. Секреты сохраняются скрыто.</p>
-          <form hidden={!canWriteSection('payments')} aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveProviderAccount() }}>
+          <form hidden={!canWriteSection('payments')} aria-busy={actionBusyId === 'provider-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveProviderAccount() }}>
             <fieldset className="form-section">
               <legend>Основные параметры</legend>
               <div className="provider-setup-note">
@@ -3527,7 +3683,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={providerFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={actionBusyId === 'provider-save' || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'provider-save'}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
               {editingProviderAccountId && <PrimaryButton type="button" className="button-ghost" onClick={resetProviderForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -3674,7 +3830,7 @@ export function App() {
       <div id="tariffs" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('tariffs')} hidden={activeSection !== 'tariffs'}>
         <Card>
           <h3>{editingTariffId ? 'Редактирование тарифа' : 'Новый тариф'}</h3>
-          <form hidden={!canWriteSection('tariffs')} aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveTariff() }}>
+          <form hidden={!canWriteSection('tariffs')} aria-busy={actionBusyId === 'tariff-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveTariff() }}>
             <fieldset className="form-section">
               <legend>Цена и срок</legend>
               <div className="form-grid">
@@ -3724,7 +3880,7 @@ export function App() {
             </div>
             <FormValidationSummary errors={tariffFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || busy || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || actionBusyId === 'tariff-save' || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'tariff-save'}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
               {editingTariffId && <PrimaryButton type="button" className="button-ghost" onClick={resetTariffForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -3741,7 +3897,7 @@ export function App() {
       <div id="referrals" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('referrals')} hidden={activeSection !== 'referrals'}>
         <Card>
           <h3>{editingReferralProgramId ? 'Редактирование программы' : 'Новая реферальная программа'}</h3>
-          <form hidden={!canWriteSection('referrals')} aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveReferralProgram() }}>
+          <form hidden={!canWriteSection('referrals')} aria-busy={actionBusyId === 'referral-program-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveReferralProgram() }}>
             <fieldset className="form-section">
               <legend>Публикация</legend>
               <div className="form-grid">
@@ -3778,7 +3934,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={referralProgramFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || referralProgramFormErrors.length > 0}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={actionBusyId === 'referral-program-save' || referralProgramFormErrors.length > 0} aria-busy={actionBusyId === 'referral-program-save'}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
               {editingReferralProgramId && <PrimaryButton type="button" className="button-ghost" onClick={resetReferralProgramForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -3927,7 +4083,7 @@ export function App() {
         </Card>
         <Card>
           <h3>{editingServerId ? 'Редактировать VPN-сервер' : 'Добавить VPN-сервер'}</h3>
-          <form hidden={!canWriteSection('nodes')} aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveServer() }}>
+          <form hidden={!canWriteSection('nodes')} aria-busy={actionBusyId === 'server-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveServer() }}>
             <fieldset className="form-section">
               <legend>Идентификация сервера</legend>
               <div className="form-grid">
@@ -3965,7 +4121,7 @@ export function App() {
             <p className="muted">SSH-доступ защищается API и не возвращается обратно. Проверочный режим не выполняет реальный SSH-деплой.</p>
             <FormValidationSummary errors={serverFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || serverFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={actionBusyId === 'server-save' || !token || serverFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'server-save'}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
               {editingServerId && <PrimaryButton type="button" className="button-ghost" onClick={cancelServerEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -3976,7 +4132,7 @@ export function App() {
         <Card>
           <h3>{editingVpnPanelId ? 'Редактировать 3x-ui панель' : '3x-ui панели'}</h3>
           <p className="safe-note">В проверочном режиме тест и синхронизация идут через безопасный путь без реального подключения к 3x-ui.</p>
-          <form hidden={!canWriteSection('panels')} aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleSaveVpnPanel() }}>
+          <form hidden={!canWriteSection('panels')} aria-busy={actionBusyId === 'vpn-panel-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveVpnPanel() }}>
             <fieldset className="form-section">
               <legend>Доступ к панели</legend>
               <div className="form-grid">
@@ -3999,16 +4155,16 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={vpnPanelFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={busy || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={busy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={actionBusyId === 'vpn-panel-save' || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'vpn-panel-save'}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
               {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
           {vpnPanels.length === 0 && <EmptyState title="3x-ui панели не добавлены" description="Добавьте панель, чтобы управлять inbound-правилами, клиентами и синхронизацией." />}
-          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · проверка {formatDate(panel.lastHealthCheckAt)} · синхронизация {formatDate(panel.lastSyncAt)}</div>{panel.lastError && <div className="error-text">Последняя ошибка: {panel.lastError}</div>}</div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedVpnPanelId(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('panels') && <><PrimaryButton className="button-secondary" onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={actionBusyId === `panel-status-${panel.id}`} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === `panel-status-${panel.id}`} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => void handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `panel-delete-${panel.id}`} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => void handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></>}</div></div>)}</div>
+          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · проверка {formatDate(panel.lastHealthCheckAt)} · синхронизация {formatDate(panel.lastSyncAt)}</div>{panel.lastError && <div className="error-text">Последняя ошибка: {panel.lastError}</div>}</div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectVpnPanel(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('panels') && <><PrimaryButton className="button-secondary" onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={actionBusyId === `panel-status-${panel.id}`} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === `panel-status-${panel.id}`} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => void handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `panel-delete-${panel.id}`} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => void handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></>}</div></div>)}</div>
         </Card>
         <Card>
           <h3>Детали панели</h3>
-          <label><span>Панель</span><select value={selectedVpnPanelId} onChange={(e) => setSelectedVpnPanelId(e.target.value)}><option value="">Не выбрана</option>{vpnPanels.map((panel) => <option key={panel.id} value={panel.id}>{panel.name}</option>)}</select></label>
+          <label><span>Панель</span><select value={selectedVpnPanelId} onChange={(e) => selectVpnPanel(e.target.value)}><option value="">Не выбрана</option>{vpnPanels.map((panel) => <option key={panel.id} value={panel.id}>{panel.name}</option>)}</select></label>
           <h4>Inbound-правила</h4>
           <form hidden={!canWriteSection('panels')} aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveInbound() }}>
             <fieldset className="form-section">
