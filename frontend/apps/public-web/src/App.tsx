@@ -21,6 +21,7 @@ import { Card, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageSh
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
 import { parsePendingCheckout, type PendingCheckout } from './pending-checkout'
 import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
+import { getPublicSessionCheckError, isPublicAccessTokenExpired, isPublicSessionRejected, publicSessionEndedMessage } from './public-session'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-public-token'
@@ -629,11 +630,13 @@ function AccountPage({
   onLogout,
   logoutBusy,
   sessionError,
+  sessionHydrationBusy,
   lastCheckout,
   pendingCheckout,
   pendingCheckoutOrder,
   checkoutError,
   claimBusy,
+  onRetrySession,
   onRetryPendingCheckout,
   onClearPendingCheckout
 }: {
@@ -644,11 +647,13 @@ function AccountPage({
   onLogout: () => Promise<void>
   logoutBusy: boolean
   sessionError: string
+  sessionHydrationBusy: boolean
   lastCheckout: CheckoutState
   pendingCheckout: PendingCheckout | null
   pendingCheckoutOrder: OrderDto | null
   checkoutError: string
   claimBusy: boolean
+  onRetrySession: () => void
   onRetryPendingCheckout: () => void
   onClearPendingCheckout: () => void
 }) {
@@ -729,18 +734,33 @@ function AccountPage({
   return (
     <PageShell title="Аккаунт">
       <div className="grid">
-        <StatTile label="Авторизация" value={token ? 'подключен' : 'не выполнена'} />
+        <StatTile label="Авторизация" value={profile ? 'подключен' : token ? (sessionHydrationBusy ? 'проверяется' : 'требует проверки') : 'не выполнена'} />
         <StatTile label="Покупка" value={pendingCheckoutOrder ? 'заказ создан' : pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто'} />
         <StatTile label="Рефералы" value={profile?.referralCode ?? 'будет после входа'} />
       </div>
 
       {sessionError && <div className="section"><ErrorBlock message={sessionError} /></div>}
 
+      {token && !profile && (
+        <div className="section">
+          <Card>
+            <h3>Проверка сессии</h3>
+            {sessionHydrationBusy
+              ? <LoadingBlock label="Проверяем доступ к аккаунту..." />
+              : <p className="muted">Токены сохранены локально, но доступ к профилю пока не подтверждён.</p>}
+            <div className="form-actions">
+              {!sessionHydrationBusy && <PrimaryButton type="button" onClick={onRetrySession}>Повторить проверку</PrimaryButton>}
+              <PrimaryButton type="button" className="button-ghost" disabled={logoutBusy} aria-busy={logoutBusy} onClick={() => void onLogout()}>{logoutBusy ? 'Завершаем сессию...' : 'Завершить сессию'}</PrimaryButton>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {checkoutError && (
         <div className="section">
           <Card>
             <ErrorBlock message={checkoutError} />
-            {pendingCheckout && token && (
+            {pendingCheckout && profile && (
               <div className="form-actions">
                 <PrimaryButton type="button" disabled={claimBusy} aria-busy={claimBusy} onClick={onRetryPendingCheckout}>{pendingCheckoutOrder ? 'Повторить оплату' : 'Повторить привязку'}</PrimaryButton>
                 <PrimaryButton type="button" className="button-ghost" disabled={claimBusy} onClick={onClearPendingCheckout}>Отменить эту покупку</PrimaryButton>
@@ -801,7 +821,7 @@ function AccountPage({
             </Card>
           )}
         </div>
-      ) : (
+      ) : token ? null : (
         <div className="section">
           {pendingCheckout && (
             <Card>
@@ -968,8 +988,20 @@ export function App() {
   const checkoutClaimRequestIdRef = useRef(0)
   const [logoutBusy, setLogoutBusy] = useState(false)
   const [sessionError, setSessionError] = useState('')
+  const [sessionHydrationBusy, setSessionHydrationBusy] = useState(false)
+  const [sessionHydrationAttempt, setSessionHydrationAttempt] = useState(0)
+  const sessionHydrationInFlightRef = useRef(false)
+  const sessionHydrationAttemptKeyRef = useRef('')
+  const sessionHydrationRequestIdRef = useRef(0)
+
+  const invalidateSessionHydration = () => {
+    sessionHydrationRequestIdRef.current += 1
+    sessionHydrationInFlightRef.current = false
+    setSessionHydrationBusy(false)
+  }
 
   const clearSession = () => {
+    invalidateSessionHydration()
     checkoutClaimRequestIdRef.current += 1
     checkoutClaimInFlightRef.current = false
     setClaimBusy(false)
@@ -984,34 +1016,74 @@ export function App() {
   useEffect(() => {
     if (!token) {
       setProfile(null)
+      setSessionHydrationBusy(false)
       return
     }
+    if (profile || sessionHydrationInFlightRef.current) return
 
-    let cancelled = false
-    api.getMe(token).then((nextProfile) => {
-      if (!cancelled) setProfile(nextProfile)
-    }).catch(async () => {
-      if (!refreshToken) {
-        if (!cancelled) clearSession()
-        return
-      }
+    const attemptKey = `${token}:${refreshToken}:${sessionHydrationAttempt}`
+    if (sessionHydrationAttemptKeyRef.current === attemptKey) return
+    sessionHydrationAttemptKeyRef.current = attemptKey
+    sessionHydrationInFlightRef.current = true
+    const requestId = ++sessionHydrationRequestIdRef.current
+    setSessionHydrationBusy(true)
+    setSessionError('')
 
+    void (async () => {
       try {
+        try {
+          const nextProfile = await api.getMe(token)
+          if (requestId === sessionHydrationRequestIdRef.current) setProfile(nextProfile)
+          return
+        } catch (error) {
+          if (requestId !== sessionHydrationRequestIdRef.current) return
+          if (!isPublicAccessTokenExpired(error)) {
+            if (isPublicSessionRejected(error)) {
+              clearSession()
+              setSessionError(publicSessionEndedMessage)
+            } else {
+              setSessionError(getPublicSessionCheckError(error))
+            }
+            return
+          }
+        }
+
+        if (!refreshToken) {
+          clearSession()
+          setSessionError(publicSessionEndedMessage)
+          return
+        }
+
         const response = await api.refresh(refreshToken)
-        const nextProfile = await api.getMe(response.accessToken)
-        if (cancelled) return
+        if (requestId !== sessionHydrationRequestIdRef.current) return
         writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
         writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
         setToken(response.accessToken)
         setRefreshToken(response.refreshToken)
+        const nextProfile = await api.getMe(response.accessToken)
+        if (requestId !== sessionHydrationRequestIdRef.current) return
         setProfile(nextProfile)
-      } catch {
-        if (!cancelled) clearSession()
+      } catch (error) {
+        if (requestId !== sessionHydrationRequestIdRef.current) return
+        if (isPublicSessionRejected(error)) {
+          clearSession()
+          setSessionError(publicSessionEndedMessage)
+        } else {
+          setSessionError(getPublicSessionCheckError(error))
+        }
+      } finally {
+        if (requestId === sessionHydrationRequestIdRef.current) {
+          sessionHydrationInFlightRef.current = false
+          setSessionHydrationBusy(false)
+        }
       }
-    })
+    })()
+  }, [token, refreshToken, profile, sessionHydrationAttempt])
 
-    return () => { cancelled = true }
-  }, [token, refreshToken])
+  const retrySessionHydration = () => {
+    setSessionError('')
+    setSessionHydrationAttempt((current) => current + 1)
+  }
 
   const retryPendingCheckout = () => {
     setCheckoutError('')
@@ -1029,7 +1101,7 @@ export function App() {
   }
 
   useEffect(() => {
-    if (!token || !pendingCheckout || checkoutClaimInFlightRef.current) return
+    if (!token || !profile || !pendingCheckout || checkoutClaimInFlightRef.current) return
     const attemptKey = `${pendingCheckout.token}:${claimAttempt}`
     if (checkoutClaimAttemptKeyRef.current === attemptKey) return
 
@@ -1066,7 +1138,7 @@ export function App() {
         }
       }
     })()
-  }, [token, pendingCheckout, pendingCheckoutOrder, claimAttempt])
+  }, [token, profile, pendingCheckout, pendingCheckoutOrder, claimAttempt])
 
   const handlePendingCheckout = (pending: PendingCheckout) => {
     checkoutClaimRequestIdRef.current += 1
@@ -1080,10 +1152,12 @@ export function App() {
   const navigationLabel = useMemo(() => profile ? `Привет, ${profile.displayName}` : 'Аккаунт', [profile])
 
   const handleAuthenticated = (response: AuthResponse) => {
+    invalidateSessionHydration()
     writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
     writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
     setToken(response.accessToken)
     setRefreshToken(response.refreshToken)
+    setProfile(null)
     setSessionError('')
   }
 
@@ -1137,11 +1211,13 @@ export function App() {
               onLogout={handleLogout}
               logoutBusy={logoutBusy}
               sessionError={sessionError}
+              sessionHydrationBusy={sessionHydrationBusy}
               lastCheckout={lastCheckout}
               pendingCheckout={pendingCheckout}
               pendingCheckoutOrder={pendingCheckoutOrder}
               checkoutError={checkoutError}
               claimBusy={claimBusy}
+              onRetrySession={retrySessionHydration}
               onRetryPendingCheckout={retryPendingCheckout}
               onClearPendingCheckout={clearPendingCheckout}
             />

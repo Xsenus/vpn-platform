@@ -112,6 +112,11 @@ async function mockPublicApi(page: Page) {
   let logoutAuthorization = ''
   let logoutShouldFail = false
   let refreshPayload: unknown = null
+  let refreshRequestCount = 0
+  let refreshDelayMs = 0
+  let profileRequestCount = 0
+  const profileRequestCountsByToken = new Map<string, number>()
+  let forcedProfileFailure: { accessToken: string; status: number; error: string } | null = null
   let rejectNextProfileRequest = true
   let rejectNextCheckoutPromo = false
   let checkoutDelayMs = 0
@@ -258,7 +263,13 @@ async function mockPublicApi(page: Page) {
       await route.fulfill({ status: 204, headers: corsHeaders })
       return
     }
+    refreshRequestCount += 1
     refreshPayload = route.request().postDataJSON()
+    if (refreshDelayMs > 0) {
+      const delay = refreshDelayMs
+      refreshDelayMs = 0
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
     await fulfillJson(route, {
       accessToken: 'public-refreshed-access-token',
       refreshToken: 'public-refreshed-refresh-token',
@@ -270,6 +281,13 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/me', async (route) => {
+    profileRequestCount += 1
+    const accessToken = (route.request().headers().authorization ?? '').replace(/^Bearer\s+/i, '')
+    profileRequestCountsByToken.set(accessToken, (profileRequestCountsByToken.get(accessToken) ?? 0) + 1)
+    if (forcedProfileFailure?.accessToken === accessToken) {
+      await fulfillJson(route, { error: forcedProfileFailure.error }, forcedProfileFailure.status)
+      return
+    }
     if (rejectNextProfileRequest) {
       rejectNextProfileRequest = false
       await fulfillJson(route, { error: 'expired access token' }, 401)
@@ -337,6 +355,20 @@ async function mockPublicApi(page: Page) {
     getLogoutPayload: () => logoutPayload,
     getLogoutAuthorization: () => logoutAuthorization,
     getRefreshPayload: () => refreshPayload,
+    getSessionRequestCounts: () => ({
+      profile: profileRequestCount,
+      refresh: refreshRequestCount,
+      profileByToken: Object.fromEntries(profileRequestCountsByToken)
+    }),
+    rejectProfileForAccessToken: (accessToken: string, status: number, error: string) => {
+      rejectNextProfileRequest = false
+      forcedProfileFailure = { accessToken, status, error }
+    },
+    allowProfileRequests: () => {
+      rejectNextProfileRequest = false
+      forcedProfileFailure = null
+    },
+    delayNextRefresh: (delayMs: number) => { refreshDelayMs = delayMs },
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
@@ -452,6 +484,88 @@ test('public account discards an unsafe persisted checkout before authorized req
   await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 0, claim: 0, paymentInit: 0 })
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
   expect(pageErrors).toEqual([])
+})
+
+test('public restored session performs one rotating refresh under StrictMode', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.rejectProfileForAccessToken('public-access-token', 401, 'expired access token')
+
+  await page.goto('/account')
+  await expect(page.getByText('Public E2E').first()).toBeVisible()
+  await expect.poll(api.getSessionRequestCounts).toEqual({
+    profile: 2,
+    refresh: 1,
+    profileByToken: {
+      'public-access-token': 1,
+      'public-refreshed-access-token': 1
+    }
+  })
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-public-token'),
+    refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
+  }))).toEqual({ access: 'public-refreshed-access-token', refresh: 'public-refreshed-refresh-token' })
+})
+
+test('public restored session preserves tokens and retries profile after a transient failure', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.rejectProfileForAccessToken('public-access-token', 503, 'profile unavailable')
+
+  await page.goto('/account')
+  await expect(page.getByRole('heading', { name: 'Проверка сессии' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('profile unavailable')
+  await expect.poll(api.getSessionRequestCounts).toEqual({
+    profile: 1,
+    refresh: 0,
+    profileByToken: { 'public-access-token': 1 }
+  })
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-public-token'),
+    refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
+  }))).toEqual({ access: 'public-access-token', refresh: 'public-refresh-token' })
+
+  api.allowProfileRequests()
+  await page.getByRole('button', { name: 'Повторить проверку' }).click()
+  await expect(page.getByText('Public E2E').first()).toBeVisible()
+  await expect.poll(api.getSessionRequestCounts).toEqual({
+    profile: 2,
+    refresh: 0,
+    profileByToken: { 'public-access-token': 2 }
+  })
+})
+
+test('public logout invalidates a delayed refresh response', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.rejectProfileForAccessToken('public-access-token', 401, 'expired access token')
+  api.delayNextRefresh(500)
+
+  await page.goto('/account')
+  await expect.poll(() => api.getSessionRequestCounts().refresh).toBe(1)
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await expect(page.getByRole('tab', { name: 'Вход' })).toBeVisible()
+  await page.waitForTimeout(600)
+
+  await expect(page.getByText('Public E2E')).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => ({
+    access: sessionStorage.getItem('vpn-platform-public-token'),
+    refresh: sessionStorage.getItem('vpn-platform-public-refresh-token')
+  }))).toEqual({ access: null, refresh: null })
+  expect(api.getSessionRequestCounts()).toEqual({
+    profile: 1,
+    refresh: 1,
+    profileByToken: { 'public-access-token': 1 }
+  })
 })
 
 test('authenticated public checkout owns one claim and payment initialization', async ({ page }) => {

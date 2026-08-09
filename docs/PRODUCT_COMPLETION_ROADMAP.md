@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-public-checkout-storage-validation`, версия `0.543.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `556/576` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-public-session-refresh-single-flight`, версия `0.544.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `557/577` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-09:
 
 - [x] `STATE-001` Backend test suite проходит: `1112/1112`.
-- [x] `STATE-002` Frontend test suite проходит: `107/107`.
+- [x] `STATE-002` Frontend test suite проходит: `109/109`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -1920,6 +1920,10 @@ git diff --check
   - Что сделать: синтаксически корректный, но подменённый JSON из `sessionStorage` не должен попадать в UI или формировать авторизованные claim/payment-init маршруты.
   - Что сделано: отдельный bounded parser проверяет object shape, размер raw state, base64url token, длину tariff name и provider через общий API-client allow-list; invalid state удаляется до запуска checkout effect.
   - Доказательство: parser unit regression `3/3`, frontend `107/107`, typecheck/build, desktop/mobile public `12/12` и полный console-responsive Playwright `26/26`; malicious provider path даёт `checkout=0/claim=0/payment-init=0`, storage очищается без stale UI и `pageerror`. Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и audit пройдены; live evidence не переиспользовалось.
+- [x] `P11-ACC-267` Защитить восстановление public session от конкурентной ротации refresh-token. 2026-08-09.
+  - Что сделать: StrictMode не должен дважды использовать один rotating refresh-token; transient profile error не должен ротировать или удалять сессию, а late response не должен восстанавливать logout-state.
+  - Что сделано: session hydration получил stable token+retry key, single-flight и request generation; refresh запускается только после access-token `401`, новая пара сохраняется до повторного profile request, UI разделяет loading/error/retry/logout состояния, а checkout claim ждёт подтверждённый профиль.
+  - Доказательство: session unit `2/2`, frontend `109/109`, public desktop/mobile `18/18`, полный console-responsive Playwright `32/32`; E2E фиксирует StrictMode `old profile=1/refresh=1/new profile=1`, transient `503` как `profile=1/refresh=0` с сохранёнными токенами и отсутствие late restore после logout. Backend `1112/1112`, fresh SQLite и audit пройдены; внешние evidence-пункты не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

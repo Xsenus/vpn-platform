@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: public session refresh single-flight
+
+Scope:
+- Проверено восстановление public access/refresh session под `React.StrictMode`, включая rotating refresh-token reuse risk.
+- Проверены transient profile failure, ручной retry и delayed refresh completion после logout.
+
+Results:
+- Roadmap progress: `557/577` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-public-session-refresh-single-flight`, version `0.544.0`.
+- Session hydration использует stable token+retry generation, single-flight и request generation; concurrent StrictMode effect не выполняет второй refresh.
+- Только access-token `401` запускает rotation; `403` завершает сессию, а transient `5xx` сохраняет токены и показывает retry UI.
+- Ротированные токены сохраняются до повторной загрузки профиля; logout/new auth инвалидируют поздние refresh/profile результаты.
+- Pending checkout effect допускается только после подтверждения профиля, поэтому claim не конкурирует с восстановлением access-token.
+- Public session unit regression: `2/2`; frontend tests: `109/109`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Desktop/mobile public: `18/18`; полный desktop/mobile console-responsive Playwright suite: `32/32`.
+- Backend full suite: `1112/1112`; Release build: `0` warnings/`0` errors; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- Secret scan: `653` files/`0` findings; strict UTF-8 guards и artifact cleanup: OK.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: public pending checkout storage validation
 
 Scope:

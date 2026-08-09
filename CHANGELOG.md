@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.544.0 - 2026-08-09
+
+Release entry: `2026-08-09-public-session-refresh-single-flight`.
+
+### Исправлено
+
+- Восстановление публичной сессии выполняет один `GET /api/me` и не запускает конкурентные refresh-token rotation под `React.StrictMode`.
+- Только `401` от access-token запускает refresh; transient `5xx` сохраняет локальные токены и предлагает ручную повторную проверку без нового входа.
+- Новая пара токенов сохраняется сразу после успешной ротации, а request generation отбрасывает поздний refresh/profile response после logout или новой авторизации.
+- Pending checkout ждёт подтверждённый профиль и не отправляет claim по просроченному восстановленному access-token.
+
+### Улучшено
+
+- Пока восстановленная сессия не подтверждена, account-page показывает отдельные loading/error/retry/logout состояния и не отображает форму нового входа поверх сохранённых токенов.
+
+### Проверено
+
+- Public session unit regression `2/2`; frontend `109/109`, typecheck/build всех приложений и dependency audit `0 vulnerabilities`.
+- Desktop/mobile E2E фиксирует один old-token profile request, один refresh и один refreshed-token profile request под StrictMode.
+- Controlled `503` даёт `profile=1/refresh=0`, сохраняет оба browser token и после ручной команды загружает профиль без ротации; delayed refresh после logout не восстанавливает UI или storage.
+- Полный desktop/mobile console-responsive Playwright suite `32/32`; backend `1112/1112`, Release build `0` warnings/`0` errors и fresh local SQLite smoke пройдены.
+- Secret scan `653/0`, strict UTF-8 guards и artifact cleanup пройдены.
+- `RoadmapCurrentStateTests` фиксирует `557/577` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.543.0 - 2026-08-09
 
 Release entry: `2026-08-09-public-checkout-storage-validation`.
