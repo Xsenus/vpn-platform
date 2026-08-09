@@ -197,6 +197,8 @@ async function mockAdminApi(page: Page) {
   let invalidUsersResponse = false
   let invalidPaymentProviderAccountsResponse = false
   let invalidTariffsResponse = false
+  let invalidVpnPanelsResponse = false
+  let delayNextVpnPanelInboundsResponse = false
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const referralPrograms = [referralProgram()]
@@ -600,7 +602,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/vpn-panels') {
-      await fulfillJson(route, panels)
+      await fulfillJson(route, invalidVpnPanelsResponse ? [{}] : panels)
       return
     }
 
@@ -615,6 +617,10 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/vpn-panels/panel-eu/inbounds') {
+      if (delayNextVpnPanelInboundsResponse) {
+        delayNextVpnPanelInboundsResponse = false
+        await new Promise((resolve) => setTimeout(resolve, 1200))
+      }
       await fulfillJson(route, inbounds)
       return
     }
@@ -664,6 +670,8 @@ async function mockAdminApi(page: Page) {
     returnInvalidUsersResponse: () => { invalidUsersResponse = true },
     returnInvalidPaymentProviderAccountsResponse: () => { invalidPaymentProviderAccountsResponse = true },
     returnInvalidTariffsResponse: () => { invalidTariffsResponse = true },
+    returnInvalidVpnPanelsResponse: () => { invalidVpnPanelsResponse = true },
+    delayNextVpnPanelInbounds: () => { delayNextVpnPanelInboundsResponse = true },
     failLogout: () => { logoutShouldFail = true }
   }
 }
@@ -679,7 +687,7 @@ async function openAdminSection(page: Page, name: string, id: string) {
 }
 
 test('admin panel covers login, payments, tariffs, VPN panels, scenarios and releases', async ({ page }, testInfo) => {
-  test.setTimeout(60_000)
+  test.setTimeout(90_000)
   const consoleErrors: string[] = []
   const failedResponses: string[] = []
   page.on('console', (message) => {
@@ -889,6 +897,25 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
   await page.getByRole('button', { name: 'Войти в админку' }).click()
   await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, '3x-ui панели', 'panels')
+  const stalePanelsSection = page.locator('#panels')
+  const panelSelect = stalePanelsSection.getByRole('combobox', { name: 'Панель' })
+  await panelSelect.selectOption('')
+  api.delayNextVpnPanelInbounds()
+  const delayedDetailsRequest = page.waitForRequest((request) => request.method() === 'GET' && request.url().endsWith('/api/admin/vpn-panels/panel-eu/inbounds'))
+  await panelSelect.selectOption('panel-eu')
+  await delayedDetailsRequest
+  api.returnInvalidVpnPanelsResponse()
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect(page.locator('.code-block').filter({ hasText: 'VPN-панели:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await expect(stalePanelsSection.getByText('3x-ui панели не добавлены')).toBeVisible()
+  await page.waitForTimeout(1400)
+  await expect(stalePanelsSection.getByText('EU 3x-ui Sandbox', { exact: true })).toHaveCount(0)
+  await expect(stalePanelsSection.getByText('default-vless', { exact: true })).toHaveCount(0)
+  await expect(stalePanelsSection.getByText('client@example.test', { exact: true })).toHaveCount(0)
+  await expect(stalePanelsSection.getByText('Remote panel sync failed.', { exact: true })).toHaveCount(0)
+  await expect(stalePanelsSection.getByRole('combobox', { name: 'Панель' })).toHaveValue('')
 
   api.returnInvalidTariffsResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()

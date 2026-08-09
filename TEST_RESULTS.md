@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: 3x-ui panel API DTO field validation
+
+Scope:
+- Проверены runtime-контракты panel, inbound, client, sync run/event и health check ответов админки для read и mutation операций до передачи данных в React.
+
+Results:
+- Roadmap progress: `547/567` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-vpn-panel-api-dto-validation`, version `0.534.0`.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; EF model drift: none.
+- Frontend tests: OK, `101/101`; typecheck и production build всех трех приложений: OK.
+- Все 19 panel/inbound/client/sync/health маршрутов отклоняют неполные DTO, некорректные enum/JSON/date/capacity/status связи, duplicate `id` и несовпадающие parent id до TypeScript cast.
+- Malformed panels и delayed stale details regression: OK, admin desktop/mobile `6/6`; выбранная панель и связанные inbound/client/sync/health данные очищаются, поздний ответ не восстанавливает старое состояние, controlled `ApiClientError` `502` виден оператору, `0` page errors.
+- Browser responsive/console suite: OK, `18/18`, включая все admin-разделы и widths `305..1920`.
+- Fresh local SQLite smoke: OK; checkout, sandbox payment, subscription и VPN access завершены, latest release подтвержден.
+- Dependency audit: OK, `0 vulnerabilities`; secret scan: OK, `649` files, `0` findings; strict UTF-8/encoding guard: OK.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: admin content and app release API DTO field validation
 
 Scope:

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.534.0 - 2026-08-09
+
+Release entry: `2026-08-09-vpn-panel-api-dto-validation`.
+
+### Исправлено
+
+- API-клиент больше не принимает неполные DTO 3x-ui panel, inbound, client, sync run/event и health check как доверенные данные.
+- Все 19 read и mutation маршрутов проверяют обязательные поля, даты, enum, JSON-объекты, nullable-значения, capacity/status связи, уникальные `id` и соответствие parent id фактическому backend-контракту.
+- Поврежденный список панелей очищает выбранную панель и связанные inbound/client/sync/health данные; поколение запроса не позволяет позднему ответу восстановить stale состояние.
+
+### Проверено
+
+- Frontend `101/101`, включая malformed panel/inbound/client/sync/health DTO; typecheck и production build всех трех приложений.
+- Admin desktop/mobile `6/6` с delayed stale-details regression; все admin-разделы и representative responsive widths; полный console/responsive suite `18/18`.
+- Backend full suite `1112/1112`, Release build `0` warnings/`0` errors, EF model drift отсутствует; fresh local SQLite checkout/payment/subscription/VPN smoke пройден.
+- Dependency audit `0 vulnerabilities`, secret scan `649` files/`0` findings; release/documentation/UTF-8 guards подтверждают latest `2026-08-09-vpn-panel-api-dto-validation`, версию `0.534.0` и roadmap `547/567`.
+- Roadmap progress: `547/567` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Реальные VPS/staging/live payment/3x-ui и SMTP evidence остаются внешними и не закрывались локальными тестами; статус остается `staging-ready baseline`, не production-ready.
+
 ## 0.533.0 - 2026-08-09
 
 Release entry: `2026-08-09-admin-content-api-dto-validation`.

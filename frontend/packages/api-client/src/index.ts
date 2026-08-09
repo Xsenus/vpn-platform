@@ -710,8 +710,8 @@ export type VpnPanelDto = {
   usedCapacity: number
   autoCreateInbound: boolean
   defaultInboundTemplateJson: string
-  lastHealthCheckAt?: string | null
-  lastSyncAt?: string | null
+  lastHealthCheckAt: string | null
+  lastSyncAt: string | null
   version: string
   lastError: string
   createdAt: string
@@ -784,13 +784,13 @@ export type VpnClientDto = {
   uuid: string
   flow: string
   limitIp: number
-  totalGb?: number | null
+  totalGb: number | null
   expiryTime: string
   enable: boolean
   configUri: string
   qrCodePayload: string
   syncStatus: string
-  lastSyncedAt?: string | null
+  lastSyncedAt: string | null
 }
 
 export type PanelSyncRunDto = {
@@ -798,7 +798,7 @@ export type PanelSyncRunDto = {
   vpnPanelId: string
   status: string
   startedAt: string
-  finishedAt?: string | null
+  finishedAt: string | null
   summaryJson: string
   errorMessage: string
 }
@@ -808,7 +808,7 @@ export type PanelSyncEventDto = {
   panelSyncRunId: string
   eventType: string
   entityType: string
-  entityId?: string | null
+  entityId: string | null
   externalId: string
   message: string
   payloadJson: string
@@ -818,7 +818,7 @@ export type PanelHealthCheckDto = {
   id: string
   vpnPanelId: string
   status: string
-  latencyMs?: number | null
+  latencyMs: number | null
   version: string
   errorMessage: string
   checkedAt: string
@@ -1227,6 +1227,12 @@ const supportDirectionValues = new Set(['inbound', 'outbound'])
 const referralProgramStatusValues = new Set(['draft', 'active', 'paused', 'archived'])
 const appReleaseItemTypeValues = new Set(['new', 'improved', 'fixed', 'important'])
 const appReleaseSourceValues = new Set(['agent', 'manual'])
+const vpnPanelStatusValues = new Set(['New', 'Active', 'Disabled', 'Maintenance', 'Error'])
+const healthStatusValues = new Set(['Unknown', 'Healthy', 'Degraded', 'Unhealthy'])
+const vpnSslVerificationModeValues = new Set(['Strict', 'AllowSelfSigned', 'Disabled'])
+const x3UiApiVariantValues = new Set(['X3UiOfficial', 'ThreeXUi', 'LegacyXUi', 'Custom'])
+const vpnInboundProtocolValues = new Set(['vless', 'vmess', 'trojan'])
+const panelSyncRunStatusValues = new Set(['Pending', 'Running', 'Succeeded', 'Failed'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -1289,6 +1295,16 @@ function hasJsonUniqueStringArray(record: Record<string, unknown>, key: string) 
     return Array.isArray(parsed)
       && parsed.every((item) => typeof item === 'string' && item.trim().length > 0)
       && new Set(parsed).size === parsed.length
+  } catch {
+    return false
+  }
+}
+
+function hasAbsoluteHttpUrl(record: Record<string, unknown>, key: string) {
+  if (!hasString(record, key, true)) return false
+  try {
+    const url = new URL(record[key] as string)
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname.length > 0
   } catch {
     return false
   }
@@ -1931,6 +1947,141 @@ function isTariffDeleteResultDto(value: unknown): value is { id: string; deleted
 
   return (value.archived === undefined || typeof value.archived === 'boolean')
     && (value.deleted === true || value.archived === true)
+}
+
+function isVpnPanelDto(value: unknown): value is VpnPanelDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'name', true)
+    && hasAbsoluteHttpUrl(value, 'baseUrl')
+    && hasString(value, 'region')
+    && hasString(value, 'status', true)
+    && vpnPanelStatusValues.has(value.status as string)
+    && hasString(value, 'healthStatus', true)
+    && healthStatusValues.has(value.healthStatus as string)
+    && hasString(value, 'login', true)
+    && hasString(value, 'sslVerificationMode', true)
+    && vpnSslVerificationModeValues.has(value.sslVerificationMode as string)
+    && hasString(value, 'apiVariant', true)
+    && x3UiApiVariantValues.has(value.apiVariant as string)
+    && hasInteger(value, 'capacity', 1)
+    && hasInteger(value, 'usedCapacity', 0)
+    && (value.usedCapacity as number) <= (value.capacity as number)
+    && hasBoolean(value, 'autoCreateInbound')
+    && hasJsonObjectString(value, 'defaultInboundTemplateJson')
+    && hasNullableDateString(value, 'lastHealthCheckAt')
+    && hasNullableDateString(value, 'lastSyncAt')
+    && hasString(value, 'version')
+    && hasString(value, 'lastError')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+    && Date.parse(value.updatedAt as string) >= Date.parse(value.createdAt as string)
+}
+
+function isDeleteVpnPanelResult(value: unknown): value is DeleteVpnPanelResult {
+  if (!isRecord(value)
+    || !hasString(value, 'id', true)
+    || !hasBoolean(value, 'deleted')
+    || !hasBoolean(value, 'archived')) return false
+
+  const countKeys: Array<keyof DeleteVpnPanelResult> = [
+    'linkedInbounds',
+    'linkedClients',
+    'linkedSyncRuns',
+    'linkedHealthChecks'
+  ]
+  if (!countKeys.every((key) => hasInteger(value, key, 0))) return false
+
+  const linkedCount = countKeys.reduce((total, key) => total + (value[key] as number), 0)
+  return value.deleted !== value.archived
+    && value.archived === (linkedCount > 0)
+}
+
+function isVpnInboundDto(value: unknown): value is VpnInboundDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'vpnPanelId', true)
+    && hasString(value, 'externalInboundId', true)
+    && hasString(value, 'name', true)
+    && hasString(value, 'protocol', true)
+    && vpnInboundProtocolValues.has((value.protocol as string).toLowerCase())
+    && hasInteger(value, 'port', 1)
+    && (value.port as number) <= 65535
+    && hasString(value, 'listen')
+    && hasJsonObjectString(value, 'settingsJson')
+    && hasJsonObjectString(value, 'streamSettingsJson')
+    && hasJsonObjectString(value, 'sniffingJson')
+    && hasBoolean(value, 'isDefault')
+    && hasBoolean(value, 'isActive')
+    && (value.isDefault !== true || value.isActive === true)
+    && hasInteger(value, 'capacity', 1)
+    && hasInteger(value, 'usedCapacity', 0)
+    && (value.usedCapacity as number) <= (value.capacity as number)
+}
+
+function isVpnClientDto(value: unknown): value is VpnClientDto {
+  if (!isRecord(value)) return false
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'userId', true)
+    && hasString(value, 'subscriptionId', true)
+    && hasString(value, 'vpnPanelId', true)
+    && hasString(value, 'vpnInboundId', true)
+    && hasString(value, 'externalClientId', true)
+    && hasString(value, 'email', true)
+    && hasString(value, 'uuid', true)
+    && hasString(value, 'flow')
+    && hasInteger(value, 'limitIp', 0)
+    && hasNullableInteger(value, 'totalGb', 0)
+    && hasDateString(value, 'expiryTime')
+    && hasBoolean(value, 'enable')
+    && hasString(value, 'configUri')
+    && hasString(value, 'qrCodePayload')
+    && hasString(value, 'syncStatus', true)
+    && hasNullableDateString(value, 'lastSyncedAt')
+}
+
+function isPanelSyncRunDto(value: unknown): value is PanelSyncRunDto {
+  if (!isRecord(value)
+    || !hasString(value, 'id', true)
+    || !hasString(value, 'vpnPanelId', true)
+    || !hasString(value, 'status', true)
+    || !panelSyncRunStatusValues.has(value.status as string)
+    || !hasDateString(value, 'startedAt')
+    || !hasNullableDateString(value, 'finishedAt')
+    || !hasJsonObjectString(value, 'summaryJson')
+    || !hasString(value, 'errorMessage')) return false
+
+  const isFinished = value.status === 'Succeeded' || value.status === 'Failed'
+  return isFinished
+    ? value.finishedAt !== null && Date.parse(value.finishedAt as string) >= Date.parse(value.startedAt as string)
+    : value.finishedAt === null
+}
+
+function isPanelSyncEventDto(value: unknown): value is PanelSyncEventDto {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasString(value, 'panelSyncRunId', true)
+    && hasString(value, 'eventType', true)
+    && hasString(value, 'entityType', true)
+    && hasNullableString(value, 'entityId')
+    && hasString(value, 'externalId')
+    && hasString(value, 'message', true)
+    && hasJsonObjectString(value, 'payloadJson')
+}
+
+function isPanelHealthCheckDto(value: unknown): value is PanelHealthCheckDto {
+  return isRecord(value)
+    && hasString(value, 'id', true)
+    && hasString(value, 'vpnPanelId', true)
+    && hasString(value, 'status', true)
+    && healthStatusValues.has(value.status as string)
+    && hasNullableInteger(value, 'latencyMs', 0)
+    && hasString(value, 'version')
+    && hasString(value, 'errorMessage')
+    && hasDateString(value, 'checkedAt')
 }
 
 function isAdminTelegramAccountDto(value: unknown): value is AdminTelegramAccountDto {
@@ -2924,7 +3075,7 @@ export class ApiClient {
   }
 
   getAdminVpnPanels(token: string): Promise<VpnPanelDto[]> {
-    return this.requestArray<VpnPanelDto>('/api/admin/vpn-panels', { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnPanelDto>('/api/admin/vpn-panels', { token, errorMessage: apiFallbackErrorMessage }, isVpnPanelDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   createAdminVpnPanel(token: string, payload: CreateVpnPanelPayload): Promise<VpnPanelDto> {
@@ -2933,7 +3084,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', isVpnPanelDto)
   }
 
   updateAdminVpnPanel(token: string, id: string, payload: UpdateVpnPanelPayload): Promise<VpnPanelDto> {
@@ -2942,7 +3093,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnPanelDto => isVpnPanelDto(value) && value.id === id)
   }
 
   deleteAdminVpnPanel(token: string, id: string): Promise<DeleteVpnPanelResult> {
@@ -2950,7 +3101,7 @@ export class ApiClient {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is DeleteVpnPanelResult => isDeleteVpnPanelResult(value) && value.id === id)
   }
 
   testAdminVpnPanel(token: string, id: string): Promise<PanelHealthCheckDto> {
@@ -2959,7 +3110,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is PanelHealthCheckDto => isPanelHealthCheckDto(value) && value.vpnPanelId === id)
   }
 
   syncAdminVpnPanel(token: string, id: string): Promise<PanelSyncRunDto> {
@@ -2968,11 +3119,14 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is PanelSyncRunDto => isPanelSyncRunDto(value) && value.vpnPanelId === id)
   }
 
   getAdminVpnPanelInbounds(token: string, id: string): Promise<VpnInboundDto[]> {
-    return this.requestArray<VpnInboundDto>(`/api/admin/vpn-panels/${id}/inbounds`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnInboundDto>(`/api/admin/vpn-panels/${id}/inbounds`, { token, errorMessage: apiFallbackErrorMessage }, isVpnInboundDto, (items) => hasUniqueStringKey(items, 'id')
+      && hasUniqueStringKey(items, 'externalInboundId')
+      && items.every((item) => item.vpnPanelId === id)
+      && items.filter((item) => item.isDefault).length <= 1)
   }
 
   createAdminVpnPanelInbound(token: string, id: string, payload: CreateVpnInboundPayload): Promise<VpnInboundDto> {
@@ -2981,7 +3135,7 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnInboundDto => isVpnInboundDto(value) && value.vpnPanelId === id)
   }
 
   setAdminVpnInboundDefault(token: string, id: string): Promise<VpnInboundDto> {
@@ -2990,7 +3144,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnInboundDto => isVpnInboundDto(value) && value.id === id)
   }
 
   updateAdminVpnInbound(token: string, id: string, payload: CreateVpnInboundPayload): Promise<VpnInboundDto> {
@@ -2999,11 +3153,13 @@ export class ApiClient {
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnInboundDto => isVpnInboundDto(value) && value.id === id)
   }
 
   getAdminVpnPanelClients(token: string, id: string): Promise<VpnClientDto[]> {
-    return this.requestArray<VpnClientDto>(`/api/admin/vpn-panels/${id}/clients`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<VpnClientDto>(`/api/admin/vpn-panels/${id}/clients`, { token, errorMessage: apiFallbackErrorMessage }, isVpnClientDto, (items) => hasUniqueStringKey(items, 'id')
+      && hasUniqueStringKey(items, 'externalClientId')
+      && items.every((item) => item.vpnPanelId === id))
   }
 
   enableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
@@ -3012,7 +3168,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
   disableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
@@ -3021,7 +3177,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
   syncAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
@@ -3030,7 +3186,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
   resetAdminVpnClientTraffic(token: string, id: string): Promise<VpnClientDto> {
@@ -3039,7 +3195,7 @@ export class ApiClient {
       token,
       body: JSON.stringify({}),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
   migrateAdminVpnClient(token: string, id: string, targetInboundId: string): Promise<VpnClientDto> {
@@ -3048,19 +3204,22 @@ export class ApiClient {
       token,
       body: JSON.stringify({ targetInboundId }),
       errorMessage: apiFallbackErrorMessage
-    })
+    }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
   getAdminVpnPanelSyncRuns(token: string, id: string): Promise<PanelSyncRunDto[]> {
-    return this.requestArray<PanelSyncRunDto>(`/api/admin/vpn-panels/${id}/sync-runs`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PanelSyncRunDto>(`/api/admin/vpn-panels/${id}/sync-runs`, { token, errorMessage: apiFallbackErrorMessage }, isPanelSyncRunDto, (items) => hasUniqueStringKey(items, 'id')
+      && items.every((item) => item.vpnPanelId === id))
   }
 
   getAdminVpnPanelSyncEvents(token: string, runId: string): Promise<PanelSyncEventDto[]> {
-    return this.requestArray<PanelSyncEventDto>(`/api/admin/vpn-panel-sync-runs/${runId}/events`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PanelSyncEventDto>(`/api/admin/vpn-panel-sync-runs/${runId}/events`, { token, errorMessage: apiFallbackErrorMessage }, isPanelSyncEventDto, (items) => hasUniqueStringKey(items, 'id')
+      && items.every((item) => item.panelSyncRunId === runId))
   }
 
   getAdminVpnPanelHealthChecks(token: string, id: string): Promise<PanelHealthCheckDto[]> {
-    return this.requestArray<PanelHealthCheckDto>(`/api/admin/vpn-panels/${id}/health-checks`, { token, errorMessage: apiFallbackErrorMessage })
+    return this.requestArray<PanelHealthCheckDto>(`/api/admin/vpn-panels/${id}/health-checks`, { token, errorMessage: apiFallbackErrorMessage }, isPanelHealthCheckDto, (items) => hasUniqueStringKey(items, 'id')
+      && items.every((item) => item.vpnPanelId === id))
   }
 
   getAdminTariffs(token: string): Promise<TariffDto[]> {

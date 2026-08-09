@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AccessCredentialDto,
   AdminAuditLogDto,
@@ -1086,6 +1086,7 @@ export function App() {
   const [provisioningRuns, setProvisioningRuns] = useState<ProvisioningRunDto[]>([])
   const [vpnPanels, setVpnPanels] = useState<VpnPanelDto[]>([])
   const [selectedVpnPanelId, setSelectedVpnPanelId] = useState('')
+  const vpnPanelDetailsRequestId = useRef(0)
   const [vpnInbounds, setVpnInbounds] = useState<VpnInboundDto[]>([])
   const [vpnClients, setVpnClients] = useState<VpnClientDto[]>([])
   const [vpnClientMigrationTargets, setVpnClientMigrationTargets] = useState<Record<string, string>>({})
@@ -1280,6 +1281,13 @@ export function App() {
     setServers(nextServers)
     setProvisioningRuns(nextRuns)
     setVpnPanels(nextVpnPanels)
+    const nextSelectedVpnPanelId = nextVpnPanels.some((panel) => panel.id === selectedVpnPanelId)
+      ? selectedVpnPanelId
+      : nextVpnPanels[0]?.id ?? ''
+    if (nextSelectedVpnPanelId !== selectedVpnPanelId) {
+      setSelectedVpnPanelId(nextSelectedVpnPanelId)
+      clearVpnPanelDetails()
+    }
     setBotSettings(nextBotSettings)
     setBotSettingsForm({
       enabled: nextBotSettings.enabled,
@@ -1300,7 +1308,6 @@ export function App() {
     })
     setLoadErrors(errors)
     if (!selectedSupportConversationId && nextSupportConversations.length > 0) setSelectedSupportConversationId(nextSupportConversations[0].id)
-    if (!selectedVpnPanelId && nextVpnPanels.length > 0) setSelectedVpnPanelId(nextVpnPanels[0].id)
     if (!nextUsers.some((item) => String(item.id) === selectedUserId)) {
       setSelectedUserId(String(nextUsers[0]?.id ?? ''))
       setUserOverview(null)
@@ -1378,7 +1385,11 @@ export function App() {
   useEffect(() => {
     setEditingInboundId(null)
     setInboundForm(defaultInboundForm)
-    if (token && selectedVpnPanelId) void loadVpnPanelDetails(selectedVpnPanelId)
+    if (token && selectedVpnPanelId) {
+      void loadVpnPanelDetails(selectedVpnPanelId)
+    } else {
+      clearVpnPanelDetails()
+    }
   }, [token, selectedVpnPanelId])
 
   useEffect(() => {
@@ -1654,8 +1665,18 @@ export function App() {
     }
   }
 
+  const clearVpnPanelDetails = () => {
+    vpnPanelDetailsRequestId.current += 1
+    setVpnInbounds([])
+    setVpnClients([])
+    setVpnClientMigrationTargets({})
+    setVpnHealthChecks([])
+    setVpnSyncRuns([])
+  }
+
   const loadVpnPanelDetails = async (panelId: string) => {
     if (!token || !panelId) return
+    const requestId = ++vpnPanelDetailsRequestId.current
     try {
       const [nextInbounds, nextClients, nextHealthChecks, nextSyncRuns] = await Promise.all([
         api.getAdminVpnPanelInbounds(token, panelId),
@@ -1663,6 +1684,7 @@ export function App() {
         api.getAdminVpnPanelHealthChecks(token, panelId),
         api.getAdminVpnPanelSyncRuns(token, panelId)
       ])
+      if (requestId !== vpnPanelDetailsRequestId.current) return
       setVpnInbounds(nextInbounds)
       setVpnClients(nextClients)
       setVpnClientMigrationTargets((current) => {
@@ -1679,6 +1701,8 @@ export function App() {
       setVpnHealthChecks(nextHealthChecks)
       setVpnSyncRuns(nextSyncRuns)
     } catch (e) {
+      if (requestId !== vpnPanelDetailsRequestId.current) return
+      clearVpnPanelDetails()
       setError(e instanceof Error ? e.message : 'Не удалось загрузить детали VPN-панели')
     }
   }
@@ -3646,6 +3670,7 @@ export function App() {
               {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
+          {vpnPanels.length === 0 && <EmptyState title="3x-ui панели не добавлены" description="Добавьте панель, чтобы управлять inbound-правилами, клиентами и синхронизацией." />}
           <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · проверка {formatDate(panel.lastHealthCheckAt)} · синхронизация {formatDate(panel.lastSyncAt)}</div>{panel.lastError && <div className="error-text">Последняя ошибка: {panel.lastError}</div>}</div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedVpnPanelId(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('panels') && <><PrimaryButton className="button-secondary" onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={actionBusyId === `panel-status-${panel.id}`} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === `panel-status-${panel.id}`} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => void handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `panel-delete-${panel.id}`} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => void handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></>}</div></div>)}</div>
         </Card>
         <Card>

@@ -625,7 +625,27 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/vpn-panels') {
-      await fulfillJson(route, [{ id: 'panel-all-screens', name: '3x-ui Smoke', baseUrl: 'https://panel.example.test', login: 'admin', apiVariant: 'x-ui', sslVerificationMode: 'strict', capacity: 100, usedCapacity: 1, status: 'Active', healthStatus: 'Healthy', autoCreateInbound: false, version: '1.8.0', lastSyncAt: now }])
+      await fulfillJson(route, [{
+        id: 'panel-all-screens',
+        name: '3x-ui Smoke',
+        baseUrl: 'https://panel.example.test',
+        region: 'eu',
+        status: 'Active',
+        healthStatus: 'Healthy',
+        login: 'admin',
+        sslVerificationMode: 'Strict',
+        apiVariant: 'X3UiOfficial',
+        capacity: 100,
+        usedCapacity: 1,
+        autoCreateInbound: false,
+        defaultInboundTemplateJson: '{}',
+        lastHealthCheckAt: now,
+        lastSyncAt: now,
+        version: '1.8.0',
+        lastError: '',
+        createdAt: now,
+        updatedAt: now
+      }])
       return
     }
 

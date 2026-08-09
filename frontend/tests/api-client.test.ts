@@ -102,6 +102,114 @@ function appReleaseFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function vpnPanelFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'panel-1',
+    name: 'Panel',
+    baseUrl: 'https://panel.example.test',
+    region: 'eu',
+    status: 'Active',
+    healthStatus: 'Healthy',
+    login: 'admin',
+    sslVerificationMode: 'Strict',
+    apiVariant: 'X3UiOfficial',
+    capacity: 5000,
+    usedCapacity: 1,
+    autoCreateInbound: false,
+    defaultInboundTemplateJson: '{}',
+    lastHealthCheckAt: adminFixtureTimestamp,
+    lastSyncAt: adminFixtureTimestamp,
+    version: '2.4.12',
+    lastError: '',
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function vpnInboundFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'inbound-1',
+    vpnPanelId: 'panel-1',
+    externalInboundId: '1',
+    name: 'default-vless',
+    protocol: 'vless',
+    port: 443,
+    listen: '',
+    settingsJson: '{"clients":[]}',
+    streamSettingsJson: '{"network":"tcp"}',
+    sniffingJson: '{}',
+    isDefault: true,
+    isActive: true,
+    capacity: 5000,
+    usedCapacity: 1,
+    ...overrides
+  }
+}
+
+function vpnClientFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'client-1',
+    userId: 'user-1',
+    subscriptionId: 'sub-1',
+    vpnPanelId: 'panel-1',
+    vpnInboundId: 'inbound-1',
+    externalClientId: 'client-1',
+    email: 'user@example.test',
+    uuid: '00000000-0000-4000-8000-000000000001',
+    flow: '',
+    limitIp: 3,
+    totalGb: null,
+    expiryTime: adminFixtureTimestamp,
+    enable: true,
+    configUri: 'vless://client',
+    qrCodePayload: 'vless://client',
+    syncStatus: 'synced',
+    lastSyncedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function panelSyncRunFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'sync-1',
+    vpnPanelId: 'panel-1',
+    status: 'Succeeded',
+    startedAt: adminFixtureTimestamp,
+    finishedAt: adminFixtureTimestamp,
+    summaryJson: '{}',
+    errorMessage: '',
+    ...overrides
+  }
+}
+
+function panelSyncEventFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'sync-event-1',
+    panelSyncRunId: 'sync-1',
+    eventType: 'missing_client',
+    entityType: 'VpnClient',
+    entityId: null,
+    externalId: 'client-1',
+    message: 'Client is missing.',
+    payloadJson: '{}',
+    ...overrides
+  }
+}
+
+function panelHealthCheckFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'health-1',
+    vpnPanelId: 'panel-1',
+    status: 'Healthy',
+    latencyMs: 12,
+    version: '2.4.12',
+    errorMessage: '',
+    checkedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function adminCapabilitiesFixture(overrides: Record<string, unknown> = {}) {
   return {
     adminRead: true,
@@ -1075,31 +1183,44 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
+    const path = new URL(String(url)).pathname
+    const method = init?.method ?? 'GET'
     if (init?.method === 'DELETE') {
       return new Response(JSON.stringify({ id: 'panel-1', deleted: true, archived: false, linkedInbounds: 0, linkedClients: 0, linkedSyncRuns: 0, linkedHealthChecks: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    if (String(url).includes('/test-connection') || String(url).includes('/health-checks')) {
-      return new Response(JSON.stringify(String(url).includes('/health-checks') ? [] : { id: 'health-1', vpnPanelId: 'panel-1', status: 'Healthy', version: '2.4.12', latencyMs: 12, checkedAt: new Date().toISOString(), errorMessage: '' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path.endsWith('/test-connection')) {
+      return new Response(JSON.stringify(panelHealthCheckFixture()), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    if (String(url).includes('/vpn-clients/')) {
-      return new Response(JSON.stringify({ id: 'client-1', userId: 'user-1', subscriptionId: 'sub-1', vpnPanelId: 'panel-1', vpnInboundId: 'inbound-1', externalClientId: 'client-1', email: 'user@example.test', uuid: 'client-uuid', flow: '', limitIp: 3, totalGb: null, expiryTime: new Date().toISOString(), enable: !String(url).includes('/disable'), configUri: 'vless://client', qrCodePayload: 'vless://client', syncStatus: 'synced', lastSyncedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path.endsWith('/health-checks')) {
+      return new Response(JSON.stringify([panelHealthCheckFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    if (String(url).includes('/sync')) {
-      return new Response(JSON.stringify({ id: 'sync-1', vpnPanelId: 'panel-1', status: 'Succeeded', startedAt: new Date().toISOString(), summaryJson: '{}', errorMessage: '' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path.endsWith('/sync-runs')) {
+      return new Response(JSON.stringify([panelSyncRunFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    if (String(url).includes('/inbounds')) {
-      return new Response(JSON.stringify(String(init?.method ?? 'GET') === 'POST' ? { id: 'inbound-1', vpnPanelId: 'panel-1', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 5000, usedCapacity: 0 } : []), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path.endsWith('/events')) {
+      return new Response(JSON.stringify([panelSyncEventFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    if (String(url).includes('/vpn-inbounds/')) {
-      return new Response(JSON.stringify({ id: 'inbound-1', vpnPanelId: 'panel-1', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '', settingsJson: '{}', streamSettingsJson: '{"network":"tcp"}', sniffingJson: '{}', isDefault: true, isActive: false, capacity: 5000, usedCapacity: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path === '/api/admin/vpn-panels/panel-1/sync') {
+      return new Response(JSON.stringify(panelSyncRunFixture()), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    if (String(url).includes('/clients')) {
-      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path.includes('/api/admin/vpn-clients/')) {
+      return new Response(JSON.stringify(vpnClientFixture({ enable: !path.endsWith('/disable') })), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    if (new URL(String(url)).pathname === '/api/admin/vpn-panels' && (init?.method ?? 'GET') === 'GET') {
-      return new Response(JSON.stringify([{ id: 'panel-1', name: 'panel', baseUrl: 'https://panel.example.test', region: 'eu', status: 'Active', healthStatus: 'Healthy', login: 'admin', sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', capacity: 5000, usedCapacity: 0, autoCreateInbound: false, defaultInboundTemplateJson: '{}', version: '2.4.12', lastError: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path === '/api/admin/vpn-panels/panel-1/inbounds') {
+      return new Response(JSON.stringify(method === 'POST' ? vpnInboundFixture() : [vpnInboundFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
-    return new Response(JSON.stringify({ id: 'panel-1', name: 'panel', baseUrl: 'https://panel.example.test', region: 'eu', status: 'Active', healthStatus: 'Healthy', login: 'admin', sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', capacity: 5000, usedCapacity: 0, autoCreateInbound: false, defaultInboundTemplateJson: '{}', version: '2.4.12', lastError: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    if (path.includes('/api/admin/vpn-inbounds/')) {
+      return new Response(JSON.stringify(vpnInboundFixture(path.endsWith('/set-default')
+        ? {}
+        : { isDefault: false, isActive: false })), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (path === '/api/admin/vpn-panels/panel-1/clients') {
+      return new Response(JSON.stringify([vpnClientFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (path === '/api/admin/vpn-panels' && method === 'GET') {
+      return new Response(JSON.stringify([vpnPanelFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    return new Response(JSON.stringify(vpnPanelFixture()), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
@@ -1118,6 +1239,8 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   await client.syncAdminVpnClient('admin-token', 'client-1')
   await client.resetAdminVpnClientTraffic('admin-token', 'client-1')
   await client.migrateAdminVpnClient('admin-token', 'client-1', 'inbound-2')
+  await client.getAdminVpnPanelSyncRuns('admin-token', 'panel-1')
+  await client.getAdminVpnPanelSyncEvents('admin-token', 'sync-1')
   await client.getAdminVpnPanelHealthChecks('admin-token', 'panel-1')
   await client.deleteAdminVpnPanel('admin-token', 'panel-1')
 
@@ -1145,9 +1268,11 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   assert.equal(calls[13]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/reset-traffic')
   assert.equal(calls[14]?.url, 'http://localhost:8080/api/admin/vpn-clients/client-1/migrate')
   assert.match(String(calls[14]?.init?.body), /inbound-2/)
-  assert.equal(calls[15]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
-  assert.equal(calls[16]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
-  assert.equal(calls[16]?.init?.method, 'DELETE')
+  assert.equal(calls[15]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/sync-runs')
+  assert.equal(calls[16]?.url, 'http://localhost:8080/api/admin/vpn-panel-sync-runs/sync-1/events')
+  assert.equal(calls[17]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1/health-checks')
+  assert.equal(calls[18]?.url, 'http://localhost:8080/api/admin/vpn-panels/panel-1')
+  assert.equal(calls[18]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
@@ -1791,6 +1916,86 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     () => client.createAdminWorkScenario('admin-token', scenarioPayload),
     () => client.updateAdminWorkScenario('admin-token', 'scenario-1', scenarioPayload),
     () => client.deleteAdminWorkScenario('admin-token', 'scenario-1')
+  ]
+  const isInvalidResponseDataError = (error: unknown) =>
+    error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+
+  for (const operation of operations) {
+    await assert.rejects(operation, isInvalidResponseDataError)
+  }
+  assert.equal(responses.length, 0)
+})
+
+test('ApiClient rejects malformed VPN panel, inbound, client and observation DTOs', async () => {
+  const responses = [
+    '[{}]', '{}', JSON.stringify(vpnPanelFixture({ id: 'panel-other' })),
+    JSON.stringify({ id: 'panel-other', deleted: true, archived: false, linkedInbounds: 0, linkedClients: 0, linkedSyncRuns: 0, linkedHealthChecks: 0 }),
+    JSON.stringify(panelHealthCheckFixture({ vpnPanelId: 'panel-other' })),
+    JSON.stringify(panelSyncRunFixture({ vpnPanelId: 'panel-other' })),
+    JSON.stringify([vpnInboundFixture({ vpnPanelId: 'panel-other' })]),
+    JSON.stringify(vpnInboundFixture({ vpnPanelId: 'panel-other' })),
+    JSON.stringify(vpnInboundFixture({ id: 'inbound-other' })),
+    JSON.stringify(vpnInboundFixture({ id: 'inbound-other' })),
+    JSON.stringify([vpnClientFixture({ vpnPanelId: 'panel-other' })]),
+    JSON.stringify(vpnClientFixture({ id: 'client-other' })),
+    JSON.stringify(vpnClientFixture({ id: 'client-other' })),
+    JSON.stringify(vpnClientFixture({ id: 'client-other' })),
+    JSON.stringify(vpnClientFixture({ id: 'client-other' })),
+    JSON.stringify(vpnClientFixture({ id: 'client-other' })),
+    JSON.stringify([panelSyncRunFixture({ vpnPanelId: 'panel-other' })]),
+    JSON.stringify([panelSyncEventFixture({ panelSyncRunId: 'sync-other' })]),
+    JSON.stringify([panelHealthCheckFixture({ vpnPanelId: 'panel-other' })])
+  ]
+  globalThis.fetch = (async () => new Response(responses.shift(), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const panelPayload = {
+    name: 'Panel',
+    baseUrl: 'https://panel.example.test',
+    login: 'admin',
+    password: 'secret',
+    region: 'eu',
+    capacity: 100,
+    sslVerificationMode: 'Strict',
+    apiVariant: 'X3UiOfficial',
+    autoCreateInbound: false,
+    defaultInboundTemplateJson: '{}'
+  }
+  const inboundPayload = {
+    name: 'default-vless',
+    protocol: 'vless',
+    port: 443,
+    listen: '',
+    settingsJson: '{"clients":[]}',
+    streamSettingsJson: '{"network":"tcp"}',
+    sniffingJson: '{}',
+    isDefault: true,
+    capacity: 100,
+    isActive: true
+  }
+  const operations = [
+    () => client.getAdminVpnPanels('admin-token'),
+    () => client.createAdminVpnPanel('admin-token', panelPayload),
+    () => client.updateAdminVpnPanel('admin-token', 'panel-1', panelPayload),
+    () => client.deleteAdminVpnPanel('admin-token', 'panel-1'),
+    () => client.testAdminVpnPanel('admin-token', 'panel-1'),
+    () => client.syncAdminVpnPanel('admin-token', 'panel-1'),
+    () => client.getAdminVpnPanelInbounds('admin-token', 'panel-1'),
+    () => client.createAdminVpnPanelInbound('admin-token', 'panel-1', inboundPayload),
+    () => client.setAdminVpnInboundDefault('admin-token', 'inbound-1'),
+    () => client.updateAdminVpnInbound('admin-token', 'inbound-1', inboundPayload),
+    () => client.getAdminVpnPanelClients('admin-token', 'panel-1'),
+    () => client.enableAdminVpnClient('admin-token', 'client-1'),
+    () => client.disableAdminVpnClient('admin-token', 'client-1'),
+    () => client.syncAdminVpnClient('admin-token', 'client-1'),
+    () => client.resetAdminVpnClientTraffic('admin-token', 'client-1'),
+    () => client.migrateAdminVpnClient('admin-token', 'client-1', 'inbound-2'),
+    () => client.getAdminVpnPanelSyncRuns('admin-token', 'panel-1'),
+    () => client.getAdminVpnPanelSyncEvents('admin-token', 'sync-1'),
+    () => client.getAdminVpnPanelHealthChecks('admin-token', 'panel-1')
   ]
   const isInvalidResponseDataError = (error: unknown) =>
     error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
