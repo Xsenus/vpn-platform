@@ -61,7 +61,7 @@ function removeSessionStorageItem(key: string) {
 type RenewalState = {
   subscriptionId: string
   order: OrderDto
-  payment: PaymentInitResult
+  payment: PaymentInitResult | null
 } | null
 
 type RetryPaymentState = {
@@ -579,6 +579,7 @@ export function App() {
     setBusy(true)
     setError('')
     setNotice('')
+    let createdOrder: OrderDto | null = null
 
     try {
       const order = await api.createMyOrder(token, {
@@ -588,12 +589,50 @@ export function App() {
         promoCode: null,
         subscriptionId: subscription.id
       })
+      createdOrder = order
+      setOrders((current) => [order, ...current.filter((item) => item.id !== order.id)])
+      setRenewalState({ subscriptionId: subscription.id, order, payment: null })
       const payment = await api.initMyPayment(token, order.id, provider, window.location.origin)
       setRenewalState({ subscriptionId: subscription.id, order, payment })
       if (!await loadAll(token)) return
       setNotice('Продление создано. Откройте оплату в карточке последнего продления.')
     } catch (e) {
-      handleAuthenticatedError(e, 'Не удалось создать продление')
+      if (createdOrder && !isCabinetSessionRejected(e)) {
+        const details = e instanceof Error && e.message.trim() ? ` ${e.message}` : ''
+        setError(`Заказ на продление ${createdOrder.id} создан, но ссылку оплаты подготовить не удалось. Повторите подготовку оплаты для этого заказа.${details}`)
+      } else {
+        handleAuthenticatedError(e, 'Не удалось создать продление')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRetryRenewalPayment = async () => {
+    if (!token || !provider || !renewalState || renewalState.payment) return
+    const paymentAvailability = getOrderPaymentAvailability(renewalState.order)
+    if (!paymentAvailability.canRetry) {
+      setError(paymentAvailability.reason ?? 'Этот заказ нельзя оплатить повторно. Создайте новый заказ.')
+      return
+    }
+
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const payment = await api.initMyPayment(token, renewalState.order.id, provider, window.location.origin)
+      setRenewalState((current) => current && current.order.id === renewalState.order.id
+        ? { ...current, payment }
+        : current)
+      if (!await loadAll(token)) return
+      setNotice('Ссылка оплаты для созданного продления подготовлена.')
+    } catch (e) {
+      if (isCabinetSessionRejected(e)) {
+        handleAuthenticatedError(e, 'Не удалось подготовить оплату продления')
+      } else {
+        const details = e instanceof Error && e.message.trim() ? ` ${e.message}` : ''
+        setError(`Заказ на продление ${renewalState.order.id} сохранён, но ссылку оплаты снова подготовить не удалось.${details}`)
+      }
     } finally {
       setBusy(false)
     }
@@ -844,14 +883,26 @@ export function App() {
             <Card>
               <h3>Последнее продление</h3>
               <p>ID подписки: {renewalState.subscriptionId}</p>
+              <p>ID заказа: {renewalState.order.id}</p>
               <p>Статус заказа: <StatusBadge value={renewalState.order.status} /></p>
-              <p>ID платежа: {renewalState.payment.paymentId}</p>
-              <ExternalLinkActions
-                value={renewalState.payment.redirectUrl}
-                openLabel="Открыть оплату"
-                ariaLabel="Открыть оплату в новой вкладке"
-                invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите продление или обратитесь в поддержку."
-              />
+              {renewalState.payment ? (
+                <>
+                  <p>ID платежа: {renewalState.payment.paymentId}</p>
+                  <ExternalLinkActions
+                    value={renewalState.payment.redirectUrl}
+                    openLabel="Открыть оплату"
+                    ariaLabel="Открыть оплату в новой вкладке"
+                    invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите продление или обратитесь в поддержку."
+                  />
+                </>
+              ) : (
+                <>
+                  <p className="safe-note">Заказ сохранён, но ссылка оплаты ещё не подготовлена. Повторная команда использует этот же заказ.</p>
+                  <PrimaryButton type="button" onClick={handleRetryRenewalPayment} disabled={busy}>
+                    Повторить подготовку оплаты
+                  </PrimaryButton>
+                </>
+              )}
             </Card>
           )}
 

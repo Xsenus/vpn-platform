@@ -63,8 +63,9 @@ Production-ready решение заблокировано следующими 
 - Promo validation is fail-closed across checkout and order creation; relational redemption limits, paid free-days snapshot and activation/renewal duration are covered by deterministic SQLite and browser regression.
 - Общий inbound-каталог и admin desktop/mobile regression подтверждают межпанельный перенос клиента, автоматическое открытие панели назначения и последующие panel health/sync операции.
 - После межпанельного переноса UI атомарно отражает `UsedCapacity` source/target панелей; desktop/mobile regression подтверждает значения до и после следующего API-refresh.
-- Latest "Что нового": `2026-08-09-vpn-migration-capacity-ui-sync`, версия `0.540.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
-- Roadmap progress: `553/573` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Кабинет сохраняет renewal order при недоступности payment init и повторяет оплату по тому же ID без дубликата; desktop/mobile regression подтверждает запросы и состояние UI.
+- Latest "Что нового": `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`; локальный backend/frontend/SQLite/browser regression и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `554/574` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

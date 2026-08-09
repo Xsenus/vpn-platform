@@ -25,8 +25,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-09-vpn-migration-capacity-ui-sync",
-                     "0.540.0"
+                     "2026-08-09-cabinet-renewal-partial-success",
+                     "0.541.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-09-vpn-migration-capacity-ui-sync", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-09-vpn-migration-capacity-ui-sync", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-cabinet-renewal-partial-success", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-09-cabinet-renewal-partial-success", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Frontend unit tests: `104/104`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-09-vpn-migration-capacity-ui-sync",
-                     "0.540.0",
+                     "2026-08-09-cabinet-renewal-partial-success",
+                     "0.541.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

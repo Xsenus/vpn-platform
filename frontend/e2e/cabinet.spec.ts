@@ -284,11 +284,14 @@ async function mockCabinetApi(page: Page) {
   let rejectedAuthorizedPath: string | null = null
   let unsafeQrSvg = false
   let invalidSubscriptionsResponse = false
+  let failNextRenewalPayment = false
+  let renewalOrderCreated = false
   let renewalOrder = {
     ...paidOrder,
     id: 'order-renewal',
     status: 'PendingPayment',
     type: 'Renewal',
+    expiresAt: '2099-06-14T00:00:00Z',
     isFirstPurchase: false,
     linkedSubscriptionId: subscription.id,
     paidAt: null,
@@ -379,7 +382,9 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/orders') {
-      await fulfillJson(route, [paidOrder, stalePendingOrder, retryablePendingOrder])
+      await fulfillJson(route, renewalOrderCreated
+        ? [renewalOrder, paidOrder, stalePendingOrder, retryablePendingOrder]
+        : [paidOrder, stalePendingOrder, retryablePendingOrder])
       return
     }
 
@@ -471,6 +476,7 @@ async function mockCabinetApi(page: Page) {
 
     if (method === 'POST' && path === '/api/me/orders') {
       const payload = request.postDataJSON()
+      renewalOrderCreated = true
       renewalOrder = {
         ...renewalOrder,
         tariffId: payload.tariffId,
@@ -490,6 +496,11 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/me/orders/order-renewal/payments/YooKassa/init') {
+      if (failNextRenewalPayment) {
+        failNextRenewalPayment = false
+        await fulfillJson(route, { error: 'payment provider unavailable' }, 503)
+        return
+      }
       await fulfillJson(route, renewalPayment)
       return
     }
@@ -537,6 +548,7 @@ async function mockCabinetApi(page: Page) {
     allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
+    failNextRenewalPayment: () => { failNextRenewalPayment = true },
     rejectNextAuthorizedPath: (path: string) => { rejectedAuthorizedPath = path },
     getRequestCount: (path: string, method = 'GET') =>
       requests.filter((item) => item.method === method && new URL(item.url).pathname === path).length,
@@ -654,9 +666,19 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.getByRole('alert').filter({ hasText: 'QR-код отклонен' }).first()).toBeVisible()
   await expect.poll(() => page.evaluate(() => (window as typeof window & { __cabinetQrExecuted?: boolean }).__cabinetQrExecuted ?? false)).toBe(false)
 
+  api.failNextRenewalPayment()
   await page.getByRole('button', { name: 'Продлить' }).first().click()
-  await expect(page.getByRole('heading', { name: 'Последнее продление' })).toBeVisible()
-  await expect(page.getByText('payment-renewal')).toBeVisible()
+  const renewalCard = page.getByRole('heading', { name: 'Последнее продление' }).locator('..')
+  await expect(renewalCard).toContainText('ID заказа: order-renewal')
+  await expect(renewalCard).toContainText('Заказ сохранён, но ссылка оплаты ещё не подготовлена.')
+  await expect(page.getByRole('alert').filter({ hasText: 'Заказ на продление order-renewal создан' })).toContainText('но ссылку оплаты подготовить не удалось.')
+  expect(api.getRequestCount('/api/me/orders', 'POST')).toBe(1)
+  expect(api.getRequestCount('/api/me/orders/order-renewal/payments/YooKassa/init', 'POST')).toBe(1)
+  await renewalCard.getByRole('button', { name: 'Повторить подготовку оплаты' }).click()
+  await expect(renewalCard.getByText('payment-renewal')).toBeVisible()
+  await expect(page.getByText('Ссылка оплаты для созданного продления подготовлена.')).toBeVisible()
+  expect(api.getRequestCount('/api/me/orders', 'POST')).toBe(1)
+  expect(api.getRequestCount('/api/me/orders/order-renewal/payments/YooKassa/init', 'POST')).toBe(2)
   expect(api.getLastRequest('/api/me/orders')?.body).toMatchObject({
     tariffId: 'tariff-pro',
     type: 'Renewal',

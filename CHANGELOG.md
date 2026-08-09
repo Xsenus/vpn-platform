@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.541.0 - 2026-08-09
+
+Release entry: `2026-08-09-cabinet-renewal-partial-success`.
+
+### Исправлено
+
+- Кабинет больше не теряет уже созданный заказ на продление, если платежный провайдер не смог подготовить ссылку оплаты.
+- Частичный успех показывается явно с ID заказа и отдельной командой повторной подготовки оплаты.
+- Повтор использует тот же `orderId` и не создает второй заказ на продление.
+
+### Проверено
+
+- Frontend `104/104`, typecheck/build всех приложений; полный desktop/mobile console-responsive Playwright suite `20/20`.
+- E2E подтверждает один POST создания заказа, контролируемый `503` первой payment-init попытки и успешный второй payment-init по тому же заказу.
+- Backend `1112/1112`, Release build `0` warnings/`0` errors; идемпотентный pending renewal intent подтвержден существующим service/SQLite контрактом.
+- Fresh local SQLite smoke подтвердил latest release `2026-08-09-cabinet-renewal-partial-success`; dependency audit `0 vulnerabilities`, secret scan `649/0` и strict UTF-8 guards пройдены.
+- `RoadmapCurrentStateTests` фиксирует `554/574` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.540.0 - 2026-08-09
 
 Release entry: `2026-08-09-vpn-migration-capacity-ui-sync`.

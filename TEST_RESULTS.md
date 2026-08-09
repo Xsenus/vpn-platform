@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: cabinet renewal partial success recovery
+
+Scope:
+- Проверен двухшаговый путь продления, в котором заказ уже сохранен, а подготовка платежной ссылки завершается ошибкой провайдера.
+
+Results:
+- Roadmap progress: `554/574` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-cabinet-renewal-partial-success`, version `0.541.0`.
+- Кабинет немедленно сохраняет созданный order в состоянии страницы, показывает его ID и не сообщает ложную общую ошибку создания продления.
+- Повторная подготовка оплаты вызывает только `POST /api/me/orders/{orderId}/payments/{provider}/init` для того же заказа.
+- Frontend tests: OK, `104/104`; typecheck/build всех приложений: OK; полный desktop/mobile console-responsive suite: `20/20`.
+- E2E подтверждает order POST `1`, payment-init POST `2`, контролируемый первый `503`, успешную ссылку второй попытки и отсутствие horizontal overflow/page errors.
+- Backend full suite: OK, `1112/1112`; Release build: OK, `0` warnings/`0` errors; pending renewal intent остается идемпотентным по существующему backend/SQLite контракту.
+- Fresh local SQLite smoke: OK, latest release `2026-08-09-cabinet-renewal-partial-success`; dependency audit: `0 vulnerabilities`; secret scan: `649` files/`0` findings.
+- Artifact cleanup: OK; временные browser/build/test/SQLite артефакты удалены, evidence-файлы с секретами не оставлены.
+- External evidence remains open: real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery were not claimed from local tests.
+
 ## Check 2026-08-09: VPN migration capacity UI synchronization
 
 Scope:

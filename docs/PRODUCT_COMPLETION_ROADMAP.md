@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-09.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-vpn-migration-capacity-ui-sync`, версия `0.540.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `553/573` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `554/574` проверяемых пунктов, готовность `96.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -1908,6 +1908,10 @@ git diff --check
   - Что сделать: успешный межпанельный перенос не должен оставлять в карточках старые `UsedCapacity`, иначе оператор видит неверную доступность и может выбрать фактически заполненную цель.
   - Что сделано: post-success reducer уменьшает source panel и увеличивает destination panel только при смене панели; same-panel migration не меняет общий счётчик. Обновление не зависит от дополнительного network call после уже выполненного side effect.
   - Доказательство: frontend `104/104`, admin Playwright `3/3`, полный desktop/mobile console-responsive suite `20/20`, typecheck/build пройдены; E2E подтверждает `EU 12 -> 11`, `US 4 -> 5` сразу после операции и после следующего API-refresh. Backend `1112/1112`, fresh local SQLite smoke, dependency audit, secret scan и strict UTF-8 guards пройдены. Внешний production-like 3x-ui evidence не закрывался.
+- [x] `P11-ACC-264` Сохранять заказ продления при сбое подготовки платежа. 2026-08-09.
+  - Что сделать: двухшаговый cabinet flow не должен скрывать уже созданный renewal order при ошибке payment init или подталкивать пользователя к созданию дубликата.
+  - Что сделано: order сохраняется в UI сразу после успешного create; частичный успех показывает ID и отдельную retry-команду, которая вызывает payment init только по сохраненному `orderId`. Session rejection по-прежнему завершает локальную сессию fail-closed.
+  - Доказательство: frontend `104/104`, typecheck/build и desktop/mobile Playwright `20/20`; E2E подтверждает order POST `1`, payment-init POST `2`, видимый первый `503` и успешную повторную ссылку без второго заказа. Backend `1112/1112` и существующий SQLite/service контракт подтверждают идемпотентность pending renewal intent. Реальный live payment evidence остается открытым.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

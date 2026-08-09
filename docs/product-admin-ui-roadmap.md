@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `553/573` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `554/574` closed, readiness `96.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -128,7 +128,8 @@
 - [x] Subscription/access action DTO проверяются до рендера; межсерверная миграция подписки доступна в админке с `vpnManage`, target/auto выбором, подтверждением и фактическим завершением 3x-ui переноса вместо вечного planned job.
 - [x] VPN-клиент переносится не только внутри выбранной панели: цели сгруппированы по доступным панелям, а после успеха UI открывает destination panel и обновленные client/inbound данные.
 - [x] После межпанельной миграции карточки панелей сразу показывают обновленные source/target capacity и не откатываются после следующего refresh.
-- [x] Latest "Что нового": `2026-08-09-vpn-migration-capacity-ui-sync`, версия `0.540.0`.
+- [x] Кабинет сохраняет созданный заказ продления при сбое payment init и повторяет подготовку ссылки по тому же ID без создания дубликата.
+- [x] Latest "Что нового": `2026-08-09-cabinet-renewal-partial-success`, версия `0.541.0`.
 
 ## Как вести дальше
 
