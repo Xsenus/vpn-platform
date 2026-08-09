@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.548.0 - 2026-08-09
+
+Release entry: `2026-08-09-admin-detail-request-lifecycle`.
+
+### Исправлено
+
+- User overview и support messages в админке принимают только последний запрос выбранной записи текущей session operation; поздние ответы не заменяют новый выбор и не возвращаются после logout.
+- Support status action для невыбранного обращения больше не загружает его сообщения в открытый диалог; reply/note/status reload ограничен актуальным thread и отбрасывается после завершения сессии.
+- Смена пользователя или обращения немедленно очищает старый detail state, reply/note drafts и показывает явные loading/empty состояния вместо данных предыдущего выбора.
+
+### Проверено
+
+- Frontend `110/110`, typecheck/build всех приложений и dependency audit `0 vulnerabilities`.
+- Admin desktop/mobile `24/24`; полный desktop/mobile console-responsive Playwright suite `62/62` покрывает out-of-order user/support requests, status action scope, draft cleanup и post-logout completion.
+- Backend `1112/1112`, Release build `0` warnings/`0` errors и fresh local SQLite checkout/payment/subscription/VPN smoke пройдены.
+- EF drift, secret scan, strict UTF-8 guards и artifact cleanup пройдены.
+- `RoadmapCurrentStateTests` фиксирует `561/581` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress и `0` blocked.
+- Real VPS/staging/live payment/production-like 3x-ui и SMTP evidence остаются внешними; статус остается `staging-ready baseline`, not production-ready.
+
 ## 0.547.0 - 2026-08-09
 
 Release entry: `2026-08-09-cabinet-support-request-lifecycle`.

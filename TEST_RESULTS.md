@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-09.
 
+## Check 2026-08-09: admin detail request lifecycle
+
+Scope:
+- Проверены out-of-order user overview и support messages, смена выбранной записи, support status action для невыбранного обращения и logout/new login при delayed detail requests.
+- Проверены loading/empty состояния и очистка reply/note drafts при смене обращения.
+
+Results:
+- Roadmap progress: `561/581` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-09-admin-detail-request-lifecycle`, version `0.548.0`.
+- Поздний user/support response не заменяет текущий detail; post-logout completion не возвращает данные после нового входа.
+- Status action другой записи сохраняет открытый thread, а смена обращения очищает reply/note drafts.
+- Frontend tests: `110/110`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Admin desktop/mobile: `24/24`; полный desktop/mobile console-responsive Playwright suite: `62/62`.
+- Backend full suite: `1112/1112`; Release build: `0` warnings/`0` errors; fresh local SQLite checkout/payment/subscription/VPN smoke: OK.
+- EF drift, secret scan, strict UTF-8 guards и artifact cleanup: OK.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-09: cabinet support request lifecycle
 
 Scope:

@@ -1027,6 +1027,7 @@ export function App() {
   const [userStatusFilter, setUserStatusFilter] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [userOverview, setUserOverview] = useState<AdminUserOverviewDto | null>(null)
+  const [userOverviewLoading, setUserOverviewLoading] = useState(false)
   const [summary, setSummary] = useState<AdminDashboardSummaryDto | null>(null)
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogDto[]>([])
   const [notificationDeliveries, setNotificationDeliveries] = useState<AdminNotificationDeliveryDto[]>([])
@@ -1050,6 +1051,7 @@ export function App() {
   const [supportConversations, setSupportConversations] = useState<SupportConversationDto[]>([])
   const [selectedSupportConversationId, setSelectedSupportConversationId] = useState('')
   const [supportMessages, setSupportMessages] = useState<SupportMessageDto[]>([])
+  const [supportMessagesLoading, setSupportMessagesLoading] = useState(false)
   const [supportReplyText, setSupportReplyText] = useState('')
   const [supportNoteText, setSupportNoteText] = useState('')
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
@@ -1116,6 +1118,12 @@ export function App() {
   const [activeSection, setActiveSection] = useState<AdminSectionId>(() => readAdminSectionFromHash())
   const restoredSessionHydrationStarted = useRef(false)
   const sessionOperationId = useRef(0)
+  const userOverviewRequestId = useRef(0)
+  const supportMessagesRequestId = useRef(0)
+  const selectedUserIdRef = useRef(selectedUserId)
+  const selectedSupportConversationIdRef = useRef(selectedSupportConversationId)
+  selectedUserIdRef.current = selectedUserId
+  selectedSupportConversationIdRef.current = selectedSupportConversationId
   const availableAdminSections = useMemo(
     () => adminSession ? adminSections.filter(([id]) => canAccessAdminSection(adminSession.capabilities, id)) : [],
     [adminSession]
@@ -1190,13 +1198,32 @@ export function App() {
     }
   }
 
+  const selectAdminUser = (userId: string) => {
+    if (selectedUserIdRef.current === userId) return
+    selectedUserIdRef.current = userId
+    userOverviewRequestId.current += 1
+    setUserOverview(null)
+    setUserOverviewLoading(false)
+    setSelectedUserId(userId)
+  }
+
+  const selectSupportConversation = (conversationId: string) => {
+    if (selectedSupportConversationIdRef.current === conversationId) return
+    selectedSupportConversationIdRef.current = conversationId
+    supportMessagesRequestId.current += 1
+    setSupportMessages([])
+    setSupportMessagesLoading(false)
+    setSupportReplyText('')
+    setSupportNoteText('')
+    setSelectedSupportConversationId(conversationId)
+  }
+
   const loadUsers = async (currentToken = token) => {
     if (!currentToken) return
     const nextUsers = await api.getAdminUsers(currentToken, { search: userSearch, status: userStatusFilter })
     setUsers(nextUsers)
-    if (!nextUsers.some((item) => String(item.id) === selectedUserId)) {
-      setSelectedUserId(String(nextUsers[0]?.id ?? ''))
-      setUserOverview(null)
+    if (!nextUsers.some((item) => String(item.id) === selectedUserIdRef.current)) {
+      selectAdminUser(String(nextUsers[0]?.id ?? ''))
     }
   }
 
@@ -1323,10 +1350,14 @@ export function App() {
       subscriptionExpiredTextTemplate: nextBotSettings.subscriptionExpiredTextTemplate
     })
     setLoadErrors(errors)
-    if (!selectedSupportConversationId && nextSupportConversations.length > 0) setSelectedSupportConversationId(nextSupportConversations[0].id)
-    if (!nextUsers.some((item) => String(item.id) === selectedUserId)) {
-      setSelectedUserId(String(nextUsers[0]?.id ?? ''))
-      setUserOverview(null)
+    const nextSelectedSupportConversationId = nextSupportConversations.some((item) => item.id === selectedSupportConversationIdRef.current)
+      ? selectedSupportConversationIdRef.current
+      : String(nextSupportConversations[0]?.id ?? '')
+    if (nextSelectedSupportConversationId !== selectedSupportConversationIdRef.current) {
+      selectSupportConversation(nextSelectedSupportConversationId)
+    }
+    if (!nextUsers.some((item) => String(item.id) === selectedUserIdRef.current)) {
+      selectAdminUser(String(nextUsers[0]?.id ?? ''))
     }
     setBusy(false)
     return true
@@ -1446,11 +1477,23 @@ export function App() {
   }, [servers, editingServerId])
 
   useEffect(() => {
-    if (token && selectedSupportConversationId) void loadSupportMessages(selectedSupportConversationId)
+    if (token && selectedSupportConversationId) {
+      void loadSupportMessages(selectedSupportConversationId, token, sessionOperationId.current)
+    } else {
+      supportMessagesRequestId.current += 1
+      setSupportMessages([])
+      setSupportMessagesLoading(false)
+    }
   }, [token, selectedSupportConversationId])
 
   useEffect(() => {
-    if (token && selectedUserId) void loadUserOverview(selectedUserId)
+    if (token && selectedUserId) {
+      void loadUserOverview(selectedUserId, token, sessionOperationId.current)
+    } else {
+      userOverviewRequestId.current += 1
+      setUserOverview(null)
+      setUserOverviewLoading(false)
+    }
   }, [token, selectedUserId])
 
   const updateServerForm = <K extends keyof ServerFormState>(key: K, value: ServerFormState[K]) => setServerForm((current) => ({ ...current, [key]: value }))
@@ -1531,15 +1574,17 @@ export function App() {
       setError(`Роль ${adminSession?.roles.join(', ') || 'текущей сессии'} не разрешает изменять раздел «${activeSectionLabel}».`)
       return
     }
+    const operationId = sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
     setActionBusyId(id)
     setError('')
     setNotice('')
     try {
       await action()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Action failed')
+      if (operationIsCurrent()) setError(e instanceof Error ? e.message : 'Action failed')
     } finally {
-      setActionBusyId('')
+      if (operationIsCurrent()) setActionBusyId('')
     }
   }
 
@@ -1547,8 +1592,11 @@ export function App() {
     setAdminSession(null)
     setPassword('')
     setUsers([])
+    selectedUserIdRef.current = ''
     setSelectedUserId('')
     setUserOverview(null)
+    userOverviewRequestId.current += 1
+    setUserOverviewLoading(false)
     setUserSearch('')
     setUserStatusFilter('')
     setSummary(null)
@@ -1572,8 +1620,11 @@ export function App() {
     setPaymentWebhookEvents([])
     setRefunds([])
     setSupportConversations([])
+    selectedSupportConversationIdRef.current = ''
     setSelectedSupportConversationId('')
     setSupportMessages([])
+    supportMessagesRequestId.current += 1
+    setSupportMessagesLoading(false)
     setSupportReplyText('')
     setSupportNoteText('')
     setTariffs([])
@@ -1756,21 +1807,55 @@ export function App() {
     }
   }
 
-  const loadUserOverview = async (userId: string) => {
-    if (!token || !userId) return
+  const loadUserOverview = async (
+    userId: string,
+    currentToken = token,
+    operationId = sessionOperationId.current
+  ) => {
+    if (!currentToken || !userId) return false
+    const requestId = ++userOverviewRequestId.current
+    const requestIsCurrent = () => sessionOperationId.current === operationId
+      && userOverviewRequestId.current === requestId
+      && selectedUserIdRef.current === userId
+    setUserOverview(null)
+    setUserOverviewLoading(true)
     try {
-      setUserOverview(await api.getAdminUserOverview(token, userId))
+      const overview = await api.getAdminUserOverview(currentToken, userId)
+      if (!requestIsCurrent()) return false
+      setUserOverview(overview)
+      return true
     } catch (e) {
+      if (!requestIsCurrent()) return false
       setError(e instanceof Error ? e.message : 'Не удалось загрузить карточку пользователя')
+      return false
+    } finally {
+      if (requestIsCurrent()) setUserOverviewLoading(false)
     }
   }
 
-  const loadSupportMessages = async (conversationId: string) => {
-    if (!token || !conversationId) return
+  const loadSupportMessages = async (
+    conversationId: string,
+    currentToken = token,
+    operationId = sessionOperationId.current
+  ) => {
+    if (!currentToken || !conversationId) return false
+    const requestId = ++supportMessagesRequestId.current
+    const requestIsCurrent = () => sessionOperationId.current === operationId
+      && supportMessagesRequestId.current === requestId
+      && selectedSupportConversationIdRef.current === conversationId
+    setSupportMessages([])
+    setSupportMessagesLoading(true)
     try {
-      setSupportMessages(await api.getAdminSupportMessages(token, conversationId))
+      const messages = await api.getAdminSupportMessages(currentToken, conversationId)
+      if (!requestIsCurrent()) return false
+      setSupportMessages(messages)
+      return true
     } catch (e) {
+      if (!requestIsCurrent()) return false
       setError(e instanceof Error ? e.message : 'Не удалось загрузить сообщения поддержки')
+      return false
+    } finally {
+      if (requestIsCurrent()) setSupportMessagesLoading(false)
     }
   }
 
@@ -1893,7 +1978,7 @@ export function App() {
   })
 
   const openOrderUser = (order: OrderDto) => {
-    setSelectedUserId(order.userId)
+    selectAdminUser(order.userId)
     setActiveSection('users')
     if (typeof window !== 'undefined') window.location.hash = 'users'
     setNotice(`Открыта карточка пользователя ${order.userEmail || shortId(order.userId)} по заказу ${shortId(order.id)}.`)
@@ -2482,54 +2567,92 @@ export function App() {
 
   const handleReplySupport = async () => {
     if (!token || !selectedSupportConversationId || !supportReplyText.trim()) return
-    const conversation = supportConversations.find((item) => item.id === selectedSupportConversationId)
+    const conversationId = selectedSupportConversationId
+    const operationId = sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
+    const conversation = supportConversations.find((item) => item.id === conversationId)
     if (!conversation) return
-    await runAction(`support-reply-${selectedSupportConversationId}`, async () => {
+    await runAction(`support-reply-${conversationId}`, async () => {
       try {
-        await api.replyAdminSupportConversation(token, selectedSupportConversationId, supportReplyText.trim(), conversation.revision)
+        await api.replyAdminSupportConversation(token, conversationId, supportReplyText.trim(), conversation.revision)
       } catch (error) {
-        if (error instanceof ApiClientError && error.status === 409) await loadAll(token)
+        if (!operationIsCurrent()) return
+        if (error instanceof ApiClientError && error.status === 409) {
+          await loadAll(token, adminSession, { operationId })
+          if (operationIsCurrent()) {
+            const currentConversationId = selectedSupportConversationIdRef.current
+            if (currentConversationId) await loadSupportMessages(currentConversationId, token, operationId)
+          }
+        }
         throw error
       }
-      setSupportReplyText('')
+      if (!operationIsCurrent()) return
+      if (selectedSupportConversationIdRef.current === conversationId) setSupportReplyText('')
       setNotice('Ответ сохранен и поставлен в очередь отправки Telegram.')
-      await loadSupportMessages(selectedSupportConversationId)
-      await loadAll(token)
+      await loadAll(token, adminSession, { operationId })
+      if (operationIsCurrent() && selectedSupportConversationIdRef.current === conversationId) {
+        await loadSupportMessages(conversationId, token, operationId)
+      }
     })
   }
 
   const handleSupportStatus = async (status: string, conversationId = selectedSupportConversationId) => {
     if (!token || !conversationId) return
+    const operationId = sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
     const conversation = supportConversations.find((item) => item.id === conversationId)
     if (!conversation) return
     await runAction(`support-status-${conversationId}`, async () => {
       try {
         await api.updateAdminSupportConversationStatus(token, conversationId, status, conversation.revision)
       } catch (error) {
-        if (error instanceof ApiClientError && error.status === 409) await loadAll(token)
+        if (!operationIsCurrent()) return
+        if (error instanceof ApiClientError && error.status === 409) {
+          await loadAll(token, adminSession, { operationId })
+          if (operationIsCurrent()) {
+            const currentConversationId = selectedSupportConversationIdRef.current
+            if (currentConversationId) await loadSupportMessages(currentConversationId, token, operationId)
+          }
+        }
         throw error
       }
+      if (!operationIsCurrent()) return
       setNotice(`Статус обращения обновлен: ${status}.`)
-      await loadSupportMessages(conversationId)
-      await loadAll(token)
+      await loadAll(token, adminSession, { operationId })
+      if (operationIsCurrent() && selectedSupportConversationIdRef.current === conversationId) {
+        await loadSupportMessages(conversationId, token, operationId)
+      }
     })
   }
 
   const handleSupportNote = async () => {
     if (!token || !selectedSupportConversationId || !supportNoteText.trim()) return
-    const conversation = supportConversations.find((item) => item.id === selectedSupportConversationId)
+    const conversationId = selectedSupportConversationId
+    const operationId = sessionOperationId.current
+    const operationIsCurrent = () => sessionOperationId.current === operationId
+    const conversation = supportConversations.find((item) => item.id === conversationId)
     if (!conversation) return
-    await runAction(`support-note-${selectedSupportConversationId}`, async () => {
+    await runAction(`support-note-${conversationId}`, async () => {
       try {
-        await api.addAdminSupportInternalNote(token, selectedSupportConversationId, supportNoteText.trim(), conversation.revision)
+        await api.addAdminSupportInternalNote(token, conversationId, supportNoteText.trim(), conversation.revision)
       } catch (error) {
-        if (error instanceof ApiClientError && error.status === 409) await loadAll(token)
+        if (!operationIsCurrent()) return
+        if (error instanceof ApiClientError && error.status === 409) {
+          await loadAll(token, adminSession, { operationId })
+          if (operationIsCurrent()) {
+            const currentConversationId = selectedSupportConversationIdRef.current
+            if (currentConversationId) await loadSupportMessages(currentConversationId, token, operationId)
+          }
+        }
         throw error
       }
-      setSupportNoteText('')
+      if (!operationIsCurrent()) return
+      if (selectedSupportConversationIdRef.current === conversationId) setSupportNoteText('')
       setNotice('Внутренняя заметка сохранена.')
-      await loadSupportMessages(selectedSupportConversationId)
-      await loadAll(token)
+      await loadAll(token, adminSession, { operationId })
+      if (operationIsCurrent() && selectedSupportConversationIdRef.current === conversationId) {
+        await loadSupportMessages(conversationId, token, operationId)
+      }
     })
   }
 
@@ -3216,7 +3339,7 @@ export function App() {
                 <div className="actions">
                   <StatusBadge value={user.isBlocked ? 'Blocked' : user.status} />
                   <StatusBadge value={s(user.rolesCsv, 'User')} />
-                  <PrimaryButton className={selectedUserId === user.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedUserId(user.id)}>{selectedUserId === user.id ? 'Открыто' : 'Открыть'}</PrimaryButton>
+                  <PrimaryButton className={selectedUserId === user.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectAdminUser(user.id)}>{selectedUserId === user.id ? 'Открыто' : 'Открыть'}</PrimaryButton>
                 </div>
               </div>
             ))}
@@ -3224,7 +3347,8 @@ export function App() {
         </Card>
         <Card className="user-overview-card">
           <h3>Карточка пользователя</h3>
-          {!userOverview && <p className="muted">Выберите пользователя.</p>}
+          {userOverviewLoading && <LoadingBlock label="Загружаем карточку пользователя..." />}
+          {!userOverviewLoading && !userOverview && <p className="muted">Выберите пользователя.</p>}
           {userOverview && <>
             <div className="user-profile-head">
               <div>
@@ -3925,11 +4049,13 @@ export function App() {
       <div id="support" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('support')} hidden={activeSection !== 'support'}>
         <Card>
           <h3>Обращения в поддержку</h3>
-          <div className="list-stack">{supportConversations.length === 0 && <EmptyState title="Нет обращений" description="Сообщения из Telegram support появятся в этом списке." />}{supportConversations.slice(0, 12).map((conversation) => <div key={conversation.id} className={`list-item-vertical${selectedSupportConversationId === conversation.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{conversation.subject || 'Обращение в поддержку'}</strong><div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · пользователь:{shortId(conversation.userId)}</div><div className="muted">Ответственный: {shortId(conversation.assignedToUserId)} · заметка: {conversation.internalNote || '—'}</div></div><StatusBadge value={conversation.status} /></div><div className="toolbar"><PrimaryButton className={selectedSupportConversationId === conversation.id ? 'button-secondary' : 'button-ghost'} onClick={() => setSelectedSupportConversationId(conversation.id)}>{selectedSupportConversationId === conversation.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('support') && <><PrimaryButton className="button-secondary" onClick={() => void handleSupportStatus('pending', conversation.id)}>В ожидание</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleSupportStatus(conversation.status === 'closed' ? 'open' : 'closed', conversation.id)}>{conversation.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}</PrimaryButton></>}</div></div>)}</div>
+          <div className="list-stack">{supportConversations.length === 0 && <EmptyState title="Нет обращений" description="Сообщения из Telegram support появятся в этом списке." />}{supportConversations.slice(0, 12).map((conversation) => <div key={conversation.id} className={`list-item-vertical${selectedSupportConversationId === conversation.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{conversation.subject || 'Обращение в поддержку'}</strong><div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · пользователь:{shortId(conversation.userId)}</div><div className="muted">Ответственный: {shortId(conversation.assignedToUserId)} · заметка: {conversation.internalNote || '—'}</div></div><StatusBadge value={conversation.status} /></div><div className="toolbar"><PrimaryButton className={selectedSupportConversationId === conversation.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectSupportConversation(conversation.id)}>{selectedSupportConversationId === conversation.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('support') && <><PrimaryButton className="button-secondary" onClick={() => void handleSupportStatus('pending', conversation.id)}>В ожидание</PrimaryButton><PrimaryButton onClick={() => void handleSupportStatus(conversation.status === 'closed' ? 'open' : 'closed', conversation.id)} className="button-secondary">{conversation.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}</PrimaryButton></>}</div></div>)}</div>
         </Card>
         <Card>
           <h3>Диалог поддержки</h3>
-          <label><span>Обращение</span><select value={selectedSupportConversationId} onChange={(e) => setSelectedSupportConversationId(e.target.value)}><option value="">Не выбрано</option>{supportConversations.map((conversation) => <option key={conversation.id} value={conversation.id}>{conversation.subject || shortId(conversation.id)}</option>)}</select></label>
+          <label><span>Обращение</span><select value={selectedSupportConversationId} onChange={(e) => selectSupportConversation(e.target.value)}><option value="">Не выбрано</option>{supportConversations.map((conversation) => <option key={conversation.id} value={conversation.id}>{conversation.subject || shortId(conversation.id)}</option>)}</select></label>
+          {supportMessagesLoading && <LoadingBlock label="Загружаем сообщения поддержки..." />}
+          {!supportMessagesLoading && selectedSupportConversationId && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Для выбранного обращения сообщения пока не сохранены." />}
           <div className="list-stack mt-12">{supportMessages.slice(-12).map((message) => <div key={message.id} className="list-item-vertical"><div className="card-head"><strong>{message.direction}{message.isInternalNote ? ' · внутренняя заметка' : ''}</strong><span className="muted">{formatDate(message.createdAt)}</span></div><div>{message.text}</div></div>)}</div>
           <form hidden={!canWriteSection('support')} className="mt-12" aria-busy={actionBusyId === `support-reply-${selectedSupportConversationId}`} onSubmit={(event) => { event.preventDefault(); void handleReplySupport() }}>
             <label><span>Ответ пользователю</span><textarea value={supportReplyText} onChange={(e) => setSupportReplyText(e.target.value)} rows={3} placeholder="Текст ответа" /></label>

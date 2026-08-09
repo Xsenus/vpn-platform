@@ -116,6 +116,68 @@ function paymentProviderAccount(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function adminUser(id: string, displayName: string, email: string) {
+  return {
+    id,
+    email,
+    displayName,
+    rolesCsv: 'User',
+    status: 'Active',
+    isBlocked: false,
+    preferredLanguage: 'ru',
+    referralCode: `REF-${id}`,
+    authSource: 'Local',
+    emailConfirmed: true,
+    lastLoginAt: now,
+    telegramRegistrationCompletedAt: null,
+    createdAt: now,
+    updatedAt: now
+  }
+}
+
+function adminUserOverview(user: ReturnType<typeof adminUser>) {
+  return {
+    user,
+    telegramAccounts: [],
+    orders: [],
+    payments: [],
+    subscriptions: [],
+    accessCredentials: [],
+    supportConversations: []
+  }
+}
+
+function adminSupportConversation(id: string, userId: string, subject: string) {
+  return {
+    id,
+    userId,
+    telegramUserId: null,
+    channel: 'web',
+    status: 'open',
+    subject,
+    assignedToUserId: null,
+    internalNote: '',
+    revision: 0,
+    closedAt: null,
+    createdAt: now,
+    updatedAt: now
+  }
+}
+
+function adminSupportMessage(id: string, conversationId: string, userId: string, text: string) {
+  return {
+    id,
+    supportConversationId: conversationId,
+    userId,
+    telegramUserId: null,
+    direction: 'inbound',
+    text,
+    attachmentsJson: '[]',
+    isInternalNote: false,
+    createdAt: now
+  }
+}
+
 function release(overrides: Record<string, unknown> = {}) {
   return {
     id: 'release-admin-e2e',
@@ -331,6 +393,16 @@ async function mockAdminApi(page: Page) {
   let invalidBotSettingsResponse = false
   let delayNextVpnPanelInboundsResponse = false
   let delayNextBotSettingsCheckResponse = false
+  let users = [adminUser('user-e2e', 'Client E2E', 'client@example.test')]
+  let userOverviews = new Map(users.map((item) => [item.id, adminUserOverview(item)]))
+  let supportConversations = [adminSupportConversation('support-e2e', 'user-e2e', 'Проверка доступа')]
+  let supportMessages = new Map([
+    ['support-e2e', [adminSupportMessage('support-message-e2e', 'support-e2e', 'user-e2e', 'Нужна проверка доступа')]]
+  ])
+  let delayedUserOverviewId: string | null = null
+  let releaseDelayedUserOverview: (() => void) | null = null
+  let delayedSupportMessagesId: string | null = null
+  let releaseDelayedSupportMessages: (() => void) | null = null
   const providers = [paymentProviderAccount()]
   const tariffs = [tariff()]
   const referralPrograms = [referralProgram()]
@@ -558,20 +630,24 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/users') {
-      await fulfillJson(route, invalidUsersResponse ? [{}] : [{ id: 'user-e2e', email: 'client@example.test', displayName: 'Client E2E', rolesCsv: 'User', status: 'Active', isBlocked: false, preferredLanguage: 'ru', referralCode: 'E2E', authSource: 'Local', emailConfirmed: true, lastLoginAt: now, telegramRegistrationCompletedAt: null, createdAt: now, updatedAt: now }])
+      await fulfillJson(route, invalidUsersResponse ? [{}] : users)
       return
     }
 
-    if (method === 'GET' && path === '/api/admin/users/user-e2e/overview') {
-      await fulfillJson(route, {
-        user: { id: 'user-e2e', email: 'client@example.test', displayName: 'Client E2E', rolesCsv: 'User', status: 'Active', isBlocked: false, preferredLanguage: 'ru', referralCode: 'E2E', authSource: 'Local', emailConfirmed: true, lastLoginAt: now, telegramRegistrationCompletedAt: null, createdAt: now, updatedAt: now },
-        telegramAccounts: [],
-        orders: [],
-        payments: [],
-        subscriptions: [],
-        accessCredentials: [],
-        supportConversations: []
-      })
+    const userOverviewMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/overview$/)
+    if (method === 'GET' && userOverviewMatch) {
+      const userId = decodeURIComponent(userOverviewMatch[1])
+      const response = userOverviews.get(userId)
+      if (!response) {
+        await fulfillJson(route, { error: 'user_not_found' }, 404)
+        return
+      }
+      if (delayedUserOverviewId === userId) {
+        delayedUserOverviewId = null
+        await new Promise<void>((resolve) => { releaseDelayedUserOverview = resolve })
+        releaseDelayedUserOverview = null
+      }
+      await fulfillJson(route, response)
       return
     }
 
@@ -654,12 +730,32 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/support/conversations') {
-      await fulfillJson(route, [{ id: 'support-e2e', userId: 'user-e2e', telegramUserId: null, channel: 'web', status: 'open', subject: 'Проверка доступа', assignedToUserId: null, internalNote: '', revision: 0, closedAt: null, createdAt: now, updatedAt: now }])
+      await fulfillJson(route, supportConversations)
       return
     }
 
-    if (method === 'GET' && path === '/api/admin/support/conversations/support-e2e/messages') {
-      await fulfillJson(route, [{ id: 'support-message-e2e', supportConversationId: 'support-e2e', userId: 'user-e2e', telegramUserId: null, direction: 'inbound', text: 'Нужна проверка доступа', attachmentsJson: '[]', isInternalNote: false, createdAt: now }])
+    const supportMessagesMatch = path.match(/^\/api\/admin\/support\/conversations\/([^/]+)\/messages$/)
+    if (method === 'GET' && supportMessagesMatch) {
+      const conversationId = decodeURIComponent(supportMessagesMatch[1])
+      const response = supportMessages.get(conversationId) ?? []
+      if (delayedSupportMessagesId === conversationId) {
+        delayedSupportMessagesId = null
+        await new Promise<void>((resolve) => { releaseDelayedSupportMessages = resolve })
+        releaseDelayedSupportMessages = null
+      }
+      await fulfillJson(route, response)
+      return
+    }
+
+    const supportStatusMatch = path.match(/^\/api\/admin\/support\/conversations\/([^/]+)\/status$/)
+    if (method === 'PATCH' && supportStatusMatch) {
+      const conversationId = decodeURIComponent(supportStatusMatch[1])
+      const nextStatus = String((body as Record<string, unknown>)?.status ?? 'open')
+      supportConversations = supportConversations.map((item) => item.id === conversationId
+        ? { ...item, status: nextStatus, revision: item.revision + 1, updatedAt: now }
+        : item)
+      const updated = supportConversations.find((item) => item.id === conversationId)
+      await fulfillJson(route, { conversationId, status: nextStatus, revision: updated?.revision ?? 0 })
       return
     }
 
@@ -889,6 +985,31 @@ async function mockAdminApi(page: Page) {
     returnInvalidBotSettingsResponse: () => { invalidBotSettingsResponse = true },
     delayNextVpnPanelInbounds: () => { delayNextVpnPanelInboundsResponse = true },
     delayNextBotSettingsCheck: () => { delayNextBotSettingsCheckResponse = true },
+    useDetailRequestRaceFixture: () => {
+      users = [
+        adminUser('user-first', 'Первый пользователь', 'first@example.test'),
+        adminUser('user-second', 'Второй пользователь', 'second@example.test')
+      ]
+      userOverviews = new Map(users.map((item) => [item.id, adminUserOverview(item)]))
+      supportConversations = [
+        adminSupportConversation('support-first', 'user-first', 'Первое обращение'),
+        adminSupportConversation('support-second', 'user-second', 'Второе обращение')
+      ]
+      supportMessages = new Map([
+        ['support-first', [adminSupportMessage('message-first', 'support-first', 'user-first', 'Старое сообщение первого обращения')]],
+        ['support-second', [adminSupportMessage('message-second', 'support-second', 'user-second', 'Текущее сообщение второго обращения')]]
+      ])
+    },
+    delayUserOverview: (userId: string) => { delayedUserOverviewId = userId },
+    releaseUserOverview: () => { releaseDelayedUserOverview?.() },
+    delaySupportMessages: (conversationId: string) => { delayedSupportMessagesId = conversationId },
+    releaseSupportMessages: () => { releaseDelayedSupportMessages?.() },
+    updateFirstDetailFixture: (userDisplayName: string, messageText: string) => {
+      const nextUser = adminUser('user-first', userDisplayName, 'first@example.test')
+      users = [nextUser, users.find((item) => item.id === 'user-second') ?? adminUser('user-second', 'Второй пользователь', 'second@example.test')]
+      userOverviews.set('user-first', adminUserOverview(nextUser))
+      supportMessages.set('support-first', [adminSupportMessage('message-first-current', 'support-first', 'user-first', messageText)])
+    },
     failLogout: () => { logoutShouldFail = true }
   }
 }
@@ -899,6 +1020,94 @@ async function seedAdminSession(page: Page, accessToken: string, refreshToken: s
     sessionStorage.setItem('vpn-platform-admin-refresh-token', refresh)
   }, { accessToken, refreshToken })
 }
+
+test('admin detail views ignore older selections and keep support actions scoped', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.useDetailRequestRaceFixture()
+  api.delayUserOverview('user-first')
+  api.delaySupportMessages('support-first')
+  await seedAdminSession(page, 'admin-detail-race-token', 'admin-detail-race-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/admin/users/user-first/overview')).toBe(1)
+  await expect.poll(() => api.getRequestCount('/api/admin/support/conversations/support-first/messages')).toBe(1)
+
+  await openAdminSection(page, 'Пользователи', 'users')
+  const usersSection = page.locator('#users')
+  const secondUserRow = usersSection.locator('.list-item').filter({ hasText: 'Второй пользователь' })
+  await secondUserRow.getByRole('button', { name: 'Открыть' }).click()
+  await expect(usersSection.locator('.user-overview-card').getByText('Второй пользователь', { exact: true })).toBeVisible()
+  const firstOverviewResponse = page.waitForResponse((response) => response.url().endsWith('/api/admin/users/user-first/overview'))
+  api.releaseUserOverview()
+  await firstOverviewResponse
+  await expect(usersSection.locator('.user-overview-card').getByText('Второй пользователь', { exact: true })).toBeVisible()
+  await expect(usersSection.locator('.user-overview-card').getByText('Первый пользователь', { exact: true })).toHaveCount(0)
+
+  await openAdminSection(page, 'Поддержка', 'support')
+  const supportSection = page.locator('#support')
+  await supportSection.getByLabel('Ответ пользователю').fill('Черновик ответа для первого обращения')
+  await supportSection.getByLabel('Внутренняя заметка').fill('Черновик заметки для первого обращения')
+  const secondConversation = supportSection.locator('.list-item-vertical').filter({ hasText: 'Второе обращение' }).first()
+  await secondConversation.getByRole('button', { name: 'Открыть' }).click()
+  await expect(supportSection.getByText('Текущее сообщение второго обращения', { exact: true })).toBeVisible()
+  await expect(supportSection.getByLabel('Ответ пользователю')).toHaveValue('')
+  await expect(supportSection.getByLabel('Внутренняя заметка')).toHaveValue('')
+  const firstMessagesResponse = page.waitForResponse((response) => response.url().endsWith('/api/admin/support/conversations/support-first/messages'))
+  api.releaseSupportMessages()
+  await firstMessagesResponse
+  await expect(supportSection.getByText('Текущее сообщение второго обращения', { exact: true })).toBeVisible()
+  await expect(supportSection.getByText('Старое сообщение первого обращения', { exact: true })).toHaveCount(0)
+
+  const firstMessagesCount = api.getRequestCount('/api/admin/support/conversations/support-first/messages')
+  const firstConversation = supportSection.locator('.list-item-vertical').filter({ hasText: 'Первое обращение' }).first()
+  await firstConversation.getByRole('button', { name: 'Закрыть' }).click()
+  await expect(page.getByText('Статус обращения обновлен: closed.')).toBeVisible()
+  expect(api.getRequestCount('/api/admin/support/conversations/support-first/messages')).toBe(firstMessagesCount)
+  await expect(supportSection.getByText('Текущее сообщение второго обращения', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin detail requests cannot restore old data after logout and new login', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.useDetailRequestRaceFixture()
+  api.delayUserOverview('user-first')
+  api.delaySupportMessages('support-first')
+  await seedAdminSession(page, 'admin-detail-logout-token', 'admin-detail-logout-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/admin/users/user-first/overview')).toBe(1)
+  await expect.poll(() => api.getRequestCount('/api/admin/support/conversations/support-first/messages')).toBe(1)
+  api.updateFirstDetailFixture('Профиль новой сессии', 'Сообщение новой сессии')
+
+  await page.getByRole('button', { name: 'Завершить сессию', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Пользователи', 'users')
+  const usersSection = page.locator('#users')
+  await expect(usersSection.locator('.user-overview-card').getByText('Профиль новой сессии', { exact: true })).toBeVisible()
+  await openAdminSection(page, 'Поддержка', 'support')
+  const supportSection = page.locator('#support')
+  await expect(supportSection.getByText('Сообщение новой сессии', { exact: true })).toBeVisible()
+
+  const oldOverviewResponse = page.waitForResponse((response) => response.url().endsWith('/api/admin/users/user-first/overview') && response.request().headers().authorization === 'Bearer admin-detail-logout-token')
+  const oldMessagesResponse = page.waitForResponse((response) => response.url().endsWith('/api/admin/support/conversations/support-first/messages') && response.request().headers().authorization === 'Bearer admin-detail-logout-token')
+  api.releaseUserOverview()
+  api.releaseSupportMessages()
+  await Promise.all([oldOverviewResponse, oldMessagesResponse])
+
+  await openAdminSection(page, 'Пользователи', 'users')
+  await expect(usersSection.locator('.user-overview-card').getByText('Профиль новой сессии', { exact: true })).toBeVisible()
+  await expect(usersSection.locator('.user-overview-card').getByText('Первый пользователь', { exact: true })).toHaveCount(0)
+  await openAdminSection(page, 'Поддержка', 'support')
+  await expect(supportSection.getByText('Сообщение новой сессии', { exact: true })).toBeVisible()
+  await expect(supportSection.getByText('Старое сообщение первого обращения', { exact: true })).toHaveCount(0)
+})
 
 test('admin restores a valid session once under StrictMode', async ({ page }) => {
   const api = await mockAdminApi(page)

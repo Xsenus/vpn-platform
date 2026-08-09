@@ -214,7 +214,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - frontend unit tests: `110/110`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `58/58`; responsive matrix проверяет ширины `305..1920` px;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `62/62`; responsive matrix проверяет ширины `305..1920` px;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -270,9 +270,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - public checkout восстанавливается из browser storage только после проверки структуры, лимитов, token format и payment-provider allow-list; повреждённое состояние удаляется до API-запросов;
 - public session hydration защищён single-flight от StrictMode refresh-token reuse, сохраняет токены при transient profile failure, отбрасывает поздний refresh после logout и допускает checkout claim только после подтверждения профиля;
 - cabinet support принимает сообщения только от последнего выбранного thread, отбрасывает delayed response после logout и очищает приватные drafts/reset state перед новым входом;
+- admin user/support detail views принимают только актуальный selected/session response, показывают loading/empty states и не подменяют открытый диалог при status action другой записи;
 - общий каталог inbound позволяет админке переносить VPN-клиента между совместимыми доступными 3x-ui панелями и после успеха открывать панель назначения;
 - после межпанельного переноса карточки панелей сразу отражают освобождённую source capacity и занятую target capacity, а следующий API-refresh сохраняет фактические значения;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-cabinet-support-request-lifecycle`, версия `0.547.0`;
-- roadmap progress: `560/580` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-admin-detail-request-lifecycle`, версия `0.548.0`;
+- roadmap progress: `561/581` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
