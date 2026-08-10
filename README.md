@@ -305,7 +305,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - server/inbound handlers повторно валидируют payload при programmatic submit; VPN server/panel/inbound формы проверяют числовые диапазоны, create credentials, JSON-object/network semantics и safe panel URL;
 - hidden admin forms не считаются capability boundary: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API;
 - admin action dispatcher проверяет capability целевого section во всех typed callsites; active Dashboard/Payments не разрешает hidden mutation другого раздела;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-action-capability-boundary`, версия `0.581.0`;
-- roadmap progress: `594/614` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- пункт «Помощь» в header личного кабинета открывает полноценную public-инструкцию `/help`; точный cabinet-to-public destination проверен source guard, desktop/mobile E2E и локальным браузером на 305 px;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-cabinet-help-navigation`, версия `0.582.0`;
+- roadmap progress: `595/615` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

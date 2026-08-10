@@ -860,7 +860,7 @@ export function App() {
         <a className="app-brand" href={publicWebUrl}>VPN Platform</a>
         <nav aria-label="Основная навигация">
           <a href={`${publicWebUrl}/tariffs`}>Тарифы</a>
-          <a href={`${publicWebUrl}/faq`}>Помощь</a>
+          <a href={`${publicWebUrl}/help`}>Помощь</a>
           <a className="active" href="/" aria-current="page">Кабинет</a>
           {token && <button type="button" className="nav-button" onClick={() => setAppVersionOpenSignal((value) => value + 1)}>Что нового</button>}
         </nav>

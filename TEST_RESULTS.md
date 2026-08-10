@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: cabinet help navigation
+
+Scope:
+- The cabinet header action labelled «Помощь» must open the complete public help journey at `/help`, not the FAQ route.
+- The cabinet-to-public destination must remain correct on desktop, mobile and the narrow 305 px responsive boundary.
+
+Results:
+- Roadmap progress: `595/615` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-cabinet-help-navigation`, version `0.582.0`.
+- Reproduction before fix: source guard `0/1` and desktop/mobile Playwright `0/2` received `http://127.0.0.1:5293/faq`; after fix targeted source guard `1/1` and browser `2/2` pass.
+- Local in-app browser at 305 px confirmed the exact `http://127.0.0.1:5293/help` href and real navigation to title `Помощь — VPN Platform` with no horizontal overflow.
+- Visual audit: all-screens `6/6` passed across 6 public routes, cabinet/modal and all 17 admin sections on 19 viewport configurations `305x568..2560x1440`; representative desktop/mobile screenshots were reviewed.
+- Frontend tests: `121/121`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; full console-responsive Playwright: `124/124`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin action capability boundary
 
 Scope:

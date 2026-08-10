@@ -784,6 +784,8 @@ test('cabinet app version modal traps focus and restores its opener', async ({ p
   await seedCabinetSession(page, 'access-token-cabinet-version', 'refresh-token-cabinet-version')
 
   await page.goto('/')
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Помощь' }))
+    .toHaveAttribute('href', 'http://127.0.0.1:5293/help')
   const opener = page.getByRole('button', { name: 'Что нового' })
   await expect(opener).toBeVisible()
   await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)

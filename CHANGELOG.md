@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.582.0 - 2026-08-10
+
+Release entry: `2026-08-10-cabinet-help-navigation`.
+
+### Исправлено
+
+- Пункт «Помощь» в шапке личного кабинета теперь открывает полноценную инструкцию `/help`, а не соседний FAQ `/faq`.
+- Cabinet-to-public переход продолжает использовать проверенный credential-free `publicWebUrl`; destination одинаково корректен на desktop, mobile и узком viewport 305 px.
+
+### Проверено
+
+- До исправления source guard и desktop/mobile Playwright падали `0/1` и `0/2`, фактически получая `http://127.0.0.1:5293/faq`; после исправления targeted unit `1/1`, browser `2/2` и ручной переход в локальном браузере ведут на `/help`.
+- Frontend `121/121`, typecheck/build, audit `0 vulnerabilities`; полный console-responsive Playwright `124/124`, включая all-screens `6/6` на 19 viewport-конфигурациях.
+- Backend `1125/1125`, EF drift OK, fresh SQLite order/payment/subscription/access flow OK, secret scan `668/0`; финальный encoding и artifact cleanup зафиксированы в `TEST_RESULTS.md`.
+- Roadmap: `595/615` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.581.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-action-capability-boundary`.

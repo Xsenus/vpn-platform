@@ -30,6 +30,7 @@ test('public and cabinet apps expose user help journey', () => {
   assert.match(publicApp, /После оплаты вернитесь в кабинет/)
   assert.match(cabinetApp, /Как пользоваться сервисом/)
   assert.match(cabinetApp, /Скопируйте ссылку или откройте QR-код/)
+  assert.match(cabinetApp, /href=\{`\$\{publicWebUrl\}\/help`\}>Помощь<\/a>/)
   assert.match(guide, /P10-DOC-003/)
   assert.match(guide, /Telegram Stars/)
 })

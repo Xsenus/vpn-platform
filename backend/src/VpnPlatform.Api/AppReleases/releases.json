@@ -13727,5 +13727,28 @@
         "text": "Roadmap progress is 594/614 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-cabinet-help-navigation",
+    "version": "0.582.0",
+    "releasedAt": "2026-08-10T21:15:50+07:00",
+    "title": "Помощь в кабинете открывает полную инструкцию",
+    "summary": "Пункт помощи в шапке кабинета теперь ведет на пользовательский маршрут `/help`, а не на FAQ.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Cabinet header использует проверенный publicWebUrl и открывает полную инструкцию `/help` на desktop и mobile."
+      },
+      {
+        "type": "improved",
+        "text": "Source guard, desktop/mobile Playwright и локальная проверка на 305 px закрепляют точный destination и отсутствие responsive overflow."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 595/615 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
