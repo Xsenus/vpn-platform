@@ -1212,8 +1212,14 @@ export function validatePasswordResetConfirm(resetToken: string, newPassword: st
   return errors
 }
 
+function getApiErrorCode(error: unknown): string {
+  if (!(error instanceof ApiClientError) || typeof error.payload !== 'object' || error.payload === null) return ''
+  const value = (error.payload as Record<string, unknown>).error
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 export function translateAuthError(error: unknown, fallback = 'Ошибка авторизации') {
-  const raw = error instanceof Error ? error.message : String(error ?? '')
+  const raw = getApiErrorCode(error) || (error instanceof Error ? error.message : String(error ?? ''))
   return authErrorMessages[raw] ?? authErrorFallbacks[raw] ?? (raw || fallback)
 }
 
@@ -1227,10 +1233,11 @@ export function translateAuthMessage(message: string) {
 
 export function normalizeApiError(payload: unknown, fallback: string): string {
   if (!payload) return fallback
-  if (typeof payload === 'string') return payload
+  if (typeof payload === 'string') return isTechnicalApiError(payload) ? fallback : payload
   if (typeof payload === 'object' && payload !== null) {
     if ('error' in payload && typeof (payload as Record<string, unknown>).error === 'string') {
-      return String((payload as Record<string, unknown>).error)
+      const error = String((payload as Record<string, unknown>).error)
+      return isTechnicalApiError(error) ? fallback : error
     }
     if ('message' in payload && typeof (payload as Record<string, unknown>).message === 'string') {
       return String((payload as Record<string, unknown>).message)
@@ -1239,7 +1246,12 @@ export function normalizeApiError(payload: unknown, fallback: string): string {
   return fallback
 }
 
+function isTechnicalApiError(value: string): boolean {
+  return /^[a-z0-9]+(?:_[a-z0-9]+)+$/i.test(value.trim())
+}
+
 const apiFallbackErrorMessage = 'Не удалось выполнить запрос. Попробуйте еще раз.'
+const apiQrLoadErrorMessage = 'Не удалось загрузить QR-код. Повторите попытку.'
 const apiRequestTimeoutMessage = 'Сервер не ответил вовремя. Проверьте подключение и повторите запрос.'
 const apiEmptyResponseMessage = 'Сервер вернул пустой ответ. Повторите запрос позже.'
 const apiInvalidJsonResponseMessage = 'Сервер вернул некорректный JSON-ответ. Повторите запрос позже.'
@@ -3271,7 +3283,7 @@ export class ApiClient {
   }
 
   getMyAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxBytes: 1_000_000 })
+    return this.requestText(`/api/cabinet/access/${id}/qr`, { token, errorMessage: apiQrLoadErrorMessage, expectedContentType: 'image/svg+xml', maxBytes: 1_000_000 })
   }
 
   getMyReferrals(token: string): Promise<RewardLedgerDto[]> {
@@ -3398,7 +3410,7 @@ export class ApiClient {
   }
 
   getAdminAccessQrSvg(token: string, id: string): Promise<string> {
-    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: apiFallbackErrorMessage, expectedContentType: 'image/svg+xml', maxBytes: 1_000_000 })
+    return this.requestText(`/api/admin/access-credentials/${id}/qr`, { token, errorMessage: apiQrLoadErrorMessage, expectedContentType: 'image/svg+xml', maxBytes: 1_000_000 })
   }
 
   enableAdminAccess(token: string, id: string, reason?: string | null): Promise<AccessActionResultDto> {

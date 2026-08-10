@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `598/618` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `599/619` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -144,7 +144,7 @@
 - [x] Telegram bot settings проходят secure save/check/reload/edit lifecycle без возврата raw bot/webhook tokens в DTO/DOM.
 - [x] Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит desktop/mobile с write-only SSH/panel credentials.
 - [x] Safe provisioning validation lifecycle проходит health/precheck/deploy/cancel/retry/support без реального SSH/Ansible.
-- [x] 3x-ui client actions проходят disable/reload/enable/sync/reset-traffic lifecycle на desktop/mobile; cabinet/admin QR cache очищается до повторного GET и после local blocker.
+- [x] 3x-ui client actions проходят disable/reload/enable/sync/reset-traffic lifecycle на desktop/mobile; cabinet/admin QR cache очищается до повторного GET и после local blocker, технические API-коды заменяются безопасным fallback.
 - [x] VPN access lifecycle сохраняет status/disabledAt/revision после reload и скрывает terminal secrets на desktop/mobile.
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
@@ -165,7 +165,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-10-stale-qr-cache-invalidation`, версия `0.585.0`; failed QR refresh не оставляет cached preview в cabinet/admin на desktop/mobile.
+- [x] Latest "Что нового": `2026-08-10-api-error-code-fallback`, версия `0.586.0`; `qr_temporarily_unavailable` не попадает в UI, cabinet/admin показывают контекстную ошибку на desktop/mobile.
 
 ## Как вести дальше
 

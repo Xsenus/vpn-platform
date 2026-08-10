@@ -1051,6 +1051,7 @@ test('cabinet invalidates stale QR after logout or a failed reload', async ({ pa
   api.failNextQrRequest()
   await qrButton.click()
   await expect.poll(() => api.getRequestCount('/api/cabinet/access/access-active/qr')).toBe(qrRequestsBeforeFailure + 1)
+  await expect(page.getByText('Не удалось загрузить QR-код. Повторите попытку.')).toBeVisible()
   await expect(page.locator('.qr-preview')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })

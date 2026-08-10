@@ -200,7 +200,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Admin RBAC consistency: защищенная session capability matrix ограничивает разделы и команды partial roles, а user overview редактирует finance/support данные по backend read-policy.
 - Admin dashboard consistency: finance/support aggregates и payment/Telegram readiness checks вычисляются только при соответствующих capabilities; frontend скрывает недоступные метрики и действия.
 - Admin audit scope: finance/support/Telegram записи и JSON payload фильтруются по capabilities до Action/EntityType/Search; frontend показывает только разрешенные категории.
-- VPN access lifecycle: enable/sync/reset пробрасывают caller cancellation после durable history/audit; enable/reset uncertainty сохраняется как `SyncRequired` для ручной сверки; cabinet/admin очищают cached QR до повторной проверки или local blocker.
+- VPN access lifecycle: enable/sync/reset пробрасывают caller cancellation после durable history/audit; enable/reset uncertainty сохраняется как `SyncRequired` для ручной сверки; cabinet/admin очищают cached QR до повторной проверки или local blocker, а API-клиент скрывает технические `snake_case` ошибки за контекстным fallback.
 - Auth session lifecycle: access JWT и refresh rows содержат `session_version`; password reset, деактивация и изменяющий полномочия admin bootstrap повышают версию и отзывают старые refresh-сессии. JWT без claim после обновления требует refresh/relogin.
 - Refresh replay lifecycle: новый login получает отдельный `FamilyId`, rotation наследует family, а reuse detection отзывает только эту цепочку; legacy NULL-family rows связываются через `ReplacedByTokenHash`.
 - Password reset lifecycle: winning token получает `UsedAt`, остальные outstanding tokens — `InvalidatedAt`/reason; concurrency `Revision` отклоняет stale sibling commit и сохраняет единственный результат.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-10-stale-qr-cache-invalidation`, версия `0.585.0`; cabinet/admin QR cache invalidation проверена через successful load и confirmed failed refresh на desktop/mobile.
-- roadmap progress: `598/618` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-10-api-error-code-fallback`, версия `0.586.0`; cabinet/admin QR errors проверены через backend `snake_case` code и понятный fallback на desktop/mobile, auth code translation сохранен.
+- roadmap progress: `599/619` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

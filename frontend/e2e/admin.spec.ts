@@ -3240,6 +3240,7 @@ test('admin VPN access actions persist status and revision across reload', async
   api.failNextAccessQrRequest()
   await qrButton.click()
   await expect.poll(() => api.getRequestCount('/api/admin/access-credentials/access-e2e/qr')).toBe(qrRequestsBeforeFailure + 1)
+  await expect(page.getByText('Не удалось загрузить QR-код. Повторите попытку.')).toBeVisible()
   await expect(accessRow.locator('.qr-preview')).toHaveCount(0)
   const expectedQrFailure = browserErrors.findIndex((item) => item.includes('503 (Service Unavailable)'))
   if (expectedQrFailure >= 0) browserErrors.splice(expectedQrFailure, 1)

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.586.0 - 2026-08-10
+
+Release entry: `2026-08-10-api-error-code-fallback`.
+
+### Исправлено
+
+- Общий API-клиент больше не показывает машинные `snake_case` значения поля `error` как пользовательский текст и использует безопасный fallback.
+- QR-запросы cabinet/admin выводят контекстное сообщение, а auth translation сохраняет специальные переводы через исходный payload code.
+
+### Проверено
+
+- До исправления confirmed QR `503` показывал `qr_temporarily_unavailable`; после исправления API unit regression и targeted cabinet/admin Playwright `4/4` на desktop/mobile проходят.
+- Frontend `122/122`, typecheck/build, audit `0 vulnerabilities`; полный console-responsive Playwright `124/124`, включая all-screens `6/6` на 25 viewport-конфигурациях.
+- Backend `1125/1125`, EF drift OK, fresh SQLite order/payment/subscription/access flow OK, secret scan `668/0`; финальный encoding и artifact cleanup зафиксированы в `TEST_RESULTS.md`.
+- Roadmap: `599/619` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.585.0 - 2026-08-10
 
 Release entry: `2026-08-10-stale-qr-cache-invalidation`.

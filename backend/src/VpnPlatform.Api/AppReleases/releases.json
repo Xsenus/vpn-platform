@@ -13819,5 +13819,28 @@
         "text": "Roadmap progress is 598/618 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-api-error-code-fallback",
+    "version": "0.586.0",
+    "releasedAt": "2026-08-10T23:03:19+07:00",
+    "title": "Технические коды ошибок скрыты",
+    "summary": "Cabinet и admin показывают понятную ошибку загрузки QR вместо внутреннего backend-кода.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Машинные snake_case значения API error заменяются безопасным fallback, а человеческие сообщения сохраняются."
+      },
+      {
+        "type": "improved",
+        "text": "QR-запросы получили контекстный текст, а auth mapping продолжает переводить исходные коды из payload."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 599/619 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

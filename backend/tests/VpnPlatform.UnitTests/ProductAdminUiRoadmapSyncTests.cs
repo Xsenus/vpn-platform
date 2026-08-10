@@ -25,8 +25,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-10-stale-qr-cache-invalidation",
-                     "0.585.0"
+                     "2026-08-10-api-error-code-fallback",
+                     "0.586.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-10-stale-qr-cache-invalidation", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-stale-qr-cache-invalidation", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-api-error-code-fallback", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-api-error-code-fallback", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Frontend unit tests: `122/122`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-10-stale-qr-cache-invalidation",
-                     "0.585.0",
+                     "2026-08-10-api-error-code-fallback",
+                     "0.586.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

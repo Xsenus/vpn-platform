@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: API error code fallback
+
+Scope:
+- Machine-readable backend `error` values must not appear as raw user-facing text.
+- Human backend messages and auth-specific code translation must remain available while QR failures use a contextual fallback.
+
+Results:
+- Roadmap progress: `599/619` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-api-error-code-fallback`, version `0.586.0`.
+- Reproduction before fix: a confirmed QR `503` with `{ "error": "qr_temporarily_unavailable" }` surfaced that raw code in cabinet/admin UI; API unit tests also showed normalized auth errors could lose their payload code.
+- After fix: API regression keeps human messages, replaces `snake_case` codes with fallback and translates payload `invalid_credentials`; targeted cabinet/admin Playwright `4/4` passes on desktop/mobile with contextual QR text and no stale preview.
+- Visual audit: all-screens `6/6` passed on 25 viewport configurations `305x568..2560x1440`; full desktop/mobile console-responsive Playwright: `124/124`.
+- Frontend tests: `122/122`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `517962`, gzip `138857`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: stale QR cache invalidation
 
 Scope:
