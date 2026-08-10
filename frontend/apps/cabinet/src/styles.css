@@ -155,6 +155,21 @@
   grid-column: 1 / -1;
 }
 
+.payment-providers-error {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+.payment-providers-error p {
+  margin: 0;
+}
+
+.payment-providers-error .button {
+  max-width: 100%;
+  white-space: normal;
+}
+
 .app-version-overlay {
   position: fixed;
   inset: 0;

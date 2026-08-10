@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet payment-provider retry
+
+Scope:
+- Public payment-provider discovery in cabinet must perform one token-scoped initial attempt even under React StrictMode effect replay.
+- A transient failure must expose one accessible recovery state and restore renewal/retry-payment selection without logout or reload.
+
+Results:
+- Roadmap progress: `609/629` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-payment-provider-retry`, version `0.596.0`.
+- Reproduction before fix: persistent `503` produced two automatic `/api/public/payments/providers` requests under StrictMode instead of one, then rendered both a load error and a false no-enabled-providers alert without a retry control; fail-first desktop/mobile was `0/2` (`expected 1`, `received 2`).
+- After fix: `paymentProvidersEffectToken` deduplicates the initial attempt, manual retry increments the request generation, error/empty states are mutually exclusive and session reset invalidates older completions.
+- Targeted provider recovery: desktop/mobile `2/2`; one failed request remains settled for `300 ms`, explicit retry sends request two, restores enabled `YooKassa` and removes the alert without horizontal overflow.
+- Full cabinet desktop/mobile regression: `36/36`; final console-responsive Playwright: `138/138` in `8.5 min`; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: provider error/retry card screenshots at 1280 and 393 CSS px confirmed readable wrapping, one alert, stable toolbar/select layout and no overlap/overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; cabinet bundle raw `363.80 kB`, gzip `105.38 kB`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `595` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet app-version latest recovery
 
 Scope:

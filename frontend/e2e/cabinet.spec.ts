@@ -374,6 +374,7 @@ async function mockCabinetApi(page: Page) {
   let unsafeQrSvg = false
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
+  let paymentProvidersFailureStatus: number | null = null
   let appVersionAvailable = false
   let appVersionSeen = true
   let appVersionLatestFailureStatus: number | null = null
@@ -653,6 +654,10 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/public/payments/providers') {
+      if (paymentProvidersFailureStatus !== null) {
+        await fulfillJson(route, { error: 'payment_providers_temporarily_unavailable' }, paymentProvidersFailureStatus)
+        return
+      }
       await fulfillJson(route, [provider])
       return
     }
@@ -811,6 +816,8 @@ async function mockCabinetApi(page: Page) {
     failNextQrRequest: (status = 503) => { failNextQrStatus = status },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
+    failPaymentProviders: (status = 503) => { paymentProvidersFailureStatus = status },
+    allowPaymentProviders: () => { paymentProvidersFailureStatus = null },
     showAppVersionRelease: () => { appVersionAvailable = true },
     showUnseenAppVersionRelease: () => {
       appVersionAvailable = true
@@ -1045,6 +1052,30 @@ test('cabinet app version rejects history completed by a logged-out session', as
 
   await expect(page.getByRole('button', { name: /Версия 0\.573\.0/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Версия 0\.572\.0/ })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet payment providers fail once and recover only on explicit retry', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.failPaymentProviders()
+  await seedCabinetSession(page, 'access-token-provider-retry', 'refresh-token-provider-retry')
+
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Сессия и оплата' })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/public/payments/providers')).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/public/payments/providers')).toBe(1)
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить способы оплаты' })).toHaveCount(1)
+  await expect(page.getByText('Нет включенных способов оплаты для оплат из кабинета.')).toHaveCount(0)
+
+  api.allowPaymentProviders()
+  await page.getByRole('button', { name: 'Повторить загрузку способов оплаты' }).click()
+  await expect.poll(() => api.getRequestCount('/api/public/payments/providers')).toBe(2)
+  const providerSelect = page.getByLabel('Способ оплаты для продления')
+  await expect(providerSelect).toBeEnabled()
+  await expect(providerSelect).toHaveValue('YooKassa')
+  await expect(page.getByText('Доступно способов оплаты: 1.')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить способы оплаты' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

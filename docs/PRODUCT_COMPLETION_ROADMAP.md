@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-app-version-latest-recovery`, версия `0.595.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `608/628` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-payment-provider-retry`, версия `0.596.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `609/629` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -2128,6 +2128,10 @@ git diff --check
   - Что сделать: failed/empty latest response после ручного открытия не должен оставлять пользователя без UI; loading/error/empty и retry должны быть доступны на desktop/mobile, а history не должен стартовать до текущего релиза.
   - Что сделано: nullable modal показывает controlled latest state, retry использует session/request generation guards, история ждёт `latest`; error copy не дублируется в header.
   - Доказательство: до исправления fail-first desktop/mobile был `0/2`, dialog не появлялся; после исправления targeted `2/2`, cabinet regression `34/34`, полный Playwright `136/136` за `8.6 min`, all-screens `6/6`, viewport screenshots 1280/393 px проверены. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
+- [x] `P11-ACC-319` Восстановить способы оплаты после transient failure. 2026-08-11.
+  - Что сделать: provider discovery должна иметь одну initial attempt под StrictMode, один понятный error state и явный retry без logout/reload; network error не должен выглядеть как отсутствие настроенных провайдеров.
+  - Что сделано: token-scoped effect guard дедуплицирует initial request, retry использует request generation, error/empty взаимоисключены, session reset инвалидирует stale completion.
+  - Доказательство: до исправления fail-first desktop/mobile был `0/2` (`expected 1`, `received 2`) и recovery UI отсутствовал; после исправления targeted `2/2`, cabinet regression `36/36`, полный Playwright `138/138` за `8.5 min`, all-screens `6/6`, карточка на 1280/393 px проверена. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2777,6 +2781,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-009` | P1 | Cabinet / payment providers | StrictMode effect replay отправлял два initial provider-запроса; после transient failure UI одновременно показывал network error и ложное отсутствие включённых способов без retry, блокируя renewal/retry payment до logout/reload. | Исправлено локально | Одна token-scoped attempt, единый alert, generation-guarded explicit retry и взаимоисключающие error/empty состояния; desktop/mobile и полный responsive gate зелёные. |
 | `BUG-2026-08-11-008` | P1 | Cabinet / app-version latest | После failed/empty latest ручное открытие ставило `open=true`, но без `selectedRelease` gate возвращал `null`: пользователь не видел loading/error/empty UI и не мог повторить запрос; history мог стартовать за невидимым modal. | Исправлено локально | Controlled status modal, generation-guarded retry и ожидание latest перед history; desktop/mobile и полный responsive gate зелёные. |
 | `BUG-2026-08-11-007` | P1 | Cabinet / app-version history | После failed или empty history `loadingHistory` возвращался в `false` при пустом массиве и effect немедленно повторял запрос; fail-first создал `46` запросов за `300 ms`, recovery UI отсутствовал. | Исправлено локально | Одна session-scoped attempt, русский alert и explicit retry; failure/empty desktop/mobile regression и полный responsive gate зелёные. |
 | `BUG-2026-08-11-006` | P1 | Cabinet / «Что нового» | Кнопка была доступна при token-only hydration, но manual effect сбрасывал open signal без `userId`; после profile/latest completion пользовательское действие терялось. | Исправлено локально | Signal ожидает profile ID при активном token и сбрасывается только без token; delayed-profile desktop/mobile regression зелёный. |

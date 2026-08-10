@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AccessCredentialDto,
   ApiClient,
@@ -137,6 +137,7 @@ export function App() {
   const supportMessagesRequestId = useRef(0)
   const supportMessagesEffectSkipId = useRef('')
   const paymentProvidersRequestId = useRef(0)
+  const paymentProvidersEffectToken = useRef<string | null>(null)
   const selectedSupportConversationIdRef = useRef(selectedSupportConversationId)
   const supportCreateDraftRef = useRef('')
   const supportReplyTextRef = useRef(supportReplyText)
@@ -212,6 +213,7 @@ export function App() {
     supportMessagesRequestId.current += 1
     supportMessagesEffectSkipId.current = ''
     paymentProvidersRequestId.current += 1
+    paymentProvidersEffectToken.current = null
     setToken('')
     setRefreshToken('')
     setSessionHydrating(false)
@@ -472,11 +474,11 @@ export function App() {
     void loadSupportMessages(selectedSupportConversation.id, token, sessionOperationId.current)
   }, [token, selectedSupportConversation?.id])
 
-  useEffect(() => {
+  const loadPaymentProviders = useCallback((currentToken: string) => {
     const requestId = ++paymentProvidersRequestId.current
     const requestIsCurrent = () => paymentProvidersRequestId.current === requestId
 
-    if (!token) {
+    if (!currentToken) {
       setPaymentProvidersLoading(false)
       setPaymentProvidersError('')
       setPaymentProviders([])
@@ -485,6 +487,7 @@ export function App() {
     }
 
     setPaymentProvidersLoading(true)
+    setPaymentProvidersError('')
     api.getPublicPaymentProviders()
       .then((items) => {
         if (!requestIsCurrent()) return
@@ -501,11 +504,13 @@ export function App() {
       .finally(() => {
         if (requestIsCurrent()) setPaymentProvidersLoading(false)
       })
+  }, [api])
 
-    return () => {
-      if (paymentProvidersRequestId.current === requestId) paymentProvidersRequestId.current += 1
-    }
-  }, [token])
+  useEffect(() => {
+    if (paymentProvidersEffectToken.current === token) return
+    paymentProvidersEffectToken.current = token
+    loadPaymentProviders(token)
+  }, [loadPaymentProviders, token])
 
 
   const handleAuthSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1053,8 +1058,15 @@ export function App() {
               </div>
               <p className="muted">Вы вошли как {profile?.email ?? profile?.displayName ?? 'пользователь'}.</p>
               {paymentProvidersLoading && <p className="muted">Загружаем доступные способы оплаты...</p>}
-              {paymentProvidersError && <p className="toast-error" role="alert">Не удалось загрузить способы оплаты: {paymentProvidersError}</p>}
-              {!paymentProvidersLoading && paymentProviders.length === 0 && <p className="toast-error" role="alert">Нет включенных способов оплаты для оплат из кабинета.</p>}
+              {paymentProvidersError && (
+                <div className="toast-error payment-providers-error" role="alert">
+                  <p>Не удалось загрузить способы оплаты: {paymentProvidersError}</p>
+                  <PrimaryButton type="button" className="button-secondary" disabled={paymentProvidersLoading} aria-busy={paymentProvidersLoading} onClick={() => loadPaymentProviders(token)}>
+                    Повторить загрузку способов оплаты
+                  </PrimaryButton>
+                </div>
+              )}
+              {!paymentProvidersLoading && !paymentProvidersError && paymentProviders.length === 0 && <p className="toast-error" role="alert">Нет включенных способов оплаты для оплат из кабинета.</p>}
               {!paymentProvidersLoading && paymentProviders.length > 0 && <p className="muted">Доступно способов оплаты: {paymentProviders.length}. В списке только включенные и готовые web-провайдеры.</p>}
             </>
           )}

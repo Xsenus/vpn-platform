@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.596.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-payment-provider-retry`.
+
+### Исправлено
+
+- Cabinet больше не отправляет два автоматических запроса payment providers при React StrictMode effect replay: initial attempt дедуплицирована по текущему token.
+- Ошибка загрузки способов оплаты теперь имеет один русский alert и явную кнопку «Повторить загрузку способов оплаты»; ложное сообщение об отсутствии включённых провайдеров при network failure скрыто.
+- Retry использует request generation guard, восстанавливает select без logout/reload и не принимает stale completion старой попытки или сессии.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: ожидался один provider-запрос, фактически отправлялось два, recovery control отсутствовал. После исправления targeted desktop/mobile `2/2`: failure остаётся на одной попытке, ручной retry восстанавливает `YooKassa` вторым запросом.
+- Полный cabinet desktop/mobile regression прошёл `36/36`; token rotation/logout, renewal/retry payment и остальные cabinet операции остались зелёными.
+- Полный console-responsive Playwright прошёл `138/138` за `8.5 min`, all-screens `6/6` на 25 viewport-конфигурациях; карточка error/retry отдельно просмотрена на 1280/393 px без overflow и overlap.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный.
+- Roadmap: `609/629` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.595.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-app-version-latest-recovery`.
