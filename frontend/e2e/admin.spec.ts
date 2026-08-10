@@ -2293,6 +2293,8 @@ test('admin preserves a restored session after a transient admission failure', a
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Восстановление admin-сессии' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Не удалось выполнить запрос. Попробуйте еще раз.')
+  await expect(page.getByText('admin_session_temporarily_unavailable')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Повторить проверку' })).toBeEnabled()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await expect(page.evaluate(() => ({

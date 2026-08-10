@@ -49,7 +49,8 @@ import {
   WorkScenarioDto,
   WorkScenarioUpsertPayload,
   PanelHealthCheckDto,
-  PanelSyncRunDto
+  PanelSyncRunDto,
+  normalizeApiError
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
@@ -1275,7 +1276,7 @@ export function App() {
     try {
       return await loader()
     } catch (e) {
-      errors.push({ area, message: e instanceof Error ? e.message : 'Failed to load' })
+      errors.push({ area, message: normalizeApiError(e, 'Не удалось загрузить данные раздела.') })
       return fallback
     }
   }
@@ -1522,7 +1523,7 @@ export function App() {
         await revokeRequest
       } else {
         clearAdminData()
-        setError(error instanceof Error ? error.message : 'Не удалось восстановить сессию администратора')
+        setError(normalizeApiError(error, 'Не удалось восстановить сессию администратора'))
       }
       return false
     } finally {
@@ -1723,7 +1724,7 @@ export function App() {
           : Promise.resolve(false)
       })
     } catch (e) {
-      if (operationIsCurrent()) setError(e instanceof Error ? e.message : 'Action failed')
+      if (operationIsCurrent()) setError(normalizeApiError(e, 'Не удалось выполнить действие. Повторите попытку.'))
     } finally {
       actionRequestsInFlight.current.delete(requestKey)
       if (operationIsCurrent()) setActionBusyId((current) => current === id ? '' : current)
@@ -1875,7 +1876,7 @@ export function App() {
       await loadAll(response.accessToken, verifiedSession, { operationId })
     } catch (e) {
       if (!operationIsCurrent()) return
-      setError(e instanceof Error ? e.message : 'Не удалось получить admin token')
+      setError(normalizeApiError(e, 'Не удалось получить admin token'))
     } finally {
       if (operationIsCurrent()) setBusy(false)
     }
@@ -1920,9 +1921,9 @@ export function App() {
       } else if (refreshRotated) {
         clearAdminData()
         setSessionHydrating(false)
-        setError(e instanceof Error ? e.message : 'Не удалось проверить обновлённую сессию администратора')
+        setError(normalizeApiError(e, 'Не удалось проверить обновлённую сессию администратора'))
       } else {
-        setError(e instanceof Error ? e.message : 'Не удалось обновить сессию администратора')
+        setError(normalizeApiError(e, 'Не удалось обновить сессию администратора'))
       }
     } finally {
       if (operationIsCurrent()) setBusy(false)
@@ -1973,7 +1974,7 @@ export function App() {
       return true
     } catch (e) {
       if (!requestIsCurrent()) return false
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить карточку пользователя')
+      setError(normalizeApiError(e, 'Не удалось загрузить карточку пользователя'))
       return false
     } finally {
       if (requestIsCurrent()) setUserOverviewLoading(false)
@@ -1999,7 +2000,7 @@ export function App() {
       return true
     } catch (e) {
       if (!requestIsCurrent()) return false
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить сообщения поддержки')
+      setError(normalizeApiError(e, 'Не удалось загрузить сообщения поддержки'))
       return false
     } finally {
       if (requestIsCurrent()) setSupportMessagesLoading(false)
@@ -2052,7 +2053,7 @@ export function App() {
     } catch (e) {
       if (!requestIsCurrent()) return false
       clearVpnPanelDetails()
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить детали VPN-панели')
+      setError(normalizeApiError(e, 'Не удалось загрузить детали VPN-панели'))
       return false
     }
   }

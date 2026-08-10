@@ -13888,5 +13888,28 @@
         "text": "Roadmap progress is 601/621 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-runtime-error-ui-boundary",
+    "version": "0.589.0",
+    "releasedAt": "2026-08-11T00:38:10+07:00",
+    "title": "Ошибки интерфейса закрыты общей локализацией",
+    "summary": "Public, cabinet и admin заменяют неизвестные runtime и handler exceptions контекстными русскими сообщениями.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Прямой вывод Error.message удалён из session, provider, renewal, action, detail и partial-load error paths."
+      },
+      {
+        "type": "improved",
+        "text": "Единый normalizer сохраняет русские domain messages и скрывает неизвестные English runtime diagnostics за контекстным fallback."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 602/622 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

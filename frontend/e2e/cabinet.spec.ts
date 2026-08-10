@@ -946,6 +946,8 @@ test('cabinet preserves a restored session after a transient profile failure', a
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Восстановление сессии' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Не удалось выполнить запрос. Попробуйте еще раз.')
+  await expect(page.getByText('profile_temporarily_unavailable')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Повторить загрузку' })).toBeEnabled()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await expect(page.evaluate(() => ({
@@ -1226,6 +1228,7 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(renewalCard).toContainText('ID заказа: order-renewal')
   await expect(renewalCard).toContainText('Заказ сохранён, но ссылка оплаты ещё не подготовлена.')
   await expect(page.getByRole('alert').filter({ hasText: 'Заказ на продление order-renewal создан' })).toContainText('но ссылку оплаты подготовить не удалось.')
+  await expect(page.getByText('payment provider unavailable')).toHaveCount(0)
   expect(api.getRequestCount('/api/me/orders', 'POST')).toBe(1)
   expect(api.getRequestCount('/api/me/orders/order-renewal/payments/YooKassa/init', 'POST')).toBe(1)
   await renewalCard.getByRole('button', { name: 'Повторить подготовку оплаты' }).click()

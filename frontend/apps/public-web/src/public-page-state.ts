@@ -57,6 +57,5 @@ export function canStartCheckout(
 }
 
 export function getCheckoutErrorMessage(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message.trim() : ''
-  return normalizeApiError(message, fallback)
+  return normalizeApiError(error, fallback)
 }

@@ -16,6 +16,7 @@ import {
   TelegramLinkTokenDto,
   TelegramStatusDto,
   UserProfileDto,
+  normalizeApiError,
   translateAuthError,
   translateAuthMessage,
   validateAuthInput,
@@ -258,7 +259,7 @@ export function App() {
       return
     }
 
-    setError(error instanceof Error ? error.message : fallback)
+    setError(normalizeApiError(error, fallback))
   }
 
   const storeSession = async (response: AuthResponse, operationId: number) => {
@@ -413,7 +414,7 @@ export function App() {
         clearSession()
         setError(cabinetSessionEndedMessage)
       } else {
-        setError(e instanceof Error ? e.message : 'Не удалось восстановить сессию')
+        setError(normalizeApiError(e, 'Не удалось восстановить сессию'))
       }
       return false
     } finally {
@@ -491,11 +492,11 @@ export function App() {
         setPaymentProvidersError('')
         setProvider((current) => current && items.some((item) => item.provider === current) ? current : (items[0]?.provider ?? ''))
       })
-      .catch((e: Error) => {
+      .catch((e: unknown) => {
         if (!requestIsCurrent()) return
         setPaymentProviders([])
         setProvider('')
-        setPaymentProvidersError(e.message)
+        setPaymentProvidersError(normalizeApiError(e, 'Не удалось загрузить способы оплаты.'))
       })
       .finally(() => {
         if (requestIsCurrent()) setPaymentProvidersLoading(false)
@@ -825,7 +826,8 @@ export function App() {
       } catch (e) {
         if (!action.isCurrent()) return
         if (createdOrder && !isCabinetSessionRejected(e)) {
-          const details = e instanceof Error && e.message.trim() ? ` ${e.message}` : ''
+          const normalizedDetails = normalizeApiError(e, '').trim()
+          const details = normalizedDetails ? ` ${normalizedDetails}` : ''
           setError(`Заказ на продление ${createdOrder.id} создан, но ссылку оплаты подготовить не удалось. Повторите подготовку оплаты для этого заказа.${details}`)
           return
         }
@@ -856,7 +858,8 @@ export function App() {
       } catch (e) {
         if (!action.isCurrent()) return
         if (isCabinetSessionRejected(e)) throw e
-        const details = e instanceof Error && e.message.trim() ? ` ${e.message}` : ''
+        const normalizedDetails = normalizeApiError(e, '').trim()
+        const details = normalizedDetails ? ` ${normalizedDetails}` : ''
         setError(`Заказ на продление ${renewal.order.id} сохранён, но ссылку оплаты снова подготовить не удалось.${details}`)
       }
     })

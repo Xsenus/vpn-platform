@@ -22,6 +22,7 @@ test('public session error guards distinguish refreshable and terminal responses
 })
 
 test('public session check keeps controlled error text for retry UI', () => {
-  assert.equal(getPublicSessionCheckError(new Error('profile unavailable')), 'profile unavailable')
+  assert.equal(getPublicSessionCheckError(new Error('profile unavailable')), publicSessionCheckFallback)
+  assert.equal(getPublicSessionCheckError(new Error('Сервер временно недоступен.')), 'Сервер временно недоступен.')
   assert.equal(getPublicSessionCheckError(null), publicSessionCheckFallback)
 })

@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-russian-api-error-boundary`, версия `0.588.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `601/621` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-runtime-error-ui-boundary`, версия `0.589.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `602/622` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-10:
 
 - [x] `STATE-001` Backend test suite проходит: `1125/1125`.
-- [x] `STATE-002` Frontend test suite проходит: `124/124`.
+- [x] `STATE-002` Frontend test suite проходит: `125/125`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2100,6 +2100,10 @@ git diff --check
   - Что сделать: англоязычные controller diagnostics и native fetch errors не должны попадать в русскую UI; известные domain errors должны сохранять точный перевод, HTTP status/raw payload — оставаться доступными программно.
   - Что сделано: общий normalizer переводит десять promo error patterns, сохраняет русский backend text, скрывает прочий ASCII-only текст за caller fallback; `fetchWithTimeout` оборачивает неизвестные transport/body failures в русский `ApiClientError` со `status = 0`, сохраняя caller-requested abort как управляющую отмену.
   - Доказательство: инвентаризация нашла `161/162` controller literal errors без русского текста; до исправления unit/E2E показывали `boom`, `Failed to fetch`, `profile unavailable`, `payment provider unavailable` и English VPN phrase. После исправления targeted unit `60/60`, public `6/6`, admin `2/2`, полный Playwright `124/124`, frontend `124/124`, backend `1125/1125`, EF drift/fresh SQLite/secret scan зелёные. Promo «не найден» остается точным русским сообщением; внешние evidence не закрывались.
+- [x] `P11-ACC-312` Закрыть runtime и handler exception boundary во всех frontend-приложениях. 2026-08-11.
+  - Что сделать: public, cabinet и admin не должны напрямую выводить `Error.message`; session rejection и полезные русские domain messages должны сохраняться, неизвестные exceptions — получать контекстный fallback.
+  - Что сделано: `normalizeApiError` применяется в public session/checkout, cabinet session/provider/renewal и admin hydration/action/detail/partial-load paths; удалены `Action failed`, `Failed to load` и все прямые user-facing exception-message consumers.
+  - Доказательство: до исправления targeted unit/source был `57/59`, public session возвращал `profile unavailable`, source guard находил прямые consumers; после исправления targeted `59/59`, browser desktop/mobile `6/6`, полный Playwright `124/124`, all-screens `6/6` на 25 viewport, frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite/secret scan зелёные. Внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2749,6 +2753,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-002` | P1 | Frontend / error boundary | API/network errors уже локализовались, но `16` public/cabinet/admin consumers напрямую читали `Error.message`; admin fallback содержал `Action failed` и `Failed to load`, поэтому runtime exception мог снова вывести English diagnostics. | Исправлено локально | Все exception paths используют общий normalizer и контекстные русские fallback; source guard запрещает прямой вывод, desktop/mobile и полный responsive regression зелёные. |
 | `BUG-2026-08-11-001` | P1 | API client / localization | Русская UI напрямую показывала English controller diagnostics и native `Failed to fetch`; `161/162` literal controller errors не содержали русского текста, но promo checkout зависел от точных English phrases для перевода. | Исправлено локально | Единая boundary переводит известные promo patterns, скрывает прочий ASCII-only текст русским fallback и оборачивает network errors; raw payload/status сохранены, desktop/mobile public/admin regressions зелёные. |
 | `BUG-2026-08-10-035` | P1 | API client / error payload | Защита от machine-code применялась к plain text и полю `error`, но поле `message`, whitespace-only значения и неизвестный auth code могли вернуть сырой или пустой пользовательский текст. | Исправлено локально | Единый text normalizer покрывает `error`/`message`/plain text и auth fallback; unit regression и cabinet/admin desktop/mobile E2E подтверждают обе JSON-формы. |
 | `BUG-2026-08-10-034` | P1 | API client / user-facing errors | Backend `error` со значением `snake_case`, включая `qr_temporarily_unavailable`, без перевода попадал в cabinet/admin UI как сырой технический код. | Исправлено локально | Общая нормализация заменяет машинные коды fallback-текстом, QR использует контекстное сообщение, auth mapping читает исходный payload code; unit и desktop/mobile Playwright regressions зелёные. |

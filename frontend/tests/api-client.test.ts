@@ -662,7 +662,24 @@ test('normalizeApiError prefers error field and message field', () => {
   assert.equal(normalizeApiError({ error: '   ' }, 'fallback'), 'fallback')
   assert.equal(normalizeApiError({ error: ' ', message: 'Запрос отклонён.' }, 'fallback'), 'Запрос отклонён.')
   assert.equal(normalizeApiError({ message: '\t' }, 'fallback'), 'fallback')
+  assert.equal(normalizeApiError(new Error('profile unavailable'), 'fallback'), 'fallback')
+  assert.equal(normalizeApiError(new Error('Операция временно недоступна.'), 'fallback'), 'Операция временно недоступна.')
+  assert.equal(normalizeApiError('Action failed', 'fallback'), 'fallback')
   assert.equal(normalizeApiError(null, 'fallback'), 'fallback')
+})
+
+test('frontend error consumers normalize exceptions before rendering them', () => {
+  const publicSessionSource = readFileSync(new URL('../apps/public-web/src/public-session.ts', import.meta.url), 'utf8')
+  const publicPageStateSource = readFileSync(new URL('../apps/public-web/src/public-page-state.ts', import.meta.url), 'utf8')
+  const cabinetSource = readFileSync(new URL('../apps/cabinet/src/App.tsx', import.meta.url), 'utf8')
+  const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
+
+  for (const source of [publicSessionSource, publicPageStateSource, cabinetSource, adminSource]) {
+    assert.match(source, /normalizeApiError/)
+    assert.doesNotMatch(source, /instanceof Error\s*\?\s*[a-z]+\.message/)
+  }
+  assert.doesNotMatch(cabinetSource, /setPaymentProvidersError\([^)]*\.message\)/)
+  assert.doesNotMatch(adminSource, /['"](?:Action failed|Failed to load)['"]/)
 })
 
 test('ApiClient errors preserve HTTP status and normalized payload', async () => {

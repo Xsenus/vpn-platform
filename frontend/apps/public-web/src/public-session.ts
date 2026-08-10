@@ -1,4 +1,4 @@
-import { ApiClientError } from '@vpn-platform/api-client'
+import { ApiClientError, normalizeApiError } from '@vpn-platform/api-client'
 
 export const publicSessionEndedMessage = 'Сессия завершена или доступ к аккаунту отозван. Войдите заново.'
 export const publicSessionCheckFallback = 'Не удалось проверить сессию. Повторите попытку, не выполняя новый вход.'
@@ -12,5 +12,5 @@ export function isPublicSessionRejected(error: unknown) {
 }
 
 export function getPublicSessionCheckError(error: unknown) {
-  return error instanceof Error ? error.message : publicSessionCheckFallback
+  return normalizeApiError(error, publicSessionCheckFallback)
 }

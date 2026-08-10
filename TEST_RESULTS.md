@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Runtime error UI boundary
+
+Scope:
+- Runtime and handler exceptions outside the API transport layer must not expose English `Error.message` text in public, cabinet or admin UI.
+- Session rejection semantics and useful Russian domain messages must remain intact while every unknown exception gets a contextual fallback.
+
+Results:
+- Roadmap progress: `602/622` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-runtime-error-ui-boundary`, version `0.589.0`.
+- Inventory: `16` user-facing exception consumers across public session/checkout, cabinet session/provider/renewal and admin hydration/action/detail/partial-load paths; literals `Action failed` and `Failed to load` were still reachable fallbacks.
+- Reproduction before fix: targeted unit/source run was `57/59`; public session returned raw `profile unavailable`, and the source guard found direct `Error.message` rendering.
+- After fix: every exception consumer calls `normalizeApiError` with a contextual Russian fallback; known Russian messages survive, 401/403 session handling remains separate, renewal details omit unsafe text instead of appending it.
+- Targeted unit/source/public-session: `59/59`; targeted cabinet/admin desktop/mobile browser: `6/6`.
+- Visual audit: full console-responsive Playwright `124/124`; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`; no blank screen, overflow, console or page errors.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Russian API error boundary
 
 Scope:

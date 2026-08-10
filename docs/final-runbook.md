@@ -177,7 +177,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-09 локально подтверждено:
 
 - backend full suite: 1125/1125;
-- frontend tests: 124/124;
+- frontend tests: 125/125;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-11-russian-api-error-boundary`, версия `0.588.0`; English JSON/plain errors и native fetch failures не попадают в русскую UI, promo messages сохраняют точный перевод.
-- roadmap progress: `601/621` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-11-runtime-error-ui-boundary`, версия `0.589.0`; API/network/runtime/handler exceptions проходят через общий русский fallback, session rejection и русские domain messages сохранены.
+- roadmap progress: `602/622` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

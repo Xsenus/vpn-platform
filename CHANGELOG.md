@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.589.0 - 2026-08-11
+
+Release entry: `2026-08-11-runtime-error-ui-boundary`.
+
+### Исправлено
+
+- Public, cabinet и admin больше не выводят `Error.message` напрямую: runtime/handler exceptions проходят через общий русский fallback так же, как API и network failures.
+- Удалены англоязычные fallback `Action failed` и `Failed to load`; session hydration, payment-provider loading, renewal details, admin actions и partial-load diagnostics получили контекстные русские сообщения.
+
+### Проверено
+
+- До исправления targeted набор падал `2/59`: public session возвращал `profile unavailable`, а source guard находил прямые exception consumers; после исправления targeted unit/source `59/59`, desktop/mobile browser `6/6`.
+- Frontend `125/125`, typecheck/build, audit `0 vulnerabilities`; полный console-responsive Playwright `124/124`, all-screens `6/6` на 25 viewport-конфигурациях; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite order/payment/subscription/access flow и secret scan `668/0` зелёные; финальные encoding, release-seed smoke и cleanup зафиксированы в `TEST_RESULTS.md`.
+- Roadmap: `602/622` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.588.0 - 2026-08-11
 
 Release entry: `2026-08-11-russian-api-error-boundary`.
