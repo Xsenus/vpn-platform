@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.598.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-support-messages-retry`.
+
+### Исправлено
+
+- Transient error загрузки сообщений выбранного обращения в admin-panel больше не уходит в общий banner и не маскируется ложным состоянием «Сообщений нет».
+- В карточке «Диалог поддержки» появился один доступный alert с явной кнопкой «Повторить загрузку сообщений» без logout, reload или повторного выбора обращения.
+- Retry сохраняет текущую переписку и использует session/request generation guards, поэтому stale response другой переписки или сессии не заменяет актуальные сообщения.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: локальный alert и retry отсутствовали. После исправления targeted desktop/mobile прошёл `2/2`: одна failed attempt остаётся settled, второй запрос восстанавливает исходное сообщение.
+- Полный admin desktop/mobile regression прошёл `68/68`; support lifecycle/race/logout, CRUD, role/capability и остальные admin операции остались зелёными.
+- Полный console-responsive Playwright прошёл `142/142` за `8.5 min`, all-screens `6/6` на 25 viewport-конфигурациях; карточка отдельно просмотрена на 1280/393 px без overflow и overlap.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; admin bundle budget `519898/139555/max 220226`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `597`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `611/631` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.597.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-support-messages-retry`.

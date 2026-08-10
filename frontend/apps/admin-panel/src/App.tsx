@@ -1084,6 +1084,7 @@ export function App() {
   const [selectedSupportConversationId, setSelectedSupportConversationId] = useState('')
   const [supportMessages, setSupportMessages] = useState<SupportMessageDto[]>([])
   const [supportMessagesLoading, setSupportMessagesLoading] = useState(false)
+  const [supportMessagesError, setSupportMessagesError] = useState('')
   const [supportReplyText, setSupportReplyText] = useState('')
   const [supportNoteText, setSupportNoteText] = useState('')
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
@@ -1296,6 +1297,7 @@ export function App() {
     supportMessagesRequestId.current += 1
     setSupportMessages([])
     setSupportMessagesLoading(false)
+    setSupportMessagesError('')
     setSupportReplyText('')
     setSupportNoteText('')
     setSelectedSupportConversationId(conversationId)
@@ -1609,6 +1611,7 @@ export function App() {
       supportMessagesRequestId.current += 1
       setSupportMessages([])
       setSupportMessagesLoading(false)
+      setSupportMessagesError('')
     }
   }, [token, selectedSupportConversationId])
 
@@ -1770,6 +1773,7 @@ export function App() {
     setSupportMessages([])
     supportMessagesRequestId.current += 1
     setSupportMessagesLoading(false)
+    setSupportMessagesError('')
     setSupportReplyText('')
     setSupportNoteText('')
     setTariffs([])
@@ -1993,14 +1997,16 @@ export function App() {
       && selectedSupportConversationIdRef.current === conversationId
     setSupportMessages([])
     setSupportMessagesLoading(true)
+    setSupportMessagesError('')
     try {
       const messages = await api.getAdminSupportMessages(currentToken, conversationId)
       if (!requestIsCurrent()) return false
       setSupportMessages(messages)
+      setSupportMessagesError('')
       return true
     } catch (e) {
       if (!requestIsCurrent()) return false
-      setError(normalizeApiError(e, 'Не удалось загрузить сообщения поддержки'))
+      setSupportMessagesError(normalizeApiError(e, 'Не удалось загрузить сообщения поддержки'))
       return false
     } finally {
       if (requestIsCurrent()) setSupportMessagesLoading(false)
@@ -4317,7 +4323,15 @@ export function App() {
           <h3>Диалог поддержки</h3>
           <label><span>Обращение</span><select value={selectedSupportConversationId} onChange={(e) => selectSupportConversation(e.target.value)}><option value="">Не выбрано</option>{supportConversations.map((conversation) => <option key={conversation.id} value={conversation.id}>{conversation.subject || shortId(conversation.id)}</option>)}</select></label>
           {supportMessagesLoading && <LoadingBlock label="Загружаем сообщения поддержки..." />}
-          {!supportMessagesLoading && selectedSupportConversationId && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Для выбранного обращения сообщения пока не сохранены." />}
+          {supportMessagesError && selectedSupportConversationId && (
+            <div className="toast-error support-messages-error" role="alert">
+              <p>Не удалось загрузить сообщения поддержки: {supportMessagesError}</p>
+              <PrimaryButton type="button" className="button-secondary" disabled={supportMessagesLoading} aria-busy={supportMessagesLoading} onClick={() => void loadSupportMessages(selectedSupportConversationId, token, sessionOperationId.current)}>
+                Повторить загрузку сообщений
+              </PrimaryButton>
+            </div>
+          )}
+          {!supportMessagesLoading && !supportMessagesError && selectedSupportConversationId && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Для выбранного обращения сообщения пока не сохранены." />}
           <div className="list-stack mt-12">{supportMessages.slice(-12).map((message) => <div key={message.id} className="list-item-vertical"><div className="card-head"><strong>{message.direction}{message.isInternalNote ? ' · внутренняя заметка' : ''}</strong><span className="muted">{formatDate(message.createdAt)}</span></div><div>{message.text}</div></div>)}</div>
           <form hidden={!canWriteSection('support')} className="mt-12" aria-busy={actionBusyId === `support-reply-${selectedSupportConversationId}`} onSubmit={(event) => { event.preventDefault(); void handleReplySupport() }}>
             <label><span>Ответ пользователю</span><textarea value={supportReplyText} onChange={(e) => setSupportReplyText(e.target.value)} rows={3} placeholder="Текст ответа" /></label>

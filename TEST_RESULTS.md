@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin support-message retry
+
+Scope:
+- A transient messages failure for the selected admin support conversation must remain inside the dialog card and must not look like a successfully loaded empty conversation.
+- Recovery must be explicit, selection/session-safe and layout-safe on desktop/mobile without logout, reload or conversation reselection.
+
+Results:
+- Roadmap progress: `611/631` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-support-messages-retry`, version `0.598.0`.
+- Reproduction before fix: persistent `503` sent the message-load failure to the global banner, rendered «Сообщений нет» inside the dialog and exposed no local retry; fail-first desktop/mobile was `0/2`.
+- After fix: the selected admin dialog owns `supportMessagesError`, hides the empty state on failure and exposes a generation-guarded explicit retry.
+- Targeted support recovery: desktop/mobile `2/2`; one failed request remains settled for `300 ms`, explicit retry sends request two, restores the original message and removes the only alert without horizontal overflow.
+- Full admin desktop/mobile regression: `68/68`; final console-responsive Playwright: `142/142` in `8.5 min`; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: dialog error/retry screenshots at 1280 and 393 CSS px confirmed readable wrapping, stable reply/note controls and no overlap/overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `519898`, gzip `139555`, largest `220226`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `597` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet support-message retry
 
 Scope:

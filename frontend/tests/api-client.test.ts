@@ -2608,6 +2608,8 @@ test('frontend sources include app version gate and admin release editor', () =>
   assert.match(cabinetAppSource, /paymentProvidersEffectToken/)
   assert.match(cabinetAppSource, /supportMessagesError/)
   assert.match(cabinetAppSource, /Повторить загрузку переписки/)
+  assert.match(adminSource, /supportMessagesError/)
+  assert.match(adminSource, /Повторить загрузку сообщений/)
   assert.match(cabinetSource, /if \(!token \|\| !userId\) return/)
   assert.match(cabinetSource, /if \(!token\) \{\s*onManualOpenHandled\(\)\s*return\s*\}\s*if \(!userId\) return/)
   assert.match(cabinetSource, /sessionRequestIdRef\.current === sessionRequestId/)

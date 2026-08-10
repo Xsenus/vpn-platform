@@ -453,6 +453,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedUserOverview: (() => void) | null = null
   let delayedSupportMessagesId: string | null = null
   let releaseDelayedSupportMessages: (() => void) | null = null
+  let supportMessagesFailureConversationId: string | null = null
+  let supportMessagesFailureStatus = 503
   let delayNextSupportStatusResponse = false
   let releaseDelayedSupportStatus: (() => void) | null = null
   let delayNextTariffCreateResponse = false
@@ -1079,6 +1081,10 @@ async function mockAdminApi(page: Page) {
     const supportMessagesMatch = path.match(/^\/api\/admin\/support\/conversations\/([^/]+)\/messages$/)
     if (method === 'GET' && supportMessagesMatch) {
       const conversationId = decodeURIComponent(supportMessagesMatch[1])
+      if (supportMessagesFailureConversationId === conversationId) {
+        await fulfillJson(route, { message: 'Временная ошибка загрузки сообщений поддержки.' }, supportMessagesFailureStatus)
+        return
+      }
       const response = supportMessages.get(conversationId) ?? []
       if (delayedSupportMessagesId === conversationId) {
         delayedSupportMessagesId = null
@@ -1836,6 +1842,11 @@ async function mockAdminApi(page: Page) {
     releaseUserOverview: () => { releaseDelayedUserOverview?.() },
     delaySupportMessages: (conversationId: string) => { delayedSupportMessagesId = conversationId },
     releaseSupportMessages: () => { releaseDelayedSupportMessages?.() },
+    failSupportMessages: (conversationId: string, status = 503) => {
+      supportMessagesFailureConversationId = conversationId
+      supportMessagesFailureStatus = status
+    },
+    allowSupportMessages: () => { supportMessagesFailureConversationId = null },
     delayNextSupportStatus: () => { delayNextSupportStatusResponse = true },
     releaseSupportStatus: () => { releaseDelayedSupportStatus?.() },
     useSupportLifecycleFixture: () => {
@@ -2121,6 +2132,34 @@ test('admin detail views ignore older selections and keep support actions scoped
   await expect(page.getByText('Статус обращения обновлен: closed.')).toBeVisible()
   expect(api.getRequestCount('/api/admin/support/conversations/support-first/messages')).toBe(firstMessagesCount)
   await expect(supportSection.getByText('Текущее сообщение второго обращения', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin support messages failure stays scoped and recovers on explicit retry', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.useDetailRequestRaceFixture()
+  api.failSupportMessages('support-first')
+  await seedAdminSession(page, 'admin-support-retry-token', 'admin-support-retry-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  const messagesPath = '/api/admin/support/conversations/support-first/messages'
+  await expect.poll(() => api.getRequestCount(messagesPath)).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount(messagesPath)).toBe(1)
+
+  await openAdminSection(page, 'Поддержка', 'support')
+  const supportSection = page.locator('#support')
+  const dialogCard = supportSection.locator('.card').filter({ has: page.getByRole('heading', { name: 'Диалог поддержки' }) })
+  await expect(dialogCard.getByRole('alert').filter({ hasText: 'Не удалось загрузить сообщения поддержки' })).toHaveCount(1)
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить сообщения поддержки' })).toHaveCount(1)
+  await expect(dialogCard.getByRole('heading', { name: 'Сообщений нет' })).toHaveCount(0)
+
+  api.allowSupportMessages()
+  await dialogCard.getByRole('button', { name: 'Повторить загрузку сообщений' }).click()
+  await expect.poll(() => api.getRequestCount(messagesPath)).toBe(2)
+  await expect(dialogCard.getByText('Старое сообщение первого обращения', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить сообщения поддержки' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

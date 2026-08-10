@@ -14095,5 +14095,28 @@
         "text": "Roadmap progress is 610/630 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-admin-support-messages-retry",
+    "version": "0.598.0",
+    "releasedAt": "2026-08-11T04:44:39+07:00",
+    "title": "Диалог поддержки в админке восстанавливается после ошибки",
+    "summary": "Ошибка сообщений остаётся в карточке выбранного обращения, а явный повтор возвращает переписку без перезагрузки панели.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Временная ошибка загрузки сообщений больше не выглядит как пустой диалог и не теряется в общем уведомлении admin-panel."
+      },
+      {
+        "type": "improved",
+        "text": "Кнопка повторной загрузки сохраняет выбранное обращение и безопасно восстанавливает сообщения на desktop и mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 611/631 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
