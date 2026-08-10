@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.565.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-support-channel-lifecycle-fix`.
+
+### Исправлено
+
+- Web-обращение без `telegramUserId` больше не обещает Telegram-доставку: backend возвращает `saved`, а admin UI показывает «Сохранить ответ» и точное уведомление о сохранении.
+- Telegram-обращение сохраняет отдельную команду «Отправить через Telegram» и статус очереди; кнопки смены статуса блокируются на время запроса и не допускают повторную операцию.
+
+### Проверено
+
+- Stateful SupportAgent flow выполняет reply, internal note, pending, close, reload, reopen и повторный reload с revision `0 -> 5`, authorization и сохранением сообщений на desktop/mobile.
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`; targeted/adjacent admin Playwright `6/6`.
+- Backend support contract `4/4`; backend full suite `1113/1113`, console-responsive Playwright `102/102`, fresh SQLite smoke и secret scan подтверждаются финальным gate этого release.
+- `RoadmapCurrentStateTests` синхронизирует release seed, docs и счетчики, не закрывая внешние acceptance-пункты локальными mock/smoke.
+- Fresh local SQLite smoke подтвердил latest release `2026-08-10-admin-support-channel-lifecycle-fix`; secret scan `657` файлов, `0` находок.
+- Реальные VPS/staging/live payment/production-like 3x-ui, provider, Telegram Bot API/webhook и SMTP delivery evidence не переиспользовались.
+- Roadmap: `578/598` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.564.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-notification-retry-lifecycle-e2e`.

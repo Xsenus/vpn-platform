@@ -76,7 +76,7 @@ git diff --check
 - GitHub secrets audit: OK.
 - Webhook idempotency contract: OK.
 - Fresh local SQLite smoke: OK.
-- Backend full suite: 1112/1112.
+- Backend full suite: 1113/1113.
 - Payment webhook controller routes for all 8 providers: OK.
 - Malformed enum/JSON write payloads fail with 400 and do not partially mutate persisted entities: OK.
 - Subscription/VPN lifecycle commands fail closed without partial subscription mutation; historical server operations and linked scenario keys remain protected: OK.
@@ -109,7 +109,7 @@ git diff --check
 - Admin user/support detail requests принимают только актуальный selected/session response и не возвращают старые данные после logout: OK.
 - Admin mutation completion, reload и form reset ограничены исходной session operation и отправленным snapshot; duplicate submit блокируется синхронно: OK.
 - Public/cabinet mutation completion ограничен исходной session/unmount operation; duplicate auth/refresh/action events блокируются синхронно, а более новые drafts сохраняются: OK.
-- Latest local release: `2026-08-10-admin-notification-retry-lifecycle-e2e`, версия `0.564.0`; notification recipient masking/role guards, payment refund terminal lifecycle, subscription/access masking, VPN access revision, 3x-ui client actions и write-only credentials проверены на desktop/mobile, axe WCAG A/AA и best-practice gate без allow-list проверен на desktop и 320 px.
+- Latest local release: `2026-08-10-admin-support-channel-lifecycle-fix`, версия `0.565.0`; channel-aware support reply/revision lifecycle, notification recipient masking/role guards, payment refund terminal lifecycle, subscription/access masking, VPN access revision, 3x-ui client actions и write-only credentials проверены на desktop/mobile, axe WCAG A/AA и best-practice gate без allow-list проверен на desktop и 320 px.
 - Frontend tests: 112/112.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

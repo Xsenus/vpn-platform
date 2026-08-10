@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1112/1112", readme, StringComparison.Ordinal);
+        Assert.Contains("1113/1113", readme, StringComparison.Ordinal);
         Assert.Contains("112/112", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-admin-notification-retry-lifecycle-e2e", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-admin-support-channel-lifecycle-fix", readme, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "1112/1112",
-                     "2026-08-10-admin-notification-retry-lifecycle-e2e",
-                     "0.564.0",
+                     "1113/1113",
+                     "2026-08-10-admin-support-channel-lifecycle-fix",
+                     "0.565.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

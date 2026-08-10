@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +45,9 @@ public class TelegramSupportAdminControllerTests
 
         var result = await controller.ReplySupportConversation(conversation.Id, new AdminSupportReplyHttpRequest("Ответ администратора", conversation.Revision), CancellationToken.None);
 
-        Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<OkObjectResult>(result);
+        using var responseJson = JsonDocument.Parse(JsonSerializer.Serialize(response.Value));
+        Assert.Equal("queued", responseJson.RootElement.GetProperty("status").GetString());
         var message = await db.SupportMessages.SingleAsync();
         var notification = await db.TelegramBotNotifications.SingleAsync();
         Assert.Equal("outbound", message.Direction);
@@ -55,6 +58,36 @@ public class TelegramSupportAdminControllerTests
         Assert.Equal(conversation.Id.ToString(), audit.EntityId);
         Assert.DoesNotContain(message.Text, audit.AfterJson, StringComparison.Ordinal);
         Assert.Contains("Ответ администратора", notification.PayloadJson);
+    }
+
+    [Fact]
+    public async Task Admin_Web_Reply_Should_Be_Saved_Without_Telegram_Queue()
+    {
+        await using var db = CreateDbContext();
+        var conversation = new SupportConversation
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            TelegramUserId = null,
+            Channel = "web",
+            Status = "open",
+            Subject = "Cabinet support"
+        };
+        db.SupportConversations.Add(conversation);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db);
+        var result = await controller.ReplySupportConversation(
+            conversation.Id,
+            new AdminSupportReplyHttpRequest("Ответ сохранен в кабинете", conversation.Revision),
+            CancellationToken.None);
+
+        var response = Assert.IsType<OkObjectResult>(result);
+        using var responseJson = JsonDocument.Parse(JsonSerializer.Serialize(response.Value));
+        Assert.Equal("saved", responseJson.RootElement.GetProperty("status").GetString());
+        Assert.Equal(1, responseJson.RootElement.GetProperty("Revision").GetInt32());
+        Assert.Empty(await db.TelegramBotNotifications.ToListAsync());
+        Assert.Equal("outbound", (await db.SupportMessages.SingleAsync()).Direction);
     }
 
     [Fact]

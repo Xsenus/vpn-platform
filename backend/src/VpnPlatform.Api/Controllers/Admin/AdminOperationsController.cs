@@ -1453,7 +1453,14 @@ public class AdminOperationsController : ControllerBase
         {
             return Conflict(new { error = "Support conversation changed. Reload it and retry." });
         }
-        return Ok(new { conversationId = id, status = "queued", conversation.Revision });
+        return Ok(new
+        {
+            conversationId = id,
+            status = conversation.TelegramUserId.HasValue
+                ? notificationQueued ? "queued" : "already_queued"
+                : "saved",
+            conversation.Revision
+        });
     }
 
 

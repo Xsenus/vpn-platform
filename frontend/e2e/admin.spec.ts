@@ -453,6 +453,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedUserOverview: (() => void) | null = null
   let delayedSupportMessagesId: string | null = null
   let releaseDelayedSupportMessages: (() => void) | null = null
+  let delayNextSupportStatusResponse = false
+  let releaseDelayedSupportStatus: (() => void) | null = null
   let delayNextTariffCreateResponse = false
   let releaseDelayedTariffCreate: (() => void) | null = null
   const notificationDeliveries: Array<Record<string, unknown>> = [{
@@ -1065,8 +1067,13 @@ async function mockAdminApi(page: Page) {
     if (method === 'PATCH' && supportStatusMatch) {
       const conversationId = decodeURIComponent(supportStatusMatch[1])
       const nextStatus = String((body as Record<string, unknown>)?.status ?? 'open')
+      if (delayNextSupportStatusResponse) {
+        delayNextSupportStatusResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedSupportStatus = resolve })
+        releaseDelayedSupportStatus = null
+      }
       supportConversations = supportConversations.map((item) => item.id === conversationId
-        ? { ...item, status: nextStatus, revision: item.revision + 1, updatedAt: now }
+        ? { ...item, status: nextStatus, closedAt: nextStatus === 'closed' ? now : null, revision: item.revision + 1, updatedAt: now }
         : item)
       const updated = supportConversations.find((item) => item.id === conversationId)
       await fulfillJson(route, { conversationId, status: nextStatus, revision: updated?.revision ?? 0 })
@@ -1086,7 +1093,7 @@ async function mockAdminApi(page: Page) {
         ? { ...item, revision: item.revision + 1, updatedAt: now }
         : item)
       const updated = supportConversations.find((item) => item.id === conversationId)
-      await fulfillJson(route, { conversationId, status: updated?.status ?? 'open', revision: updated?.revision ?? 0 })
+      await fulfillJson(route, { conversationId, status: updated?.telegramUserId ? 'queued' : 'saved', revision: updated?.revision ?? 0 })
       return
     }
 
@@ -1803,6 +1810,18 @@ async function mockAdminApi(page: Page) {
     releaseUserOverview: () => { releaseDelayedUserOverview?.() },
     delaySupportMessages: (conversationId: string) => { delayedSupportMessagesId = conversationId },
     releaseSupportMessages: () => { releaseDelayedSupportMessages?.() },
+    delayNextSupportStatus: () => { delayNextSupportStatusResponse = true },
+    releaseSupportStatus: () => { releaseDelayedSupportStatus?.() },
+    useSupportLifecycleFixture: () => {
+      supportConversations = [
+        adminSupportConversation('support-e2e', 'user-e2e', 'Проверка доступа'),
+        { ...adminSupportConversation('support-telegram-e2e', 'user-e2e', 'Telegram вопрос'), telegramUserId: 777001, channel: 'telegram' }
+      ]
+      supportMessages = new Map([
+        ['support-e2e', [adminSupportMessage('support-message-e2e', 'support-e2e', 'user-e2e', 'Нужна проверка доступа')]],
+        ['support-telegram-e2e', [adminSupportMessage('support-message-telegram-e2e', 'support-telegram-e2e', 'user-e2e', 'Сообщение из Telegram')]]
+      ])
+    },
     delayNextTariffCreate: () => { delayNextTariffCreateResponse = true },
     releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
     preparePaymentLifecycle: () => {
@@ -2232,6 +2251,90 @@ test('admin failed notification retry persists safe queue state across reload', 
   await expect(deliveryRow).not.toContainText('client@example.test')
   await expect(deliveryRow.getByRole('button', { name: 'Повторить' })).toHaveCount(0)
   expect(api.getAuthorizedRequestCount('/api/admin/notification-deliveries/notification-e2e/retry', 'POST', 'Bearer admin-notification-token')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('support agent keeps channel-aware conversation lifecycle across reload', async ({ page }) => {
+  test.setTimeout(120_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  api.useSupportLifecycleFixture()
+  await seedAdminSession(page, 'support-e2e-token', 'support-e2e-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Поддержка', 'support')
+
+  const supportPanel = page.locator('#support')
+  let webConversation = supportPanel.locator('.list-item-vertical').filter({ hasText: 'Проверка доступа' })
+  await expect(supportPanel.getByText('Нужна проверка доступа', { exact: true })).toBeVisible()
+  await expect(supportPanel.getByRole('button', { name: 'Сохранить ответ' })).toBeVisible()
+  await expect(supportPanel.getByRole('button', { name: 'Отправить через Telegram' })).toHaveCount(0)
+
+  const replyText = 'Ответ сохранен для web-обращения'
+  await supportPanel.getByLabel('Ответ пользователю').fill(replyText)
+  const replyForm = supportPanel.getByLabel('Ответ пользователю').locator('xpath=ancestor::form')
+  await replyForm.evaluate((form) => {
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  await expect.poll(() => api.getRequestCount('/api/admin/support/conversations/support-e2e/reply', 'POST')).toBe(1)
+  await expect(page.getByText('Ответ сохранен в обращении.', { exact: true })).toBeVisible()
+  await expect(supportPanel.getByText(replyText, { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/reply')?.body).toEqual({ text: replyText, revision: 0 })
+
+  const noteText = 'Внутренняя заметка для следующей смены'
+  await supportPanel.getByLabel('Внутренняя заметка').fill(noteText)
+  await supportPanel.getByRole('button', { name: 'Добавить заметку' }).click()
+  await expect(page.getByText('Внутренняя заметка сохранена.', { exact: true })).toBeVisible()
+  await expect(supportPanel.getByText(noteText, { exact: true })).toBeVisible()
+  await expect(supportPanel.getByText('internal · внутренняя заметка', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/notes')?.body).toEqual({ text: noteText, revision: 1 })
+
+  api.delayNextSupportStatus()
+  await webConversation.getByRole('button', { name: 'В ожидание' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/support/conversations/support-e2e/status', 'PATCH')).toBe(1)
+  await expect(webConversation.getByRole('button', { name: 'В ожидание' })).toBeDisabled()
+  await expect(webConversation.getByRole('button', { name: 'Закрыть' })).toBeDisabled()
+  api.releaseSupportStatus()
+  await expect(page.getByText('Статус обращения обновлен: pending.', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/status', 'PATCH')?.body).toEqual({ status: 'pending', assignedToUserId: null, revision: 2 })
+
+  webConversation = supportPanel.locator('.list-item-vertical.selected-item').filter({ hasText: 'Проверка доступа' })
+  await webConversation.getByRole('button', { name: 'Закрыть' }).click()
+  await expect(page.getByText('Статус обращения обновлен: closed.', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/status', 'PATCH')?.body).toEqual({ status: 'closed', assignedToUserId: null, revision: 3 })
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Поддержка', 'support')
+  webConversation = supportPanel.locator('.list-item-vertical.selected-item').filter({ hasText: 'Проверка доступа' })
+  await expect(webConversation).toContainText(noteText)
+  await expect(webConversation.getByRole('button', { name: 'Переоткрыть' })).toBeVisible()
+  await expect(supportPanel.getByText(replyText, { exact: true })).toBeVisible()
+  await expect(supportPanel.getByText(noteText, { exact: true })).toBeVisible()
+  await webConversation.getByRole('button', { name: 'Переоткрыть' }).click()
+  await expect(page.getByText('Статус обращения обновлен: open.', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/status', 'PATCH')?.body).toEqual({ status: 'open', assignedToUserId: null, revision: 4 })
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Поддержка', 'support')
+  await expect(supportPanel.locator('.list-item-vertical.selected-item').filter({ hasText: 'Проверка доступа' }).getByRole('button', { name: 'Закрыть' })).toBeVisible()
+  await supportPanel.getByLabel('Обращение').selectOption('support-telegram-e2e')
+  await expect(supportPanel.getByText('Сообщение из Telegram', { exact: true })).toBeVisible()
+  await expect(supportPanel.getByRole('button', { name: 'Отправить через Telegram' })).toBeVisible()
+  await expect(supportPanel.getByRole('button', { name: 'Сохранить ответ' })).toHaveCount(0)
+
+  expect(api.getAuthorizedRequestCount('/api/admin/support/conversations/support-e2e/reply', 'POST', 'Bearer support-e2e-token')).toBe(1)
+  expect(api.getAuthorizedRequestCount('/api/admin/support/conversations/support-e2e/notes', 'POST', 'Bearer support-e2e-token')).toBe(1)
+  expect(api.getAuthorizedRequestCount('/api/admin/support/conversations/support-e2e/status', 'PATCH', 'Bearer support-e2e-token')).toBe(3)
+  expect(api.getLastRequest('/api/admin/payments', 'GET')).toBeUndefined()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })
@@ -3255,7 +3358,7 @@ test('admin panel covers login and critical operational mutations across all sec
   await openAdminSection(page, 'Поддержка', 'support')
   const supportPanel = page.locator('#support')
   await supportPanel.getByLabel('Ответ пользователю').fill('Ответ пользователю из операционного E2E')
-  await supportPanel.getByRole('button', { name: 'Отправить через Telegram' }).click()
+  await supportPanel.getByRole('button', { name: 'Сохранить ответ' }).click()
   await expect(supportPanel.getByText('Ответ пользователю из операционного E2E', { exact: true })).toBeVisible()
   await supportPanel.getByLabel('Внутренняя заметка').fill('Внутренняя заметка из операционного E2E')
   await supportPanel.getByRole('button', { name: 'Добавить заметку' }).click()

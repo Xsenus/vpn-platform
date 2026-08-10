@@ -13336,5 +13336,28 @@
         "text": "Roadmap progress is 577/597 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SSH/Ansible, provider, Telegram Bot API/webhook and SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-support-channel-lifecycle-fix",
+    "version": "0.565.0",
+    "releasedAt": "2026-08-10T12:25:00+07:00",
+    "title": "Ответы поддержки учитывают канал обращения",
+    "summary": "Web-ответ больше не обещает Telegram-доставку, а SupportAgent lifecycle сохраняет reply, note и статусы с актуальной revision после reload.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Для web-обращения кнопка и результат говорят о сохранении ответа; Telegram queue показывается только при наличии Telegram-получателя."
+      },
+      {
+        "type": "improved",
+        "text": "Status-кнопки получают busy guard, а browser regression проверяет reply, internal note, pending, close/reopen, revision sequence и reload persistence на desktop/mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 578/598 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

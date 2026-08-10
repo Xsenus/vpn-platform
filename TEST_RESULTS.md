@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin support channel-aware lifecycle fix
+
+Scope:
+- Исправлена ложная Telegram-команда для web-обращения: backend отличает `saved` от `queued/already_queued`, UI показывает канал-зависимые кнопку и результат.
+- Добавлен stateful SupportAgent flow reply -> note -> pending -> close -> reload -> reopen -> reload с revision payload, authorization, message persistence и busy guards.
+
+Results:
+- Roadmap progress: `578/598` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-support-channel-lifecycle-fix`, version `0.565.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Targeted support lifecycle: desktop/mobile `2/2`; adjacent admin mutation/role regression: `6/6`; full console-responsive Playwright gate covers `102/102` scenarios.
+- Backend support contract: `4/4`; Backend full suite: OK, `1113/1113` after documentation guards are synchronized.
+- `RoadmapCurrentStateTests` and release/document encoding guards validate the latest release, counters and external-evidence boundary.
+- Fresh local SQLite smoke: OK; latest release `2026-08-10-admin-support-channel-lifecycle-fix`; secret scan: `657` files, `0` findings.
+- External evidence remains open for real Telegram Bot API delivery, SMTP, VPS/staging/production-like 3x-ui and provider sandbox/live accounts.
+
 ## Check 2026-08-10: admin notification retry lifecycle E2E
 
 Scope:
