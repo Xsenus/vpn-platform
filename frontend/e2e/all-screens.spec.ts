@@ -38,6 +38,25 @@ const adminSections = [
   'content',
   'scenarios'
 ]
+const adminSectionTitles: Record<string, string> = {
+  dashboard: 'Дашборд',
+  users: 'Пользователи',
+  support: 'Поддержка',
+  audit: 'Аудит',
+  payments: 'Оплаты',
+  tariffs: 'Тарифы',
+  referrals: 'Рефералы',
+  subscriptions: 'Подписки',
+  vpn: 'VPN-доступы',
+  nodes: 'Серверы',
+  panels: '3x-ui панели',
+  provisioning: 'Подготовка VPS',
+  bot: 'Telegram-бот',
+  releases: 'Что нового',
+  faq: 'FAQ',
+  content: 'Контент сайта',
+  scenarios: 'Сценарии'
+}
 
 const responsiveViewports = [
   { name: 'compact-mobile-with-scrollbar', width: 305, height: 568 },
@@ -946,6 +965,7 @@ test('every admin section renders without blank screens or browser errors', asyn
   await installApiMock(page)
 
   await page.goto('http://127.0.0.1:5295/')
+  await expect(page).toHaveTitle('Вход — Админ-панель VPN Platform')
   await expectPageQuality(page, 'admin auth')
   await expectWcagQuality(page, 'admin auth')
   await expectLocalBackgroundAssets(page, ['.admin-login-intro'])
@@ -958,6 +978,7 @@ test('every admin section renders without blank screens or browser errors', asyn
   for (const section of adminSections) {
     await page.goto(`http://127.0.0.1:5295/#${section}`)
     await expect(page.locator('.admin-shell')).toBeVisible()
+    await expect(page).toHaveTitle(`${adminSectionTitles[section]} — Админ-панель VPN Platform`)
     await expectNonBlankPage(page)
     await expectPageQuality(page, `admin ${section}`)
     await expectWcagQuality(page, `admin ${section}`)

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin section metadata lifecycle
+
+Scope:
+- Admin metadata различает session hydration, login и каждый из 17 authenticated sections.
+- Direct hash, смена раздела и logout синхронно обновляют title/meta description без раскрытия private state.
+
+Results:
+- Roadmap progress: `582/602` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-section-metadata-lifecycle-fix`, version `0.569.0`.
+- Frontend tests: `116/116`; targeted desktop/mobile metadata lifecycle: `2/2`; full console-responsive Playwright: `108/108`.
+- Admin all-screens проверяет login title и exact title всех 17 sections вместе с non-blank/Axe/browser-error gate.
+- Typecheck/build all apps: OK; admin bundle raw `512423`, gzip `137489`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: public route metadata and focus lifecycle
 
 Scope:

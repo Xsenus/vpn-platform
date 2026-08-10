@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.569.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-section-metadata-lifecycle-fix`.
+
+### Исправлено
+
+- Login, восстановление сессии и 17 рабочих разделов админки больше не делят статический browser title: metadata следует текущему session/section state, включая direct hash и logout.
+- Для каждого authenticated section meta description синхронизирован с его рабочим назначением; login/hydration получают отдельные безопасные описания без данных пользователя.
+
+### Проверено
+
+- Pure metadata contract покрывает hydration/login/authenticated state; frontend unit `116/116`, typecheck/build всех приложений и audit `0 vulnerabilities`.
+- Stateful `#payments -> login -> support -> logout` проходит на Desktop Chrome и Pixel 5: `2/2`; all-screens проверяет точный title login и всех 17 admin sections.
+- Полный console-responsive Playwright `108/108`; admin bundle остается в бюджете: raw `512423`, gzip `137489`, largest `219849`.
+- Backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+- Roadmap: `582/602` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.568.0 - 2026-08-10
 
 Release entry: `2026-08-10-public-route-metadata-focus-fix`.

@@ -1887,6 +1887,35 @@ async function seedAdminSession(page: Page, accessToken: string, refreshToken: s
   }, { accessToken, refreshToken })
 }
 
+test('admin metadata follows login, deep-linked sections and logout', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  await mockAdminApi(page)
+
+  await page.goto('/#payments')
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  await expect(page).toHaveTitle('Вход — Админ-панель VPN Platform')
+
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('#payments')).toBeVisible()
+  await expect(page).toHaveTitle('Оплаты — Админ-панель VPN Platform')
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /платеж/i)
+
+  await openAdminSection(page, 'Поддержка', 'support')
+  await expect(page).toHaveTitle('Поддержка — Админ-панель VPN Platform')
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /обращени/i)
+
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+  await expect(page).toHaveTitle('Вход — Админ-панель VPN Platform')
+  expect(browserErrors).toEqual([])
+})
+
 test('admin detail views ignore older selections and keep support actions scoped', async ({ page }) => {
   const api = await mockAdminApi(page)
   api.useDetailRequestRaceFixture()
@@ -3546,12 +3575,14 @@ test('finance role loads only permitted data and keeps common sections read-only
   })
   const api = await mockAdminApi(page)
 
-  await page.goto('http://127.0.0.1:5295/')
+  await page.goto('http://127.0.0.1:5295/#support')
   await page.locator('.admin-login-form input[type="email"]').fill('finance-e2e@example.test')
   await page.locator('.admin-login-form input[type="password"]').fill('FinancePassword123!')
   await page.getByRole('button', { name: 'Войти в админку' }).click()
 
   await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect(page).toHaveURL(/#dashboard$/)
+  await expect(page).toHaveTitle('Дашборд — Админ-панель VPN Platform')
   await expect(page.locator('.admin-section-select option[value="payments"]')).toHaveCount(1)
   await expect(page.locator('.admin-section-select option[value="support"]')).toHaveCount(0)
   await expect(page.locator('.admin-section-select option[value="bot"]')).toHaveCount(0)
@@ -3591,12 +3622,14 @@ test('support role dashboard hides finance data and keeps support queue visible'
   })
   const api = await mockAdminApi(page)
 
-  await page.goto('http://127.0.0.1:5295/')
+  await page.goto('http://127.0.0.1:5295/#payments')
   await page.locator('.admin-login-form input[type="email"]').fill('support-e2e@example.test')
   await page.locator('.admin-login-form input[type="password"]').fill('SupportPassword123!')
   await page.getByRole('button', { name: 'Войти в админку' }).click()
 
   await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect(page).toHaveURL(/#dashboard$/)
+  await expect(page).toHaveTitle('Дашборд — Админ-панель VPN Platform')
   await expect(page.locator('.admin-section-select option[value="support"]')).toHaveCount(1)
   await expect(page.locator('.admin-section-select option[value="payments"]')).toHaveCount(0)
   await expect(page.getByText('Оплачено / ожидает')).toHaveCount(0)

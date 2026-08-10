@@ -211,10 +211,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1113/1113` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `115/115`;
+- frontend unit tests: `116/116`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `106/106`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `108/108`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -289,10 +289,11 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет выполняет Telegram deep-link/unlink и close/reopen обращения с optimistic revision и reload persistence на desktop/mobile;
 - платежные аккаунты проходят secure create/edit/disable/reload/enable/check browser lifecycle без раскрытия write-only secrets на desktop/mobile;
 - настройки Telegram-бота проходят secure save/check/reload/edit browser lifecycle без возврата raw bot/webhook tokens на desktop/mobile;
-- admin production bundle: `5` JS chunks, largest `219849`, total raw `511564`, gzip `137127` bytes; build budget fail-closed проверяет largest/total raw/gzip;
+- admin production bundle: `5` JS chunks, largest `219849`, total raw `512423`, gzip `137489` bytes; build budget fail-closed проверяет largest/total raw/gzip;
 - неизвестный public URL показывает доступную страницу `404` с возвратом на главную/помощь и проходит desktop/mobile плюс 18-viewport responsive gate;
 - public route metadata и focus/scroll lifecycle проходят direct load, SPA navigation и browser Back на desktop/mobile;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-public-route-metadata-focus-fix`, версия `0.568.0`;
-- roadmap progress: `581/601` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- admin login/hydration и 17 hash-разделов синхронизируют title/meta description при deep-link, section switch и logout;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-section-metadata-lifecycle-fix`, версия `0.569.0`;
+- roadmap progress: `582/602` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

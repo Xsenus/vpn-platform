@@ -54,6 +54,7 @@ import {
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 import { canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
+import { getAdminPageMetadata } from './admin-page-metadata'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
@@ -1520,6 +1521,19 @@ export function App() {
     setActiveSection(fallbackSection)
     window.history.replaceState(null, '', `#${fallbackSection}`)
   }, [activeSection, adminSession, availableAdminSectionIds, availableAdminSections])
+
+  useEffect(() => {
+    const metadata = getAdminPageMetadata({
+      sectionLabel: activeSectionLabel,
+      sectionDescription: activeSectionDescription,
+      hasAdminSession: Boolean(adminSession),
+      sessionHydrating
+    })
+    document.title = metadata.title
+    const description = document.querySelector('meta[name="description"]') ?? document.head.appendChild(document.createElement('meta'))
+    description.setAttribute('name', 'description')
+    description.setAttribute('content', metadata.description)
+  }, [activeSectionDescription, activeSectionLabel, adminSession, sessionHydrating])
 
   useEffect(() => {
     const syncActiveSection = () => setActiveSection(readAdminSectionFromHash())

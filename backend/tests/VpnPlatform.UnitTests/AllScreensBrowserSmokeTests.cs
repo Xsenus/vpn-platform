@@ -11,6 +11,7 @@ public class AllScreensBrowserSmokeTests
         var spec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "all-screens.spec.ts"));
         var publicApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "App.tsx"));
         var publicRoute = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "public-route.ts"));
+        var adminMetadata = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-page-metadata.ts"));
         var config = File.ReadAllText(Path.Combine(root, "frontend", "playwright.config.ts"));
         var packageJson = File.ReadAllText(Path.Combine(root, "frontend", "package.json"));
 
@@ -63,6 +64,16 @@ public class AllScreensBrowserSmokeTests
         {
             Assert.Contains(title, publicRoute, StringComparison.Ordinal);
         }
+        foreach (var title in new[]
+                 {
+                     "Проверка сессии — Админ-панель VPN Platform",
+                     "Вход — Админ-панель VPN Platform",
+                     "${input.sectionLabel} — Админ-панель VPN Platform"
+                 })
+        {
+            Assert.Contains(title, adminMetadata, StringComparison.Ordinal);
+        }
+        Assert.Contains("adminSectionTitles", spec, StringComparison.Ordinal);
     }
 
     [Fact]

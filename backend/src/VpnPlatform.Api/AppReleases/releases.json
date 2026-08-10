@@ -13428,5 +13428,28 @@
         "text": "Roadmap progress is 581/601 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-section-metadata-lifecycle-fix",
+    "version": "0.569.0",
+    "releasedAt": "2026-08-10T14:29:00+07:00",
+    "title": "Админка отражает текущий раздел в metadata",
+    "summary": "Login, восстановление сессии и 17 рабочих разделов получили точные title и description вместо общего статического заголовка.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Direct hash, смена раздела и logout обновляют browser title/meta description по актуальному session/section state."
+      },
+      {
+        "type": "improved",
+        "text": "Exact title matrix login и 17 admin sections, а также desktop/mobile payments/support/logout lifecycle входят в обязательный Playwright gate."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 582/602 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
