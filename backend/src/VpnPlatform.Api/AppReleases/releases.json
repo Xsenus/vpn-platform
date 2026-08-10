@@ -13152,5 +13152,28 @@
         "text": "Roadmap progress is 569/589 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real provider, Telegram bot and SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-telegram-bot-settings-secure-lifecycle-e2e",
+    "version": "0.557.0",
+    "releasedAt": "2026-08-10T09:10:00+07:00",
+    "title": "Настройки Telegram-бота проверяются без раскрытия токенов",
+    "summary": "Desktop и mobile-admin сценарии сохраняют, проверяют и повторно редактируют настройки Telegram-бота, сохраняя bot token и webhook secret строго write-only.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Admin E2E выполняет save/check/reload/edit lifecycle режима, URL и текстов Telegram-бота через фактическую форму и controls."
+      },
+      {
+        "type": "improved",
+        "text": "Bot token и webhook secret отправляются только в PATCH payload, очищаются после сохранения и не возвращаются в DTO или DOM; повторное редактирование сохраняет настроенные токены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 570/590 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real provider, Telegram Bot API/webhook and SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -424,6 +424,7 @@ async function mockAdminApi(page: Page) {
   let invalidServersResponse = false
   let invalidProvisioningRunsResponse = false
   let invalidBotSettingsResponse = false
+  let botSettings = telegramBotSettings()
   let delayNextVpnPanelInboundsResponse = false
   let delayNextBotSettingsCheckResponse = false
   let users = [adminUser('user-e2e', 'Client E2E', 'client@example.test')]
@@ -1285,6 +1286,32 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'PATCH' && path === '/api/admin/telegram-bot/settings') {
+      const payload = body as Record<string, unknown>
+      botSettings = telegramBotSettings({
+        ...botSettings,
+        enabled: payload.enabled,
+        mode: payload.mode,
+        publicBotUsername: payload.publicBotUsername,
+        webhookUrl: payload.webhookUrl,
+        adminChatId: payload.adminChatId,
+        webAppUrl: payload.webAppUrl,
+        welcomeText: payload.welcomeText,
+        instructionText: payload.instructionText,
+        supportText: payload.supportText,
+        afterPaymentTextTemplate: payload.afterPaymentTextTemplate,
+        renewalTextTemplate: payload.renewalTextTemplate,
+        paymentFailedTextTemplate: payload.paymentFailedTextTemplate,
+        subscriptionExpiredTextTemplate: payload.subscriptionExpiredTextTemplate,
+        hasBotToken: Boolean(payload.botToken) || Boolean(botSettings.hasBotToken),
+        botTokenMasked: Boolean(payload.botToken) ? '***configured***' : botSettings.botTokenMasked,
+        hasSecretToken: Boolean(payload.secretToken) || Boolean(botSettings.hasSecretToken),
+        generatedAt: now
+      })
+      await fulfillJson(route, botSettings)
+      return
+    }
+
     if (method === 'POST' && path === '/api/admin/telegram-bot/settings/test') {
       if (delayNextBotSettingsCheckResponse) {
         delayNextBotSettingsCheckResponse = false
@@ -1295,7 +1322,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/telegram-bot/settings') {
-      await fulfillJson(route, invalidBotSettingsResponse ? {} : telegramBotSettings())
+      await fulfillJson(route, invalidBotSettingsResponse ? {} : botSettings)
       return
     }
 
@@ -1757,6 +1784,72 @@ test('admin payment provider accounts support secure lifecycle', async ({ page }
   expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e/check')).toBeTruthy()
   expect(api.getRequestCount('/api/admin/payment-providers/accounts/provider-created-e2e/enabled', 'POST')).toBe(2)
   expect(api.getAuthorizedRequestCount('/api/admin/payment-providers/accounts/provider-created-e2e', 'PATCH', 'Bearer admin-provider-token')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin Telegram bot settings support secure save and reload lifecycle', async ({ page }) => {
+  test.slow()
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-bot-token', 'admin-bot-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+
+  const botPanel = page.locator('#bot')
+  await botPanel.getByLabel('Состояние').selectOption('true')
+  await botPanel.getByLabel('Режим').selectOption('Webhook')
+  await botPanel.getByLabel('Username публичного бота').fill('vpnplatform_e2e_bot')
+  await botPanel.getByLabel('URL webhook').fill('https://api.example.test/api/channels/telegram/webhook')
+  await botPanel.getByLabel('ID админского чата').fill('-100777001')
+  await botPanel.getByLabel('URL WebApp').fill('https://cabinet.example.test')
+  await botPanel.getByRole('textbox', { name: /^Токен бота/ }).fill('e2e-bot-token-value')
+  await botPanel.getByRole('textbox', { name: /^Секрет webhook/ }).fill('e2e-bot-webhook-value')
+  await botPanel.getByLabel('Приветствие').fill('Добро пожаловать в E2E-бота')
+  await botPanel.getByLabel('Текст поддержки').fill('Поддержка E2E доступна в кабинете')
+  await botPanel.getByRole('button', { name: 'Сохранить настройки бота' }).click()
+
+  await expect(page.getByText('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/telegram-bot/settings', 'PATCH')?.body).toMatchObject({
+    enabled: true,
+    mode: 'Webhook',
+    publicBotUsername: 'vpnplatform_e2e_bot',
+    botToken: 'e2e-bot-token-value',
+    secretToken: 'e2e-bot-webhook-value',
+    welcomeText: 'Добро пожаловать в E2E-бота',
+    supportText: 'Поддержка E2E доступна в кабинете'
+  })
+  await expect(page.getByText('e2e-bot-token-value', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('e2e-bot-webhook-value', { exact: true })).toHaveCount(0)
+  await expect(botPanel.getByRole('textbox', { name: /^Токен бота/ })).toHaveValue('')
+  await expect(botPanel.getByRole('textbox', { name: /^Секрет webhook/ })).toHaveValue('')
+
+  await botPanel.getByRole('button', { name: 'Проверить подключение' }).click()
+  await expect(page.getByText('Telegram-бот готов к работе.')).toBeVisible()
+  await expect(botPanel.getByText('Обязательные настройки заполнены. Можно проверять реальный диалог с ботом в Telegram.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect(botPanel.getByLabel('Состояние')).toHaveValue('true')
+  await expect(botPanel.getByLabel('Режим')).toHaveValue('Webhook')
+  await expect(botPanel.getByLabel('Username публичного бота')).toHaveValue('vpnplatform_e2e_bot')
+  await expect(botPanel.getByLabel('Приветствие')).toHaveValue('Добро пожаловать в E2E-бота')
+  await expect(botPanel.getByRole('textbox', { name: /^Токен бота/ })).toHaveValue('')
+
+  await botPanel.getByLabel('Приветствие').fill('Обновленное приветствие E2E')
+  await botPanel.getByRole('button', { name: 'Сохранить настройки бота' }).click()
+  expect(api.getLastRequest('/api/admin/telegram-bot/settings', 'PATCH')?.body).toMatchObject({
+    welcomeText: 'Обновленное приветствие E2E',
+    botToken: '',
+    secretToken: ''
+  })
+  expect(api.getRequestCount('/api/admin/telegram-bot/settings', 'PATCH')).toBe(2)
+  expect(api.getAuthorizedRequestCount('/api/admin/telegram-bot/settings', 'PATCH', 'Bearer admin-bot-token')).toBe(2)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })

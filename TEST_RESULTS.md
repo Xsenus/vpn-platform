@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin Telegram bot settings secure lifecycle E2E
+
+Scope:
+- Добавлен stateful desktop/mobile browser flow для save/check/reload/edit lifecycle настроек Telegram-бота.
+- Проверяются mode, URLs, тексты, write-only bot/webhook tokens, безопасный DTO/DOM, authorization, console errors и mobile overflow.
+
+Results:
+- Roadmap progress: `570/590` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-telegram-bot-settings-secure-lifecycle-e2e`, version `0.557.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `86/86`; secure Telegram settings lifecycle passes on desktop and mobile-admin; all-screens axe/responsive matrix: `6/6`.
+- Backend full suite: `1112/1112`; fresh local SQLite checkout/payment/subscription/VPN smoke: OK; secret scan: `657` files, `0` findings.
+- External evidence remains open for real Telegram Bot API/webhook, provider sandbox/live accounts, VPS/staging/production-like 3x-ui and SMTP delivery.
+
 ## Check 2026-08-10: admin payment provider secure lifecycle E2E
 
 Scope:

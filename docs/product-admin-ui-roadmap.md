@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `569/589` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `570/590` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `84/84`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `86/86`.
 - [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -141,7 +141,8 @@
 - [x] Управляемые тарифы, реферальные программы, сценарии, релизы, FAQ и контент сайта проходят stateful create/edit/delete lifecycle на desktop/mobile с reload persistence.
 - [x] Cabinet Telegram deep-link/unlink и support close/reopen проходят stateful desktop/mobile lifecycle с optimistic revision и reload persistence.
 - [x] Payment provider accounts проходят secure create/edit/disable/reload/enable/check lifecycle без возврата write-only secret values в DTO/DOM.
-- [x] Latest "Что нового": `2026-08-10-admin-payment-provider-secure-lifecycle-e2e`, версия `0.556.0`.
+- [x] Telegram bot settings проходят secure save/check/reload/edit lifecycle без возврата raw bot/webhook tokens в DTO/DOM.
+- [x] Latest "Что нового": `2026-08-10-admin-telegram-bot-settings-secure-lifecycle-e2e`, версия `0.557.0`.
 
 ## Как вести дальше
 

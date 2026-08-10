@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.557.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-telegram-bot-settings-secure-lifecycle-e2e`.
+
+### Улучшено
+
+- Admin browser regression сохраняет Telegram bot mode, URLs, тексты и write-only bot/webhook tokens через фактическую форму на desktop/mobile.
+- После PATCH и общего reload значения формы сохраняются, secret inputs очищаются, а DTO/DOM содержит только безопасные configured-признаки без raw tokens.
+- Stateful mock API поддерживает save/check lifecycle, повторное редактирование без замены токенов, authorization, console и overflow assertions.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `86/86`; secure Telegram settings lifecycle проходит `2/2`, all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- Реальный Telegram Bot API/webhook, VPS/staging/live payment/production-like 3x-ui и SMTP evidence не переиспользовались.
+- Roadmap: `570/590` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.556.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-payment-provider-secure-lifecycle-e2e`.
