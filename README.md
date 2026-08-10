@@ -211,7 +211,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1113/1113` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `117/117`;
+- frontend unit tests: `119/119`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `118/118`; responsive matrix проверяет 19 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
@@ -300,7 +300,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - общие статусные метки различают составные negative/neutral/warning/success состояния и локализуют API-значения независимо от регистра;
 - shared и app-specific CSS не содержат внешних runtime asset URL; browser page-quality gate проверяет все загруженные stylesheet rules;
 - подтверждаемые admin-операции удерживают busy dialog до завершения Promise, блокируют повторный destructive submit и проходят delayed desktop/mobile regression;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-confirm-action-async-lifecycle`, версия `0.576.0`;
-- roadmap progress: `589/609` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- cabinet-to-public navigation проверяет configured base URL, а payment retry не передаёт query/fragment текущей страницы внешнему провайдеру;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-cabinet-url-boundary`, версия `0.577.0`;
+- roadmap progress: `590/610` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

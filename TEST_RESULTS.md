@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: cabinet URL boundary
+
+Scope:
+- Cabinet navigation must not expose executable, credential-bearing or malformed `VITE_PUBLIC_WEB_URL` values through user-facing links.
+- Payment retry must send a canonical return origin without the current page query or fragment.
+
+Results:
+- Roadmap progress: `590/610` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-cabinet-url-boundary`, version `0.577.0`.
+- Reproduction before fix: cabinet retry desktop/mobile leaked query/fragment `2/2`; URL resolver unit after fix: `2/2`; targeted cabinet desktop/mobile: `2/2`; full console-responsive Playwright: `118/118`.
+- `VITE_PUBLIC_WEB_URL` accepts only credential-free `http/https` values without query/fragment and falls back safely; payment retry sends only `window.location.origin`.
+- Frontend tests: `119/119`; typecheck/build all apps: OK; cabinet JS `359.27 kB` raw/`104.22 kB` gzip; admin JS raw `514172`, gzip `138052`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `665` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: confirmed action async lifecycle
 
 Scope:

@@ -13612,5 +13612,28 @@
         "text": "Roadmap progress is 589/609 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-cabinet-url-boundary",
+    "version": "0.577.0",
+    "releasedAt": "2026-08-10T18:28:00+07:00",
+    "title": "Переходы кабинета используют безопасные адреса",
+    "summary": "Кабинет проверяет адрес публичного сайта перед созданием ссылок и больше не передаёт параметры текущей страницы платёжному провайдеру.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Некорректный, исполняемый или содержащий credentials/query/fragment адрес публичного сайта отклоняется с безопасным локальным fallback."
+      },
+      {
+        "type": "improved",
+        "text": "Повторная оплата передаёт провайдеру только origin кабинета; query и fragment открытой страницы не включаются в return URL."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 590/610 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

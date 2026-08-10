@@ -27,10 +27,11 @@ import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
 import { buildOrderExportText, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
+import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
-const configuredPublicWebUrl = import.meta.env.VITE_PUBLIC_WEB_URL?.replace(/\/$/, '')
+const configuredPublicWebUrl = import.meta.env.VITE_PUBLIC_WEB_URL
 const TOKEN_STORAGE_KEY = 'vpn-platform-cabinet-token'
 const REFRESH_TOKEN_STORAGE_KEY = 'vpn-platform-cabinet-refresh-token'
 
@@ -153,20 +154,10 @@ export function App() {
   const resetConfirmErrors = validatePasswordResetConfirm(resetToken, newPassword)
   const showAuthValidation = authValidationErrors.length > 0 && Boolean(authEmail || authPassword || authDisplayName)
   const showResetValidation = Boolean(resetEmail || resetToken || newPassword)
-  const publicWebUrl = useMemo(() => {
-    if (configuredPublicWebUrl) return configuredPublicWebUrl
-    if (typeof window === 'undefined') return 'http://localhost:5173'
-
-    const devPortMap: Record<string, string> = {
-      '5174': '5173',
-      '5474': '5473'
-    }
-    const publicPort = devPortMap[window.location.port]
-
-    return publicPort
-      ? `${window.location.protocol}//${window.location.hostname}:${publicPort}`
-      : window.location.origin
-  }, [])
+  const publicWebUrl = useMemo(
+    () => resolveCabinetPublicWebUrl(configuredPublicWebUrl, typeof window === 'undefined' ? undefined : window.location),
+    []
+  )
 
   const activeSubscriptions = useMemo(
     () => subscriptions.filter((item) => item.status === 'Active' || item.status === 'GracePeriod').length,
@@ -782,7 +773,7 @@ export function App() {
     }
     const selectedProvider = provider
     await runSessionAction(`payment-retry-${order.id}`, 'Не удалось повторить оплату', async (action) => {
-      const payment = await api.initMyPayment(token, order.id, selectedProvider, window.location.href)
+      const payment = await api.initMyPayment(token, order.id, selectedProvider, window.location.origin)
       if (!action.isCurrent()) return
       setRetryPaymentState({ order, payment })
       if (!await action.reloadAll()) return

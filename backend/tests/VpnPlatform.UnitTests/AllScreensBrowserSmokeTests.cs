@@ -15,7 +15,9 @@ public class AllScreensBrowserSmokeTests
         var adminApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "App.tsx"));
         var adminMetadata = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-page-metadata.ts"));
         var adminSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "admin.spec.ts"));
+        var cabinetApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "cabinet", "src", "App.tsx"));
         var cabinetAppVersion = File.ReadAllText(Path.Combine(root, "frontend", "apps", "cabinet", "src", "AppVersion.tsx"));
+        var cabinetPublicUrl = File.ReadAllText(Path.Combine(root, "frontend", "apps", "cabinet", "src", "cabinet-public-url.ts"));
         var cabinetSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "cabinet.spec.ts"));
         var sharedUi = File.ReadAllText(Path.Combine(root, "frontend", "packages", "ui", "src", "index.tsx"));
         var sharedStyles = File.ReadAllText(Path.Combine(root, "frontend", "packages", "ui", "src", "styles.css"));
@@ -98,6 +100,11 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("document.body.style.overflow = 'hidden'", cabinetAppVersion, StringComparison.Ordinal);
         Assert.Contains("cabinet app version modal traps focus and restores its opener", cabinetSpec, StringComparison.Ordinal);
         Assert.Contains("cabinet app version modal at ${viewport.name}", spec, StringComparison.Ordinal);
+        Assert.Contains("resolveCabinetPublicWebUrl", cabinetApp, StringComparison.Ordinal);
+        Assert.Contains("getSafeHttpUrl", cabinetPublicUrl, StringComparison.Ordinal);
+        Assert.Contains("!parsed.search && !parsed.hash", cabinetPublicUrl, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.location.href", cabinetApp, StringComparison.Ordinal);
+        Assert.Contains("source=private-campaign#payment-history", cabinetSpec, StringComparison.Ordinal);
         Assert.Contains("unhealthy: 'danger'", sharedUi, StringComparison.Ordinal);
         Assert.Contains("inactive: 'danger'", sharedUi, StringComparison.Ordinal);
         Assert.Contains("notlinked: 'neutral'", sharedUi, StringComparison.Ordinal);

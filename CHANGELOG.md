@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.577.0 - 2026-08-10
+
+Release entry: `2026-08-10-cabinet-url-boundary`.
+
+### Исправлено
+
+- Cabinet-to-public ссылки теперь строятся только из credential-free `http/https` base URL без query/fragment; некорректный `VITE_PUBLIC_WEB_URL` безопасно откатывается к локальному origin/dev port mapping.
+- Повторная оплата передаёт провайдеру канонический `window.location.origin`, а не полный browser URL с query/fragment, поэтому приватный навигационный контекст не попадает во внешний payment request.
+
+### Проверено
+
+- До исправления targeted cabinet desktop/mobile воспроизводил утечку query/fragment `2/2`; после исправления URL resolver unit `2/2`, targeted browser `2/2` и полный console-responsive Playwright `118/118` зелёные.
+- Frontend `119/119`, typecheck/build, audit `0 vulnerabilities`; cabinet JS `359.27 kB` raw/`104.22 kB` gzip, admin bundle raw `514172`, gzip `138052`, largest `219849`.
+- Backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate.
+- Roadmap: `590/610` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.576.0 - 2026-08-10
 
 Release entry: `2026-08-10-confirm-action-async-lifecycle`.

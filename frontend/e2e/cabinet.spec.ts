@@ -1154,11 +1154,12 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(staleOrderCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)
 
   const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
+  await page.evaluate(() => window.history.replaceState({}, '', '/?source=private-campaign#payment-history'))
   await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
   await expect(page.getByRole('heading', { name: 'Последняя повторная оплата' })).toBeVisible()
   await expect(page.getByText('payment-retry')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveAttribute('href', 'https://pay.example.test/retry')
-  expect(api.getLastRequest('/api/me/orders/order-retryable/payments/YooKassa/init')).toBeDefined()
+  expect(api.getLastRequest('/api/me/orders/order-retryable/payments/YooKassa/init')?.body).toEqual({ returnUrl: 'http://127.0.0.1:5294' })
 
   const blockedCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Заблокированный тариф' }) })
   const cancelledCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Отменённый тариф' }) })

@@ -177,7 +177,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-09 локально подтверждено:
 
 - backend full suite: 1113/1113;
-- frontend tests: 117/117;
+- frontend tests: 119/119;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -227,8 +227,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - shared status badge semantics and case-insensitive Russian labels: OK.
 - shared/public/admin CSS external asset source guard and all-screen CSSOM origin gate: OK.
 - confirmed admin actions retain their async Promise, disable dialog controls and close only after API completion: OK.
-- latest "Что нового": `2026-08-10-confirm-action-async-lifecycle`, версия `0.576.0`.
-- roadmap progress: `589/609` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- cabinet configured public URL and payment return origin boundary: OK.
+- latest "Что нового": `2026-08-10-cabinet-url-boundary`, версия `0.577.0`.
+- roadmap progress: `590/610` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

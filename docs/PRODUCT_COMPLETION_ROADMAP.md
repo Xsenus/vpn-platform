@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-10.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-confirm-action-async-lifecycle`, версия `0.576.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `589/609` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-cabinet-url-boundary`, версия `0.577.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `590/610` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-10:
 
 - [x] `STATE-001` Backend test suite проходит: `1113/1113`.
-- [x] `STATE-002` Frontend test suite проходит: `117/117`.
+- [x] `STATE-002` Frontend test suite проходит: `119/119`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2052,6 +2052,10 @@ git diff --check
   - Что сделать: общий `ConfirmButton` должен владеть Promise destructive-операции, удерживать busy-состояние до ответа API и исключать повторное подтверждение; admin callsites не должны отбрасывать Promise через `void`.
   - Что сделано: все подтверждаемые payment, tariff, subscription, VPN, server, content и provisioning actions возвращают Promise в общий компонент. Delayed provider regression проверяет видимый `Выполняем...`, disabled confirm/cancel, единственный POST и закрытие dialog только после release ответа; source guard запрещает detached `onConfirm`.
   - Доказательство: до исправления targeted desktop/mobile воспроизводил дефект `2/2`; после исправления targeted `2/2`, полный console-responsive Playwright `118/118`; frontend `117/117`, typecheck/build, admin bundle `514172` raw/`138052` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1113/1113`, fresh SQLite latest release OK, secret scan `663/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
+- [x] `P11-ACC-300` Закрыть configured navigation и payment return URL границу кабинета. 2026-08-10.
+  - Что сделать: пользовательские cabinet-to-public ссылки не должны принимать исполняемый, credential-bearing или неоднозначный base URL, а повторная оплата не должна отправлять внешнему провайдеру query/fragment текущей страницы.
+  - Что сделано: отдельный resolver применяет общую `http/https` allow-list, запрещает credentials/query/fragment и сохраняет safe fallback/dev port mapping. Retry payment использует только `window.location.origin`; browser regression добавляет приватные query/fragment перед запросом и проверяет точное тело API.
+  - Доказательство: до исправления targeted cabinet desktop/mobile воспроизводил утечку `2/2`; после исправления URL unit `2/2`, targeted browser `2/2`, полный console-responsive Playwright `118/118`; frontend `119/119`, typecheck/build, cabinet JS `359.27/104.22 kB`, admin bundle `514172` raw/`138052` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1113/1113`, fresh SQLite latest release OK, secret scan `665/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2628,6 +2632,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-08-10 | Codex | Cabinet configured public URL и payment retry return URL boundary | Зеленое локально | Reproduction desktop/mobile `2/2` failed before fix; URL unit `2/2`, targeted browser `2/2`, frontend `119/119`, полный console-responsive suite `118/118`, backend `1113/1113`, fresh SQLite, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-10 | Codex | Async lifecycle всех подтверждаемых admin-операций и delayed destructive request | Зеленое локально | Reproduction `2/2` failed before fix; targeted desktop/mobile `2/2`, frontend `117/117`, полный console-responsive suite `118/118`, backend `1113/1113`, fresh SQLite, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-09 | Codex | Local visual assets, runtime decode, breakpoint-edge responsive и manual screenshots | Зеленое локально | Frontend `111/111`, all-screens `6/6` на 18 viewport, полный console-responsive suite `78/78`, production build, backend `1112/1112`; external live evidence не переиспользовалось |
 | 2026-08-09 | Codex | Public/cabinet mutation ownership, duplicate events, stale completion и draft preservation | Зеленое локально | Frontend `110/110`, полный console-responsive desktop/mobile suite `78/78`, backend `1112/1112`, Release build, fresh SQLite, EF drift и audit; external live evidence не переиспользовалось |
@@ -2699,6 +2704,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-10-025` | P1 | Cabinet navigation/payment URL boundary | `VITE_PUBLIC_WEB_URL` напрямую попадал во все пользовательские href без scheme/credentials/query проверки, а retry payment передавал провайдеру полный `window.location.href`, включая текущие query/fragment. | Исправлено локально | Configured public URL проходит fail-closed resolver; payment return ограничен origin, unit и desktop/mobile regression проверяют unsafe значения и точное request body. Production provider redirect smoke остаётся внешней проверкой. |
 | `BUG-2026-08-10-024` | P1 | Admin destructive actions/shared UI | Все `ConfirmButton` callsites отбрасывали Promise через `void`: dialog снимал busy и закрывался до ответа API, поэтому общий компонент не мог гарантировать lifecycle операции и блокировку повторного подтверждения. | Исправлено локально | Все подтверждаемые handlers возвращают Promise; delayed provider desktop/mobile regression проверяет busy controls, один запрос и закрытие после ответа. Production admin smoke остаётся внешней проверкой. |
 | `BUG-2026-08-10-023` | P1 | Frontend visual assets/CSP | После миграции активных экранов на local WebP общий CSS сохранял недостижимый `.hero` с Unsplash URL, а source guard читал только public/admin styles; bundle и evidence противоречили заявленному отсутствию external runtime assets. | Исправлено локально | Legacy экран/CSS удалены, source guard охватывает shared слой, browser CSSOM gate проверяет каждый экран; deployment CSP smoke остается внешним. |
 | `BUG-2026-08-10-022` | P1 | Shared UI/status semantics | Подстрочные правила считали `Unhealthy`, `Inactive` и `NotLinked` успешными; lowercase API-статусы поддержки оставались на английском, а `Succeeded` не получал success-тон. | Исправлено локально | Точная таблица и упорядоченные fallback-правила проходят unit и полный desktop/mobile browser regression; production cabinet/admin smoke остается внешним. |
