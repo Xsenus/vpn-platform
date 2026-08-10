@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.590.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-managed-error-content`.
+
+### Исправлено
+
+- Public tariffs теперь хранит initial load failure как managed content key и повторно разрешает текст после загрузки CMS-контента; настроенные администратором `home.errors.tariffsLoad` и `home.errors.paymentProvidersLoad` больше не теряются из-за порядка ответов API.
+- Стартовые content/tariff/provider requests получили lifetime guard и не меняют состояние после ухода со страницы.
+- Exhaustive admin responsive test сохраняет все 25 viewport и все sections, но использует измеренный timeout `600 s`: прежние `480 s` обрывали зелёный layout audit под нагрузкой полного параллельного набора.
+
+### Проверено
+
+- До исправления fail-first browser regression получал встроенный текст вместо delayed managed message; после исправления targeted desktop/mobile `2/2`, полный public desktop/mobile regression `30/30`.
+- Первый полный browser run прошёл `125/126`, а единственный exhaustive test был оборван ровно на `480 s`; изолированно он прошёл за `427.4 s`, после корректировки полный console-responsive Playwright прошёл `126/126` за `10.2 min`, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `125/125`, typecheck/build, audit `0 vulnerabilities`; backend `1125/1125`, EF drift отсутствует, fresh SQLite order/payment/subscription/access flow зелёный.
+- Roadmap: `603/623` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.589.0 - 2026-08-11
 
 Release entry: `2026-08-11-runtime-error-ui-boundary`.

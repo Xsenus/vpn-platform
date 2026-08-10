@@ -373,6 +373,7 @@ function TariffsPage({ onPendingCheckout }: {
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
   const [tariffsLoading, setTariffsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [errorContentKey, setErrorContentKey] = useState('')
   const [promoCode, setPromoCode] = useState('')
   const [paymentProviders, setPaymentProviders] = useState<PublicPaymentProviderDto[]>([])
   const [paymentProvidersLoading, setPaymentProvidersLoading] = useState(true)
@@ -383,31 +384,56 @@ function TariffsPage({ onPendingCheckout }: {
   const checkoutRequestIdRef = useRef(0)
   const navigate = useNavigate()
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
+  const visibleError = errorContentKey ? content(errorContentKey) : error
   const checkoutUnavailableReason = getCheckoutUnavailableReason(paymentProvidersLoading, paymentProviders, provider, {
     loading: content('home.checkout.unavailable.loading'),
     noProviders: content('home.checkout.unavailable.noProviders'),
     chooseProvider: content('home.checkout.unavailable.chooseProvider')
   })
-  const tariffsState = getPublicListState(tariffsLoading, error, tariffs.length)
+  const tariffsState = getPublicListState(tariffsLoading, visibleError, tariffs.length)
 
   useEffect(() => {
-    api.getHomeContent().then((items) => setPageContent({ ...defaultHomeContent, ...mapContent(items) })).catch(() => setPageContent(defaultHomeContent))
+    let cancelled = false
+    api.getHomeContent()
+      .then((items) => {
+        if (!cancelled) setPageContent({ ...defaultHomeContent, ...mapContent(items) })
+      })
+      .catch(() => {
+        if (!cancelled) setPageContent(defaultHomeContent)
+      })
     setTariffsLoading(true)
-    api.getTariffs().then(setTariffs).catch(() => setError(content('home.errors.tariffsLoad'))).finally(() => setTariffsLoading(false))
+    api.getTariffs()
+      .then((items) => {
+        if (!cancelled) setTariffs(items)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setError('')
+        setErrorContentKey('home.errors.tariffsLoad')
+      })
+      .finally(() => {
+        if (!cancelled) setTariffsLoading(false)
+      })
     setPaymentProvidersLoading(true)
     api.getPublicPaymentProviders()
       .then((items) => {
+        if (cancelled) return
         setPaymentProviders(items)
         setProvider((current) => current && items.some((item) => item.provider === current) ? current : (items[0]?.provider ?? ''))
       })
       .catch(() => {
+        if (cancelled) return
         setPaymentProviders([])
         setProvider('')
-        setError(content('home.errors.paymentProvidersLoad'))
+        setError('')
+        setErrorContentKey('home.errors.paymentProvidersLoad')
       })
-      .finally(() => setPaymentProvidersLoading(false))
+      .finally(() => {
+        if (!cancelled) setPaymentProvidersLoading(false)
+      })
 
     return () => {
+      cancelled = true
       checkoutRequestIdRef.current += 1
       checkoutInFlightRef.current = false
     }
@@ -417,6 +443,7 @@ function TariffsPage({ onPendingCheckout }: {
     if (checkoutInFlightRef.current) return
 
     setError('')
+    setErrorContentKey('')
 
     if (!provider) {
       setError(content('home.errors.noPaymentProviders'))
@@ -487,9 +514,9 @@ function TariffsPage({ onPendingCheckout }: {
         </Card>
       </div>
 
-      {error && (
+      {visibleError && (
         <div className="section">
-          <ErrorBlock message={error} />
+          <ErrorBlock message={visibleError} />
         </div>
       )}
 

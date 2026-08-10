@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public managed error content
+
+Scope:
+- Initial tariff/provider failures must render the latest admin-managed `home.errors.*` content regardless of API response order.
+- The exhaustive responsive gate must finish under ordinary full-suite contention without reducing sections, viewports or WCAG/layout assertions.
+
+Results:
+- Roadmap progress: `603/623` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-managed-error-content`, version `0.590.0`.
+- Reproduction before fix: delayed CMS content plus an immediate malformed tariff response kept the built-in error permanently; targeted browser was `0/1` and received `Не удалось загрузить тарифы...` instead of the managed message.
+- After fix: `TariffsPage` stores a managed content key, resolves it from current content on every render and ignores all three initial request completions after unmount; source guard covers both tariff and provider error keys.
+- Targeted managed-content browser: desktop/mobile `2/2`; full public desktop/mobile regression: `30/30`; no horizontal overflow.
+- Responsive-gate reproduction: first full run was `125/126`; the only failure was the exhaustive admin matrix being interrupted exactly at its `480 s` test timeout during `page.evaluate`, with no layout assertion failure. Isolated unchanged coverage passed `1/1` in `427.4 s`.
+- Final visual audit: full console-responsive Playwright `126/126` in `10.2 min`; all-screens `6/6`, including every admin section on 25 viewport configurations `305x568..2560x1440`; timeout is `600 s`, coverage is unchanged.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; incomplete local NuGet cache was restored before the successful run; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Runtime error UI boundary
 
 Scope:

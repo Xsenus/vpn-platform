@@ -1086,7 +1086,7 @@ test('cabinet fits representative responsive viewports after authentication', as
 })
 
 test('every admin section fits representative responsive viewports', async ({ page }, testInfo) => {
-  test.setTimeout(480_000)
+  test.setTimeout(600_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 

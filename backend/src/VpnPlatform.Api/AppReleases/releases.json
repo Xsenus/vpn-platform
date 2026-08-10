@@ -13911,5 +13911,28 @@
         "text": "Roadmap progress is 602/622 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-public-managed-error-content",
+    "version": "0.590.0",
+    "releasedAt": "2026-08-11T01:25:40+07:00",
+    "title": "Управляемые ошибки тарифов синхронизированы",
+    "summary": "Публичная страница тарифов применяет актуальные CMS-сообщения независимо от порядка ответов API.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Initial tariff и provider failures хранят managed content key и обновляют сообщение после загрузки CMS-контента."
+      },
+      {
+        "type": "improved",
+        "text": "Стартовые запросы защищены от completion после unmount, а exhaustive responsive gate получил измеренный запас времени без сокращения coverage."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 603/623 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

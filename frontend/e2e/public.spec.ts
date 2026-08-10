@@ -132,6 +132,8 @@ async function mockPublicApi(page: Page) {
   let wrongShapeTariffsResponse = false
   let invalidItemTariffsResponse = false
   let oversizedTariffsResponse = false
+  let homeContentDelayMs = 0
+  let customTariffsLoadError = ''
   let failNextPaymentInit = false
   let paymentInitDelayMs = 0
   let registerRequestCount = 0
@@ -145,7 +147,19 @@ async function mockPublicApi(page: Page) {
   let releaseDelayedResetPassword: (() => void) | null = null
 
   await page.route('**/api/public/content/home', async (route) => {
-    await fulfillJson(route, homeContent)
+    if (homeContentDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, homeContentDelayMs))
+    const response = customTariffsLoadError
+      ? [
+          ...homeContent,
+          {
+            ...homeContent[0],
+            id: 'content-tariffs-load-error',
+            key: 'home.errors.tariffsLoad',
+            value: customTariffsLoadError
+          }
+        ]
+      : homeContent
+    await fulfillJson(route, response)
   })
 
   await page.route('**/api/public/content/faq**', async (route) => {
@@ -439,9 +453,24 @@ async function mockPublicApi(page: Page) {
       wrongShapeTariffsResponse = false
       invalidItemTariffsResponse = false
       oversizedTariffsResponse = true
-    }
+    },
+    delayHomeContent: (delayMs: number) => { homeContentDelayMs = delayMs },
+    setTariffsLoadError: (message: string) => { customTariffsLoadError = message }
   }
 }
+
+test('public tariffs applies managed error content after a slower content response', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.returnInvalidTariffsResponse()
+  api.delayHomeContent(250)
+  api.setTariffsLoadError('Тарифы обновляются. Вернитесь через несколько минут.')
+
+  await page.goto('/tariffs')
+
+  await expect(page.getByRole('alert')).toContainText('Тарифы обновляются. Вернитесь через несколько минут.')
+  await expect(page.getByRole('alert')).not.toContainText('Не удалось загрузить тарифы.')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
 
 test('public tariffs handles invalid MIME, shape, item and size without a render crash', async ({ page }) => {
   const pageErrors: string[] = []
