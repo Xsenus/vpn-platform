@@ -1049,6 +1049,7 @@ export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
   const [adminSession, setAdminSession] = useState<AdminSessionDto | null>(null)
+  const [adminDataReady, setAdminDataReady] = useState(false)
   const adminAccessVerified = Boolean(adminSession)
   const adminDisabledTitle = adminAccessVerified ? undefined : adminAuthRequiredMessage
   const [email, setEmail] = useState(readSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY) ?? '')
@@ -1454,6 +1455,7 @@ export function App() {
       })
     }
     setLoadErrors(errors)
+    setAdminDataReady(true)
     const nextSelectedSupportConversationId = nextSupportConversations.some((item) => item.id === selectedSupportConversationIdRef.current)
       ? selectedSupportConversationIdRef.current
       : String(nextSupportConversations[0]?.id ?? '')
@@ -1566,6 +1568,12 @@ export function App() {
     description.setAttribute('name', 'description')
     description.setAttribute('content', metadata.description)
   }, [activeSectionDescription, activeSectionLabel, adminSession, sessionHydrating])
+
+  useEffect(() => {
+    if (!adminSession) return
+    const focusTargetId = adminDataReady ? 'admin-content' : 'admin-data-loading'
+    window.requestAnimationFrame(() => document.getElementById(focusTargetId)?.focus())
+  }, [adminDataReady, adminSession])
 
   useEffect(() => {
     let focusFrame = 0
@@ -1743,6 +1751,7 @@ export function App() {
     loadAllRequestId.current += 1
     usersRequestId.current += 1
     setAdminSession(null)
+    setAdminDataReady(false)
     setPassword('')
     setUsers([])
     selectedUserIdRef.current = ''
@@ -3365,6 +3374,44 @@ export function App() {
             <p className="safe-note" role="status">{adminAuthRequiredMessage}</p>
             {busy && <LoadingBlock label="Проверяем доступ..." />}
             {notice && <p className="toast-success" role="status" aria-live="polite">{notice}</p>}
+            {error && <ErrorBlock message={error} />}
+          </Card>
+        </div>
+      </PageShell>
+    )
+  }
+
+  if (!adminDataReady) {
+    return (
+      <PageShell title="Админ-панель VPN Platform">
+        <div id="admin-data-loading" className="admin-login-shell" tabIndex={-1}>
+          <section className="admin-login-intro" aria-label="Возможности админ-панели">
+            <p className="eyebrow">VPN Platform Admin</p>
+            <h2>Единый центр управления продажей VPN</h2>
+            <p>Настраивайте тарифы, платежных провайдеров, Telegram-ботов, VPN-серверы, панели 3x-ui и выдачу доступов из одной панели.</p>
+            <div className="admin-login-metrics">
+              <span><strong>{adminSections.length}</strong> разделов</span>
+              <span><strong>9</strong> провайдеров</span>
+              <span><strong>24/7</strong> контроль</span>
+            </div>
+          </section>
+          <Card>
+            <div className="login-panel-header">
+              <div>
+                <p className="eyebrow">Доступ подтверждён</p>
+                <h2 className="page-heading">Загрузка admin-панели</h2>
+                <p className="muted no-margin-bottom">Получаем фактические рабочие данные перед показом метрик, очередей и разделов управления.</p>
+              </div>
+              <ValidationModeBadge label="Доступ только для администраторов" />
+            </div>
+            {busy
+              ? <LoadingBlock label="Загружаем данные admin-panel..." />
+              : (
+                <div className="toolbar mt-12">
+                  <PrimaryButton type="button" onClick={() => void loadAll(token, adminSession)}>Повторить загрузку</PrimaryButton>
+                  <PrimaryButton type="button" disabled={logoutBusy} aria-busy={logoutBusy} className="button-secondary" onClick={() => void handleLogout()}>Завершить сессию</PrimaryButton>
+                </div>
+              )}
             {error && <ErrorBlock message={error} />}
           </Card>
         </div>

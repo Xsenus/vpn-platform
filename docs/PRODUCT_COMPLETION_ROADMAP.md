@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-auth-data-boundary`, версия `0.601.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `614/634` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-admin-initial-data-boundary`, версия `0.602.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `615/635` проверяемых пунктов, готовность `96.9%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -2152,6 +2152,10 @@ git diff --check
   - Что сделать: unauthenticated экран не должен показывать нулевые пользовательские метрики и empty states приватных коллекций; после login реальные данные должны появляться без reload.
   - Что сделано: aggregate/private dashboard требует подтверждённый profile; help/auth/password-reset остаются доступны до входа, `/api/me` не вызывается без token, успешный login открывает фактические метрики и подписку.
   - Доказательство: до исправления fail-first desktop/mobile был `0/2`; после исправления targeted `2/2`, cabinet regression `40/40`, полный Playwright `148/148` за `8.6 min` без failed/flaky/skipped, all-screens `6/6`; auth UI на 1280/393 px проверен без overflow/overlap. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
+- [x] `P11-ACC-325` Скрыть operational admin-panel до завершения первой загрузки данных. 2026-08-11.
+  - Что сделать: подтверждение admin-роли не должно превращать ещё не загруженные массивы в нулевые метрики и empty states; переход login -> loading -> dashboard должен сохранять корректный фокус и mobile layout.
+  - Что сделано: отдельный `adminDataReady` gate удерживает operational navigation/content до завершения первой общей выборки; focused loading/retry/logout state переходит в фактический dashboard, повторные refresh сохраняют подтверждённые данные.
+  - Доказательство: до исправления fail-first desktop/mobile был `0/2`; после исправления targeted `2/2`, промежуточный focus regression `70/74` исправлен и targeted boundary/RBAC прошёл `6/6`, финальный admin regression `74/74`, полный Playwright `150/150` за `8.7 min` без failed/flaky/skipped, all-screens `6/6`; loading UI на 1280/393 px проверен без overflow/overlap. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2801,6 +2805,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-015` | P1 | Admin / initial data | После подтверждения admin-роли до завершения первой общей загрузки панель показывала нулевые operational метрики и ложные empty states; фокус после добавления loading-state требовал отдельного перехода в готовый content. | Исправлено локально | Initial-data gate, двухфазный focus transition и desktop/mobile/full responsive regression зелёные. |
 | `BUG-2026-08-11-014` | P1 | Cabinet / auth boundary | До авторизации экран входа показывал нулевые приватные метрики и empty states пользовательских коллекций, хотя профиль ещё не был загружен. | Исправлено локально | Profile-only aggregate/private data gate и проверенный login transition; desktop/mobile и полный responsive gate зелёные. |
 | `BUG-2026-08-11-013` | P1 | Cabinet / restored session | Transient failure общей первичной загрузки оставлял recovery-карточку одновременно с ложными нулевыми метриками и empty states приватных данных. | Исправлено локально | Aggregate/private data gate до подтверждённого профиля, сохранённая сессия и explicit retry; desktop/mobile и полный responsive gate зелёные. |
 | `BUG-2026-08-11-012` | P1 | Admin / user and VPN details | Transient detail failures уходили в общий banner; выбранный пользователь выглядел невыбранным, а VPN-панель одновременно показывала форму и ложное «Клиентов нет» без локального retry. | Исправлено локально | Scoped loading/error states, взаимоисключающие detail/empty/error состояния и generation-guarded explicit retry; desktop/mobile и полный responsive gate зелёные. |

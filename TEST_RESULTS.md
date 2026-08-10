@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin initial-data boundary
+
+Scope:
+- A verified admin role must not expose zero operational metrics or empty queues while the first aggregate load is still pending.
+- The login-to-dashboard transition must preserve focus and responsive layout, then reveal factual data without reload.
+
+Results:
+- Roadmap progress: `615/635` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-initial-data-boundary`, version `0.602.0`.
+- Reproduction before fix: delayed dashboard summary kept the initial `Promise.all` pending while the verified-session render exposed «Всего пользователей», «Активные подписки», «Заказов пока нет» and «Нет срочных проблем» from empty local state; fail-first desktop/mobile was `0/2`.
+- After fix: `adminDataReady` keeps operational navigation/content unmounted until the first load completes; the focused transition screen exposes loading plus recovery/logout controls, then moves focus to `#admin-content` and reveals factual data without reload.
+- Targeted boundary: desktop/mobile `2/2`; an intermediate full run exposed focus regression at `70/74`, the corrected boundary/RBAC set passed `6/6`, and final admin desktop/mobile regression passed `74/74` in `6.2 min`.
+- Final console-responsive Playwright: `150/150` in `8.7 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: transition screenshots at 1280 and 393 CSS px confirmed coherent loading composition, fitted badge/text, no operational data, skip-link overlap or horizontal overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `523325`, gzip `140074`, largest `223653`; cabinet bundle `364.41 kB`, gzip `105.46 kB`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `601` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet auth-data boundary
 
 Scope:

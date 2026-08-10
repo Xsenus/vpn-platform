@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.602.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-initial-data-boundary`.
+
+### Исправлено
+
+- После успешной проверки административной роли admin-panel больше не показывает нулевые operational метрики и ложные empty states, пока первая общая загрузка ещё ждёт API.
+- До подтверждения первой выборки отображается отдельный focused loading-state; dashboard, навигация, очереди и формы монтируются только после получения данных, а последующие refresh сохраняют уже подтверждённый интерфейс.
+- Переход фокуса теперь охватывает обе фазы: loading-контейнер получает фокус после login, а готовый `#admin-content` — после завершения загрузки; переходный экран не создаёт перекрывающий mobile skip-link.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: при задержанном dashboard response отображалась ложная метрика «Всего пользователей». После исправления targeted boundary прошёл `2/2`.
+- Промежуточный полный admin run выявил focus regression `70/74`; после двухфазного focus transition targeted boundary/RBAC прошёл `6/6`, финальный admin desktop/mobile regression — `74/74` за `6.2 min`.
+- Полный console-responsive Playwright прошёл `150/150` за `8.7 min`, без failed/flaky/skipped; all-screens `6/6` на 25 viewport-конфигурациях. Loading UI просмотрен на 1280/393 px без overflow, overlap и ложных operational данных.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; admin bundle `523325/140074/max 223653`, cabinet bundle `364.41/105.46 kB`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `601`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `615/635` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.601.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-auth-data-boundary`.

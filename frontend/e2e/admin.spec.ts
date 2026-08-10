@@ -426,6 +426,8 @@ async function mockAdminApi(page: Page) {
   const requests: Array<{ method: string; path: string; body: unknown; authorization: string }> = []
   let logoutShouldFail = false
   let dashboardShouldDeny = false
+  let delayNextDashboardResponse = false
+  let releaseDelayedDashboard: (() => void) | null = null
   const expiredAdminAccessTokens = new Set<string>()
   let failNextAdminSessionStatus: number | null = null
   let refreshFailureStatus: number | null = null
@@ -654,6 +656,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/dashboard/summary') {
+      if (delayNextDashboardResponse) {
+        delayNextDashboardResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedDashboard = resolve })
+        releaseDelayedDashboard = null
+      }
       const financeVisible = request.headers().authorization !== 'Bearer support-e2e-token'
       const supportVisible = request.headers().authorization !== 'Bearer finance-e2e-token'
       await fulfillJson(route, {
@@ -1817,6 +1824,8 @@ async function mockAdminApi(page: Page) {
     getAuthorizedRequestCount: (path: string, method: string, authorization: string) =>
       requests.filter((item) => item.method === method && item.path === path && item.authorization === authorization).length,
     denyNextDashboard: () => { dashboardShouldDeny = true },
+    delayNextDashboard: () => { delayNextDashboardResponse = true },
+    releaseDashboard: () => { releaseDelayedDashboard?.() },
     expireAccessToken: (accessToken: string) => { expiredAdminAccessTokens.add(`Bearer ${accessToken}`) },
     failNextAdminSessionRequest: (status = 503) => { failNextAdminSessionStatus = status },
     failRefreshRequest: (status = 401) => { refreshFailureStatus = status },
@@ -3568,6 +3577,35 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
+})
+
+test('admin login hides operational data until the initial load completes', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.delayNextDashboard()
+
+  await page.goto('/')
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+
+  await expect(page.getByText('Загружаем данные admin-panel...')).toBeVisible()
+  await expect(page.locator('#admin-data-loading')).toBeFocused()
+  await expect(page.locator('.skip-link')).toHaveCount(0)
+  for (const falseLoadedState of [
+    'Всего пользователей',
+    'Активные подписки',
+    'Заказов пока нет',
+    'Нет срочных проблем'
+  ]) {
+    await expect(page.getByText(falseLoadedState, { exact: true })).toHaveCount(0)
+  }
+
+  api.releaseDashboard()
+  await expect(page.getByRole('heading', { name: 'Дашборд' })).toBeVisible()
+  await expect(page.locator('.stat-tile').filter({ hasText: 'Всего пользователей' })).toContainText('4')
+  await expect(page.getByText('Admin Pro 30', { exact: true }).first()).toBeVisible()
+  expect(api.getRequestCount('/api/admin/dashboard/summary')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('admin panel covers login and critical operational mutations across all sections', async ({ page }, testInfo) => {

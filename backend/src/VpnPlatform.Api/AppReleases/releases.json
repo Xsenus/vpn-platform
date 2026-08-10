@@ -14187,5 +14187,28 @@
         "text": "Roadmap progress is 614/634 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-admin-initial-data-boundary",
+    "version": "0.602.0",
+    "releasedAt": "2026-08-11T06:39:54+07:00",
+    "title": "Админ-панель ждёт фактические данные перед показом",
+    "summary": "После подтверждения роли сначала показывается управляемая загрузка, а метрики и очереди появляются только после получения фактических данных.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Нулевые рабочие метрики и пустые очереди больше не показываются во время первой загрузки админ-панели."
+      },
+      {
+        "type": "improved",
+        "text": "Фокус последовательно переходит на экран загрузки и затем на готовый dashboard без перекрытий на мобильных экранах."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 615/635 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
