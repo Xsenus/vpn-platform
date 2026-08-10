@@ -131,6 +131,52 @@ public class AdminTelegramBotSettingsControllerTests
             PaymentFailedTextTemplate: null,
             SubscriptionExpiredTextTemplate: null), CancellationToken.None);
         Assert.Contains("WebApp URL", JsonSerializer.Serialize(Assert.IsType<BadRequestObjectResult>(invalidWebApp).Value), StringComparison.Ordinal);
+
+        var credentialBearingWebhook = await controller.UpdateSettings(new UpdateTelegramBotSettingsCommand(
+            Enabled: false,
+            Mode: "LongPolling",
+            PublicBotUsername: "vpn_ready_bot",
+            BotToken: null,
+            WebhookUrl: "https://operator:secret@api.example.test/webhook",
+            SecretToken: null,
+            AdminChatId: null,
+            WebAppUrl: null,
+            WelcomeText: null,
+            InstructionText: null,
+            SupportText: null,
+            AfterPaymentTextTemplate: null,
+            RenewalTextTemplate: null,
+            PaymentFailedTextTemplate: null,
+            SubscriptionExpiredTextTemplate: null), CancellationToken.None);
+        Assert.Contains("логин", ReadError(credentialBearingWebhook), StringComparison.OrdinalIgnoreCase);
+
+        var credentialBearingWebApp = await controller.UpdateSettings(new UpdateTelegramBotSettingsCommand(
+            Enabled: false,
+            Mode: "LongPolling",
+            PublicBotUsername: "vpn_ready_bot",
+            BotToken: null,
+            WebhookUrl: null,
+            SecretToken: null,
+            AdminChatId: null,
+            WebAppUrl: "https://operator:secret@cabinet.example.test",
+            WelcomeText: null,
+            InstructionText: null,
+            SupportText: null,
+            AfterPaymentTextTemplate: null,
+            RenewalTextTemplate: null,
+            PaymentFailedTextTemplate: null,
+            SubscriptionExpiredTextTemplate: null), CancellationToken.None);
+        Assert.Contains("логин", ReadError(credentialBearingWebApp), StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.SiteContentBlocks.ToListAsync());
+    }
+
+    private static string ReadError(IActionResult result)
+    {
+        var value = Assert.IsType<BadRequestObjectResult>(result).Value;
+        Assert.NotNull(value);
+        var property = value.GetType().GetProperty("error");
+        Assert.NotNull(property);
+        return Assert.IsType<string>(property.GetValue(value));
     }
 
     private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)

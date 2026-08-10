@@ -152,6 +152,46 @@ public class PaymentProviderAccountConcurrencyTests
         Assert.Equal(1, await db.PaymentProviderAccounts.CountAsync(x => x.Name == "duplicate-name"));
     }
 
+    [Theory]
+    [InlineData("https://operator:secret@api.example.test", "https://cabinet.example.test/return", "https://api.example.test/webhook", "{}")]
+    [InlineData("https://api.example.test", "https://operator:secret@cabinet.example.test/return", "https://api.example.test/webhook", "{}")]
+    [InlineData("https://api.example.test", "https://cabinet.example.test/return", "https://operator:secret@api.example.test/webhook", "{}")]
+    [InlineData("https://api.example.test", "https://cabinet.example.test/return", "https://api.example.test/webhook", "{\"hostedCheckoutUrl\":\"https://operator:secret@pay.example.test\"}")]
+    public async Task Provider_Account_Should_Reject_Credential_Bearing_Urls_Without_Persistence(
+        string apiBaseUrl,
+        string returnUrl,
+        string webhookUrl,
+        string extraSettingsJson)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var service = new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock());
+
+        var result = await service.UpsertAsync(null, new UpsertPaymentProviderAccountCommand(
+            PaymentProvider.YooKassa,
+            PaymentProviderMode.Sandbox,
+            "unsafe-url",
+            "Unsafe URL",
+            IsEnabled: true,
+            IsDefault: false,
+            ShopId: "unsafe-url",
+            ApiBaseUrl: apiBaseUrl,
+            ReturnUrl: returnUrl,
+            WebhookUrl: webhookUrl,
+            SecretKey: "provider-secret",
+            WebhookSecret: "webhook-secret",
+            UseWebhookIpAllowList: false,
+            AllowedWebhookIpRangesCsv: string.Empty,
+            ExtraSettingsJson: extraSettingsJson));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("credentials", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.PaymentProviderAccounts.ToListAsync());
+    }
+
     [Fact]
     public async Task NonUnique_Persistence_Failure_Should_Not_Be_Masked_As_Conflict()
     {
@@ -196,6 +236,45 @@ public class PaymentProviderAccountConcurrencyTests
             await checkGate.DisposeAsync();
             Assert.True((await checkTask).IsSuccess);
         }
+    }
+
+    [Fact]
+    public async Task Legacy_Credential_Bearing_Account_Should_Not_Be_Enabled_Or_Selected_For_Checkout()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var account = Account("legacy-unsafe-url");
+        account.IsEnabled = false;
+        account.ApiBaseUrl = "https://operator:secret@api.example.test";
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+        var service = new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock());
+
+        var enable = await service.SetEnabledAsync(account.Id, enabled: true);
+
+        Assert.False(enable.IsSuccess);
+        Assert.Contains("credentials", enable.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(account.IsEnabled);
+
+        account.IsEnabled = true;
+        await db.SaveChangesAsync();
+        var checkout = await service.GetWebCheckoutAccountEntityAsync(PaymentProvider.YooKassa);
+
+        Assert.False(checkout.IsSuccess);
+        Assert.Contains("credentials", checkout.Error, StringComparison.OrdinalIgnoreCase);
+
+        var fallback = Account("safe-fallback");
+        fallback.IsDefault = false;
+        db.PaymentProviderAccounts.Add(fallback);
+        await db.SaveChangesAsync();
+
+        var fallbackCheckout = await service.GetWebCheckoutAccountEntityAsync(PaymentProvider.YooKassa);
+
+        Assert.True(fallbackCheckout.IsSuccess, fallbackCheckout.Error);
+        Assert.Equal(fallback.Id, fallbackCheckout.Value!.Id);
     }
 
     private static DbContextOptions<ApplicationDbContext> SqliteOptions(string path)

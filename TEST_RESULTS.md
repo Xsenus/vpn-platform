@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin configuration URL credentials boundary
+
+Scope:
+- Payment provider, Telegram and 3x-ui configuration must not persist or submit URL-embedded credentials.
+- Frontend and backend must enforce the same absolute credential-free `http/https` contract, including `hostedCheckoutUrl`.
+
+Results:
+- Roadmap progress: `591/611` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-config-url-credentials-boundary`, version `0.578.0`.
+- Reproduction before fix: backend accepted six credential-bearing create/enable/checkout cases and targeted admin desktop/mobile failed `6/6`; after fix URL unit `2/2`, backend targeted `20/20`, browser targeted `6/6`, full console-responsive Playwright `118/118`.
+- Frontend forms show validation and disable submit; backend rejects API/return/webhook/hosted checkout, Telegram and panel URL credentials before persistence, enable and checkout selection, while preserving a safe provider fallback.
+- Frontend tests: `121/121`; typecheck/build all apps: OK; cabinet JS `359.27 kB` raw/`104.22 kB` gzip; admin JS raw `515206`, gzip `138227`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1119/1119`; fresh SQLite latest release: OK; secret scan: `668` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: cabinet URL boundary
 
 Scope:

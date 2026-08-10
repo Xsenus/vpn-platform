@@ -182,12 +182,22 @@ public class AdminTelegramBotSettingsController : ControllerBase
             return "Для режима Webhook укажите Webhook URL.";
         }
 
-        if (!string.IsNullOrWhiteSpace(webhookUrl) && !IsHttpUrl(webhookUrl))
+        if (!string.IsNullOrWhiteSpace(webhookUrl) && SafeHttpUrl.ContainsCredentials(webhookUrl))
+        {
+            return "Webhook URL не должен содержать логин или пароль.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(webhookUrl) && !SafeHttpUrl.TryNormalize(webhookUrl, out _))
         {
             return "Webhook URL должен быть абсолютным http/https адресом.";
         }
 
-        if (!string.IsNullOrWhiteSpace(webAppUrl) && !IsHttpUrl(webAppUrl))
+        if (!string.IsNullOrWhiteSpace(webAppUrl) && SafeHttpUrl.ContainsCredentials(webAppUrl))
+        {
+            return "WebApp URL не должен содержать логин или пароль.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(webAppUrl) && !SafeHttpUrl.TryNormalize(webAppUrl, out _))
         {
             return "WebApp URL должен быть абсолютным http/https адресом.";
         }
@@ -225,7 +235,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
             {
                 requiredActions.Add("Укажите Webhook URL для режима Webhook.");
             }
-            else if (!IsHttpUrl(state.WebhookUrl))
+            else if (!SafeHttpUrl.TryNormalize(state.WebhookUrl, out _))
             {
                 requiredActions.Add("Исправьте Webhook URL: нужен абсолютный http/https адрес.");
             }
@@ -236,7 +246,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(state.WebAppUrl) && !IsHttpUrl(state.WebAppUrl))
+        if (!string.IsNullOrWhiteSpace(state.WebAppUrl) && !SafeHttpUrl.TryNormalize(state.WebAppUrl, out _))
         {
             requiredActions.Add("Исправьте WebApp URL: нужен абсолютный http/https адрес.");
         }
@@ -441,10 +451,6 @@ public class AdminTelegramBotSettingsController : ControllerBase
 
     private static string? NormalizeOptionalUrl(string? url)
         => url is null ? null : url.Trim();
-
-    private static bool IsHttpUrl(string url)
-        => Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private static bool IsValidTelegramUsername(string username)
     {

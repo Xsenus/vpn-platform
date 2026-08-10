@@ -14,6 +14,7 @@ public class AllScreensBrowserSmokeTests
         var publicRoute = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "public-route.ts"));
         var adminApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "App.tsx"));
         var adminMetadata = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-page-metadata.ts"));
+        var adminUrlValidation = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-url-validation.ts"));
         var adminSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "admin.spec.ts"));
         var cabinetApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "cabinet", "src", "App.tsx"));
         var cabinetAppVersion = File.ReadAllText(Path.Combine(root, "frontend", "apps", "cabinet", "src", "AppVersion.tsx"));
@@ -105,6 +106,9 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("!parsed.search && !parsed.hash", cabinetPublicUrl, StringComparison.Ordinal);
         Assert.DoesNotContain("window.location.href", cabinetApp, StringComparison.Ordinal);
         Assert.Contains("source=private-campaign#payment-history", cabinetSpec, StringComparison.Ordinal);
+        Assert.Contains("getSafeHttpUrl", adminUrlValidation, StringComparison.Ordinal);
+        Assert.Contains("без логина и пароля", adminUrlValidation, StringComparison.Ordinal);
+        Assert.Contains("operator:secret@", adminSpec, StringComparison.Ordinal);
         Assert.Contains("unhealthy: 'danger'", sharedUi, StringComparison.Ordinal);
         Assert.Contains("inactive: 'danger'", sharedUi, StringComparison.Ordinal);
         Assert.Contains("notlinked: 'neutral'", sharedUi, StringComparison.Ordinal);

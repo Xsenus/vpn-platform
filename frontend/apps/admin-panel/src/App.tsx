@@ -59,6 +59,7 @@ import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './ad
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
 import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
+import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -909,17 +910,6 @@ function validateWorkScenarioForm(form: WorkScenarioUpsertPayload) {
   return errors
 }
 
-function isValidHttpUrl(value: string | null | undefined) {
-  const normalized = String(value ?? '').trim()
-  if (!normalized) return true
-  try {
-    const url = new URL(normalized)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
 function validatePaymentProviderForm(
   form: UpsertPaymentProviderAccountPayload,
   setup: PaymentProviderSetup,
@@ -931,9 +921,12 @@ function validatePaymentProviderForm(
   if (!form.publicName.trim()) errors.push('Укажите название способа оплаты для пользователя.')
   if (enabled && setup.channel === 'web' && !form.shopId.trim()) errors.push(`Заполните поле "${setup.shopIdLabel}".`)
   if (enabled && setup.channel === 'web' && !form.secretKey?.trim() && !editingAccount?.hasSecretKey) errors.push(`Заполните секрет "${setup.secretLabel}".`)
-  if (!isValidHttpUrl(form.apiBaseUrl)) errors.push('API base URL должен быть корректным http/https адресом.')
-  if (!isValidHttpUrl(form.returnUrl)) errors.push('Return URL должен быть корректным http/https адресом.')
-  if (!isValidHttpUrl(form.webhookUrl)) errors.push('Webhook URL должен быть корректным http/https адресом.')
+  if (!isOptionalSafeAdminHttpUrl(form.apiBaseUrl)) errors.push('API base URL должен быть корректным http/https адресом без логина и пароля.')
+  if (!isOptionalSafeAdminHttpUrl(form.returnUrl)) errors.push('Return URL должен быть корректным http/https адресом без логина и пароля.')
+  if (!isOptionalSafeAdminHttpUrl(form.webhookUrl)) errors.push('Webhook URL должен быть корректным http/https адресом без логина и пароля.')
+  for (const field of setup.extraSettingsFields.filter((item) => item.inputMode === 'url')) {
+    if (!isOptionalSafeAdminHttpUrl(providerExtraSettingValue(form, field))) errors.push(`${field.label} должен быть корректным http/https адресом без логина и пароля.`)
+  }
   return errors
 }
 
@@ -952,8 +945,8 @@ function validateVpnPanelForm(form: CreateVpnPanelPayload) {
   if (!form.name.trim()) errors.push('Укажите название 3x-ui панели.')
   if (!form.baseUrl.trim()) {
     errors.push('Укажите адрес 3x-ui панели.')
-  } else if (!isValidHttpUrl(form.baseUrl)) {
-    errors.push('Адрес 3x-ui панели должен быть корректным http/https URL.')
+  } else if (!isOptionalSafeAdminHttpUrl(form.baseUrl)) {
+    errors.push('Адрес 3x-ui панели должен быть корректным http/https URL без логина и пароля.')
   }
   if (Number(form.capacity) <= 0) errors.push('Емкость 3x-ui панели должна быть больше 0.')
   return errors
@@ -2060,6 +2053,13 @@ export function App() {
 
   const handleSaveProviderAccount = async () => {
     if (!token || !canWriteActiveSection) return
+    const validationErrors = validatePaymentProviderForm(providerForm, providerSetup(providerForm.provider), editingProviderAccountId
+      ? paymentProviderAccounts.find((account) => account.id === editingProviderAccountId)
+      : undefined)
+    if (validationErrors.length > 0) {
+      setError(validationErrors[0])
+      return
+    }
     const editingId = editingProviderAccountId
     const submittedForm = providerForm
     await runAction('provider-save', async (action) => {
@@ -2830,6 +2830,11 @@ export function App() {
 
   const handleSaveVpnPanel = async () => {
     if (!token || !canWriteActiveSection) return
+    const validationErrors = validateVpnPanelForm(vpnPanelForm)
+    if (validationErrors.length > 0) {
+      setError(validationErrors[0])
+      return
+    }
     const editingId = editingVpnPanelId
     const submittedForm = vpnPanelForm
     const selectedPanelId = selectedVpnPanelIdRef.current
@@ -3142,19 +3147,26 @@ export function App() {
     await action.reloadAll()
   })
 
-  const handleSaveBotSettings = () => runAction('bot-settings', async (action) => {
-    const submittedForm = botSettingsForm
-    const saved = await api.updateAdminTelegramBotSettings(token, submittedForm)
-    if (!action.isCurrent()) return
-    setBotSettings(saved)
-    if (botSettingsFormRef.current === submittedForm) {
-      botSettingsFormDirty.current = false
-      setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+  const handleSaveBotSettings = () => {
+    const validationErrors = validateTelegramBotUrlFields(botSettingsForm)
+    if (validationErrors.length > 0) {
+      setError(validationErrors[0])
+      return
     }
-    botSettingsCheckRequestId.current += 1
-    setBotSettingsCheck(null)
-    setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
-  })
+    return runAction('bot-settings', async (action) => {
+      const submittedForm = botSettingsForm
+      const saved = await api.updateAdminTelegramBotSettings(token, submittedForm)
+      if (!action.isCurrent()) return
+      setBotSettings(saved)
+      if (botSettingsFormRef.current === submittedForm) {
+        botSettingsFormDirty.current = false
+        setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+      }
+      botSettingsCheckRequestId.current += 1
+      setBotSettingsCheck(null)
+      setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
+    })
+  }
 
   const handleTestBotSettings = () => runAction('bot-settings-test', async (action) => {
     const requestId = ++botSettingsCheckRequestId.current
@@ -3174,6 +3186,7 @@ export function App() {
   const vpnPanelFormErrors = validateVpnPanelForm(vpnPanelForm)
   const inboundFormErrors = validateInboundForm(inboundForm, selectedVpnPanelId)
   const workScenarioFormErrors = validateWorkScenarioForm(workScenarioForm)
+  const botSettingsFormErrors = validateTelegramBotUrlFields(botSettingsForm)
 
   if (token && !adminAccessVerified) {
     return (
@@ -4310,8 +4323,9 @@ export function App() {
               <label><span>Шаблон ошибки оплаты</span><textarea value={botSettingsForm.paymentFailedTextTemplate ?? ''} onChange={(e) => updateBotForm('paymentFailedTextTemplate', e.target.value)} rows={3} /></label>
               <label><span>Шаблон окончания подписки</span><textarea value={botSettingsForm.subscriptionExpiredTextTemplate ?? ''} onChange={(e) => updateBotForm('subscriptionExpiredTextTemplate', e.target.value)} rows={3} /></label>
             </fieldset>
+            <FormValidationSummary errors={botSettingsFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить настройки бота</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings' || botSettingsFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить настройки бота</PrimaryButton>
               <PrimaryButton className="button-secondary" type="button" disabled={!token || actionBusyId === 'bot-settings-test'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings-test'} onClick={() => { void handleTestBotSettings() }}>Проверить подключение</PrimaryButton>
             </div>
           </form>

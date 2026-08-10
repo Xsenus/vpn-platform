@@ -47,11 +47,21 @@ public class PaymentProviderAccountService
             .Where(x => x.Provider == provider && x.IsEnabled && x.Mode != PaymentProviderMode.Disabled)
             .ToListAsync(cancellationToken);
 
-        var account = PaymentProviderConfigurationRules.SelectWebCheckoutAccount(candidates, provider);
+        var safeCandidates = candidates
+            .Where(x => ValidateAccountUrls(x) is null)
+            .ToList();
+        var account = PaymentProviderConfigurationRules.SelectWebCheckoutAccount(safeCandidates, provider);
 
-        return account is null
-            ? Result<PaymentProviderAccount>.Failure($"Payment provider {provider} is not configured for web checkout or disabled.")
-            : Result<PaymentProviderAccount>.Success(account);
+        if (account is null)
+        {
+            var unsafeCandidateError = candidates
+                .Select(ValidateAccountUrls)
+                .FirstOrDefault(x => x is not null);
+            return Result<PaymentProviderAccount>.Failure(
+                unsafeCandidateError ?? $"Payment provider {provider} is not configured for web checkout or disabled.");
+        }
+
+        return Result<PaymentProviderAccount>.Success(account);
     }
 
     public async Task<Result<PaymentProviderAccountDto>> UpsertAsync(Guid? id, UpsertPaymentProviderAccountCommand command, CancellationToken cancellationToken = default)
@@ -137,6 +147,12 @@ public class PaymentProviderAccountService
             CreatedAt = existing?.CreatedAt ?? _clock.UtcNow,
             UpdatedAt = _clock.UtcNow
         };
+
+        var urlValidationError = ValidateAccountUrls(proposed);
+        if (urlValidationError is not null)
+        {
+            return Result<PaymentProviderAccountDto>.Failure(urlValidationError);
+        }
 
         var credentialValidationError = ValidateProviderCredentials(proposed);
         if (!string.IsNullOrWhiteSpace(credentialValidationError))
@@ -354,6 +370,15 @@ public class PaymentProviderAccountService
             return Result<PaymentProviderAccountDto>.Failure("Payment provider account not found.");
         }
 
+        if (enabled)
+        {
+            var urlValidationError = ValidateAccountUrls(account);
+            if (urlValidationError is not null)
+            {
+                return Result<PaymentProviderAccountDto>.Failure(urlValidationError);
+            }
+        }
+
         account.IsEnabled = enabled;
         account.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -501,15 +526,52 @@ public class PaymentProviderAccountService
             return;
         }
 
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        var validationError = ValidateOptionalSafeHttpUrl(value, fieldName);
+        if (validationError is not null)
         {
-            var issue = $"{fieldName} указан неверно. Используйте абсолютный http/https URL.";
-            details.Add(issue);
-            blockingIssues.Add(issue);
+            details.Add(validationError);
+            blockingIssues.Add(validationError);
             return;
         }
 
         details.Add($"URL корректен: {fieldName}.");
+    }
+
+    private static string? ValidateOptionalSafeHttpUrl(string? value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (SafeHttpUrl.ContainsCredentials(value))
+        {
+            return $"{fieldName} must not contain credentials (login or password).";
+        }
+
+        return SafeHttpUrl.TryNormalize(value, out _)
+            ? null
+            : $"{fieldName} указан неверно. Используйте абсолютный http/https URL.";
+    }
+
+    private static string? ValidateAccountUrls(PaymentProviderAccount account)
+    {
+        foreach (var (value, fieldName) in new[]
+                 {
+                     (account.ApiBaseUrl, "API base URL"),
+                     (account.ReturnUrl, "Return URL"),
+                     (account.WebhookUrl, "Webhook URL"),
+                     (PaymentProviderConfigurationRules.ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl"), "hostedCheckoutUrl")
+                 })
+        {
+            var validationError = ValidateOptionalSafeHttpUrl(value, fieldName);
+            if (validationError is not null)
+            {
+                return validationError;
+            }
+        }
+
+        return null;
     }
 
     private static IReadOnlyCollection<string> GetProviderCheckGuidance(PaymentProvider provider)

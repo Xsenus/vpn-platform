@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-10.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-cabinet-url-boundary`, версия `0.577.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `590/610` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-admin-config-url-credentials-boundary`, версия `0.578.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `591/611` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-10:
 
-- [x] `STATE-001` Backend test suite проходит: `1113/1113`.
-- [x] `STATE-002` Frontend test suite проходит: `119/119`.
+- [x] `STATE-001` Backend test suite проходит: `1119/1119`.
+- [x] `STATE-002` Frontend test suite проходит: `121/121`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2056,6 +2056,10 @@ git diff --check
   - Что сделать: пользовательские cabinet-to-public ссылки не должны принимать исполняемый, credential-bearing или неоднозначный base URL, а повторная оплата не должна отправлять внешнему провайдеру query/fragment текущей страницы.
   - Что сделано: отдельный resolver применяет общую `http/https` allow-list, запрещает credentials/query/fragment и сохраняет safe fallback/dev port mapping. Retry payment использует только `window.location.origin`; browser regression добавляет приватные query/fragment перед запросом и проверяет точное тело API.
   - Доказательство: до исправления targeted cabinet desktop/mobile воспроизводил утечку `2/2`; после исправления URL unit `2/2`, targeted browser `2/2`, полный console-responsive Playwright `118/118`; frontend `119/119`, typecheck/build, cabinet JS `359.27/104.22 kB`, admin bundle `514172` raw/`138052` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1113/1113`, fresh SQLite latest release OK, secret scan `665/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
+- [x] `P11-ACC-301` Запретить URL-embedded credentials в административной конфигурации. 2026-08-10.
+  - Что сделать: payment provider, Telegram Webhook/WebApp и 3x-ui URL не должны принимать `user:password@host`; frontend обязан остановить submit с понятной ошибкой, backend — отклонить запрос до любой записи.
+  - Что сделано: shared frontend validator подключен к API/return/webhook/extra provider URL, Telegram и panel формам; Application-level `SafeHttpUrl` защищает provider fields/`hostedCheckoutUrl`, Telegram controller и X3UiPanelService. Handlers повторно валидируют payload независимо от disabled-кнопки; provider enable и checkout selection отбрасывают legacy unsafe records, но сохраняют выбор корректного fallback account.
+  - Доказательство: до исправления backend принимал шесть credential-bearing create/enable/checkout cases, targeted desktop/mobile падал `6/6`; после исправления URL unit `2/2`, backend targeted `20/20`, browser targeted `6/6`, полный console-responsive Playwright `118/118`; frontend `121/121`, typecheck/build, cabinet JS `359.27/104.22 kB`, admin bundle `515206` raw/`138227` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1119/1119`, fresh SQLite latest release OK, secret scan `668/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2632,6 +2636,7 @@ git diff --check
 
 | Дата | Кто | Что проверено | Результат | Доказательство |
 | --- | --- | --- | --- | --- |
+| 2026-08-10 | Codex | Credential-bearing URL boundary для payment provider, Telegram и 3x-ui конфигурации | Зеленое локально | Reproduction backend `6` и browser desktop/mobile `6/6` failed before fix; URL unit `2/2`, backend targeted `20/20`, browser targeted `6/6`, frontend `121/121`, полный console-responsive suite `118/118`, backend `1119/1119`, fresh SQLite, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-10 | Codex | Cabinet configured public URL и payment retry return URL boundary | Зеленое локально | Reproduction desktop/mobile `2/2` failed before fix; URL unit `2/2`, targeted browser `2/2`, frontend `119/119`, полный console-responsive suite `118/118`, backend `1113/1113`, fresh SQLite, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-10 | Codex | Async lifecycle всех подтверждаемых admin-операций и delayed destructive request | Зеленое локально | Reproduction `2/2` failed before fix; targeted desktop/mobile `2/2`, frontend `117/117`, полный console-responsive suite `118/118`, backend `1113/1113`, fresh SQLite, audit/secret scan; external live evidence не переиспользовалось |
 | 2026-08-09 | Codex | Local visual assets, runtime decode, breakpoint-edge responsive и manual screenshots | Зеленое локально | Frontend `111/111`, all-screens `6/6` на 18 viewport, полный console-responsive suite `78/78`, production build, backend `1112/1112`; external live evidence не переиспользовалось |
@@ -2704,6 +2709,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-10-026` | P1 | Admin/payment/Telegram/3x-ui URL validation | Frontend и backend считали `https://user:password@host` корректным URL и позволяли сохранить credentials внутри API/return/webhook/WebApp/panel конфигурации; legacy запись можно было включить или выбрать для checkout. | Исправлено локально | Единая credential-free `http/https` граница блокирует submit, persistence, enable и use-time selection, включая `hostedCheckoutUrl`, с safe fallback account; unit, SQLite/backend и desktop/mobile regression зелёные. Реальные provider/Telegram/3x-ui подключения остаются внешней проверкой. |
 | `BUG-2026-08-10-025` | P1 | Cabinet navigation/payment URL boundary | `VITE_PUBLIC_WEB_URL` напрямую попадал во все пользовательские href без scheme/credentials/query проверки, а retry payment передавал провайдеру полный `window.location.href`, включая текущие query/fragment. | Исправлено локально | Configured public URL проходит fail-closed resolver; payment return ограничен origin, unit и desktop/mobile regression проверяют unsafe значения и точное request body. Production provider redirect smoke остаётся внешней проверкой. |
 | `BUG-2026-08-10-024` | P1 | Admin destructive actions/shared UI | Все `ConfirmButton` callsites отбрасывали Promise через `void`: dialog снимал busy и закрывался до ответа API, поэтому общий компонент не мог гарантировать lifecycle операции и блокировку повторного подтверждения. | Исправлено локально | Все подтверждаемые handlers возвращают Promise; delayed provider desktop/mobile regression проверяет busy controls, один запрос и закрытие после ответа. Production admin smoke остаётся внешней проверкой. |
 | `BUG-2026-08-10-023` | P1 | Frontend visual assets/CSP | После миграции активных экранов на local WebP общий CSS сохранял недостижимый `.hero` с Unsplash URL, а source guard читал только public/admin styles; bundle и evidence противоречили заявленному отсутствию external runtime assets. | Исправлено локально | Legacy экран/CSS удалены, source guard охватывает shared слой, browser CSSOM gate проверяет каждый экран; deployment CSP smoke остается внешним. |

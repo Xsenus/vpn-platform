@@ -283,6 +283,7 @@ public class X3UiIntegrationTests
 
     [Theory]
     [InlineData("ftp://panel.example.test", "secret", "Strict", "X3UiOfficial", "{}", "HTTP")]
+    [InlineData("https://operator:secret@panel.example.test", "secret", "Strict", "X3UiOfficial", "{}", "credentials")]
     [InlineData("https://panel.example.test", "", "Strict", "X3UiOfficial", "{}", "Password")]
     [InlineData("https://panel.example.test", "secret", "unknown", "X3UiOfficial", "{}", "SSL")]
     [InlineData("https://panel.example.test", "secret", "Strict", "unknown", "{}", "API variant")]

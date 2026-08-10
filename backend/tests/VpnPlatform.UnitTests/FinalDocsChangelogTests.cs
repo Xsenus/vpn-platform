@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1113/1113", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-10-cabinet-url-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1119/1119", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-10-admin-config-url-credentials-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1113/1113",
-                     "2026-08-10-cabinet-url-boundary",
-                     "0.577.0",
+                     "1119/1119",
+                     "2026-08-10-admin-config-url-credentials-boundary",
+                     "0.578.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-10-cabinet-url-boundary",
-                     "0.577.0",
+                     "2026-08-10-admin-config-url-credentials-boundary",
+                     "0.578.0",
                      "522/542",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: OK, `1113/1113`",
+                     "Backend full suite: `1119/1119`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `639` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-10-cabinet-url-boundary",
-                     "0.577.0",
+                     "2026-08-10-admin-config-url-credentials-boundary",
+                     "0.578.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "backend full suite `1113/1113`",
+                     "Backend `1119/1119`",
                      "PostgreSQL SQL",
                      "secret scan `639` files, `0` findings"
                  })

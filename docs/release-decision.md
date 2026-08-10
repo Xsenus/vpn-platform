@@ -22,9 +22,9 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1113/1113`.
+- Backend full suite: `1119/1119`.
 - API Release build: OK.
-- Frontend unit tests: `119/119`.
+- Frontend unit tests: `121/121`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `118/118`; responsive all-screens: `6/6` на 19 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
@@ -80,8 +80,9 @@ Production-ready решение заблокировано следующими 
 - Admin unknown hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
 - Confirmed admin actions сохраняют async lifecycle: busy dialog удерживается до ответа API, controls блокируются, duplicate destructive submit исключён desktop/mobile regression.
 - Cabinet configured public URL проходит fail-closed allow-list, а payment retry передаёт провайдеру только origin без query/fragment.
-- Latest "Что нового": `2026-08-10-cabinet-url-boundary`, версия `0.577.0`; локальный backend/frontend/browser regression, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `590/610` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Admin payment provider, Telegram и 3x-ui URL отклоняют embedded credentials до submit и persistence.
+- Latest "Что нового": `2026-08-10-admin-config-url-credentials-boundary`, версия `0.578.0`; локальный backend/frontend/browser regression, admin configuration URL boundary, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `591/611` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

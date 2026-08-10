@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.578.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-config-url-credentials-boundary`.
+
+### Исправлено
+
+- Admin-формы payment provider, Telegram Webhook/WebApp и 3x-ui panel теперь отклоняют `http/https` URL со встроенными логином или паролем, показывают понятную ошибку и блокируют submit до исправления.
+- Backend применяет ту же fail-closed границу при записи, включении и выборе checkout account: защищены API/return/webhook URL провайдеров, `hostedCheckoutUrl`, Telegram URL и base URL 3x-ui; legacy unsafe default не мешает выбрать корректный fallback.
+
+### Проверено
+
+- До исправления backend воспроизводил шесть ошибочно принятых credential-bearing create/enable/checkout cases, а targeted admin desktop/mobile падал `6/6`; после исправления URL unit `2/2`, backend targeted `20/20`, browser targeted `6/6` и полный console-responsive Playwright `118/118` зелёные.
+- Frontend `121/121`, typecheck/build, audit `0 vulnerabilities`; cabinet JS `359.27 kB` raw/`104.22 kB` gzip, admin bundle raw `515206`, gzip `138227`, largest `219849`.
+- Backend `1119/1119`, fresh SQLite latest release и secret scan `668/0` подтверждены финальным gate.
+- Roadmap: `591/611` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.577.0 - 2026-08-10
 
 Release entry: `2026-08-10-cabinet-url-boundary`.

@@ -1029,9 +1029,11 @@ public class X3UiPanelService
         {
             return "Panel name is required.";
         }
-        if (!Uri.TryCreate(baseUrl?.Trim(), UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
-            || string.IsNullOrWhiteSpace(uri.Host))
+        if (SafeHttpUrl.ContainsCredentials(baseUrl))
+        {
+            return "Base URL must not contain credentials (login or password).";
+        }
+        if (!SafeHttpUrl.TryNormalize(baseUrl, out _))
         {
             return "Base URL must be an absolute HTTP or HTTPS URL.";
         }
