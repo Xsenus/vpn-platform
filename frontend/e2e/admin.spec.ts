@@ -455,6 +455,21 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedSupportMessages: (() => void) | null = null
   let delayNextTariffCreateResponse = false
   let releaseDelayedTariffCreate: (() => void) | null = null
+  const notificationDeliveries: Array<Record<string, unknown>> = [{
+    id: 'notification-e2e',
+    userId: 'user-e2e',
+    templateKey: 'password_reset_requested',
+    channel: 'Email',
+    maskedToAddress: 'cl***@example.test',
+    status: 'Failed',
+    attempts: 5,
+    processingStartedAt: null,
+    nextAttemptAt: null,
+    sentAt: null,
+    errorText: 'SMTP connection unavailable',
+    createdAt: now,
+    updatedAt: now
+  }]
   const providers = [paymentProviderAccount()]
   const orders: Array<Record<string, unknown>> = [
     { id: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', userEmail: 'client@example.test', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', amount: 590, currency: 'RUB', status: 'PaymentReceived', type: 'NewSubscription', channel: 'Web', paymentProvider: 'YooKassa', checkoutSessionId: null, expiresAt: '2026-06-14T07:00:00Z', paidAt: now, isFirstPurchase: true, paymentAttemptsCount: 1, lastPaymentId: 'payment-e2e', lastPaymentStatus: 'Succeeded', lastPaymentProvider: 'YooKassa', linkedSubscriptionId: 'sub-e2e', createdAt: now, updatedAt: now }
@@ -679,25 +694,21 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/notification-deliveries') {
-      await fulfillJson(route, [{
-        id: 'notification-e2e',
-        userId: 'user-e2e',
-        templateKey: 'password_reset_requested',
-        channel: 'Email',
-        maskedToAddress: 'cl***@example.test',
-        status: 'Failed',
-        attempts: 5,
-        processingStartedAt: null,
-        nextAttemptAt: null,
-        sentAt: null,
-        errorText: 'SMTP connection unavailable',
-        createdAt: now,
-        updatedAt: now
-      }])
+      await fulfillJson(route, notificationDeliveries)
       return
     }
 
     if (method === 'POST' && path === '/api/admin/notification-deliveries/notification-e2e/retry') {
+      notificationDeliveries[0] = {
+        ...notificationDeliveries[0],
+        status: 'Pending',
+        attempts: 0,
+        processingStartedAt: null,
+        nextAttemptAt: now,
+        sentAt: null,
+        errorText: '',
+        updatedAt: now
+      }
       await fulfillJson(route, { id: 'notification-e2e', status: 'Pending', nextAttemptAt: now })
       return
     }
@@ -2179,6 +2190,52 @@ async function openAdminSection(page: Page, name: string, id: string) {
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
 
+test('admin failed notification retry persists safe queue state across reload', async ({ page }) => {
+  test.setTimeout(120_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-notification-token', 'admin-notification-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Аудит', 'audit')
+
+  const auditPanel = page.locator('#audit')
+  let deliveryRow = auditPanel.locator('.list-item').filter({ hasText: 'password_reset_requested' })
+  await expect(deliveryRow).toContainText('cl***@example.test')
+  await expect(deliveryRow).not.toContainText('client@example.test')
+  await expect(deliveryRow).toContainText('попыток: 5')
+  await expect(deliveryRow).toContainText('SMTP connection unavailable')
+  await expect(deliveryRow).toContainText('Ошибка')
+  await deliveryRow.getByRole('button', { name: 'Повторить' }).click()
+
+  await expect(page.getByText('Email-уведомление возвращено в очередь доставки.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/notification-deliveries/notification-e2e/retry')?.authorization).toBe('Bearer admin-notification-token')
+  deliveryRow = auditPanel.locator('.list-item').filter({ hasText: 'password_reset_requested' })
+  await expect(deliveryRow).toContainText('Ожидает')
+  await expect(deliveryRow).toContainText('попыток: 0')
+  await expect(deliveryRow).toContainText('следующая попытка:')
+  await expect(deliveryRow).not.toContainText('SMTP connection unavailable')
+  await expect(deliveryRow.getByRole('button', { name: 'Повторить' })).toHaveCount(0)
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Аудит', 'audit')
+  deliveryRow = auditPanel.locator('.list-item').filter({ hasText: 'password_reset_requested' })
+  await expect(deliveryRow).toContainText('Ожидает')
+  await expect(deliveryRow).toContainText('попыток: 0')
+  await expect(deliveryRow).not.toContainText('SMTP connection unavailable')
+  await expect(deliveryRow).not.toContainText('client@example.test')
+  await expect(deliveryRow.getByRole('button', { name: 'Повторить' })).toHaveCount(0)
+  expect(api.getAuthorizedRequestCount('/api/admin/notification-deliveries/notification-e2e/retry', 'POST', 'Bearer admin-notification-token')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
 test('admin payment recheck and refunds persist across reload', async ({ page }) => {
   test.setTimeout(150_000)
   const browserErrors: string[] = []
@@ -3405,6 +3462,9 @@ test('finance role loads only permitted data and keeps common sections read-only
   await expect(page.getByText('telegram_bot.settings.update', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Изменения платежных провайдеров и ротация секретов')).toBeVisible()
   await expect(page.getByText('Ответы, заметки и статусы обращений')).toHaveCount(0)
+  const financeDelivery = page.locator('#audit .list-item').filter({ hasText: 'password_reset_requested' })
+  await expect(financeDelivery).toContainText('cl***@example.test')
+  await expect(financeDelivery.getByRole('button', { name: 'Повторить' })).toHaveCount(0)
 
   await openAdminSection(page, 'Тарифы', 'tariffs')
   await expect(page.getByText('Только просмотр', { exact: true })).toBeVisible()
@@ -3451,6 +3511,9 @@ test('support role dashboard hides finance data and keeps support queue visible'
 
   await openAdminSection(page, 'Аудит', 'audit')
   await expect(page.getByText('auth.login', { exact: true })).toBeVisible()
+  const supportDelivery = page.locator('#audit .list-item').filter({ hasText: 'password_reset_requested' })
+  await expect(supportDelivery).toContainText('cl***@example.test')
+  await expect(supportDelivery.getByRole('button', { name: 'Повторить' })).toHaveCount(0)
   await expect(page.getByText('support.reply', { exact: true })).toBeVisible()
   await expect(page.getByText('payment.status.changed', { exact: true })).toHaveCount(0)
   await expect(page.getByText('telegram_bot.settings.update', { exact: true })).toHaveCount(0)

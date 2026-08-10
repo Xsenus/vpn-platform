@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin notification retry lifecycle E2E
+
+Scope:
+- Добавлен stateful desktop/mobile flow failed notification retry -> Pending -> reload с attempts reset, next attempt и очищенной ошибкой.
+- Проверяются authorization, masked recipient, отсутствие duplicate retry, console errors/overflow и отсутствие write-control у FinanceManager/SupportAgent.
+
+Results:
+- Roadmap progress: `577/597` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-notification-retry-lifecycle-e2e`, version `0.564.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `100/100`; notification retry lifecycle passes on desktop and mobile-admin; all-screens axe/responsive matrix: `6/6`.
+- Backend full suite: `1112/1112`; fresh local SQLite checkout/payment/subscription/VPN smoke: OK; secret scan: `657` files, `0` findings.
+- Real SMTP delivery and external VPS/staging/production-like 3x-ui, provider sandbox/live accounts and Telegram Bot API/webhook evidence remain open.
+
 ## Check 2026-08-10: admin payment refund lifecycle fix
 
 Scope:

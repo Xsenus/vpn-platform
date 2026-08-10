@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.564.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-notification-retry-lifecycle-e2e`.
+
+### Улучшено
+
+- Admin browser regression выполняет failed email notification retry и подтверждает persisted `Pending` state после reload на desktop/mobile.
+- Stateful mock сбрасывает attempts `5 -> 0`, очищает error, назначает next attempt и исключает повторный retry вне Failed state.
+- FinanceManager и SupportAgent видят только masked recipient и не получают write-control для retry.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `100/100`; notification retry lifecycle проходит `2/2`, all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- Реальные VPS/staging/live payment/production-like 3x-ui, provider, Telegram и SMTP delivery evidence не переиспользовались.
+- Roadmap: `577/597` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.563.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-payment-refund-lifecycle-fix`.

@@ -13313,5 +13313,28 @@
         "text": "Roadmap progress is 576/596 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SSH/Ansible, provider, Telegram Bot API/webhook and SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-notification-retry-lifecycle-e2e",
+    "version": "0.564.0",
+    "releasedAt": "2026-08-10T11:53:00+07:00",
+    "title": "Повтор email-доставки сохраняет безопасное состояние очереди",
+    "summary": "Desktop и mobile-admin сценарии переводят failed delivery в Pending, сбрасывают attempts/error и подтверждают masked recipient и role guards после reload.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Admin E2E выполняет retry failed email delivery и подтверждает persisted Pending state, attempts 0, next attempt и очищенный error после общей перезагрузки."
+      },
+      {
+        "type": "improved",
+        "text": "Recipient остаётся masked, duplicate retry недоступен, а FinanceManager и SupportAgent не получают write-control для notification delivery."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 577/597 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SSH/Ansible, provider, Telegram Bot API/webhook and SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]
