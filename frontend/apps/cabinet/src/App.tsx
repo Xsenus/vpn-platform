@@ -631,12 +631,20 @@ export function App() {
 
   const handleLoadQr = async (accessId: string) => {
     if (!token) return
+    const clearCachedQr = () => setQrSvgs((current) => {
+      if (!current[accessId]) return current
+      const next = { ...current }
+      delete next[accessId]
+      return next
+    })
     const qrAvailability = getAccessQrAvailability(accesses.find((access) => access.id === accessId))
     if (!qrAvailability.canGenerate) {
+      clearCachedQr()
       setError(qrAvailability.reason ?? 'QR-код пока недоступен.')
       return
     }
     await runSessionAction(`qr-${accessId}`, 'Не удалось загрузить QR', async (action) => {
+      clearCachedQr()
       const svg = await api.getMyAccessQrSvg(token, accessId)
       if (!action.isCurrent()) return
       setQrSvgs((current) => ({ ...current, [accessId]: svg }))

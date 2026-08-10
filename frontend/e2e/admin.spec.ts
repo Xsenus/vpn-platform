@@ -459,6 +459,7 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedTariffCreate: (() => void) | null = null
   let delayNextProviderEnabledResponse = false
   let releaseDelayedProviderEnabled: (() => void) | null = null
+  let failNextAccessQrStatus: number | null = null
   const notificationDeliveries: Array<Record<string, unknown>> = [{
     id: 'notification-e2e',
     userId: 'user-e2e',
@@ -879,6 +880,12 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/access-credentials/access-e2e/qr') {
+      if (failNextAccessQrStatus !== null) {
+        const status = failNextAccessQrStatus
+        failNextAccessQrStatus = null
+        await fulfillJson(route, { error: 'qr_temporarily_unavailable' }, status)
+        return
+      }
       await route.fulfill({
         status: 200,
         headers: { ...corsHeaders, 'content-type': 'image/svg+xml; charset=utf-8' },
@@ -1845,6 +1852,7 @@ async function mockAdminApi(page: Page) {
     releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
     delayNextProviderEnabled: () => { delayNextProviderEnabledResponse = true },
     releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
+    failNextAccessQrRequest: (status = 503) => { failNextAccessQrStatus = status },
     preparePaymentLifecycle: () => {
       orders[0] = { ...orders[0], status: 'PendingPayment', lastPaymentStatus: 'Unknown', paidAt: null, updatedAt: now }
       payments[0] = {
@@ -3225,6 +3233,16 @@ test('admin VPN access actions persist status and revision across reload', async
   const vpnPanel = page.locator('#vpn')
   let accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
   await expect(accessRow).toContainText('версия: 1')
+  const qrButton = accessRow.getByRole('button', { name: 'Показать QR' })
+  await qrButton.click()
+  await expect(accessRow.locator('.qr-preview')).toBeVisible()
+  const qrRequestsBeforeFailure = api.getRequestCount('/api/admin/access-credentials/access-e2e/qr')
+  api.failNextAccessQrRequest()
+  await qrButton.click()
+  await expect.poll(() => api.getRequestCount('/api/admin/access-credentials/access-e2e/qr')).toBe(qrRequestsBeforeFailure + 1)
+  await expect(accessRow.locator('.qr-preview')).toHaveCount(0)
+  const expectedQrFailure = browserErrors.findIndex((item) => item.includes('503 (Service Unavailable)'))
+  if (expectedQrFailure >= 0) browserErrors.splice(expectedQrFailure, 1)
   await accessRow.getByRole('button', { name: 'Отключить' }).click()
   await vpnPanel.getByRole('button', { name: 'Подтвердить' }).click()
   await expect(page.getByText('VPN-доступ отключен.')).toBeVisible()

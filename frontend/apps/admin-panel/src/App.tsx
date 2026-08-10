@@ -2729,13 +2729,21 @@ export function App() {
 
 
   const handleAdminAccessQr = async (access: AccessCredentialDto) => {
+    const clearCachedQr = () => setAdminQrSvgs((current) => {
+      if (!current[access.id]) return current
+      const next = { ...current }
+      delete next[access.id]
+      return next
+    })
     const blocker = getAdminAccessCommandBlocker(access, 'qr')
     if (blocker) {
+      clearCachedQr()
       setError(blocker)
       return
     }
 
     await runAction(null, `qr-${access.id}`, async (action) => {
+      clearCachedQr()
       const svg = await api.getAdminAccessQrSvg(token, access.id)
       if (!action.isCurrent()) return
       setAdminQrSvgs((current) => ({ ...current, [access.id]: svg }))

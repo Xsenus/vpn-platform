@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: stale QR cache invalidation
+
+Scope:
+- A previously rendered VPN QR must be removed before cabinet or admin requests a fresh SVG.
+- Failed or locally blocked refresh must not leave an obsolete access secret visible in any duplicate view.
+
+Results:
+- Roadmap progress: `598/618` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-stale-qr-cache-invalidation`, version `0.585.0`.
+- Reproduction before fix: after a successful QR load and a confirmed second GET returning `503`, cabinet retained `4` stale previews and admin retained `1`.
+- After fix: targeted cabinet/admin `2/2`; cached SVG is removed before each request and on local command blocking, while stale post-logout completion remains rejected.
+- Visual audit: all-screens `6/6` passed on 25 viewport configurations `305x568..2560x1440`; full desktop/mobile console-responsive Playwright: `124/124`.
+- Frontend tests: `122/122`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `517782`, gzip `138792`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: password reset form separation
 
 Scope:

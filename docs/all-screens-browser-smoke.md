@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-10-password-reset-form-separation`, версия `0.584.0`; public/cabinet reset stages разделены на независимые формы и проверены через Enter на desktop/mobile и во всей responsive matrix.
+- Latest "Что нового": `2026-08-10-stale-qr-cache-invalidation`, версия `0.585.0`; cabinet/admin очищают cached QR до повторного GET, а failed refresh проверен на desktop/mobile без stale preview.

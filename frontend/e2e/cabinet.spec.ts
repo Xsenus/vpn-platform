@@ -355,6 +355,7 @@ async function mockCabinetApi(page: Page) {
   let delayNextQr = false
   let delayedQrReleased = false
   let releaseDelayedQr: (() => void) | null = null
+  let failNextQrStatus: number | null = null
   let unsafeQrSvg = false
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
@@ -667,6 +668,12 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/cabinet/access/access-active/qr') {
+      if (failNextQrStatus !== null) {
+        const status = failNextQrStatus
+        failNextQrStatus = null
+        await fulfillJson(route, { error: 'qr_temporarily_unavailable' }, status)
+        return
+      }
       if (delayNextQr) {
         delayNextQr = false
         if (!delayedQrReleased) {
@@ -748,6 +755,7 @@ async function mockCabinetApi(page: Page) {
       releaseDelayedSupportMessages?.()
     },
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
+    failNextQrRequest: (status = 503) => { failNextQrStatus = status },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
     showAppVersionRelease: () => { appVersionAvailable = true },
@@ -1009,7 +1017,7 @@ test('cabinet keeps manual refresh single-flight', async ({ page }) => {
   expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
 })
 
-test('cabinet ignores a delayed action after logout and a new login', async ({ page }) => {
+test('cabinet invalidates stale QR after logout or a failed reload', async ({ page }) => {
   const api = await mockCabinetApi(page)
   api.delayNextQrRequest()
   await seedCabinetSession(page, 'access-token-old-action', 'refresh-token-old-action')
@@ -1036,6 +1044,14 @@ test('cabinet ignores a delayed action after logout and a new login', async ({ p
   await expect(page.getByText('QR-код загружен.')).toHaveCount(0)
   expect(api.getRequestCount('/api/cabinet/access/access-active/qr')).toBe(1)
   expect(api.getAuthorizedRequestCount('/api/cabinet/access/access-active/qr', 'Bearer access-token-old-action')).toBe(1)
+
+  await qrButton.click()
+  await expect.poll(() => page.locator('.qr-preview').count()).toBeGreaterThan(0)
+  const qrRequestsBeforeFailure = api.getRequestCount('/api/cabinet/access/access-active/qr')
+  api.failNextQrRequest()
+  await qrButton.click()
+  await expect.poll(() => api.getRequestCount('/api/cabinet/access/access-active/qr')).toBe(qrRequestsBeforeFailure + 1)
+  await expect(page.locator('.qr-preview')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

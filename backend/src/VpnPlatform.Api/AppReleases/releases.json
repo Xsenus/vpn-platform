@@ -13796,5 +13796,28 @@
         "text": "Roadmap progress is 597/617 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-stale-qr-cache-invalidation",
+    "version": "0.585.0",
+    "releasedAt": "2026-08-10T22:41:52+07:00",
+    "title": "Устаревший QR скрывается до повторной проверки",
+    "summary": "Cabinet и admin больше не оставляют cached QR видимым после failed refresh или локальной блокировки доступа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Cached SVG удаляется до каждого cabinet/admin QR GET и не переживает ошибку повторной загрузки."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile regressions проверяют successful load, confirmed 503, ноль stale preview и отклонение late post-logout completion."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 598/618 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

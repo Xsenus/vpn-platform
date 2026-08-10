@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.585.0 - 2026-08-10
+
+Release entry: `2026-08-10-stale-qr-cache-invalidation`.
+
+### Исправлено
+
+- Cabinet и admin теперь удаляют cached QR SVG до каждого повторного запроса; failed/blocked refresh не оставляет на экране устаревший ключ доступа.
+- Очистка применяется ко всем повторным представлениям одного access ID в кабинете и к административной карточке VPN-доступа.
+
+### Проверено
+
+- До исправления после подтверждённого failed QR GET cabinet сохранял `4` preview, admin — `1`; после исправления targeted cabinet/admin `2/2` проходят.
+- Frontend `122/122`, typecheck/build, audit `0 vulnerabilities`; полный console-responsive Playwright `124/124`, включая desktop/mobile stale-QR regressions и all-screens `6/6` на 25 viewport-конфигурациях.
+- Backend `1125/1125`, EF drift OK, fresh SQLite order/payment/subscription/access flow OK, secret scan `668/0`; финальный encoding и artifact cleanup зафиксированы в `TEST_RESULTS.md`.
+- Roadmap: `598/618` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.584.0 - 2026-08-10
 
 Release entry: `2026-08-10-password-reset-form-separation`.
