@@ -177,11 +177,11 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-09 локально подтверждено:
 
 - backend full suite: 1113/1113;
-- frontend tests: 114/114;
+- frontend tests: 115/115;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 104/104; responsive all-screens: 6/6 на 18 viewport-конфигурациях `305x568..2560x1440`;
+- browser console smoke: 106/106; responsive all-screens: 6/6 на 18 viewport-конфигурациях `305x568..2560x1440`;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -218,8 +218,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
 - admin production bundle budget: `5` JS chunks, largest `219849`, total raw `511564`, gzip `137127`; production preview desktop/mobile: OK.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
-- latest "Что нового": `2026-08-10-public-not-found-page-fix`, версия `0.567.0`.
-- roadmap progress: `580/600` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- public route title/meta/focus: direct load, SPA navigation и browser Back desktop/mobile: OK.
+- latest "Что нового": `2026-08-10-public-route-metadata-focus-fix`, версия `0.568.0`.
+- roadmap progress: `581/601` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

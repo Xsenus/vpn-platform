@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.568.0 - 2026-08-10
+
+Release entry: `2026-08-10-public-route-metadata-focus-fix`.
+
+### Исправлено
+
+- SPA-переходы с главной больше не оставляют stale SEO title/description на тарифах, FAQ, помощи, аккаунте и `404`: каждый route получает собственные metadata, включая direct deep-link и trailing slash.
+- После внутреннего перехода и browser Back/Forward scroll возвращается к началу страницы, а клавиатурный фокус переносится на новый `main-content` вместо общей шапки.
+
+### Проверено
+
+- Pure route mapping покрывает все известные/неизвестные пути; frontend unit `115/115`, typecheck/build всех приложений, admin bundle budget и audit `0 vulnerabilities`.
+- Stateful title/meta/focus/Back regression проходит на Desktop Chrome и Pixel 5: `2/2`; шесть direct public routes проходят title, render, Axe и 18 responsive viewport-конфигураций.
+- Полный console-responsive Playwright: `106/106`; backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate.
+- Реальные VPS/staging/live payment/production-like 3x-ui, Telegram Bot API/webhook и SMTP evidence остаются внешними.
+- Roadmap: `581/601` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.567.0 - 2026-08-10
 
 Release entry: `2026-08-10-public-not-found-page-fix`.

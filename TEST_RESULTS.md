@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: public route metadata and focus lifecycle
+
+Scope:
+- Единый route-state contract обновляет title/meta description для главной, тарифов, FAQ, помощи, аккаунта и неизвестного URL.
+- SPA navigation и browser Back/Forward сбрасывают scroll и переносят focus на новый `main-content`.
+
+Results:
+- Roadmap progress: `581/601` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-public-route-metadata-focus-fix`, version `0.568.0`.
+- Frontend tests: `115/115`; targeted desktop/mobile transition lifecycle: `2/2`; full console-responsive Playwright: `106/106`.
+- Six public direct routes pass title, non-blank, main landmark, accessible-name, Axe WCAG A/AA/best-practice and 18 viewport checks.
+- Typecheck/build all apps and admin bundle budget: OK; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `661` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: public unknown-route recovery
 
 Scope:

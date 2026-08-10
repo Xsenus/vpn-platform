@@ -10,6 +10,7 @@ public class AllScreensBrowserSmokeTests
         var root = FindRepositoryRoot();
         var spec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "all-screens.spec.ts"));
         var publicApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "App.tsx"));
+        var publicRoute = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "public-route.ts"));
         var config = File.ReadAllText(Path.Combine(root, "frontend", "playwright.config.ts"));
         var packageJson = File.ReadAllText(Path.Combine(root, "frontend", "package.json"));
 
@@ -48,6 +49,20 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("path=\"*\"", publicApp, StringComparison.Ordinal);
         Assert.Contains("Страница не найдена", publicApp, StringComparison.Ordinal);
         Assert.Contains("Ошибка 404", publicApp, StringComparison.Ordinal);
+        Assert.Contains("PublicRouteEffects", publicApp, StringComparison.Ordinal);
+        Assert.Contains("main-content", publicApp, StringComparison.Ordinal);
+        Assert.Contains("window.scrollTo", publicApp, StringComparison.Ordinal);
+        foreach (var title in new[]
+                 {
+                     "Тарифы — VPN Platform",
+                     "Помощь — VPN Platform",
+                     "FAQ — VPN Platform",
+                     "Аккаунт — VPN Platform",
+                     "Страница не найдена — VPN Platform"
+                 })
+        {
+            Assert.Contains(title, publicRoute, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

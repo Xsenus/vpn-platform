@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, NavLink, Route, Routes, useNavigate } from 'react-router'
+import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router'
 import {
   ApiClient,
   AuthResponse,
@@ -21,6 +21,7 @@ import { Card, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageSh
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
 import { parsePendingCheckout, type PendingCheckout } from './pending-checkout'
 import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
+import { getPublicRouteMetadata } from './public-route'
 import { getPublicSessionCheckError, isPublicAccessTokenExpired, isPublicSessionRejected, publicSessionEndedMessage } from './public-session'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
@@ -57,6 +58,34 @@ function removeSessionStorageItem(key: string) {
   } catch {
     // Storage cleanup is best-effort when browser storage is unavailable.
   }
+}
+
+function applyPublicPageMetadata(title: string, description: string) {
+  document.title = title
+  const meta = document.querySelector('meta[name="description"]') ?? document.head.appendChild(document.createElement('meta'))
+  meta.setAttribute('name', 'description')
+  meta.setAttribute('content', description)
+}
+
+function PublicRouteEffects() {
+  const { pathname } = useLocation()
+  const previousPathname = useRef(pathname)
+
+  useEffect(() => {
+    const metadata = getPublicRouteMetadata(pathname)
+    applyPublicPageMetadata(metadata.title, metadata.description)
+
+    if (previousPathname.current === pathname) return
+    previousPathname.current = pathname
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    const focusFrame = window.requestAnimationFrame(() => {
+      document.getElementById('main-content')?.focus({ preventScroll: true })
+    })
+
+    return () => window.cancelAnimationFrame(focusFrame)
+  }, [pathname])
+
+  return null
 }
 
 function readPendingCheckout(): PendingCheckout | null {
@@ -165,11 +194,7 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
   })).filter((item) => item.name && item.text)
 
   useEffect(() => {
-    document.title = content('home.seo.title') || 'VPN Platform'
-    const description = content('home.seo.description')
-    const meta = document.querySelector('meta[name="description"]') ?? document.head.appendChild(document.createElement('meta'))
-    meta.setAttribute('name', 'description')
-    meta.setAttribute('content', description)
+    applyPublicPageMetadata(content('home.seo.title') || 'VPN Platform', content('home.seo.description'))
   }, [homeContent])
 
   return (
@@ -1266,6 +1291,7 @@ export function App() {
 
   return (
     <>
+      <PublicRouteEffects />
       <SkipLink />
       <header className="topbar">
         <Link className="app-brand" to="/">VPN Platform</Link>

@@ -781,6 +781,34 @@ test('public unknown route renders a recoverable not-found page', async ({ page 
   expect(consoleErrors).toEqual([])
 })
 
+test('public route transitions update metadata and focus page content', async ({ page }) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+  await mockPublicApi(page)
+
+  await page.goto('/')
+  await expect(page).toHaveTitle('VPN Platform — быстрый VPN-доступ с автоматической выдачей')
+
+  await page.getByRole('link', { name: 'Тарифы', exact: true }).click()
+  await expect(page).toHaveURL(/\/tariffs$/)
+  await expect(page).toHaveTitle('Тарифы — VPN Platform')
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /тариф/i)
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('main-content')
+
+  await page.getByRole('link', { name: 'FAQ', exact: true }).click()
+  await expect(page).toHaveTitle('FAQ — VPN Platform')
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('main-content')
+
+  await page.goBack()
+  await expect(page).toHaveURL(/\/tariffs$/)
+  await expect(page).toHaveTitle('Тарифы — VPN Platform')
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('main-content')
+  expect(consoleErrors).toEqual([])
+})
+
 test('public website covers landing, tariffs, FAQ and checkout start', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {

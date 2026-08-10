@@ -11,6 +11,14 @@ const corsHeaders = {
 const now = '2026-06-14T08:00:00Z'
 
 const publicRoutes = ['/', '/tariffs', '/faq', '/help', '/account', '/missing-page']
+const publicRouteTitles: Record<string, string> = {
+  '/': 'VPN Platform — быстрый VPN-доступ с автоматической выдачей',
+  '/tariffs': 'Тарифы — VPN Platform',
+  '/faq': 'FAQ — VPN Platform',
+  '/help': 'Помощь — VPN Platform',
+  '/account': 'Аккаунт — VPN Platform',
+  '/missing-page': 'Страница не найдена — VPN Platform'
+}
 const adminSections = [
   'dashboard',
   'users',
@@ -894,6 +902,7 @@ test('all public routes render without blank screens or browser errors', async (
 
   for (const route of publicRoutes) {
     await page.goto(route)
+    await expect(page).toHaveTitle(publicRouteTitles[route])
     await expectNonBlankPage(page)
     await expectPageQuality(page, route)
     await expectWcagQuality(page, route)

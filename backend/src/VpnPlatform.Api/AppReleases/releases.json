@@ -13405,5 +13405,28 @@
         "text": "Roadmap progress is 580/600 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-public-route-metadata-focus-fix",
+    "version": "0.568.0",
+    "releasedAt": "2026-08-10T13:58:00+07:00",
+    "title": "Публичные маршруты обновляют metadata и focus",
+    "summary": "Тарифы, FAQ, помощь, аккаунт и 404 больше не наследуют title главной, а SPA-переходы переводят клавиатурный focus в новый main.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Единый mapping задает title и meta description для каждого public route при direct load, SPA navigation и browser Back/Forward."
+      },
+      {
+        "type": "improved",
+        "text": "После смены route scroll возвращается к началу, main-content получает focus; desktop/mobile и 18-viewport regressions проходят без console errors."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 581/601 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

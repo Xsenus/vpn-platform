@@ -39,14 +39,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1113/1113", readme, StringComparison.Ordinal);
-        Assert.Contains("114/114", readme, StringComparison.Ordinal);
+        Assert.Contains("115/115", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-public-not-found-page-fix", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("104/104", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-10-public-route-metadata-focus-fix", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("106/106", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1113/1113",
-                     "2026-08-10-public-not-found-page-fix",
-                     "0.567.0",
+                     "2026-08-10-public-route-metadata-focus-fix",
+                     "0.568.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",
