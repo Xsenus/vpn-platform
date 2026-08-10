@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.558.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-vpn-infrastructure-secure-lifecycle-e2e`.
+
+### Улучшено
+
+- Admin browser regression выполняет create/reload/edit/status/delete lifecycle VPN-сервера и create/reload/edit/status/archive lifecycle 3x-ui панели на desktop/mobile.
+- SSH credential и пароли панелей остаются write-only: отправляются только в mutation payload, очищаются после сохранения и не возвращаются в DTO или DOM.
+- Stateful mock API поддерживает CRUD серверов, панелей и inbound-правил, включая default/disable/enable, authorization, confirm-dialog, console и overflow assertions.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `88/88`; secure infrastructure lifecycle проходит `2/2`, all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- Реальные VPS/staging/live payment/production-like 3x-ui, provider, Telegram и SMTP evidence не переиспользовались.
+- Roadmap: `571/591` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.557.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-telegram-bot-settings-secure-lifecycle-e2e`.

@@ -109,7 +109,7 @@ git diff --check
 - Admin user/support detail requests принимают только актуальный selected/session response и не возвращают старые данные после logout: OK.
 - Admin mutation completion, reload и form reset ограничены исходной session operation и отправленным snapshot; duplicate submit блокируется синхронно: OK.
 - Public/cabinet mutation completion ограничен исходной session/unmount operation; duplicate auth/refresh/action events блокируются синхронно, а более новые drafts сохраняются: OK.
-- Latest local release: `2026-08-10-admin-telegram-bot-settings-secure-lifecycle-e2e`, версия `0.557.0`; secure payment provider/Telegram settings и cabinet Telegram/support lifecycle проверены на desktop/mobile, axe WCAG A/AA и best-practice gate без allow-list проверен на desktop и 320 px.
+- Latest local release: `2026-08-10-admin-vpn-infrastructure-secure-lifecycle-e2e`, версия `0.558.0`; write-only SSH/panel credentials, secure infrastructure/provider/Telegram settings и cabinet Telegram/support lifecycle проверены на desktop/mobile, axe WCAG A/AA и best-practice gate без allow-list проверен на desktop и 320 px.
 - Frontend tests: 112/112.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

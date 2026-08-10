@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin VPN infrastructure secure lifecycle E2E
+
+Scope:
+- Добавлен stateful desktop/mobile browser flow для server create/reload/edit/allocation/maintenance/disable/delete и panel create/reload/edit/status/archive lifecycle.
+- Inbound-правило проходит create/edit/set-default/disable/enable; SSH credential и panel passwords проверяются как write-only без возврата в DTO/DOM.
+
+Results:
+- Roadmap progress: `571/591` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-vpn-infrastructure-secure-lifecycle-e2e`, version `0.558.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `88/88`; secure infrastructure lifecycle passes on desktop and mobile-admin; all-screens axe/responsive matrix: `6/6`.
+- Backend full suite: `1112/1112`; fresh local SQLite checkout/payment/subscription/VPN smoke: OK; secret scan: `657` files, `0` findings.
+- External evidence remains open for real VPS/staging/production-like 3x-ui, provider sandbox/live accounts, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin Telegram bot settings secure lifecycle E2E
 
 Scope:

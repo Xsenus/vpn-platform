@@ -446,6 +446,7 @@ async function mockAdminApi(page: Page) {
   const scenarios = [workScenario()]
   const faqEntries: Array<Record<string, unknown>> = []
   const siteContentBlocks: Array<Record<string, unknown>> = []
+  const servers = [vpnServer()]
   const panels = [
     vpnPanel(),
     vpnPanel({
@@ -1199,13 +1200,83 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/admin/servers') {
+      const payload = body as Record<string, unknown>
+      const publicPayload = { ...payload }
+      const sshCredential = publicPayload.sshCredential
+      const panelPassword = publicPayload.panelPassword
+      delete publicPayload.sshCredential
+      delete publicPayload.sshPrivateKeyPath
+      delete publicPayload.panelPassword
+      const created = vpnServer({
+        ...publicPayload,
+        id: 'server-created-e2e',
+        usedCapacity: 0,
+        status: 'Ready',
+        healthStatus: 'Unknown',
+        sshCredentialConfigured: Boolean(sshCredential),
+        panelPasswordConfigured: Boolean(panelPassword),
+        createdAt: now,
+        updatedAt: now
+      })
+      servers.push(created)
+      await fulfillJson(route, created, 201)
+      return
+    }
+
+    const serverMutationMatch = path.match(/^\/api\/admin\/servers\/([^/]+)$/)
+    if (serverMutationMatch && method === 'PUT') {
+      const index = servers.findIndex((item) => item.id === serverMutationMatch[1])
+      const payload = body as Record<string, unknown>
+      const publicPayload = { ...payload }
+      const sshCredential = publicPayload.sshCredential
+      const panelPassword = publicPayload.panelPassword
+      delete publicPayload.sshCredential
+      delete publicPayload.sshPrivateKeyPath
+      delete publicPayload.panelPassword
+      const updated = vpnServer({
+        ...servers[index],
+        ...publicPayload,
+        id: serverMutationMatch[1],
+        sshCredentialConfigured: Boolean(sshCredential) || Boolean(servers[index]?.sshCredentialConfigured),
+        panelPasswordConfigured: Boolean(panelPassword) || Boolean(servers[index]?.panelPasswordConfigured),
+        updatedAt: now
+      })
+      if (index >= 0) servers[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    const serverModeMatch = path.match(/^\/api\/admin\/servers\/([^/]+)\/(maintenance|disable-maintenance|disable-allocation|enable-allocation|disable)$/)
+    if (serverModeMatch && method === 'POST') {
+      const index = servers.findIndex((item) => item.id === serverModeMatch[1])
+      const server = servers[index]
+      const action = serverModeMatch[2]
+      const updated = vpnServer({
+        ...server,
+        status: action === 'maintenance' ? 'Maintenance' : action === 'disable' ? 'Disabled' : action === 'disable-maintenance' ? 'Ready' : server.status,
+        isAvailableForNewUsers: action === 'enable-allocation' ? true : action === 'disable-allocation' || action === 'maintenance' || action === 'disable' ? false : server.isAvailableForNewUsers,
+        updatedAt: now
+      })
+      if (index >= 0) servers[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
     if (method === 'DELETE' && path === '/api/admin/servers/server-eu') {
       await fulfillJson(route, { id: 'server-eu', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 2, linkedMigrationJobs: 1 })
       return
     }
 
+    if (serverMutationMatch && method === 'DELETE') {
+      const index = servers.findIndex((item) => item.id === serverMutationMatch[1])
+      if (index >= 0) servers.splice(index, 1)
+      await fulfillJson(route, { id: serverMutationMatch[1], deleted: true, archived: false, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 0, linkedMigrationJobs: 0 })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/servers') {
-      await fulfillJson(route, invalidServersResponse ? [{}] : [vpnServer()])
+      await fulfillJson(route, invalidServersResponse ? [{}] : servers)
       return
     }
 
@@ -1216,6 +1287,51 @@ async function mockAdminApi(page: Page) {
 
     if (method === 'GET' && path === '/api/admin/vpn-panels') {
       await fulfillJson(route, invalidVpnPanelsResponse ? [{}] : panels)
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/vpn-panels') {
+      const payload = body as Record<string, unknown>
+      const publicPayload = { ...payload }
+      delete publicPayload.password
+      const created = vpnPanel({
+        ...publicPayload,
+        id: 'panel-created-e2e',
+        status: 'Active',
+        healthStatus: 'Unknown',
+        usedCapacity: 0,
+        version: '',
+        lastError: '',
+        createdAt: now,
+        updatedAt: now
+      })
+      panels.push(created)
+      await fulfillJson(route, created, 201)
+      return
+    }
+
+    const panelMutationMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)$/)
+    if (panelMutationMatch && method === 'PATCH') {
+      const index = panels.findIndex((item) => item.id === panelMutationMatch[1])
+      const payload = body as Record<string, unknown>
+      const publicPayload = { ...payload }
+      delete publicPayload.password
+      const updated = vpnPanel({ ...panels[index], ...publicPayload, id: panelMutationMatch[1], updatedAt: now })
+      if (index >= 0) panels[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    if (panelMutationMatch && method === 'DELETE') {
+      const panelId = panelMutationMatch[1]
+      const index = panels.findIndex((item) => item.id === panelId)
+      const linkedInbounds = inbounds.filter((item) => item.vpnPanelId === panelId).length
+      if (linkedInbounds > 0) {
+        panels[index] = vpnPanel({ ...panels[index], status: 'Disabled', updatedAt: now })
+      } else if (index >= 0) {
+        panels.splice(index, 1)
+      }
+      await fulfillJson(route, { id: panelId, deleted: linkedInbounds === 0, archived: linkedInbounds > 0, linkedInbounds, linkedClients: 0, linkedSyncRuns: 0, linkedHealthChecks: 0 })
       return
     }
 
@@ -1237,12 +1353,57 @@ async function mockAdminApi(page: Page) {
     }
 
     const panelInboundsMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/inbounds$/)
+    if (method === 'POST' && panelInboundsMatch) {
+      const payload = body as Record<string, unknown>
+      if (payload.isDefault) {
+        inbounds.forEach((item) => {
+          if (item.vpnPanelId === panelInboundsMatch[1]) item.isDefault = false
+        })
+      }
+      const created = {
+        id: 'inbound-created-e2e',
+        vpnPanelId: panelInboundsMatch[1],
+        externalInboundId: '99',
+        usedCapacity: 0,
+        ...payload
+      }
+      inbounds.push(created)
+      await fulfillJson(route, created, 201)
+      return
+    }
+
     if (method === 'GET' && panelInboundsMatch) {
       if (panelInboundsMatch[1] === 'panel-eu' && delayNextVpnPanelInboundsResponse) {
         delayNextVpnPanelInboundsResponse = false
         await new Promise((resolve) => setTimeout(resolve, 1200))
       }
       await fulfillJson(route, inbounds.filter((item) => item.vpnPanelId === panelInboundsMatch[1]))
+      return
+    }
+
+    const inboundMutationMatch = path.match(/^\/api\/admin\/vpn-inbounds\/([^/]+)$/)
+    if (method === 'PATCH' && inboundMutationMatch) {
+      const index = inbounds.findIndex((item) => item.id === inboundMutationMatch[1])
+      const payload = body as Record<string, unknown>
+      if (payload.isDefault) {
+        inbounds.forEach((item) => {
+          if (item.vpnPanelId === inbounds[index]?.vpnPanelId) item.isDefault = false
+        })
+      }
+      const updated = { ...inbounds[index], ...payload, id: inboundMutationMatch[1] }
+      if (index >= 0) inbounds[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    const inboundDefaultMatch = path.match(/^\/api\/admin\/vpn-inbounds\/([^/]+)\/set-default$/)
+    if (method === 'POST' && inboundDefaultMatch) {
+      const index = inbounds.findIndex((item) => item.id === inboundDefaultMatch[1])
+      const panelId = inbounds[index]?.vpnPanelId
+      inbounds.forEach((item) => {
+        if (item.vpnPanelId === panelId) item.isDefault = item.id === inboundDefaultMatch[1]
+      })
+      await fulfillJson(route, inbounds[index])
       return
     }
 
@@ -1850,6 +2011,165 @@ test('admin Telegram bot settings support secure save and reload lifecycle', asy
   })
   expect(api.getRequestCount('/api/admin/telegram-bot/settings', 'PATCH')).toBe(2)
   expect(api.getAuthorizedRequestCount('/api/admin/telegram-bot/settings', 'PATCH', 'Bearer admin-bot-token')).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin VPN infrastructure supports secure managed lifecycle', async ({ page }) => {
+  test.setTimeout(180_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-infrastructure-token', 'admin-infrastructure-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Серверы', 'nodes')
+  const nodesPanel = page.locator('#nodes')
+  const serverForm = nodesPanel.locator('form')
+  await serverForm.getByLabel('Название').fill('E2E NL Node')
+  await serverForm.getByLabel('Host или DNS').fill('nl-node.example.test')
+  await serverForm.getByLabel('IP-адрес').fill('192.0.2.44')
+  await serverForm.getByLabel('Провайдер').fill('E2E Provider')
+  await serverForm.getByLabel('Регион').fill('EU')
+  await serverForm.getByLabel('Страна').fill('NL')
+  await serverForm.getByLabel('Дата-центр').fill('AMS-E2E')
+  await serverForm.getByLabel('Емкость').fill('250')
+  await serverForm.getByLabel('Приоритет').fill('25')
+  await serverForm.getByLabel('Протоколы').fill('vless,trojan')
+  await serverForm.getByRole('textbox', { name: /^SSH-доступ/ }).fill('playwright-ssh-write-only')
+  await serverForm.getByRole('textbox', { name: /^Пароль панели/ }).fill('playwright-panel-write-only')
+  await serverForm.getByRole('button', { name: 'Создать сервер' }).click()
+
+  await expect(page.getByText('Сервер E2E NL Node создан. Секреты не возвращаются из API.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers', 'POST')?.body).toMatchObject({
+    name: 'E2E NL Node',
+    host: 'nl-node.example.test',
+    sshCredential: 'playwright-ssh-write-only',
+    panelPassword: 'playwright-panel-write-only'
+  })
+  await expect(page.getByText('playwright-ssh-write-only', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('playwright-panel-write-only', { exact: true })).toHaveCount(0)
+  await expect(serverForm.getByRole('textbox', { name: /^SSH-доступ/ })).toHaveValue('')
+  await expect(serverForm.getByRole('textbox', { name: /^Пароль панели/ })).toHaveValue('')
+
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  let serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'E2E NL Node' })
+  await expect(serverRow).toContainText('EU/NL · E2E Provider · nl-node.example.test')
+  await serverRow.getByRole('button', { name: 'Редактировать' }).click()
+  await expect(serverForm.getByLabel('Название')).toHaveValue('E2E NL Node')
+  await expect(serverForm.getByRole('textbox', { name: /^SSH-доступ/ })).toHaveValue('')
+  await expect(serverForm.getByRole('textbox', { name: /^Пароль панели/ })).toHaveValue('')
+  await serverForm.getByLabel('Название').fill('E2E NL Node Updated')
+  await serverForm.getByLabel('Приоритет').fill('30')
+  await serverForm.getByRole('button', { name: 'Сохранить сервер' }).click()
+
+  await expect(page.getByText('Сервер E2E NL Node Updated обновлен. Секреты не возвращаются из API.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-created-e2e', 'PUT')?.body).toMatchObject({
+    name: 'E2E NL Node Updated',
+    priority: 30,
+    sshCredential: '',
+    panelPassword: ''
+  })
+  serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'E2E NL Node Updated' })
+  await serverRow.getByRole('button', { name: 'Закрыть набор' }).click()
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(serverRow).toContainText('новые пользователи: закрыты')
+  await serverRow.getByRole('button', { name: 'Открыть набор' }).click()
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(serverRow).toContainText('новые пользователи: разрешены')
+  await serverRow.getByRole('button', { name: 'В обслуживание' }).click()
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Сервер E2E NL Node Updated: перевести в обслуживание.')).toBeVisible()
+  await serverRow.getByRole('button', { name: 'Вернуть в работу' }).click()
+  await expect(page.getByText('Сервер E2E NL Node Updated: вернуть в работу.')).toBeVisible()
+  await serverRow.getByRole('button', { name: 'Отключить' }).click()
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Сервер E2E NL Node Updated: отключить сервер.')).toBeVisible()
+  await serverRow.getByRole('button', { name: 'Удалить' }).click()
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Сервер E2E NL Node Updated удалён.')).toBeVisible()
+  await expect(nodesPanel.getByText('E2E NL Node Updated', { exact: true })).toHaveCount(0)
+
+  await openAdminSection(page, '3x-ui панели', 'panels')
+  const panelsPanel = page.locator('#panels')
+  const panelForm = panelsPanel.locator('form').first()
+  await panelForm.getByLabel('Название панели').fill('E2E 3x-ui Panel')
+  await panelForm.getByLabel('Адрес панели').fill('https://panel-created.example.test')
+  await panelForm.getByLabel('Логин').fill('e2e-admin')
+  await panelForm.getByRole('textbox', { name: /^Пароль панели/ }).fill('playwright-3xui-write-only')
+  await panelForm.getByLabel('Регион').fill('NL')
+  await panelForm.getByLabel('Емкость').fill('300')
+  await panelForm.getByRole('button', { name: 'Добавить панель' }).click()
+
+  await expect(page.getByText('VPN-панель E2E 3x-ui Panel сохранена. Пароль не возвращается из API.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-panels', 'POST')?.body).toMatchObject({
+    name: 'E2E 3x-ui Panel',
+    password: 'playwright-3xui-write-only',
+    region: 'NL'
+  })
+  await expect(page.getByText('playwright-3xui-write-only', { exact: true })).toHaveCount(0)
+  await expect(panelForm.getByRole('textbox', { name: /^Пароль панели/ })).toHaveValue('')
+
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  let panelRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'E2E 3x-ui Panel' })
+  await expect(panelRow).toContainText('https://panel-created.example.test')
+  await panelRow.getByRole('button', { name: 'Редактировать' }).click()
+  await expect(panelForm.getByLabel('Название панели')).toHaveValue('E2E 3x-ui Panel')
+  await expect(panelForm.getByRole('textbox', { name: /^Пароль панели/ })).toHaveValue('')
+  await panelForm.getByLabel('Название панели').fill('E2E 3x-ui Panel Updated')
+  await panelForm.getByRole('button', { name: 'Сохранить панель' }).click()
+  await expect(page.getByText('VPN-панель E2E 3x-ui Panel Updated обновлена. Пароль не возвращается из API.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-panels/panel-created-e2e', 'PATCH')?.body).toMatchObject({
+    name: 'E2E 3x-ui Panel Updated',
+    password: ''
+  })
+
+  panelRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'E2E 3x-ui Panel Updated' })
+  await expect(panelsPanel.getByRole('combobox', { name: 'Панель' })).toHaveValue('panel-created-e2e')
+  const inboundForm = panelsPanel.locator('form').nth(1)
+  await inboundForm.getByLabel('Название inbound-правила').fill('e2e-vless')
+  await inboundForm.getByLabel('Порт').fill('9443')
+  await inboundForm.getByLabel('Емкость').fill('200')
+  await inboundForm.getByLabel('Основной inbound для панели').uncheck()
+  await inboundForm.getByRole('textbox', { name: 'settingsJson', exact: true }).fill('{"clients":[]}')
+  await inboundForm.getByRole('textbox', { name: 'streamSettingsJson', exact: true }).fill('{"network":"tcp","security":"reality"}')
+  await inboundForm.getByRole('textbox', { name: 'sniffingJson', exact: true }).fill('{}')
+  await inboundForm.getByRole('button', { name: 'Создать inbound-правило' }).click()
+
+  await expect(page.getByText('Inbound-правило e2e-vless создано.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-panels/panel-created-e2e/inbounds', 'POST')?.body).toMatchObject({ name: 'e2e-vless', port: 9443, capacity: 200 })
+  let inboundRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'e2e-vless' })
+  await inboundRow.getByRole('button', { name: 'Редактировать' }).click()
+  await inboundForm.getByLabel('Название inbound-правила').fill('e2e-vless-updated')
+  await inboundForm.getByLabel('Порт').fill('10443')
+  await inboundForm.getByRole('button', { name: 'Сохранить inbound-правило' }).click()
+  await expect(page.getByText('Inbound-правило e2e-vless-updated обновлено.')).toBeVisible()
+  inboundRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'e2e-vless-updated' })
+  await inboundRow.getByRole('button', { name: 'Сделать основным' }).click()
+  await expect(inboundRow).toContainText('Основной')
+  await inboundRow.getByRole('button', { name: 'Выключить' }).click()
+  await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(inboundRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  await inboundRow.getByRole('button', { name: 'Включить' }).click()
+  await expect(inboundRow.getByRole('button', { name: 'Выключить' })).toBeVisible()
+
+  await panelRow.getByRole('button', { name: 'Отключить' }).click()
+  await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(panelRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  await panelRow.getByRole('button', { name: 'Включить' }).click()
+  await expect(panelRow.getByRole('button', { name: 'Отключить' })).toBeVisible()
+  await panelRow.getByRole('button', { name: 'Удалить' }).click()
+  await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Панель E2E 3x-ui Panel Updated отключена и сохранена в истории: связей 1.')).toBeVisible()
+  await expect(panelRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+
+  expect(api.getAuthorizedRequestCount('/api/admin/servers', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)
+  expect(api.getAuthorizedRequestCount('/api/admin/vpn-panels', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })

@@ -214,7 +214,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - frontend unit tests: `112/112`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `86/86`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `88/88`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -224,6 +224,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - команды `extend/activate/block/unblock/cancel` не изменяют подписку при ошибке VPN-провайдера; unhealthy/full migration target отклоняется;
 - удаление VPN-сервера сохраняет health-check и migration history через архивирование, а связанный ключ рабочего сценария нельзя переименовать;
 - административные user/content/release/referral/support/Telegram и 3x-ui операции создают redacted audit trail с admin/system actor; panel sync откатывает частичные изменения, а remote inbound/client create компенсируется при отказе локального commit;
+- desktop/mobile browser flow проверяет полный managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила, включая write-only SSH/panel credentials, reload persistence, confirm-dialog и отсутствие overflow;
 - возвраты резервируются локально до provider call; параллельные повторы дедуплицируются, а `New/Pending/Unknown` refund блокирует новую операцию до ручной сверки;
 - payment init сериализуется по order id, сохраняет reservation до provider call и восстанавливает remote checkout после transient final commit failure;
 - публичный список payment providers и checkout используют единый детерминированный selector готового web-аккаунта; неготовый default не перехватывает показанный fallback;
@@ -282,7 +283,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет выполняет Telegram deep-link/unlink и close/reopen обращения с optimistic revision и reload persistence на desktop/mobile;
 - платежные аккаунты проходят secure create/edit/disable/reload/enable/check browser lifecycle без раскрытия write-only secrets на desktop/mobile;
 - настройки Telegram-бота проходят secure save/check/reload/edit browser lifecycle без возврата raw bot/webhook tokens на desktop/mobile;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-telegram-bot-settings-secure-lifecycle-e2e`, версия `0.557.0`;
-- roadmap progress: `570/590` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-vpn-infrastructure-secure-lifecycle-e2e`, версия `0.558.0`;
+- roadmap progress: `571/591` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
