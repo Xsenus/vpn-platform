@@ -1539,7 +1539,11 @@ export function App() {
   useEffect(() => {
     let focusFrame = 0
     const syncActiveSection = (focusContent = false) => {
-      setActiveSection(readAdminSectionFromHash())
+      const nextSection = readAdminSectionFromHash()
+      if (window.location.hash && parseAdminSectionHref(window.location.hash) === null) {
+        window.history.replaceState(null, '', `#${nextSection}`)
+      }
+      setActiveSection(nextSection)
       if (!focusContent) return
       window.cancelAnimationFrame(focusFrame)
       focusFrame = window.requestAnimationFrame(() => document.getElementById('admin-content')?.focus())

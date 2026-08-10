@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin invalid hash canonical fallback
+
+Scope:
+- Non-empty unknown admin fragments must not leave URL, visible tabpanel and metadata in contradictory states.
+- Direct invalid load and runtime hash changes recover to canonical `#dashboard`; browser Back must restore the previous valid section and keyboard focus.
+
+Results:
+- Roadmap progress: `584/604` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-invalid-hash-canonical-fallback`, version `0.571.0`.
+- Frontend tests: `116/116`; targeted desktop/mobile invalid-hash lifecycle: `2/2`; admin desktop/mobile suite: `58/58`; full console-responsive Playwright: `114/114`.
+- All 17 admin sections still pass exact title, non-blank, Axe and 18-viewport responsive checks; empty root URL remains unchanged.
+- Typecheck/build all apps: OK; admin bundle raw `512438`, gzip `137533`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin section history and focus lifecycle
 
 Scope:

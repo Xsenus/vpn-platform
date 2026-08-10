@@ -1948,6 +1948,34 @@ test('admin section history restores content, metadata and focus', async ({ page
   expect(browserErrors).toEqual([])
 })
 
+test('admin invalid hashes recover to a canonical dashboard route', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-invalid-hash-token', 'admin-invalid-hash-refresh')
+
+  await page.goto('/#unknown')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect(page).toHaveURL(/#dashboard$/)
+  await expect(page.locator('#dashboard')).toBeVisible()
+  await expect(page).toHaveTitle('Дашборд — Админ-панель VPN Platform')
+
+  await openAdminSection(page, 'Оплаты', 'payments')
+  await page.evaluate(() => { window.location.hash = '#not-a-section' })
+  await expect(page).toHaveURL(/#dashboard$/)
+  await expect(page.locator('#dashboard')).toBeVisible()
+  await expect(page.locator('#admin-content')).toBeFocused()
+
+  await page.goBack()
+  await expect(page).toHaveURL(/#payments$/)
+  await expect(page.locator('#payments')).toBeVisible()
+  await expect(page).toHaveTitle('Оплаты — Админ-панель VPN Platform')
+  expect(browserErrors).toEqual([])
+})
+
 test('admin order links keep section history and focus operable', async ({ page }) => {
   const browserErrors: string[] = []
   page.on('console', (message) => {

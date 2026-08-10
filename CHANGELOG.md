@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.571.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-invalid-hash-canonical-fallback`.
+
+### Исправлено
+
+- Неизвестный admin hash больше не оставляет URL и видимый экран в разных состояниях: непустой invalid fragment канонизируется в `#dashboard`, а обычный корневой `/` не переписывается.
+- Runtime invalid hash восстанавливает Dashboard, title и `admin-content` focus; Back возвращает предыдущий валидный раздел без сохранения несуществующего fragment.
+
+### Проверено
+
+- Direct `#unknown` и runtime `#not-a-section -> #dashboard -> Back -> #payments` проходят Desktop Chrome и Pixel 5: `2/2`.
+- Полный admin desktop/mobile suite `58/58`; полный console-responsive Playwright `114/114`, включая все 17 sections на 18 viewport-конфигурациях и Axe gate.
+- Frontend unit `116/116`, typecheck/build всех приложений, audit `0 vulnerabilities`; admin bundle raw `512438`, gzip `137533`, largest `219849`.
+- Backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+- Roadmap: `584/604` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.570.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-section-history-focus-fix`.

@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `583/603` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `584/604` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `112/112`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `114/114`.
 - [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -149,12 +149,13 @@
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
-- [x] Admin production bundle budget: `5` chunks, largest `219849`, total raw `512330`, gzip `137506`.
+- [x] Admin production bundle budget: `5` chunks, largest `219849`, total raw `512438`, gzip `137533`.
 - [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 18 viewport-конфигураций без blank screen/overflow.
 - [x] Public route metadata/focus lifecycle проходит direct load, navigation и browser Back на desktop/mobile.
 - [x] Admin metadata lifecycle проходит hydration/login, deep-link, 17 sections и logout на desktop/mobile.
 - [x] Admin section history/focus lifecycle проходит tabs, Back/Forward, role fallback и order-links на desktop/mobile.
-- [x] Latest "Что нового": `2026-08-10-admin-section-history-focus-fix`, версия `0.570.0`.
+- [x] Admin invalid hash canonical fallback проходит direct/runtime recovery, focus и Back на desktop/mobile.
+- [x] Latest "Что нового": `2026-08-10-admin-invalid-hash-canonical-fallback`, версия `0.571.0`.
 
 ## Как вести дальше
 

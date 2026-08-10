@@ -78,9 +78,11 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("adminSectionTitles", spec, StringComparison.Ordinal);
         Assert.Contains("window.history.pushState", adminApp, StringComparison.Ordinal);
         Assert.Contains("window.addEventListener('popstate'", adminApp, StringComparison.Ordinal);
+        Assert.Contains("window.location.hash && parseAdminSectionHref(window.location.hash) === null", adminApp, StringComparison.Ordinal);
         Assert.Contains("goToAdminSection('users')", adminApp, StringComparison.Ordinal);
         Assert.Contains("goToAdminSection('subscriptions')", adminApp, StringComparison.Ordinal);
         Assert.Contains("admin section history restores content, metadata and focus", adminSpec, StringComparison.Ordinal);
+        Assert.Contains("admin invalid hashes recover to a canonical dashboard route", adminSpec, StringComparison.Ordinal);
         Assert.Contains("admin order links keep section history and focus operable", adminSpec, StringComparison.Ordinal);
     }
 

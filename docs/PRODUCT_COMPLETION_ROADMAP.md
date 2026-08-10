@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-10.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-admin-section-history-focus-fix`, версия `0.570.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `583/603` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-admin-invalid-hash-canonical-fallback`, версия `0.571.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `584/604` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -35,10 +35,10 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-08-09:
+Что подтверждено на 2026-08-10:
 
-- [x] `STATE-001` Backend test suite проходит: `1112/1112`.
-- [x] `STATE-002` Frontend test suite проходит: `114/114`.
+- [x] `STATE-001` Backend test suite проходит: `1113/1113`.
+- [x] `STATE-002` Frontend test suite проходит: `116/116`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2028,6 +2028,10 @@ git diff --check
   - Что сделать: пользовательские section-переходы должны сохраняться в browser history; Back/Forward, role fallback и внутренние order/readiness links обязаны синхронизировать hash, видимый tabpanel, metadata и клавиатурный focus без выхода из админки или hidden-focus состояния.
   - Что сделано: единый `goToAdminSection` создает history-entry только при фактической смене section, hash/popstate listener восстанавливает state и `admin-content` focus, а fallback оставляет запрещенный hash вне истории. Order links и readiness actions переведены на тот же boundary.
   - Доказательство: targeted desktop/mobile history/order-links `4/4`, admin desktop/mobile `56/56`, полный console-responsive Playwright `112/112`, 17 sections на 18 viewport-конфигурациях и Axe; frontend `116/116`, typecheck/build, admin bundle `512330` raw/`137506` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1113/1113`, fresh SQLite latest release OK, secret scan `663/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
+- [x] `P11-ACC-294` Канонизировать неизвестные hash-маршруты админки. 2026-08-10.
+  - Что сделать: invalid fragment не должен оставлять URL, tabpanel и metadata в разных состояниях; direct load и runtime hash должны безопасно восстанавливаться, сохраняя предыдущий валидный route для Back и не переписывая пустой root URL.
+  - Что сделано: центральный hash-sync отличает пустой URL от непустого неизвестного fragment, заменяет invalid entry на `#dashboard`, синхронизирует active section и использует существующий history focus lifecycle.
+  - Доказательство: targeted desktop/mobile direct/runtime invalid hash `2/2`, admin desktop/mobile `58/58`, полный console-responsive Playwright `114/114`, 17 sections на 18 viewport-конфигурациях и Axe; frontend `116/116`, typecheck/build, admin bundle `512438` raw/`137533` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1113/1113`, fresh SQLite latest release OK, secret scan `663/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2674,6 +2678,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-10-019` | P1 | Admin routing/accessibility | Неизвестный hash показывал Dashboard, но сохранялся в URL; refresh/history расходились с tabpanel/title, а runtime recovery не имел канонического route. | Исправлено локально | Invalid non-empty hash заменяется `#dashboard`; direct/runtime desktop/mobile regression проверяет title, focus и Back. Production admin smoke остается внешним. |
 | `BUG-2026-08-10-018` | P1 | Admin navigation/accessibility | Section tabs использовали `replaceState`, поэтому Back выходил из админки, а hash/order transitions могли оставить клавиатурный focus внутри скрытого tabpanel. | Исправлено локально | Push history, popstate/hash synchronization, content focus и desktop/mobile Back/Forward/order-link regressions добавлены; production admin smoke остается внешней проверкой. |
 | `BUG-2026-08-10-017` | P1 | Admin routing/accessibility/SEO | Login, hydration и 17 hash-разделов использовали один статический title; deep-link, section switch и logout не обновляли metadata, поэтому browser history и assistive context не отражали текущий рабочий экран. | Исправлено локально | Session/section metadata contract проходит desktop/mobile lifecycle и exact title matrix 17 sections; production admin-account smoke остается внешней проверкой. |
 | `BUG-2026-08-10-016` | P1 | Public routing/accessibility/SEO | Только главная меняла title/meta: SPA-переход сохранял ее metadata на тарифах/FAQ/аккаунте, а focus оставался в общей шапке; Back/Forward не объявлял новый main клавиатурному пользователю. | Исправлено локально | Route metadata mapping и focus/scroll effect проходят direct load, navigation и Back на desktop/mobile; deployment SEO/rewrite остается частью внешнего smoke. |

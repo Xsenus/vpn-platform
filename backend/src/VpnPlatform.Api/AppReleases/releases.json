@@ -13474,5 +13474,28 @@
         "text": "Roadmap progress is 583/603 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-invalid-hash-canonical-fallback",
+    "version": "0.571.0",
+    "releasedAt": "2026-08-10T15:28:00+07:00",
+    "title": "Неизвестный адрес админки восстанавливается безопасно",
+    "summary": "Несуществующий hash больше не расходится с видимым разделом: админка заменяет его каноническим Dashboard и сохраняет рабочую историю браузера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Direct load неизвестного admin hash и ошибочный fragment во время сессии теперь заменяются на #dashboard с согласованными tabpanel и title."
+      },
+      {
+        "type": "improved",
+        "text": "Runtime recovery переносит focus в основной контент, а Back возвращает предыдущий валидный раздел без сохранения несуществующего URL в истории."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 584/604 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

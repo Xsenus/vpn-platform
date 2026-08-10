@@ -76,7 +76,7 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
 - Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
 - Telegram bot settings проходят secure save/check/reload/edit lifecycle без раскрытия write-only bot/webhook tokens на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `112/112`; all-screens: `6/6`.
+- `npm run e2e:console --prefix frontend`: `114/114`; all-screens: `6/6`.
 - Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит на desktop/mobile без раскрытия SSH/panel credentials.
 - Safe provisioning validation lifecycle проходит desktop/mobile с mode/risk/operator warning и без реального SSH/Ansible.
 - 3x-ui client disable/reload/enable/sync/reset-traffic lifecycle проходит desktop/mobile без console errors и overflow.
@@ -84,9 +84,10 @@ PNG создаются только при явном флаге внутри `f
 - Subscription activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle сохраняет связанный access state и скрывает terminal secrets на desktop/mobile.
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
-- Admin production build содержит `5` JS chunks под fail-closed budget: raw `512330`, gzip `137506`, largest `219849` bytes.
+- Admin production build содержит `5` JS chunks под fail-closed budget: raw `512438`, gzip `137533`, largest `219849` bytes.
 - Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 18 viewport-конфигураций.
 - Все шесть public route-состояний имеют собственные title/meta; SPA navigation и browser Back переводят focus в новый main на desktop/mobile.
 - Login и все 17 admin sections имеют exact title; payments/support/logout metadata lifecycle проходит desktop/mobile.
 - Admin Back/Forward и order-links восстанавливают hash, tabpanel, metadata и `admin-content` focus на desktop/mobile.
-- Latest "Что нового": `2026-08-10-admin-section-history-focus-fix`, версия `0.570.0`.
+- Unknown admin hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
+- Latest "Что нового": `2026-08-10-admin-invalid-hash-canonical-fallback`, версия `0.571.0`.
