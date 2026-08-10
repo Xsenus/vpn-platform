@@ -1220,7 +1220,7 @@ function getApiErrorCode(error: unknown): string {
 
 export function translateAuthError(error: unknown, fallback = 'Ошибка авторизации') {
   const raw = getApiErrorCode(error) || (error instanceof Error ? error.message : String(error ?? ''))
-  return authErrorMessages[raw] ?? authErrorFallbacks[raw] ?? (raw || fallback)
+  return authErrorMessages[raw] ?? authErrorFallbacks[raw] ?? normalizeApiErrorText(raw, fallback)
 }
 
 export function translateAuthMessage(message: string) {
@@ -1233,17 +1233,21 @@ export function translateAuthMessage(message: string) {
 
 export function normalizeApiError(payload: unknown, fallback: string): string {
   if (!payload) return fallback
-  if (typeof payload === 'string') return isTechnicalApiError(payload) ? fallback : payload
+  if (typeof payload === 'string') return normalizeApiErrorText(payload, fallback)
   if (typeof payload === 'object' && payload !== null) {
     if ('error' in payload && typeof (payload as Record<string, unknown>).error === 'string') {
       const error = String((payload as Record<string, unknown>).error)
-      return isTechnicalApiError(error) ? fallback : error
+      if (error.trim()) return normalizeApiErrorText(error, fallback)
     }
     if ('message' in payload && typeof (payload as Record<string, unknown>).message === 'string') {
-      return String((payload as Record<string, unknown>).message)
+      return normalizeApiErrorText(String((payload as Record<string, unknown>).message), fallback)
     }
   }
   return fallback
+}
+
+function normalizeApiErrorText(value: string, fallback: string): string {
+  return !value.trim() || isTechnicalApiError(value) ? fallback : value
 }
 
 function isTechnicalApiError(value: string): boolean {

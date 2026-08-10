@@ -13842,5 +13842,28 @@
         "text": "Roadmap progress is 599/619 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-api-error-payload-hardening",
+    "version": "0.587.0",
+    "releasedAt": "2026-08-10T23:24:05+07:00",
+    "title": "Все формы API-ошибок используют безопасный fallback",
+    "summary": "Технические и пустые error/message/plain-text payload больше не попадают в интерфейс, включая неизвестные auth-коды.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Единый text normalizer закрывает snake_case и whitespace-only значения в error, message и plain text."
+      },
+      {
+        "type": "improved",
+        "text": "Известные auth codes сохраняют переводы, а неизвестный machine code использует caller fallback."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 600/620 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

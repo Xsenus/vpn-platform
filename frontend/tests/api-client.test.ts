@@ -655,6 +655,10 @@ test('normalizeApiError prefers error field and message field', () => {
   assert.equal(normalizeApiError({ message: 'denied' }, 'fallback'), 'denied')
   assert.equal(normalizeApiError({ error: 'qr_temporarily_unavailable' }, 'Не удалось загрузить QR-код.'), 'Не удалось загрузить QR-код.')
   assert.equal(normalizeApiError('provider_timeout', 'Сервис временно недоступен.'), 'Сервис временно недоступен.')
+  assert.equal(normalizeApiError({ message: 'provider_timeout' }, 'Сервис временно недоступен.'), 'Сервис временно недоступен.')
+  assert.equal(normalizeApiError({ error: '   ' }, 'fallback'), 'fallback')
+  assert.equal(normalizeApiError({ error: ' ', message: 'Backend declined the request.' }, 'fallback'), 'Backend declined the request.')
+  assert.equal(normalizeApiError({ message: '\t' }, 'fallback'), 'fallback')
   assert.equal(normalizeApiError(null, 'fallback'), 'fallback')
 })
 
@@ -716,6 +720,8 @@ test('auth helpers validate forms and translate backend codes to Russian text', 
   assert.deepEqual(validatePasswordResetConfirm('token', 'NewPassword123!'), [])
   assert.equal(translateAuthError(new Error('invalid_credentials')), 'Неверный email или пароль.')
   assert.equal(translateAuthError(new ApiClientError('Запрос не выполнен.', 401, { error: 'invalid_credentials' })), 'Неверный email или пароль.')
+  assert.equal(translateAuthError(new ApiClientError('Запрос не выполнен.', 401, { error: 'unknown_auth_failure' }), 'Не удалось войти'), 'Не удалось войти')
+  assert.equal(translateAuthError(new Error('unknown_auth_failure'), 'Не удалось войти'), 'Не удалось войти')
   assert.equal(translateAuthError(new Error('email_exists')), 'Аккаунт с таким email уже зарегистрирован. Войдите или восстановите пароль.')
   assert.equal(translateAuthError(new Error('invalid_referral_code')), 'Реферальный код не найден или больше недоступен.')
   assert.equal(

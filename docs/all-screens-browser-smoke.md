@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-10-api-error-code-fallback`, версия `0.586.0`; cabinet/admin failed QR refresh показывает безопасный контекстный fallback вместо `snake_case` backend-кода на desktop/mobile.
+- Latest "Что нового": `2026-08-10-api-error-payload-hardening`, версия `0.587.0`; cabinet `error` и admin `message` machine-code payload показывают безопасный QR fallback на desktop/mobile.

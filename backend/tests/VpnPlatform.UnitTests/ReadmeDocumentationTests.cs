@@ -45,7 +45,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-api-error-code-fallback", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-api-error-payload-hardening", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("124/124", readme, StringComparison.Ordinal);
     }
 
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1125/1125",
-                     "2026-08-10-api-error-code-fallback",
-                     "0.586.0",
+                     "2026-08-10-api-error-payload-hardening",
+                     "0.587.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

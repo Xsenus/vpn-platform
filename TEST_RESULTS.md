@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: API error payload hardening
+
+Scope:
+- Machine-readable and empty error text must use a controlled fallback in every supported payload form: `error`, `message` and plain text.
+- Known auth codes must retain translations while an unknown machine code uses the caller-provided fallback.
+
+Results:
+- Roadmap progress: `600/620` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-api-error-payload-hardening`, version `0.587.0`.
+- Reproduction before fix: `{ "message": "provider_timeout" }` returned raw `provider_timeout`; unknown auth payload `unknown_auth_failure` also bypassed the supplied fallback. Whitespace-only object values could produce an empty UI error.
+- After fix: the shared text normalizer covers all payload forms and auth fallback; API targeted suite passes, while cabinet `error` and admin `message` QR failures show the same contextual message on desktop/mobile.
+- Visual audit: all-screens `6/6` passed on 25 viewport configurations `305x568..2560x1440`; full desktop/mobile console-responsive Playwright: `124/124`.
+- Frontend tests: `122/122`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `518019`, gzip `138867`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: API error code fallback
 
 Scope:

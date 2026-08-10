@@ -227,7 +227,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - desktop/mobile browser flow проверяет полный managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила, включая write-only SSH/panel credentials, reload persistence, confirm-dialog и отсутствие overflow;
 - safe provisioning browser flow проверяет health/precheck/validation prepare/deploy/cancel/retry/support lifecycle, mode/risk warnings и reload state без реального SSH/Ansible;
 - desktop/mobile browser flow выполняет disable/reload/enable/sync/reset-traffic lifecycle 3x-ui клиента с authorization, confirm-dialog и persisted sync state;
-- desktop/mobile browser flow сохраняет VPN access status/disabledAt/revision через disable/reload/enable/sync/reset-traffic, не раскрывает terminal access secrets, очищает cached QR и показывает безопасный fallback вместо технических API-кодов;
+- desktop/mobile browser flow сохраняет VPN access status/disabledAt/revision через disable/reload/enable/sync/reset-traffic, не раскрывает terminal access secrets, очищает cached QR и показывает безопасный fallback вместо технических API-кодов в `error`, `message` и plain-text payload;
 - desktop/mobile browser flow сохраняет subscription status/renewal/block reason/server/access revision через activate/extend/sync/block/reload/unblock/migrate/reload/cancel и скрывает terminal access secrets;
 - desktop/mobile payment flow сохраняет recheck и partial/full refund после reload, автоматически подставляет остаток и блокирует повторный полный возврат точным сообщением;
 - desktop/mobile audit flow сохраняет failed notification retry как Pending с attempts reset/error cleanup; read-only finance/support роли не получают retry control;
@@ -306,7 +306,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - hidden admin forms не считаются capability boundary: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API;
 - admin action dispatcher проверяет capability целевого section во всех typed callsites; active Dashboard/Payments не разрешает hidden mutation другого раздела;
 - пункт «Помощь» в header личного кабинета открывает полноценную public-инструкцию `/help`; точный cabinet-to-public destination проверен source guard, desktop/mobile E2E и локальным браузером на 305 px;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-api-error-code-fallback`, версия `0.586.0`;
-- roadmap progress: `599/619` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-api-error-payload-hardening`, версия `0.587.0`;
+- roadmap progress: `600/620` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
