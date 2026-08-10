@@ -76,9 +76,10 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
 - Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
 - Telegram bot settings проходят secure save/check/reload/edit lifecycle без раскрытия write-only bot/webhook tokens на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `94/94`; all-screens: `6/6`.
+- `npm run e2e:console --prefix frontend`: `96/96`; all-screens: `6/6`.
 - Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит на desktop/mobile без раскрытия SSH/panel credentials.
 - Safe provisioning validation lifecycle проходит desktop/mobile с mode/risk/operator warning и без реального SSH/Ansible.
 - 3x-ui client disable/reload/enable/sync/reset-traffic lifecycle проходит desktop/mobile без console errors и overflow.
 - VPN access disable/reload/enable/sync/reset-traffic lifecycle сохраняет revision и скрывает terminal secrets на desktop/mobile.
-- Latest "Что нового": `2026-08-10-admin-vpn-access-actions-lifecycle-e2e`, версия `0.561.0`.
+- Subscription activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle сохраняет связанный access state и скрывает terminal secrets на desktop/mobile.
+- Latest "Что нового": `2026-08-10-admin-subscription-actions-lifecycle-e2e`, версия `0.562.0`.

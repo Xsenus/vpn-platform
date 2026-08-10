@@ -723,38 +723,118 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/migrate') {
-      await fulfillJson(route, { migrationJobId: 'migration-sub-e2e', subscriptionId: 'sub-e2e', sourceNodeId: 'server-eu', targetNodeId: body ?? 'server-us', status: 'completed' })
+      const sourceNodeId = String(subscriptions[0].currentServerId ?? 'server-eu')
+      const targetNodeId = typeof body === 'string' && body ? body : 'server-us'
+      subscriptions[0] = { ...subscriptions[0], currentServerId: targetNodeId, nodeName: targetNodeId === 'server-us' ? 'US Sandbox' : targetNodeId, updatedAt: now }
+      accessCredentials[0] = {
+        ...accessCredentials[0],
+        serverId: targetNodeId,
+        serverName: targetNodeId === 'server-us' ? 'US Sandbox' : targetNodeId,
+        lastSyncedAt: now,
+        revision: Number(accessCredentials[0].revision ?? 0) + 1,
+        updatedAt: now
+      }
+      await fulfillJson(route, { migrationJobId: 'migration-sub-e2e', subscriptionId: 'sub-e2e', sourceNodeId, targetNodeId, status: 'completed' })
       return
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/extend') {
-      await fulfillJson(route, { id: 'sub-e2e', status: 'Active', endAt: '2026-08-12T07:00:00Z', gracePeriodEndAt: '2026-08-15T07:00:00Z' })
+      const days = Number((body as Record<string, unknown>)?.days ?? 0)
+      const endAt = '2027-02-27T07:00:00Z'
+      const gracePeriodEndAt = '2027-03-02T07:00:00Z'
+      subscriptions[0] = {
+        ...subscriptions[0],
+        status: 'Active',
+        endAt,
+        gracePeriodEndAt,
+        renewalCount: Number(subscriptions[0].renewalCount ?? 0) + 1,
+        updatedAt: now
+      }
+      await fulfillJson(route, { id: 'sub-e2e', status: 'Active', endAt, gracePeriodEndAt, days })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/activate') {
+      accessCredentials[0] = {
+        ...accessCredentials[0],
+        subscriptionStatus: 'Active',
+        isTerminal: false,
+        status: 'Active',
+        disabledAt: null,
+        lastSyncedAt: now,
+        revision: Number(accessCredentials[0].revision ?? 0) + 1,
+        updatedAt: now
+      }
+      subscriptions[0] = {
+        ...subscriptions[0],
+        status: 'Active',
+        currentAccessId: 'access-e2e',
+        blockReason: null,
+        updatedAt: now
+      }
+      await fulfillJson(route, {
+        id: 'sub-e2e',
+        status: 'Active',
+        endAt: subscriptions[0].endAt,
+        currentAccessId: 'access-e2e',
+        access: {
+          id: 'access-e2e',
+          status: 'Active',
+          disabledAt: null,
+          lastSyncedAt: now,
+          revision: accessCredentials[0].revision,
+          usedTrafficBytes: 0,
+          message: 'activated'
+        }
+      })
       return
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/sync-access') {
+      accessCredentials[0] = {
+        ...accessCredentials[0],
+        lastSyncedAt: now,
+        revision: Number(accessCredentials[0].revision ?? 0) + 1,
+        updatedAt: now
+      }
       await fulfillJson(route, {
         id: 'sub-e2e',
         currentAccessId: 'access-e2e',
-        access: { id: 'access-e2e', status: 'Active', disabledAt: null, lastSyncedAt: now, revision: 2, usedTrafficBytes: 0, message: 'synced' }
+        access: { id: 'access-e2e', status: accessCredentials[0].status, disabledAt: accessCredentials[0].disabledAt, lastSyncedAt: now, revision: accessCredentials[0].revision, usedTrafficBytes: 0, message: 'synced' }
       })
       return
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/block') {
-      subscriptions[0] = { ...subscriptions[0], status: 'Blocked', updatedAt: now }
+      subscriptions[0] = { ...subscriptions[0], status: 'Blocked', blockReason: 'manual_admin_action', updatedAt: now }
+      accessCredentials[0] = { ...accessCredentials[0], subscriptionStatus: 'Blocked', status: 'Disabled', disabledAt: now, revision: Number(accessCredentials[0].revision ?? 0) + 1, updatedAt: now }
       await fulfillJson(route, { id: 'sub-e2e', status: 'Blocked', blockReason: 'manual_admin_action' })
       return
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/unblock') {
-      subscriptions[0] = { ...subscriptions[0], status: 'Active', updatedAt: now }
+      subscriptions[0] = { ...subscriptions[0], status: 'Active', blockReason: null, updatedAt: now }
+      accessCredentials[0] = { ...accessCredentials[0], subscriptionStatus: 'Active', status: 'Active', disabledAt: null, revision: Number(accessCredentials[0].revision ?? 0) + 1, updatedAt: now }
       await fulfillJson(route, { id: 'sub-e2e', status: 'Active' })
       return
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/cancel') {
-      subscriptions[0] = { ...subscriptions[0], status: 'Cancelled', currentServerId: null, currentAccessId: null, updatedAt: now }
+      subscriptions[0] = { ...subscriptions[0], status: 'Cancelled', currentServerId: null, currentAccessId: null, accessUri: '', qrCodePath: '', configPath: '', cancelledAt: now, updatedAt: now }
+      accessCredentials[0] = {
+        ...accessCredentials[0],
+        subscriptionStatus: 'Cancelled',
+        isTerminal: true,
+        providerAccessId: '',
+        accessUri: '',
+        qrCodePayload: '',
+        qrCodePath: '',
+        configPath: '',
+        status: 'Revoked',
+        disabledAt: now,
+        revision: Number(accessCredentials[0].revision ?? 0) + 1,
+        updatedAt: now
+      }
       await fulfillJson(route, { id: 'sub-e2e', status: 'Cancelled', cancelledAt: now })
       return
     }
@@ -1687,6 +1767,35 @@ async function mockAdminApi(page: Page) {
     releaseSupportMessages: () => { releaseDelayedSupportMessages?.() },
     delayNextTariffCreate: () => { delayNextTariffCreateResponse = true },
     releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
+    prepareSubscriptionLifecycle: () => {
+      subscriptions[0] = {
+        ...subscriptions[0],
+        status: 'PendingActivation',
+        endAt: '2027-01-13T07:00:00Z',
+        gracePeriodEndAt: null,
+        currentServerId: 'server-eu',
+        currentAccessId: null,
+        renewalCount: 0,
+        blockReason: null,
+        cancelledAt: null,
+        accessUri: '',
+        qrCodePath: '',
+        configPath: '',
+        nodeName: 'EU Sandbox',
+        updatedAt: now
+      }
+      accessCredentials[0] = {
+        ...accessCredentials[0],
+        subscriptionStatus: 'PendingActivation',
+        isTerminal: false,
+        serverId: 'server-eu',
+        serverName: 'EU Sandbox',
+        status: 'Disabled',
+        disabledAt: now,
+        revision: 1,
+        updatedAt: now
+      }
+    },
     updateFirstDetailFixture: (userDisplayName: string, messageText: string) => {
       const nextUser = adminUser('user-first', userDisplayName, 'first@example.test')
       users = [nextUser, users.find((item) => item.id === 'user-second') ?? adminUser('user-second', 'Второй пользователь', 'second@example.test')]
@@ -2438,6 +2547,106 @@ test('admin 3x-ui client actions persist across reload', async ({ page }) => {
 
   for (const action of ['disable', 'enable', 'sync', 'reset-traffic']) {
     expect(api.getAuthorizedRequestCount(`/api/admin/vpn-clients/client-e2e/${action}`, 'POST', 'Bearer admin-vpn-client-token')).toBe(1)
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin subscription operations persist lifecycle across reload', async ({ page }) => {
+  test.setTimeout(150_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  api.prepareSubscriptionLifecycle()
+  await seedAdminSession(page, 'admin-subscription-token', 'admin-subscription-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+
+  const subscriptionsPanel = page.locator('#subscriptions')
+  let subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('PendingActivation')
+  await expect(subscriptionRow).toContainText('Доступа нет')
+  await subscriptionRow.getByRole('button', { name: 'Активировать' }).click()
+  await expect(page.getByText('Подписка активирована, текущий VPN-доступ включен при наличии.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/subscriptions/sub-e2e/activate')?.body).toEqual({ reason: 'manual_subscription_activate' })
+
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('Активно')
+  await expect(subscriptionRow).toContainText('Доступ привязан')
+  await subscriptionRow.getByRole('spinbutton').fill('45')
+  await subscriptionRow.getByRole('button', { name: 'Продлить' }).click()
+  await expect(page.getByText('Подписка продлена на 45 дней.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/subscriptions/sub-e2e/extend')?.body).toEqual({ days: 45, reason: 'manual_admin_extend' })
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('продлений: 1')
+
+  await subscriptionRow.getByRole('button', { name: 'Синхронизировать доступ' }).click()
+  await expect(page.getByText('Текущий VPN-доступ подписки синхронизирован.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/subscriptions/sub-e2e/sync-access')?.body).toEqual({ reason: 'manual_subscription_sync' })
+
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await subscriptionRow.getByRole('button', { name: 'Заблокировать' }).click()
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('Заблокировано')
+  await expect(subscriptionRow).toContainText('manual_admin_action')
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('Заблокировано')
+  await expect(subscriptionRow).toContainText('продлений: 1')
+  await subscriptionRow.getByRole('button', { name: 'Разблокировать' }).click()
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('Активно')
+
+  await subscriptionRow.getByRole('combobox', { name: /Целевой сервер для миграции/ }).selectOption('auto')
+  await subscriptionRow.getByRole('button', { name: 'Перенести', exact: true }).click()
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText(/Подписка перенесена на сервер server-u/)).toBeVisible()
+  expect(api.getLastRequest('/api/admin/subscriptions/sub-e2e/migrate')?.body).toBeNull()
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('сервер: server-u')
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'VPN-доступы', 'vpn')
+  let accessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'client-e2e' })
+  await expect(accessRow).toContainText('US Sandbox')
+  await expect(accessRow).toContainText('версия: 6')
+
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await subscriptionRow.getByRole('button', { name: 'Отменить' }).click()
+  await expect(subscriptionsPanel.getByRole('dialog')).toContainText('VPN-доступ будет отозван и удален с сервера')
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Подписка отменена, VPN-доступ отозван и удален с сервера.')).toBeVisible()
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(subscriptionRow).toContainText('Отменено')
+  await expect(subscriptionRow).toContainText('Доступа нет')
+  await expect(subscriptionRow.getByRole('button')).toHaveCount(0)
+
+  await openAdminSection(page, 'VPN-доступы', 'vpn')
+  accessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'access-e' })
+  await expect(accessRow).toContainText('Доступ отозван.')
+  await expect(accessRow).toContainText('версия: 7')
+  await expect(accessRow).not.toContainText('client-e2e')
+  await expect(accessRow).not.toContainText('vless://admin-e2e@example.test')
+  await expect(accessRow.getByRole('button')).toHaveCount(0)
+
+  for (const action of ['activate', 'extend', 'sync-access', 'block', 'unblock', 'migrate', 'cancel']) {
+    expect(api.getAuthorizedRequestCount(`/api/admin/subscriptions/sub-e2e/${action}`, 'POST', 'Bearer admin-subscription-token')).toBe(1)
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
