@@ -456,6 +456,13 @@ async function mockAdminApi(page: Page) {
   let delayNextTariffCreateResponse = false
   let releaseDelayedTariffCreate: (() => void) | null = null
   const providers = [paymentProviderAccount()]
+  const orders: Array<Record<string, unknown>> = [
+    { id: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', userEmail: 'client@example.test', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', amount: 590, currency: 'RUB', status: 'PaymentReceived', type: 'NewSubscription', channel: 'Web', paymentProvider: 'YooKassa', checkoutSessionId: null, expiresAt: '2026-06-14T07:00:00Z', paidAt: now, isFirstPurchase: true, paymentAttemptsCount: 1, lastPaymentId: 'payment-e2e', lastPaymentStatus: 'Succeeded', lastPaymentProvider: 'YooKassa', linkedSubscriptionId: 'sub-e2e', createdAt: now, updatedAt: now }
+  ]
+  const payments: Array<Record<string, unknown>> = [
+    { id: 'payment-e2e', orderId: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', provider: 'YooKassa', paymentProviderAccountId: 'provider-yookassa', providerMode: 'Sandbox', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', idempotencyKey: 'idem-admin-e2e', confirmationUrl: 'http://127.0.0.1:5295/payments/return', returnUrl: 'http://127.0.0.1:5295', amount: 590, currency: 'RUB', status: 'Succeeded', signatureValidated: true, isActivationProcessed: true, activationProcessedAt: now, paidAt: now, failedAt: null, refundedAt: null, refundedAmount: 0, statusReason: null, webhookEventsCount: 1, refundsCount: 0, refundSupported: true, canRefund: true, refundableAmount: 590, refundBlockers: [], createdAt: now, updatedAt: now }
+  ]
+  const refunds: Array<Record<string, unknown>> = []
   const tariffs = [tariff()]
   const referralPrograms = [referralProgram()]
   const releases = [release()]
@@ -880,22 +887,42 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/orders') {
-      await fulfillJson(route, [{ id: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', userEmail: 'client@example.test', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', amount: 590, currency: 'RUB', status: 'PaymentReceived', type: 'NewSubscription', channel: 'Web', paymentProvider: 'YooKassa', checkoutSessionId: null, expiresAt: '2026-06-14T07:00:00Z', paidAt: now, isFirstPurchase: true, paymentAttemptsCount: 1, lastPaymentId: 'payment-e2e', lastPaymentStatus: 'Succeeded', lastPaymentProvider: 'YooKassa', linkedSubscriptionId: 'sub-e2e', createdAt: now, updatedAt: now }])
+      await fulfillJson(route, orders)
       return
     }
 
     if (method === 'GET' && path === '/api/admin/payments') {
-      await fulfillJson(route, [{ id: 'payment-e2e', orderId: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', provider: 'YooKassa', paymentProviderAccountId: 'provider-yookassa', providerMode: 'Sandbox', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', idempotencyKey: 'idem-admin-e2e', confirmationUrl: 'http://127.0.0.1:5295/payments/return', returnUrl: 'http://127.0.0.1:5295', amount: 590, currency: 'RUB', status: 'Succeeded', signatureValidated: true, isActivationProcessed: true, activationProcessedAt: now, paidAt: now, failedAt: null, refundedAt: null, refundedAmount: 0, statusReason: null, webhookEventsCount: 1, refundsCount: 0, refundSupported: true, canRefund: true, refundableAmount: 590, refundBlockers: [], createdAt: now, updatedAt: now }])
+      await fulfillJson(route, payments)
       return
     }
 
     if (method === 'POST' && (path === '/api/admin/payments/payment-e2e/recheck' || path === '/api/admin/orders/order-e2e/recheck-payment')) {
+      payments[0] = { ...payments[0], status: 'Succeeded', signatureValidated: true, canRefund: true, refundableAmount: 590 - Number(payments[0].refundedAmount ?? 0), refundBlockers: [], statusReason: null, updatedAt: now }
+      orders[0] = { ...orders[0], status: 'PaymentReceived', lastPaymentStatus: 'Succeeded', updatedAt: now }
       await fulfillJson(route, { orderId: 'order-e2e', paymentId: 'payment-e2e', status: 'Succeeded', rawResponse: '{}', statusReason: null })
       return
     }
 
     if (method === 'POST' && path === '/api/admin/payments/payment-e2e/refund') {
-      await fulfillJson(route, { id: 'refund-e2e', paymentAttemptId: 'payment-e2e', provider: 'YooKassa', providerRefundId: 'rf-e2e', status: 'Succeeded', amount: Number((body as Record<string, unknown>)?.amount ?? 0), currency: 'RUB', reason: String((body as Record<string, unknown>)?.reason ?? ''), createdAt: now, refundedAt: now })
+      const amount = Number((body as Record<string, unknown>)?.amount ?? 0)
+      const refundedAmount = Number(payments[0].refundedAmount ?? 0) + amount
+      const refundableAmount = Math.max(0, 590 - refundedAmount)
+      const refundNumber = refunds.length + 1
+      const refund = { id: `refund-e2e-${refundNumber}`, paymentAttemptId: 'payment-e2e', provider: 'YooKassa', providerRefundId: `rf-e2e-${refundNumber}`, status: 'Succeeded', amount, currency: 'RUB', reason: String((body as Record<string, unknown>)?.reason ?? ''), createdAt: now, refundedAt: now }
+      refunds.push(refund)
+      payments[0] = {
+        ...payments[0],
+        status: refundableAmount > 0 ? 'PartiallyRefunded' : 'Refunded',
+        refundedAt: now,
+        refundedAmount,
+        refundsCount: refunds.length,
+        canRefund: refundableAmount > 0,
+        refundableAmount,
+        refundBlockers: [],
+        updatedAt: now
+      }
+      orders[0] = { ...orders[0], lastPaymentStatus: payments[0].status, updatedAt: now }
+      await fulfillJson(route, refund)
       return
     }
 
@@ -1001,7 +1028,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/refunds') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, refunds)
       return
     }
 
@@ -1767,6 +1794,23 @@ async function mockAdminApi(page: Page) {
     releaseSupportMessages: () => { releaseDelayedSupportMessages?.() },
     delayNextTariffCreate: () => { delayNextTariffCreateResponse = true },
     releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
+    preparePaymentLifecycle: () => {
+      orders[0] = { ...orders[0], status: 'PendingPayment', lastPaymentStatus: 'Unknown', paidAt: null, updatedAt: now }
+      payments[0] = {
+        ...payments[0],
+        status: 'Unknown',
+        signatureValidated: false,
+        refundedAt: null,
+        refundedAmount: 0,
+        refundsCount: 0,
+        canRefund: false,
+        refundableAmount: 590,
+        refundBlockers: ['Статус платежа требует ручной сверки.'],
+        statusReason: 'manual_recheck_required',
+        updatedAt: now
+      }
+      refunds.splice(0)
+    },
     prepareSubscriptionLifecycle: () => {
       subscriptions[0] = {
         ...subscriptions[0],
@@ -2134,6 +2178,90 @@ async function openAdminSection(page: Page, name: string, id: string) {
   }
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
+
+test('admin payment recheck and refunds persist across reload', async ({ page }) => {
+  test.setTimeout(150_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  api.preparePaymentLifecycle()
+  await seedAdminSession(page, 'admin-refund-token', 'admin-refund-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  let orderRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  let paymentRow = page.locator('#payment-payment-e2e')
+  await expect(orderRow).toContainText('Неизвестно')
+  await expect(paymentRow).toContainText('Статус платежа требует ручной сверки.')
+  await expect(paymentRow).toContainText('Возврат недоступен')
+
+  await orderRow.getByRole('button', { name: 'Проверить оплату' }).click()
+  await expect(page.getByText('Заказ order-e2: последний платеж payment- проверен, статус Succeeded.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/orders/order-e2e/recheck-payment')?.authorization).toBe('Bearer admin-refund-token')
+  orderRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  paymentRow = page.locator('#payment-payment-e2e')
+  await expect(orderRow).toContainText('Succeeded')
+  await expect(paymentRow).toContainText('Возврат доступен')
+
+  await paymentRow.getByRole('button', { name: 'Проверить статус' }).click()
+  await expect(page.getByText('Платеж payment- проверен: Succeeded')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payments/payment-e2e/recheck')?.authorization).toBe('Bearer admin-refund-token')
+
+  paymentRow = page.locator('#payment-payment-e2e')
+  await paymentRow.getByRole('spinbutton', { name: 'Сумма' }).fill('200')
+  await paymentRow.getByRole('textbox', { name: 'Причина' }).fill('partial_refund_e2e')
+  await paymentRow.getByRole('button', { name: 'Вернуть платеж' }).click()
+  await expect(paymentsPanel.getByRole('dialog')).toContainText('Вернуть 200 RUB')
+  await paymentsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Возврат rf-e2e-1: Succeeded')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payments/payment-e2e/refund')?.body).toEqual({ amount: 200, reason: 'partial_refund_e2e' })
+
+  paymentRow = page.locator('#payment-payment-e2e')
+  await expect(paymentRow).toContainText('Частичный возврат')
+  await expect(paymentRow).toContainText('возвращено 200 RUB')
+  await expect(paymentRow).toContainText('доступно к возврату 390 RUB')
+  await expect(paymentRow.getByRole('spinbutton', { name: 'Сумма' })).toHaveValue('390')
+  await expect(paymentRow.getByRole('spinbutton', { name: 'Сумма' })).toHaveAttribute('max', '390')
+  await expect(paymentRow.getByRole('textbox', { name: 'Причина' })).toHaveValue('')
+  await expect(paymentsPanel.getByText('Возврат 200 RUB · rf-e2e-1')).toBeVisible()
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+  paymentRow = page.locator('#payment-payment-e2e')
+  await expect(paymentRow.getByRole('spinbutton', { name: 'Сумма' })).toHaveValue('390')
+  await expect(paymentRow.getByRole('textbox', { name: 'Причина' })).toHaveValue('manual_admin_refund')
+  await paymentRow.getByRole('button', { name: 'Вернуть платеж' }).click()
+  await expect(paymentsPanel.getByRole('dialog')).toContainText('Вернуть 390 RUB')
+  await paymentsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Возврат rf-e2e-2: Succeeded')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payments/payment-e2e/refund')?.body).toEqual({ amount: 390, reason: 'manual_admin_refund' })
+
+  paymentRow = page.locator('#payment-payment-e2e')
+  await expect(paymentRow).toContainText('Возвращено')
+  await expect(paymentRow).toContainText('возвращено 590 RUB')
+  await expect(paymentRow).toContainText('доступно к возврату 0 RUB')
+  await expect(paymentRow).toContainText('Возврат недоступен: Сумма уже возвращена.')
+  await expect(paymentRow.getByRole('spinbutton', { name: 'Сумма' })).toBeDisabled()
+  await expect(paymentRow.getByRole('button', { name: 'Вернуть платеж' })).toBeDisabled()
+  await expect(paymentsPanel.getByText('Возврат 390 RUB · rf-e2e-2')).toBeVisible()
+
+  await page.reload()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+  paymentRow = page.locator('#payment-payment-e2e')
+  await expect(paymentRow).toContainText('Возврат недоступен: Сумма уже возвращена.')
+  await expect(paymentsPanel.getByText(/Возврат (200|390) RUB · rf-e2e-/)).toHaveCount(2)
+  expect(api.getAuthorizedRequestCount('/api/admin/payments/payment-e2e/refund', 'POST', 'Bearer admin-refund-token')).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
 
 test('admin payment provider accounts support secure lifecycle', async ({ page }) => {
   test.slow()
@@ -2941,7 +3069,7 @@ test('admin panel covers login and critical operational mutations across all sec
   await refundablePayment.getByLabel('Причина').fill('playwright_refund')
   await refundablePayment.getByRole('button', { name: 'Вернуть платеж' }).click()
   await page.locator('#payments').getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(page.getByText('Возврат rf-e2e: Succeeded')).toBeVisible()
+  await expect(page.getByText('Возврат rf-e2e-1: Succeeded')).toBeVisible()
   expect(api.getLastRequest('/api/admin/payments/payment-e2e/refund')?.body).toEqual({ amount: 590, reason: 'playwright_refund' })
 
   await openAdminSection(page, 'Тарифы', 'tariffs')

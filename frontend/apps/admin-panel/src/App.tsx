@@ -833,8 +833,8 @@ function refundBlockerText(payment: PaymentAttemptDto) {
   }
 
   if (payment.refundSupported === false) return 'Провайдер не поддерживает возвраты.'
-  if (payment.status !== 'Succeeded' && payment.status !== 'PartiallyRefunded') return 'Возврат доступен только после успешной оплаты.'
   if (getRefundableAmount(payment) <= 0) return 'Сумма уже возвращена.'
+  if (payment.status !== 'Succeeded' && payment.status !== 'PartiallyRefunded') return 'Возврат доступен только после успешной оплаты.'
   return ''
 }
 
@@ -2108,7 +2108,11 @@ export function App() {
       const refund = await api.refundAdminPayment(token, payment.id, amount, reason)
       if (!action.isCurrent()) return
       setNotice(`Возврат ${refund.providerRefundId || refund.id}: ${refund.status}`)
-      setRefundAmounts((current) => ({ ...current, [payment.id]: getRefundableAmount(payment) }))
+      setRefundAmounts((current) => {
+        const next = { ...current }
+        delete next[payment.id]
+        return next
+      })
       setRefundReasons((current) => ({ ...current, [payment.id]: '' }))
       await action.reloadAll()
     })

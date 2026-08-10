@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `112/112`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `96/96`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `98/98`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -72,8 +72,8 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Latest "Что нового": `2026-08-10-admin-subscription-actions-lifecycle-e2e`, версия `0.562.0`; локальный backend/frontend/browser regression, secure infrastructure/provisioning, 3x-ui client, VPN access и subscription lifecycle на desktop/mobile пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `575/595` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-admin-payment-refund-lifecycle-fix`, версия `0.563.0`; локальный backend/frontend/browser regression, payment partial/full refund, secure infrastructure/provisioning, 3x-ui client, VPN access и subscription lifecycle на desktop/mobile пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `576/596` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

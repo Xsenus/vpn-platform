@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `575/595` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `576/596` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `96/96`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `98/98`.
 - [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -147,7 +147,8 @@
 - [x] 3x-ui client actions проходят disable/reload/enable/sync/reset-traffic lifecycle на desktop/mobile.
 - [x] VPN access lifecycle сохраняет status/disabledAt/revision после reload и скрывает terminal secrets на desktop/mobile.
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
-- [x] Latest "Что нового": `2026-08-10-admin-subscription-actions-lifecycle-e2e`, версия `0.562.0`.
+- [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
+- [x] Latest "Что нового": `2026-08-10-admin-payment-refund-lifecycle-fix`, версия `0.563.0`.
 
 ## Как вести дальше
 
