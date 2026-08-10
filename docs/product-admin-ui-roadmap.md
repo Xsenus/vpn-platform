@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `589/609` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -149,7 +149,7 @@
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
-- [x] Admin production bundle budget: `5` chunks, largest `219849`, total raw `514307`, gzip `138055`.
+- [x] Admin production bundle budget: `5` chunks, largest `219849`, total raw `514172`, gzip `138052`.
 - [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 19 viewport-конфигураций без blank screen/overflow.
 - [x] Public route metadata/focus lifecycle проходит direct load, navigation и browser Back на desktop/mobile.
 - [x] Admin metadata lifecycle проходит hydration/login, deep-link, 17 sections и logout на desktop/mobile.
@@ -159,7 +159,8 @@
 - [x] Cabinet app-version modal удерживает focus, изолирует background/scroll и проходит 19-viewport responsive/WCAG gate.
 - [x] Общие status badges различают составные negative/neutral/warning/success состояния и локализуют API casing.
 - [x] Shared/public/admin styles и browser CSSOM gate не допускают внешние runtime asset URL на любом экране.
-- [x] Latest "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`.
+- [x] Подтверждаемые admin-операции удерживают async busy dialog до завершения API, блокируют повторный submit и проходят delayed desktop/mobile regression.
+- [x] Latest "Что нового": `2026-08-10-confirm-action-async-lifecycle`, версия `0.576.0`.
 
 ## Как вести дальше
 

@@ -107,6 +107,9 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("stylesheet references external asset", spec, StringComparison.Ordinal);
         Assert.DoesNotContain("url(\"https://", sharedStyles, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("function HomePage", publicApp, StringComparison.Ordinal);
+        Assert.DoesNotContain("onConfirm={() => void ", adminApp, StringComparison.Ordinal);
+        Assert.Contains("getByRole('button', { name: 'Выполняем...' })", adminSpec, StringComparison.Ordinal);
+        Assert.Contains("delayNextProviderEnabled", adminSpec, StringComparison.Ordinal);
         Assert.Equal(19, Regex.Matches(spec, "(?m)^  \\{ name: '[^']+', width: \\d+, height: \\d+ \\},?$").Count);
     }
 

@@ -13589,5 +13589,28 @@
         "text": "Roadmap progress is 588/608 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-confirm-action-async-lifecycle",
+    "version": "0.576.0",
+    "releasedAt": "2026-08-10T18:05:00+07:00",
+    "title": "Подтверждение ждёт завершения операции",
+    "summary": "Административный диалог подтверждения теперь остаётся в состоянии выполнения до фактического ответа API и не допускает повторную отправку опасной команды.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Подтверждаемые операции оплат, подписок, VPN, серверов, контента и provisioning возвращают Promise в общий компонент; диалог закрывается только после завершения запроса."
+      },
+      {
+        "type": "improved",
+        "text": "Во время запроса подтверждение и отмена заблокированы, отображается «Выполняем...», а desktop/mobile regression проверяет единственный destructive request."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 589/609 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -457,6 +457,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedSupportStatus: (() => void) | null = null
   let delayNextTariffCreateResponse = false
   let releaseDelayedTariffCreate: (() => void) | null = null
+  let delayNextProviderEnabledResponse = false
+  let releaseDelayedProviderEnabled: (() => void) | null = null
   const notificationDeliveries: Array<Record<string, unknown>> = [{
     id: 'notification-e2e',
     userId: 'user-e2e',
@@ -1009,6 +1011,11 @@ async function mockAdminApi(page: Page) {
       const enabled = Boolean((body as Record<string, unknown>)?.enabled)
       const account = paymentProviderAccount({ ...providers[index], isEnabled: enabled, isPubliclyAvailable: enabled, updatedAt: now })
       providers[index] = account
+      if (delayNextProviderEnabledResponse) {
+        delayNextProviderEnabledResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedProviderEnabled = resolve })
+        releaseDelayedProviderEnabled = null
+      }
       await fulfillJson(route, account)
       return
     }
@@ -1824,6 +1831,8 @@ async function mockAdminApi(page: Page) {
     },
     delayNextTariffCreate: () => { delayNextTariffCreateResponse = true },
     releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
+    delayNextProviderEnabled: () => { delayNextProviderEnabledResponse = true },
+    releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
     preparePaymentLifecycle: () => {
       orders[0] = { ...orders[0], status: 'PendingPayment', lastPaymentStatus: 'Unknown', paidAt: null, updatedAt: now }
       payments[0] = {
@@ -2631,8 +2640,16 @@ test('admin payment provider accounts support secure lifecycle', async ({ page }
   })
 
   providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa CRUD Updated' })
+  api.delayNextProviderEnabled()
   await providerRow.getByRole('button', { name: 'Выключить' }).click()
-  await paymentsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  const confirmation = paymentsPanel.getByRole('dialog')
+  await confirmation.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(confirmation).toBeVisible()
+  await expect(confirmation.getByRole('button', { name: 'Выполняем...' })).toBeDisabled()
+  await expect(confirmation.getByRole('button', { name: 'Отмена' })).toBeDisabled()
+  expect(api.getRequestCount('/api/admin/payment-providers/accounts/provider-created-e2e/enabled', 'POST')).toBe(1)
+  api.releaseProviderEnabled()
+  await expect(confirmation).toHaveCount(0)
   await expect(page.getByText('yookassa-crud-e2e: выключен')).toBeVisible()
   await expect(providerRow.getByRole('button', { name: 'Включить' })).toBeVisible()
   expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e/enabled')?.body).toEqual({ enabled: false })

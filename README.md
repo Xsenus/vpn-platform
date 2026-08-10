@@ -289,7 +289,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет выполняет Telegram deep-link/unlink и close/reopen обращения с optimistic revision и reload persistence на desktop/mobile;
 - платежные аккаунты проходят secure create/edit/disable/reload/enable/check browser lifecycle без раскрытия write-only secrets на desktop/mobile;
 - настройки Telegram-бота проходят secure save/check/reload/edit browser lifecycle без возврата raw bot/webhook tokens на desktop/mobile;
-- admin production bundle: `5` JS chunks, largest `219849`, total raw `514307`, gzip `138055` bytes; build budget fail-closed проверяет largest/total raw/gzip;
+- admin production bundle: `5` JS chunks, largest `219849`, total raw `514172`, gzip `138052` bytes; build budget fail-closed проверяет largest/total raw/gzip;
 - неизвестный public URL показывает доступную страницу `404` с возвратом на главную/помощь и проходит desktop/mobile плюс 19-viewport responsive gate;
 - public route metadata и focus/scroll lifecycle проходят direct load, SPA navigation и browser Back на desktop/mobile;
 - admin login/hydration и 17 hash-разделов синхронизируют title/meta description при deep-link, section switch и logout;
@@ -299,7 +299,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - cabinet release-modal удерживает Tab/Shift+Tab, изолирует фон и scroll, закрывается Escape с возвратом opener и проходит 19-viewport responsive/WCAG gate;
 - общие статусные метки различают составные negative/neutral/warning/success состояния и локализуют API-значения независимо от регистра;
 - shared и app-specific CSS не содержат внешних runtime asset URL; browser page-quality gate проверяет все загруженные stylesheet rules;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`;
-- roadmap progress: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- подтверждаемые admin-операции удерживают busy dialog до завершения Promise, блокируют повторный destructive submit и проходят delayed desktop/mobile regression;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-confirm-action-async-lifecycle`, версия `0.576.0`;
+- roadmap progress: `589/609` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

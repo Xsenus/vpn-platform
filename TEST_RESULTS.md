@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: confirmed action async lifecycle
+
+Scope:
+- Destructive admin confirmation must own the returned async operation instead of closing while its API request is still pending.
+- Pending confirmation must remain visible, disable both controls and prevent duplicate submission on desktop/mobile.
+
+Results:
+- Roadmap progress: `589/609` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-confirm-action-async-lifecycle`, version `0.576.0`.
+- Reproduction before fix: delayed provider toggle failed `2/2`; targeted desktop/mobile after fix: `2/2`; full console-responsive Playwright: `118/118`.
+- All admin `ConfirmButton` handlers return their Promise; delayed provider toggle stays in `Выполняем...`, disables confirm/cancel, sends one request and closes only after the response.
+- Frontend tests: `117/117`; typecheck/build all apps: OK; admin JS raw `514172`, gzip `138052`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: shared CSS external asset guard
 
 Scope:

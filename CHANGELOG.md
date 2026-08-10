@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.576.0 - 2026-08-10
+
+Release entry: `2026-08-10-confirm-action-async-lifecycle`.
+
+### Исправлено
+
+- Все подтверждаемые административные операции теперь возвращают свой Promise в общий `ConfirmButton`: диалог остаётся открытым и блокирует подтверждение/отмену до фактического завершения API-запроса.
+- Browser regression задерживает смену статуса платёжного провайдера и проверяет busy-состояние, единственный запрос и закрытие диалога только после ответа на desktop/mobile; source guard запрещает повторное отбрасывание Promise в `onConfirm`.
+
+### Проверено
+
+- До исправления targeted provider lifecycle воспроизводил раннее закрытие `2/2`; после исправления targeted desktop/mobile `2/2` и полный console-responsive Playwright `118/118` зелёные.
+- Frontend `117/117`, typecheck/build, audit `0 vulnerabilities`; admin bundle raw `514172`, gzip `138052`, largest `219849`.
+- Backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate.
+- Roadmap: `589/609` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.575.0 - 2026-08-10
 
 Release entry: `2026-08-10-shared-css-external-asset-guard`.

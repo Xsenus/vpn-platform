@@ -25,8 +25,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-10-shared-css-external-asset-guard",
-                     "0.575.0"
+                     "2026-08-10-confirm-action-async-lifecycle",
+                     "0.576.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-10-shared-css-external-asset-guard", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-shared-css-external-asset-guard", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-confirm-action-async-lifecycle", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-confirm-action-async-lifecycle", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Frontend unit tests: `117/117`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-10-shared-css-external-asset-guard",
-                     "0.575.0",
+                     "2026-08-10-confirm-action-async-lifecycle",
+                     "0.576.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
