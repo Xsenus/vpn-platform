@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `572/592` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `573/593` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `90/90`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `92/92`.
 - [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -144,7 +144,8 @@
 - [x] Telegram bot settings проходят secure save/check/reload/edit lifecycle без возврата raw bot/webhook tokens в DTO/DOM.
 - [x] Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит desktop/mobile с write-only SSH/panel credentials.
 - [x] Safe provisioning validation lifecycle проходит health/precheck/deploy/cancel/retry/support без реального SSH/Ansible.
-- [x] Latest "Что нового": `2026-08-10-admin-provisioning-validation-lifecycle-e2e`, версия `0.559.0`.
+- [x] 3x-ui client actions проходят disable/reload/enable/sync/reset-traffic lifecycle на desktop/mobile.
+- [x] Latest "Что нового": `2026-08-10-admin-vpn-client-actions-lifecycle-e2e`, версия `0.560.0`.
 
 ## Как вести дальше
 

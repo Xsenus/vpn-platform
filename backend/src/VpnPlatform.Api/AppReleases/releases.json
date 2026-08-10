@@ -13221,5 +13221,28 @@
         "text": "Roadmap progress is 572/592 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SSH/Ansible, provider, Telegram Bot API/webhook and SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-vpn-client-actions-lifecycle-e2e",
+    "version": "0.560.0",
+    "releasedAt": "2026-08-10T10:24:00+07:00",
+    "title": "Операции 3x-ui клиента проходят полный lifecycle",
+    "summary": "Desktop и mobile-admin сценарии отключают, повторно загружают, включают, синхронизируют и сбрасывают трафик 3x-ui клиента через фактические controls.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Admin E2E выполняет disable/reload/enable/sync/reset-traffic lifecycle 3x-ui клиента с confirm-dialog и проверкой persisted state."
+      },
+      {
+        "type": "improved",
+        "text": "Stateful mock API проверяет authorization всех client action routes, а UI подтверждает enable и sync status после каждой операции на desktop/mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 573/593 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SSH/Ansible, provider, Telegram Bot API/webhook and SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

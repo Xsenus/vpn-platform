@@ -1536,6 +1536,21 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    const vpnClientActionMatch = path.match(/^\/api\/admin\/vpn-clients\/([^/]+)\/(enable|disable|sync|reset-traffic)$/)
+    if (method === 'POST' && vpnClientActionMatch) {
+      const index = clients.findIndex((item) => item.id === vpnClientActionMatch[1])
+      const action = vpnClientActionMatch[2]
+      const updated = {
+        ...clients[index],
+        enable: action === 'enable' ? true : action === 'disable' ? false : clients[index]?.enable,
+        syncStatus: action === 'reset-traffic' ? 'traffic-reset' : action === 'sync' ? 'synced' : action,
+        lastSyncedAt: now
+      }
+      if (index >= 0) clients[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
     if (method === 'POST' && path === '/api/admin/vpn-clients/client-e2e/migrate') {
       const body = request.postDataJSON() as { targetInboundId?: string }
       const target = inbounds.find((item) => item.id === body.targetInboundId)
@@ -2361,6 +2376,57 @@ test('admin provisioning supports safe validation lifecycle', async ({ page }) =
   await expect(precheckRow).toContainText('Попытка 1')
   await expect(provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox Validation E2E' })).toBeVisible()
   expect(api.getAuthorizedRequestCount('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/support-needed', 'POST', 'Bearer admin-provisioning-token')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin 3x-ui client actions persist across reload', async ({ page }) => {
+  test.setTimeout(120_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-vpn-client-token', 'admin-vpn-client-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, '3x-ui панели', 'panels')
+
+  const panelsPanel = page.locator('#panels')
+  await expect(panelsPanel.getByRole('combobox', { name: 'Панель' })).toHaveValue('panel-eu')
+  let clientRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'client@example.test' })
+  await expect(clientRow.getByRole('button', { name: 'Отключить' })).toBeVisible()
+
+  await clientRow.getByRole('button', { name: 'Отключить' }).click()
+  await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: disable.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-clients/client-e2e/disable', 'POST')?.body).toEqual({})
+  await expect(clientRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  clientRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'client@example.test' })
+  await expect(clientRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  await expect(clientRow).toContainText('Синхронизация: disable')
+
+  await clientRow.getByRole('button', { name: 'Включить' }).click()
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: enable.')).toBeVisible()
+  await expect(clientRow.getByRole('button', { name: 'Отключить' })).toBeVisible()
+
+  await clientRow.getByRole('button', { name: 'Синхронизировать' }).click()
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: synced.')).toBeVisible()
+  await expect(clientRow).toContainText('Синхронизация: synced')
+
+  await clientRow.getByRole('button', { name: 'Сбросить трафик' }).click()
+  await expect(panelsPanel.getByRole('dialog')).toContainText('ручной сверки')
+  await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: traffic-reset.')).toBeVisible()
+  await expect(clientRow).toContainText('Синхронизация: traffic-reset')
+
+  for (const action of ['disable', 'enable', 'sync', 'reset-traffic']) {
+    expect(api.getAuthorizedRequestCount(`/api/admin/vpn-clients/client-e2e/${action}`, 'POST', 'Bearer admin-vpn-client-token')).toBe(1)
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })
