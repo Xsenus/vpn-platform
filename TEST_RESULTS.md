@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: cabinet Telegram and support status E2E
+
+Scope:
+- Добавлен stateful desktop/mobile browser flow для Telegram deep-link/unlink и close/reopen пользовательского обращения.
+- Проверяются безопасная Telegram URL, authorization, optimistic support revision, mutation payload, reload persistence, console errors и mobile overflow.
+
+Results:
+- Roadmap progress: `568/588` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-cabinet-telegram-support-status-e2e`, version `0.555.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `82/82`; cabinet Telegram/support lifecycle passes on desktop and mobile-cabinet; all-screens axe/responsive matrix: `6/6`.
+- Backend full suite: `1112/1112`; fresh local SQLite checkout/payment/subscription/VPN smoke: OK; secret scan: `657` files, `0` findings.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
+
 ## Check 2026-08-10: admin managed configuration CRUD E2E
 
 Scope:

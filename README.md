@@ -207,14 +207,14 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 ## Текущий статус
 
-На 2026-08-09 локально подтверждено:
+На 2026-08-10 локально подтверждено:
 
 - backend на .NET 9: `1112/1112` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `112/112`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `80/80`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `82/82`; responsive matrix проверяет 18 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -279,7 +279,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - axe проверяет WCAG 2.0/2.1/2.2 A/AA и best practices без allow-list на 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px;
 - критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки выполняются desktop/mobile E2E; вкладка оплат объединена одним корректным `tabpanel`;
 - управляемая конфигурация admin-панели проходит stateful create/edit/delete browser lifecycle для тарифов, сценариев, релизов, FAQ и контента сайта на desktop/mobile;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-managed-configuration-crud-e2e`, версия `0.554.0`;
-- roadmap progress: `567/587` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- кабинет выполняет Telegram deep-link/unlink и close/reopen обращения с optimistic revision и reload persistence на desktop/mobile;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-cabinet-telegram-support-status-e2e`, версия `0.555.0`;
+- roadmap progress: `568/588` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

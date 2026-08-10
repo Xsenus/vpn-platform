@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.555.0 - 2026-08-10
+
+Release entry: `2026-08-10-cabinet-telegram-support-status-e2e`.
+
+### Улучшено
+
+- Cabinet browser regression выполняет создание Telegram deep-link, подтверждает внешний linked-state и отвязывает аккаунт через фактические UI-кнопки на desktop/mobile.
+- Обращение поддержки закрывается и переоткрывается с проверкой optimistic revision `0 -> 1 -> 2`, mutation payload и сохранения статуса после общего reload.
+- Stateful mock API хранит Telegram/support status и проверяет авторизацию, отсутствие console errors и горизонтального overflow.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `82/82`; cabinet Telegram/support lifecycle проходит `2/2`, all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- External VPS/staging/live payment/production-like 3x-ui и SMTP evidence не переиспользовалось.
+- Roadmap: `568/588` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.554.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-managed-configuration-crud-e2e`.

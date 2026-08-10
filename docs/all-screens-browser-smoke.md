@@ -73,5 +73,6 @@ PNG создаются только при явном флаге внутри `f
 - Критический admin flow выполняет notification retry, payment/order recheck, refund, subscription/VPN mutations и support reply/note/status на desktop/mobile.
 - Public account assertion использует точное accessible name, а последовательный axe-аудит 17 admin sections имеет достаточный timeout без исключения правил.
 - Управляемая конфигурация admin-панели проходит полный create/edit/delete lifecycle с confirm-dialog, payload assertions и сохранением состояния после reload на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `80/80`; all-screens: `6/6`.
-- Latest "Что нового": `2026-08-10-admin-managed-configuration-crud-e2e`, версия `0.554.0`.
+- Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
+- `npm run e2e:console --prefix frontend`: `82/82`; all-screens: `6/6`.
+- Latest "Что нового": `2026-08-10-cabinet-telegram-support-status-e2e`, версия `0.555.0`.

@@ -13106,5 +13106,28 @@
         "text": "Roadmap progress is 567/587 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-cabinet-telegram-support-status-e2e",
+    "version": "0.555.0",
+    "releasedAt": "2026-08-10T08:35:00+07:00",
+    "title": "Telegram и статусы поддержки проверяются в кабинете",
+    "summary": "Desktop и mobile-cabinet сценарии создают безопасную Telegram-ссылку, отвязывают аккаунт и проверяют закрытие и переоткрытие обращения с сохранением после reload.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Cabinet E2E выполняет создание Telegram deep-link, переход к linked-state и отвязку через фактические пользовательские controls на desktop и mobile."
+      },
+      {
+        "type": "improved",
+        "text": "Закрытие и переоткрытие обращения проверяет payload, optimistic revision 0 -> 1 -> 2 и сохранение результата после общей перезагрузки данных."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 568/588 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram bot and SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

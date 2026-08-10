@@ -316,6 +316,7 @@ async function mockCabinetApi(page: Page) {
   const requests: Array<{ method: string; url: string; body: unknown; authorization: string }> = []
   let supportConversations: unknown[] = []
   const supportMessagesByConversationId = new Map<string, unknown[]>()
+  let telegramStatus = { isLinked: false, telegramUserId: null as number | null, username: null as string | null, linkedAt: null as string | null }
   let delayedSupportConversationId: string | null = null
   let delayedSupportMessagesReleased = false
   let releaseDelayedSupportMessages: (() => void) | null = null
@@ -566,8 +567,36 @@ async function mockCabinetApi(page: Page) {
       return
     }
 
+    if (method === 'PATCH' && path === '/api/me/support/conversations/support-created/status') {
+      const payload = request.postDataJSON() as { status: 'open' | 'closed'; revision: number }
+      const revision = payload.revision + 1
+      supportConversations = supportConversations.map((item) => {
+        const conversation = item as ReturnType<typeof supportConversation>
+        return conversation.id === 'support-created'
+          ? { ...conversation, status: payload.status, revision, closedAt: payload.status === 'closed' ? now : null, updatedAt: now }
+          : conversation
+      })
+      await fulfillJson(route, { conversationId: 'support-created', status: payload.status, revision })
+      return
+    }
+
     if (method === 'GET' && path === '/api/me/telegram/status') {
-      await fulfillJson(route, { isLinked: false, telegramUserId: null, username: null, linkedAt: null })
+      await fulfillJson(route, telegramStatus)
+      return
+    }
+
+    if (method === 'POST' && path === '/api/me/telegram/link-token') {
+      await fulfillJson(route, {
+        token: 'cabinet-e2e',
+        deepLinkUrl: 'https://t.me/vpnplatform_bot?start=link_cabinet-e2e',
+        expiresAt: '2026-06-13T07:15:00Z'
+      })
+      return
+    }
+
+    if (method === 'DELETE' && path === '/api/me/telegram/unlink') {
+      telegramStatus = { isLinked: false, telegramUserId: null, username: null, linkedAt: null }
+      await fulfillJson(route, telegramStatus)
       return
     }
 
@@ -693,6 +722,9 @@ async function mockCabinetApi(page: Page) {
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
+    markTelegramLinked: () => {
+      telegramStatus = { isLinked: true, telegramUserId: 777001, username: 'cabinet_e2e', linkedAt: now }
+    },
     rejectNextAuthorizedPath: (path: string) => { rejectedAuthorizedPath = path },
     getRequestCount: (path: string, method = 'GET') =>
       requests.filter((item) => item.method === method && new URL(item.url).pathname === path).length,
@@ -922,6 +954,60 @@ test('cabinet ignores a delayed action after logout and a new login', async ({ p
   expect(api.getRequestCount('/api/cabinet/access/access-active/qr')).toBe(1)
   expect(api.getAuthorizedRequestCount('/api/cabinet/access/access-active/qr', 'Bearer access-token-old-action')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet Telegram and support status operations persist across reload', async ({ page }) => {
+  test.slow()
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  const api = await mockCabinetApi(page)
+  await seedCabinetSession(page, 'access-token-cabinet-operations', 'refresh-token-cabinet-operations')
+  await page.goto('/')
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+
+  const telegramCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Telegram' }) })
+  await telegramCard.getByRole('button', { name: 'Создать ссылку на бота' }).click()
+  await expect(page.getByText('Ссылка на Telegram-бота создана.')).toBeVisible()
+  await expect(telegramCard.getByRole('link', { name: 'Открыть Telegram-бота в новой вкладке' }))
+    .toHaveAttribute('href', 'https://t.me/vpnplatform_bot?start=link_cabinet-e2e')
+  expect(api.getLastRequest('/api/me/telegram/link-token')?.body).toEqual({})
+
+  api.markTelegramLinked()
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect(telegramCard.getByText('@cabinet_e2e')).toBeVisible()
+  await telegramCard.getByRole('button', { name: 'Отвязать Telegram' }).click()
+  await expect(page.getByText('Telegram отвязан от аккаунта.')).toBeVisible()
+  await expect(telegramCard.getByRole('button', { name: 'Создать ссылку на бота' })).toBeVisible()
+  expect(api.getLastRequest('/api/me/telegram/unlink', 'DELETE')).toBeDefined()
+
+  await page.getByLabel('Тема').fill('Проверка статуса обращения')
+  await page.getByLabel('Сообщение').fill('Закрытие и повторное открытие должны сохраняться после обновления данных.')
+  await page.getByRole('button', { name: 'Создать обращение' }).click()
+  await expect(page.getByRole('button', { name: /Проверка статуса обращения/ })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Закрыть' }).click()
+  await expect(page.getByText('Обращение закрыто.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Переоткрыть' })).toBeVisible()
+  expect(api.getLastRequest('/api/me/support/conversations/support-created/status', 'PATCH')?.body)
+    .toEqual({ status: 'closed', revision: 0 })
+
+  await page.getByRole('button', { name: 'Переоткрыть' }).click()
+  await expect(page.getByText('Обращение переоткрыто.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Закрыть' })).toBeVisible()
+  expect(api.getLastRequest('/api/me/support/conversations/support-created/status', 'PATCH')?.body)
+    .toEqual({ status: 'open', revision: 1 })
+
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect(page.getByRole('button', { name: /Проверка статуса обращения, статус open/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Закрыть' })).toBeVisible()
+  expect(api.getRequestCount('/api/me/support/conversations/support-created/status', 'PATCH')).toBe(2)
+  expect(api.getAuthorizedRequestCount('/api/me/telegram/unlink', 'Bearer access-token-cabinet-operations', 'DELETE')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(consoleErrors).toEqual([])
 })
 
 test('cabinet covers register, login, payments, subscription access and support', async ({ page }, testInfo) => {
