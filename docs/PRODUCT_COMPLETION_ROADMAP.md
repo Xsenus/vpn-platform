@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-app-version-identity-boundary`, версия `0.592.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `605/625` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-app-version-manual-intent`, версия `0.593.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `606/626` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -2116,6 +2116,10 @@ git diff --check
   - Что сделать: token-only hydration не должен загружать или открывать release под anonymous identity; сохранённый dismissal конкретного пользователя обязан применяться, даже если latest endpoint быстрее profile.
   - Что сделано: app-version effect закрывает и очищает state при token/user transition, ждёт непустой `userId` перед latest request, отклоняет manual open во время hydration; anonymous dismissal key удалён.
   - Доказательство: до исправления fail-first desktop был `0/1` (`expected 0`, `actual 1` dialog после profile); после исправления targeted desktop/mobile `2/2`, cabinet regression `28/28`, полный Playwright `130/130` за `8.8 min`, all-screens `6/6` на 25 viewport. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
+- [x] `P11-ACC-316` Сохранить ручной app-version intent до завершения identity hydration. 2026-08-11.
+  - Что сделать: нажатие «Что нового» при активном token, но до profile ID, не должно теряться; при logout intent не должен переходить в следующую сессию.
+  - Что сделано: manual effect разделяет no-token и no-userId состояния: logout завершает signal, token-only hydration оставляет его pending до rerender с подтверждённым user ID.
+  - Доказательство: до исправления fail-first desktop был `0/1`, dialog не появился после profile/latest completion; после исправления targeted desktop/mobile `2/2`, cabinet regression `30/30`, полный Playwright `132/132` за `9.0 min`, all-screens `6/6` на 25 viewport. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2765,6 +2769,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-006` | P1 | Cabinet / «Что нового» | Кнопка была доступна при token-only hydration, но manual effect сбрасывал open signal без `userId`; после profile/latest completion пользовательское действие терялось. | Исправлено локально | Signal ожидает profile ID при активном token и сбрасывается только без token; delayed-profile desktop/mobile regression зелёный. |
 | `BUG-2026-08-11-005` | P1 | Cabinet / «Что нового» | При token-only hydration latest release мог загрузиться раньше profile и открыть окно под `anonymous`; последующий user-specific dismissal не закрывал уже открытый modal. | Исправлено локально | Загрузка ждёт `profile.id`, token/user transition закрывает modal и очищает state, anonymous key удалён; delayed-profile desktop/mobile regression зелёный. |
 | `BUG-2026-08-11-004` | P1 | Cabinet / «Что нового» | Pending history старой сессии сохранял `loadingHistory` после logout, блокировал запрос нового пользователя и мог поздним callback вернуть чужую stale history; latest callbacks также не имели session ownership. | Исправлено локально | Session/latest/history generations отклоняют stale callbacks, token/user change полностью очищает app-version state; desktop/mobile и полный cabinet regression зелёные. |
 | `BUG-2026-08-11-003` | P1 | Public tariffs / responsive gate | Initial load handlers замыкали встроенный content fallback, поэтому более поздний CMS response не обновлял ошибку; exhaustive admin responsive test имел всего `52.6 s` запаса изолированно и обрывался на `480 s` под полной параллельной нагрузкой. | Исправлено локально | Managed key разрешается из актуального content state, late unmount completions игнорируются; timeout основан на измерении и оставляет всё покрытие, полный browser gate `126/126`. |

@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet app-version manual intent
+
+Scope:
+- A manual «Что нового» click during token-only hydration must survive until the current cabinet profile identity is available.
+- The same intent must still be discarded on a full logout so it cannot cross sessions.
+
+Results:
+- Roadmap progress: `606/626` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-app-version-manual-intent`, version `0.593.0`.
+- Reproduction before fix: delayed `/api/me`, a visible token-owned nav button and a manual click caused `onManualOpenHandled` to clear the signal while `userId` was absent; after profile/latest completion targeted desktop was `0/1` because the dialog never opened.
+- After fix: no token consumes the signal, while token without identity leaves it pending; the userId dependency re-runs the effect and opens the current release after hydration.
+- Targeted manual-intent browser: desktop/mobile `2/2`; full cabinet desktop/mobile regression: `30/30`; no pre-identity latest request, modal or horizontal overflow.
+- Final visual audit: full console-responsive Playwright `132/132` in `9.0 min`; all-screens `6/6`, including every admin section on 25 viewport configurations `305x568..2560x1440`.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `592` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet app-version identity boundary
 
 Scope:

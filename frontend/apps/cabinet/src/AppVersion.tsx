@@ -111,10 +111,11 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
 
   useEffect(() => {
     if (!manualOpenSignal) return
-    if (!token || !userId) {
+    if (!token) {
       onManualOpenHandled()
       return
     }
+    if (!userId) return
 
     setOpen(true)
     onManualOpenHandled()

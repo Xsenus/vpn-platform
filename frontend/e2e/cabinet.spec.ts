@@ -907,6 +907,27 @@ test('cabinet app version waits for the user identity before applying a local di
   await expect(dialog).toHaveCount(0)
 })
 
+test('cabinet app version preserves a manual open while the user identity is loading', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.showAppVersionRelease()
+  api.delayNextProfileRequest()
+  await seedCabinetSession(page, 'access-token-version-manual', 'refresh-token-version-manual')
+
+  await page.goto('/')
+  await expect.poll(() => api.getRequestCount('/api/me')).toBe(1)
+  const opener = page.getByRole('button', { name: 'Что нового' })
+  await expect(opener).toBeVisible()
+  await opener.click()
+  expect(api.getRequestCount('/api/app-version/latest')).toBe(0)
+  const dialog = page.getByRole('dialog', { name: appVersionRelease.title })
+  await expect(dialog).toHaveCount(0)
+
+  api.releaseProfileRequest()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)
+  await expect(dialog).toBeVisible()
+})
+
 test('cabinet app version rejects history completed by a logged-out session', async ({ page }) => {
   const api = await mockCabinetApi(page)
   api.showAppVersionRelease()

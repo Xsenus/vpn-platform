@@ -214,7 +214,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - frontend unit tests: `125/125`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `130/130`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `132/132`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -309,7 +309,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - пункт «Помощь» в header личного кабинета открывает полноценную public-инструкцию `/help`; точный cabinet-to-public destination проверен source guard, desktop/mobile E2E и локальным браузером на 305 px;
 - cabinet «Что нового» привязан к текущей token/user session: logout/login сбрасывает loading/history state, а stale latest/history callbacks отклоняются request generation guards;
 - app-version latest/dismissal ждёт подтверждённый profile ID и не использует anonymous identity во время token-only hydration;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-app-version-identity-boundary`, версия `0.592.0`;
-- roadmap progress: `605/625` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- ручное нажатие «Что нового» во время token-only hydration сохраняется до profile ID, но не переносится через logout;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-app-version-manual-intent`, версия `0.593.0`;
+- roadmap progress: `606/626` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

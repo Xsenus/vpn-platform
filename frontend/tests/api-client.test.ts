@@ -2601,6 +2601,7 @@ test('frontend sources include app version gate and admin release editor', () =>
   assert.match(cabinetSource, /latestRequestIdRef/)
   assert.match(cabinetSource, /historyRequestIdRef/)
   assert.match(cabinetSource, /if \(!token \|\| !userId\) return/)
+  assert.match(cabinetSource, /if \(!token\) \{\s*onManualOpenHandled\(\)\s*return\s*\}\s*if \(!userId\) return/)
   assert.match(cabinetSource, /sessionRequestIdRef\.current === sessionRequestId/)
   assert.match(cabinetSource, /historyRequestIdRef\.current === historyRequestId/)
   assert.doesNotMatch(cabinetSource, /\.then\(\(items\) => setHistory\(items\)\)/)

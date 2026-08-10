@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.593.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-app-version-manual-intent`.
+
+### Исправлено
+
+- Ручное нажатие cabinet «Что нового» во время token-only hydration больше не теряется: open intent ждёт `profile.id` и выполняется после подтверждения пользователя.
+- При полном logout signal по-прежнему завершается и не переносится в будущую сессию; ожидание действует только внутри текущего token lifecycle.
+- Source guard закрепляет раздельную обработку отсутствующего token и временно отсутствующего user ID.
+
+### Проверено
+
+- До исправления fail-first desktop regression был `0/1`: после delayed profile latest release загрузился, но dialog не появился, потому что signal уже был сброшен.
+- После исправления targeted desktop/mobile `2/2`, полный cabinet desktop/mobile regression `30/30`; до identity нет latest request/modal, после identity ручное окно открывается.
+- Полный console-responsive Playwright прошёл `132/132` за `9.0 min`, all-screens `6/6` на 25 viewport-конфигурациях; frontend `125/125`, typecheck/build, audit `0 vulnerabilities`; backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный.
+- Roadmap: `606/626` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.592.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-app-version-identity-boundary`.
