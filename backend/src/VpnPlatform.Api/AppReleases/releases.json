@@ -14118,5 +14118,28 @@
         "text": "Roadmap progress is 611/631 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-admin-detail-recovery",
+    "version": "0.599.0",
+    "releasedAt": "2026-08-11T05:16:50+07:00",
+    "title": "Детали пользователя и VPN-панели восстанавливаются после ошибки",
+    "summary": "Ошибки остаются внутри выбранных карточек, а явный повтор возвращает актуальные данные без перезагрузки админки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Временная ошибка больше не выглядит как отсутствие выбранного пользователя или пустая VPN-панель."
+      },
+      {
+        "type": "improved",
+        "text": "Карточки показывают локальное состояние загрузки или ошибки и безопасно повторяют запрос, сохраняя текущий выбор."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 612/632 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

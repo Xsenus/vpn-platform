@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin detail recovery
+
+Scope:
+- Transient user-overview and VPN-panel-detail failures must remain inside their selected detail cards and must not render contradictory empty/selection states.
+- Recovery must be explicit, selection/session-safe and layout-safe on desktop/mobile; VPN-panel forms must stay hidden while current details are loading or failed.
+
+Results:
+- Roadmap progress: `612/632` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-detail-recovery`, version `0.599.0`.
+- Reproduction before fix: persistent `503` sent both detail failures to the global banner; the user card rendered «Выберите пользователя», the VPN card rendered «Клиентов нет» and neither surface exposed a local retry; fail-first desktop/mobile was `0/4`.
+- After fix: both selected cards own scoped error state and generation-guarded explicit retry; user selection, panel selection and admin session remain intact, and VPN detail loading/error states hide stale forms and false empty content.
+- Targeted detail recovery: desktop/mobile `4/4`; one failed request remains settled for `300 ms`, request two restores the original user/panel data, and delayed request three confirms the panel loading state before restoring inbound/client data.
+- Full admin desktop/mobile regression: `72/72`; final console-responsive Playwright: `146/146` in `8.6 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: both scoped error/retry cards at 1280 and 393 CSS px confirmed readable wrapping, hidden contradictory content and no overlap/overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `521075`, gzip `139799`, largest `221403`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `598` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin support-message retry
 
 Scope:

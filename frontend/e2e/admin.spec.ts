@@ -451,10 +451,14 @@ async function mockAdminApi(page: Page) {
   ])
   let delayedUserOverviewId: string | null = null
   let releaseDelayedUserOverview: (() => void) | null = null
+  let userOverviewFailureUserId: string | null = null
+  let userOverviewFailureStatus = 503
   let delayedSupportMessagesId: string | null = null
   let releaseDelayedSupportMessages: (() => void) | null = null
   let supportMessagesFailureConversationId: string | null = null
   let supportMessagesFailureStatus = 503
+  let vpnPanelDetailsFailurePanelId: string | null = null
+  let vpnPanelDetailsFailureStatus = 503
   let delayNextSupportStatusResponse = false
   let releaseDelayedSupportStatus: (() => void) | null = null
   let delayNextTariffCreateResponse = false
@@ -740,6 +744,10 @@ async function mockAdminApi(page: Page) {
     const userOverviewMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/overview$/)
     if (method === 'GET' && userOverviewMatch) {
       const userId = decodeURIComponent(userOverviewMatch[1])
+      if (userOverviewFailureUserId === userId) {
+        await fulfillJson(route, { message: 'Временная ошибка загрузки карточки пользователя.' }, userOverviewFailureStatus)
+        return
+      }
       const response = userOverviews.get(userId)
       if (!response) {
         await fulfillJson(route, { error: 'user_not_found' }, 404)
@@ -1665,6 +1673,10 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && panelInboundsMatch) {
+      if (vpnPanelDetailsFailurePanelId === panelInboundsMatch[1]) {
+        await fulfillJson(route, { message: 'Временная ошибка загрузки деталей VPN-панели.' }, vpnPanelDetailsFailureStatus)
+        return
+      }
       if (panelInboundsMatch[1] === 'panel-eu' && delayNextVpnPanelInboundsResponse) {
         delayNextVpnPanelInboundsResponse = false
         await new Promise((resolve) => setTimeout(resolve, 1200))
@@ -1840,6 +1852,11 @@ async function mockAdminApi(page: Page) {
     },
     delayUserOverview: (userId: string) => { delayedUserOverviewId = userId },
     releaseUserOverview: () => { releaseDelayedUserOverview?.() },
+    failUserOverview: (userId: string, status = 503) => {
+      userOverviewFailureUserId = userId
+      userOverviewFailureStatus = status
+    },
+    allowUserOverview: () => { userOverviewFailureUserId = null },
     delaySupportMessages: (conversationId: string) => { delayedSupportMessagesId = conversationId },
     releaseSupportMessages: () => { releaseDelayedSupportMessages?.() },
     failSupportMessages: (conversationId: string, status = 503) => {
@@ -1847,6 +1864,11 @@ async function mockAdminApi(page: Page) {
       supportMessagesFailureStatus = status
     },
     allowSupportMessages: () => { supportMessagesFailureConversationId = null },
+    failVpnPanelDetails: (panelId: string, status = 503) => {
+      vpnPanelDetailsFailurePanelId = panelId
+      vpnPanelDetailsFailureStatus = status
+    },
+    allowVpnPanelDetails: () => { vpnPanelDetailsFailurePanelId = null },
     delayNextSupportStatus: () => { delayNextSupportStatusResponse = true },
     releaseSupportStatus: () => { releaseDelayedSupportStatus?.() },
     useSupportLifecycleFixture: () => {
@@ -2160,6 +2182,68 @@ test('admin support messages failure stays scoped and recovers on explicit retry
   await expect.poll(() => api.getRequestCount(messagesPath)).toBe(2)
   await expect(dialogCard.getByText('Старое сообщение первого обращения', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить сообщения поддержки' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin user overview failure stays scoped and recovers on explicit retry', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.useDetailRequestRaceFixture()
+  api.failUserOverview('user-first')
+  await seedAdminSession(page, 'admin-user-overview-retry-token', 'admin-user-overview-retry-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  const overviewPath = '/api/admin/users/user-first/overview'
+  await expect.poll(() => api.getRequestCount(overviewPath)).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount(overviewPath)).toBe(1)
+
+  await openAdminSection(page, 'Пользователи', 'users')
+  const overviewCard = page.locator('#users .user-overview-card')
+  await expect(overviewCard.getByRole('alert').filter({ hasText: 'Не удалось загрузить карточку пользователя' })).toHaveCount(1)
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить карточку пользователя' })).toHaveCount(1)
+  await expect(overviewCard.getByText('Выберите пользователя.')).toHaveCount(0)
+
+  api.allowUserOverview()
+  await overviewCard.getByRole('button', { name: 'Повторить загрузку карточки' }).click()
+  await expect.poll(() => api.getRequestCount(overviewPath)).toBe(2)
+  await expect(overviewCard.getByText('Первый пользователь', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить карточку пользователя' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin VPN panel detail failure stays scoped and recovers on explicit retry', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.failVpnPanelDetails('panel-eu')
+  await seedAdminSession(page, 'admin-panel-details-retry-token', 'admin-panel-details-retry-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  const inboundsPath = '/api/admin/vpn-panels/panel-eu/inbounds'
+  await expect.poll(() => api.getRequestCount(inboundsPath)).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount(inboundsPath)).toBe(1)
+
+  await openAdminSection(page, '3x-ui панели', 'panels')
+  const detailsCard = page.locator('#panels .card').filter({ has: page.getByRole('heading', { name: 'Детали панели' }) })
+  await expect(detailsCard.getByRole('alert').filter({ hasText: 'Не удалось загрузить детали VPN-панели' })).toHaveCount(1)
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить детали VPN-панели' })).toHaveCount(1)
+  await expect(detailsCard.getByRole('heading', { name: 'Клиентов нет' })).toHaveCount(0)
+
+  api.allowVpnPanelDetails()
+  await detailsCard.getByRole('button', { name: 'Повторить загрузку деталей' }).click()
+  await expect.poll(() => api.getRequestCount(inboundsPath)).toBe(2)
+  await expect(detailsCard.getByText('default-vless', { exact: true })).toBeVisible()
+  await expect(detailsCard.getByText('client@example.test', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить детали VPN-панели' })).toHaveCount(0)
+
+  await detailsCard.getByRole('combobox', { name: 'Панель' }).selectOption('')
+  api.delayNextVpnPanelInbounds()
+  await detailsCard.getByRole('combobox', { name: 'Панель' }).selectOption('panel-eu')
+  await expect(detailsCard.getByRole('status')).toContainText('Загружаем детали VPN-панели')
+  await expect(detailsCard.getByRole('heading', { name: 'Inbound-правила' })).toHaveCount(0)
+  await expect.poll(() => api.getRequestCount(inboundsPath)).toBe(3)
+  await expect(detailsCard.getByText('default-vless', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

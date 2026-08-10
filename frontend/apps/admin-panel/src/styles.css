@@ -1,17 +1,20 @@
 @import "../../../packages/ui/src/styles.css";
 
-.support-messages-error {
+.support-messages-error,
+.detail-load-error {
   display: grid;
   justify-items: start;
   gap: 10px;
   margin-top: 12px;
 }
 
-.support-messages-error p {
+.support-messages-error p,
+.detail-load-error p {
   margin: 0;
 }
 
-.support-messages-error .button {
+.support-messages-error .button,
+.detail-load-error .button {
   max-width: 100%;
   white-space: normal;
 }

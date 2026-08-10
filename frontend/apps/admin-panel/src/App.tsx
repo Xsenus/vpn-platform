@@ -1060,6 +1060,7 @@ export function App() {
   const [selectedUserId, setSelectedUserId] = useState('')
   const [userOverview, setUserOverview] = useState<AdminUserOverviewDto | null>(null)
   const [userOverviewLoading, setUserOverviewLoading] = useState(false)
+  const [userOverviewError, setUserOverviewError] = useState('')
   const [summary, setSummary] = useState<AdminDashboardSummaryDto | null>(null)
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogDto[]>([])
   const [notificationDeliveries, setNotificationDeliveries] = useState<AdminNotificationDeliveryDto[]>([])
@@ -1122,6 +1123,8 @@ export function App() {
   const [vpnPanels, setVpnPanels] = useState<VpnPanelDto[]>([])
   const [selectedVpnPanelId, setSelectedVpnPanelId] = useState('')
   const vpnPanelDetailsRequestId = useRef(0)
+  const [vpnPanelDetailsLoading, setVpnPanelDetailsLoading] = useState(false)
+  const [vpnPanelDetailsError, setVpnPanelDetailsError] = useState('')
   const [vpnInbounds, setVpnInbounds] = useState<VpnInboundDto[]>([])
   const [vpnMigrationInbounds, setVpnMigrationInbounds] = useState<VpnInboundDto[]>([])
   const [vpnClients, setVpnClients] = useState<VpnClientDto[]>([])
@@ -1288,6 +1291,7 @@ export function App() {
     userOverviewRequestId.current += 1
     setUserOverview(null)
     setUserOverviewLoading(false)
+    setUserOverviewError('')
     setSelectedUserId(userId)
   }
 
@@ -1622,6 +1626,7 @@ export function App() {
       userOverviewRequestId.current += 1
       setUserOverview(null)
       setUserOverviewLoading(false)
+      setUserOverviewError('')
     }
   }, [token, selectedUserId])
 
@@ -1745,6 +1750,7 @@ export function App() {
     setUserOverview(null)
     userOverviewRequestId.current += 1
     setUserOverviewLoading(false)
+    setUserOverviewError('')
     setUserSearch('')
     setUserStatusFilter('')
     setSummary(null)
@@ -1820,6 +1826,8 @@ export function App() {
     setSubscriptionMigrationTargets({})
     setVpnHealthChecks([])
     setVpnSyncRuns([])
+    setVpnPanelDetailsLoading(false)
+    setVpnPanelDetailsError('')
     setVpnPanelForm(defaultVpnPanelForm)
     setEditingVpnPanelId(null)
     setInboundForm(defaultInboundForm)
@@ -1971,14 +1979,16 @@ export function App() {
       && selectedUserIdRef.current === userId
     setUserOverview(null)
     setUserOverviewLoading(true)
+    setUserOverviewError('')
     try {
       const overview = await api.getAdminUserOverview(currentToken, userId)
       if (!requestIsCurrent()) return false
       setUserOverview(overview)
+      setUserOverviewError('')
       return true
     } catch (e) {
       if (!requestIsCurrent()) return false
-      setError(normalizeApiError(e, 'Не удалось загрузить карточку пользователя'))
+      setUserOverviewError(normalizeApiError(e, 'Не удалось загрузить карточку пользователя'))
       return false
     } finally {
       if (requestIsCurrent()) setUserOverviewLoading(false)
@@ -2021,6 +2031,8 @@ export function App() {
     setVpnClientMigrationTargets({})
     setVpnHealthChecks([])
     setVpnSyncRuns([])
+    setVpnPanelDetailsLoading(false)
+    setVpnPanelDetailsError('')
   }
 
   const loadVpnPanelDetails = async (
@@ -2033,6 +2045,8 @@ export function App() {
     const requestIsCurrent = () => sessionOperationId.current === operationId
       && requestId === vpnPanelDetailsRequestId.current
       && selectedVpnPanelIdRef.current === panelId
+    setVpnPanelDetailsLoading(true)
+    setVpnPanelDetailsError('')
     try {
       const [nextInbounds, nextMigrationInbounds, nextClients, nextHealthChecks, nextSyncRuns] = await Promise.all([
         api.getAdminVpnPanelInbounds(currentToken, panelId),
@@ -2055,12 +2069,15 @@ export function App() {
       })
       setVpnHealthChecks(nextHealthChecks)
       setVpnSyncRuns(nextSyncRuns)
+      setVpnPanelDetailsError('')
       return true
     } catch (e) {
       if (!requestIsCurrent()) return false
       clearVpnPanelDetails()
-      setError(normalizeApiError(e, 'Не удалось загрузить детали VPN-панели'))
+      setVpnPanelDetailsError(normalizeApiError(e, 'Не удалось загрузить детали VPN-панели'))
       return false
+    } finally {
+      if (requestIsCurrent()) setVpnPanelDetailsLoading(false)
     }
   }
 
@@ -3611,7 +3628,15 @@ export function App() {
         <Card className="user-overview-card">
           <h3>Карточка пользователя</h3>
           {userOverviewLoading && <LoadingBlock label="Загружаем карточку пользователя..." />}
-          {!userOverviewLoading && !userOverview && <p className="muted">Выберите пользователя.</p>}
+          {userOverviewError && selectedUserId && (
+            <div className="toast-error detail-load-error" role="alert">
+              <p>Не удалось загрузить карточку пользователя: {userOverviewError}</p>
+              <PrimaryButton type="button" className="button-secondary" disabled={userOverviewLoading} aria-busy={userOverviewLoading} onClick={() => void loadUserOverview(selectedUserId, token, sessionOperationId.current)}>
+                Повторить загрузку карточки
+              </PrimaryButton>
+            </div>
+          )}
+          {!userOverviewLoading && !userOverviewError && !userOverview && <p className="muted">Выберите пользователя.</p>}
           {userOverview && <>
             <div className="user-profile-head">
               <div>
@@ -4274,6 +4299,17 @@ export function App() {
         <Card>
           <h3>Детали панели</h3>
           <label><span>Панель</span><select value={selectedVpnPanelId} onChange={(e) => selectVpnPanel(e.target.value)}><option value="">Не выбрана</option>{vpnPanels.map((panel) => <option key={panel.id} value={panel.id}>{panel.name}</option>)}</select></label>
+          {vpnPanelDetailsLoading && <LoadingBlock label="Загружаем детали VPN-панели..." />}
+          {vpnPanelDetailsError && selectedVpnPanelId && (
+            <div className="toast-error detail-load-error" role="alert">
+              <p>Не удалось загрузить детали VPN-панели: {vpnPanelDetailsError}</p>
+              <PrimaryButton type="button" className="button-secondary" disabled={vpnPanelDetailsLoading} aria-busy={vpnPanelDetailsLoading} onClick={() => void loadVpnPanelDetails(selectedVpnPanelId, token, sessionOperationId.current)}>
+                Повторить загрузку деталей
+              </PrimaryButton>
+            </div>
+          )}
+          {!selectedVpnPanelId && <p className="muted">Выберите панель.</p>}
+          {selectedVpnPanelId && !vpnPanelDetailsLoading && !vpnPanelDetailsError && <>
           <h4>Inbound-правила</h4>
           <form hidden={!canWriteSection('panels')} aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveInbound() }}>
             <fieldset className="form-section">
@@ -4308,6 +4344,7 @@ export function App() {
             const clientNeedsReconciliation = client.syncStatus.includes('uncertain') || client.syncStatus.includes('compensation-failed')
             return <div key={client.id} className="list-item-vertical"><div className="item-head"><div><strong>{client.email}</strong><div className="muted">UUID {client.uuid} · inbound {inbound?.name ?? shortId(client.vpnInboundId)} · до {formatDate(client.expiryTime)}</div><div className="muted">Синхронизация: {client.syncStatus || 'unknown'} · {formatDate(client.lastSyncedAt)} · лимит устройств {client.limitIp ?? 0}</div></div><div className="item-status"><StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} />{clientNeedsReconciliation && <StatusBadge value="SyncRequired" />}{inbound && <StatusBadge value={inbound.protocol} />}</div></div><div className="toolbar" hidden={!canWriteSection('panels')}>{client.enable ? <ConfirmButton className="button-secondary" disabled={actionBusyId === `vpn-client-disable-${client.id}`} message={`Отключить VPN-клиента "${client.email}"? Пользователь потеряет подключение.`} onConfirm={() => handleVpnClientAction(client, 'disable')}>Отключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === `vpn-client-enable-${client.id}`} onClick={() => void handleVpnClientAction(client, 'enable')}>Включить</PrimaryButton>}<PrimaryButton disabled={actionBusyId === `vpn-client-sync-${client.id}`} onClick={() => void handleVpnClientAction(client, 'sync')}>Синхронизировать</PrimaryButton><ConfirmButton disabled={actionBusyId === `vpn-client-reset-${client.id}`} message={`Необратимо обнулить счётчики трафика VPN-клиента "${client.email}" в 3x-ui? При сетевой неопределённости клиент будет помечен для ручной сверки.`} onConfirm={() => handleVpnClientAction(client, 'reset')}>Сбросить трафик</ConfirmButton>{migrationOptionsCount > 0 && <><select aria-label={`Целевой inbound для ${client.email}`} value={vpnClientMigrationTargets[client.id] ?? ''} onChange={(e) => updateVpnClientMigrationTarget(client.id, e.target.value)}><option value="">Выберите inbound</option>{migrationOptionGroups.map((group) => <optgroup key={group.panel.id} label={`${group.panel.name} · ${group.panel.region}`}>{group.inbounds.map((option) => <option key={option.id} value={option.id}>{option.name} · {option.protocol}:{option.port} · {option.usedCapacity}/{option.capacity}</option>)}</optgroup>)}</select><ConfirmButton disabled={!vpnClientMigrationTargets[client.id] || actionBusyId === `vpn-client-migrate-${client.id}`} message={`Перенести VPN-клиента "${client.email}"? Сначала будет занято по одному временному slot целевой панели, inbound и связанного VPN-сервера; после успешного удаления source-копии старые slots освободятся. При ошибке перенос будет отменён.`} onConfirm={() => handleMigrateVpnClient(client)}>Перенести</ConfirmButton></>}</div></div>
           })}{vpnClients.length === 0 && <EmptyState title="Клиентов нет" description="После выдачи VPN-доступов клиенты 3x-ui появятся здесь." />}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ok'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.errorMessage || (run.summaryJson !== '{}' ? run.summaryJson : '') || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
+          </>}
         </Card>
       </div>
 

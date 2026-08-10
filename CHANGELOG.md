@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.599.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-detail-recovery`.
+
+### Исправлено
+
+- Ошибки загрузки карточки пользователя и деталей VPN-панели в admin-panel больше не уходят в общий banner и не маскируются ложными состояниями «Выберите пользователя» или «Клиентов нет».
+- Обе detail-карточки получили собственные доступные alert-состояния и явные кнопки повторной загрузки без logout, reload или смены выбранной сущности.
+- Детали VPN-панели показывают отдельное loading-состояние и скрывают формы inbound/клиентов до завершения актуального запроса; session/request generation guards отклоняют stale completion.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/4`; после исправления targeted recovery прошёл `4/4`, включая единственную settled-попытку, retry, восстановление данных и loading-state VPN-панели.
+- Полный admin desktop/mobile regression прошёл `72/72`; существующие support, CRUD, role/capability и VPN-операции остались зелёными.
+- Полный console-responsive Playwright прошёл `146/146` за `8.6 min`, без failed/flaky/skipped; all-screens `6/6` на 25 viewport-конфигурациях. Error-карточки просмотрены на 1280/393 px без overflow и overlap.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; admin bundle budget `521075/139799/max 221403`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `598`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `612/632` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.598.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-support-messages-retry`.
