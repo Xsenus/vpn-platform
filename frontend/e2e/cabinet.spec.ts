@@ -1148,7 +1148,7 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(referralRewardRow.getByText('Подтверждено')).toBeVisible()
 
   const staleOrderCard = page.locator('.payment-record').filter({ hasText: 'Истёкший заказ' })
-  await expect(staleOrderCard.getByText('Expired')).toBeVisible()
+  await expect(staleOrderCard.getByText('Срок истек')).toBeVisible()
   await expect(staleOrderCard.getByText('Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.')).toBeVisible()
   await expect(staleOrderCard.getByRole('button', { name: 'Повторить оплату' })).toHaveCount(0)
   await expect(staleOrderCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)

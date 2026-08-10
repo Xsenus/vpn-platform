@@ -84,7 +84,7 @@ PNG создаются только при явном флаге внутри `f
 - Subscription activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle сохраняет связанный access state и скрывает terminal secrets на desktop/mobile.
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
-- Admin production build содержит `5` JS chunks под fail-closed budget: raw `512499`, gzip `137570`, largest `219849` bytes.
+- Admin production build содержит `5` JS chunks под fail-closed budget: raw `514307`, gzip `138055`, largest `219849` bytes.
 - Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 19 viewport-конфигураций.
 - Все шесть public route-состояний имеют собственные title/meta; SPA navigation и browser Back переводят focus в новый main на desktop/mobile.
 - Login и все 17 admin sections имеют exact title; payments/support/logout metadata lifecycle проходит desktop/mobile.
@@ -92,4 +92,5 @@ PNG создаются только при явном флаге внутри `f
 - Unknown admin hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
 - Admin skip-ссылки сохраняют section hash при keyboard focus transfer до входа, после входа и после reload на desktop/mobile.
 - Cabinet app-version modal открывается на всех 19 viewport-конфигурациях и проходит bounds/overflow/control clipping, compact Axe, focus trap, inert/scroll isolation и opener restore.
-- Latest "Что нового": `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`.
+- Shared status badge gate проверяет neutral `NotLinked`, success `Succeeded`, русскую подпись `Expired` и полный desktop/mobile lifecycle.
+- Latest "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`.

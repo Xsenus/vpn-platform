@@ -97,6 +97,12 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("document.body.style.overflow = 'hidden'", cabinetAppVersion, StringComparison.Ordinal);
         Assert.Contains("cabinet app version modal traps focus and restores its opener", cabinetSpec, StringComparison.Ordinal);
         Assert.Contains("cabinet app version modal at ${viewport.name}", spec, StringComparison.Ordinal);
+        Assert.Contains("unhealthy: 'danger'", sharedUi, StringComparison.Ordinal);
+        Assert.Contains("inactive: 'danger'", sharedUi, StringComparison.Ordinal);
+        Assert.Contains("notlinked: 'neutral'", sharedUi, StringComparison.Ordinal);
+        Assert.Contains("succeeded: 'success'", sharedUi, StringComparison.Ordinal);
+        Assert.Contains("Статус: Не привязано", spec, StringComparison.Ordinal);
+        Assert.Contains("Статус: Успешно", spec, StringComparison.Ordinal);
         Assert.Equal(19, Regex.Matches(spec, "(?m)^  \\{ name: '[^']+', width: \\d+, height: \\d+ \\},?$").Count);
     }
 

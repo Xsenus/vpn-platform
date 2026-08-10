@@ -954,6 +954,8 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
   await expectNonBlankPage(page)
   await expectPageQuality(page, 'cabinet dashboard')
   await expectWcagQuality(page, 'cabinet dashboard')
+  await expect(page.getByRole('status', { name: 'Статус: Не привязано' })).toHaveClass(/status-badge-neutral/)
+  await expect(page.getByRole('status', { name: 'Статус: Успешно' }).first()).toHaveClass(/status-badge-success/)
   await captureAuditScreenshot(page, testInfo, 'cabinet-dashboard-desktop')
 
   expect(browserErrors).toEqual([])

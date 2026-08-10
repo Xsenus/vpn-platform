@@ -177,7 +177,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-09 локально подтверждено:
 
 - backend full suite: 1113/1113;
-- frontend tests: 116/116;
+- frontend tests: 117/117;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -216,7 +216,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- admin production bundle budget: `5` JS chunks, largest `219849`, total raw `512499`, gzip `137570`.
+- admin production bundle budget: `5` JS chunks, largest `219849`, total raw `514307`, gzip `138055`.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
 - public route title/meta/focus: direct load, SPA navigation и browser Back desktop/mobile: OK.
 - admin section metadata: hydration/login, deep-link, 17 sections и logout desktop/mobile: OK.
@@ -224,8 +224,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin invalid hash canonical fallback: direct/runtime recovery, focus и Back desktop/mobile: OK.
 - admin skip links preserve the active section hash through focus transfer, login and reload on desktop/mobile.
 - cabinet app-version modal traps keyboard focus, isolates background controls/scroll and passes the 19-viewport responsive/WCAG gate.
-- latest "Что нового": `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`.
-- roadmap progress: `586/606` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- shared status badge semantics and case-insensitive Russian labels: OK.
+- latest "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`.
+- roadmap progress: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

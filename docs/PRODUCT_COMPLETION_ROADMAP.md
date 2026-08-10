@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-10.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `586/606` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `587/607` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-10:
 
 - [x] `STATE-001` Backend test suite проходит: `1113/1113`.
-- [x] `STATE-002` Frontend test suite проходит: `116/116`.
+- [x] `STATE-002` Frontend test suite проходит: `117/117`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2040,6 +2040,10 @@ git diff --check
   - Что сделать: `aria-modal` должен удерживать Tab/Shift+Tab внутри, исключать фон из focus navigation, блокировать background scroll, закрываться Escape и возвращать focus к opener; весь modal нужно включить в responsive/WCAG gate.
   - Что сделано: dialog вычисляет только видимые focusable controls и циклически обрабатывает Tab; mobile history переводит focus в видимую кнопку закрытия и возвращает его после выбора. Root получает `inert`, body — временный overflow lock, cleanup восстанавливает исходные значения и живой opener. Cabinet all-screens открывает modal на каждой responsive конфигурации.
   - Доказательство: targeted desktop/mobile focus/inert/scroll/restore `2/2`, cabinet desktop/mobile `24/24`, полный console-responsive Playwright `118/118`; modal bounds/overflow/control clipping проходят `19` viewport-конфигураций `305x568..2560x1440`, compact Axe `0`; frontend `116/116`, typecheck/build, cabinet JS `357.36/103.68 kB`, admin bundle `512499` raw/`137570` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1113/1113`, fresh SQLite latest release OK, secret scan `663/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
+- [x] `P11-ACC-297` Исправить семантику и локализацию общих статусных меток. 2026-08-10.
+  - Что сделать: составные отрицательные статусы не должны наследовать success-тон через положительные подстроки, а регистр API-значения не должен менять русскую пользовательскую подпись.
+  - Что сделано: точная таблица тонов обрабатывает `Unhealthy`, `Inactive`, `NotLinked`, `Degraded`, `Succeeded`, refund и lifecycle-статусы до упорядоченных fallback-правил; labels нормализуются без учета регистра. Cabinet browser gate проверяет фактические роли и CSS-тона, stale-order сценарий ожидает русскую подпись.
+  - Доказательство: targeted component `1/1`, targeted cabinet stale-order desktop/mobile `2/2`, полный console-responsive Playwright `118/118`; frontend `117/117`, typecheck/build, cabinet JS `359.18/104.18 kB`, admin bundle `514307` raw/`138055` gzip/largest `219849`, audit `0 vulnerabilities`, backend `1113/1113`, fresh SQLite latest release OK, secret scan `663/0`. Внешние VPS/staging/provider/3x-ui/Telegram/SMTP evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2686,6 +2690,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-10-022` | P1 | Shared UI/status semantics | Подстрочные правила считали `Unhealthy`, `Inactive` и `NotLinked` успешными; lowercase API-статусы поддержки оставались на английском, а `Succeeded` не получал success-тон. | Исправлено локально | Точная таблица и упорядоченные fallback-правила проходят unit и полный desktop/mobile browser regression; production cabinet/admin smoke остается внешним. |
 | `BUG-2026-08-10-021` | P1 | Cabinet accessibility/responsive | `aria-modal` окна «Что нового» не удерживал Tab: Shift+Tab с dialog переводил focus на скрытый фон, mobile history оставляла его под overlay; background controls/scroll не изолировались, а responsive matrix окно не открывала. | Исправлено локально | Focus trap, mobile history focus restore, root inert, scroll lock, Escape/opener restore и modal gate на 19 viewport добавлены; production cabinet smoke остается внешним. |
 | `BUG-2026-08-10-020` | P1 | Admin routing/accessibility | Общий SkipLink записывал служебный target в URL и затирал `#support`/другой section hash; после login или reload пользователь терял deep-linked раздел. | Исправлено локально | Admin skip links сохраняют route при переносе focus; desktop/mobile regression проходит до входа, после входа и после reload. Production admin smoke остается внешним. |
 | `BUG-2026-08-10-019` | P1 | Admin routing/accessibility | Неизвестный hash показывал Dashboard, но сохранялся в URL; refresh/history расходились с tabpanel/title, а runtime recovery не имел канонического route. | Исправлено локально | Invalid non-empty hash заменяется `#dashboard`; direct/runtime desktop/mobile regression проверяет title, focus и Back. Production admin smoke остается внешним. |

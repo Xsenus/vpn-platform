@@ -24,7 +24,7 @@ Production-ready решение заблокировано следующими 
 
 - Backend full suite: `1113/1113`.
 - API Release build: OK.
-- Frontend unit tests: `116/116`.
+- Frontend unit tests: `117/117`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `118/118`; responsive all-screens: `6/6` на 19 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
@@ -72,14 +72,14 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 6 public route-состояний, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Admin production bundle: `5` chunks, largest `219849`, total raw `512499`, gzip `137570`; fail-closed budget пройден.
+- Admin production bundle: `5` chunks, largest `219849`, total raw `514307`, gzip `138055`; fail-closed budget пройден.
 - Unknown public route показывает доступное `404` recovery и проходит desktop/mobile, Axe, console и 18 responsive viewport-конфигураций без blank screen/overflow.
 - Public route title/meta/focus lifecycle проходит direct load, SPA navigation и browser Back на desktop/mobile; каждый route имеет точную metadata.
 - Admin hydration/login и 17 sections имеют точную metadata; deep-link, section switch и logout проходят desktop/mobile.
 - Admin tabs, Back/Forward, role fallback и order-links синхронизируют history, tabpanel, metadata и focus на desktop/mobile.
 - Admin unknown hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
-- Latest "Что нового": `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`; локальный backend/frontend/browser regression, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `586/606` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`; локальный backend/frontend/browser regression, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

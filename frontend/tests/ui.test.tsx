@@ -56,6 +56,20 @@ test('StatusBadge and CodeBlock render content', () => {
   assert.match(html, /Buy/)
 })
 
+test('StatusBadge tones distinguish composite negative and successful states', () => {
+  const renderStatus = (value: string) => renderToStaticMarkup(<StatusBadge value={value} />)
+
+  assert.match(renderStatus('Unhealthy'), /status-badge-danger/)
+  assert.match(renderStatus('Inactive'), /status-badge-danger/)
+  assert.match(renderStatus('NotLinked'), /status-badge-neutral/)
+  assert.match(renderStatus('Degraded'), /status-badge-warning/)
+  assert.match(renderStatus('Succeeded'), /status-badge-success/)
+  assert.match(renderStatus('PartiallyRefunded'), /status-badge-success/)
+  assert.match(renderStatus('open'), /Открыто/)
+  assert.match(renderStatus('pending'), /Ожидает/)
+  assert.match(renderStatus('closed'), /Закрыто/)
+})
+
 test('UI polish helpers render loading, empty, error, copy and validation states', () => {
   const html = renderToStaticMarkup(
     <SectionCard title="Security" description="Secrets stay write-only">

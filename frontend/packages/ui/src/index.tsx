@@ -88,11 +88,77 @@ export function StatTile({ label, value, hint }: { label: string; value: string 
   )
 }
 
-function badgeTone(value: unknown) {
-  const normalized = String(value ?? 'Unknown').toLowerCase()
-  if (normalized.includes('active') || normalized.includes('ready') || normalized.includes('paid') || normalized.includes('healthy') || normalized.includes('enabled') || normalized.includes('completed') || normalized.includes('deployed') || normalized.includes('linked') || normalized.includes('published') || normalized.includes('home')) return 'success'
-  if (normalized.includes('fail') || normalized.includes('error') || normalized.includes('blocked') || normalized.includes('cancel') || normalized.includes('disabled') || normalized.includes('unhealthy') || normalized.includes('hidden')) return 'danger'
-  if (normalized.includes('pending') || normalized.includes('queued') || normalized.includes('grace') || normalized.includes('progress') || normalized.includes('sandbox') || normalized.includes('validation') || normalized.includes('attention') || normalized.includes('upcoming') || normalized.includes('проблем')) return 'warning'
+type StatusBadgeTone = 'success' | 'danger' | 'warning' | 'neutral'
+
+const exactStatusTones: Record<string, StatusBadgeTone> = {
+  active: 'success',
+  ready: 'success',
+  published: 'success',
+  home: 'success',
+  paid: 'success',
+  healthy: 'success',
+  enabled: 'success',
+  completed: 'success',
+  deployed: 'success',
+  linked: 'success',
+  approved: 'success',
+  paymentreceived: 'success',
+  succeeded: 'success',
+  success: 'success',
+  refunded: 'success',
+  partiallyrefunded: 'success',
+  configured: 'success',
+  default: 'success',
+  'checkout ready': 'success',
+  'access linked': 'success',
+  failed: 'danger',
+  error: 'danger',
+  blocked: 'danger',
+  cancelled: 'danger',
+  canceled: 'danger',
+  disabled: 'danger',
+  unhealthy: 'danger',
+  inactive: 'danger',
+  reverted: 'danger',
+  suspended: 'danger',
+  deleted: 'danger',
+  hidden: 'danger',
+  'refund blocked': 'danger',
+  attention: 'warning',
+  upcoming: 'warning',
+  pending: 'warning',
+  waitingconfirmation: 'warning',
+  queued: 'warning',
+  graceperiod: 'warning',
+  inprogress: 'warning',
+  sandbox: 'warning',
+  validation: 'warning',
+  pendingpayment: 'warning',
+  fulfillmentinprogress: 'warning',
+  partiallyprocessed: 'warning',
+  unknown: 'warning',
+  degraded: 'warning',
+  syncrequired: 'warning',
+  expired: 'warning',
+  'not configured': 'warning',
+  'needs configuration': 'warning',
+  notlinked: 'neutral',
+  'write-only': 'neutral',
+  new: 'neutral',
+  open: 'neutral',
+  closed: 'neutral',
+  'no access': 'neutral'
+}
+
+function badgeTone(value: unknown): StatusBadgeTone {
+  const normalized = String(value ?? 'Unknown').trim().toLowerCase()
+  const exactTone = exactStatusTones[normalized]
+  if (exactTone) return exactTone
+  if (normalized.includes('not linked') || normalized.includes('no access')) return 'neutral'
+  if (normalized.includes('fail') || normalized.includes('error') || normalized.includes('blocked') || normalized.includes('cancel') || normalized.includes('disabled') || normalized.includes('unhealthy') || normalized.includes('inactive') || normalized.includes('hidden')) return 'danger'
+  if (normalized.includes('partially refunded') || normalized.includes('succeeded') || normalized.includes('success') || normalized.includes('refunded')) return 'success'
+  if (normalized.includes('pending') || normalized.includes('queued') || normalized.includes('grace') || normalized.includes('progress') || normalized.includes('sandbox') || normalized.includes('validation') || normalized.includes('attention') || normalized.includes('upcoming') || normalized.includes('degraded') || normalized.includes('unknown') || normalized.includes('needs') || normalized.includes('проблем')) return 'warning'
+  if (normalized.includes('active') || normalized.includes('ready') || normalized.includes('paid') || normalized.includes('healthy') || normalized.includes('enabled') || normalized.includes('completed') || normalized.includes('deployed') || normalized.includes('linked') || normalized.includes('published') || normalized.includes('configured') || normalized.includes('home')) return 'success'
   return 'neutral'
 }
 
@@ -133,6 +199,8 @@ const statusLabels: Record<string, string> = {
   PartiallyProcessed: 'Частично обработано',
   PartiallyRefunded: 'Частичный возврат',
   Refunded: 'Возвращено',
+  Succeeded: 'Успешно',
+  Success: 'Успешно',
   'Refund ready': 'Возврат доступен',
   'Refund blocked': 'Возврат недоступен',
   WaitingConfirmation: 'Ждет подтверждения',
@@ -142,6 +210,9 @@ const statusLabels: Record<string, string> = {
   Sandbox: 'Проверка',
   Validation: 'Проверка',
   Unknown: 'Неизвестно',
+  Degraded: 'Снижена доступность',
+  SyncRequired: 'Нужна синхронизация',
+  Expired: 'Срок истек',
   Configured: 'Задано',
   'Write-only': 'Скрыто',
   Default: 'Основной',
@@ -153,13 +224,18 @@ const statusLabels: Record<string, string> = {
   Closed: 'Закрыто',
   'Checkout ready': 'Готово к оплате',
   'Not configured': 'Не настроено',
+  'Needs configuration': 'Нужна настройка',
   'Access linked': 'Доступ привязан',
   'No access': 'Доступа нет'
 }
 
+const normalizedStatusLabels = Object.fromEntries(
+  Object.entries(statusLabels).map(([key, label]) => [key.toLowerCase(), label])
+)
+
 function badgeLabel(value: unknown) {
-  const raw = String(value ?? 'Unknown')
-  return statusLabels[raw] ?? raw
+  const raw = String(value ?? 'Unknown').trim()
+  return statusLabels[raw] ?? normalizedStatusLabels[raw.toLowerCase()] ?? raw
 }
 
 export function StatusBadge({ value }: { value: unknown }) {

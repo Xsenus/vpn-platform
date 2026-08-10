@@ -13543,5 +13543,28 @@
         "text": "Roadmap progress is 586/606 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-status-badge-semantic-tones",
+    "version": "0.574.0",
+    "releasedAt": "2026-08-10T17:14:00+07:00",
+    "title": "Статусы отображаются с точным смыслом",
+    "summary": "Статусные метки кабинета и админки больше не путают составные отрицательные состояния с успешными и всегда показывают согласованные русские подписи.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Unhealthy и Inactive показываются как ошибки, NotLinked остается нейтральным, а Succeeded получает успешный тон."
+      },
+      {
+        "type": "improved",
+        "text": "Статусы поддержки и другие API-значения локализуются независимо от регистра; Expired отображается как «Срок истек» на desktop и mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 587/607 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.574.0 - 2026-08-10
+
+Release entry: `2026-08-10-status-badge-semantic-tones`.
+
+### Исправлено
+
+- Общая статусная метка больше не считает `Unhealthy`, `Inactive` и `NotLinked` успешными из-за совпадений с подстроками `healthy`, `active` и `linked`; отрицательные составные статусы теперь распознаются до положительных fallback-правил.
+- `Succeeded`, `Degraded`, `SyncRequired`, `Expired` и lowercase-статусы поддержки получили согласованные тона и русские подписи во всех приложениях.
+
+### Проверено
+
+- Компонентный regression покрывает danger/neutral/warning/success и регистронезависимую локализацию; frontend unit `117/117`, typecheck/build, audit `0 vulnerabilities`.
+- Cabinet dashboard проверяет нейтральный `NotLinked` и успешный `Succeeded`; stale `Expired` order проверяется на desktop/mobile, полный console-responsive Playwright `118/118`.
+- Cabinet JS `359.18/104.18 kB`; admin bundle raw `514307`, gzip `138055`, largest `219849`; backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate.
+- Roadmap: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.573.0 - 2026-08-10
 
 Release entry: `2026-08-10-cabinet-app-version-modal-focus-trap`.

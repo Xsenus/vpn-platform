@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: shared status badge semantic tones
+
+Scope:
+- Shared status badges must not classify composite negative states as success through positive substrings.
+- API status casing must not leak English labels into the Russian cabinet and admin UI.
+
+Results:
+- Roadmap progress: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-status-badge-semantic-tones`, version `0.574.0`.
+- Frontend tests: `117/117`; targeted status component: `1/1`; targeted cabinet desktop/mobile stale-order lifecycle: `2/2`; full console-responsive Playwright: `118/118`.
+- Cabinet dashboard browser gate confirms neutral `NotLinked` and successful `Succeeded`; stale `Expired` order displays the localized label `Срок истек` on desktop/mobile.
+- Typecheck/build all apps: OK; cabinet JS `359.18 kB` raw, `104.18 kB` gzip; admin bundle raw `514307`, gzip `138055`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: cabinet app-version modal focus isolation
 
 Scope:
