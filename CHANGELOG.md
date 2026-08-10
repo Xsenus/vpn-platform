@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.591.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-app-version-session-boundary`.
+
+### Исправлено
+
+- Cabinet «Что нового» привязывает latest/history requests к текущим token/user generation: ответы старой сессии больше не могут заполнить модальное окно после logout/login.
+- Logout и смена пользователя сбрасывают history, выбранный release и loading state; новая сессия немедленно запускает собственную загрузку истории вместо ожидания старого Promise.
+- Manual refresh latest version и history completion получили отдельные request generations, поэтому более ранний ответ не перезаписывает более новый.
+
+### Проверено
+
+- До исправления fail-first desktop regression был `0/1`: после logout/login новая сессия не отправляла history request (`expected 2`, `actual 1`) из-за stale `loadingHistory`.
+- После исправления targeted desktop/mobile `2/2`, полный cabinet desktop/mobile regression `26/26`; source guard подтверждает session/latest/history generations и отсутствие unguarded state completion.
+- Полный console-responsive Playwright прошёл `128/128` за `9.6 min`, all-screens `6/6` на 25 viewport-конфигурациях; frontend `125/125`, typecheck/build, audit `0 vulnerabilities`; backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный.
+- Roadmap: `604/624` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.590.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-managed-error-content`.

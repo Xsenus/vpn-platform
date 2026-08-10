@@ -69,19 +69,30 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
   const [selectedReleaseId, setSelectedReleaseId] = useState('')
   const [open, setOpen] = useState(false)
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const sessionRequestIdRef = useRef(0)
+  const latestRequestIdRef = useRef(0)
+  const historyRequestIdRef = useRef(0)
 
   useEffect(() => {
+    const sessionRequestId = ++sessionRequestIdRef.current
+    latestRequestIdRef.current += 1
+    historyRequestIdRef.current += 1
+    setLatest(null)
+    setHistory([])
+    setSelectedReleaseId('')
+    setLoadingHistory(false)
+
     if (!token) {
-      setLatest(null)
-      setHistory([])
       setOpen(false)
       return
     }
 
-    let cancelled = false
+    const latestRequestId = ++latestRequestIdRef.current
+    const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
+      && latestRequestIdRef.current === latestRequestId
     api.getLatestAppVersion(token)
       .then((response) => {
-        if (cancelled) return
+        if (!requestIsCurrent()) return
         const release = response.latestRelease ?? null
         setLatest(release)
         setSelectedReleaseId(release?.releaseId ?? '')
@@ -90,11 +101,13 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
         }
       })
       .catch(() => {
-        if (!cancelled) setLatest(null)
+        if (requestIsCurrent()) setLatest(null)
       })
 
     return () => {
-      cancelled = true
+      if (sessionRequestIdRef.current === sessionRequestId) sessionRequestIdRef.current += 1
+      latestRequestIdRef.current += 1
+      historyRequestIdRef.current += 1
     }
   }, [api, token, userId])
 
@@ -108,24 +121,41 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     setOpen(true)
     onManualOpenHandled()
     if (!latest) {
+      const sessionRequestId = sessionRequestIdRef.current
+      const latestRequestId = ++latestRequestIdRef.current
+      const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
+        && latestRequestIdRef.current === latestRequestId
       api.getLatestAppVersion(token)
         .then((response) => {
+          if (!requestIsCurrent()) return
           const release = response.latestRelease ?? null
           setLatest(release)
           setSelectedReleaseId(release?.releaseId ?? '')
         })
-        .catch(() => setLatest(null))
+        .catch(() => {
+          if (requestIsCurrent()) setLatest(null)
+        })
     }
   }, [api, latest, manualOpenSignal, onManualOpenHandled, token])
 
   useEffect(() => {
     if (!open || !token || history.length > 0 || loadingHistory) return
 
+    const sessionRequestId = sessionRequestIdRef.current
+    const historyRequestId = ++historyRequestIdRef.current
+    const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
+      && historyRequestIdRef.current === historyRequestId
     setLoadingHistory(true)
     api.getAppVersionHistory(token)
-      .then((items) => setHistory(items))
-      .catch(() => setHistory([]))
-      .finally(() => setLoadingHistory(false))
+      .then((items) => {
+        if (requestIsCurrent()) setHistory(items)
+      })
+      .catch(() => {
+        if (requestIsCurrent()) setHistory([])
+      })
+      .finally(() => {
+        if (requestIsCurrent()) setLoadingHistory(false)
+      })
   }, [api, history.length, loadingHistory, open, token])
 
   const selectedRelease = useMemo(() => {

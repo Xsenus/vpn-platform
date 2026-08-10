@@ -37,6 +37,18 @@ const appVersionRelease = {
   updatedAt: now
 }
 
+const staleAppVersionRelease = {
+  ...appVersionRelease,
+  id: 'release-cabinet-stale',
+  releaseId: '2026-08-09-cabinet-stale-history',
+  version: '0.572.0',
+  title: 'Устаревшая история обновлений',
+  summary: 'Этот ответ принадлежит завершённой сессии.',
+  items: [
+    { id: 'release-item-cabinet-stale', type: 'fixed', text: 'Старый ответ не должен попасть в новую сессию.', sortOrder: 10 }
+  ]
+}
+
 const subscription = {
   id: 'sub-active',
   userId: user.id,
@@ -360,6 +372,9 @@ async function mockCabinetApi(page: Page) {
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
   let appVersionAvailable = false
+  let delayNextAppVersionHistory = false
+  let delayedAppVersionHistoryReleased = false
+  let releaseDelayedAppVersionHistory: (() => void) | null = null
   let renewalOrderCreated = false
   let renewalOrder = {
     ...paidOrder,
@@ -703,6 +718,16 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/app-version/history') {
+      if (delayNextAppVersionHistory) {
+        delayNextAppVersionHistory = false
+        if (!delayedAppVersionHistoryReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedAppVersionHistory = resolve })
+        }
+        delayedAppVersionHistoryReleased = false
+        releaseDelayedAppVersionHistory = null
+        await fulfillJson(route, [staleAppVersionRelease])
+        return
+      }
       await fulfillJson(route, appVersionAvailable ? [appVersionRelease] : [])
       return
     }
@@ -759,6 +784,11 @@ async function mockCabinetApi(page: Page) {
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
     showAppVersionRelease: () => { appVersionAvailable = true },
+    delayNextAppVersionHistory: () => { delayNextAppVersionHistory = true },
+    releaseAppVersionHistory: () => {
+      delayedAppVersionHistoryReleased = true
+      releaseDelayedAppVersionHistory?.()
+    },
     markTelegramLinked: () => {
       telegramStatus = { isLinked: true, telegramUserId: 777001, username: 'cabinet_e2e', linkedAt: now }
     },
@@ -833,6 +863,44 @@ test('cabinet app version modal traps focus and restores its opener', async ({ p
   await expect.poll(() => page.evaluate(() => ({ inert: document.getElementById('root')?.inert, overflow: document.body.style.overflow })))
     .toEqual({ inert: false, overflow: '' })
   expect(browserErrors).toEqual([])
+})
+
+test('cabinet app version rejects history completed by a logged-out session', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.showAppVersionRelease()
+  api.delayNextAppVersionHistory()
+  await seedCabinetSession(page, 'access-token-version-old', 'refresh-token-version-old')
+
+  await page.goto('/')
+  const opener = page.getByRole('button', { name: 'Что нового' })
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)
+  await opener.click()
+  await expect(page.getByRole('dialog', { name: appVersionRelease.title })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/app-version/history')).toBe(1)
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  const authPanel = page.locator('#cabinet-auth-panel')
+  await authPanel.getByLabel('Email').fill(user.email)
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Войти' }).click()
+  await expect.poll(() => api.getAuthorizedRequestCount(
+    '/api/app-version/latest',
+    `Bearer access-token-${user.email}`
+  )).toBeGreaterThan(0)
+
+  await page.getByRole('button', { name: 'Что нового' }).click()
+  const currentDialog = page.getByRole('dialog', { name: appVersionRelease.title })
+  await expect(currentDialog).toBeVisible()
+  if (page.viewportSize()!.width <= 820) {
+    await currentDialog.getByRole('button', { name: 'История' }).click()
+  }
+  await expect.poll(() => api.getRequestCount('/api/app-version/history')).toBe(2)
+  api.releaseAppVersionHistory()
+
+  await expect(page.getByRole('button', { name: /Версия 0\.573\.0/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Версия 0\.572\.0/ })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('cabinet keeps the selected support thread when an older request finishes late', async ({ page }) => {

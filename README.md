@@ -214,7 +214,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - frontend unit tests: `125/125`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `126/126`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `128/128`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -307,7 +307,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - hidden admin forms не считаются capability boundary: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API;
 - admin action dispatcher проверяет capability целевого section во всех typed callsites; active Dashboard/Payments не разрешает hidden mutation другого раздела;
 - пункт «Помощь» в header личного кабинета открывает полноценную public-инструкцию `/help`; точный cabinet-to-public destination проверен source guard, desktop/mobile E2E и локальным браузером на 305 px;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-public-managed-error-content`, версия `0.590.0`;
-- roadmap progress: `603/623` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- cabinet «Что нового» привязан к текущей token/user session: logout/login сбрасывает loading/history state, а stale latest/history callbacks отклоняются request generation guards;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-app-version-session-boundary`, версия `0.591.0`;
+- roadmap progress: `604/624` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

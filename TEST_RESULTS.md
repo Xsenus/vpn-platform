@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet app-version session boundary
+
+Scope:
+- Latest release and release history must belong to the current cabinet token/user session.
+- Logout/login must not let stale pending callbacks block or overwrite the next session's «Что нового» state.
+
+Results:
+- Roadmap progress: `604/624` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-app-version-session-boundary`, version `0.591.0`.
+- Reproduction before fix: the old session opened history with a delayed response, then logout/login left `loadingHistory=true`; targeted desktop browser was `0/1`, with `expected 2` history requests and `actual 1`.
+- After fix: token/user changes invalidate session/latest/history request generations and reset latest, history, selected release and loading state; stale `then`, `catch` and `finally` callbacks are no-ops.
+- Targeted app-version browser: desktop/mobile `2/2`; full cabinet desktop/mobile regression: `26/26`; source unit guard: `1/1`.
+- Final visual audit: full console-responsive Playwright `128/128` in `9.6 min`; all-screens `6/6`, including every admin section on 25 viewport configurations `305x568..2560x1440`.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `590` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public managed error content
 
 Scope:
