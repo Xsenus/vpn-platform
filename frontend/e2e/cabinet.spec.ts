@@ -1227,6 +1227,17 @@ test('cabinet preserves a restored session after a transient profile failure', a
   await expect(page.getByRole('alert')).toContainText('Не удалось выполнить запрос. Попробуйте еще раз.')
   await expect(page.getByText('profile_temporarily_unavailable')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Повторить загрузку' })).toBeEnabled()
+  for (const falseLoadedState of [
+    'Активных подписок',
+    'Подписок пока нет',
+    'VPN-ключей пока нет',
+    'Заказов нет',
+    'Платежей нет',
+    'Доступы не выдавались',
+    'Реферальных начислений нет'
+  ]) {
+    await expect(page.getByText(falseLoadedState, { exact: true })).toHaveCount(0)
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await expect(page.evaluate(() => ({
     access: sessionStorage.getItem('vpn-platform-cabinet-token'),

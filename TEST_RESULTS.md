@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet restored-data boundary
+
+Scope:
+- A transient failure during the initial load of a restored cabinet session must not look like successfully loaded zero metrics or empty private collections.
+- Recovery must preserve access/refresh tokens, remain explicit and layout-safe on desktop/mobile, and reveal private dashboard data only after a confirmed profile load.
+
+Results:
+- Roadmap progress: `613/633` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-restored-data-boundary`, version `0.600.0`.
+- Reproduction before fix: a persistent first profile `503` left the session recovery card visible together with zero aggregate tiles and false empty states for subscriptions, VPN keys, orders, payments, accesses and referral rewards; fail-first desktop/mobile was `0/2`.
+- After fix: `cabinetDataReady` keeps aggregate/private data surfaces unmounted while an active token has no confirmed profile; recovery/login/reset controls remain available, and existing session/request guards are unchanged.
+- Targeted recovery: desktop/mobile `2/2`; tokens remain in session storage, no private empty state is rendered, explicit retry restores the original profile and sends `0` refresh requests.
+- Full cabinet desktop/mobile regression: `38/38`; final console-responsive Playwright: `146/146` in `8.8 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: recovery screenshots at 1280 and 393 CSS px confirmed coherent vertical flow, readable controls/alert and no overlap/overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; cabinet bundle `364.41 kB`, gzip `105.46 kB`; admin bundle raw `521075`, gzip `139799`, largest `221403`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `599` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin detail recovery
 
 Scope:

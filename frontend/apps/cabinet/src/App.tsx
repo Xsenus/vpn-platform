@@ -158,6 +158,7 @@ export function App() {
   const showAuthValidation = authValidationErrors.length > 0 && Boolean(authEmail || authPassword || authDisplayName)
   const showResetRequestValidation = Boolean(resetEmail)
   const showResetConfirmValidation = Boolean(resetToken || newPassword)
+  const cabinetDataReady = !token || profile !== null
   const publicWebUrl = useMemo(
     () => resolveCabinetPublicWebUrl(configuredPublicWebUrl, typeof window === 'undefined' ? undefined : window.location),
     []
@@ -902,12 +903,14 @@ export function App() {
         <ValidationModeBadge label="Проверочный режим оплат" />
       </div>
 
-      <div className="grid section">
-        <StatTile label="Активных подписок" value={activeSubscriptions} />
-        <StatTile label="Всего заказов" value={orders.length} />
-        <StatTile label="Реферальных начислений" value={referrals.length} />
-        <StatTile label="Открытых обращений" value={openSupportConversations} />
-      </div>
+      {cabinetDataReady && (
+        <div className="grid section">
+          <StatTile label="Активных подписок" value={activeSubscriptions} />
+          <StatTile label="Всего заказов" value={orders.length} />
+          <StatTile label="Реферальных начислений" value={referrals.length} />
+          <StatTile label="Открытых обращений" value={openSupportConversations} />
+        </div>
+      )}
 
       <div id="user-help" className="section">
         <Card className="cabinet-help-card">
@@ -1195,6 +1198,8 @@ export function App() {
         </div>
       )}
 
+      {cabinetDataReady && (
+        <>
       <div className="section">
         <h2>Мои подписки</h2>
         {subscriptions.length === 0 && (
@@ -1525,6 +1530,8 @@ export function App() {
           </div>
         </Card>
       </div>
+        </>
+      )}
       </PageShell>
       <AppVersionGate
         api={api}

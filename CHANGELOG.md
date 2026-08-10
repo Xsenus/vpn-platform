@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.600.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-restored-data-boundary`.
+
+### Исправлено
+
+- При transient failure первичной загрузки сохранённой cabinet-сессии интерфейс больше не показывает нулевые метрики и ложные empty states о подписках, VPN-ключах, заказах, платежах, доступах и реферальных начислениях.
+- Recovery-карточка, русский alert, сохранённые access/refresh tokens и явный retry остаются доступны; приватные dashboard-поверхности появляются только после подтверждённой загрузки профиля и фактических данных.
+- Существующие session/request generation guards и refresh policy не менялись: transient failure не завершает сессию и не вызывает refresh token, успешный retry восстанавливает исходный кабинет.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: при recovery одновременно отображалась ложная метрика «Активных подписок». После исправления targeted recovery прошёл `2/2`, токены сохраняются, retry возвращает профиль без refresh-запроса.
+- Полный cabinet desktop/mobile regression прошёл `38/38`; login/refresh/logout, payment/renewal, QR, Telegram, support races и app-version lifecycle остались зелёными.
+- Полный console-responsive Playwright прошёл `146/146` за `8.8 min`, без failed/flaky/skipped; all-screens `6/6` на 25 viewport-конфигурациях. Recovery UI просмотрен на 1280/393 px без overflow и overlap.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; cabinet bundle `364.41/105.46 kB`, admin bundle budget `521075/139799/max 221403`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `599`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `613/633` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.599.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-detail-recovery`.

@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-11-admin-detail-recovery`, версия `0.599.0`; transient errors user overview и VPN panel details остаются в выбранных карточках, исключают false selection/empty states и имеют explicit retry без logout/reload.
-- roadmap progress: `612/632` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-11-cabinet-restored-data-boundary`, версия `0.600.0`; transient restored-session failure сохраняет cabinet-сессию, показывает recovery без false aggregate/private empty states и восстанавливает фактические данные явным retry.
+- roadmap progress: `613/633` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

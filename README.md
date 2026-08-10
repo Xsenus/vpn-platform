@@ -313,7 +313,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - app-version history выполняет одну attempt после failure/empty response и показывает русский alert с явным retry без request flood;
 - ручная latest-загрузка «Что нового» показывает loading/error/empty modal и явный retry; history ждёт загруженный текущий релиз;
 - cabinet provider discovery выполняет одну token-scoped initial attempt под StrictMode и восстанавливает payment select явным retry без logout/reload;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-admin-detail-recovery`, версия `0.599.0`;
-- roadmap progress: `612/632` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-restored-data-boundary`, версия `0.600.0`;
+- roadmap progress: `613/633` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
