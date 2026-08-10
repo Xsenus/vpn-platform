@@ -155,17 +155,20 @@
   grid-column: 1 / -1;
 }
 
-.payment-providers-error {
+.payment-providers-error,
+.support-messages-error {
   display: grid;
   justify-items: start;
   gap: 10px;
 }
 
-.payment-providers-error p {
+.payment-providers-error p,
+.support-messages-error p {
   margin: 0;
 }
 
-.payment-providers-error .button {
+.payment-providers-error .button,
+.support-messages-error .button {
   max-width: 100%;
   white-space: normal;
 }

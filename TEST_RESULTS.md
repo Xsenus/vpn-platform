@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet support-message retry
+
+Scope:
+- A transient messages failure for the selected support conversation must remain inside the thread and must not look like a successfully loaded empty conversation.
+- Recovery must be explicit, session-safe and layout-safe on desktop/mobile without logout, reload or conversation reselection.
+
+Results:
+- Roadmap progress: `610/630` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-support-messages-retry`, version `0.597.0`.
+- Reproduction before fix: persistent `503` sent the message-load failure to the global banner, rendered «Сообщений нет» inside the selected thread and exposed no retry; fail-first desktop/mobile was `0/2`.
+- After fix: the selected thread owns `supportMessagesError`, hides the empty state on failure and exposes a generation-guarded explicit retry; session rejection still follows the terminal authenticated-error path.
+- Targeted support recovery: desktop/mobile `2/2`; one failed request remains settled for `300 ms`, explicit retry sends request two, restores the original message and removes the scoped alert without horizontal overflow.
+- Full cabinet desktop/mobile regression: `38/38`; final console-responsive Playwright: `140/140` in `8.5 min`; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: support error/retry screenshots at 1280 and 393 CSS px confirmed readable wrapping, stable reply controls and no overlap/overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; cabinet bundle raw `364.36 kB`, gzip `105.45 kB`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `596` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet payment-provider retry
 
 Scope:

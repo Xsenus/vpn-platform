@@ -350,6 +350,8 @@ async function mockCabinetApi(page: Page) {
   const supportMessagesByConversationId = new Map<string, unknown[]>()
   let telegramStatus = { isLinked: false, telegramUserId: null as number | null, username: null as string | null, linkedAt: null as string | null }
   let delayedSupportConversationId: string | null = null
+  let supportMessagesFailureConversationId: string | null = null
+  let supportMessagesFailureStatus = 503
   let delayedSupportMessagesReleased = false
   let releaseDelayedSupportMessages: (() => void) | null = null
   let logoutShouldFail = false
@@ -587,6 +589,10 @@ async function mockCabinetApi(page: Page) {
     const supportMessagesMatch = path.match(/^\/api\/me\/support\/conversations\/([^/]+)\/messages$/)
     if (method === 'GET' && supportMessagesMatch) {
       const conversationId = decodeURIComponent(supportMessagesMatch[1])
+      if (supportMessagesFailureConversationId === conversationId) {
+        await fulfillJson(route, { error: 'support_messages_temporarily_unavailable' }, supportMessagesFailureStatus)
+        return
+      }
       if (delayedSupportConversationId === conversationId) {
         if (!delayedSupportMessagesReleased) {
           await new Promise<void>((resolve) => { releaseDelayedSupportMessages = resolve })
@@ -808,6 +814,11 @@ async function mockCabinetApi(page: Page) {
       delayedSupportConversationId = conversationId
       delayedSupportMessagesReleased = false
     },
+    failSupportMessages: (conversationId: string, status = 503) => {
+      supportMessagesFailureConversationId = conversationId
+      supportMessagesFailureStatus = status
+    },
+    allowSupportMessages: () => { supportMessagesFailureConversationId = null },
     releaseSupportMessages: () => {
       delayedSupportMessagesReleased = true
       releaseDelayedSupportMessages?.()
@@ -1076,6 +1087,29 @@ test('cabinet payment providers fail once and recover only on explicit retry', a
   await expect(providerSelect).toHaveValue('YooKassa')
   await expect(page.getByText('Доступно способов оплаты: 1.')).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить способы оплаты' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet support messages failure stays scoped and recovers on explicit retry', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.useSupportConversationRaceFixture()
+  api.failSupportMessages('support-first')
+  await seedCabinetSession(page, 'access-token-support-retry', 'refresh-token-support-retry')
+
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: /Первая переписка/ })).toBeVisible()
+  const messagesPath = '/api/me/support/conversations/support-first/messages'
+  await expect.poll(() => api.getRequestCount(messagesPath)).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount(messagesPath)).toBe(1)
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить переписку поддержки' })).toHaveCount(1)
+  await expect(page.getByRole('heading', { name: 'Сообщений нет' })).toHaveCount(0)
+
+  api.allowSupportMessages()
+  await page.getByRole('button', { name: 'Повторить загрузку переписки' }).click()
+  await expect.poll(() => api.getRequestCount(messagesPath)).toBe(2)
+  await expect(page.getByText('Секрет первой переписки', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить переписку поддержки' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

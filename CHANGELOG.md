@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.597.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-support-messages-retry`.
+
+### Исправлено
+
+- Ошибка загрузки сообщений выбранного обращения больше не уходит в общий banner и не маскируется ложным состоянием «Сообщений нет».
+- В области переписки появился один доступный русский alert с явной кнопкой «Повторить загрузку переписки»; восстановление не требует logout или reload.
+- Retry сохраняет выбранное обращение и использует существующие session/request generation guards, поэтому устаревший ответ другой переписки или сессии не может заменить актуальные сообщения.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: scoped alert и retry отсутствовали, одновременно показывалось ложное пустое состояние. После исправления targeted desktop/mobile прошёл `2/2`: одна failed attempt остаётся settled, второй запрос восстанавливает исходные сообщения.
+- Полный cabinet desktop/mobile regression прошёл `38/38`; support race/logout/draft/status и остальные cabinet операции остались зелёными.
+- Полный console-responsive Playwright прошёл `140/140` за `8.5 min`, all-screens `6/6` на 25 viewport-конфигурациях; error/retry область отдельно просмотрена на 1280/393 px без overflow и overlap.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; cabinet bundle `364.36 kB`, gzip `105.45 kB`, admin bundle budget `519433/139444/max 219849`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `596`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `610/630` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.596.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-payment-provider-retry`.

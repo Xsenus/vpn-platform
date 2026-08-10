@@ -105,6 +105,7 @@ export function App() {
   const [supportOrderId, setSupportOrderId] = useState('')
   const [supportSubscriptionId, setSupportSubscriptionId] = useState('')
   const [supportLoading, setSupportLoading] = useState(false)
+  const [supportMessagesError, setSupportMessagesError] = useState('')
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatusDto | null>(null)
   const [telegramLink, setTelegramLink] = useState<TelegramLinkTokenDto | null>(null)
   const [paymentProviders, setPaymentProviders] = useState<PublicPaymentProviderDto[]>([])
@@ -200,6 +201,7 @@ export function App() {
     supportMessagesRequestId.current += 1
     setSupportMessages([])
     setSupportLoading(false)
+    setSupportMessagesError('')
     setSupportReplyText('')
     setSelectedSupportConversationId(conversationId)
   }
@@ -234,6 +236,7 @@ export function App() {
     setSupportOrderId('')
     setSupportSubscriptionId('')
     setSupportLoading(false)
+    setSupportMessagesError('')
     setTelegramStatus(null)
     setTelegramLink(null)
     setPaymentProviders([])
@@ -437,14 +440,20 @@ export function App() {
 
     setSupportMessages([])
     setSupportLoading(true)
+    setSupportMessagesError('')
     try {
       const messages = await api.getMySupportMessages(currentToken, conversationId)
       if (!requestIsCurrent()) return false
       setSupportMessages(messages)
+      setSupportMessagesError('')
       return true
     } catch (e) {
       if (!requestIsCurrent()) return false
-      handleAuthenticatedError(e, 'Не удалось загрузить переписку поддержки')
+      if (isCabinetSessionRejected(e)) {
+        handleAuthenticatedError(e, 'Не удалось загрузить переписку поддержки')
+      } else {
+        setSupportMessagesError(normalizeApiError(e, 'Не удалось загрузить переписку поддержки'))
+      }
       return false
     } finally {
       if (requestIsCurrent()) setSupportLoading(false)
@@ -463,6 +472,7 @@ export function App() {
       supportMessagesRequestId.current += 1
       setSupportMessages([])
       setSupportLoading(false)
+      setSupportMessagesError('')
       return
     }
 
@@ -1428,7 +1438,15 @@ export function App() {
 
               <div className="support-thread">
                 {supportLoading && <LoadingBlock label="Загружаем переписку..." />}
-                {!supportLoading && selectedSupportConversation && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Переписка появится после первого сообщения." />}
+                {supportMessagesError && selectedSupportConversation && (
+                  <div className="toast-error support-messages-error" role="alert">
+                    <p>Не удалось загрузить переписку поддержки: {supportMessagesError}</p>
+                    <PrimaryButton type="button" className="button-secondary" disabled={supportLoading} aria-busy={supportLoading} onClick={() => void loadSupportMessages(selectedSupportConversation.id, token, sessionOperationId.current)}>
+                      Повторить загрузку переписки
+                    </PrimaryButton>
+                  </div>
+                )}
+                {!supportLoading && !supportMessagesError && selectedSupportConversation && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Переписка появится после первого сообщения." />}
                 {!selectedSupportConversation && supportConversations.length > 0 && <EmptyState title="Выберите обращение" description="Откройте обращение из списка, чтобы увидеть переписку." />}
                 {supportMessages.map((message) => (
                   <div key={message.id} className={`support-message support-message-${message.direction}`}>
