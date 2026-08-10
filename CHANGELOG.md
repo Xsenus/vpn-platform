@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.559.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-provisioning-validation-lifecycle-e2e`.
+
+### Улучшено
+
+- Admin browser regression выполняет health-check, dry-run precheck, прямую validation preparation и deploy/cancel/retry/support lifecycle подготовки VPS на desktop/mobile.
+- Stateful mock API сохраняет provisioning runs и проверяет допустимые переходы `ReadyToDeploy -> DeployQueued -> Cancelled -> Retrying`, payload и authorization.
+- Confirm-dialog показывает validation mode и operator warning; reload сохраняет run state без вызова реального SSH/Ansible.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `90/90`; safe provisioning lifecycle проходит `2/2`, all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- Реальные VPS/SSH/Ansible, staging/live payment/production-like 3x-ui, provider, Telegram и SMTP evidence не переиспользовались.
+- Roadmap: `572/592` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.558.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-vpn-infrastructure-secure-lifecycle-e2e`.

@@ -383,6 +383,22 @@ function provisioningRun(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function provisioningCommand(serverId: string, runId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    serverId,
+    runId,
+    status: 'queued',
+    dryRun: true,
+    mode: 'dry-run',
+    modeTitle: 'Dry-run precheck',
+    riskLevel: 'safe',
+    liveDeployAllowed: false,
+    nextAction: 'Проверьте precheck перед validation deploy.',
+    operatorWarning: 'Dry-run не меняет VPS.',
+    ...overrides
+  }
+}
+
 function telegramBotSettings(overrides: Record<string, unknown> = {}) {
   return {
     enabled: false,
@@ -447,6 +463,7 @@ async function mockAdminApi(page: Page) {
   const faqEntries: Array<Record<string, unknown>> = []
   const siteContentBlocks: Array<Record<string, unknown>> = []
   const servers = [vpnServer()]
+  const provisioningRuns = [provisioningRun()]
   const panels = [
     vpnPanel(),
     vpnPanel({
@@ -1263,6 +1280,70 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    const serverHealthMatch = path.match(/^\/api\/admin\/servers\/([^/]+)\/health-check$/)
+    if (serverHealthMatch && method === 'POST') {
+      const index = servers.findIndex((item) => item.id === serverHealthMatch[1])
+      if (index >= 0) {
+        servers[index] = vpnServer({ ...servers[index], healthStatus: 'Healthy', lastHealthCheckAt: now, lastHealthLatencyMs: 18, lastHealthError: '', updatedAt: now })
+      }
+      await fulfillJson(route, { id: 'health-created-e2e', nodeId: serverHealthMatch[1], status: 'Healthy', checkedAt: now, latencyMs: 18, metadataJson: '{"source":"playwright"}', errorText: '' })
+      return
+    }
+
+    const serverPrecheckMatch = path.match(/^\/api\/admin\/servers\/([^/]+)\/precheck$/)
+    if (serverPrecheckMatch && method === 'POST') {
+      const server = servers.find((item) => item.id === serverPrecheckMatch[1])
+      const runId = 'provisioning-precheck-created-e2e'
+      if (!provisioningRuns.some((item) => item.id === runId)) {
+        provisioningRuns.unshift(provisioningRun({
+          id: runId,
+          nodeId: serverPrecheckMatch[1],
+          nodeName: `${server?.name ?? 'VPS'} Precheck E2E`,
+          targetHost: server?.host ?? 'unknown.example.test',
+          status: 'ReadyToDeploy',
+          currentStep: 'ready_to_deploy',
+          precheckReportPreview: 'Stateful browser precheck ready.',
+          executionLog: 'dry-run precheck completed',
+          executionLogPreview: 'dry-run precheck completed'
+        }))
+      }
+      await fulfillJson(route, provisioningCommand(serverPrecheckMatch[1], runId, { status: 'ReadyToDeploy' }))
+      return
+    }
+
+    const serverProvisionMatch = path.match(/^\/api\/admin\/servers\/([^/]+)\/provision$/)
+    if (serverProvisionMatch && method === 'POST') {
+      const server = servers.find((item) => item.id === serverProvisionMatch[1])
+      const runId = 'provisioning-direct-created-e2e'
+      if (!provisioningRuns.some((item) => item.id === runId)) {
+        provisioningRuns.unshift(provisioningRun({
+          id: runId,
+          nodeId: serverProvisionMatch[1],
+          nodeName: `${server?.name ?? 'VPS'} Validation E2E`,
+          targetHost: server?.host ?? 'unknown.example.test',
+          status: 'DeployQueued',
+          currentStep: 'deploy_queued',
+          dryRun: false,
+          mode: 'validation-deploy',
+          modeTitle: 'Validation deploy',
+          riskLevel: 'low',
+          nextAction: 'Дождитесь validation result.',
+          operatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+          finishedAt: null
+        }))
+      }
+      await fulfillJson(route, provisioningCommand(serverProvisionMatch[1], runId, {
+        status: 'DeployQueued',
+        dryRun: false,
+        mode: 'validation-deploy',
+        modeTitle: 'Validation deploy',
+        riskLevel: 'low',
+        nextAction: 'Дождитесь validation result.',
+        operatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.'
+      }))
+      return
+    }
+
     if (method === 'DELETE' && path === '/api/admin/servers/server-eu') {
       await fulfillJson(route, { id: 'server-eu', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 2, linkedMigrationJobs: 1 })
       return
@@ -1281,7 +1362,49 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/provisioning-runs') {
-      await fulfillJson(route, invalidProvisioningRunsResponse ? [{}] : [provisioningRun()])
+      await fulfillJson(route, invalidProvisioningRunsResponse ? [{}] : provisioningRuns)
+      return
+    }
+
+    const provisioningActionMatch = path.match(/^\/api\/admin\/provisioning-runs\/([^/]+)\/(deploy|cancel|retry|support-needed)$/)
+    if (provisioningActionMatch && method === 'POST') {
+      const runId = provisioningActionMatch[1]
+      const action = provisioningActionMatch[2]
+      const index = provisioningRuns.findIndex((item) => item.id === runId)
+      const run = provisioningRuns[index]
+      if (action === 'cancel') {
+        provisioningRuns[index] = provisioningRun({ ...run, status: 'Cancelled', currentStep: 'cancelled', finishedAt: now, updatedAt: now })
+        await fulfillJson(route, { runId, status: 'cancelled' })
+        return
+      }
+      if (action === 'support-needed') {
+        await fulfillJson(route, { runId, supportConversationId: 'support-provisioning-e2e' })
+        return
+      }
+      const retry = action === 'retry'
+      provisioningRuns[index] = provisioningRun({
+        ...run,
+        status: retry ? 'Retrying' : 'DeployQueued',
+        currentStep: retry ? 'retrying' : 'deploy_queued',
+        dryRun: false,
+        mode: 'validation-deploy',
+        modeTitle: 'Validation deploy',
+        riskLevel: 'low',
+        nextAction: retry ? 'Дождитесь повторной validation-попытки.' : 'Дождитесь validation deploy.',
+        operatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
+        attemptCount: Number(run?.attemptCount ?? 0) + (retry ? 1 : 0),
+        finishedAt: null,
+        updatedAt: now
+      })
+      await fulfillJson(route, provisioningCommand(String(run?.nodeId ?? 'server-eu'), runId, {
+        status: retry ? 'Retrying' : 'DeployQueued',
+        dryRun: false,
+        mode: 'validation-deploy',
+        modeTitle: 'Validation deploy',
+        riskLevel: 'low',
+        nextAction: retry ? 'Дождитесь повторной validation-попытки.' : 'Дождитесь validation deploy.',
+        operatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.'
+      }))
       return
     }
 
@@ -2170,6 +2293,74 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
 
   expect(api.getAuthorizedRequestCount('/api/admin/servers', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)
   expect(api.getAuthorizedRequestCount('/api/admin/vpn-panels', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin provisioning supports safe validation lifecycle', async ({ page }) => {
+  test.setTimeout(150_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-provisioning-token', 'admin-provisioning-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Серверы', 'nodes')
+  const nodesPanel = page.locator('#nodes')
+  const serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' }).first()
+  await serverRow.getByRole('button', { name: 'Health-check' }).click()
+  await expect(page.getByText('Health-check EU Sandbox: Healthy')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-eu/health-check', 'POST')?.authorization).toBe('Bearer admin-provisioning-token')
+
+  await serverRow.getByRole('button', { name: 'Precheck VPS' }).click()
+  await expect(page.getByText('Проверка поставлена в очередь. Режим: Dry-run precheck. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-eu/precheck', 'POST')?.body).toEqual({})
+
+  await serverRow.getByRole('button', { name: 'Подготовить' }).click()
+  await expect(nodesPanel.getByRole('dialog')).toContainText('Validation deploy')
+  await expect(nodesPanel.getByRole('dialog')).toContainText('не меняет рабочую инфраструктуру')
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Подготовка сервера поставлена в очередь. Режим: Validation deploy; риск: низкий риск. ID запуска: provisioning-direct-created-e2e')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-eu/provision', 'POST')?.body).toEqual({ dryRun: false })
+
+  await openAdminSection(page, 'Подготовка VPS', 'provisioning')
+  const provisioningPanel = page.locator('#provisioning')
+  let precheckRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox Precheck E2E' })
+  await expect(precheckRow).toContainText('Stateful browser precheck ready.')
+  await expect(precheckRow.getByRole('button', { name: 'Повторить' })).toBeDisabled()
+  await expect(precheckRow.getByRole('button', { name: 'Развернуть' })).toBeEnabled()
+  await expect(precheckRow.getByRole('button', { name: 'Отменить' })).toBeEnabled()
+
+  await precheckRow.getByRole('button', { name: 'Развернуть' }).click()
+  await expect(provisioningPanel.getByRole('dialog')).toContainText('Validation deploy')
+  await expect(provisioningPanel.getByRole('dialog')).toContainText('не меняет рабочую инфраструктуру')
+  await provisioningPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Развертывание поставлено в очередь. Режим: Validation deploy; риск: низкий риск. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/deploy', 'POST')?.body).toEqual({})
+
+  precheckRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox Precheck E2E' })
+  await expect(precheckRow.getByRole('button', { name: 'Развернуть' })).toBeDisabled()
+  await precheckRow.getByRole('button', { name: 'Отменить' }).click()
+  await provisioningPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Запуск подготовки сервера отменен.')).toBeVisible()
+  await expect(precheckRow.getByRole('button', { name: 'Повторить' })).toBeEnabled()
+
+  await precheckRow.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByText('Повтор поставлен в очередь. Режим: Validation deploy. Новый ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/retry', 'POST')?.authorization).toBe('Bearer admin-provisioning-token')
+  await precheckRow.getByRole('button', { name: 'Нужна поддержка' }).click()
+  await expect(page.getByText('Обращение в поддержку: support-provisioning-e2e')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  precheckRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox Precheck E2E' })
+  await expect(precheckRow).toContainText('Попытка 1')
+  await expect(provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox Validation E2E' })).toBeVisible()
+  expect(api.getAuthorizedRequestCount('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/support-needed', 'POST', 'Bearer admin-provisioning-token')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })
