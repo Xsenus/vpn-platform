@@ -797,7 +797,7 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
 
   await page.getByRole('button', { name: 'Купить' }).first().click()
   await expect(page).toHaveURL(/\/account$/)
-  await expect(page.getByRole('heading', { name: 'Аккаунт' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Аккаунт', exact: true })).toBeVisible()
   await expect(page.getByText('Покупка сохранена')).toBeVisible()
   await expect(page.getByText('Start 30 дней')).toBeVisible()
 

@@ -2873,6 +2873,7 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /role="tablist"/)
   assert.match(adminSource, /role="tab"/)
   assert.match(adminSource, /role="tabpanel"/)
+  assert.match(adminSource, /id="payments" className="section" role="tabpanel"/)
   assert.match(adminSource, /aria-controls=\{id\}/)
   assert.match(adminSource, /aria-labelledby=\{adminSectionTabId/)
   assert.match(adminSource, /admin-section-select/)

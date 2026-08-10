@@ -67,3 +67,10 @@ PNG создаются только при явном флаге внутри `f
 - Representative public, account, cabinet и admin screenshots проверены вручную на desktop/mobile; временные PNG очищены.
 - `npm run e2e:all-screens --prefix frontend`: `6/6`; полный `npm run e2e:console --prefix frontend`: `78/78`.
 - Latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`.
+
+## Результат 2026-08-10
+
+- Критический admin flow выполняет notification retry, payment/order recheck, refund, subscription/VPN mutations и support reply/note/status на desktop/mobile.
+- Public account assertion использует точное accessible name, а последовательный axe-аудит 17 admin sections имеет достаточный timeout без исключения правил.
+- `npm run e2e:console --prefix frontend`: `78/78`; all-screens: `6/6`.
+- Latest "Что нового": `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`.

@@ -3621,7 +3621,8 @@ export function App() {
         </Card>
       </div>
 
-      <div id="payments" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('payments')} hidden={activeSection !== 'payments'}>
+      <div id="payments" className="section" role="tabpanel" aria-labelledby={adminSectionTabId('payments')} hidden={activeSection !== 'payments'}>
+        <div className="card-list-two">
         <Card>
           <h3>{editingProviderAccountId ? 'Редактирование способа оплаты' : 'Способы оплаты'}</h3>
           <p className="muted">Добавьте платежный аккаунт, включите его и проверьте готовность к оплатам. Секреты сохраняются скрыто.</p>
@@ -3735,9 +3736,9 @@ export function App() {
             ))}
           </div>
         </Card>
-      </div>
+        </div>
 
-      <div className="section card-list-two" hidden={activeSection !== 'payments'}>
+        <div className="section card-list-two">
         <Card>
           <h3>Заказы</h3>
           <div className="toolbar">
@@ -3825,6 +3826,7 @@ export function App() {
             {refunds.slice(0, 4).map((refund) => <div key={refund.id} className="list-item"><span>Возврат {refund.amount} {refund.currency} · {refund.providerRefundId || shortId(refund.id)}</span><StatusBadge value={refund.status} /></div>)}
           </div>
         </Card>
+        </div>
       </div>
 
       <div id="tariffs" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('tariffs')} hidden={activeSection !== 'tariffs'}>

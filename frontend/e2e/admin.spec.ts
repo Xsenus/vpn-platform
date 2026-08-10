@@ -631,6 +631,11 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/admin/notification-deliveries/notification-e2e/retry') {
+      await fulfillJson(route, { id: 'notification-e2e', status: 'Pending', nextAttemptAt: now })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/users') {
       await fulfillJson(route, invalidUsersResponse ? [{}] : users)
       return
@@ -663,6 +668,32 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/extend') {
+      await fulfillJson(route, { id: 'sub-e2e', status: 'Active', endAt: '2026-08-12T07:00:00Z', gracePeriodEndAt: '2026-08-15T07:00:00Z' })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/sync-access') {
+      await fulfillJson(route, {
+        id: 'sub-e2e',
+        currentAccessId: 'access-e2e',
+        access: { id: 'access-e2e', status: 'Active', disabledAt: null, lastSyncedAt: now, revision: 2, usedTrafficBytes: 0, message: 'synced' }
+      })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/block') {
+      subscriptions[0] = { ...subscriptions[0], status: 'Blocked', updatedAt: now }
+      await fulfillJson(route, { id: 'sub-e2e', status: 'Blocked', blockReason: 'manual_admin_action' })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/unblock') {
+      subscriptions[0] = { ...subscriptions[0], status: 'Active', updatedAt: now }
+      await fulfillJson(route, { id: 'sub-e2e', status: 'Active' })
+      return
+    }
+
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/cancel') {
       subscriptions[0] = { ...subscriptions[0], status: 'Cancelled', currentServerId: null, currentAccessId: null, updatedAt: now }
       await fulfillJson(route, { id: 'sub-e2e', status: 'Cancelled', cancelledAt: now })
@@ -687,13 +718,38 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    const accessActionMatch = path.match(/^\/api\/admin\/access-credentials\/access-e2e\/(disable|sync|reset-traffic)$/)
+    if (method === 'POST' && accessActionMatch) {
+      const status = accessActionMatch[1] === 'disable' ? 'Disabled' : 'Active'
+      await fulfillJson(route, {
+        id: 'access-e2e',
+        status,
+        disabledAt: status === 'Disabled' ? now : null,
+        lastSyncedAt: now,
+        revision: 2,
+        usedTrafficBytes: 0,
+        message: accessActionMatch[1]
+      })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/orders') {
       await fulfillJson(route, [{ id: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', userEmail: 'client@example.test', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', amount: 590, currency: 'RUB', status: 'PaymentReceived', type: 'NewSubscription', channel: 'Web', paymentProvider: 'YooKassa', checkoutSessionId: null, expiresAt: '2026-06-14T07:00:00Z', paidAt: now, isFirstPurchase: true, paymentAttemptsCount: 1, lastPaymentId: 'payment-e2e', lastPaymentStatus: 'Succeeded', lastPaymentProvider: 'YooKassa', linkedSubscriptionId: 'sub-e2e', createdAt: now, updatedAt: now }])
       return
     }
 
     if (method === 'GET' && path === '/api/admin/payments') {
-      await fulfillJson(route, [{ id: 'payment-e2e', orderId: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', provider: 'YooKassa', paymentProviderAccountId: 'provider-yookassa', providerMode: 'Sandbox', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', idempotencyKey: 'idem-admin-e2e', confirmationUrl: 'http://127.0.0.1:5295/payments/return', returnUrl: 'http://127.0.0.1:5295', amount: 590, currency: 'RUB', status: 'Succeeded', signatureValidated: true, isActivationProcessed: true, activationProcessedAt: now, paidAt: now, failedAt: null, refundedAt: null, refundedAmount: 0, statusReason: null, webhookEventsCount: 1, refundsCount: 0, refundSupported: true, canRefund: false, refundableAmount: 0, refundBlockers: [], createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'payment-e2e', orderId: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', provider: 'YooKassa', paymentProviderAccountId: 'provider-yookassa', providerMode: 'Sandbox', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', idempotencyKey: 'idem-admin-e2e', confirmationUrl: 'http://127.0.0.1:5295/payments/return', returnUrl: 'http://127.0.0.1:5295', amount: 590, currency: 'RUB', status: 'Succeeded', signatureValidated: true, isActivationProcessed: true, activationProcessedAt: now, paidAt: now, failedAt: null, refundedAt: null, refundedAmount: 0, statusReason: null, webhookEventsCount: 1, refundsCount: 0, refundSupported: true, canRefund: true, refundableAmount: 590, refundBlockers: [], createdAt: now, updatedAt: now }])
+      return
+    }
+
+    if (method === 'POST' && (path === '/api/admin/payments/payment-e2e/recheck' || path === '/api/admin/orders/order-e2e/recheck-payment')) {
+      await fulfillJson(route, { orderId: 'order-e2e', paymentId: 'payment-e2e', status: 'Succeeded', rawResponse: '{}', statusReason: null })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/payments/payment-e2e/refund') {
+      await fulfillJson(route, { id: 'refund-e2e', paymentAttemptId: 'payment-e2e', provider: 'YooKassa', providerRefundId: 'rf-e2e', status: 'Succeeded', amount: Number((body as Record<string, unknown>)?.amount ?? 0), currency: 'RUB', reason: String((body as Record<string, unknown>)?.reason ?? ''), createdAt: now, refundedAt: now })
       return
     }
 
@@ -758,6 +814,41 @@ async function mockAdminApi(page: Page) {
         : item)
       const updated = supportConversations.find((item) => item.id === conversationId)
       await fulfillJson(route, { conversationId, status: nextStatus, revision: updated?.revision ?? 0 })
+      return
+    }
+
+    const supportReplyMatch = path.match(/^\/api\/admin\/support\/conversations\/([^/]+)\/reply$/)
+    if (method === 'POST' && supportReplyMatch) {
+      const conversationId = decodeURIComponent(supportReplyMatch[1])
+      const text = String((body as Record<string, unknown>)?.text ?? '')
+      const currentMessages = supportMessages.get(conversationId) ?? []
+      supportMessages.set(conversationId, [...currentMessages, {
+        ...adminSupportMessage(`reply-${currentMessages.length + 1}`, conversationId, 'admin-user', text),
+        direction: 'outbound'
+      }])
+      supportConversations = supportConversations.map((item) => item.id === conversationId
+        ? { ...item, revision: item.revision + 1, updatedAt: now }
+        : item)
+      const updated = supportConversations.find((item) => item.id === conversationId)
+      await fulfillJson(route, { conversationId, status: updated?.status ?? 'open', revision: updated?.revision ?? 0 })
+      return
+    }
+
+    const supportNoteMatch = path.match(/^\/api\/admin\/support\/conversations\/([^/]+)\/notes$/)
+    if (method === 'POST' && supportNoteMatch) {
+      const conversationId = decodeURIComponent(supportNoteMatch[1])
+      const text = String((body as Record<string, unknown>)?.text ?? '')
+      const currentMessages = supportMessages.get(conversationId) ?? []
+      const note = {
+        ...adminSupportMessage(`note-${currentMessages.length + 1}`, conversationId, 'admin-user', text),
+        direction: 'internal',
+        isInternalNote: true
+      }
+      supportMessages.set(conversationId, [...currentMessages, note])
+      supportConversations = supportConversations.map((item) => item.id === conversationId
+        ? { ...item, revision: item.revision + 1, internalNote: text, updatedAt: now }
+        : item)
+      await fulfillJson(route, note)
       return
     }
 
@@ -1353,8 +1444,8 @@ async function openAdminSection(page: Page, name: string, id: string) {
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
 
-test('admin panel covers login, payments, tariffs, VPN panels, scenarios and releases', async ({ page }, testInfo) => {
-  test.setTimeout(90_000)
+test('admin panel covers login and critical operational mutations across all sections', async ({ page }, testInfo) => {
+  test.setTimeout(150_000)
   const consoleErrors: string[] = []
   const failedResponses: string[] = []
   page.on('console', (message) => {
@@ -1401,12 +1492,31 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(page.locator('a[href^="javascript:"]')).toHaveCount(0)
   await expect.poll(() => page.evaluate(() => (window as typeof window & { __adminReadinessLinkExecuted?: boolean }).__adminReadinessLinkExecuted ?? false)).toBe(false)
 
+  await openAdminSection(page, 'Аудит', 'audit')
+  const failedDelivery = page.locator('#audit .list-item').filter({ hasText: 'SMTP connection unavailable' })
+  await failedDelivery.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByText('Email-уведомление возвращено в очередь доставки.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/notification-deliveries/notification-e2e/retry')).toBeTruthy()
+
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.getByText('YooKassa sandbox')).toBeVisible()
   await page.locator('#payments').getByRole('button', { name: 'Проверить настройки' }).click()
   await expect(page.getByText('Настройки готовы', { exact: true })).toBeVisible()
   await expect(page.getByText('Конфигурация готова. Внешний кабинет провайдера не запрашивался.')).toBeVisible()
   expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-yookassa/check')).toBeTruthy()
+  const orderRow = page.locator('#payments .list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await expect(orderRow.getByRole('button', { name: 'Проверить оплату' })).toBeVisible({ timeout: 5_000 })
+  await orderRow.getByRole('button', { name: 'Проверить оплату' }).click()
+  await expect(page.getByText(/последний платеж .* проверен, статус Succeeded/)).toBeVisible()
+  const refundablePayment = page.locator('#payment-payment-e2e')
+  await expect(refundablePayment.getByRole('button', { name: 'Проверить статус' })).toBeVisible({ timeout: 5_000 })
+  await refundablePayment.getByRole('button', { name: 'Проверить статус' }).click()
+  await expect(page.getByText(/Платеж .* проверен: Succeeded/)).toBeVisible()
+  await refundablePayment.getByLabel('Причина').fill('playwright_refund')
+  await refundablePayment.getByRole('button', { name: 'Вернуть платеж' }).click()
+  await page.locator('#payments').getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Возврат rf-e2e: Succeeded')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payments/payment-e2e/refund')?.body).toEqual({ amount: 590, reason: 'playwright_refund' })
 
   await openAdminSection(page, 'Тарифы', 'tariffs')
   const tariffsPanel = page.locator('#tariffs')
@@ -1441,6 +1551,14 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await activeAccessRow.getByRole('button', { name: 'Показать QR' }).click()
   await expect(activeAccessRow.getByRole('img', { name: 'QR-код доступа access-e2e' })).toBeVisible()
   await expect(activeAccessRow.locator('svg')).toHaveCount(0)
+  await activeAccessRow.getByRole('button', { name: 'Отключить' }).click()
+  await page.locator('#vpn').getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('VPN-доступ отключен.')).toBeVisible()
+  await activeAccessRow.getByRole('button', { name: 'Синхронизировать' }).click()
+  await expect(page.getByText('VPN-доступ синхронизирован.')).toBeVisible()
+  await activeAccessRow.getByRole('button', { name: 'Сбросить трафик' }).click()
+  await page.locator('#vpn').getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Трафик VPN-доступа сброшен.')).toBeVisible()
   const revokedAccessRow = page.locator('#vpn .list-item-vertical').filter({ hasText: 'Доступ отозван.' })
   await expect(revokedAccessRow.getByText('Доступ отозван. Ключ и provider-команды скрыты; доступна только история.')).toBeVisible()
   await expect(revokedAccessRow.getByRole('button')).toHaveCount(0)
@@ -1459,6 +1577,16 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(cancelledSubscriptionRow.getByRole('button')).toHaveCount(0)
   await expect(cancelledSubscriptionRow.getByRole('spinbutton')).toHaveCount(0)
   await expect(cancelledSubscriptionRow.getByRole('combobox')).toHaveCount(0)
+  await subscriptionsPanel.getByRole('button', { name: 'Продлить' }).click()
+  await expect(page.getByText('Подписка продлена на 30 дней.')).toBeVisible()
+  await subscriptionsPanel.getByRole('button', { name: 'Синхронизировать доступ' }).click()
+  await expect(page.getByText('Текущий VPN-доступ подписки синхронизирован.')).toBeVisible()
+  await subscriptionsPanel.getByRole('button', { name: 'Заблокировать' }).click()
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText(/Подписка обновлена:/)).toBeVisible()
+  await subscriptionsPanel.getByRole('button', { name: 'Разблокировать' }).click()
+  await subscriptionsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText(/Подписка обновлена:/)).toBeVisible()
   await subscriptionsPanel.getByRole('combobox', { name: /Целевой сервер для миграции/ }).selectOption('auto')
   await subscriptionsPanel.getByRole('button', { name: 'Перенести', exact: true }).click()
   await expect(subscriptionsPanel.getByRole('dialog')).toContainText('Клиент будет создан на целевой панели')
@@ -1512,6 +1640,18 @@ test('admin panel covers login, payments, tariffs, VPN panels, scenarios and rel
   await expect(usPanelRow).toContainText('Емкость 5/1000')
   await usPanelRow.getByRole('button', { name: 'Синхронизировать' }).click()
   await expect(page.getByText('Синхронизация Succeeded: {"clients":1}')).toBeVisible()
+
+  await openAdminSection(page, 'Поддержка', 'support')
+  const supportPanel = page.locator('#support')
+  await supportPanel.getByLabel('Ответ пользователю').fill('Ответ пользователю из операционного E2E')
+  await supportPanel.getByRole('button', { name: 'Отправить через Telegram' }).click()
+  await expect(supportPanel.getByText('Ответ пользователю из операционного E2E', { exact: true })).toBeVisible()
+  await supportPanel.getByLabel('Внутренняя заметка').fill('Внутренняя заметка из операционного E2E')
+  await supportPanel.getByRole('button', { name: 'Добавить заметку' }).click()
+  await expect(supportPanel.getByText('Внутренняя заметка из операционного E2E', { exact: true })).toBeVisible()
+  const supportConversationRow = supportPanel.locator('.list-item-vertical').filter({ hasText: 'Проверка доступа' }).first()
+  await supportConversationRow.getByRole('button', { name: 'В ожидание' }).click()
+  await expect(page.getByText('Статус обращения обновлен: pending.')).toBeVisible()
 
   await openAdminSection(page, 'Сценарии', 'scenarios')
   const scenariosPanel = page.locator('#scenarios')

@@ -931,6 +931,7 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
 })
 
 test('every admin section renders without blank screens or browser errors', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 

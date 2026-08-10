@@ -1,6 +1,6 @@
 # Product/UI roadmap: сайт, кабинет и админка VPN Platform
 
-Дата актуализации: 2026-08-09.
+Дата актуализации: 2026-08-10.
 
 Этот документ был исходным продуктовым планом по единому сайту, кабинету и админке. Актуальный источник правды по production-ready статусу находится в [PRODUCT_COMPLETION_ROADMAP.md](PRODUCT_COMPLETION_ROADMAP.md). Здесь оставлен компактный продуктовый срез, чтобы старые незакрытые чекбоксы не противоречили фактическим проверкам.
 
@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `566/586` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -137,7 +137,8 @@
 - [x] Admin user/support detail views отбрасывают out-of-order и post-logout responses, очищают drafts при смене обращения и не загружают thread невыбранной status action.
 - [x] Admin mutations применяют state/reload только в исходной session operation, отклоняют duplicate submit и сохраняют новый form draft при delayed completion.
 - [x] Public/cabinet mutations отклоняют duplicate events, late session/unmount completion и сохраняют более новый support/reset draft.
-- [x] Latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`.
+- [x] Критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки проходят stateful desktop/mobile E2E; вся вкладка оплат находится в одном `tabpanel`.
+- [x] Latest "Что нового": `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`.
 
 ## Как вести дальше
 

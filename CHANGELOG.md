@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.553.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-critical-operations-e2e`.
+
+### Исправлено
+
+- Вкладка «Оплаты» теперь объединяет настройки провайдеров, заказы, платежи и возвраты в одном корректном `tabpanel`; переходы и scoped browser-действия больше не теряют визуально связанные операции.
+- Главный admin E2E выполняет повтор email-доставки, перепроверку заказа и платежа, возврат, продление/синхронизацию/блокировку подписки, disable/sync/reset VPN-доступа, ответ, внутреннюю заметку и смену статуса поддержки.
+- Public checkout использует точное accessible name заголовка аккаунта, а последовательный axe-аудит 17 admin-разделов получил реалистичный общий timeout без ослабления проверок.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `78/78`; критический admin flow проходит на desktop и mobile-admin, all-screens axe/responsive matrix проходит `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- Roadmap/release/strict UTF-8 guards `49/49` пройдены; временные Playwright traces/reports и frontend build artifacts очищены.
+- External VPS/staging/live payment/production-like 3x-ui и SMTP evidence не переиспользовалось.
+- Roadmap: `566/586` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.552.0 - 2026-08-09
 
 Release entry: `2026-08-09-automated-wcag-accessibility-gate`.

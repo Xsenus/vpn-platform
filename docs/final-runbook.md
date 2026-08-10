@@ -216,8 +216,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`.
-- roadmap progress: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`.
+- roadmap progress: `566/586` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

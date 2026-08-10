@@ -13056,5 +13056,32 @@
         "text": "Roadmap progress is 565/585 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Automated axe coverage does not replace manual acceptance. Real VPS/staging/payment/3x-ui evidence is still required, and real SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-critical-operations-e2e",
+    "version": "0.553.0",
+    "releasedAt": "2026-08-10T07:55:00+07:00",
+    "title": "Критические операции админки проверяются end-to-end",
+    "summary": "Desktop и mobile-admin сценарии выполняют операции уведомлений, оплат, подписок, VPN-доступа и поддержки, а вкладка оплат имеет единый корректный tabpanel.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Настройки платежных провайдеров, заказы, платежи и возвраты теперь находятся внутри одного доступного tabpanel вкладки «Оплаты»."
+      },
+      {
+        "type": "improved",
+        "text": "Admin E2E фактически выполняет повтор email-доставки, recheck и refund оплаты, управление подпиской и VPN-доступом, ответ, заметку и смену статуса поддержки на desktop/mobile."
+      },
+      {
+        "type": "fixed",
+        "text": "Public account locator различает точный заголовок, а axe-аудит 17 admin sections имеет достаточный общий timeout без исключения accessibility rules."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 566/586 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence and real SMTP delivery are still required externally."
+      }
+    ]
   }
 ]

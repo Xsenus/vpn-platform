@@ -1,6 +1,21 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-09.
+Дата проверки: 2026-08-10.
+
+## Check 2026-08-10: admin critical operations E2E and payments tab semantics
+
+Scope:
+- Главный admin browser flow расширен с навигационной проверки до фактического выполнения критических операций уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки.
+- Исправлена семантика вкладки «Оплаты»: настройки провайдеров, заказы, платежи и возвраты находятся внутри одного `tabpanel`; public/all-screens regressions получили точный accessible locator и устойчивый бюджет axe-аудита.
+
+Results:
+- Roadmap progress: `566/586` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-critical-operations-e2e`, version `0.553.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `78/78`; critical admin operations pass on desktop and mobile-admin; all-screens axe/responsive matrix: `6/6`.
+- Backend full suite: `1112/1112`; fresh local SQLite checkout/payment/subscription/VPN smoke: OK; secret scan: `657` files, `0` findings.
+- Roadmap/release/strict UTF-8 guards: `49/49`; generated Playwright reports, traces and frontend build directories removed after verification.
+- External evidence remains open for real VPS/staging/live payment/production-like 3x-ui and real SMTP delivery.
 
 ## Check 2026-08-09: automated WCAG accessibility gate
 

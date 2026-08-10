@@ -2,11 +2,11 @@
 
 Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
 
-Дата актуализации: 2026-08-09.
+Дата актуализации: 2026-08-10.
 
-Дата последней сверки: 2026-08-09.
+Дата последней сверки: 2026-08-10.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `565/585` проверяемых пунктов, готовность `96.6%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `566/586` проверяемых пунктов, готовность `96.6%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -1956,6 +1956,10 @@ git diff --check
   - Что сделать: существующий page quality smoke не должен ограничиваться landmarks, IDs, alt и именами controls; public, cabinet и все admin sections нужно проверять полноценным accessibility engine на desktop и compact mobile без allow-list нарушений.
   - Что сделано: `@axe-core/playwright` встроен в all-screens gate с тегами WCAG 2.0/2.1/2.2 A/AA и best practices. Исправлены AA-контраст публичного акцента, недопустимый `tabpanel` на двух auth-формах, пропущенный `h2` аккаунта и вложенные admin `main` landmarks. Axe запускается на 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop, а также на всех пользовательских и рабочих состояниях при `320x720`; исключений правил и селекторов нет.
   - Доказательство: frontend `112/112`, typecheck/build, dependency audit `0 vulnerabilities`, all-screens `6/6` с axe и responsive matrix; backend `1112/1112`, strict UTF-8 guards и fresh local SQLite smoke пройдены. Автоматический axe-аудит не заменяет ручную проверку и не закрывает внешние VPS/staging/live payment/3x-ui/SMTP evidence.
+- [x] `P11-ACC-276` Проверить критические admin-операции desktop/mobile и семантику вкладки оплат. 2026-08-10.
+  - Что сделать: browser E2E должен не только открывать разделы, но и выполнять повтор уведомления, recheck/refund оплаты, extend/sync/block/unblock подписки, disable/sync/reset VPN-доступа и reply/note/status поддержки; вся визуальная вкладка оплат должна принадлежать одному доступному `tabpanel`.
+  - Что сделано: admin mock API стал stateful для критических mutation routes, основной flow выполняет и подтверждает каждую операцию на desktop/mobile. Provider settings, orders, payments и refunds объединены внутри `#payments`; public locator использует exact accessible name, а axe-аудит 17 admin sections получил достаточный общий timeout.
+  - Доказательство: frontend `112/112`, typecheck/build, audit `0 vulnerabilities`; targeted regressions `3/3`, полный console-responsive Playwright `78/78`, all-screens `6/6`; backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0`. Внешние VPS/staging/live payment/3x-ui/SMTP evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2602,6 +2606,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-10-001` | P1 | Admin payments/E2E | Визуальная вкладка оплат состояла из двух соседних секций, но `tabpanel` охватывал только настройки провайдера; browser flow не выполнял критические payment/subscription/VPN/support mutations, поэтому рабочие регрессии могли оставаться незамеченными. | Исправлено локально | Единый payments tabpanel и stateful desktop/mobile mutation E2E подтверждены полным Playwright `78/78`, frontend/backend suite и fresh SQLite smoke. |
 | `BUG-2026-08-09-008` | P1 | Frontend accessibility | Автоматизированный browser gate не запускал WCAG engine; слабый красный контраст, `tabpanel` на form, пропущенный heading level и вложенные `main` landmarks оставались незамеченными. | Исправлено локально | Axe WCAG A/AA + best-practice gate без allow-list проходит public, cabinet и 17 admin sections на desktop и 320 px. |
 | `BUG-2026-08-09-007` | P1 | Frontend visual assets | Четыре ключевых background загружались с Unsplash во время runtime и могли исчезнуть из public/admin UI при CSP, offline/CDN failure; responsive gate не проверял decode assets и ширины сразу после CSS-breakpoints. | Исправлено локально | Локальные WebP bundles, same-origin decode/dimension guard, 18 viewport-конфигураций и manual screenshot review подтверждают визуальный контракт. |
 | `BUG-2026-08-09-006` | P0 | Public/cabinet mutation lifecycle | Cabinet actions и public auth/reset полагались на React busy после render: синхронный повтор мог дублировать запрос, late response мог изменить новую сессию или маршрут, а завершение старой отправки стирало новый draft. | Исправлено локально | Session/request ownership, synchronous locks, unmount invalidation и snapshot-owned reset покрыты полным desktop/mobile E2E `78/78`. |

@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1112/1112", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-09-automated-wcag-accessibility-gate", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-admin-critical-operations-e2e", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "1112/1112",
-                     "2026-08-09-automated-wcag-accessibility-gate",
-                     "0.552.0",
+                     "2026-08-10-admin-critical-operations-e2e",
+                     "0.553.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,8 +104,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-09-automated-wcag-accessibility-gate",
-                     "0.552.0",
+                     "2026-08-10-admin-critical-operations-e2e",
+                     "0.553.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-09-automated-wcag-accessibility-gate",
-                     "0.552.0",
+                     "2026-08-10-admin-critical-operations-e2e",
+                     "0.553.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -241,14 +241,14 @@ public class FinalDocsChangelogTests
 
         var changelogTopEntry = Regex.Match(
             changelog,
-            @"(?s)\A# Changelog\s+## (?<version>[^\r\n]+?) - 2026-08-09(?<body>.*?)(?:\r?\n## |\z)");
+            @"(?s)\A# Changelog\s+## (?<version>[^\r\n]+?) - 2026-08-10(?<body>.*?)(?:\r?\n## |\z)");
         Assert.True(changelogTopEntry.Success, "CHANGELOG.md must start with the latest release block.");
         Assert.Contains(version, changelogTopEntry.Groups["version"].Value, StringComparison.Ordinal);
         Assert.Contains(releaseId, changelogTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
 
         var testResultsTopEntry = Regex.Match(
             testResults,
-            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-08-09\.\s+## Check 2026-08-09: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
+            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-08-10\.\s+## Check 2026-08-10: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
         Assert.True(testResultsTopEntry.Success, "TEST_RESULTS.md must start with the latest release check block.");
         Assert.Contains(releaseId, testResultsTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(version, testResultsTopEntry.Groups["body"].Value, StringComparison.Ordinal);

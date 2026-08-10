@@ -72,8 +72,8 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`; локальный backend/frontend/browser regression, automated accessibility и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
-- Roadmap progress: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`; локальный backend/frontend/browser regression, критические admin mutations, automated accessibility и responsive matrix пройдены. Real SMTP и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `566/586` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

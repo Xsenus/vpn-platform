@@ -277,7 +277,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - public/cabinet mutation lifecycle блокирует duplicate auth/refresh/action requests, отбрасывает completion старой сессии и сохраняет более новые support/reset drafts;
 - публичная витрина и admin login используют три локальных WebP из production bundle вместо runtime Unsplash; desktop/mobile screenshots и 18 viewport-конфигураций проверены без overflow и clipped controls;
 - axe проверяет WCAG 2.0/2.1/2.2 A/AA и best practices без allow-list на 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`;
-- roadmap progress: `565/585` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки выполняются desktop/mobile E2E; вкладка оплат объединена одним корректным `tabpanel`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`;
+- roadmap progress: `566/586` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
