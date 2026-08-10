@@ -2744,6 +2744,72 @@ test('admin Telegram bot settings support secure save and reload lifecycle', asy
   expect(browserErrors).toEqual([])
 })
 
+test('admin server and inbound handlers reject invalid programmatic submits', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-form-boundary-token', 'admin-form-boundary-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Серверы', 'nodes')
+  const serverForm = page.locator('#nodes form')
+  await expect(serverForm.getByRole('button', { name: 'Создать сервер' })).toBeDisabled()
+  await serverForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+
+  await openAdminSection(page, '3x-ui панели', 'panels')
+  const panelsSection = page.locator('#panels')
+  await panelsSection.getByRole('combobox', { name: 'Панель' }).selectOption('panel-eu')
+  const inboundForm = panelsSection.locator('form').nth(1)
+  await inboundForm.getByLabel('Порт').fill('0')
+  await expect(inboundForm.getByRole('button', { name: 'Создать inbound-правило' })).toBeDisabled()
+  await inboundForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+  expect({
+    serverRequests: api.getRequestCount('/api/admin/servers', 'POST'),
+    inboundRequests: api.getRequestCount('/api/admin/vpn-panels/panel-eu/inbounds', 'POST')
+  }).toEqual({ serverRequests: 0, inboundRequests: 0 })
+})
+
+test('admin VPN configuration validators reject invalid semantic fields', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-semantic-validation-token', 'admin-semantic-validation-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Серверы', 'nodes')
+  const serverForm = page.locator('#nodes form')
+  await serverForm.getByLabel('Название').fill('Invalid boundary node')
+  await serverForm.getByLabel('Host или DNS').fill('boundary.example.test')
+  await serverForm.getByLabel('Приоритет').fill('0')
+  await serverForm.getByLabel('URL панели').fill('https://operator:secret@panel.example.test')
+  await expect(serverForm.getByRole('button', { name: 'Создать сервер' })).toBeDisabled()
+  await serverForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+
+  await openAdminSection(page, '3x-ui панели', 'panels')
+  const panelsSection = page.locator('#panels')
+  const panelForm = panelsSection.locator('form').first()
+  await panelForm.getByLabel('Название панели').fill('Invalid boundary panel')
+  await panelForm.getByLabel('Адрес панели').fill('https://panel.example.test')
+  await panelForm.getByLabel('Логин').fill('')
+  await panelForm.getByLabel('Емкость').fill('1.5')
+  await panelForm.getByLabel('Шаблон inbound JSON').fill('[]')
+  await expect(panelForm.getByRole('button', { name: 'Добавить панель' })).toBeDisabled()
+  await panelForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+
+  await panelsSection.getByRole('combobox', { name: 'Панель' }).selectOption('panel-eu')
+  const inboundForm = panelsSection.locator('form').nth(1)
+  await inboundForm.getByLabel('Емкость').fill('0')
+  await inboundForm.getByRole('textbox', { name: 'settingsJson', exact: true }).fill('[]')
+  await inboundForm.getByRole('textbox', { name: 'streamSettingsJson', exact: true }).fill('{}')
+  await inboundForm.getByRole('textbox', { name: 'sniffingJson', exact: true }).fill('{invalid')
+  await expect(inboundForm.getByRole('button', { name: 'Создать inbound-правило' })).toBeDisabled()
+  await inboundForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+
+  expect({
+    serverRequests: api.getRequestCount('/api/admin/servers', 'POST'),
+    panelRequests: api.getRequestCount('/api/admin/vpn-panels', 'POST'),
+    inboundRequests: api.getRequestCount('/api/admin/vpn-panels/panel-eu/inbounds', 'POST')
+  }).toEqual({ serverRequests: 0, panelRequests: 0, inboundRequests: 0 })
+})
+
 test('admin VPN infrastructure supports secure managed lifecycle', async ({ page }) => {
   test.setTimeout(180_000)
   const browserErrors: string[] = []

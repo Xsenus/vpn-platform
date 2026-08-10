@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.579.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-vpn-form-validation-boundary`.
+
+### Исправлено
+
+- Admin server и inbound handlers теперь повторно валидируют payload при любом submit и не полагаются на состояние disabled-кнопки; programmatic submit больше не отправляет пустой сервер или inbound с недопустимым портом.
+- Формы VPN-сервера, 3x-ui панели и inbound проверяют целые диапазоны, обязательные panel credentials при создании, JSON-object поля, `network` в stream settings и согласованность default/active; server API отклоняет credential-bearing и non-HTTP panel base URL при create/update.
+
+### Проверено
+
+- До исправления desktop/mobile отправляли по одному некорректному server и inbound POST, а semantic form gate считал unsafe server URL и `priority=0` допустимыми; после исправления targeted browser `6/6`, server-management backend `18/18` и полный console-responsive Playwright `122/122` зелёные.
+- Frontend `121/121`, typecheck/build, audit `0 vulnerabilities`; cabinet JS `359.27 kB` raw/`104.22 kB` gzip, admin bundle raw `516939`, gzip `138621`, largest `219849`.
+- Backend `1125/1125`, fresh SQLite latest release и secret scan `668/0` подтверждены финальным gate.
+- Roadmap: `592/612` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.578.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-config-url-credentials-boundary`.

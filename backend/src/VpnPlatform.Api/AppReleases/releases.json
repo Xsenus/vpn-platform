@@ -13658,5 +13658,28 @@
         "text": "Roadmap progress is 591/611 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-vpn-form-validation-boundary",
+    "version": "0.579.0",
+    "releasedAt": "2026-08-10T19:38:57+07:00",
+    "title": "VPN-формы проверяют данные при любом submit",
+    "summary": "Админка и API отклоняют некорректные server, 3x-ui panel и inbound настройки даже при программной отправке формы в обход disabled-кнопки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Server и inbound handlers повторно запускают validation до API; programmatic submit не создаёт пустой сервер или inbound с недопустимыми параметрами."
+      },
+      {
+        "type": "improved",
+        "text": "VPN server, 3x-ui panel и inbound формы проверяют целые диапазоны, create credentials, JSON-object/network semantics и credential-free panel URL; server API повторяет URL boundary при create/update."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 592/612 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

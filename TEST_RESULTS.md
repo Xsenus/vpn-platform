@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin VPN form validation boundary
+
+Scope:
+- Admin server and inbound handlers must reject invalid payloads even when submit is dispatched programmatically and the disabled button is bypassed.
+- VPN server, 3x-ui panel and inbound forms must enforce the same numeric, URL, credentials and JSON semantics as their backend contracts.
+
+Results:
+- Roadmap progress: `592/612` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-vpn-form-validation-boundary`, version `0.579.0`.
+- Reproduction before fix: desktop/mobile each sent invalid server and inbound POST requests through programmatic submit; the semantic gate also accepted a credential-bearing server panel URL and zero priority. After fix targeted browser `6/6`, server-management backend `18/18`, full console-responsive Playwright `122/122`.
+- Handlers re-run validation before `runAction`; forms reject non-integer ranges, missing create credentials, malformed/non-object JSON, missing stream network and invalid default/active state. Server create/update rejects unsafe panel base URLs at the API boundary.
+- Frontend tests: `121/121`; typecheck/build all apps: OK; cabinet JS `359.27 kB` raw/`104.22 kB` gzip; admin JS raw `516939`, gzip `138621`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1125/1125`; fresh SQLite latest release: OK; secret scan: `668` files, `0` findings.
+- Artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin configuration URL credentials boundary
 
 Scope:

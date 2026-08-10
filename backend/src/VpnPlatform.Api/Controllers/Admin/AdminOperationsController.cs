@@ -1617,6 +1617,11 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "SSH port must be between 1 and 65535." });
         }
 
+        if (!TryNormalizeServerPanelBaseUrl(request.PanelBaseUrl, out var panelBaseUrl, out var panelBaseUrlError))
+        {
+            return BadRequest(new { error = panelBaseUrlError });
+        }
+
         var authMethod = ProvisioningService.NormalizeAuthMethod(request.SshAuthMethod ?? (string.IsNullOrWhiteSpace(request.SshCredential) ? "ssh_key" : "ssh_key"));
         if (!string.IsNullOrWhiteSpace(request.SshCredential) && authMethod != "password" && authMethod != "ssh_key")
         {
@@ -1665,7 +1670,7 @@ public class AdminOperationsController : ControllerBase
             ProtectedSshCredential = protectedCredential,
             SshCredentialRef = string.IsNullOrWhiteSpace(protectedCredential) ? string.Empty : $"secretref:ssh:{Guid.NewGuid():N}",
             SkipHostKeyChecking = request.SkipHostKeyChecking,
-            PanelBaseUrl = request.PanelBaseUrl ?? string.Empty,
+            PanelBaseUrl = panelBaseUrl,
             PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername,
             PanelPassword = string.Empty,
             ProtectedPanelPassword = protectedPanelPassword,
@@ -1706,6 +1711,11 @@ public class AdminOperationsController : ControllerBase
         if (request.SshPort <= 0 || request.SshPort > 65535)
         {
             return BadRequest(new { error = "SSH port must be between 1 and 65535." });
+        }
+
+        if (!TryNormalizeServerPanelBaseUrl(request.PanelBaseUrl, out var panelBaseUrl, out var panelBaseUrlError))
+        {
+            return BadRequest(new { error = panelBaseUrlError });
         }
 
         var authMethod = ProvisioningService.NormalizeAuthMethod(request.SshAuthMethod ?? ProvisioningService.GetSshAuthMethod(node));
@@ -1782,7 +1792,7 @@ public class AdminOperationsController : ControllerBase
         node.SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim();
         node.SshPort = request.SshPort > 0 ? request.SshPort : 22;
         node.SkipHostKeyChecking = request.SkipHostKeyChecking;
-        node.PanelBaseUrl = request.PanelBaseUrl?.Trim() ?? string.Empty;
+        node.PanelBaseUrl = panelBaseUrl;
         node.PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername.Trim();
         node.PanelInboundId = request.PanelInboundId;
         node.PublicHostname = request.PublicHostname?.Trim() ?? string.Empty;
@@ -3158,6 +3168,27 @@ public class AdminOperationsController : ControllerBase
             });
 
         return string.Join(',', userTags.Concat(systemTags.Select(tag => $"{tag.Key}:{tag.Value}")));
+    }
+
+    private static bool TryNormalizeServerPanelBaseUrl(string? value, out string normalized, out string error)
+    {
+        normalized = value?.Trim() ?? string.Empty;
+        error = string.Empty;
+        if (normalized.Length == 0)
+        {
+            return true;
+        }
+        if (SafeHttpUrl.ContainsCredentials(normalized))
+        {
+            error = "Panel base URL must not contain credentials (login or password).";
+            return false;
+        }
+        if (!SafeHttpUrl.TryNormalize(normalized, out normalized))
+        {
+            error = "Panel base URL must be an absolute HTTP or HTTPS URL.";
+            return false;
+        }
+        return true;
     }
 
     private static NodeHealthCheckDto MapNodeHealthCheck(NodeHealthCheck check)

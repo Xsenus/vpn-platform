@@ -76,7 +76,7 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
 - Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
 - Telegram bot settings проходят secure save/check/reload/edit lifecycle без раскрытия write-only bot/webhook tokens на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `118/118`; all-screens: `6/6`.
+- `npm run e2e:console --prefix frontend`: `122/122`; all-screens: `6/6`.
 - Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит на desktop/mobile без раскрытия SSH/panel credentials.
 - Safe provisioning validation lifecycle проходит desktop/mobile с mode/risk/operator warning и без реального SSH/Ansible.
 - 3x-ui client disable/reload/enable/sync/reset-traffic lifecycle проходит desktop/mobile без console errors и overflow.
@@ -84,7 +84,7 @@ PNG создаются только при явном флаге внутри `f
 - Subscription activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle сохраняет связанный access state и скрывает terminal secrets на desktop/mobile.
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
-- Admin production build содержит `5` JS chunks под fail-closed budget: raw `514307`, gzip `138055`, largest `219849` bytes.
+- Admin production build содержит `5` JS chunks под fail-closed budget: raw `516939`, gzip `138621`, largest `219849` bytes.
 - Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 19 viewport-конфигураций.
 - Все шесть public route-состояний имеют собственные title/meta; SPA navigation и browser Back переводят focus в новый main на desktop/mobile.
 - Login и все 17 admin sections имеют exact title; payments/support/logout metadata lifecycle проходит desktop/mobile.
@@ -94,4 +94,5 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet app-version modal открывается на всех 19 viewport-конфигурациях и проходит bounds/overflow/control clipping, compact Axe, focus trap, inert/scroll isolation и opener restore.
 - Shared status badge gate проверяет neutral `NotLinked`, success `Succeeded`, русскую подпись `Expired` и полный desktop/mobile lifecycle.
 - Page-quality gate анализирует CSSOM каждого экрана и отклоняет cross-origin `http(s)` asset URL даже в неактивных stylesheet rules; shared/public/admin source guard проверяет тот же контракт статически.
-- Latest "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`.
+- VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
+- Latest "Что нового": `2026-08-10-admin-vpn-form-validation-boundary`, версия `0.579.0`.

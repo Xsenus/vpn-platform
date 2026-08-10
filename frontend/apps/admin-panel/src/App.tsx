@@ -932,32 +932,63 @@ function validatePaymentProviderForm(
 
 function validateServerForm(form: ServerFormState) {
   const errors: string[] = []
+  const sshPort = Number(form.sshPort)
+  const capacity = Number(form.capacity)
+  const priority = Number(form.priority)
   if (!form.name.trim()) errors.push('Укажите название VPN-сервера.')
   if (!form.host.trim()) errors.push('Укажите Host / DNS VPN-сервера.')
-  if (Number(form.sshPort) <= 0 || Number(form.sshPort) > 65535) errors.push('SSH-порт должен быть в диапазоне 1-65535.')
-  if (Number(form.capacity) <= 0) errors.push('Емкость сервера должна быть больше 0.')
-  if (Number(form.priority) < 0) errors.push('Приоритет не может быть отрицательным.')
+  if (!Number.isInteger(sshPort) || sshPort <= 0 || sshPort > 65535) errors.push('SSH-порт должен быть целым числом в диапазоне 1-65535.')
+  if (!Number.isInteger(capacity) || capacity <= 0) errors.push('Емкость сервера должна быть целым числом больше 0.')
+  if (!Number.isInteger(priority) || priority <= 0) errors.push('Приоритет должен быть целым числом больше 0.')
+  if (!isOptionalSafeAdminHttpUrl(form.panelBaseUrl)) errors.push('URL панели должен быть корректным http/https адресом без логина и пароля.')
   return errors
 }
 
-function validateVpnPanelForm(form: CreateVpnPanelPayload) {
+function parseJsonObject(value: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(value)
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null
+  } catch {
+    return null
+  }
+}
+
+function validateVpnPanelForm(form: CreateVpnPanelPayload, isEditing: boolean) {
   const errors: string[] = []
+  const capacity = Number(form.capacity)
   if (!form.name.trim()) errors.push('Укажите название 3x-ui панели.')
   if (!form.baseUrl.trim()) {
     errors.push('Укажите адрес 3x-ui панели.')
   } else if (!isOptionalSafeAdminHttpUrl(form.baseUrl)) {
     errors.push('Адрес 3x-ui панели должен быть корректным http/https URL без логина и пароля.')
   }
-  if (Number(form.capacity) <= 0) errors.push('Емкость 3x-ui панели должна быть больше 0.')
+  if (!form.login.trim()) errors.push('Укажите логин 3x-ui панели.')
+  if (!isEditing && !form.password?.trim()) errors.push('Укажите пароль 3x-ui панели.')
+  if (!Number.isInteger(capacity) || capacity <= 0) errors.push('Емкость 3x-ui панели должна быть целым числом больше 0.')
+  if (!parseJsonObject(form.defaultInboundTemplateJson)) errors.push('Шаблон inbound должен быть корректным JSON-объектом.')
   return errors
 }
 
 function validateInboundForm(form: CreateVpnInboundPayload, selectedVpnPanelId: string) {
   const errors: string[] = []
+  const port = Number(form.port)
+  const capacity = Number(form.capacity)
   if (!selectedVpnPanelId) errors.push('Выберите 3x-ui панель перед созданием inbound.')
   if (!form.name.trim()) errors.push('Укажите название inbound-правила.')
-  if (Number(form.port) <= 0 || Number(form.port) > 65535) errors.push('Порт inbound должен быть в диапазоне 1-65535.')
-  if (!form.protocol.trim()) errors.push('Укажите протокол inbound.')
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) errors.push('Порт inbound должен быть целым числом в диапазоне 1-65535.')
+  if (!['vless', 'vmess', 'trojan'].includes(form.protocol.trim().toLowerCase())) errors.push('Протокол inbound должен быть VLESS, VMess или Trojan.')
+  if (!Number.isInteger(capacity) || capacity <= 0) errors.push('Емкость inbound должна быть целым числом больше 0.')
+  if (form.isDefault && !form.isActive) errors.push('Основной inbound должен быть активен.')
+  if (!parseJsonObject(form.settingsJson)) errors.push('settingsJson должен быть корректным JSON-объектом.')
+  const streamSettings = parseJsonObject(form.streamSettingsJson)
+  if (!streamSettings) {
+    errors.push('streamSettingsJson должен быть корректным JSON-объектом.')
+  } else if (typeof streamSettings.network !== 'string' || !streamSettings.network.trim()) {
+    errors.push('streamSettingsJson должен содержать непустое поле network.')
+  }
+  if (!parseJsonObject(form.sniffingJson)) errors.push('sniffingJson должен быть корректным JSON-объектом.')
   return errors
 }
 
@@ -2830,12 +2861,12 @@ export function App() {
 
   const handleSaveVpnPanel = async () => {
     if (!token || !canWriteActiveSection) return
-    const validationErrors = validateVpnPanelForm(vpnPanelForm)
+    const editingId = editingVpnPanelId
+    const validationErrors = validateVpnPanelForm(vpnPanelForm, Boolean(editingId))
     if (validationErrors.length > 0) {
       setError(validationErrors[0])
       return
     }
-    const editingId = editingVpnPanelId
     const submittedForm = vpnPanelForm
     const selectedPanelId = selectedVpnPanelIdRef.current
     await runAction('vpn-panel-save', async (action) => {
@@ -2895,11 +2926,16 @@ export function App() {
   })
 
   const handleSaveInbound = () => {
+    if (!token || !canWriteSection('panels')) return
     const editingId = editingInboundId
     const submittedForm = inboundForm
     const panelId = selectedVpnPanelId
+    const validationErrors = validateInboundForm(submittedForm, panelId)
+    if (validationErrors.length > 0) {
+      setError(`Inbound: ${validationErrors.join(' ')}`)
+      return
+    }
     return runAction(editingId ? `update-inbound-${editingId}` : 'create-inbound', async (action) => {
-      if (!panelId) return
       const saved = editingId
         ? await api.updateAdminVpnInbound(token, editingId, submittedForm)
         : await api.createAdminVpnPanelInbound(token, panelId, submittedForm)
@@ -3042,6 +3078,11 @@ export function App() {
     if (!token || !canWriteActiveSection) return
     const editingId = editingServerId
     const submittedForm = serverForm
+    const validationErrors = validateServerForm(submittedForm)
+    if (validationErrors.length > 0) {
+      setError(`Сервер: ${validationErrors.join(' ')}`)
+      return
+    }
     await runAction('server-save', async (action) => {
       const saved = editingId
         ? await api.updateAdminServer(token, editingId, submittedForm)
@@ -3183,7 +3224,7 @@ export function App() {
   const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
   const tariffFormErrors = validateTariffForm(tariffForm)
   const serverFormErrors = validateServerForm(serverForm)
-  const vpnPanelFormErrors = validateVpnPanelForm(vpnPanelForm)
+  const vpnPanelFormErrors = validateVpnPanelForm(vpnPanelForm, Boolean(editingVpnPanelId))
   const inboundFormErrors = validateInboundForm(inboundForm, selectedVpnPanelId)
   const workScenarioFormErrors = validateWorkScenarioForm(workScenarioForm)
   const botSettingsFormErrors = validateTelegramBotUrlFields(botSettingsForm)

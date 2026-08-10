@@ -266,6 +266,52 @@ public class AdminServerManagementTests
         Assert.DoesNotContain(db.AuditLogs, x => x.Action == "server.update" && x.EntityId == node.Id.ToString());
     }
 
+    [Theory]
+    [InlineData(false, "https://operator:secret@panel.example.test")]
+    [InlineData(true, "https://operator:secret@panel.example.test")]
+    [InlineData(false, "ftp://panel.example.test")]
+    [InlineData(true, "ftp://panel.example.test")]
+    public async Task Server_Write_Should_Reject_Unsafe_Panel_Base_Url(bool update, string panelBaseUrl)
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateController(db);
+        var node = NewNode("unsafe-panel-url-node");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var request = UpdateRequest(node, panelBaseUrl: panelBaseUrl);
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        var error = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("Panel base URL", error.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(string.Empty, node.PanelBaseUrl);
+        Assert.DoesNotContain(db.AuditLogs, x => x.Action is "server.create" or "server.update");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Server_Write_Should_Accept_Safe_Panel_Base_Url(bool update)
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateController(db);
+        var node = NewNode("safe-panel-url-node");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        const string panelBaseUrl = "https://panel.example.test:2053/base/";
+
+        var request = UpdateRequest(node, panelBaseUrl: panelBaseUrl);
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Contains(await db.VpnNodes.ToListAsync(), x => x.PanelBaseUrl == panelBaseUrl);
+        Assert.Contains(db.AuditLogs, x => x.Action == (update ? "server.update" : "server.create"));
+    }
+
     [Fact]
     public async Task UpdateServer_Should_Wait_For_Concurrent_Health_Check()
     {
@@ -351,7 +397,7 @@ public class AdminServerManagementTests
             IsAvailableForNewUsers = true
         };
 
-    private static CreateServerHttpRequest UpdateRequest(VpnNode node, int? capacity = null, string? name = null)
+    private static CreateServerHttpRequest UpdateRequest(VpnNode node, int? capacity = null, string? name = null, string? panelBaseUrl = null)
         => new(
             name ?? node.Name,
             node.Host,
@@ -368,7 +414,7 @@ public class AdminServerManagementTests
             node.SshPort,
             node.SshPrivateKeyPath,
             node.SkipHostKeyChecking,
-            node.PanelBaseUrl,
+            panelBaseUrl ?? node.PanelBaseUrl,
             node.PanelUsername,
             PanelPassword: null,
             node.PanelInboundId,
