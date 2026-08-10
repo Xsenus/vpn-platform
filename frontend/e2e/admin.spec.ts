@@ -1916,6 +1916,74 @@ test('admin metadata follows login, deep-linked sections and logout', async ({ p
   expect(browserErrors).toEqual([])
 })
 
+test('admin section history restores content, metadata and focus', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-history-token', 'admin-history-refresh')
+
+  await page.goto('/#dashboard')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+  await expect(page).toHaveURL(/#payments$/)
+  await expect(page.locator('#admin-content')).toBeFocused()
+
+  await openAdminSection(page, 'Поддержка', 'support')
+  await expect(page).toHaveURL(/#support$/)
+
+  await page.goBack()
+  await expect(page).toHaveURL(/#payments$/)
+  await expect(page.locator('#payments')).toBeVisible()
+  await expect(page).toHaveTitle('Оплаты — Админ-панель VPN Platform')
+  await expect(page.locator('#admin-content')).toBeFocused()
+
+  await page.goForward()
+  await expect(page).toHaveURL(/#support$/)
+  await expect(page.locator('#support')).toBeVisible()
+  await expect(page).toHaveTitle('Поддержка — Админ-панель VPN Platform')
+  await expect(page.locator('#admin-content')).toBeFocused()
+  expect(browserErrors).toEqual([])
+})
+
+test('admin order links keep section history and focus operable', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-order-links-token', 'admin-order-links-refresh')
+
+  await page.goto('/#payments')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  const orderRow = page.locator('#payments .list-item-vertical').filter({ hasText: '590 RUB · Admin Pro 30' })
+
+  await orderRow.getByRole('button', { name: 'К пользователю' }).click()
+  await expect(page).toHaveURL(/#users$/)
+  await expect(page.locator('#users')).toBeVisible()
+  await expect(page.locator('#admin-content')).toBeFocused()
+
+  await page.goBack()
+  await expect(page).toHaveURL(/#payments$/)
+  await expect(orderRow).toBeVisible()
+  await orderRow.getByRole('button', { name: 'К платежу' }).click()
+  await expect(page).toHaveURL(/#payments$/)
+  await expect(page.locator('#admin-content')).toBeFocused()
+
+  await orderRow.getByRole('button', { name: 'К подписке' }).click()
+  await expect(page).toHaveURL(/#subscriptions$/)
+  await expect(page.locator('#subscriptions')).toBeVisible()
+  await expect(page.locator('#admin-content')).toBeFocused()
+
+  await page.goBack()
+  await expect(page).toHaveURL(/#payments$/)
+  await expect(orderRow).toBeVisible()
+  expect(browserErrors).toEqual([])
+})
+
 test('admin detail views ignore older selections and keep support actions scoped', async ({ page }) => {
   const api = await mockAdminApi(page)
   api.useDetailRequestRaceFixture()
@@ -3583,6 +3651,7 @@ test('finance role loads only permitted data and keeps common sections read-only
   await expect(page.locator('.admin-shell')).toBeVisible()
   await expect(page).toHaveURL(/#dashboard$/)
   await expect(page).toHaveTitle('Дашборд — Админ-панель VPN Platform')
+  await expect(page.locator('#admin-content')).toBeFocused()
   await expect(page.locator('.admin-section-select option[value="payments"]')).toHaveCount(1)
   await expect(page.locator('.admin-section-select option[value="support"]')).toHaveCount(0)
   await expect(page.locator('.admin-section-select option[value="bot"]')).toHaveCount(0)
@@ -3630,6 +3699,7 @@ test('support role dashboard hides finance data and keeps support queue visible'
   await expect(page.locator('.admin-shell')).toBeVisible()
   await expect(page).toHaveURL(/#dashboard$/)
   await expect(page).toHaveTitle('Дашборд — Админ-панель VPN Platform')
+  await expect(page.locator('#admin-content')).toBeFocused()
   await expect(page.locator('.admin-section-select option[value="support"]')).toHaveCount(1)
   await expect(page.locator('.admin-section-select option[value="payments"]')).toHaveCount(0)
   await expect(page.getByText('Оплачено / ожидает')).toHaveCount(0)

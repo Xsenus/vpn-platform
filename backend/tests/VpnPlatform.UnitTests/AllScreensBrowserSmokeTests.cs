@@ -11,7 +11,9 @@ public class AllScreensBrowserSmokeTests
         var spec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "all-screens.spec.ts"));
         var publicApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "App.tsx"));
         var publicRoute = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "public-route.ts"));
+        var adminApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "App.tsx"));
         var adminMetadata = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-page-metadata.ts"));
+        var adminSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "admin.spec.ts"));
         var config = File.ReadAllText(Path.Combine(root, "frontend", "playwright.config.ts"));
         var packageJson = File.ReadAllText(Path.Combine(root, "frontend", "package.json"));
 
@@ -74,6 +76,12 @@ public class AllScreensBrowserSmokeTests
             Assert.Contains(title, adminMetadata, StringComparison.Ordinal);
         }
         Assert.Contains("adminSectionTitles", spec, StringComparison.Ordinal);
+        Assert.Contains("window.history.pushState", adminApp, StringComparison.Ordinal);
+        Assert.Contains("window.addEventListener('popstate'", adminApp, StringComparison.Ordinal);
+        Assert.Contains("goToAdminSection('users')", adminApp, StringComparison.Ordinal);
+        Assert.Contains("goToAdminSection('subscriptions')", adminApp, StringComparison.Ordinal);
+        Assert.Contains("admin section history restores content, metadata and focus", adminSpec, StringComparison.Ordinal);
+        Assert.Contains("admin order links keep section history and focus operable", adminSpec, StringComparison.Ordinal);
     }
 
     [Fact]

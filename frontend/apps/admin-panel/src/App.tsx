@@ -1520,6 +1520,7 @@ export function App() {
     const fallbackSection = availableAdminSections[0][0]
     setActiveSection(fallbackSection)
     window.history.replaceState(null, '', `#${fallbackSection}`)
+    window.requestAnimationFrame(() => document.getElementById('admin-content')?.focus())
   }, [activeSection, adminSession, availableAdminSectionIds, availableAdminSections])
 
   useEffect(() => {
@@ -1536,12 +1537,22 @@ export function App() {
   }, [activeSectionDescription, activeSectionLabel, adminSession, sessionHydrating])
 
   useEffect(() => {
-    const syncActiveSection = () => setActiveSection(readAdminSectionFromHash())
+    let focusFrame = 0
+    const syncActiveSection = (focusContent = false) => {
+      setActiveSection(readAdminSectionFromHash())
+      if (!focusContent) return
+      window.cancelAnimationFrame(focusFrame)
+      focusFrame = window.requestAnimationFrame(() => document.getElementById('admin-content')?.focus())
+    }
+    const handleHistoryNavigation = () => syncActiveSection(true)
     syncActiveSection()
-    window.addEventListener('hashchange', syncActiveSection)
+    window.addEventListener('hashchange', handleHistoryNavigation)
+    window.addEventListener('popstate', handleHistoryNavigation)
 
     return () => {
-      window.removeEventListener('hashchange', syncActiveSection)
+      window.cancelAnimationFrame(focusFrame)
+      window.removeEventListener('hashchange', handleHistoryNavigation)
+      window.removeEventListener('popstate', handleHistoryNavigation)
     }
   }, [])
 
@@ -1635,7 +1646,9 @@ export function App() {
   const goToAdminSection = (sectionId: AdminSectionId, focusTarget: 'content' | 'tab' = 'content') => {
     setActiveSection(sectionId)
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `#${sectionId}`)
+      if (parseAdminSectionHref(window.location.hash) !== sectionId) {
+        window.history.pushState(null, '', `#${sectionId}`)
+      }
       window.requestAnimationFrame(() => {
         if (focusTarget === 'tab') focusAdminSectionTab(sectionId)
         else focusAdminContent()
@@ -2038,8 +2051,7 @@ export function App() {
       allowedWebhookIpRangesCsv: account.allowedWebhookIpRangesCsv ?? '',
       extraSettingsJson: ''
     })
-    setActiveSection('payments')
-    if (typeof window !== 'undefined') window.location.hash = 'payments'
+    goToAdminSection('payments')
   }
 
   const handleSaveProviderAccount = async () => {
@@ -2092,14 +2104,12 @@ export function App() {
 
   const openOrderUser = (order: OrderDto) => {
     selectAdminUser(order.userId)
-    setActiveSection('users')
-    if (typeof window !== 'undefined') window.location.hash = 'users'
+    goToAdminSection('users')
     setNotice(`Открыта карточка пользователя ${order.userEmail || shortId(order.userId)} по заказу ${shortId(order.id)}.`)
   }
 
   const openOrderPayment = (order: OrderDto) => {
-    setActiveSection('payments')
-    if (typeof window !== 'undefined') window.location.hash = 'payments'
+    goToAdminSection('payments')
     if (order.lastPaymentId && typeof window !== 'undefined' && typeof document !== 'undefined') {
       window.setTimeout(() => document.getElementById(`payment-${order.lastPaymentId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0)
     }
@@ -2107,8 +2117,7 @@ export function App() {
   }
 
   const openOrderSubscription = (order: OrderDto) => {
-    setActiveSection('subscriptions')
-    if (typeof window !== 'undefined') window.location.hash = 'subscriptions'
+    goToAdminSection('subscriptions')
     if (order.linkedSubscriptionId && typeof window !== 'undefined' && typeof document !== 'undefined') {
       window.setTimeout(() => document.getElementById(`subscription-${order.linkedSubscriptionId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0)
     }
@@ -2163,8 +2172,7 @@ export function App() {
       afterPaymentText: tariff.afterPaymentText ?? ''
     })
     setTariffFeaturesText(featuresToText(tariff))
-    setActiveSection('tariffs')
-    if (typeof window !== 'undefined') window.location.hash = 'tariffs'
+    goToAdminSection('tariffs')
   }
 
   const handleSaveTariff = async () => {
@@ -2288,8 +2296,7 @@ export function App() {
         sortOrder: item.sortOrder || (index + 1) * 10
       })) : [{ type: 'new', text: '', sortOrder: 10 }]
     })
-    setActiveSection('releases')
-    if (typeof window !== 'undefined') window.location.hash = 'releases'
+    goToAdminSection('releases')
   }
 
   const handleSaveRelease = async () => {
@@ -2352,8 +2359,7 @@ export function App() {
       showOnFaqPage: entry.showOnFaqPage !== false,
       sortOrder: entry.sortOrder ?? 100
     })
-    setActiveSection('faq')
-    if (typeof window !== 'undefined') window.location.hash = 'faq'
+    goToAdminSection('faq')
   }
 
   const handleSaveFaq = async () => {
@@ -2415,8 +2421,7 @@ export function App() {
       isActive: block.isActive,
       sortOrder: block.sortOrder
     })
-    setActiveSection('content')
-    if (typeof window !== 'undefined') window.location.hash = 'content'
+    goToAdminSection('content')
   }
 
   const handleSaveSiteContent = async () => {
@@ -2500,8 +2505,7 @@ export function App() {
       trafficLimit: scenario.trafficLimit ?? null,
       sortOrder: scenario.sortOrder
     })
-    setActiveSection('scenarios')
-    if (typeof window !== 'undefined') window.location.hash = 'scenarios'
+    goToAdminSection('scenarios')
   }
 
   const handleSaveWorkScenario = async () => {
@@ -3383,8 +3387,9 @@ export function App() {
                       <a
                         className="button button-secondary"
                         href={`#${actionSection}`}
-                        onClick={() => {
-                          setActiveSection(actionSection)
+                        onClick={(event) => {
+                          event.preventDefault()
+                          goToAdminSection(actionSection)
                         }}
                       >
                         {check.actionLabel || 'Открыть'}

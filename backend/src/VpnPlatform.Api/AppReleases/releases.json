@@ -13451,5 +13451,28 @@
         "text": "Roadmap progress is 582/602 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-section-history-focus-fix",
+    "version": "0.570.0",
+    "releasedAt": "2026-08-10T15:08:00+07:00",
+    "title": "Разделы админки поддерживают историю браузера",
+    "summary": "Back и Forward восстанавливают раздел, metadata и focus, а внутренние ссылки из заказов больше не оставляют фокус в скрытом экране.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Переходы между разделами создают history-entry вместо перезаписи текущего URL; Back и Forward синхронизируют hash, видимый tabpanel, title и основной focus."
+      },
+      {
+        "type": "improved",
+        "text": "Ссылки заказа к пользователю, платежу и подписке используют единый navigation lifecycle и проверяются на desktop/mobile вместе с отсутствием console errors."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 583/603 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

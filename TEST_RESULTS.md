@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin section history and focus lifecycle
+
+Scope:
+- User-driven admin section switches create browser history instead of replacing the only route entry; Back/Forward restore section, metadata and focus.
+- Readiness actions and order links to user, payment and subscription use the same navigation boundary and cannot leave focus inside a hidden tabpanel.
+
+Results:
+- Roadmap progress: `583/603` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-section-history-focus-fix`, version `0.570.0`.
+- Frontend tests: `116/116`; targeted desktop/mobile history and order-link lifecycle: `4/4`; admin desktop/mobile suite: `56/56`; full console-responsive Playwright: `112/112`.
+- All 17 admin sections pass exact title, non-blank, Axe and 18-viewport responsive checks; browser Back/Forward restore `#payments/#support` and focus `admin-content`.
+- Typecheck/build all apps: OK; admin bundle raw `512330`, gzip `137506`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin section metadata lifecycle
 
 Scope:

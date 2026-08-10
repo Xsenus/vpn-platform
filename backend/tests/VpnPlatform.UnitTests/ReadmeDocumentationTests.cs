@@ -45,8 +45,8 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-admin-section-metadata-lifecycle-fix", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("108/108", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-10-admin-section-history-focus-fix", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("112/112", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1113/1113",
-                     "2026-08-10-admin-section-metadata-lifecycle-fix",
-                     "0.569.0",
+                     "2026-08-10-admin-section-history-focus-fix",
+                     "0.570.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

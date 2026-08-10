@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `116/116`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `108/108`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `112/112`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -72,12 +72,13 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 6 public route-состояний, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Admin production bundle: `5` chunks, largest `219849`, total raw `512423`, gzip `137489`; fail-closed budget пройден.
+- Admin production bundle: `5` chunks, largest `219849`, total raw `512330`, gzip `137506`; fail-closed budget пройден.
 - Unknown public route показывает доступное `404` recovery и проходит desktop/mobile, Axe, console и 18 responsive viewport-конфигураций без blank screen/overflow.
 - Public route title/meta/focus lifecycle проходит direct load, SPA navigation и browser Back на desktop/mobile; каждый route имеет точную metadata.
 - Admin hydration/login и 17 sections имеют точную metadata; deep-link, section switch и logout проходят desktop/mobile.
-- Latest "Что нового": `2026-08-10-admin-section-metadata-lifecycle-fix`, версия `0.569.0`; локальный backend/frontend/browser regression, admin/public metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `582/602` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Admin tabs, Back/Forward, role fallback и order-links синхронизируют history, tabpanel, metadata и focus на desktop/mobile.
+- Latest "Что нового": `2026-08-10-admin-section-history-focus-fix`, версия `0.570.0`; локальный backend/frontend/browser regression, admin/public metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `583/603` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

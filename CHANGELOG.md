@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.570.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-section-history-focus-fix`.
+
+### Исправлено
+
+- Переключение admin sections больше не перезаписывает одну history-entry: browser Back/Forward восстанавливают предыдущий hash-раздел вместо выхода на предшествующую админке страницу.
+- После Back/Forward и ролевого fallback видимый tabpanel, title и клавиатурный focus синхронизируются с основным admin content; внутренние ссылки заказа не оставляют focus в скрытом разделе.
+
+### Проверено
+
+- Stateful Dashboard -> Payments -> Support -> Back/Forward и order-links к пользователю/платежу/подписке проходят на Desktop Chrome и Pixel 5: `4/4`.
+- Полный admin desktop/mobile suite `56/56`; полный console-responsive Playwright `112/112`, включая все 17 sections на 18 viewport-конфигурациях и Axe gate.
+- Frontend unit `116/116`, typecheck/build всех приложений, audit `0 vulnerabilities`; admin bundle raw `512330`, gzip `137506`, largest `219849`.
+- Backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+- Roadmap: `583/603` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.569.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-section-metadata-lifecycle-fix`.
