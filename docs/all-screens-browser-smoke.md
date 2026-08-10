@@ -93,4 +93,5 @@ PNG создаются только при явном флаге внутри `f
 - Admin skip-ссылки сохраняют section hash при keyboard focus transfer до входа, после входа и после reload на desktop/mobile.
 - Cabinet app-version modal открывается на всех 19 viewport-конфигурациях и проходит bounds/overflow/control clipping, compact Axe, focus trap, inert/scroll isolation и opener restore.
 - Shared status badge gate проверяет neutral `NotLinked`, success `Succeeded`, русскую подпись `Expired` и полный desktop/mobile lifecycle.
-- Latest "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`.
+- Page-quality gate анализирует CSSOM каждого экрана и отклоняет cross-origin `http(s)` asset URL даже в неактивных stylesheet rules; shared/public/admin source guard проверяет тот же контракт статически.
+- Latest "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`.

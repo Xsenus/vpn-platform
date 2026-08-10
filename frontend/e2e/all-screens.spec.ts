@@ -800,6 +800,21 @@ async function expectPageQuality(page: Page, screenName: string) {
     if (!document.documentElement.lang.trim()) problems.push('html element has no lang attribute')
     if (!document.querySelector('main, [role="main"]')) problems.push('page has no main landmark')
 
+    for (const sheet of Array.from(document.styleSheets)) {
+      let cssText = ''
+      try {
+        cssText = Array.from(sheet.cssRules, (rule) => rule.cssText).join('\n')
+      } catch {
+        problems.push(`stylesheet rules are inaccessible: ${sheet.href ?? 'inline'}`)
+        continue
+      }
+
+      for (const match of cssText.matchAll(/url\(["']?(https?:\/\/[^"')]+)["']?\)/gi)) {
+        const assetUrl = new URL(match[1], window.location.href)
+        if (assetUrl.origin !== window.location.origin) problems.push(`stylesheet references external asset: ${assetUrl.href}`)
+      }
+    }
+
     const ids = new Map<string, number>()
     for (const element of Array.from(document.querySelectorAll<HTMLElement>('[id]'))) {
       if (!element.id) continue

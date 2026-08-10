@@ -135,22 +135,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   color: var(--primary-strong);
 }
 
-.hero {
-  min-height: 430px;
-  display: grid;
-  align-content: end;
-  padding: 34px;
-  margin-bottom: 22px;
-  border-radius: var(--radius-md);
-  color: #fff;
-  background:
-    linear-gradient(180deg, rgba(7, 12, 20, 0.12), rgba(7, 12, 20, 0.78)),
-    url("https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1800&q=82") center/cover;
-  box-shadow: var(--shadow);
-}
-.hero h2 { max-width: 780px; color: #fff; font-size: 42px; line-height: 1.08; margin-bottom: 12px; }
-.hero p { max-width: 760px; color: rgba(255, 255, 255, 0.9); margin: 0; }
-.hero .button { min-width: 156px; }
 .hero-actions {
   display: flex;
   gap: 12px;
@@ -776,8 +760,6 @@ form { display: grid; gap: 12px; max-width: 560px; }
 @media (max-width: 900px) {
   .page-shell { padding: var(--page-y) var(--page-x) var(--page-bottom); }
   .topbar { align-items: flex-start; flex-direction: column; padding: 14px; }
-  .hero { min-height: 360px; padding: 22px; }
-  .hero h2 { font-size: 32px; }
   .admin-shell { grid-template-columns: 1fr; }
   .admin-sidebar { position: static; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }
   .card-list-two, .form-grid { grid-template-columns: 1fr; }
@@ -824,7 +806,6 @@ form { display: grid; gap: 12px; max-width: 560px; }
 }
 
 @media (max-width: 520px) {
-  .hero h2 { font-size: 28px; }
   .card-list, .grid, .toolbar, .segmented-control { grid-template-columns: 1fr; }
   .toolbar.compact,
   .list-item .toolbar,
@@ -865,15 +846,6 @@ form { display: grid; gap: 12px; max-width: 560px; }
     padding: 14px;
   }
 
-  .hero {
-    min-height: 320px;
-    padding: 18px;
-  }
-
-  .hero h2 {
-    font-size: 25px;
-  }
-
   .hero-actions,
   .form-actions,
   .copy-row {
@@ -882,8 +854,7 @@ form { display: grid; gap: 12px; max-width: 560px; }
   }
 
   .inline-number-field,
-  .form-actions .button,
-  .hero .button {
+  .form-actions .button {
     width: 100%;
     min-width: 0;
   }

@@ -78,8 +78,8 @@ Production-ready решение заблокировано следующими 
 - Admin hydration/login и 17 sections имеют точную metadata; deep-link, section switch и logout проходят desktop/mobile.
 - Admin tabs, Back/Forward, role fallback и order-links синхронизируют history, tabpanel, metadata и focus на desktop/mobile.
 - Admin unknown hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
-- Latest "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`; локальный backend/frontend/browser regression, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`; локальный backend/frontend/browser regression, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

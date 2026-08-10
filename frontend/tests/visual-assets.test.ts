@@ -18,11 +18,11 @@ const assetDirectory = join(repositoryRoot, 'frontend', 'packages', 'ui', 'src',
 const visualAssets = ['vpn-datacenter.webp', 'vpn-workspace.webp', 'vpn-global-network.webp']
 
 test('visual backgrounds are bundled WebP assets instead of external runtime dependencies', () => {
+  const sharedStyles = readFileSync(join(repositoryRoot, 'frontend', 'packages', 'ui', 'src', 'styles.css'), 'utf8')
   const publicStyles = readFileSync(join(repositoryRoot, 'frontend', 'apps', 'public-web', 'src', 'styles.css'), 'utf8')
   const adminStyles = readFileSync(join(repositoryRoot, 'frontend', 'apps', 'admin-panel', 'src', 'styles.css'), 'utf8')
 
-  assert.doesNotMatch(publicStyles, /url\(["']https?:\/\//i)
-  assert.doesNotMatch(adminStyles, /url\(["']https?:\/\//i)
+  assert.doesNotMatch(`${sharedStyles}\n${publicStyles}\n${adminStyles}`, /url\(["']https?:\/\//i)
   assert.doesNotMatch(`${publicStyles}\n${adminStyles}`, /font-size:\s*clamp\(/i)
 
   for (const fileName of visualAssets) {

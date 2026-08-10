@@ -298,7 +298,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin skip-ссылки переводят клавиатурный focus, не заменяя hash выбранного раздела до входа, после входа и после reload;
 - cabinet release-modal удерживает Tab/Shift+Tab, изолирует фон и scroll, закрывается Escape с возвратом opener и проходит 19-viewport responsive/WCAG gate;
 - общие статусные метки различают составные negative/neutral/warning/success состояния и локализуют API-значения независимо от регистра;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`;
-- roadmap progress: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- shared и app-specific CSS не содержат внешних runtime asset URL; browser page-quality gate проверяет все загруженные stylesheet rules;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`;
+- roadmap progress: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

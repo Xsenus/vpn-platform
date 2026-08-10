@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.575.0 - 2026-08-10
+
+Release entry: `2026-08-10-shared-css-external-asset-guard`.
+
+### Исправлено
+
+- Из общего stylesheet удален недостижимый legacy `.hero` с runtime URL Unsplash; связанный неиспользуемый `HomePage` удален из public bundle source.
+- Visual-assets guard теперь проверяет shared CSS вместе с app-specific стилями, а browser page-quality gate отклоняет cross-origin asset URL во всех загруженных stylesheet rules, даже если правило не совпало с текущим DOM.
+
+### Проверено
+
+- Targeted visual source `1/1` и public all-screens browser `1/1`; полный console-responsive Playwright `118/118` на 19 viewport-конфигурациях.
+- Frontend `117/117`, typecheck/build, audit `0 vulnerabilities`; public/cabinet/admin CSS уменьшены до `28.00/24.25/26.44 kB` raw без изменения активных локальных WebP.
+- Admin bundle raw `514307`, gzip `138055`, largest `219849`; backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate.
+- Roadmap: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.574.0 - 2026-08-10
 
 Release entry: `2026-08-10-status-badge-semantic-tones`.

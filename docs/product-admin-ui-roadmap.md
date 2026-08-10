@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -158,7 +158,8 @@
 - [x] Admin skip links сохраняют section hash при focus transfer, login и reload на desktop/mobile.
 - [x] Cabinet app-version modal удерживает focus, изолирует background/scroll и проходит 19-viewport responsive/WCAG gate.
 - [x] Общие status badges различают составные negative/neutral/warning/success состояния и локализуют API casing.
-- [x] Latest "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`.
+- [x] Shared/public/admin styles и browser CSSOM gate не допускают внешние runtime asset URL на любом экране.
+- [x] Latest "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`.
 
 ## Как вести дальше
 

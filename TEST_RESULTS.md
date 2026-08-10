@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: shared CSS external asset guard
+
+Scope:
+- Shared and app-specific stylesheets must not retain hidden cross-origin runtime assets after the local WebP migration.
+- Browser page-quality checks must inspect loaded CSS rules, not only backgrounds that currently match DOM elements.
+
+Results:
+- Roadmap progress: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-shared-css-external-asset-guard`, version `0.575.0`.
+- Frontend tests: `117/117`; targeted visual source: `1/1`; targeted public all-screens browser: `1/1`; full console-responsive Playwright: `118/118`.
+- Shared stylesheet, public/admin styles and every loaded browser CSS rule contain no cross-origin `http(s)` asset URL; active WebP backgrounds remain same-origin, decoded and at least `1200x800`.
+- Typecheck/build all apps: OK; CSS raw public `28.00 kB`, cabinet `24.25 kB`, admin `26.44 kB`; admin JS raw `514307`, gzip `138055`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: shared status badge semantic tones
 
 Scope:

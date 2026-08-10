@@ -367,54 +367,6 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
   )
 }
 
-function HomePage({ profile }: { profile: UserProfileDto | null }) {
-  return (
-    <PageShell title="VPN Platform">
-      <div className="hero">
-        <h2>VPN-доступ с автоматической выдачей</h2>
-        <p>Выберите тариф, оплатите удобным способом и получите готовую ссылку для подключения после подтверждения оплаты. Все рискованные операции сначала проходят в безопасном режиме проверки.</p>
-        <div className="hero-actions">
-          <Link to="/tariffs" className="button">Выбрать тариф</Link>
-          <Link to="/account" className="button button-secondary">{profile ? 'Мой аккаунт' : 'Войти / зарегистрироваться'}</Link>
-        </div>
-      </div>
-
-      <div className="grid">
-        <StatTile label="Покупка" value="заказ" hint="заказ создаётся безопасно" />
-        <StatTile label="Оплата" value="проверена" hint="показываются только доступные способы" />
-        <StatTile label="Выдача" value="VPN-ссылка" hint="после подтверждения платежа" />
-      </div>
-
-      {profile && (
-        <div className="section">
-          <Card>
-            <h3>Текущий аккаунт</h3>
-            <p><strong>{profile.displayName}</strong></p>
-            <p>{profile.email ?? 'email не указан'}</p>
-            <p>Реферальный код: <strong>{profile.referralCode}</strong></p>
-            <StatusBadge value={profile.status} />
-          </Card>
-        </div>
-      )}
-
-      <div className="section card-list">
-        <Card>
-          <h3>Безопасная покупка</h3>
-          <p>Покупка начинается без лишних технических шагов: пользователь выбирает тариф, входит в аккаунт и переходит к оплате. Недоступные способы оплаты не показываются.</p>
-        </Card>
-        <Card>
-          <h3>Платежи</h3>
-          <p>Пользователь видит только способы оплаты, которые сейчас готовы принимать платежи. Это снижает количество ошибок на этапе покупки.</p>
-        </Card>
-        <Card>
-          <h3>Автовыдача</h3>
-          <p>После подтверждения платежа подписка активируется автоматически, а готовая ссылка для подключения появляется в кабинете.</p>
-        </Card>
-      </div>
-    </PageShell>
-  )
-}
-
 function TariffsPage({ onPendingCheckout }: {
   onPendingCheckout: (pending: PendingCheckout) => void
 }) {

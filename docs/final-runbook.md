@@ -225,8 +225,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin skip links preserve the active section hash through focus transfer, login and reload on desktop/mobile.
 - cabinet app-version modal traps keyboard focus, isolates background controls/scroll and passes the 19-viewport responsive/WCAG gate.
 - shared status badge semantics and case-insensitive Russian labels: OK.
-- latest "Что нового": `2026-08-10-status-badge-semantic-tones`, версия `0.574.0`.
-- roadmap progress: `587/607` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- shared/public/admin CSS external asset source guard and all-screen CSSOM origin gate: OK.
+- latest "Что нового": `2026-08-10-shared-css-external-asset-guard`, версия `0.575.0`.
+- roadmap progress: `588/608` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

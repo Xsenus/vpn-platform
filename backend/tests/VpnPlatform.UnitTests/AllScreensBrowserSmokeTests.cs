@@ -18,6 +18,7 @@ public class AllScreensBrowserSmokeTests
         var cabinetAppVersion = File.ReadAllText(Path.Combine(root, "frontend", "apps", "cabinet", "src", "AppVersion.tsx"));
         var cabinetSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "cabinet.spec.ts"));
         var sharedUi = File.ReadAllText(Path.Combine(root, "frontend", "packages", "ui", "src", "index.tsx"));
+        var sharedStyles = File.ReadAllText(Path.Combine(root, "frontend", "packages", "ui", "src", "styles.css"));
         var config = File.ReadAllText(Path.Combine(root, "frontend", "playwright.config.ts"));
         var packageJson = File.ReadAllText(Path.Combine(root, "frontend", "package.json"));
 
@@ -103,6 +104,9 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("succeeded: 'success'", sharedUi, StringComparison.Ordinal);
         Assert.Contains("Статус: Не привязано", spec, StringComparison.Ordinal);
         Assert.Contains("Статус: Успешно", spec, StringComparison.Ordinal);
+        Assert.Contains("stylesheet references external asset", spec, StringComparison.Ordinal);
+        Assert.DoesNotContain("url(\"https://", sharedStyles, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("function HomePage", publicApp, StringComparison.Ordinal);
         Assert.Equal(19, Regex.Matches(spec, "(?m)^  \\{ name: '[^']+', width: \\d+, height: \\d+ \\},?$").Count);
     }
 

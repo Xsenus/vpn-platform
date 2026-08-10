@@ -13566,5 +13566,28 @@
         "text": "Roadmap progress is 587/607 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-shared-css-external-asset-guard",
+    "version": "0.575.0",
+    "releasedAt": "2026-08-10T17:35:00+07:00",
+    "title": "Все визуальные ресурсы остаются локальными",
+    "summary": "Общий интерфейс больше не содержит скрытой ссылки на внешний CDN, а автоматическая проверка контролирует CSS всех страниц и приложений.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Удалены неиспользуемый старый экран главной и его фоновый Unsplash URL из общего stylesheet."
+      },
+      {
+        "type": "improved",
+        "text": "Source и browser guards проверяют shared/public/admin CSS и отклоняют внешние asset URL во всех загруженных правилах, даже если селектор сейчас не отображается."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 588/608 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
