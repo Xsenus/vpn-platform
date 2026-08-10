@@ -357,6 +357,9 @@ async function mockCabinetApi(page: Page) {
   let rejectedAuthorizedPath: string | null = null
   const expiredAccessTokens = new Set<string>()
   let failNextProfileStatus: number | null = null
+  let delayNextProfile = false
+  let delayedProfileReleased = false
+  let releaseDelayedProfile: (() => void) | null = null
   let refreshFailureStatus: number | null = null
   let delayNextRefresh = false
   let delayedRefreshReleased = false
@@ -372,6 +375,7 @@ async function mockCabinetApi(page: Page) {
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
   let appVersionAvailable = false
+  let appVersionSeen = true
   let delayNextAppVersionHistory = false
   let delayedAppVersionHistoryReleased = false
   let releaseDelayedAppVersionHistory: (() => void) | null = null
@@ -490,6 +494,14 @@ async function mockCabinetApi(page: Page) {
         failNextProfileStatus = null
         await fulfillJson(route, { error: 'profile_temporarily_unavailable' }, status)
         return
+      }
+      if (delayNextProfile) {
+        delayNextProfile = false
+        if (!delayedProfileReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedProfile = resolve })
+        }
+        delayedProfileReleased = false
+        releaseDelayedProfile = null
       }
       await fulfillJson(route, user)
       return
@@ -712,7 +724,7 @@ async function mockCabinetApi(page: Page) {
 
     if (method === 'GET' && path === '/api/app-version/latest') {
       await fulfillJson(route, appVersionAvailable
-        ? { currentVersion: appVersionRelease.version, latestRelease: appVersionRelease, seenByCurrentUser: true }
+        ? { currentVersion: appVersionRelease.version, latestRelease: appVersionRelease, seenByCurrentUser: appVersionSeen }
         : { currentVersion: null, latestRelease: null, seenByCurrentUser: true })
       return
     }
@@ -747,6 +759,11 @@ async function mockCabinetApi(page: Page) {
     allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
     expireAccessToken: (accessToken: string) => { expiredAccessTokens.add(`Bearer ${accessToken}`) },
     failNextProfileRequest: (status = 503) => { failNextProfileStatus = status },
+    delayNextProfileRequest: () => { delayNextProfile = true },
+    releaseProfileRequest: () => {
+      delayedProfileReleased = true
+      releaseDelayedProfile?.()
+    },
     failRefreshRequest: (status = 401) => { refreshFailureStatus = status },
     delayNextRefreshRequest: () => { delayNextRefresh = true },
     releaseRefreshRequest: () => {
@@ -784,6 +801,10 @@ async function mockCabinetApi(page: Page) {
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
     showAppVersionRelease: () => { appVersionAvailable = true },
+    showUnseenAppVersionRelease: () => {
+      appVersionAvailable = true
+      appVersionSeen = false
+    },
     delayNextAppVersionHistory: () => { delayNextAppVersionHistory = true },
     releaseAppVersionHistory: () => {
       delayedAppVersionHistoryReleased = true
@@ -863,6 +884,27 @@ test('cabinet app version modal traps focus and restores its opener', async ({ p
   await expect.poll(() => page.evaluate(() => ({ inert: document.getElementById('root')?.inert, overflow: document.body.style.overflow })))
     .toEqual({ inert: false, overflow: '' })
   expect(browserErrors).toEqual([])
+})
+
+test('cabinet app version waits for the user identity before applying a local dismissal', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.showUnseenAppVersionRelease()
+  api.delayNextProfileRequest()
+  await seedCabinetSession(page, 'access-token-version-dismissed', 'refresh-token-version-dismissed')
+  await page.addInitScript(({ userId, releaseId }) => {
+    localStorage.setItem(`appVersion.dismissed.${userId}.${releaseId}`, '1')
+  }, { userId: user.id, releaseId: appVersionRelease.releaseId })
+
+  await page.goto('/')
+  const dialog = page.getByRole('dialog', { name: appVersionRelease.title })
+  await expect.poll(() => api.getRequestCount('/api/me')).toBe(1)
+  expect(api.getRequestCount('/api/app-version/latest')).toBe(0)
+  await expect(dialog).toHaveCount(0)
+
+  api.releaseProfileRequest()
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)
+  await expect(dialog).toHaveCount(0)
 })
 
 test('cabinet app version rejects history completed by a logged-out session', async ({ page }) => {

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.592.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-app-version-identity-boundary`.
+
+### Исправлено
+
+- Cabinet «Что нового» больше не загружает latest release до подтверждения `profile.id`: ранний token-only ответ не может открыть модальное окно под anonymous identity.
+- Token/user transition всегда закрывает старое окно и очищает release state; персональный local dismissal применяется только к точному user ID.
+- Anonymous dismissal key удалён, поэтому закрытие или показ release не смешивается между hydration-состоянием и реальным пользователем.
+
+### Проверено
+
+- До исправления fail-first desktop regression был `0/1`: ранний unseen response открывал окно, а после загрузки profile персональный dismissal не закрывал его (`expected 0`, `actual 1`).
+- После исправления targeted desktop/mobile `2/2`, полный cabinet desktop/mobile regression `28/28`; до identity latest requests и modal отсутствуют, после identity dismissal применяется к текущему пользователю.
+- Полный console-responsive Playwright прошёл `130/130` за `8.8 min`, all-screens `6/6` на 25 viewport-конфигурациях; frontend `125/125`, typecheck/build, audit `0 vulnerabilities`; backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный.
+- Roadmap: `605/625` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.591.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-app-version-session-boundary`.

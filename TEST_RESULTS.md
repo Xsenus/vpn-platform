@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet app-version identity boundary
+
+Scope:
+- App-version latest/history and local dismissal must belong to a confirmed cabinet user identity, not a temporary token-only hydration state.
+- A dismissed release must not re-open when `/api/app-version/latest` completes before `/api/me`.
+
+Results:
+- Roadmap progress: `605/625` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-app-version-identity-boundary`, version `0.592.0`.
+- Reproduction before fix: delayed `/api/me` plus an immediate unseen latest release opened the modal under `anonymous`; after profile hydration the saved user-specific dismissal was ignored and targeted desktop was `0/1` (`expected 0`, `actual 1` dialog).
+- After fix: token/user transitions close and clear app-version state, latest loading waits for a non-empty `userId`, manual open is rejected during identity hydration and anonymous dismissal keys no longer exist.
+- Targeted identity browser: desktop/mobile `2/2`; full cabinet desktop/mobile regression: `28/28`; no early latest request, modal or horizontal overflow.
+- Final visual audit: full console-responsive Playwright `130/130` in `8.8 min`; all-screens `6/6`, including every admin section on 25 viewport configurations `305x568..2560x1440`.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `591` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet app-version session boundary
 
 Scope:

@@ -32,8 +32,8 @@ function getDialogFocusableElements(dialog: HTMLElement) {
     .filter((element) => element.getClientRects().length > 0 && element.getAttribute('aria-hidden') !== 'true')
 }
 
-function dismissedKey(userId: string | null | undefined, releaseId: string) {
-  return `appVersion.dismissed.${userId || 'anonymous'}.${releaseId}`
+function dismissedKey(userId: string, releaseId: string) {
+  return `appVersion.dismissed.${userId}.${releaseId}`
 }
 
 function readDismissed(key: string) {
@@ -81,11 +81,9 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     setHistory([])
     setSelectedReleaseId('')
     setLoadingHistory(false)
+    setOpen(false)
 
-    if (!token) {
-      setOpen(false)
-      return
-    }
+    if (!token || !userId) return
 
     const latestRequestId = ++latestRequestIdRef.current
     const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
@@ -113,7 +111,7 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
 
   useEffect(() => {
     if (!manualOpenSignal) return
-    if (!token) {
+    if (!token || !userId) {
       onManualOpenHandled()
       return
     }
@@ -136,7 +134,7 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
           if (requestIsCurrent()) setLatest(null)
         })
     }
-  }, [api, latest, manualOpenSignal, onManualOpenHandled, token])
+  }, [api, latest, manualOpenSignal, onManualOpenHandled, token, userId])
 
   useEffect(() => {
     if (!open || !token || history.length > 0 || loadingHistory) return
@@ -166,7 +164,7 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
   const handleClose = async () => {
     setOpen(false)
     const release = latest
-    if (!token || !release) return
+    if (!token || !userId || !release) return
 
     writeDismissed(dismissedKey(userId, release.releaseId))
     try {
