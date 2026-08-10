@@ -1699,9 +1699,11 @@ export function App() {
     goToAdminSection(availableAdminSections[nextIndex][0], 'tab')
   }
 
-  const runAction = async (id: string, action: (context: AdminActionContext) => Promise<void>, requiresWrite = true) => {
-    if (requiresWrite && !canWriteActiveSection) {
-      setError(`Роль ${adminSession?.roles.join(', ') || 'текущей сессии'} не разрешает изменять раздел «${activeSectionLabel}».`)
+  const runAction = async (requiredSections: AdminSectionId | readonly AdminSectionId[] | null, id: string, action: (context: AdminActionContext) => Promise<void>) => {
+    const sections = requiredSections === null ? [] : Array.isArray(requiredSections) ? requiredSections : [requiredSections]
+    const deniedSection = sections.find((section) => !canWriteSection(section))
+    if (deniedSection) {
+      setError(`Роль ${adminSession?.roles.join(', ') || 'текущей сессии'} не разрешает изменять раздел «${adminSectionLabel(deniedSection)}».`)
       return
     }
     const operationId = sessionOperationId.current
@@ -2093,7 +2095,7 @@ export function App() {
     }
     const editingId = editingProviderAccountId
     const submittedForm = providerForm
-    await runAction('provider-save', async (action) => {
+    await runAction('payments', 'provider-save', async (action) => {
       const saved = editingId
         ? await api.updateAdminPaymentProviderAccount(token, editingId, submittedForm)
         : await api.createAdminPaymentProviderAccount(token, submittedForm)
@@ -2105,7 +2107,7 @@ export function App() {
   }
 
   const handleSetProviderEnabled = async (account: PaymentProviderAccountDto, enabled: boolean) => {
-    await runAction(account.id, async (action) => {
+    await runAction('payments', account.id, async (action) => {
       await api.setAdminPaymentProviderAccountEnabled(token, account.id, enabled)
       if (!action.isCurrent()) return
       setNotice(`${account.name}: ${enabled ? 'включен' : 'выключен'}`)
@@ -2114,7 +2116,7 @@ export function App() {
   }
 
   const handleCheckProviderAccount = async (account: PaymentProviderAccountDto) => {
-    await runAction(`provider-check-${account.id}`, async (action) => {
+    await runAction('payments', `provider-check-${account.id}`, async (action) => {
       const result = await api.checkAdminPaymentProviderAccount(token, account.id)
       if (!action.isCurrent()) return
       setProviderCheckResults((current) => ({ ...current, [account.id]: result }))
@@ -2123,14 +2125,14 @@ export function App() {
     })
   }
 
-  const handleRecheckPayment = async (paymentId: string) => runAction(paymentId, async (action) => {
+  const handleRecheckPayment = async (paymentId: string) => runAction('payments', paymentId, async (action) => {
     const payment = await api.recheckAdminPayment(token, paymentId)
     if (!action.isCurrent()) return
     setNotice(`Платеж ${shortId(payment.paymentId)} проверен: ${payment.status}`)
     await action.reloadAll()
   })
 
-  const handleRecheckOrderPayment = async (order: OrderDto) => runAction(`order-recheck-${order.id}`, async (action) => {
+  const handleRecheckOrderPayment = async (order: OrderDto) => runAction('payments', `order-recheck-${order.id}`, async (action) => {
     const payment = await api.recheckAdminOrderPayment(token, order.id)
     if (!action.isCurrent()) return
     setNotice(`Заказ ${shortId(order.id)}: последний платеж ${shortId(payment.paymentId)} проверен, статус ${payment.status}.`)
@@ -2160,7 +2162,7 @@ export function App() {
   }
 
   const handleRefundPayment = async (payment: PaymentAttemptDto) => {
-    await runAction(payment.id, async (action) => {
+    await runAction('payments', payment.id, async (action) => {
       const amount = refundAmounts[payment.id] ?? getRefundableAmount(payment)
       const reason = refundReasons[payment.id]?.trim() || 'manual_admin_refund'
       const refund = await api.refundAdminPayment(token, payment.id, amount, reason)
@@ -2227,7 +2229,7 @@ export function App() {
     const editingId = editingTariffId
     const submittedForm = tariffForm
     const submittedFeaturesText = tariffFeaturesText
-    await runAction('tariff-save', async (action) => {
+    await runAction('tariffs', 'tariff-save', async (action) => {
       if (editingId) {
         await api.updateAdminTariff(token, editingId, payload)
       } else {
@@ -2243,7 +2245,7 @@ export function App() {
   }
 
   const handleToggleTariff = async (tariff: TariffDto) => {
-    await runAction(tariff.id, async (action) => {
+    await runAction('tariffs', tariff.id, async (action) => {
       await api.updateAdminTariff(token, tariff.id, { isActive: tariff.isActive === false })
       if (!action.isCurrent()) return
       setNotice(`Тариф ${tariff.name} обновлён.`)
@@ -2252,7 +2254,7 @@ export function App() {
   }
 
   const handleDeleteTariff = async (tariff: TariffDto) => {
-    await runAction(`delete-${tariff.id}`, async (action) => {
+    await runAction('tariffs', `delete-${tariff.id}`, async (action) => {
       const result = await api.deleteAdminTariff(token, tariff.id)
       if (!action.isCurrent()) return
       if (editingTariffIdRef.current === tariff.id) resetTariffForm()
@@ -2295,7 +2297,7 @@ export function App() {
 
     const editingId = editingReferralProgramId
     const submittedForm = referralProgramForm
-    await runAction('referral-program-save', async (action) => {
+    await runAction('referrals', 'referral-program-save', async (action) => {
       const payload = buildReferralProgramPayload(submittedForm)
       if (editingId) {
         await api.updateAdminReferralProgram(token, editingId, payload)
@@ -2354,7 +2356,7 @@ export function App() {
       return
     }
 
-    await runAction(editingId ? `release-update-${editingId}` : 'release-create', async (action) => {
+    await runAction('releases', editingId ? `release-update-${editingId}` : 'release-create', async (action) => {
       if (editingId) {
         await api.updateAdminAppRelease(token, editingId, payload)
       } else {
@@ -2368,7 +2370,7 @@ export function App() {
   }
 
   const handleDeleteRelease = async (release: AppReleaseDto) => {
-    await runAction(`release-delete-${release.id}`, async (action) => {
+    await runAction('releases', `release-delete-${release.id}`, async (action) => {
       await api.deleteAdminAppRelease(token, release.id)
       if (!action.isCurrent()) return
       if (editingReleaseIdRef.current === release.id) resetReleaseForm()
@@ -2414,7 +2416,7 @@ export function App() {
       return
     }
 
-    await runAction(editingId ? `faq-update-${editingId}` : 'faq-create', async (action) => {
+    await runAction('faq', editingId ? `faq-update-${editingId}` : 'faq-create', async (action) => {
       if (editingId) {
         await api.updateAdminFaq(token, editingId, payload)
       } else {
@@ -2430,7 +2432,7 @@ export function App() {
   const handleDeleteFaq = async (entry: FaqItem) => {
     const faqId = entry.id
     if (!faqId) return
-    await runAction(`faq-delete-${faqId}`, async (action) => {
+    await runAction('faq', `faq-delete-${faqId}`, async (action) => {
       await api.deleteAdminFaq(token, faqId)
       if (!action.isCurrent()) return
       if (editingFaqIdRef.current === faqId) resetFaqForm()
@@ -2478,7 +2480,7 @@ export function App() {
       sortOrder: Number(submittedForm.sortOrder) || 0
     }
 
-    await runAction(editingId ? `content-update-${editingId}` : 'content-create', async (action) => {
+    await runAction('content', editingId ? `content-update-${editingId}` : 'content-create', async (action) => {
       if (editingId) {
         await api.updateAdminSiteContent(token, editingId, payload)
       } else {
@@ -2492,7 +2494,7 @@ export function App() {
   }
 
   const handleDeleteSiteContent = async (block: SiteContentBlockDto) => {
-    await runAction(`content-delete-${block.id}`, async (action) => {
+    await runAction('content', `content-delete-${block.id}`, async (action) => {
       await api.deleteAdminSiteContent(token, block.id)
       if (!action.isCurrent()) return
       if (editingSiteContentIdRef.current === block.id) resetSiteContentForm()
@@ -2503,7 +2505,7 @@ export function App() {
 
   const handleRestoreHomeContentDefaults = async () => {
     if (!token) return
-    await runAction('content-restore-defaults', async (action) => {
+    await runAction('content', 'content-restore-defaults', async (action) => {
       const result = await api.restoreAdminHomeContentDefaults(token)
       if (!action.isCurrent()) return
       setHomeContentReadiness(result.readiness)
@@ -2563,7 +2565,7 @@ export function App() {
       sortOrder: Number(submittedForm.sortOrder) || 0
     }
 
-    await runAction(editingId ? `scenario-update-${editingId}` : 'scenario-create', async (action) => {
+    await runAction('scenarios', editingId ? `scenario-update-${editingId}` : 'scenario-create', async (action) => {
       if (editingId) {
         await api.updateAdminWorkScenario(token, editingId, payload)
       } else {
@@ -2577,7 +2579,7 @@ export function App() {
   }
 
   const handleDeleteWorkScenario = async (scenario: WorkScenarioDto) => {
-    await runAction(`scenario-delete-${scenario.id}`, async (action) => {
+    await runAction('scenarios', `scenario-delete-${scenario.id}`, async (action) => {
       await api.deleteAdminWorkScenario(token, scenario.id)
       if (!action.isCurrent()) return
       if (editingWorkScenarioIdRef.current === scenario.id) resetWorkScenarioForm()
@@ -2594,7 +2596,7 @@ export function App() {
     }
 
     if (action === 'activate') {
-      await runAction(`${action}-${subscription.id}`, async (adminAction) => {
+      await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
         await api.activateAdminSubscription(token, subscription.id, 'manual_subscription_activate')
         if (!adminAction.isCurrent()) return
         setNotice('Подписка активирована, текущий VPN-доступ включен при наличии.')
@@ -2609,7 +2611,7 @@ export function App() {
         setError('Укажите положительное количество дней для продления подписки.')
         return
       }
-      await runAction(`${action}-${subscription.id}`, async (adminAction) => {
+      await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
         await api.extendAdminSubscription(token, subscription.id, days, 'manual_admin_extend')
         if (!adminAction.isCurrent()) return
         setNotice(`Подписка продлена на ${days} дней.`)
@@ -2624,7 +2626,7 @@ export function App() {
         return
       }
 
-      await runAction(`${action}-${subscription.id}`, async (adminAction) => {
+      await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
         await api.syncAdminSubscriptionAccess(token, subscription.id, 'manual_subscription_sync')
         if (!adminAction.isCurrent()) return
         setNotice('Текущий VPN-доступ подписки синхронизирован.')
@@ -2638,7 +2640,7 @@ export function App() {
       unblock: () => api.unblockAdminSubscription(token, subscription.id, 'manual_admin_action'),
       cancel: () => api.cancelAdminSubscription(token, subscription.id, 'manual_admin_action')
     }
-    await runAction(`${action}-${subscription.id}`, async (adminAction) => {
+    await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
       await map[action]()
       if (!adminAction.isCurrent()) return
       setNotice(action === 'cancel'
@@ -2667,7 +2669,7 @@ export function App() {
     }
 
     const targetNodeId = selectedTarget === 'auto' ? null : selectedTarget
-    await runAction(`migrate-${subscription.id}`, async (action) => {
+    await runAction(['subscriptions', 'vpn'], `migrate-${subscription.id}`, async (action) => {
       const result = await api.migrateAdminSubscription(token, subscription.id, targetNodeId)
       if (!action.isCurrent()) return
       setSubscriptionMigrationTargets((current) => ({ ...current, [subscription.id]: '' }))
@@ -2683,7 +2685,7 @@ export function App() {
       return
     }
 
-    await runAction(`${enable ? 'enable' : 'disable'}-${access.id}`, async (action) => {
+    await runAction('vpn', `${enable ? 'enable' : 'disable'}-${access.id}`, async (action) => {
       if (enable) await api.enableAdminAccess(token, access.id, 'manual_admin_action')
       else await api.disableAdminAccess(token, access.id, 'manual_admin_action')
       if (!action.isCurrent()) return
@@ -2699,7 +2701,7 @@ export function App() {
       return
     }
 
-    await runAction(`sync-${access.id}`, async (action) => {
+    await runAction('vpn', `sync-${access.id}`, async (action) => {
       await api.syncAdminAccess(token, access.id, 'manual_admin_sync')
       if (!action.isCurrent()) return
       setNotice('VPN-доступ синхронизирован.')
@@ -2714,7 +2716,7 @@ export function App() {
       return
     }
 
-    await runAction(`reset-${access.id}`, async (action) => {
+    await runAction('vpn', `reset-${access.id}`, async (action) => {
       try {
         await api.resetAdminAccessTraffic(token, access.id, 'manual_admin_reset_traffic')
         if (!action.isCurrent()) return
@@ -2733,12 +2735,12 @@ export function App() {
       return
     }
 
-    await runAction(`qr-${access.id}`, async (action) => {
+    await runAction(null, `qr-${access.id}`, async (action) => {
       const svg = await api.getAdminAccessQrSvg(token, access.id)
       if (!action.isCurrent()) return
       setAdminQrSvgs((current) => ({ ...current, [access.id]: svg }))
       setNotice('QR-код загружен. Он содержит ссылку подключения и не добавляет дополнительных секретов.')
-    }, false)
+    })
   }
 
   const handleReplySupport = async () => {
@@ -2748,7 +2750,7 @@ export function App() {
     const operationIsCurrent = () => sessionOperationId.current === operationId
     const conversation = supportConversations.find((item) => item.id === conversationId)
     if (!conversation) return
-    await runAction(`support-reply-${conversationId}`, async () => {
+    await runAction('support', `support-reply-${conversationId}`, async () => {
       try {
         const result = await api.replyAdminSupportConversation(token, conversationId, supportReplyText.trim(), conversation.revision)
         if (!operationIsCurrent()) return
@@ -2783,7 +2785,7 @@ export function App() {
     const operationIsCurrent = () => sessionOperationId.current === operationId
     const conversation = supportConversations.find((item) => item.id === conversationId)
     if (!conversation) return
-    await runAction(`support-status-${conversationId}`, async () => {
+    await runAction('support', `support-status-${conversationId}`, async () => {
       try {
         await api.updateAdminSupportConversationStatus(token, conversationId, status, conversation.revision)
       } catch (error) {
@@ -2813,7 +2815,7 @@ export function App() {
     const operationIsCurrent = () => sessionOperationId.current === operationId
     const conversation = supportConversations.find((item) => item.id === conversationId)
     if (!conversation) return
-    await runAction(`support-note-${conversationId}`, async () => {
+    await runAction('support', `support-note-${conversationId}`, async () => {
       try {
         await api.addAdminSupportInternalNote(token, conversationId, supportNoteText.trim(), conversation.revision)
       } catch (error) {
@@ -2869,7 +2871,7 @@ export function App() {
     }
     const submittedForm = vpnPanelForm
     const selectedPanelId = selectedVpnPanelIdRef.current
-    await runAction('vpn-panel-save', async (action) => {
+    await runAction('panels', 'vpn-panel-save', async (action) => {
       const saved = editingId
         ? await api.updateAdminVpnPanel(token, editingId, submittedForm)
         : await api.createAdminVpnPanel(token, submittedForm)
@@ -2890,7 +2892,7 @@ export function App() {
     })
   }
 
-  const handleTestVpnPanel = (panelId: string) => runAction(`test-${panelId}`, async (action) => {
+  const handleTestVpnPanel = (panelId: string) => runAction('panels', `test-${panelId}`, async (action) => {
     const result = await api.testAdminVpnPanel(token, panelId)
     if (!action.isCurrent()) return
     setNotice(`Проверка панели: ${result.status} (${result.version || 'версия неизвестна'})`)
@@ -2898,7 +2900,7 @@ export function App() {
     await loadVpnPanelDetails(panelId, token, action.operationId)
   })
 
-  const handleSyncVpnPanel = (panelId: string) => runAction(`sync-${panelId}`, async (action) => {
+  const handleSyncVpnPanel = (panelId: string) => runAction('panels', `sync-${panelId}`, async (action) => {
     const result = await api.syncAdminVpnPanel(token, panelId)
     if (!action.isCurrent()) return
     setNotice(`Синхронизация ${result.status}: ${result.summaryJson || result.errorMessage}`)
@@ -2906,7 +2908,7 @@ export function App() {
     await loadVpnPanelDetails(panelId, token, action.operationId)
   })
 
-  const handleSetVpnPanelStatus = (panel: VpnPanelDto, status: 'Active' | 'Disabled') => runAction(`panel-status-${panel.id}`, async (action) => {
+  const handleSetVpnPanelStatus = (panel: VpnPanelDto, status: 'Active' | 'Disabled') => runAction('panels', `panel-status-${panel.id}`, async (action) => {
     const saved = await api.updateAdminVpnPanel(token, panel.id, { status })
     if (!action.isCurrent()) return
     setNotice(`Панель ${saved.name}: статус ${saved.status}.`)
@@ -2914,7 +2916,7 @@ export function App() {
     await loadVpnPanelDetails(panel.id, token, action.operationId)
   })
 
-  const handleDeleteVpnPanel = (panel: VpnPanelDto) => runAction(`panel-delete-${panel.id}`, async (action) => {
+  const handleDeleteVpnPanel = (panel: VpnPanelDto) => runAction('panels', `panel-delete-${panel.id}`, async (action) => {
     const result = await api.deleteAdminVpnPanel(token, panel.id)
     if (!action.isCurrent()) return
     setNotice(result.archived
@@ -2935,7 +2937,7 @@ export function App() {
       setError(`Inbound: ${validationErrors.join(' ')}`)
       return
     }
-    return runAction(editingId ? `update-inbound-${editingId}` : 'create-inbound', async (action) => {
+    return runAction('panels', editingId ? `update-inbound-${editingId}` : 'create-inbound', async (action) => {
       const saved = editingId
         ? await api.updateAdminVpnInbound(token, editingId, submittedForm)
         : await api.createAdminVpnPanelInbound(token, panelId, submittedForm)
@@ -2951,14 +2953,14 @@ export function App() {
     })
   }
 
-  const handleSetDefaultInbound = (inboundId: string) => runAction(inboundId, async (action) => {
+  const handleSetDefaultInbound = (inboundId: string) => runAction('panels', inboundId, async (action) => {
     await api.setAdminVpnInboundDefault(token, inboundId)
     if (!action.isCurrent()) return
     setNotice('Основное inbound-правило обновлено.')
     await loadVpnPanelDetails(selectedVpnPanelId, token, action.operationId)
   })
 
-  const handleToggleInboundActive = (inbound: VpnInboundDto) => runAction(`toggle-inbound-${inbound.id}`, async (action) => {
+  const handleToggleInboundActive = (inbound: VpnInboundDto) => runAction('panels', `toggle-inbound-${inbound.id}`, async (action) => {
     const nextIsActive = !inbound.isActive
     const saved = await api.updateAdminVpnInbound(token, inbound.id, inboundToForm(inbound, {
       isActive: nextIsActive,
@@ -2983,7 +2985,7 @@ export function App() {
     setInboundForm(defaultInboundForm)
   }
 
-  const handleVpnClientAction = (client: VpnClientDto, action: 'enable' | 'disable' | 'sync' | 'reset') => runAction(`vpn-client-${action}-${client.id}`, async (adminAction) => {
+  const handleVpnClientAction = (client: VpnClientDto, action: 'enable' | 'disable' | 'sync' | 'reset') => runAction('panels', `vpn-client-${action}-${client.id}`, async (adminAction) => {
     try {
       const saved = action === 'enable'
         ? await api.enableAdminVpnClient(token, client.id)
@@ -2999,7 +3001,7 @@ export function App() {
     }
   })
 
-  const handleMigrateVpnClient = (client: VpnClientDto) => runAction(`vpn-client-migrate-${client.id}`, async (action) => {
+  const handleMigrateVpnClient = (client: VpnClientDto) => runAction('panels', `vpn-client-migrate-${client.id}`, async (action) => {
     const targetInboundId = vpnClientMigrationTargets[client.id]
     if (!targetInboundId) return
     const targetInbound = vpnMigrationInbounds.find((inbound) => inbound.id === targetInboundId)
@@ -3083,7 +3085,7 @@ export function App() {
       setError(`Сервер: ${validationErrors.join(' ')}`)
       return
     }
-    await runAction('server-save', async (action) => {
+    await runAction('nodes', 'server-save', async (action) => {
       const saved = editingId
         ? await api.updateAdminServer(token, editingId, submittedForm)
         : await api.createAdminServer(token, submittedForm)
@@ -3099,7 +3101,7 @@ export function App() {
 
   const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate' | 'disable') => {
     const actionLabel = action === 'maintenance' ? 'перевести в обслуживание' : action === 'ready' ? 'вернуть в работу' : action === 'drain' ? 'закрыть набор пользователей' : action === 'disable' ? 'отключить сервер' : 'открыть набор пользователей'
-    await runAction(`${action}-${server.id}`, async (adminAction) => {
+    await runAction('nodes', `${action}-${server.id}`, async (adminAction) => {
       if (action === 'maintenance') await api.enableAdminServerMaintenance(token, server.id)
       if (action === 'ready') await api.disableAdminServerMaintenance(token, server.id)
       if (action === 'drain') await api.disableAdminServerAllocation(token, server.id)
@@ -3111,7 +3113,7 @@ export function App() {
     })
   }
 
-  const handleDeleteServer = (server: VpnNodeDto) => runAction(`delete-server-${server.id}`, async (action) => {
+  const handleDeleteServer = (server: VpnNodeDto) => runAction('nodes', `delete-server-${server.id}`, async (action) => {
     const result = await api.deleteAdminServer(token, server.id)
     if (!action.isCurrent()) return
     setNotice(result.archived
@@ -3121,14 +3123,14 @@ export function App() {
     await action.reloadAll()
   })
 
-  const handleCheckServerHealth = (server: VpnNodeDto) => runAction(`health-server-${server.id}`, async (action) => {
+  const handleCheckServerHealth = (server: VpnNodeDto) => runAction('nodes', `health-server-${server.id}`, async (action) => {
     const check = await api.checkAdminServerHealth(token, server.id)
     if (!action.isCurrent()) return
     setNotice(`Health-check ${server.name}: ${check.status}${check.errorText ? ` · ${check.errorText}` : ''}`)
     await action.reloadAll()
   })
 
-  const handleQueuePrecheck = (serverId: string) => runAction(`precheck-${serverId}`, async (action) => {
+  const handleQueuePrecheck = (serverId: string) => runAction('nodes', `precheck-${serverId}`, async (action) => {
     const response = await api.precheckAdminServer(token, serverId)
     if (!action.isCurrent()) return
     setNotice(`Проверка поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. ID запуска: ${response.runId}`)
@@ -3136,7 +3138,7 @@ export function App() {
   })
 
   const handleQueueProvision = async (serverId: string) => {
-    await runAction(`provision-${serverId}`, async (action) => {
+    await runAction('nodes', `provision-${serverId}`, async (action) => {
       const response = await api.queueAdminProvision(token, serverId, false)
       if (!action.isCurrent()) return
       setNotice(`Подготовка сервера поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
@@ -3144,14 +3146,14 @@ export function App() {
     })
   }
 
-  const handleRetryProvisioningRun = (runId: string) => runAction(`retry-${runId}`, async (action) => {
+  const handleRetryProvisioningRun = (runId: string) => runAction('provisioning', `retry-${runId}`, async (action) => {
     const response = await api.retryAdminProvisioningRun(token, runId)
     if (!action.isCurrent()) return
     setNotice(`Повтор поставлен в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. Новый ID запуска: ${response.runId}`)
     await action.reloadAll()
   })
 
-  const handleRetryNotificationDelivery = (deliveryId: string) => runAction(`retry-notification-${deliveryId}`, async (action) => {
+  const handleRetryNotificationDelivery = (deliveryId: string) => runAction('audit', `retry-notification-${deliveryId}`, async (action) => {
     await api.retryAdminNotificationDelivery(token, deliveryId)
     if (!action.isCurrent()) return
     setNotice('Email-уведомление возвращено в очередь доставки.')
@@ -3159,7 +3161,7 @@ export function App() {
   })
 
   const handleDeployProvisioningRun = (runId: string) => {
-    return runAction(`deploy-run-${runId}`, async (action) => {
+    return runAction('provisioning', `deploy-run-${runId}`, async (action) => {
       const response = await api.deployAdminProvisioningRun(token, runId)
       if (!action.isCurrent()) return
       setNotice(`Развертывание поставлено в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
@@ -3168,7 +3170,7 @@ export function App() {
   }
 
   const handleCancelProvisioningRun = (runId: string) => {
-    return runAction(`cancel-run-${runId}`, async (action) => {
+    return runAction('provisioning', `cancel-run-${runId}`, async (action) => {
       try {
         await api.cancelAdminProvisioningRun(token, runId)
       } catch (error) {
@@ -3181,7 +3183,7 @@ export function App() {
     })
   }
 
-  const handleProvisioningSupportNeeded = (runId: string) => runAction(`support-run-${runId}`, async (action) => {
+  const handleProvisioningSupportNeeded = (runId: string) => runAction('provisioning', `support-run-${runId}`, async (action) => {
     const response = await api.markAdminProvisioningSupportNeeded(token, runId)
     if (!action.isCurrent()) return
     setNotice(`Обращение в поддержку: ${response.supportConversationId}`)
@@ -3195,7 +3197,7 @@ export function App() {
       setError(validationErrors[0])
       return
     }
-    return runAction('bot-settings', async (action) => {
+    return runAction('bot', 'bot-settings', async (action) => {
       const submittedForm = botSettingsForm
       const saved = await api.updateAdminTelegramBotSettings(token, submittedForm)
       if (!action.isCurrent()) return
@@ -3212,7 +3214,7 @@ export function App() {
 
   const handleTestBotSettings = () => {
     if (!token || !canWriteSection('bot')) return
-    return runAction('bot-settings-test', async (action) => {
+    return runAction('bot', 'bot-settings-test', async (action) => {
       const requestId = ++botSettingsCheckRequestId.current
       const result = await api.testAdminTelegramBotSettings(token)
       if (!action.isCurrent() || requestId !== botSettingsCheckRequestId.current) return

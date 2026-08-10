@@ -72,7 +72,7 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 6 public route-состояний, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Admin production bundle: `5` chunks, largest `219849`, total raw `517096`, gzip `138654`; fail-closed budget пройден.
+- Admin production bundle: `5` chunks, largest `219849`, total raw `517701`, gzip `138757`; fail-closed budget пройден.
 - Unknown public route показывает доступное `404` recovery и проходит desktop/mobile, Axe, console и 18 responsive viewport-конфигураций без blank screen/overflow.
 - Public route title/meta/focus lifecycle проходит direct load, SPA navigation и browser Back на desktop/mobile; каждый route имеет точную metadata.
 - Admin hydration/login и 17 sections имеют точную metadata; deep-link, section switch и logout проходят desktop/mobile.
@@ -83,8 +83,9 @@ Production-ready решение заблокировано следующими 
 - Admin payment provider, Telegram и 3x-ui URL отклоняют embedded credentials до submit и persistence.
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
-- Latest "Что нового": `2026-08-10-admin-hidden-form-capability-boundary`, версия `0.580.0`; локальный backend/frontend/browser regression, admin capability boundary, VPN form boundary, admin configuration URL boundary, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `593/613` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
+- Latest "Что нового": `2026-08-10-admin-action-capability-boundary`, версия `0.581.0`; локальный backend/frontend/browser regression, admin action/form capability boundaries, VPN form boundary, admin configuration URL boundary, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `594/614` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

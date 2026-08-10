@@ -13704,5 +13704,28 @@
         "text": "Roadmap progress is 593/613 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-action-capability-boundary",
+    "version": "0.581.0",
+    "releasedAt": "2026-08-10T20:29:48+07:00",
+    "title": "Admin actions проверяют права целевого раздела",
+    "summary": "Action dispatcher больше не подменяет capability операции правом записи активного tab.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Tariff, payment, subscription, VPN, node, panel, provisioning, support, content и Telegram actions явно передают целевой section в typed dispatcher."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile regression подтверждает, что finance-role не может вызвать hidden tariff PATCH из writable Dashboard, а полный admin lifecycle сохраняет разрешенные операции."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 594/614 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

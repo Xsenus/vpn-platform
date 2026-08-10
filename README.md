@@ -289,7 +289,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет выполняет Telegram deep-link/unlink и close/reopen обращения с optimistic revision и reload persistence на desktop/mobile;
 - платежные аккаунты проходят secure create/edit/disable/reload/enable/check browser lifecycle без раскрытия write-only secrets на desktop/mobile;
 - настройки Telegram-бота проходят secure save/check/reload/edit browser lifecycle без возврата raw bot/webhook tokens на desktop/mobile;
-- admin production bundle: `5` JS chunks, largest `219849`, total raw `517096`, gzip `138654` bytes; build budget fail-closed проверяет largest/total raw/gzip;
+- admin production bundle: `5` JS chunks, largest `219849`, total raw `517701`, gzip `138757` bytes; build budget fail-closed проверяет largest/total raw/gzip;
 - неизвестный public URL показывает доступную страницу `404` с возвратом на главную/помощь и проходит desktop/mobile плюс 19-viewport responsive gate;
 - public route metadata и focus/scroll lifecycle проходят direct load, SPA navigation и browser Back на desktop/mobile;
 - admin login/hydration и 17 hash-разделов синхронизируют title/meta description при deep-link, section switch и logout;
@@ -304,7 +304,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin и backend запрещают credential-bearing URL в payment provider, Telegram и 3x-ui конфигурации при submit, записи, включении и checkout selection;
 - server/inbound handlers повторно валидируют payload при programmatic submit; VPN server/panel/inbound формы проверяют числовые диапазоны, create credentials, JSON-object/network semantics и safe panel URL;
 - hidden admin forms не считаются capability boundary: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-hidden-form-capability-boundary`, версия `0.580.0`;
-- roadmap progress: `593/613` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- admin action dispatcher проверяет capability целевого section во всех typed callsites; active Dashboard/Payments не разрешает hidden mutation другого раздела;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-admin-action-capability-boundary`, версия `0.581.0`;
+- roadmap progress: `594/614` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

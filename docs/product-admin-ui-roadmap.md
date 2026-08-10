@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `593/613` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `594/614` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -164,7 +164,8 @@
 - [x] Admin payment provider, Telegram и 3x-ui URL не принимают embedded credentials на frontend и backend.
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
-- [x] Latest "Что нового": `2026-08-10-admin-hidden-form-capability-boundary`, версия `0.580.0`.
+- [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
+- [x] Latest "Что нового": `2026-08-10-admin-action-capability-boundary`, версия `0.581.0`.
 
 ## Как вести дальше
 

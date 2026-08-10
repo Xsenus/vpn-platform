@@ -3816,6 +3816,10 @@ test('read-only admin capability boundary rejects hidden form programmatic submi
   await page.getByRole('button', { name: 'Войти в админку' }).click()
   await expect(page.locator('.admin-shell')).toBeVisible()
 
+  const tariffSection = page.locator('#tariffs')
+  await tariffSection.locator('button').filter({ hasText: 'Выключить' }).first().evaluate((button) => (button as HTMLButtonElement).click())
+  await tariffSection.locator('button').filter({ hasText: 'Подтвердить' }).evaluate((button) => (button as HTMLButtonElement).click())
+
   const editableSections = [page.locator('#releases'), page.locator('#faq'), page.locator('#content'), page.locator('#scenarios')]
   for (const section of editableSections) {
     await section.locator('button').filter({ hasText: 'Редактировать' }).first().evaluate((button) => (button as HTMLButtonElement).click())
@@ -3841,9 +3845,10 @@ test('read-only admin capability boundary rejects hidden form programmatic submi
     faq: api.getRequestCount('/api/admin/faq/faq-created-e2e', 'PUT'),
     content: api.getRequestCount('/api/admin/site-content/content-created-e2e', 'PUT'),
     scenarios: api.getRequestCount('/api/admin/work-scenarios/scenario-auto', 'PUT'),
+    tariffToggle: api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'PATCH'),
     bot: api.getRequestCount('/api/admin/telegram-bot/settings', 'PATCH'),
     botTest: api.getRequestCount('/api/admin/telegram-bot/settings/test', 'POST')
-  }).toEqual({ releases: 0, faq: 0, content: 0, scenarios: 0, bot: 0, botTest: 0 })
+  }).toEqual({ releases: 0, faq: 0, content: 0, scenarios: 0, tariffToggle: 0, bot: 0, botTest: 0 })
 
   await page.getByRole('button', { name: 'Завершить сессию' }).click()
   await page.locator('.admin-login-form input[type="email"]').fill('readonly-e2e@example.test')

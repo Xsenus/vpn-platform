@@ -216,7 +216,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- admin production bundle budget: `5` JS chunks, largest `219849`, total raw `517096`, gzip `138654`.
+- admin production bundle budget: `5` JS chunks, largest `219849`, total raw `517701`, gzip `138757`.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
 - public route title/meta/focus: direct load, SPA navigation и browser Back desktop/mobile: OK.
 - admin section metadata: hydration/login, deep-link, 17 sections и logout desktop/mobile: OK.
@@ -231,8 +231,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin payment/Telegram/3x-ui URL credentials boundary on frontend and backend: OK.
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
-- latest "Что нового": `2026-08-10-admin-hidden-form-capability-boundary`, версия `0.580.0`.
-- roadmap progress: `593/613` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- admin action target-section capability boundary for all typed dispatcher callsites: OK.
+- latest "Что нового": `2026-08-10-admin-action-capability-boundary`, версия `0.581.0`.
+- roadmap progress: `594/614` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.581.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-action-capability-boundary`.
+
+### Исправлено
+
+- Общий admin action dispatcher теперь проверяет capability целевого раздела, а не активного tab; finance-role больше не может вызвать hidden tariff/VPN/provisioning mutation из writable Dashboard или Payments.
+- Все `54` action callsites типизированно привязаны к section capability; subscription migration требует одновременно subscription и VPN write-права, read-only QR явно исключен из mutation gate.
+
+### Проверено
+
+- До исправления desktop/mobile отправляли hidden tariff PATCH из finance-session; после исправления denied targeted `2/2` и разрешенный admin desktop/mobile lifecycle `66/66` зеленые.
+- Frontend `121/121`, typecheck/build, audit `0 vulnerabilities`; admin bundle raw `517701`, gzip `138757`, largest `219849`.
+- Полный console-responsive Playwright `124/124`, backend `1125/1125`, EF drift OK, fresh SQLite latest release OK, encoding `14/14`, secret scan `668/0`, artifact cleanup OK.
+- Roadmap: `594/614` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.580.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-hidden-form-capability-boundary`.

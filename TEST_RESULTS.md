@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin action capability boundary
+
+Scope:
+- Every admin action must authorize against the target operation section rather than whichever tab happens to be active.
+- Typed callsites must make mutation capability ownership explicit, including composite subscription/VPN migration and the read-only QR exception.
+
+Results:
+- Roadmap progress: `594/614` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-action-capability-boundary`, version `0.581.0`.
+- Reproduction before fix: finance-role on writable Dashboard sent one hidden tariff PATCH on desktop and mobile. After fix denied targeted browser `2/2`; allowed admin desktop/mobile lifecycle `66/66`.
+- All `54` `runAction` callsites provide an explicit target section; subscription migration requires both `subscriptions` and `vpn`, while QR retrieval explicitly uses the read-only path.
+- Frontend tests: `121/121`; typecheck/build all apps: OK; admin JS raw `517701`, gzip `138757`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `124/124`; backend full suite: `1125/1125`; EF model drift: none; fresh SQLite latest release: OK.
+- Encoding guard: `14/14`; secret scan: `668` files, `0` findings; artifact cleanup: OK.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin hidden form capability boundary
 
 Scope:

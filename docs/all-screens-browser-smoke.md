@@ -84,7 +84,7 @@ PNG создаются только при явном флаге внутри `f
 - Subscription activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle сохраняет связанный access state и скрывает terminal secrets на desktop/mobile.
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
-- Admin production build содержит `5` JS chunks под fail-closed budget: raw `517096`, gzip `138654`, largest `219849` bytes.
+- Admin production build содержит `5` JS chunks под fail-closed budget: raw `517701`, gzip `138757`, largest `219849` bytes.
 - Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 19 viewport-конфигураций.
 - Все шесть public route-состояний имеют собственные title/meta; SPA navigation и browser Back переводят focus в новый main на desktop/mobile.
 - Login и все 17 admin sections имеют exact title; payments/support/logout metadata lifecycle проходит desktop/mobile.
@@ -96,4 +96,5 @@ PNG создаются только при явном флаге внутри `f
 - Page-quality gate анализирует CSSOM каждого экрана и отклоняет cross-origin `http(s)` asset URL даже в неактивных stylesheet rules; shared/public/admin source guard проверяет тот же контракт статически.
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
-- Latest "Что нового": `2026-08-10-admin-hidden-form-capability-boundary`, версия `0.580.0`.
+- Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
+- Latest "Что нового": `2026-08-10-admin-action-capability-boundary`, версия `0.581.0`.
