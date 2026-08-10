@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin payment provider secure lifecycle E2E
+
+Scope:
+- Добавлен stateful desktop/mobile browser flow для create/edit/disable/reload/enable/check lifecycle платежного аккаунта.
+- Проверяются write-only secrets, безопасный DTO/DOM, mutation payload, authorization, readiness result, console errors и mobile overflow.
+
+Results:
+- Roadmap progress: `569/589` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-payment-provider-secure-lifecycle-e2e`, version `0.556.0`.
+- Frontend tests: `112/112`; typecheck/build: OK; dependency audit: `0 vulnerabilities`.
+- Full console-responsive Playwright: `84/84`; secure provider lifecycle passes on desktop and mobile-admin; all-screens axe/responsive matrix: `6/6`.
+- Backend full suite: `1112/1112`; fresh local SQLite checkout/payment/subscription/VPN smoke: OK; secret scan: `657` files, `0` findings.
+- External evidence remains open for real provider sandbox/live accounts, VPS/staging/production-like 3x-ui, Telegram and SMTP delivery.
+
 ## Check 2026-08-10: cabinet Telegram and support status E2E
 
 Scope:

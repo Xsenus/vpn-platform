@@ -13129,5 +13129,28 @@
         "text": "Roadmap progress is 568/588 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram bot and SMTP delivery must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-payment-provider-secure-lifecycle-e2e",
+    "version": "0.556.0",
+    "releasedAt": "2026-08-10T08:54:00+07:00",
+    "title": "Платежные аккаунты проверяются без раскрытия секретов",
+    "summary": "Desktop и mobile-admin сценарии создают, редактируют, отключают, включают и проверяют платежный аккаунт, сохраняя secret-поля write-only.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Admin E2E выполняет полный create/edit/disable/reload/enable/check lifecycle платежного аккаунта через фактическую форму и controls."
+      },
+      {
+        "type": "improved",
+        "text": "Secret values отправляются только в mutation payload, не возвращаются в DTO и не появляются в DOM; редактирование сохраняет текущие секреты через безопасные hasSecret-признаки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 569/589 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real provider, Telegram bot and SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

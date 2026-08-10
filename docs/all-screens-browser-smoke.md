@@ -74,5 +74,6 @@ PNG создаются только при явном флаге внутри `f
 - Public account assertion использует точное accessible name, а последовательный axe-аудит 17 admin sections имеет достаточный timeout без исключения правил.
 - Управляемая конфигурация admin-панели проходит полный create/edit/delete lifecycle с confirm-dialog, payload assertions и сохранением состояния после reload на desktop/mobile.
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `82/82`; all-screens: `6/6`.
-- Latest "Что нового": `2026-08-10-cabinet-telegram-support-status-e2e`, версия `0.555.0`.
+- Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
+- `npm run e2e:console --prefix frontend`: `84/84`; all-screens: `6/6`.
+- Latest "Что нового": `2026-08-10-admin-payment-provider-secure-lifecycle-e2e`, версия `0.556.0`.

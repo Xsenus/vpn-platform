@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.556.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-payment-provider-secure-lifecycle-e2e`.
+
+### Улучшено
+
+- Admin browser regression выполняет create/edit/disable/reload/enable/check lifecycle платежного аккаунта через фактическую форму на desktop/mobile.
+- Write-only secret-поля отправляются при создании, остаются пустыми при редактировании и никогда не появляются в DTO/DOM; UI показывает только безопасные `hasSecretKey`/`hasWebhookSecret` признаки.
+- Stateful mock API хранит provider account state и проверяет mutation payload, authorization, readiness result, console errors и горизонтальный overflow.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `84/84`; secure provider lifecycle проходит `2/2`, all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- Реальный provider sandbox/live кабинет, VPS/staging/production-like 3x-ui и SMTP evidence не переиспользовались.
+- Roadmap: `569/589` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.555.0 - 2026-08-10
 
 Release entry: `2026-08-10-cabinet-telegram-support-status-e2e`.

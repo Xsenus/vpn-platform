@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `112/112`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `82/82`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `84/84`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -72,8 +72,8 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Latest "Что нового": `2026-08-10-cabinet-telegram-support-status-e2e`, версия `0.555.0`; локальный backend/frontend/browser regression, critical admin/configuration mutations и cabinet Telegram/support lifecycle на desktop/mobile пройдены. Real Telegram/SMTP delivery и полный live VPS/staging evidence все еще требуются.
-- Roadmap progress: `568/588` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-admin-payment-provider-secure-lifecycle-e2e`, версия `0.556.0`; локальный backend/frontend/browser regression, admin provider/configuration mutations и cabinet Telegram/support lifecycle на desktop/mobile пройдены. Real provider/Telegram/SMTP delivery и полный live VPS/staging evidence все еще требуются.
+- Roadmap progress: `569/589` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

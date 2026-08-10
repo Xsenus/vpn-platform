@@ -793,9 +793,81 @@ async function mockAdminApi(page: Page) {
       return
     }
 
-    if (method === 'POST' && path === '/api/admin/payment-providers/accounts/provider-yookassa/check') {
-      const account = paymentProviderAccount({ healthStatus: 'Unknown', updatedAt: '2026-06-13T07:05:00Z' })
-      providers[0] = account
+    if (method === 'POST' && path === '/api/admin/payment-providers/accounts') {
+      const payload = body as Record<string, unknown>
+      const account = paymentProviderAccount({
+        id: 'provider-created-e2e',
+        provider: payload.provider,
+        mode: payload.mode,
+        name: payload.name,
+        publicName: payload.publicName,
+        isEnabled: payload.isEnabled,
+        isDefault: payload.isDefault,
+        shopId: payload.shopId,
+        apiBaseUrl: payload.apiBaseUrl,
+        returnUrl: payload.returnUrl,
+        webhookUrl: payload.webhookUrl,
+        hasSecretKey: Boolean(payload.secretKey),
+        hasWebhookSecret: Boolean(payload.webhookSecret),
+        useWebhookIpAllowList: payload.useWebhookIpAllowList,
+        allowedWebhookIpRangesCsv: payload.allowedWebhookIpRangesCsv,
+        extraSettingsJson: payload.extraSettingsJson,
+        healthStatus: 'Unknown',
+        isPubliclyAvailable: Boolean(payload.isEnabled) && payload.mode !== 'Disabled'
+      })
+      providers.push(account)
+      await fulfillJson(route, account)
+      return
+    }
+
+    const providerMutationMatch = path.match(/^\/api\/admin\/payment-providers\/accounts\/([^/]+)$/)
+    if (method === 'PATCH' && providerMutationMatch) {
+      const accountId = decodeURIComponent(providerMutationMatch[1])
+      const index = providers.findIndex((account) => account.id === accountId)
+      const current = providers[index]
+      const payload = body as Record<string, unknown>
+      const account = paymentProviderAccount({
+        ...current,
+        provider: payload.provider,
+        mode: payload.mode,
+        name: payload.name,
+        publicName: payload.publicName,
+        isEnabled: payload.isEnabled,
+        isDefault: payload.isDefault,
+        shopId: payload.shopId,
+        apiBaseUrl: payload.apiBaseUrl,
+        returnUrl: payload.returnUrl,
+        webhookUrl: payload.webhookUrl,
+        hasSecretKey: Boolean(payload.secretKey) || Boolean(current?.hasSecretKey),
+        hasWebhookSecret: Boolean(payload.webhookSecret) || Boolean(current?.hasWebhookSecret),
+        useWebhookIpAllowList: payload.useWebhookIpAllowList,
+        allowedWebhookIpRangesCsv: payload.allowedWebhookIpRangesCsv,
+        extraSettingsJson: payload.extraSettingsJson || current?.extraSettingsJson,
+        isPubliclyAvailable: Boolean(payload.isEnabled) && payload.mode !== 'Disabled',
+        updatedAt: now
+      })
+      providers[index] = account
+      await fulfillJson(route, account)
+      return
+    }
+
+    const providerEnabledMatch = path.match(/^\/api\/admin\/payment-providers\/accounts\/([^/]+)\/enabled$/)
+    if (method === 'POST' && providerEnabledMatch) {
+      const accountId = decodeURIComponent(providerEnabledMatch[1])
+      const index = providers.findIndex((account) => account.id === accountId)
+      const enabled = Boolean((body as Record<string, unknown>)?.enabled)
+      const account = paymentProviderAccount({ ...providers[index], isEnabled: enabled, isPubliclyAvailable: enabled, updatedAt: now })
+      providers[index] = account
+      await fulfillJson(route, account)
+      return
+    }
+
+    const providerCheckMatch = path.match(/^\/api\/admin\/payment-providers\/accounts\/([^/]+)\/check$/)
+    if (method === 'POST' && providerCheckMatch) {
+      const accountId = decodeURIComponent(providerCheckMatch[1])
+      const index = providers.findIndex((item) => item.id === accountId)
+      const account = paymentProviderAccount({ ...providers[index], healthStatus: 'Unknown', updatedAt: '2026-06-13T07:05:00Z' })
+      providers[index] = account
       await fulfillJson(route, {
         accountId: account.id,
         provider: account.provider,
@@ -1615,6 +1687,79 @@ async function openAdminSection(page: Page, name: string, id: string) {
   }
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
+
+test('admin payment provider accounts support secure lifecycle', async ({ page }) => {
+  test.slow()
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-provider-token', 'admin-provider-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  await paymentsPanel.getByLabel('Внутреннее имя').fill('yookassa-crud-e2e')
+  await paymentsPanel.getByLabel('Название для пользователя').fill('YooKassa CRUD E2E')
+  await paymentsPanel.getByLabel('Shop ID магазина').fill('shop-crud-e2e')
+  await paymentsPanel.getByRole('textbox', { name: /^Секретный ключ/ }).fill('e2e-api-key-value')
+  await paymentsPanel.getByRole('textbox', { name: /^Секрет webhook/ }).fill('e2e-webhook-key-value')
+  await paymentsPanel.getByLabel('URL возврата после оплаты').fill('https://cabinet.example.test/payment-return')
+  await paymentsPanel.getByLabel('URL webhook в YooKassa').fill('https://api.example.test/api/webhooks/payments/yookassa')
+  await paymentsPanel.getByRole('button', { name: 'Сохранить способ оплаты' }).click()
+
+  await expect(page.getByText('Способ оплаты yookassa-crud-e2e сохранен. Секреты не отображаются.')).toBeVisible()
+  let providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa CRUD E2E' })
+  await expect(providerRow).toContainText('Секретный ключ: задан')
+  await expect(providerRow).toContainText('Секрет webhook: задан')
+  expect(api.getLastRequest('/api/admin/payment-providers/accounts')?.body).toMatchObject({
+    name: 'yookassa-crud-e2e',
+    publicName: 'YooKassa CRUD E2E',
+    secretKey: 'e2e-api-key-value',
+    webhookSecret: 'e2e-webhook-key-value'
+  })
+  await expect(page.getByText('e2e-api-key-value', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('e2e-webhook-key-value', { exact: true })).toHaveCount(0)
+
+  await providerRow.getByRole('button', { name: 'Редактировать' }).click()
+  await expect(paymentsPanel.getByRole('heading', { name: 'Редактирование способа оплаты' })).toBeVisible()
+  await expect(paymentsPanel.getByRole('textbox', { name: /^Секретный ключ/ })).toHaveValue('')
+  await expect(paymentsPanel.getByRole('textbox', { name: /^Секрет webhook/ })).toHaveValue('')
+  await paymentsPanel.getByLabel('Название для пользователя').fill('YooKassa CRUD Updated')
+  await paymentsPanel.getByRole('button', { name: 'Сохранить изменения' }).click()
+  await expect(page.getByText('Способ оплаты yookassa-crud-e2e обновлен. Секреты не отображаются.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e', 'PATCH')?.body).toMatchObject({
+    publicName: 'YooKassa CRUD Updated',
+    secretKey: '',
+    webhookSecret: ''
+  })
+
+  providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa CRUD Updated' })
+  await providerRow.getByRole('button', { name: 'Выключить' }).click()
+  await paymentsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('yookassa-crud-e2e: выключен')).toBeVisible()
+  await expect(providerRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e/enabled')?.body).toEqual({ enabled: false })
+
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa CRUD Updated' })
+  await expect(providerRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  await providerRow.getByRole('button', { name: 'Включить' }).click()
+  await expect(page.getByText('yookassa-crud-e2e: включен')).toBeVisible()
+  await expect(providerRow.getByRole('button', { name: 'Выключить' })).toBeVisible()
+
+  await providerRow.getByRole('button', { name: 'Проверить настройки' }).click()
+  await expect(providerRow.getByText('Настройки готовы')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e/check')).toBeTruthy()
+  expect(api.getRequestCount('/api/admin/payment-providers/accounts/provider-created-e2e/enabled', 'POST')).toBe(2)
+  expect(api.getAuthorizedRequestCount('/api/admin/payment-providers/accounts/provider-created-e2e', 'PATCH', 'Bearer admin-provider-token')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
 
 test('admin managed configuration supports complete CRUD lifecycle', async ({ page }) => {
   test.setTimeout(180_000)

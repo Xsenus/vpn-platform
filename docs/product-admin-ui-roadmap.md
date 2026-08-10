@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `568/588` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `569/589` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `82/82`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `84/84`.
 - [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -140,7 +140,8 @@
 - [x] Критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки проходят stateful desktop/mobile E2E; вся вкладка оплат находится в одном `tabpanel`.
 - [x] Управляемые тарифы, реферальные программы, сценарии, релизы, FAQ и контент сайта проходят stateful create/edit/delete lifecycle на desktop/mobile с reload persistence.
 - [x] Cabinet Telegram deep-link/unlink и support close/reopen проходят stateful desktop/mobile lifecycle с optimistic revision и reload persistence.
-- [x] Latest "Что нового": `2026-08-10-cabinet-telegram-support-status-e2e`, версия `0.555.0`.
+- [x] Payment provider accounts проходят secure create/edit/disable/reload/enable/check lifecycle без возврата write-only secret values в DTO/DOM.
+- [x] Latest "Что нового": `2026-08-10-admin-payment-provider-secure-lifecycle-e2e`, версия `0.556.0`.
 
 ## Как вести дальше
 
