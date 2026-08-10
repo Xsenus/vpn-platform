@@ -45,8 +45,8 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-admin-skip-link-route-preservation", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("116/116", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-10-cabinet-app-version-modal-focus-trap", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("118/118", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1113/1113",
-                     "2026-08-10-admin-skip-link-route-preservation",
-                     "0.572.0",
+                     "2026-08-10-cabinet-app-version-modal-focus-trap",
+                     "0.573.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

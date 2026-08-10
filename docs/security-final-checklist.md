@@ -109,7 +109,7 @@ git diff --check
 - Admin user/support detail requests принимают только актуальный selected/session response и не возвращают старые данные после logout: OK.
 - Admin mutation completion, reload и form reset ограничены исходной session operation и отправленным snapshot; duplicate submit блокируется синхронно: OK.
 - Public/cabinet mutation completion ограничен исходной session/unmount operation; duplicate auth/refresh/action events блокируются синхронно, а более новые drafts сохраняются: OK.
-- Latest local release: `2026-08-10-admin-skip-link-route-preservation`, версия `0.572.0`; admin skip-link/hash preservation, invalid-hash recovery/history/focus и admin/public metadata lifecycle закрывают contradictory route, hidden-focus, stale head и blank-screen состояния; bundle budget, support lifecycle, notification role guards, payment refund, VPN access revision и write-only credentials проверены; axe WCAG A/AA и best-practice gate без allow-list проверен на desktop и 320 px.
+- Latest local release: `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`; cabinet modal focus/inert/scroll isolation, admin skip-link/hash preservation, invalid-hash recovery/history/focus и admin/public metadata lifecycle закрывают background-focus, contradictory route, hidden-focus, stale head и blank-screen состояния; bundle budget, support lifecycle, notification role guards, payment refund, VPN access revision и write-only credentials проверены; axe WCAG A/AA и best-practice gate без allow-list проверен на desktop и 320 px.
 - Frontend tests: 116/116.
 - Frontend typecheck/build: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.

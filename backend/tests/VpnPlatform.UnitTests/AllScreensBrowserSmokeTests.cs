@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace VpnPlatform.UnitTests;
@@ -14,6 +15,8 @@ public class AllScreensBrowserSmokeTests
         var adminApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "App.tsx"));
         var adminMetadata = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-page-metadata.ts"));
         var adminSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "admin.spec.ts"));
+        var cabinetAppVersion = File.ReadAllText(Path.Combine(root, "frontend", "apps", "cabinet", "src", "AppVersion.tsx"));
+        var cabinetSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "cabinet.spec.ts"));
         var sharedUi = File.ReadAllText(Path.Combine(root, "frontend", "packages", "ui", "src", "index.tsx"));
         var config = File.ReadAllText(Path.Combine(root, "frontend", "playwright.config.ts"));
         var packageJson = File.ReadAllText(Path.Combine(root, "frontend", "package.json"));
@@ -90,6 +93,11 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("SkipLink href=\"#admin-login\" updateHash={false}", adminApp, StringComparison.Ordinal);
         Assert.Contains("SkipLink href=\"#admin-content\" updateHash={false}", adminApp, StringComparison.Ordinal);
         Assert.Contains("admin skip links preserve the current section route", adminSpec, StringComparison.Ordinal);
+        Assert.Contains("appRoot.inert = true", cabinetAppVersion, StringComparison.Ordinal);
+        Assert.Contains("document.body.style.overflow = 'hidden'", cabinetAppVersion, StringComparison.Ordinal);
+        Assert.Contains("cabinet app version modal traps focus and restores its opener", cabinetSpec, StringComparison.Ordinal);
+        Assert.Contains("cabinet app version modal at ${viewport.name}", spec, StringComparison.Ordinal);
+        Assert.Equal(19, Regex.Matches(spec, "(?m)^  \\{ name: '[^']+', width: \\d+, height: \\d+ \\},?$").Count);
     }
 
     [Fact]

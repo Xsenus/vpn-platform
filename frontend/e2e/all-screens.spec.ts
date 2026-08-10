@@ -1031,6 +1031,32 @@ test('cabinet fits representative responsive viewports after authentication', as
     await expectResponsiveLayout(page, `cabinet at ${viewport.name}`)
     if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `cabinet at ${viewport.name}`)
     if (viewport.name === 'compact-mobile') await captureAuditScreenshot(page, testInfo, 'cabinet-dashboard-mobile')
+
+    await page.getByRole('button', { name: 'Что нового' }).click()
+    const appVersionDialog = page.getByRole('dialog', { name: release.title })
+    await expect(appVersionDialog).toBeVisible()
+    await expectResponsiveLayout(page, `cabinet app version modal at ${viewport.name}`)
+    const modalBounds = await appVersionDialog.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        viewportWidth: document.documentElement.clientWidth,
+        viewportHeight: window.innerHeight
+      }
+    })
+    expect(modalBounds.left, `modal left edge at ${viewport.name}`).toBeGreaterThanOrEqual(0)
+    expect(modalBounds.top, `modal top edge at ${viewport.name}`).toBeGreaterThanOrEqual(0)
+    expect(modalBounds.right, `modal right edge at ${viewport.name}`).toBeLessThanOrEqual(modalBounds.viewportWidth)
+    expect(modalBounds.bottom, `modal bottom edge at ${viewport.name}`).toBeLessThanOrEqual(modalBounds.viewportHeight)
+    if (viewport.name === 'compact-mobile') {
+      await expectWcagQuality(page, `cabinet app version modal at ${viewport.name}`)
+      await captureAuditScreenshot(page, testInfo, 'cabinet-app-version-mobile')
+    }
+    await page.keyboard.press('Escape')
+    await expect(appVersionDialog).toHaveCount(0)
   }
 
   expect(browserErrors).toEqual([])

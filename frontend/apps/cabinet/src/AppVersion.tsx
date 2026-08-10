@@ -18,6 +18,20 @@ const itemLabels: Record<string, string> = {
   important: 'Важно'
 }
 
+const dialogFocusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(',')
+
+function getDialogFocusableElements(dialog: HTMLElement) {
+  return Array.from(dialog.querySelectorAll<HTMLElement>(dialogFocusableSelector))
+    .filter((element) => element.getClientRects().length > 0 && element.getAttribute('aria-hidden') !== 'true')
+}
+
 function dismissedKey(userId: string | null | undefined, releaseId: string) {
   return `appVersion.dismissed.${userId || 'anonymous'}.${releaseId}`
 }
@@ -160,21 +174,63 @@ type AppVersionModalProps = {
 export function AppVersionModal({ latestRelease, selectedRelease, history, loadingHistory, onClose, onSelectRelease, onShowCurrent }: AppVersionModalProps) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const dialogRef = useRef<HTMLElement | null>(null)
+  const historyToggleRef = useRef<HTMLButtonElement | null>(null)
+  const historyCloseRef = useRef<HTMLButtonElement | null>(null)
   const isCurrent = latestRelease?.releaseId === selectedRelease.releaseId
 
   useEffect(() => {
     const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const appRoot = document.getElementById('root')
+    const appRootWasInert = appRoot?.inert ?? false
+    const previousBodyOverflow = document.body.style.overflow
+
+    if (appRoot) appRoot.inert = true
+    document.body.style.overflow = 'hidden'
     dialogRef.current?.focus()
 
     return () => {
-      previousActiveElement?.focus()
+      if (appRoot) appRoot.inert = appRootWasInert
+      document.body.style.overflow = previousBodyOverflow
+      if (previousActiveElement?.isConnected) previousActiveElement.focus()
     }
   }, [])
 
   const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape') return
-    event.stopPropagation()
-    onClose()
+    if (event.key === 'Escape') {
+      event.stopPropagation()
+      onClose()
+      return
+    }
+
+    if (event.key !== 'Tab' || !dialogRef.current) return
+    const focusableElements = getDialogFocusableElements(dialogRef.current)
+    if (focusableElements.length === 0) {
+      event.preventDefault()
+      dialogRef.current.focus()
+      return
+    }
+
+    const firstElement = focusableElements[0]
+    const lastElement = focusableElements[focusableElements.length - 1]
+    const activeElement = document.activeElement
+    if (event.shiftKey && (activeElement === dialogRef.current || activeElement === firstElement)) {
+      event.preventDefault()
+      lastElement.focus()
+    } else if (!event.shiftKey && activeElement === lastElement) {
+      event.preventDefault()
+      firstElement.focus()
+    }
+  }
+
+  const openHistory = () => {
+    setHistoryOpen(true)
+    window.requestAnimationFrame(() => historyCloseRef.current?.focus())
+  }
+
+  const closeHistory = () => {
+    const restoreMobileToggle = Boolean(historyToggleRef.current?.getClientRects().length)
+    setHistoryOpen(false)
+    if (restoreMobileToggle) window.requestAnimationFrame(() => historyToggleRef.current?.focus())
   }
 
   return createPortal(
@@ -193,7 +249,7 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
         <aside id="app-version-history" className={`app-version-history ${historyOpen ? 'is-open' : ''}`} aria-label="История обновлений">
           <div className="app-version-history-head">
             <strong>История обновлений</strong>
-            <PrimaryButton type="button" className="button-ghost app-version-history-toggle" onClick={() => setHistoryOpen(false)}>Скрыть</PrimaryButton>
+            <button ref={historyCloseRef} type="button" className="button button-ghost app-version-history-toggle" onClick={closeHistory}>Скрыть</button>
           </div>
           {loadingHistory && <p className="muted" role="status" aria-live="polite">Загружаем историю...</p>}
           <div className="app-version-history-list">
@@ -206,7 +262,7 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
                 aria-label={`Версия ${release.version}, ${formatReleaseDate(release.releasedAt)}`}
                 onClick={() => {
                   onSelectRelease(release.releaseId)
-                  setHistoryOpen(false)
+                  closeHistory()
                 }}
               >
                 <span>{release.version}</span>
@@ -218,15 +274,16 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
         </aside>
         <div className="app-version-content">
           <div className="app-version-mobile-actions">
-            <PrimaryButton
+            <button
+              ref={historyToggleRef}
               type="button"
-              className="button-secondary"
+              className="button button-secondary"
               aria-expanded={historyOpen}
               aria-controls="app-version-history"
-              onClick={() => setHistoryOpen(true)}
+              onClick={openHistory}
             >
               История
-            </PrimaryButton>
+            </button>
           </div>
           <header className="app-version-header">
             <div>

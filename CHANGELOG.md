@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.573.0 - 2026-08-10
+
+Release entry: `2026-08-10-cabinet-app-version-modal-focus-trap`.
+
+### Исправлено
+
+- Модальное окно «Что нового» больше не выпускает клавиатурный focus на скрытый под overlay кабинет: Tab/Shift+Tab замыкаются на видимых controls, фон получает `inert`, а body scroll блокируется.
+- Escape закрывает окно и возвращает focus к живой кнопке открытия; на mobile история переводит focus в кнопку закрытия и возвращает его после выбора версии, а исходные `inert`/`overflow` значения восстанавливаются.
+
+### Проверено
+
+- Targeted desktop/mobile modal lifecycle: `2/2`; focus trap, opener restore, background isolation, scroll lock, viewport bounds и отсутствие horizontal overflow подтверждены.
+- Cabinet modal проходит все `19` viewport-конфигураций `305x568..2560x1440`, включая стороны breakpoints, compact Axe и responsive control clipping gate.
+- Cabinet desktop/mobile suite `24/24`; полный console-responsive Playwright `118/118`; frontend unit `116/116`, typecheck/build, audit `0 vulnerabilities`.
+- Admin bundle raw `512499`, gzip `137570`, largest `219849`; backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate.
+- Roadmap: `586/606` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.572.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-skip-link-route-preservation`.

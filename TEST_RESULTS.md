@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: cabinet app-version modal focus isolation
+
+Scope:
+- The `aria-modal` app-version dialog must trap Tab/Shift+Tab, isolate background controls and scrolling, keep mobile history focus visible, close with Escape and restore its live opener.
+- Modal geometry, controls and WCAG quality must hold across the complete representative responsive matrix.
+
+Results:
+- Roadmap progress: `586/606` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-cabinet-app-version-modal-focus-trap`, version `0.573.0`.
+- Frontend tests: `116/116`; targeted desktop/mobile modal lifecycle: `2/2`; cabinet desktop/mobile suite: `24/24`; full console-responsive Playwright: `118/118`.
+- App-version modal passes viewport bounds, horizontal overflow and interactive-control clipping checks on all `19` configurations `305x568..2560x1440`; compact mobile Axe has `0` violations.
+- Typecheck/build all apps: OK; cabinet JS `357.36 kB` raw, `103.68 kB` gzip; admin bundle raw `512499`, gzip `137570`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin skip links preserve section routes
 
 Scope:

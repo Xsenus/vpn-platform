@@ -17,6 +17,26 @@ const user = {
   status: 'Active'
 }
 
+const appVersionRelease = {
+  id: 'release-cabinet-e2e',
+  releaseId: '2026-08-10-cabinet-modal-focus',
+  version: '0.573.0',
+  releasedAt: now,
+  title: 'Проверка модального окна',
+  summary: 'Клавиатурный фокус должен оставаться внутри окна обновления.',
+  isActive: true,
+  source: 'agent',
+  items: [
+    { id: 'release-item-cabinet-e2e', type: 'fixed', text: 'Проверен полный клавиатурный lifecycle.', sortOrder: 10 }
+  ],
+  createdByUserId: null,
+  createdByUserName: 'Codex',
+  updatedByUserId: null,
+  updatedByUserName: 'Codex',
+  createdAt: now,
+  updatedAt: now
+}
+
 const subscription = {
   id: 'sub-active',
   userId: user.id,
@@ -338,6 +358,7 @@ async function mockCabinetApi(page: Page) {
   let unsafeQrSvg = false
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
+  let appVersionAvailable = false
   let renewalOrderCreated = false
   let renewalOrder = {
     ...paidOrder,
@@ -668,12 +689,19 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/app-version/latest') {
-      await fulfillJson(route, { currentVersion: null, latestRelease: null, seenByCurrentUser: true })
+      await fulfillJson(route, appVersionAvailable
+        ? { currentVersion: appVersionRelease.version, latestRelease: appVersionRelease, seenByCurrentUser: true }
+        : { currentVersion: null, latestRelease: null, seenByCurrentUser: true })
       return
     }
 
     if (method === 'GET' && path === '/api/app-version/history') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, appVersionAvailable ? [appVersionRelease] : [])
+      return
+    }
+
+    if (method === 'POST' && path === '/api/app-version/mark-seen') {
+      await fulfillJson(route, { releaseId: appVersionRelease.releaseId, seen: true })
       return
     }
 
@@ -722,6 +750,7 @@ async function mockCabinetApi(page: Page) {
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
+    showAppVersionRelease: () => { appVersionAvailable = true },
     markTelegramLinked: () => {
       telegramStatus = { isLinked: true, telegramUserId: 777001, username: 'cabinet_e2e', linkedAt: now }
     },
@@ -743,6 +772,58 @@ async function seedCabinetSession(page: Page, accessToken: string, refreshToken:
     sessionStorage.setItem('vpn-platform-cabinet-refresh-token', refresh)
   }, { accessToken, refreshToken })
 }
+
+test('cabinet app version modal traps focus and restores its opener', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  const api = await mockCabinetApi(page)
+  api.showAppVersionRelease()
+  await seedCabinetSession(page, 'access-token-cabinet-version', 'refresh-token-cabinet-version')
+
+  await page.goto('/')
+  const opener = page.getByRole('button', { name: 'Что нового' })
+  await expect(opener).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)
+  await opener.click()
+  const dialog = page.getByRole('dialog', { name: 'Проверка модального окна' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog).toBeFocused()
+  const dialogBox = await dialog.boundingBox()
+  const viewport = page.viewportSize()
+  expect(dialogBox).not.toBeNull()
+  expect(viewport).not.toBeNull()
+  expect(dialogBox!.x).toBeGreaterThanOrEqual(0)
+  expect(dialogBox!.y).toBeGreaterThanOrEqual(0)
+  expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport!.width)
+  expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport!.height)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await expect.poll(() => page.evaluate(() => ({ inert: document.getElementById('root')?.inert, overflow: document.body.style.overflow })))
+    .toEqual({ inert: true, overflow: 'hidden' })
+
+  if (page.viewportSize()!.width <= 820) {
+    const historyToggle = page.getByRole('button', { name: 'История' })
+    await historyToggle.click()
+    await expect(page.getByRole('button', { name: 'Скрыть' })).toBeFocused()
+    await page.getByRole('button', { name: /Версия 0\.573\.0/ }).click()
+    await expect(historyToggle).toBeFocused()
+  }
+
+  await dialog.focus()
+  await page.keyboard.press('Shift+Tab')
+  await expect(dialog.locator(':focus')).toHaveCount(1)
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Закрыть окно что нового' })).toBeFocused()
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(opener).toBeFocused()
+  await expect.poll(() => page.evaluate(() => ({ inert: document.getElementById('root')?.inert, overflow: document.body.style.overflow })))
+    .toEqual({ inert: false, overflow: '' })
+  expect(browserErrors).toEqual([])
+})
 
 test('cabinet keeps the selected support thread when an older request finishes late', async ({ page }) => {
   const api = await mockCabinetApi(page)

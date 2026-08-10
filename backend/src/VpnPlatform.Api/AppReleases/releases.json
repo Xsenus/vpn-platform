@@ -13520,5 +13520,28 @@
         "text": "Roadmap progress is 585/605 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-cabinet-app-version-modal-focus-trap",
+    "version": "0.573.0",
+    "releasedAt": "2026-08-10T16:21:00+07:00",
+    "title": "Окно обновлений удерживает клавиатурный фокус",
+    "summary": "Модальное окно «Что нового» теперь изолирует фон кабинета, удерживает Tab-навигацию внутри себя и возвращает фокус к кнопке открытия после закрытия.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Tab и Shift+Tab циклически перемещаются только по доступным элементам окна; mobile history сохраняет видимый focus, а Escape закрывает modal и восстанавливает исходную кнопку."
+      },
+      {
+        "type": "improved",
+        "text": "Фон кабинета получает inert, прокрутка страницы блокируется на время открытия, а modal проходит WCAG и геометрические проверки на 19 viewport-конфигурациях."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 586/606 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

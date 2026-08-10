@@ -181,7 +181,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 116/116; responsive all-screens: 6/6 на 18 viewport-конфигурациях `305x568..2560x1440`;
+- browser console smoke: 118/118; responsive all-screens: 6/6 на 19 viewport-конфигурациях `305x568..2560x1440`;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -223,8 +223,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin section history/focus: tabs, Back/Forward и order-links desktop/mobile: OK.
 - admin invalid hash canonical fallback: direct/runtime recovery, focus и Back desktop/mobile: OK.
 - admin skip links preserve the active section hash through focus transfer, login and reload on desktop/mobile.
-- latest "Что нового": `2026-08-10-admin-skip-link-route-preservation`, версия `0.572.0`.
-- roadmap progress: `585/605` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- cabinet app-version modal traps keyboard focus, isolates background controls/scroll and passes the 19-viewport responsive/WCAG gate.
+- latest "Что нового": `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`.
+- roadmap progress: `586/606` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

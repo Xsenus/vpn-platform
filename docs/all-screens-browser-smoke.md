@@ -14,7 +14,7 @@
 - отсутствие `pageerror`;
 - landmark, уникальные DOM `id`, `alt` у изображений и доступные имена controls/actions;
 - отсутствие document overflow и горизонтально обрезанных interactive controls;
-- responsive layout на 18 конфигурациях от `305x568` и `568x320` mobile landscape до `2560x1440`;
+- responsive layout на 19 конфигурациях от `305x568` и `568x320` mobile landscape до `2560x1440`;
 - ширины сразу после CSS-breakpoints: `391`, `521`, `641`, `769`, `821`, `901`, `961`, `1025`, `1281` px;
 - same-origin URL, browser decode и минимальный размер `1200x800` для ключевых background assets public/admin.
 
@@ -61,7 +61,7 @@ PNG создаются только при явном флаге внутри `f
 
 ## Результат 2026-08-09
 
-- Responsive matrix расширена с 8 до 18 viewport-конфигураций и покрывает обе стороны всех используемых CSS-breakpoints.
+- Responsive matrix содержит 19 viewport-конфигураций и покрывает обе стороны всех используемых CSS-breakpoints.
 - Встроена проверка local/same-origin decode фоновых WebP и их размеров.
 - Встроен `@axe-core/playwright`: WCAG 2.0/2.1/2.2 A/AA и best-practice правила без allow-list проверяют desktop и compact mobile состояния public, cabinet и всех 17 admin sections.
 - Representative public, account, `404`, cabinet и admin screenshots проверены вручную на desktop/mobile; временные PNG очищены.
@@ -76,7 +76,7 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
 - Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
 - Telegram bot settings проходят secure save/check/reload/edit lifecycle без раскрытия write-only bot/webhook tokens на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `116/116`; all-screens: `6/6`.
+- `npm run e2e:console --prefix frontend`: `118/118`; all-screens: `6/6`.
 - Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит на desktop/mobile без раскрытия SSH/panel credentials.
 - Safe provisioning validation lifecycle проходит desktop/mobile с mode/risk/operator warning и без реального SSH/Ansible.
 - 3x-ui client disable/reload/enable/sync/reset-traffic lifecycle проходит desktop/mobile без console errors и overflow.
@@ -85,10 +85,11 @@ PNG создаются только при явном флаге внутри `f
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
 - Admin production build содержит `5` JS chunks под fail-closed budget: raw `512499`, gzip `137570`, largest `219849` bytes.
-- Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 18 viewport-конфигураций.
+- Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 19 viewport-конфигураций.
 - Все шесть public route-состояний имеют собственные title/meta; SPA navigation и browser Back переводят focus в новый main на desktop/mobile.
 - Login и все 17 admin sections имеют exact title; payments/support/logout metadata lifecycle проходит desktop/mobile.
 - Admin Back/Forward и order-links восстанавливают hash, tabpanel, metadata и `admin-content` focus на desktop/mobile.
 - Unknown admin hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
 - Admin skip-ссылки сохраняют section hash при keyboard focus transfer до входа, после входа и после reload на desktop/mobile.
-- Latest "Что нового": `2026-08-10-admin-skip-link-route-preservation`, версия `0.572.0`.
+- Cabinet app-version modal открывается на всех 19 viewport-конфигурациях и проходит bounds/overflow/control clipping, compact Axe, focus trap, inert/scroll isolation и opener restore.
+- Latest "Что нового": `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`.

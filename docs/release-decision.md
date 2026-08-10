@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `116/116`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `116/116`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `118/118`; responsive all-screens: `6/6` на 19 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -78,8 +78,8 @@ Production-ready решение заблокировано следующими 
 - Admin hydration/login и 17 sections имеют точную metadata; deep-link, section switch и logout проходят desktop/mobile.
 - Admin tabs, Back/Forward, role fallback и order-links синхронизируют history, tabpanel, metadata и focus на desktop/mobile.
 - Admin unknown hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
-- Latest "Что нового": `2026-08-10-admin-skip-link-route-preservation`, версия `0.572.0`; локальный backend/frontend/browser regression, admin skip-link/hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `585/605` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-cabinet-app-version-modal-focus-trap`, версия `0.573.0`; локальный backend/frontend/browser regression, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `586/606` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 
