@@ -376,6 +376,7 @@ async function mockCabinetApi(page: Page) {
   let failNextRenewalPayment = false
   let appVersionAvailable = false
   let appVersionSeen = true
+  let appVersionLatestFailureStatus: number | null = null
   let appVersionHistoryFailureStatus: number | null = null
   let emptyAppVersionHistory = false
   let delayNextAppVersionHistory = false
@@ -725,6 +726,10 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/app-version/latest') {
+      if (appVersionLatestFailureStatus !== null) {
+        await fulfillJson(route, { error: 'latest_temporarily_unavailable' }, appVersionLatestFailureStatus)
+        return
+      }
       await fulfillJson(route, appVersionAvailable
         ? { currentVersion: appVersionRelease.version, latestRelease: appVersionRelease, seenByCurrentUser: appVersionSeen }
         : { currentVersion: null, latestRelease: null, seenByCurrentUser: true })
@@ -811,6 +816,8 @@ async function mockCabinetApi(page: Page) {
       appVersionAvailable = true
       appVersionSeen = false
     },
+    failAppVersionLatest: (status = 503) => { appVersionLatestFailureStatus = status },
+    allowAppVersionLatest: () => { appVersionLatestFailureStatus = null },
     failAppVersionHistory: (status = 503) => { appVersionHistoryFailureStatus = status },
     allowAppVersionHistory: () => { appVersionHistoryFailureStatus = null },
     returnEmptyAppVersionHistory: () => { emptyAppVersionHistory = true },
@@ -935,6 +942,41 @@ test('cabinet app version preserves a manual open while the user identity is loa
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
   await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)
   await expect(dialog).toBeVisible()
+})
+
+test('cabinet app version manual failure and empty result retry only on demand', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.failAppVersionLatest()
+  await seedCabinetSession(page, 'access-token-version-latest-error', 'refresh-token-version-latest-error')
+
+  await page.goto('/')
+  const opener = page.getByRole('button', { name: 'Что нового' })
+  await expect(opener).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBe(1)
+  await opener.click()
+
+  const dialog = page.getByRole('dialog', { name: 'Что нового' })
+  await expect(dialog).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBe(2)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/app-version/latest')).toBe(2)
+  expect(api.getRequestCount('/api/app-version/history')).toBe(0)
+  await expect(dialog.getByRole('alert')).toContainText('Не удалось загрузить информацию об обновлениях')
+
+  api.allowAppVersionLatest()
+  await dialog.getByRole('button', { name: 'Повторить загрузку' }).click()
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBe(3)
+  await expect(dialog.getByRole('status')).toContainText('Опубликованные обновления пока отсутствуют')
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/app-version/latest')).toBe(3)
+  expect(api.getRequestCount('/api/app-version/history')).toBe(0)
+
+  api.showAppVersionRelease()
+  await dialog.getByRole('button', { name: 'Повторить загрузку' }).click()
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBe(4)
+  await expect(page.getByRole('dialog', { name: appVersionRelease.title })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/app-version/history')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('cabinet app version history fails once and retries only on demand', async ({ page }) => {

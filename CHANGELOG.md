@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.595.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-app-version-latest-recovery`.
+
+### Исправлено
+
+- Ручное открытие «Что нового» больше не исчезает при ошибке или пустом ответе latest endpoint: modal показывает loading, русский error/empty state и явный retry.
+- History endpoint не вызывается, пока текущий релиз не загружен, поэтому скрытый запрос не стартует за невидимым modal.
+- Latest retry ограничен текущими token/user и request generation; старый ответ не может заменить результат новой попытки или другой сессии.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: после клика dialog отсутствовал до timeout. После исправления targeted desktop/mobile `2/2`, failure и empty result не повторяются автоматически, recovery выполняется только явным retry.
+- Полный cabinet desktop/mobile regression прошёл `34/34`; error/empty/recovery, отсутствие раннего history-запроса и horizontal overflow проверены в обоих viewport.
+- Полный console-responsive Playwright прошёл `136/136` за `8.6 min`, all-screens `6/6` на 25 viewport-конфигурациях; отдельные viewport screenshots 1280/393 px просмотрены, повтор ошибки в header удалён.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный.
+- Roadmap: `608/628` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.594.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-app-version-history-retry`.

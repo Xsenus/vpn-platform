@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet app-version latest recovery
+
+Scope:
+- Manual «Что нового» must remain visible when latest release loading fails or returns an empty successful response.
+- Recovery must be explicit, session-safe, accessible and layout-safe on desktop/mobile; history must wait for a loaded current release.
+
+Results:
+- Roadmap progress: `608/628` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-app-version-latest-recovery`, version `0.595.0`.
+- Reproduction before fix: persistent `503` after manual open left `open=true`, but the gate returned `null` without `selectedRelease`; fail-first desktop/mobile was `0/2` because no dialog appeared before timeout.
+- After fix: manual latest loading owns explicit loading/error/empty state, generation-guarded retry and a visible status modal; history waits for a non-null latest release.
+- Targeted latest recovery: desktop/mobile `2/2`; failure settles at two latest requests, empty retry at three, published-release recovery at four, and history remains at zero until recovery succeeds.
+- Full cabinet desktop/mobile regression: `34/34`; final console-responsive Playwright: `136/136` in `8.6 min`; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: viewport screenshots at 1280 and 393 CSS px confirmed centered modal, readable text, stable wrapping, blocked background and no overlap/overflow; duplicate error copy in the header was removed before the final browser run.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; cabinet bundle raw `363.49 kB`, gzip `105.32 kB`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `594` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet app-version history retry
 
 Scope:

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ApiClient, AppReleaseDto, AppReleaseItemDto } from '@vpn-platform/api-client'
 import { PrimaryButton } from '@vpn-platform/ui'
@@ -71,6 +71,9 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [historyAttempted, setHistoryAttempted] = useState(false)
   const [historyError, setHistoryError] = useState('')
+  const [loadingLatest, setLoadingLatest] = useState(false)
+  const [latestError, setLatestError] = useState('')
+  const [latestEmpty, setLatestEmpty] = useState(false)
   const sessionRequestIdRef = useRef(0)
   const latestRequestIdRef = useRef(0)
   const historyRequestIdRef = useRef(0)
@@ -85,6 +88,9 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     setLoadingHistory(false)
     setHistoryAttempted(false)
     setHistoryError('')
+    setLoadingLatest(false)
+    setLatestError('')
+    setLatestEmpty(false)
     setOpen(false)
 
     if (!token || !userId) return
@@ -113,6 +119,35 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     }
   }, [api, token, userId])
 
+  const loadLatestForManualOpen = useCallback(() => {
+    if (!token || !userId) return
+
+    const sessionRequestId = sessionRequestIdRef.current
+    const latestRequestId = ++latestRequestIdRef.current
+    const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
+      && latestRequestIdRef.current === latestRequestId
+    setLoadingLatest(true)
+    setLatestError('')
+    setLatestEmpty(false)
+    api.getLatestAppVersion(token)
+      .then((response) => {
+        if (!requestIsCurrent()) return
+        const release = response.latestRelease ?? null
+        setLatest(release)
+        setSelectedReleaseId(release?.releaseId ?? '')
+        setLatestEmpty(!release)
+      })
+      .catch(() => {
+        if (!requestIsCurrent()) return
+        setLatest(null)
+        setSelectedReleaseId('')
+        setLatestError('Не удалось загрузить информацию об обновлениях.')
+      })
+      .finally(() => {
+        if (requestIsCurrent()) setLoadingLatest(false)
+      })
+  }, [api, token, userId])
+
   useEffect(() => {
     if (!manualOpenSignal) return
     if (!token) {
@@ -123,26 +158,11 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
 
     setOpen(true)
     onManualOpenHandled()
-    if (!latest) {
-      const sessionRequestId = sessionRequestIdRef.current
-      const latestRequestId = ++latestRequestIdRef.current
-      const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
-        && latestRequestIdRef.current === latestRequestId
-      api.getLatestAppVersion(token)
-        .then((response) => {
-          if (!requestIsCurrent()) return
-          const release = response.latestRelease ?? null
-          setLatest(release)
-          setSelectedReleaseId(release?.releaseId ?? '')
-        })
-        .catch(() => {
-          if (requestIsCurrent()) setLatest(null)
-        })
-    }
-  }, [api, latest, manualOpenSignal, onManualOpenHandled, token, userId])
+    if (!latest) loadLatestForManualOpen()
+  }, [latest, loadLatestForManualOpen, manualOpenSignal, onManualOpenHandled, token, userId])
 
   useEffect(() => {
-    if (!open || !token || history.length > 0 || loadingHistory || historyAttempted) return
+    if (!open || !token || !latest || history.length > 0 || loadingHistory || historyAttempted) return
 
     const sessionRequestId = sessionRequestIdRef.current
     const historyRequestId = ++historyRequestIdRef.current
@@ -165,7 +185,7 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
       .finally(() => {
         if (requestIsCurrent()) setLoadingHistory(false)
       })
-  }, [api, history.length, historyAttempted, loadingHistory, open, token])
+  }, [api, history.length, historyAttempted, latest, loadingHistory, open, token])
 
   const retryHistory = () => {
     historyRequestIdRef.current += 1
@@ -193,7 +213,7 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     }
   }
 
-  if (!open || !selectedRelease) return null
+  if (!open) return null
 
   return (
     <AppVersionModal
@@ -202,7 +222,11 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
       history={history.length > 0 ? history : latest ? [latest] : []}
       loadingHistory={loadingHistory}
       historyError={historyError}
+      loadingLatest={loadingLatest}
+      latestError={latestError}
+      latestEmpty={latestEmpty}
       onClose={() => void handleClose()}
+      onRetryLatest={loadLatestForManualOpen}
       onRetryHistory={retryHistory}
       onSelectRelease={(releaseId) => setSelectedReleaseId(releaseId)}
       onShowCurrent={() => setSelectedReleaseId(latest?.releaseId ?? '')}
@@ -212,22 +236,29 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
 
 type AppVersionModalProps = {
   latestRelease: AppReleaseDto | null
-  selectedRelease: AppReleaseDto
+  selectedRelease: AppReleaseDto | null
   history: AppReleaseDto[]
   loadingHistory: boolean
   historyError: string
+  loadingLatest: boolean
+  latestError: string
+  latestEmpty: boolean
   onClose: () => void
+  onRetryLatest: () => void
   onRetryHistory: () => void
   onSelectRelease: (releaseId: string) => void
   onShowCurrent: () => void
 }
 
-export function AppVersionModal({ latestRelease, selectedRelease, history, loadingHistory, historyError, onClose, onRetryHistory, onSelectRelease, onShowCurrent }: AppVersionModalProps) {
+export function AppVersionModal({ latestRelease, selectedRelease, history, loadingHistory, historyError, loadingLatest, latestError, latestEmpty, onClose, onRetryLatest, onRetryHistory, onSelectRelease, onShowCurrent }: AppVersionModalProps) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const dialogRef = useRef<HTMLElement | null>(null)
   const historyToggleRef = useRef<HTMLButtonElement | null>(null)
   const historyCloseRef = useRef<HTMLButtonElement | null>(null)
-  const isCurrent = latestRelease?.releaseId === selectedRelease.releaseId
+  const isCurrent = latestRelease?.releaseId === selectedRelease?.releaseId
+  const latestStatusMessage = latestError || (latestEmpty
+    ? 'Опубликованные обновления пока отсутствуют.'
+    : 'Загружаем информацию об обновлениях...')
 
   useEffect(() => {
     const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -288,7 +319,7 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
     <div className="app-version-overlay" role="presentation">
       <section
         ref={dialogRef}
-        className="app-version-modal"
+        className={`app-version-modal ${selectedRelease ? '' : 'app-version-modal-status'}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-version-title"
@@ -297,7 +328,7 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
         onKeyDown={handleDialogKeyDown}
       >
         <button className="app-version-close" type="button" aria-label="Закрыть окно что нового" onClick={onClose}>×</button>
-        <aside id="app-version-history" className={`app-version-history ${historyOpen ? 'is-open' : ''}`} aria-label="История обновлений">
+        {selectedRelease && <aside id="app-version-history" className={`app-version-history ${historyOpen ? 'is-open' : ''}`} aria-label="История обновлений">
           <div className="app-version-history-head">
             <strong>История обновлений</strong>
             <button ref={historyCloseRef} type="button" className="button button-ghost app-version-history-toggle" onClick={closeHistory}>Скрыть</button>
@@ -330,9 +361,9 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
               </button>
             ))}
           </div>
-        </aside>
+        </aside>}
         <div className="app-version-content">
-          <div className="app-version-mobile-actions">
+          {selectedRelease && <div className="app-version-mobile-actions">
             <button
               ref={historyToggleRef}
               type="button"
@@ -343,14 +374,14 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
             >
               История
             </button>
-          </div>
+          </div>}
           <header className="app-version-header">
             <div>
               <p className="eyebrow">Что нового</p>
-              <h2 id="app-version-title">{selectedRelease.title}</h2>
-              <p id="app-version-summary">{selectedRelease.summary}</p>
+              <h2 id="app-version-title">{selectedRelease?.title ?? 'Что нового'}</h2>
+              <p id="app-version-summary">{selectedRelease?.summary ?? 'Последние изменения VPN Platform.'}</p>
             </div>
-            <div className="app-version-meta">
+            {selectedRelease && <div className="app-version-meta">
               <span>Версия {selectedRelease.version}</span>
               <small>{formatReleaseDate(selectedRelease.releasedAt)}</small>
               {!isCurrent && (
@@ -358,9 +389,9 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
                   Показать текущее
                 </PrimaryButton>
               )}
-            </div>
+            </div>}
           </header>
-          <div className="app-version-items">
+          {selectedRelease ? <div className="app-version-items">
             {selectedRelease.items.map((item, index) => {
               const type = normalizeItemType(item)
               return (
@@ -370,7 +401,16 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
                 </article>
               )
             })}
-          </div>
+          </div> : (
+            <div className={`app-version-load-state ${latestError ? 'is-error' : ''}`} role={latestError ? 'alert' : 'status'} aria-live="polite">
+              <p>{latestStatusMessage}</p>
+              {!loadingLatest && (
+                <PrimaryButton type="button" className="button-secondary" onClick={onRetryLatest}>
+                  Повторить загрузку
+                </PrimaryButton>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </div>,

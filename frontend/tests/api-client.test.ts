@@ -2602,6 +2602,8 @@ test('frontend sources include app version gate and admin release editor', () =>
   assert.match(cabinetSource, /historyRequestIdRef/)
   assert.match(cabinetSource, /historyAttempted/)
   assert.match(cabinetSource, /Повторить загрузку истории/)
+  assert.match(cabinetSource, /Не удалось загрузить информацию об обновлениях/)
+  assert.match(cabinetSource, /Повторить загрузку/)
   assert.match(cabinetSource, /if \(!token \|\| !userId\) return/)
   assert.match(cabinetSource, /if \(!token\) \{\s*onManualOpenHandled\(\)\s*return\s*\}\s*if \(!userId\) return/)
   assert.match(cabinetSource, /sessionRequestIdRef\.current === sessionRequestId/)

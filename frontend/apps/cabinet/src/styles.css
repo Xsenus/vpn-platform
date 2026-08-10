@@ -180,6 +180,11 @@
   box-shadow: 0 30px 90px rgba(15, 23, 42, 0.32);
 }
 
+.app-version-modal-status {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(680px, 100%);
+}
+
 .app-version-close {
   position: absolute;
   top: 14px;
@@ -319,6 +324,32 @@
   display: grid;
   gap: 12px;
   margin-top: 28px;
+}
+
+.app-version-load-state {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  margin-top: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  background: #f8fafc;
+}
+
+.app-version-load-state.is-error {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.app-version-load-state p {
+  margin: 0;
+}
+
+.app-version-load-state .button {
+  max-width: 100%;
+  white-space: normal;
 }
 
 .app-version-item {
