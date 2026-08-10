@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.567.0 - 2026-08-10
+
+Release entry: `2026-08-10-public-not-found-page-fix`.
+
+### Исправлено
+
+- Неизвестный публичный URL больше не оставляет после header пустой экран и не вызывает React Router warning: catch-all route показывает доступное `404` состояние с переходами на главную и в помощь.
+- Неизвестный маршрут добавлен в all-screens матрицу non-blank, page quality, Axe WCAG A/AA и responsive overflow проверок.
+
+### Проверено
+
+- Целевой `404` lifecycle проходит на Desktop Chrome и Pixel 5: `2/2`; возврат на главную, main landmark, console/page errors и overflow проверены.
+- Все шесть public route-состояний проходят render/WCAG и 18 viewport-конфигураций `305x568..2560x1440`; desktop/mobile screenshots просмотрены вручную.
+- Frontend unit `114/114`, typecheck/build всех приложений, admin bundle budget и dependency audit `0 vulnerabilities`; полный console-responsive Playwright `104/104`.
+- Backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate; реальные VPS/staging/live payment/3x-ui/Telegram/SMTP evidence остаются внешними.
+- Roadmap: `580/600` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.566.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-bundle-budget`.

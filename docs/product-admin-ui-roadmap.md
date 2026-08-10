@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `579/599` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `580/600` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `102/102`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `104/104`.
 - [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -150,7 +150,8 @@
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
 - [x] Admin production bundle budget: `5` chunks, largest `219849`, total raw `511564`, gzip `137127`; production preview desktop/mobile: OK.
-- [x] Latest "Что нового": `2026-08-10-admin-bundle-budget`, версия `0.566.0`.
+- [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 18 viewport-конфигураций без blank screen/overflow.
+- [x] Latest "Что нового": `2026-08-10-public-not-found-page-fix`, версия `0.567.0`.
 
 ## Как вести дальше
 

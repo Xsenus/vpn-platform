@@ -756,6 +756,31 @@ test('public checkout ignores a late payment response after logout', async ({ pa
   }))).toEqual({ access: null, refresh: null })
 })
 
+test('public unknown route renders a recoverable not-found page', async ({ page }) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+  await mockPublicApi(page)
+
+  await page.goto('/missing-page')
+  await expect(page.getByRole('heading', { name: 'Страница не найдена' })).toBeVisible()
+  await expect(page.getByText('Ошибка 404')).toBeVisible()
+  await expect(page.getByRole('main')).toBeVisible()
+
+  const layout = await page.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    contentWidth: document.documentElement.scrollWidth
+  }))
+  expect(layout.contentWidth).toBeLessThanOrEqual(layout.viewportWidth + 1)
+
+  await page.getByRole('link', { name: 'На главную' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('heading', { name: 'VPN Platform' })).toBeVisible()
+  expect(consoleErrors).toEqual([])
+})
+
 test('public website covers landing, tariffs, FAQ and checkout start', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {

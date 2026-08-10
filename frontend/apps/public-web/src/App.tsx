@@ -1035,6 +1035,25 @@ function UserHelpPage() {
   )
 }
 
+function NotFoundPage() {
+  return (
+    <PageShell title="Страница не найдена">
+      <div className="section">
+        <EmptyState
+          title="Ошибка 404"
+          description="Проверьте адрес страницы или выберите доступный раздел."
+          action={(
+            <div className="not-found-actions">
+              <Link className="button" to="/">На главную</Link>
+              <Link className="button button-ghost" to="/help">Открыть помощь</Link>
+            </div>
+          )}
+        />
+      </div>
+    </PageShell>
+  )
+}
+
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
@@ -1294,6 +1313,7 @@ export function App() {
             />
           )}
         />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   )

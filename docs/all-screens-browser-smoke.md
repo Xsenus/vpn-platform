@@ -6,7 +6,7 @@
 
 Команда `npm run e2e:all-screens --prefix frontend` запускает отдельный Playwright project `all-screens` и проверяет:
 
-- public web routes: `/`, `/tariffs`, `/faq`, `/help`, `/account`;
+- public web routes: `/`, `/tariffs`, `/faq`, `/help`, `/account` и catch-all `/missing-page` для `404` recovery;
 - cabinet auth screen и авторизованный dashboard;
 - все admin sections (`all admin sections`): `dashboard`, `users`, `payments`, `tariffs`, `referrals`, `subscriptions`, `vpn`, `nodes`, `panels`, `support`, `audit`, `bot`, `releases`, `faq`, `content`, `scenarios`, `provisioning`;
 - отсутствие пустого `body`;
@@ -64,7 +64,7 @@ PNG создаются только при явном флаге внутри `f
 - Responsive matrix расширена с 8 до 18 viewport-конфигураций и покрывает обе стороны всех используемых CSS-breakpoints.
 - Встроена проверка local/same-origin decode фоновых WebP и их размеров.
 - Встроен `@axe-core/playwright`: WCAG 2.0/2.1/2.2 A/AA и best-practice правила без allow-list проверяют desktop и compact mobile состояния public, cabinet и всех 17 admin sections.
-- Representative public, account, cabinet и admin screenshots проверены вручную на desktop/mobile; временные PNG очищены.
+- Representative public, account, `404`, cabinet и admin screenshots проверены вручную на desktop/mobile; временные PNG очищены.
 - `npm run e2e:all-screens --prefix frontend`: `6/6`; полный `npm run e2e:console --prefix frontend`: `78/78`.
 - Latest "Что нового": `2026-08-09-automated-wcag-accessibility-gate`, версия `0.552.0`.
 
@@ -76,7 +76,7 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
 - Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
 - Telegram bot settings проходят secure save/check/reload/edit lifecycle без раскрытия write-only bot/webhook tokens на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `102/102`; all-screens: `6/6`.
+- `npm run e2e:console --prefix frontend`: `104/104`; all-screens: `6/6`.
 - Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит на desktop/mobile без раскрытия SSH/panel credentials.
 - Safe provisioning validation lifecycle проходит desktop/mobile с mode/risk/operator warning и без реального SSH/Ansible.
 - 3x-ui client disable/reload/enable/sync/reset-traffic lifecycle проходит desktop/mobile без console errors и overflow.
@@ -85,4 +85,5 @@ PNG создаются только при явном флаге внутри `f
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
 - Admin production preview дополнительно загрузил `5` JS chunks без HTTP/browser errors и overflow на `1440x900`/`320x720`; largest chunk `219849` bytes.
-- Latest "Что нового": `2026-08-10-admin-bundle-budget`, версия `0.566.0`.
+- Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 18 viewport-конфигураций.
+- Latest "Что нового": `2026-08-10-public-not-found-page-fix`, версия `0.567.0`.

@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const now = '2026-06-14T08:00:00Z'
 
-const publicRoutes = ['/', '/tariffs', '/faq', '/help', '/account']
+const publicRoutes = ['/', '/tariffs', '/faq', '/help', '/account', '/missing-page']
 const adminSections = [
   'dashboard',
   'users',
@@ -902,6 +902,7 @@ test('all public routes render without blank screens or browser errors', async (
       await captureAuditScreenshot(page, testInfo, 'public-home-desktop')
     }
     if (route === '/account') await captureAuditScreenshot(page, testInfo, 'public-account-desktop')
+    if (route === '/missing-page') await captureAuditScreenshot(page, testInfo, 'public-not-found-desktop')
   }
 
   expect(browserErrors).toEqual([])
@@ -972,6 +973,9 @@ test('all public routes fit representative responsive viewports', async ({ page 
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `${route} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile' && (route === '/' || route === '/account')) {
         await captureAuditScreenshot(page, testInfo, `public-${route === '/' ? 'home' : 'account'}-mobile`)
+      }
+      if (viewport.name === 'compact-mobile' && route === '/missing-page') {
+        await captureAuditScreenshot(page, testInfo, 'public-not-found-mobile')
       }
     }
   }

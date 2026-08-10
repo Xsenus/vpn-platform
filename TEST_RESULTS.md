@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: public unknown-route recovery
+
+Scope:
+- Catch-all public route заменяет header-only blank screen на доступное `404` состояние с рабочими переходами на главную и в помощь.
+- Неизвестный URL включен в общий render, page-quality, Axe и 18-viewport responsive gate.
+
+Results:
+- Roadmap progress: `580/600` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-public-not-found-page-fix`, version `0.567.0`.
+- Targeted desktop/mobile `404` lifecycle: `2/2`; full console-responsive Playwright: `104/104`; all-screens public render/responsive: `2/2`.
+- Six public route states pass non-blank, main landmark, accessible-name, Axe WCAG A/AA/best-practice and 18 viewport checks; desktop/mobile screenshots reviewed.
+- Frontend tests: `114/114`; typecheck/build all apps and admin bundle budget: OK; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `659` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin production bundle budget
 
 Scope:

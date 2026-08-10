@@ -13382,5 +13382,28 @@
         "text": "Roadmap progress is 579/599 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-public-not-found-page-fix",
+    "version": "0.567.0",
+    "releasedAt": "2026-08-10T13:26:00+07:00",
+    "title": "Неизвестный адрес получил безопасную страницу 404",
+    "summary": "Public web больше не оставляет пустой экран для неизвестного URL и предлагает рабочий возврат на главную или в помощь.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Catch-all route показывает доступное состояние ошибки 404 вместо header-only blank screen и React Router warning."
+      },
+      {
+        "type": "improved",
+        "text": "Шесть public route-состояний проходят non-blank, page-quality, Axe и responsive проверки на 18 размерах; desktop/mobile 404 screenshots просмотрены вручную."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 580/600 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

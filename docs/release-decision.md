@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `114/114`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `102/102`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `104/104`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -71,10 +71,11 @@ Production-ready решение заблокировано следующими 
 - Admin detail request generation исключает out-of-order user/support state и post-logout completion; status action не подменяет выбранный support thread.
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
-- Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
+- Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 6 public route-состояний, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
 - Admin production bundle: `5` chunks, largest `219849`, total raw `511564`, gzip `137127`; fail-closed budget и production preview на `1440x900`/`320x720` пройдены.
-- Latest "Что нового": `2026-08-10-admin-bundle-budget`, версия `0.566.0`; локальный backend/frontend/browser regression, bundle budget, channel-aware SupportAgent lifecycle, notification retry, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `579/599` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Unknown public route показывает доступное `404` recovery и проходит desktop/mobile, Axe, console и 18 responsive viewport-конфигураций без blank screen/overflow.
+- Latest "Что нового": `2026-08-10-public-not-found-page-fix`, версия `0.567.0`; локальный backend/frontend/browser regression, `404` recovery, bundle budget, channel-aware SupportAgent lifecycle, notification retry, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `580/600` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

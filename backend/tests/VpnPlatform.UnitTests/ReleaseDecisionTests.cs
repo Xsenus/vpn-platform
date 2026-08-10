@@ -23,7 +23,7 @@ public class ReleaseDecisionTests
         Assert.Contains("[x] `P11-ACC-007`", roadmap, StringComparison.Ordinal);
 
         Assert.Contains("staging-ready baseline", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-admin-bundle-budget", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-public-not-found-page-fix", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0.104.0 - 2026-06-14", changelog, StringComparison.Ordinal);
         Assert.Contains("staging-ready baseline", changelog, StringComparison.OrdinalIgnoreCase);
     }

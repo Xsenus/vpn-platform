@@ -9,6 +9,7 @@ public class AllScreensBrowserSmokeTests
     {
         var root = FindRepositoryRoot();
         var spec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "all-screens.spec.ts"));
+        var publicApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "App.tsx"));
         var config = File.ReadAllText(Path.Combine(root, "frontend", "playwright.config.ts"));
         var packageJson = File.ReadAllText(Path.Combine(root, "frontend", "package.json"));
 
@@ -30,6 +31,7 @@ public class AllScreensBrowserSmokeTests
                      "'/faq'",
                      "'/help'",
                      "'/account'",
+                     "'/missing-page'",
                      "dashboard",
                      "payments",
                      "panels",
@@ -43,6 +45,9 @@ public class AllScreensBrowserSmokeTests
         Assert.Contains("all-screens\\.spec\\.ts", config, StringComparison.Ordinal);
         Assert.Contains("\"e2e:all-screens\"", packageJson, StringComparison.Ordinal);
         Assert.Contains("--project=all-screens", packageJson, StringComparison.Ordinal);
+        Assert.Contains("path=\"*\"", publicApp, StringComparison.Ordinal);
+        Assert.Contains("Страница не найдена", publicApp, StringComparison.Ordinal);
+        Assert.Contains("Ошибка 404", publicApp, StringComparison.Ordinal);
     }
 
     [Fact]

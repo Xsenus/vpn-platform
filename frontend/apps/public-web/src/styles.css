@@ -740,3 +740,13 @@
     min-height: auto;
   }
 }
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.not-found-actions .button {
+  min-width: 140px;
+}

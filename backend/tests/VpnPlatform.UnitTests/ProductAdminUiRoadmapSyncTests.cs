@@ -20,13 +20,13 @@ public class ProductAdminUiRoadmapSyncTests
                      "staging-ready baseline",
                      "Backend full suite: `1113/1113`",
                      "Frontend unit tests: `114/114`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `102/102`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `104/104`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-10-admin-bundle-budget",
-                     "0.566.0"
+                     "2026-08-10-public-not-found-page-fix",
+                     "0.567.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-10-admin-bundle-budget", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-admin-bundle-budget", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-public-not-found-page-fix", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-public-not-found-page-fix", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Frontend unit tests: `114/114`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-10-admin-bundle-budget",
-                     "0.566.0",
+                     "2026-08-10-public-not-found-page-fix",
+                     "0.567.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
