@@ -24,7 +24,7 @@ Production-ready решение заблокировано следующими 
 
 - Backend full suite: `1113/1113`.
 - API Release build: OK.
-- Frontend unit tests: `112/112`.
+- Frontend unit tests: `114/114`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `102/102`; responsive all-screens: `6/6` на 18 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
@@ -72,8 +72,9 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 5 public routes, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Latest "Что нового": `2026-08-10-admin-support-channel-lifecycle-fix`, версия `0.565.0`; локальный backend/frontend/browser regression, channel-aware SupportAgent lifecycle, notification retry role guards, payment refund, secure infrastructure/provisioning, 3x-ui client, VPN access и subscription lifecycle на desktop/mobile пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `578/598` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Admin production bundle: `5` chunks, largest `219849`, total raw `511564`, gzip `137127`; fail-closed budget и production preview на `1440x900`/`320x720` пройдены.
+- Latest "Что нового": `2026-08-10-admin-bundle-budget`, версия `0.566.0`; локальный backend/frontend/browser regression, bundle budget, channel-aware SupportAgent lifecycle, notification retry, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `579/599` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

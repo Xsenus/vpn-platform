@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.566.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-bundle-budget`.
+
+### Улучшено
+
+- Admin production bundle разделен на стабильные `vendor-react`, `platform-api`, `platform-ui`, runtime и изменяемый app chunk; largest chunk уменьшен с `512060` до `219849` bytes без повышения Vite warning limit.
+- Обязательный post-build budget ограничивает число JS assets `5`, largest chunk `360 KiB`, общий raw `540 KiB` и общий gzip `145 KiB`; превышение завершает `npm run build` с ошибкой.
+
+### Проверено
+
+- Фактический admin build: `5` JS chunks, raw `511564`, gzip `137127`, largest `219849`; frontend unit `114/114`, typecheck/build всех приложений, audit `0 vulnerabilities`.
+- Production preview Chromium загрузил все chunks без HTTP/browser errors и overflow на `1440x900`/`320x720`; admin all-screens render/responsive `2/2`.
+- Backend `1113/1113`, полный console-responsive Playwright baseline `102/102`, fresh SQLite smoke latest release OK; secret scan `659` файлов, `0` находок.
+- Реальные VPS/staging/live payment/production-like 3x-ui, provider, Telegram Bot API/webhook и SMTP evidence не переиспользовались.
+- Roadmap: `579/599` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.565.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-support-channel-lifecycle-fix`.

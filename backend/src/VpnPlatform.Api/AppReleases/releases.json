@@ -13359,5 +13359,28 @@
         "text": "Roadmap progress is 578/598 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-bundle-budget",
+    "version": "0.566.0",
+    "releasedAt": "2026-08-10T12:52:00+07:00",
+    "title": "Admin bundle получил измеряемый budget",
+    "summary": "Стабильные framework/API/UI chunks кешируются отдельно, а production build fail-closed ограничивает largest и общий raw/gzip размер.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Largest admin JavaScript chunk уменьшен с 512060 до 219849 bytes без повышения warning limit; общий raw/gzip размер остается под отдельным budget."
+      },
+      {
+        "type": "new",
+        "text": "Каждый admin build автоматически проверяет пять JS assets, largest 360 KiB, total raw 540 KiB и total gzip 145 KiB; превышение ломает build."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 579/599 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

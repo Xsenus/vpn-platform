@@ -84,4 +84,5 @@ PNG создаются только при явном флаге внутри `f
 - Subscription activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle сохраняет связанный access state и скрывает terminal secrets на desktop/mobile.
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
-- Latest "Что нового": `2026-08-10-admin-support-channel-lifecycle-fix`, версия `0.565.0`.
+- Admin production preview дополнительно загрузил `5` JS chunks без HTTP/browser errors и overflow на `1440x900`/`320x720`; largest chunk `219849` bytes.
+- Latest "Что нового": `2026-08-10-admin-bundle-budget`, версия `0.566.0`.

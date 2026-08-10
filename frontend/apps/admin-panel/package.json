@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite --port 5175",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "build": "tsc -p tsconfig.json --noEmit && vite build && node ../../scripts/check-admin-bundle-budget.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

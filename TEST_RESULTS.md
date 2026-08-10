@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin production bundle budget
+
+Scope:
+- Vite manual chunks отделяют stable React, platform API/UI и runtime от admin app без изменения общего behavior.
+- Post-build script измеряет каждый `.js`, общий raw/gzip и fail-closed проверяет четыре независимых budget boundary.
+
+Results:
+- Roadmap progress: `579/599` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-bundle-budget`, version `0.566.0`.
+- Admin build: `5` JS chunks, raw `511564`, gzip `137127`, largest `219849`; limits: `5`, `552960`, `148480`, `368640` bytes respectively.
+- Frontend tests: `114/114`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`.
+- Production preview Chromium: chunks loaded, no HTTP/browser errors, desktop `1440x900` and mobile `320x720` overflow checks OK; admin all-screens render/responsive: `2/2`.
+- Backend full suite: `1113/1113`; full console-responsive Playwright baseline: `102/102`; fresh SQLite smoke latest release: OK; secret scan: `659` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin support channel-aware lifecycle fix
 
 Scope:
