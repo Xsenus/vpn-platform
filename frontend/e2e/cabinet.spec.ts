@@ -376,6 +376,8 @@ async function mockCabinetApi(page: Page) {
   let failNextRenewalPayment = false
   let appVersionAvailable = false
   let appVersionSeen = true
+  let appVersionHistoryFailureStatus: number | null = null
+  let emptyAppVersionHistory = false
   let delayNextAppVersionHistory = false
   let delayedAppVersionHistoryReleased = false
   let releaseDelayedAppVersionHistory: (() => void) | null = null
@@ -730,6 +732,10 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/app-version/history') {
+      if (appVersionHistoryFailureStatus !== null) {
+        await fulfillJson(route, { error: 'history_temporarily_unavailable' }, appVersionHistoryFailureStatus)
+        return
+      }
       if (delayNextAppVersionHistory) {
         delayNextAppVersionHistory = false
         if (!delayedAppVersionHistoryReleased) {
@@ -740,7 +746,7 @@ async function mockCabinetApi(page: Page) {
         await fulfillJson(route, [staleAppVersionRelease])
         return
       }
-      await fulfillJson(route, appVersionAvailable ? [appVersionRelease] : [])
+      await fulfillJson(route, appVersionAvailable && !emptyAppVersionHistory ? [appVersionRelease] : [])
       return
     }
 
@@ -805,6 +811,9 @@ async function mockCabinetApi(page: Page) {
       appVersionAvailable = true
       appVersionSeen = false
     },
+    failAppVersionHistory: (status = 503) => { appVersionHistoryFailureStatus = status },
+    allowAppVersionHistory: () => { appVersionHistoryFailureStatus = null },
+    returnEmptyAppVersionHistory: () => { emptyAppVersionHistory = true },
     delayNextAppVersionHistory: () => { delayNextAppVersionHistory = true },
     releaseAppVersionHistory: () => {
       delayedAppVersionHistoryReleased = true
@@ -926,6 +935,37 @@ test('cabinet app version preserves a manual open while the user identity is loa
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
   await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)
   await expect(dialog).toBeVisible()
+})
+
+test('cabinet app version history fails once and retries only on demand', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.showAppVersionRelease()
+  api.failAppVersionHistory()
+  await seedCabinetSession(page, 'access-token-version-history-error', 'refresh-token-version-history-error')
+
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Что нового' })).toBeVisible()
+  await page.getByRole('button', { name: 'Что нового' }).click()
+  const dialog = page.getByRole('dialog', { name: appVersionRelease.title })
+  await expect(dialog).toBeVisible()
+  if (page.viewportSize()!.width <= 820) {
+    await dialog.getByRole('button', { name: 'История' }).click()
+  }
+
+  await expect.poll(() => api.getRequestCount('/api/app-version/history')).toBeGreaterThan(0)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/app-version/history')).toBe(1)
+  await expect(dialog.getByRole('alert')).toContainText('Не удалось загрузить историю обновлений')
+
+  api.allowAppVersionHistory()
+  api.returnEmptyAppVersionHistory()
+  await dialog.getByRole('button', { name: 'Повторить загрузку истории' }).click()
+  await expect.poll(() => api.getRequestCount('/api/app-version/history')).toBe(2)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/app-version/history')).toBe(2)
+  await expect(dialog.getByRole('button', { name: /Версия 0\.573\.0/ })).toBeVisible()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('cabinet app version rejects history completed by a logged-out session', async ({ page }) => {

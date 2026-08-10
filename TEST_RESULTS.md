@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet app-version history retry
+
+Scope:
+- A failed or empty app-version history response must complete one request attempt without an automatic retry loop.
+- History recovery must be explicit, accessible and layout-safe on desktop/mobile.
+
+Results:
+- Roadmap progress: `607/627` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-app-version-history-retry`, version `0.594.0`.
+- Reproduction before fix: persistent `503` left history empty and `loadingHistory=false`, immediately re-triggering the effect; targeted desktop sent `46` requests in `300 ms` instead of one.
+- After fix: session reset clears `historyAttempted/error`; one open starts one attempt, both failure and empty success remain settled, and the retry control explicitly resets the attempt after invalidating an older request generation.
+- Targeted history recovery: desktop/mobile `2/2`; full cabinet desktop/mobile regression: `32/32`; Russian alert, one manual retry, current-release fallback and no horizontal overflow are verified.
+- Final visual audit: full console-responsive Playwright `134/134` in `8.7 min`; all-screens `6/6`, including every admin section on 25 viewport configurations `305x568..2560x1440`.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; cabinet bundle raw `362.46 kB`, gzip `105.06 kB`; admin bundle raw `519433`, gzip `139444`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `593` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet app-version manual intent
 
 Scope:

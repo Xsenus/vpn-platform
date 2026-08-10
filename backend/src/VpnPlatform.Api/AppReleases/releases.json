@@ -14003,5 +14003,28 @@
         "text": "Roadmap progress is 606/626 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-cabinet-app-version-history-retry",
+    "version": "0.594.0",
+    "releasedAt": "2026-08-11T02:55:12+07:00",
+    "title": "История обновлений восстанавливается без цикла",
+    "summary": "Ошибка или пустая история завершают одну попытку, а повторная загрузка запускается только пользователем.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "History endpoint больше не получает непрерывные запросы после 503 или пустого успешного ответа."
+      },
+      {
+        "type": "improved",
+        "text": "Русский alert и явная кнопка retry доступны в desktop sidebar и mobile history drawer без overflow."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 607/627 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

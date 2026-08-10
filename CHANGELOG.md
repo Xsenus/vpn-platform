@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.594.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-app-version-history-retry`.
+
+### Исправлено
+
+- Cabinet history effect больше не повторяет запрос бесконечно после ошибки или успешного пустого ответа: session-scoped `historyAttempted` завершает одну попытку.
+- Ошибка истории теперь отображается русским alert-состоянием с явной кнопкой «Повторить загрузку истории»; retry запускается только по действию пользователя.
+- Error/retry блок стабильно помещается в desktop sidebar и mobile history drawer, длинная подпись кнопки переносится без overflow.
+
+### Проверено
+
+- До исправления fail-first desktop regression отправил `46` history-запросов за `300 ms` вместо одного; после исправления targeted desktop/mobile `2/2`, failure остаётся на одном запросе, empty-success — на втором после ручного retry.
+- Полный cabinet desktop/mobile regression прошёл `32/32`; alert, retry, fallback текущего release и отсутствие horizontal overflow проверены в обоих viewport.
+- Полный console-responsive Playwright прошёл `134/134` за `8.7 min`, all-screens `6/6` на 25 viewport-конфигурациях; frontend `125/125`, typecheck/build, audit `0 vulnerabilities`; backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный.
+- Roadmap: `607/627` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.593.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-app-version-manual-intent`.

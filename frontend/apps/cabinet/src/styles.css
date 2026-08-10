@@ -217,6 +217,24 @@
   display: none;
 }
 
+.app-version-history-error {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.app-version-history-error p {
+  margin: 0;
+}
+
+.app-version-history-error .button {
+  width: 100%;
+  white-space: normal;
+}
+
 .app-version-history-list {
   display: grid;
   gap: 8px;

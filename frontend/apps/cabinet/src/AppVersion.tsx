@@ -69,6 +69,8 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
   const [selectedReleaseId, setSelectedReleaseId] = useState('')
   const [open, setOpen] = useState(false)
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [historyAttempted, setHistoryAttempted] = useState(false)
+  const [historyError, setHistoryError] = useState('')
   const sessionRequestIdRef = useRef(0)
   const latestRequestIdRef = useRef(0)
   const historyRequestIdRef = useRef(0)
@@ -81,6 +83,8 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     setHistory([])
     setSelectedReleaseId('')
     setLoadingHistory(false)
+    setHistoryAttempted(false)
+    setHistoryError('')
     setOpen(false)
 
     if (!token || !userId) return
@@ -138,24 +142,38 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
   }, [api, latest, manualOpenSignal, onManualOpenHandled, token, userId])
 
   useEffect(() => {
-    if (!open || !token || history.length > 0 || loadingHistory) return
+    if (!open || !token || history.length > 0 || loadingHistory || historyAttempted) return
 
     const sessionRequestId = sessionRequestIdRef.current
     const historyRequestId = ++historyRequestIdRef.current
     const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
       && historyRequestIdRef.current === historyRequestId
+    setHistoryAttempted(true)
+    setHistoryError('')
     setLoadingHistory(true)
     api.getAppVersionHistory(token)
       .then((items) => {
-        if (requestIsCurrent()) setHistory(items)
+        if (!requestIsCurrent()) return
+        setHistory(items)
+        setHistoryError('')
       })
       .catch(() => {
-        if (requestIsCurrent()) setHistory([])
+        if (!requestIsCurrent()) return
+        setHistory([])
+        setHistoryError('Не удалось загрузить историю обновлений.')
       })
       .finally(() => {
         if (requestIsCurrent()) setLoadingHistory(false)
       })
-  }, [api, history.length, loadingHistory, open, token])
+  }, [api, history.length, historyAttempted, loadingHistory, open, token])
+
+  const retryHistory = () => {
+    historyRequestIdRef.current += 1
+    setHistory([])
+    setHistoryError('')
+    setLoadingHistory(false)
+    setHistoryAttempted(false)
+  }
 
   const selectedRelease = useMemo(() => {
     if (!selectedReleaseId) return latest
@@ -183,7 +201,9 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
       selectedRelease={selectedRelease}
       history={history.length > 0 ? history : latest ? [latest] : []}
       loadingHistory={loadingHistory}
+      historyError={historyError}
       onClose={() => void handleClose()}
+      onRetryHistory={retryHistory}
       onSelectRelease={(releaseId) => setSelectedReleaseId(releaseId)}
       onShowCurrent={() => setSelectedReleaseId(latest?.releaseId ?? '')}
     />
@@ -195,12 +215,14 @@ type AppVersionModalProps = {
   selectedRelease: AppReleaseDto
   history: AppReleaseDto[]
   loadingHistory: boolean
+  historyError: string
   onClose: () => void
+  onRetryHistory: () => void
   onSelectRelease: (releaseId: string) => void
   onShowCurrent: () => void
 }
 
-export function AppVersionModal({ latestRelease, selectedRelease, history, loadingHistory, onClose, onSelectRelease, onShowCurrent }: AppVersionModalProps) {
+export function AppVersionModal({ latestRelease, selectedRelease, history, loadingHistory, historyError, onClose, onRetryHistory, onSelectRelease, onShowCurrent }: AppVersionModalProps) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const dialogRef = useRef<HTMLElement | null>(null)
   const historyToggleRef = useRef<HTMLButtonElement | null>(null)
@@ -281,6 +303,14 @@ export function AppVersionModal({ latestRelease, selectedRelease, history, loadi
             <button ref={historyCloseRef} type="button" className="button button-ghost app-version-history-toggle" onClick={closeHistory}>Скрыть</button>
           </div>
           {loadingHistory && <p className="muted" role="status" aria-live="polite">Загружаем историю...</p>}
+          {historyError && (
+            <div className="app-version-history-error" role="alert">
+              <p>{historyError}</p>
+              <PrimaryButton type="button" className="button-secondary" onClick={onRetryHistory}>
+                Повторить загрузку истории
+              </PrimaryButton>
+            </div>
+          )}
           <div className="app-version-history-list">
             {history.map((release) => (
               <button
