@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: password reset form separation
+
+Scope:
+- Public and cabinet reset-code request and password confirmation must be independent form operations with correct Enter-key behavior.
+- Validation must stay scoped to the active reset stage without premature missing-token/password errors.
+
+Results:
+- Roadmap progress: `597/617` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-password-reset-form-separation`, version `0.584.0`.
+- Reproduction before fix: public Playwright expected one forgot-password request after Enter in reset email but received `0`; the combined form routed implicit submit to password confirmation.
+- After fix: targeted public Enter/single-flight `1/1` and full cabinet reset/login lifecycle `1/1`; separate accessible request/confirmation forms keep validation stage-specific.
+- Visual audit: all-screens `6/6` passed on 25 viewport configurations `305x568..2560x1440`; full desktop/mobile console-responsive Playwright: `124/124`.
+- Frontend tests: `122/122`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: responsive breakpoint pairs
 
 Scope:

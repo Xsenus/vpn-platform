@@ -70,7 +70,7 @@ Production-ready решение заблокировано следующими 
 - Cabinet support request generation исключает out-of-order thread и late logout completion; private support/auth/reset drafts очищаются до следующего входа.
 - Admin detail request generation исключает out-of-order user/support state и post-logout completion; status action не подменяет выбранный support thread.
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
-- Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
+- Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation используют независимые формы с корректным Enter submit.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 6 public route-состояний, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
 - Admin production bundle: `5` chunks, largest `219849`, total raw `517701`, gzip `138757`; fail-closed budget пройден.
 - Unknown public route показывает доступное `404` recovery и проходит desktop/mobile, Axe, console и 18 responsive viewport-конфигураций без blank screen/overflow.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`; responsive matrix и source guard проверяют точные пары по обе стороны всех CSS-breakpoints, а локальный backend/frontend/browser regression, admin action/form capability boundaries, VPN form boundary, admin configuration URL boundary, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-password-reset-form-separation`, версия `0.584.0`; public/cabinet reset stages имеют независимые submit/validation boundaries, а локальный backend/frontend/browser regression, responsive breakpoint matrix, admin action/form capability boundaries, VPN form boundary, admin configuration URL boundary, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `597/617` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

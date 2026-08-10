@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.584.0 - 2026-08-10
+
+Release entry: `2026-08-10-password-reset-form-separation`.
+
+### Исправлено
+
+- Public и cabinet password reset разделены на две семантически независимые формы: запрос кода и подтверждение нового пароля; Enter в поле email теперь запускает именно forgot-password.
+- Ошибки отсутствующих кода и нового пароля больше не показываются сразу при вводе email, а каждая стадия имеет собственный validation summary и доступное имя формы.
+
+### Проверено
+
+- До исправления public Playwright получал `0` forgot-password запросов после Enter вместо `1`; после исправления targeted public `1/1` и полный cabinet lifecycle `1/1` проходят.
+- Frontend `122/122`, typecheck/build, audit `0 vulnerabilities`; полный console-responsive Playwright `124/124`, включая desktop/mobile reset flow и all-screens `6/6` на 25 viewport-конфигурациях.
+- Backend `1125/1125`, EF drift OK, fresh SQLite order/payment/subscription/access flow OK, secret scan `668/0`; финальный encoding и artifact cleanup зафиксированы в `TEST_RESULTS.md`.
+- Roadmap: `597/617` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.583.0 - 2026-08-10
 
 Release entry: `2026-08-10-responsive-breakpoint-pairs`.

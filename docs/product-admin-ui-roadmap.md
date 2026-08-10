@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `597/617` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -136,7 +136,7 @@
 - [x] Cabinet support отбрасывает out-of-order и post-logout message responses, а новый вход начинается без support/auth/reset drafts предыдущей сессии.
 - [x] Admin user/support detail views отбрасывают out-of-order и post-logout responses, очищают drafts при смене обращения и не загружают thread невыбранной status action.
 - [x] Admin mutations применяют state/reload только в исходной session operation, отклоняют duplicate submit и сохраняют новый form draft при delayed completion.
-- [x] Public/cabinet mutations отклоняют duplicate events, late session/unmount completion и сохраняют более новый support/reset draft.
+- [x] Public/cabinet mutations отклоняют duplicate events, late session/unmount completion и сохраняют более новый support/reset draft; reset request/confirmation разделены на независимые формы с корректным Enter submit.
 - [x] Критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки проходят stateful desktop/mobile E2E; вся вкладка оплат находится в одном `tabpanel`.
 - [x] Управляемые тарифы, реферальные программы, сценарии, релизы, FAQ и контент сайта проходят stateful create/edit/delete lifecycle на desktop/mobile с reload persistence.
 - [x] Cabinet Telegram deep-link/unlink и support close/reopen проходят stateful desktop/mobile lifecycle с optimistic revision и reload persistence.
@@ -165,7 +165,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`; responsive matrix проверяет все девять CSS-breakpoints на точных парах `N/N+1`.
+- [x] Latest "Что нового": `2026-08-10-password-reset-form-separation`, версия `0.584.0`; public/cabinet reset request/confirmation формы проверены на desktop/mobile и 25 viewport-конфигурациях.
 
 ## Как вести дальше
 

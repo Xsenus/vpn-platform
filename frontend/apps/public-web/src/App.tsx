@@ -684,7 +684,8 @@ function AccountPage({
   const resetRequestErrors = validatePasswordResetRequest(resetEmail)
   const resetConfirmErrors = validatePasswordResetConfirm(resetToken, newPassword)
   const showAuthValidation = authValidationErrors.length > 0 && Boolean(email || password || displayName)
-  const showResetValidation = Boolean(resetEmail || resetToken || newPassword)
+  const showResetRequestValidation = Boolean(resetEmail)
+  const showResetConfirmValidation = Boolean(resetToken || newPassword)
 
   const switchAuthMode = (nextMode: 'login' | 'register') => {
     setMode(nextMode)
@@ -937,17 +938,26 @@ function AccountPage({
           <Card>
             <h3>Сброс пароля</h3>
             <p className="muted">Код восстановления придёт на email. В локальном режиме проверки он может быть показан сразу.</p>
-            <form className="form-grid" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleResetPassword() }}>
+            <form aria-label="Запрос кода сброса" className="form-grid" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleForgotPassword() }}>
               <label><span>Email</span><input value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required /></label>
-              <PasswordField label="Код сброса" value={resetToken} onChange={setResetToken} placeholder="Одноразовый код" autoComplete="one-time-code" />
-              <PasswordField label="Новый пароль" value={newPassword} onChange={setNewPassword} placeholder="Новый пароль" autoComplete="new-password" minLength={8} />
-              {showResetValidation && [...resetRequestErrors, ...resetConfirmErrors].length > 0 && (
+              {showResetRequestValidation && resetRequestErrors.length > 0 && (
                 <ul className="validation-list" aria-live="polite">
-                  {[...resetRequestErrors, ...resetConfirmErrors].map((item) => <li key={item}>{item}</li>)}
+                  {resetRequestErrors.map((item) => <li key={item}>{item}</li>)}
                 </ul>
               )}
               <div className="form-actions">
-                <PrimaryButton type="button" className="button-ghost" disabled={resetRequestErrors.length > 0 || busy} aria-busy={busy} onClick={() => void handleForgotPassword()}>Запросить код</PrimaryButton>
+                <PrimaryButton type="submit" className="button-ghost" disabled={resetRequestErrors.length > 0 || busy} aria-busy={busy}>Запросить код</PrimaryButton>
+              </div>
+            </form>
+            <form aria-label="Подтверждение сброса пароля" className="form-grid mt-12" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void handleResetPassword() }}>
+              <PasswordField label="Код сброса" value={resetToken} onChange={setResetToken} placeholder="Одноразовый код" autoComplete="one-time-code" />
+              <PasswordField label="Новый пароль" value={newPassword} onChange={setNewPassword} placeholder="Новый пароль" autoComplete="new-password" minLength={8} />
+              {showResetConfirmValidation && resetConfirmErrors.length > 0 && (
+                <ul className="validation-list" aria-live="polite">
+                  {resetConfirmErrors.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
+              <div className="form-actions">
                 <PrimaryButton type="submit" disabled={resetConfirmErrors.length > 0 || busy} aria-busy={busy}>Изменить пароль</PrimaryButton>
               </div>
             </form>

@@ -1283,7 +1283,9 @@ test('cabinet covers register, login, payments, subscription access and support'
 
   const resetCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Сброс пароля' }) })
   await resetCard.getByLabel('Email').fill(user.email)
-  await resetCard.getByRole('button', { name: 'Запросить код' }).click()
+  const forgotPasswordRequests = api.getRequestCount('/api/auth/forgot-password', 'POST')
+  await resetCard.getByLabel('Email').press('Enter')
+  await expect.poll(() => api.getRequestCount('/api/auth/forgot-password', 'POST')).toBe(forgotPasswordRequests + 1)
   await resetCard.getByRole('textbox', { name: 'Новый пароль', exact: true }).fill('ChangedPassword123!')
   await resetCard.getByRole('button', { name: 'Сохранить пароль' }).click()
   await expect(page.getByText('Пароль изменён. Войдите с новым паролем.')).toBeVisible()

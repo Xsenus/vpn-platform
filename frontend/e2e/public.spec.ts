@@ -535,11 +535,8 @@ test('public account actions are single-flight and preserve newer reset input', 
   const resetCard = page.getByRole('heading', { name: 'Сброс пароля' }).locator('..')
   await resetCard.getByLabel('Email').fill('first@example.test')
   api.delayNextForgotPassword()
-  const forgotButton = resetCard.getByRole('button', { name: 'Запросить код' })
-  await forgotButton.evaluate((button) => {
-    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-  })
+  await resetCard.getByLabel('Email').press('Enter')
+  await resetCard.getByLabel('Email').press('Enter')
   await expect.poll(() => api.getAccountRequestCounts().forgotPassword).toBe(1)
   await resetCard.getByLabel('Email').fill('second@example.test')
   api.releaseForgotPassword()

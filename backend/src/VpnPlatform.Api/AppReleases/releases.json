@@ -13773,5 +13773,28 @@
         "text": "Roadmap progress is 596/616 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-password-reset-form-separation",
+    "version": "0.584.0",
+    "releasedAt": "2026-08-10T22:17:22+07:00",
+    "title": "Сброс пароля разделён на понятные шаги",
+    "summary": "Запрос кода и подтверждение нового пароля теперь являются независимыми формами в public и cabinet.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Enter в поле email запускает запрос reset-кода, а code/password form отдельно подтверждает новый пароль."
+      },
+      {
+        "type": "improved",
+        "text": "Validation summary ограничен текущей стадией, обе формы имеют доступные имена и сохраняют single-flight защиту на desktop/mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 597/617 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

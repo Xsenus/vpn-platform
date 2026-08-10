@@ -214,7 +214,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public authenticated checkout: session создается один раз, claim/payment-init имеет одного владельца, а partial success повторяет только оплату и игнорирует late response после logout.
 - Public persisted checkout: browser state проходит bounded shape/token/provider validation и удаляется до авторизованных запросов при любом нарушении контракта.
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
-- Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft.
+- Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation имеют независимые формы и корректный Enter submit.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
 - admin production bundle budget: `5` JS chunks, largest `219849`, total raw `517701`, gzip `138757`.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`; responsive matrix и source guard проверяют точные пары по обе стороны всех девяти CSS-breakpoints.
-- roadmap progress: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-10-password-reset-form-separation`, версия `0.584.0`; public/cabinet password reset разделён на request/confirmation формы с проверенным Enter и stage-specific validation.
+- roadmap progress: `597/617` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

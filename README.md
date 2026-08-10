@@ -281,7 +281,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - общий каталог inbound позволяет админке переносить VPN-клиента между совместимыми доступными 3x-ui панелями и после успеха открывать панель назначения;
 - после межпанельного переноса карточки панелей сразу отражают освобождённую source capacity и занятую target capacity, а следующий API-refresh сохраняет фактические значения;
 - admin mutation lifecycle привязывает CRUD/payment/subscription/VPN/provisioning/bot completion к исходной сессии, блокирует duplicate submit и сохраняет новые form drafts при delayed save/reload;
-- public/cabinet mutation lifecycle блокирует duplicate auth/refresh/action requests, отбрасывает completion старой сессии и сохраняет более новые support/reset drafts;
+- public/cabinet mutation lifecycle блокирует duplicate auth/refresh/action requests, отбрасывает completion старой сессии и сохраняет более новые support/reset drafts; запрос reset-кода и подтверждение пароля разделены на независимые формы с корректным Enter submit;
 - публичная витрина и admin login используют три локальных WebP из production bundle вместо runtime Unsplash; desktop/mobile screenshots и 25 viewport-конфигураций проверены без overflow и clipped controls;
 - axe проверяет WCAG 2.0/2.1/2.2 A/AA и best practices без allow-list на 6 public route-состояниях, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px;
 - критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки выполняются desktop/mobile E2E; вкладка оплат объединена одним корректным `tabpanel`;
@@ -306,7 +306,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - hidden admin forms не считаются capability boundary: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API;
 - admin action dispatcher проверяет capability целевого section во всех typed callsites; active Dashboard/Payments не разрешает hidden mutation другого раздела;
 - пункт «Помощь» в header личного кабинета открывает полноценную public-инструкцию `/help`; точный cabinet-to-public destination проверен source guard, desktop/mobile E2E и локальным браузером на 305 px;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`;
-- roadmap progress: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-password-reset-form-separation`, версия `0.584.0`;
+- roadmap progress: `597/617` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
