@@ -3178,7 +3178,7 @@ export function App() {
   if (token && !adminAccessVerified) {
     return (
       <PageShell title="Админ-панель VPN Platform">
-        <SkipLink href="#admin-session-recovery" />
+        <SkipLink href="#admin-session-recovery" updateHash={false} />
         <div id="admin-session-recovery" className="admin-login-shell" tabIndex={-1}>
           <section className="admin-login-intro" aria-label="Возможности админ-панели">
             <p className="eyebrow">VPN Platform Admin</p>
@@ -3218,7 +3218,7 @@ export function App() {
   if (!token) {
     return (
       <PageShell title="Админ-панель VPN Platform">
-        <SkipLink href="#admin-login" />
+        <SkipLink href="#admin-login" updateHash={false} />
         <div id="admin-login" className="admin-login-shell" tabIndex={-1}>
           <section className="admin-login-intro" aria-label="Возможности админ-панели">
             <p className="eyebrow">VPN Platform Admin</p>
@@ -3282,7 +3282,7 @@ export function App() {
 
   return (
     <PageShell title="Админ-панель VPN Platform">
-      <SkipLink href="#admin-content" />
+      <SkipLink href="#admin-content" updateHash={false} />
       <div className="admin-shell">
         <nav className="admin-sidebar" aria-label="Разделы админ-панели">
           <strong>Навигация</strong>

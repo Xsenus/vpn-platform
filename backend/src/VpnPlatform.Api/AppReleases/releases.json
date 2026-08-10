@@ -13497,5 +13497,28 @@
         "text": "Roadmap progress is 584/604 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-skip-link-route-preservation",
+    "version": "0.572.0",
+    "releasedAt": "2026-08-10T15:50:00+07:00",
+    "title": "Skip-ссылки админки сохраняют выбранный раздел",
+    "summary": "Клавиатурный переход к основному содержимому больше не подменяет hash-маршрут админки служебным якорем и не сбрасывает deep link после входа или обновления страницы.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Skip-ссылки входа, восстановления сессии и рабочего экрана переводят focus к нужной области, не изменяя текущий admin section hash."
+      },
+      {
+        "type": "improved",
+        "text": "Общий SkipLink сохраняет прежнюю hash-навигацию по умолчанию, а admin явно отключает ее; desktop/mobile regression проверяет deep-linked Support до входа, после входа и после reload."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 585/605 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin skip links preserve section routes
+
+Scope:
+- Login, session-recovery and authenticated skip links must move keyboard focus without replacing the active admin section hash.
+- A deep-linked section must survive skip-link activation, login and reload with matching tabpanel and metadata.
+
+Results:
+- Roadmap progress: `585/605` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-skip-link-route-preservation`, version `0.572.0`.
+- Frontend tests: `116/116`; targeted desktop/mobile skip-link lifecycle: `2/2`; admin desktop/mobile suite: `60/60`; full console-responsive Playwright: `116/116`.
+- All 17 admin sections still pass exact title, non-blank, Axe and 18-viewport responsive checks; deep-linked `#support` remains canonical through login, skip navigation and reload.
+- Typecheck/build all apps: OK; admin bundle raw `512499`, gzip `137570`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1113/1113`; fresh SQLite latest release: OK; secret scan: `663` files, `0` findings.
+- External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin invalid hash canonical fallback
 
 Scope:

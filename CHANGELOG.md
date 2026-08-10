@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.572.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-skip-link-route-preservation`.
+
+### Исправлено
+
+- Skip-ссылки login, session recovery и authenticated admin screen больше не заменяют section hash служебными `#admin-login`, `#admin-session-recovery` или `#admin-content`.
+- Клавиатурный переход сохраняет deep-linked раздел до входа, после входа и после reload, одновременно переводя focus в нужную область страницы.
+
+### Проверено
+
+- Targeted desktop/mobile skip-link lifecycle: `2/2`; текущий `#support`, видимый tabpanel, title и focus сохраняются через login и reload.
+- Полный admin desktop/mobile suite `60/60`; полный console-responsive Playwright `116/116`, включая все 17 sections на 18 viewport-конфигурациях и Axe gate.
+- Frontend unit `116/116`, typecheck/build всех приложений, audit `0 vulnerabilities`; admin bundle raw `512499`, gzip `137570`, largest `219849`.
+- Backend `1113/1113`, fresh SQLite latest release и secret scan подтверждены финальным gate; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+- Roadmap: `585/605` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.571.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-invalid-hash-canonical-fallback`.

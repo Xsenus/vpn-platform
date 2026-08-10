@@ -1916,6 +1916,38 @@ test('admin metadata follows login, deep-linked sections and logout', async ({ p
   expect(browserErrors).toEqual([])
 })
 
+test('admin skip links preserve the current section route', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  await mockAdminApi(page)
+
+  await page.goto('/#support')
+  const loginSkipLink = page.getByRole('link', { name: 'Перейти к содержимому' })
+  await loginSkipLink.focus()
+  await loginSkipLink.press('Enter')
+  await expect(page).toHaveURL(/#support$/)
+  await expect(page.locator('#admin-login')).toBeFocused()
+
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('#support')).toBeVisible()
+
+  const contentSkipLink = page.getByRole('link', { name: 'Перейти к содержимому' })
+  await contentSkipLink.focus()
+  await contentSkipLink.press('Enter')
+  await expect(page).toHaveURL(/#support$/)
+  await expect(page.locator('#admin-content')).toBeFocused()
+
+  await page.reload()
+  await expect(page.locator('#support')).toBeVisible()
+  await expect(page).toHaveTitle('Поддержка — Админ-панель VPN Platform')
+  expect(browserErrors).toEqual([])
+})
+
 test('admin section history restores content, metadata and focus', async ({ page }) => {
   const browserErrors: string[] = []
   page.on('console', (message) => {

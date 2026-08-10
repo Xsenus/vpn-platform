@@ -20,13 +20,13 @@ public class ProductAdminUiRoadmapSyncTests
                      "staging-ready baseline",
                      "Backend full suite: `1113/1113`",
                      "Frontend unit tests: `116/116`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `114/114`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `116/116`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-10-admin-invalid-hash-canonical-fallback",
-                     "0.571.0"
+                     "2026-08-10-admin-skip-link-route-preservation",
+                     "0.572.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-10-admin-invalid-hash-canonical-fallback", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-admin-invalid-hash-canonical-fallback", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-admin-skip-link-route-preservation", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-admin-skip-link-route-preservation", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Frontend unit tests: `116/116`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-10-admin-invalid-hash-canonical-fallback",
-                     "0.571.0",
+                     "2026-08-10-admin-skip-link-route-preservation",
+                     "0.572.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

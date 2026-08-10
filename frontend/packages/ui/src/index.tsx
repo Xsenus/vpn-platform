@@ -34,7 +34,7 @@ export function PageShell({ title, children }: PropsWithChildren<{ title: string
   )
 }
 
-export function SkipLink({ href = '#main-content', label = 'Перейти к содержимому' }: { href?: string; label?: string }) {
+export function SkipLink({ href = '#main-content', label = 'Перейти к содержимому', updateHash = true }: { href?: string; label?: string; updateHash?: boolean }) {
   const activate = (event: React.MouseEvent<HTMLAnchorElement> | React.KeyboardEvent<HTMLAnchorElement>) => {
     if (!href.startsWith('#')) return
 
@@ -44,7 +44,7 @@ export function SkipLink({ href = '#main-content', label = 'Перейти к с
     event.preventDefault()
     target.focus({ preventScroll: true })
     target.scrollIntoView({ block: 'start' })
-    window.history.replaceState(null, '', href)
+    if (updateHash) window.history.replaceState(null, '', href)
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLAnchorElement>) => {
