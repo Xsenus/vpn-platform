@@ -77,9 +77,9 @@ test('public page state explains checkout availability and button state', () => 
   assert.equal(canStartCheckout('', false, [], 'YooKassa'), false)
 })
 
-test('public checkout translates promo failures and preserves unrelated errors', () => {
+test('public checkout translates promo failures and hides unrelated English diagnostics', () => {
   assert.equal(getCheckoutErrorMessage(new Error('Promo code not found.'), 'Ошибка'), 'Промокод не найден. Проверьте написание.')
   assert.equal(getCheckoutErrorMessage(new Error('Promo code usage limit for this account has been reached.'), 'Ошибка'), 'Вы уже использовали этот промокод максимально допустимое число раз.')
-  assert.equal(getCheckoutErrorMessage(new Error('Payment provider is unavailable.'), 'Ошибка'), 'Payment provider is unavailable.')
+  assert.equal(getCheckoutErrorMessage(new Error('Payment provider is unavailable.'), 'Ошибка'), 'Ошибка')
   assert.equal(getCheckoutErrorMessage(null, 'Не удалось оформить покупку.'), 'Не удалось оформить покупку.')
 })

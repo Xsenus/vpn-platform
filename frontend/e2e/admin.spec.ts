@@ -883,7 +883,7 @@ async function mockAdminApi(page: Page) {
       if (failNextAccessQrStatus !== null) {
         const status = failNextAccessQrStatus
         failNextAccessQrStatus = null
-        await fulfillJson(route, { message: 'qr_temporarily_unavailable' }, status)
+        await fulfillJson(route, { message: 'VPN access URI is not available yet.' }, status)
         return
       }
       await route.fulfill({

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.588.0 - 2026-08-11
+
+Release entry: `2026-08-11-russian-api-error-boundary`.
+
+### Исправлено
+
+- Англоязычные backend diagnostics и native network errors больше не выводятся напрямую в русской public/cabinet/admin UI; HTTP status и raw payload сохранены внутри `ApiClientError`, а caller-requested abort остаётся управляющей отменой.
+- Десять известных promo error patterns переведены в общем API-клиенте, поэтому checkout сохраняет точные подсказки без отдельного расходящегося словаря.
+
+### Проверено
+
+- Инвентаризация controller literals: `162` error strings, `161` без русского текста; до исправления UI/tests показывали `boom`, `Failed to fetch`, `profile unavailable`, `payment provider unavailable` и English VPN phrase.
+- Targeted API/public `60/60`, public browser `6/6`, admin desktop/mobile `2/2`; frontend `124/124`, typecheck/build, audit `0 vulnerabilities`; полный console-responsive Playwright `124/124`, all-screens `6/6` на 25 viewport-конфигурациях.
+- Backend `1125/1125`, EF drift OK, fresh SQLite order/payment/subscription/access flow OK, secret scan `668/0`; финальный encoding и artifact cleanup зафиксированы в `TEST_RESULTS.md`.
+- Roadmap: `601/621` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.587.0 - 2026-08-10
 
 Release entry: `2026-08-10-api-error-payload-hardening`.

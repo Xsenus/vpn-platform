@@ -1189,6 +1189,19 @@ const authErrorFallbacks: Record<string, string> = {
   'Request failed': 'Запрос не выполнен. Попробуйте еще раз.'
 }
 
+const apiErrorTranslations: Array<[string, string]> = [
+  ['promo code not found', 'Промокод не найден. Проверьте написание.'],
+  ['promo code is inactive', 'Промокод отключён.'],
+  ['promo code is not active yet', 'Промокод ещё не начал действовать.'],
+  ['promo code expired', 'Срок действия промокода истёк.'],
+  ['not available for this tariff', 'Промокод не действует для выбранного тарифа.'],
+  ['not available for this channel', 'Промокод нельзя использовать в этом канале продаж.'],
+  ['promo code configuration is invalid', 'Промокод настроен некорректно. Обратитесь в поддержку.'],
+  ['redemption limit has been reached', 'Лимит активаций промокода исчерпан.'],
+  ['usage limit for this account has been reached', 'Вы уже использовали этот промокод максимально допустимое число раз.'],
+  ['promo code changed while', 'Промокод обновился во время оформления. Повторите попытку.']
+]
+
 export function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 }
@@ -1247,7 +1260,12 @@ export function normalizeApiError(payload: unknown, fallback: string): string {
 }
 
 function normalizeApiErrorText(value: string, fallback: string): string {
-  return !value.trim() || isTechnicalApiError(value) ? fallback : value
+  const trimmed = value.trim()
+  if (!trimmed) return fallback
+  const normalized = trimmed.toLowerCase()
+  const translation = apiErrorTranslations.find(([fragment]) => normalized.includes(fragment))?.[1]
+  if (translation) return translation
+  return isTechnicalApiError(trimmed) || !/[А-Яа-яЁё]/.test(trimmed) ? fallback : value
 }
 
 function isTechnicalApiError(value: string): boolean {
@@ -1256,6 +1274,7 @@ function isTechnicalApiError(value: string): boolean {
 
 const apiFallbackErrorMessage = 'Не удалось выполнить запрос. Попробуйте еще раз.'
 const apiQrLoadErrorMessage = 'Не удалось загрузить QR-код. Повторите попытку.'
+const apiNetworkErrorMessage = 'Не удалось связаться с сервером. Проверьте подключение и повторите попытку.'
 const apiRequestTimeoutMessage = 'Сервер не ответил вовремя. Проверьте подключение и повторите запрос.'
 const apiEmptyResponseMessage = 'Сервер вернул пустой ответ. Повторите запрос позже.'
 const apiInvalidJsonResponseMessage = 'Сервер вернул некорректный JSON-ответ. Повторите запрос позже.'
@@ -2922,7 +2941,9 @@ export class ApiClient {
       if (timeoutReached) {
         throw new ApiClientError(apiRequestTimeoutMessage, 408, null)
       }
-      throw error
+      if (externalSignal?.aborted) throw error
+      if (error instanceof ApiClientError) throw error
+      throw new ApiClientError(apiNetworkErrorMessage, 0, null)
     } finally {
       clearTimeout(timeoutId)
       externalSignal?.removeEventListener('abort', forwardExternalAbort)

@@ -13865,5 +13865,28 @@
         "text": "Roadmap progress is 600/620 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-russian-api-error-boundary",
+    "version": "0.588.0",
+    "releasedAt": "2026-08-11T00:01:31+07:00",
+    "title": "API-ошибки приведены к языку интерфейса",
+    "summary": "English backend diagnostics и native network errors заменяются русским fallback, а promo failures сохраняют точные переводы.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "ASCII-only API diagnostics больше не выводятся пользователю; raw payload и HTTP status остаются доступны внутри ApiClientError."
+      },
+      {
+        "type": "improved",
+        "text": "Единый словарь переводит десять promo error patterns, а native fetch failures получают контролируемый русский текст."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 601/621 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

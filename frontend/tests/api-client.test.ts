@@ -651,13 +651,16 @@ test('buildAuthHeaders returns bearer header when token exists', () => {
 })
 
 test('normalizeApiError prefers error field and message field', () => {
-  assert.equal(normalizeApiError({ error: 'boom' }, 'fallback'), 'boom')
-  assert.equal(normalizeApiError({ message: 'denied' }, 'fallback'), 'denied')
+  assert.equal(normalizeApiError({ error: 'boom' }, 'fallback'), 'fallback')
+  assert.equal(normalizeApiError({ message: 'VPN access not found.' }, 'fallback'), 'fallback')
+  assert.equal(normalizeApiError({ error: 'Операция недоступна.' }, 'fallback'), 'Операция недоступна.')
+  assert.equal(normalizeApiError({ message: 'Запрос отклонён.' }, 'fallback'), 'Запрос отклонён.')
+  assert.equal(normalizeApiError({ error: 'Promo code not found.' }, 'fallback'), 'Промокод не найден. Проверьте написание.')
   assert.equal(normalizeApiError({ error: 'qr_temporarily_unavailable' }, 'Не удалось загрузить QR-код.'), 'Не удалось загрузить QR-код.')
   assert.equal(normalizeApiError('provider_timeout', 'Сервис временно недоступен.'), 'Сервис временно недоступен.')
   assert.equal(normalizeApiError({ message: 'provider_timeout' }, 'Сервис временно недоступен.'), 'Сервис временно недоступен.')
   assert.equal(normalizeApiError({ error: '   ' }, 'fallback'), 'fallback')
-  assert.equal(normalizeApiError({ error: ' ', message: 'Backend declined the request.' }, 'fallback'), 'Backend declined the request.')
+  assert.equal(normalizeApiError({ error: ' ', message: 'Запрос отклонён.' }, 'fallback'), 'Запрос отклонён.')
   assert.equal(normalizeApiError({ message: '\t' }, 'fallback'), 'fallback')
   assert.equal(normalizeApiError(null, 'fallback'), 'fallback')
 })
@@ -674,7 +677,7 @@ test('ApiClient errors preserve HTTP status and normalized payload', async () =>
     (error: unknown) => {
       assert.ok(error instanceof ApiClientError)
       assert.equal(error.status, 403)
-      assert.equal(error.message, 'forbidden')
+      assert.equal(error.message, 'Не удалось выполнить запрос. Попробуйте еще раз.')
       assert.deepEqual(error.payload, { error: 'forbidden' })
       return true
     }
@@ -2437,6 +2440,40 @@ test('ApiClient times out stalled fetches and response bodies with controlled er
     (error: unknown) => error instanceof ApiClientError && error.status === 408 && /повторите запрос/i.test(error.message)
   )
   assert.equal(bodySignal?.aborted, true)
+})
+
+test('ApiClient converts native network failures to a controlled Russian error', async () => {
+  globalThis.fetch = (async () => {
+    throw new TypeError('Failed to fetch')
+  }) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await assert.rejects(
+    () => client.getTariffs(),
+    (error: unknown) => error instanceof ApiClientError
+      && error.status === 0
+      && error.payload === null
+      && error.message === 'Не удалось связаться с сервером. Проверьте подключение и повторите попытку.'
+  )
+})
+
+test('ApiClient preserves caller-requested aborts as control flow', async () => {
+  globalThis.fetch = ((_url: string | URL, init?: RequestInit) => new Promise((_resolve, reject) => {
+    const signal = init?.signal
+    const rejectAbort = () => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'))
+    if (signal?.aborted) rejectAbort()
+    else signal?.addEventListener('abort', rejectAbort, { once: true })
+  })) as typeof fetch
+
+  const controller = new AbortController()
+  const client = new ApiClient('http://localhost:8080')
+  const requestArray = (client as unknown as {
+    requestArray<T>(path: string, init?: RequestInit): Promise<T[]>
+  }).requestArray.bind(client)
+  const pending = requestArray('/api/public/tariffs', { signal: controller.signal })
+  controller.abort(new DOMException('Caller cancelled', 'AbortError'))
+
+  await assert.rejects(pending, (error: unknown) => error instanceof DOMException && error.name === 'AbortError')
 })
 
 test('ApiClient clears the request deadline after a successful response', async () => {

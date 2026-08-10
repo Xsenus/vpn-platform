@@ -654,7 +654,7 @@ test('public restored session preserves tokens and retries profile after a trans
 
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: 'Проверка сессии' })).toBeVisible()
-  await expect(page.getByRole('alert')).toContainText('profile unavailable')
+  await expect(page.getByRole('alert')).toContainText('Не удалось выполнить запрос. Попробуйте еще раз.')
   await expect.poll(api.getSessionRequestCounts).toEqual({
     profile: 1,
     refresh: 0,
@@ -716,7 +716,7 @@ test('authenticated public checkout owns one claim and payment initialization', 
   await page.getByRole('button', { name: 'Купить' }).first().click()
 
   await expect(page).toHaveURL(/\/account$/)
-  await expect(page.getByRole('alert').filter({ hasText: 'payment provider unavailable' })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось выполнить запрос. Попробуйте еще раз.' })).toBeVisible()
   await expect(page.getByText('ID заказа: public-order')).toBeVisible()
   await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 1 })
   await page.waitForTimeout(250)

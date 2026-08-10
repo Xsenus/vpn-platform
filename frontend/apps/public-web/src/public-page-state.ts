@@ -1,4 +1,4 @@
-import type { PublicPaymentProviderDto, TariffDto } from '@vpn-platform/api-client'
+import { normalizeApiError, type PublicPaymentProviderDto, type TariffDto } from '@vpn-platform/api-client'
 
 export type PublicListState = 'loading' | 'error' | 'empty' | 'ready'
 
@@ -58,19 +58,5 @@ export function canStartCheckout(
 
 export function getCheckoutErrorMessage(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message.trim() : ''
-  const normalized = message.toLowerCase()
-  const promoMessages: Array<[string, string]> = [
-    ['promo code not found', 'Промокод не найден. Проверьте написание.'],
-    ['promo code is inactive', 'Промокод отключён.'],
-    ['promo code is not active yet', 'Промокод ещё не начал действовать.'],
-    ['promo code expired', 'Срок действия промокода истёк.'],
-    ['not available for this tariff', 'Промокод не действует для выбранного тарифа.'],
-    ['not available for this channel', 'Промокод нельзя использовать в этом канале продаж.'],
-    ['promo code configuration is invalid', 'Промокод настроен некорректно. Обратитесь в поддержку.'],
-    ['redemption limit has been reached', 'Лимит активаций промокода исчерпан.'],
-    ['usage limit for this account has been reached', 'Вы уже использовали этот промокод максимально допустимое число раз.'],
-    ['promo code changed while', 'Промокод обновился во время оформления. Повторите попытку.']
-  ]
-  const promoMessage = promoMessages.find(([fragment]) => normalized.includes(fragment))
-  return promoMessage?.[1] ?? (message || fallback)
+  return normalizeApiError(message, fallback)
 }

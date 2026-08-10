@@ -39,13 +39,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1125/1125", readme, StringComparison.Ordinal);
-        Assert.Contains("122/122", readme, StringComparison.Ordinal);
+        Assert.Contains("124/124", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-api-error-payload-hardening", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-11-russian-api-error-boundary", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("124/124", readme, StringComparison.Ordinal);
     }
 
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1125/1125",
-                     "2026-08-10-api-error-payload-hardening",
-                     "0.587.0",
+                     "2026-08-11-russian-api-error-boundary",
+                     "0.588.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

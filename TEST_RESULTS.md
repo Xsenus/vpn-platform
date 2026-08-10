@@ -1,6 +1,24 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-10.
+Дата проверки: 2026-08-11.
+
+## Check 2026-08-11: Russian API error boundary
+
+Scope:
+- English backend diagnostics and native fetch errors must not appear in the Russian public, cabinet or admin UI.
+- Known promo failures must retain precise localized guidance while status/raw payload remain available to application logic.
+
+Results:
+- Roadmap progress: `601/621` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-russian-api-error-boundary`, version `0.588.0`.
+- Inventory: `162` literal controller error strings, `161` without Russian text; direct frontend consumers existed in public session/checkout, cabinet and admin operations.
+- Reproduction before fix: unit tests returned `boom` and native `Failed to fetch`; browser paths required raw `profile unavailable`, `payment provider unavailable` and an English VPN phrase.
+- After fix: shared normalization translates ten promo patterns, preserves Russian backend text, hides remaining ASCII diagnostics behind caller fallback and wraps unknown fetch/body failures in Russian `ApiClientError` with status `0`; raw HTTP payload/status remain available and caller-requested abort stays control flow.
+- Targeted API/public tests: `60/60`; targeted public browser: `6/6`; targeted admin desktop/mobile: `2/2`.
+- Visual audit: all-screens `6/6` passed on 25 viewport configurations `305x568..2560x1440`; final full desktop/mobile console-responsive Playwright: `124/124` after updating four obsolete English assertions (the preceding full run was `120/124`).
+- Frontend tests: `124/124`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `519493`, gzip `139420`, largest `219849`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
 
 ## Check 2026-08-10: API error payload hardening
 
