@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1112/1112", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-10-admin-critical-operations-e2e", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-10-admin-managed-configuration-crud-e2e", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "1112/1112",
-                     "2026-08-10-admin-critical-operations-e2e",
-                     "0.553.0",
+                     "2026-08-10-admin-managed-configuration-crud-e2e",
+                     "0.554.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,8 +104,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-10-admin-critical-operations-e2e",
-                     "0.553.0",
+                     "2026-08-10-admin-managed-configuration-crud-e2e",
+                     "0.554.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-10-admin-critical-operations-e2e",
-                     "0.553.0",
+                     "2026-08-10-admin-managed-configuration-crud-e2e",
+                     "0.554.0",
                      "522/542",
                      "96.3%",
                      "20",

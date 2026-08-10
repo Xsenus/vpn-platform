@@ -13083,5 +13083,28 @@
         "text": "Roadmap progress is 566/586 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence and real SMTP delivery are still required externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-managed-configuration-crud-e2e",
+    "version": "0.554.0",
+    "releasedAt": "2026-08-10T08:15:00+07:00",
+    "title": "CRUD управляемой конфигурации проверяется end-to-end",
+    "summary": "Desktop и mobile-admin сценарии полностью создают, изменяют и удаляют тарифы, реферальные программы, сценарии, релизы, FAQ и контент сайта с проверкой сохранения после reload.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Admin E2E выполняет полный CRUD тарифов, реферальных программ, рабочих сценариев, релизов приложения, FAQ и блоков контента сайта через фактические UI-формы."
+      },
+      {
+        "type": "improved",
+        "text": "Stateful API-моки подтверждают payload, confirm-dialog, уведомления и сохранение результата после reload на desktop и mobile-admin без overflow и console errors."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 567/587 closed, readiness 96.6%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real SMTP delivery must also be confirmed externally."
+      }
+    ]
   }
 ]

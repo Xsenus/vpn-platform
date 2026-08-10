@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.554.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-managed-configuration-crud-e2e`.
+
+### Улучшено
+
+- Admin browser regression выполняет полный create/edit/delete lifecycle тарифов, сценариев, релизов, FAQ и контента сайта, create/edit реферальной программы, disable тарифа и восстановление обязательных блоков главной.
+- Mock API хранит состояние управляемых сущностей между mutation и общим reload, поэтому тест подтверждает не только отправку запроса, но и фактическое повторное отображение результата после загрузки данных.
+- Один и тот же сценарий проходит desktop и mobile-admin через реальные формы, доступные кнопки и confirm-dialog, проверяя API methods/payload и отсутствие горизонтального overflow.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `80/80`; all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- External VPS/staging/live payment/production-like 3x-ui и SMTP evidence не переиспользовалось.
+- Roadmap: `567/587` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.553.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-critical-operations-e2e`.

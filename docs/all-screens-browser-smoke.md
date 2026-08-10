@@ -72,5 +72,6 @@ PNG создаются только при явном флаге внутри `f
 
 - Критический admin flow выполняет notification retry, payment/order recheck, refund, subscription/VPN mutations и support reply/note/status на desktop/mobile.
 - Public account assertion использует точное accessible name, а последовательный axe-аудит 17 admin sections имеет достаточный timeout без исключения правил.
-- `npm run e2e:console --prefix frontend`: `78/78`; all-screens: `6/6`.
-- Latest "Что нового": `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`.
+- Управляемая конфигурация admin-панели проходит полный create/edit/delete lifecycle с confirm-dialog, payload assertions и сохранением состояния после reload на desktop/mobile.
+- `npm run e2e:console --prefix frontend`: `80/80`; all-screens: `6/6`.
+- Latest "Что нового": `2026-08-10-admin-managed-configuration-crud-e2e`, версия `0.554.0`.

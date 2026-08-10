@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `566/586` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `567/587` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -90,7 +90,7 @@
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `78/78`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `80/80`.
 - [x] Responsive matrix: 18 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -138,7 +138,8 @@
 - [x] Admin mutations применяют state/reload только в исходной session operation, отклоняют duplicate submit и сохраняют новый form draft при delayed completion.
 - [x] Public/cabinet mutations отклоняют duplicate events, late session/unmount completion и сохраняют более новый support/reset draft.
 - [x] Критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки проходят stateful desktop/mobile E2E; вся вкладка оплат находится в одном `tabpanel`.
-- [x] Latest "Что нового": `2026-08-10-admin-critical-operations-e2e`, версия `0.553.0`.
+- [x] Управляемые тарифы, реферальные программы, сценарии, релизы, FAQ и контент сайта проходят stateful create/edit/delete lifecycle на desktop/mobile с reload persistence.
+- [x] Latest "Что нового": `2026-08-10-admin-managed-configuration-crud-e2e`, версия `0.554.0`.
 
 ## Как вести дальше
 

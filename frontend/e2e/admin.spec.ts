@@ -227,6 +227,39 @@ function workScenario(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function faqItem(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'faq-created-e2e',
+    question: 'Как проверить управляемый FAQ?',
+    answer: 'Создать, изменить и удалить запись через админку.',
+    category: 'E2E',
+    isActive: true,
+    showOnHome: true,
+    showOnFaqPage: true,
+    sortOrder: 10,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  }
+}
+
+function siteContentBlock(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'content-created-e2e',
+    key: 'home.e2e.title',
+    value: 'Управляемый блок E2E',
+    group: 'home',
+    label: 'Заголовок E2E',
+    description: 'Проверка CRUD контента через браузер.',
+    inputType: 'text',
+    isActive: true,
+    sortOrder: 90,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  }
+}
+
 function vpnPanel(overrides: Record<string, unknown> = {}) {
   return {
     id: 'panel-eu',
@@ -410,6 +443,8 @@ async function mockAdminApi(page: Page) {
   const referralPrograms = [referralProgram()]
   const releases = [release()]
   const scenarios = [workScenario()]
+  const faqEntries: Array<Record<string, unknown>> = []
+  const siteContentBlocks: Array<Record<string, unknown>> = []
   const panels = [
     vpnPanel(),
     vpnPanel({
@@ -868,6 +903,22 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    const tariffMutationMatch = path.match(/^\/api\/admin\/tariffs\/([^/]+)$/)
+    if (tariffMutationMatch && method === 'PATCH') {
+      const index = tariffs.findIndex((item) => item.id === tariffMutationMatch[1])
+      const updated = tariff({ ...tariffs[index], ...(body as Record<string, unknown>), id: tariffMutationMatch[1], updatedAt: now })
+      if (index >= 0) tariffs[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    if (tariffMutationMatch && method === 'DELETE') {
+      const index = tariffs.findIndex((item) => item.id === tariffMutationMatch[1])
+      if (index >= 0) tariffs.splice(index, 1)
+      await fulfillJson(route, { id: tariffMutationMatch[1], deleted: true, archived: false })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/referral-programs') {
       await fulfillJson(route, referralPrograms)
       return
@@ -882,6 +933,15 @@ async function mockAdminApi(page: Page) {
       const created = referralProgram({ ...(body as Record<string, unknown>), id: 'referral-program-created-e2e', createdAt: now, updatedAt: now })
       referralPrograms.push(created)
       await fulfillJson(route, created, 201)
+      return
+    }
+
+    const referralProgramMutationMatch = path.match(/^\/api\/admin\/referral-programs\/([^/]+)$/)
+    if (referralProgramMutationMatch && method === 'PATCH') {
+      const index = referralPrograms.findIndex((item) => item.id === referralProgramMutationMatch[1])
+      const updated = referralProgram({ ...referralPrograms[index], ...(body as Record<string, unknown>), id: referralProgramMutationMatch[1], updatedAt: now })
+      if (index >= 0) referralPrograms[index] = updated
+      await fulfillJson(route, updated)
       return
     }
 
@@ -922,23 +982,119 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    const releaseMutationMatch = path.match(/^\/api\/app-version\/admin\/releases\/([^/]+)$/)
+    if (releaseMutationMatch && method === 'PUT') {
+      const index = releases.findIndex((item) => item.id === releaseMutationMatch[1])
+      const releaseBody = body as Record<string, unknown>
+      const updated = release({
+        ...releases[index],
+        ...releaseBody,
+        id: releaseMutationMatch[1],
+        items: Array.isArray(releaseBody.items)
+          ? releaseBody.items.map((item, itemIndex) => ({ ...(item as Record<string, unknown>), id: `release-updated-item-${itemIndex + 1}` }))
+          : [],
+        updatedAt: now
+      })
+      if (index >= 0) releases[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    if (releaseMutationMatch && method === 'DELETE') {
+      const index = releases.findIndex((item) => item.id === releaseMutationMatch[1])
+      if (index >= 0) releases.splice(index, 1)
+      await fulfillJson(route, { id: releaseMutationMatch[1], deleted: true })
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/faq') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, faqEntries)
       return
     }
 
     if (method === 'GET' && path === '/api/admin/faq/overview') {
-      await fulfillJson(route, { totalCount: 0, activeCount: 0, hiddenCount: 0, homeCount: 0, faqPageCount: 0, publicCount: 0, categoryCount: 0, categories: [], duplicateQuestions: [], hasPublicFaq: false, hasHomeFaq: false })
+      const activeEntries = faqEntries.filter((item) => item.isActive !== false)
+      const homeEntries = activeEntries.filter((item) => item.showOnHome === true)
+      const pageEntries = activeEntries.filter((item) => item.showOnFaqPage === true)
+      const categories = [...new Set(faqEntries.map((item) => String(item.category ?? '')).filter(Boolean))]
+      await fulfillJson(route, {
+        totalCount: faqEntries.length,
+        activeCount: activeEntries.length,
+        hiddenCount: faqEntries.length - activeEntries.length,
+        homeCount: homeEntries.length,
+        faqPageCount: pageEntries.length,
+        publicCount: activeEntries.length,
+        categoryCount: categories.length,
+        categories,
+        duplicateQuestions: [],
+        hasPublicFaq: pageEntries.length > 0,
+        hasHomeFaq: homeEntries.length > 0
+      })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/faq') {
+      const created = faqItem(body as Record<string, unknown>)
+      faqEntries.push(created)
+      await fulfillJson(route, created, 201)
+      return
+    }
+
+    const faqMutationMatch = path.match(/^\/api\/admin\/faq\/([^/]+)$/)
+    if (faqMutationMatch && method === 'PUT') {
+      const index = faqEntries.findIndex((item) => item.id === faqMutationMatch[1])
+      const updated = faqItem({ ...faqEntries[index], ...(body as Record<string, unknown>), id: faqMutationMatch[1], updatedAt: now })
+      if (index >= 0) faqEntries[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    if (faqMutationMatch && method === 'DELETE') {
+      const index = faqEntries.findIndex((item) => item.id === faqMutationMatch[1])
+      if (index >= 0) faqEntries.splice(index, 1)
+      await fulfillJson(route, { id: faqMutationMatch[1], deleted: true })
       return
     }
 
     if (method === 'GET' && path === '/api/admin/site-content') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, siteContentBlocks)
       return
     }
 
     if (method === 'GET' && path === '/api/admin/site-content/home-readiness') {
       await fulfillJson(route, { isReady: true, requiredCount: 1, presentCount: 1, activeRequiredCount: 1, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: 1, requiredKeys: ['home.hero.title'] })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/site-content/home-defaults') {
+      await fulfillJson(route, {
+        created: 1,
+        restored: 0,
+        readiness: { isReady: true, requiredCount: 1, presentCount: 1, activeRequiredCount: 1, missingKeys: [], inactiveKeys: [], emptyKeys: [], duplicateKeys: [], publicBlocksCount: Math.max(1, siteContentBlocks.length), requiredKeys: ['home.hero.title'] }
+      })
+      return
+    }
+
+    if (method === 'POST' && path === '/api/admin/site-content') {
+      const created = siteContentBlock(body as Record<string, unknown>)
+      siteContentBlocks.push(created)
+      await fulfillJson(route, created, 201)
+      return
+    }
+
+    const siteContentMutationMatch = path.match(/^\/api\/admin\/site-content\/([^/]+)$/)
+    if (siteContentMutationMatch && method === 'PUT') {
+      const index = siteContentBlocks.findIndex((item) => item.id === siteContentMutationMatch[1])
+      const updated = siteContentBlock({ ...siteContentBlocks[index], ...(body as Record<string, unknown>), id: siteContentMutationMatch[1], updatedAt: now })
+      if (index >= 0) siteContentBlocks[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    if (siteContentMutationMatch && method === 'DELETE') {
+      const index = siteContentBlocks.findIndex((item) => item.id === siteContentMutationMatch[1])
+      if (index >= 0) siteContentBlocks.splice(index, 1)
+      await fulfillJson(route, { id: siteContentMutationMatch[1], deleted: true })
       return
     }
 
@@ -951,6 +1107,22 @@ async function mockAdminApi(page: Page) {
       const created = workScenario({ ...(body as Record<string, unknown>), id: 'scenario-created-e2e', createdAt: now, updatedAt: now })
       scenarios.push(created)
       await fulfillJson(route, created, 201)
+      return
+    }
+
+    const workScenarioMutationMatch = path.match(/^\/api\/admin\/work-scenarios\/([^/]+)$/)
+    if (workScenarioMutationMatch && method === 'PUT') {
+      const index = scenarios.findIndex((item) => item.id === workScenarioMutationMatch[1])
+      const updated = workScenario({ ...scenarios[index], ...(body as Record<string, unknown>), id: workScenarioMutationMatch[1], updatedAt: now })
+      if (index >= 0) scenarios[index] = updated
+      await fulfillJson(route, updated)
+      return
+    }
+
+    if (workScenarioMutationMatch && method === 'DELETE') {
+      const index = scenarios.findIndex((item) => item.id === workScenarioMutationMatch[1])
+      if (index >= 0) scenarios.splice(index, 1)
+      await fulfillJson(route, { id: workScenarioMutationMatch[1], deleted: true })
       return
     }
 
@@ -1443,6 +1615,167 @@ async function openAdminSection(page: Page, name: string, id: string) {
   }
   await expect(page.locator(`#${id}`)).toBeVisible()
 }
+
+test('admin managed configuration supports complete CRUD lifecycle', async ({ page }) => {
+  test.setTimeout(180_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-content-token', 'admin-content-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  await openAdminSection(page, 'Тарифы', 'tariffs')
+  const tariffsPanel = page.locator('#tariffs')
+  await tariffsPanel.getByLabel('Название').fill('CRUD Tariff E2E')
+  await tariffsPanel.getByLabel('Slug').fill('crud-tariff-e2e')
+  await tariffsPanel.getByRole('spinbutton', { name: 'Цена' }).fill('690')
+  await tariffsPanel.getByLabel('Короткое описание').fill('Тариф полного браузерного CRUD.')
+  await tariffsPanel.getByLabel('Преимущества, по одному в строке').fill('CRUD\nDesktop и mobile')
+  await tariffsPanel.getByRole('button', { name: 'Создать тариф' }).click()
+  await expect(page.getByText('Тариф создан.')).toBeVisible()
+
+  let tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Tariff E2E' })
+  await expect(tariffRow).toContainText('690 RUB')
+  await tariffRow.getByRole('button', { name: 'Редактировать' }).click()
+  await tariffsPanel.getByLabel('Название').fill('CRUD Tariff Updated')
+  await tariffsPanel.getByRole('button', { name: 'Сохранить тариф' }).click()
+  await expect(page.getByText('Тариф обновлён.')).toBeVisible()
+  tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Tariff Updated' })
+  await tariffRow.getByRole('button', { name: 'Выключить' }).click()
+  await tariffsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(tariffRow).toContainText('Выключено')
+  await expect(tariffRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/tariffs/tariff-created-e2e', 'PATCH')?.body).toMatchObject({ isActive: false })
+  await tariffRow.getByRole('button', { name: 'Удалить' }).click()
+  await tariffsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(tariffsPanel.getByText('CRUD Tariff Updated', { exact: true })).toHaveCount(0)
+  expect(api.getLastRequest('/api/admin/tariffs/tariff-created-e2e', 'DELETE')).toBeTruthy()
+
+  await openAdminSection(page, 'Рефералы', 'referrals')
+  const referralsPanel = page.locator('#referrals')
+  await referralsPanel.getByLabel('Название').fill('CRUD Referral E2E')
+  await referralsPanel.locator('form select').first().selectOption('active')
+  await referralsPanel.getByRole('button', { name: 'Создать программу' }).click()
+  await expect(page.getByText('Реферальная программа создана.')).toBeVisible()
+  let referralRow = referralsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Referral E2E' })
+  await referralRow.getByRole('button', { name: 'Редактировать' }).click()
+  await referralsPanel.getByLabel('Название').fill('CRUD Referral Updated')
+  await referralsPanel.getByRole('button', { name: 'Сохранить программу' }).click()
+  await expect(page.getByText('Реферальная программа обновлена.')).toBeVisible()
+  referralRow = referralsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Referral Updated' })
+  await expect(referralRow).toBeVisible()
+  expect(api.getLastRequest('/api/admin/referral-programs/referral-program-created-e2e', 'PATCH')?.body).toMatchObject({ name: 'CRUD Referral Updated' })
+
+  await openAdminSection(page, 'Сценарии', 'scenarios')
+  const scenariosPanel = page.locator('#scenarios')
+  await scenariosPanel.getByLabel('Название').fill('CRUD Scenario E2E')
+  await scenariosPanel.getByLabel('Ключ').fill('crud-scenario-e2e')
+  await scenariosPanel.getByLabel('VPN-протокол').fill('vless')
+  await scenariosPanel.getByLabel('Текст для кабинета').fill('Сценарий полного браузерного CRUD.')
+  await scenariosPanel.getByRole('button', { name: 'Создать сценарий' }).click()
+  await expect(page.getByText('Сценарий работы создан.')).toBeVisible()
+  let scenarioRow = scenariosPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Scenario E2E' })
+  await scenarioRow.getByRole('button', { name: 'Редактировать' }).click()
+  await scenariosPanel.getByLabel('Название').fill('CRUD Scenario Updated')
+  await scenariosPanel.getByRole('button', { name: 'Сохранить сценарий' }).click()
+  await expect(page.getByText('Сценарий работы обновлен.')).toBeVisible()
+  scenarioRow = scenariosPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Scenario Updated' })
+  await scenarioRow.getByRole('button', { name: 'Удалить' }).click()
+  await scenariosPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(scenariosPanel.getByText('CRUD Scenario Updated', { exact: true })).toHaveCount(0)
+  expect(api.getLastRequest('/api/admin/work-scenarios/scenario-created-e2e', 'DELETE')).toBeTruthy()
+
+  await openAdminSection(page, 'Что нового', 'releases')
+  const releasesPanel = page.locator('#releases')
+  await releasesPanel.getByLabel('Release ID').fill('2026-08-10-admin-crud-e2e')
+  await releasesPanel.getByLabel('Версия').fill('0.554.0-test')
+  await releasesPanel.getByLabel('Дата публикации').fill('2026-08-10T07:00')
+  await releasesPanel.getByLabel('Заголовок').fill('CRUD Release E2E')
+  await releasesPanel.getByLabel('Короткое описание').fill('Релиз полного браузерного CRUD.')
+  await releasesPanel.getByLabel('Текст').fill('Создание, обновление и удаление релиза.')
+  await releasesPanel.getByRole('button', { name: 'Создать релиз' }).click()
+  await expect(page.getByText('Релиз создан.')).toBeVisible()
+  let releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Release E2E' })
+  await releaseRow.getByRole('button', { name: 'Редактировать' }).click()
+  await releasesPanel.getByLabel('Заголовок').fill('CRUD Release Updated')
+  await releasesPanel.getByRole('button', { name: 'Сохранить релиз' }).click()
+  await expect(page.getByText('Релиз обновлен.')).toBeVisible()
+  releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Release Updated' })
+  await releaseRow.getByRole('button', { name: 'Удалить' }).click()
+  await releasesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(releasesPanel.getByText('CRUD Release Updated', { exact: true })).toHaveCount(0)
+  expect(api.getLastRequest('/api/app-version/admin/releases/release-created-e2e', 'DELETE')).toBeTruthy()
+
+  await openAdminSection(page, 'FAQ', 'faq')
+  const faqPanel = page.locator('#faq')
+  const faqForm = faqPanel.locator('form').first()
+  await faqForm.getByLabel('Вопрос').fill('Как проверить управляемый FAQ?')
+  await faqForm.getByLabel('Ответ').fill('Создать, изменить и удалить запись через админку.')
+  await faqForm.getByLabel('Категория').fill('E2E')
+  await faqForm.getByRole('button', { name: 'Создать вопрос' }).click()
+  await expect(page.getByText('Вопрос FAQ создан.')).toBeVisible()
+
+  let faqRow = faqPanel.locator('.list-item-vertical').filter({ hasText: 'Как проверить управляемый FAQ?' })
+  await expect(faqRow).toContainText('Создать, изменить и удалить запись через админку.')
+  expect(api.getLastRequest('/api/admin/faq', 'POST')?.body).toMatchObject({ category: 'E2E', showOnFaqPage: true })
+
+  await faqRow.getByRole('button', { name: 'Редактировать' }).click()
+  await expect(faqPanel.getByRole('heading', { name: 'Редактировать вопрос' })).toBeVisible()
+  await faqForm.getByLabel('Ответ').fill('Обновлённый ответ проверен браузерным E2E.')
+  await faqForm.getByRole('button', { name: 'Сохранить вопрос' }).click()
+  await expect(page.getByText('Вопрос FAQ обновлен.')).toBeVisible()
+  faqRow = faqPanel.locator('.list-item-vertical').filter({ hasText: 'Как проверить управляемый FAQ?' })
+  await expect(faqRow).toContainText('Обновлённый ответ проверен браузерным E2E.')
+  expect(api.getLastRequest('/api/admin/faq/faq-created-e2e', 'PUT')?.body).toMatchObject({ answer: 'Обновлённый ответ проверен браузерным E2E.' })
+
+  await faqRow.getByRole('button', { name: 'Удалить' }).click()
+  await faqPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Вопрос FAQ удален.')).toBeVisible()
+  await expect(faqPanel.getByText('FAQ пока пуст')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/faq/faq-created-e2e', 'DELETE')).toBeTruthy()
+
+  await openAdminSection(page, 'Контент сайта', 'content')
+  const contentPanel = page.locator('#content')
+  const contentForm = contentPanel.locator('form')
+  await contentForm.getByLabel('Ключ').fill('home.e2e.title')
+  await contentForm.getByLabel('Название поля').fill('Заголовок E2E')
+  await contentForm.getByLabel('Описание для администратора').fill('Проверка CRUD контента через браузер.')
+  await contentForm.getByLabel('Значение').fill('Управляемый блок E2E')
+  await contentForm.getByRole('button', { name: 'Создать блок' }).click()
+  await expect(page.getByText('Блок контента создан.')).toBeVisible()
+
+  let contentRow = contentPanel.locator('.list-item-vertical').filter({ hasText: 'Заголовок E2E' })
+  await expect(contentRow).toContainText('Управляемый блок E2E')
+  expect(api.getLastRequest('/api/admin/site-content', 'POST')?.body).toMatchObject({ key: 'home.e2e.title', value: 'Управляемый блок E2E' })
+
+  await contentRow.getByRole('button', { name: 'Редактировать' }).click()
+  await expect(contentPanel.getByRole('heading', { name: 'Редактировать блок контента' })).toBeVisible()
+  await contentForm.getByLabel('Значение').fill('Обновлённый блок E2E')
+  await contentForm.getByRole('button', { name: 'Сохранить блок' }).click()
+  await expect(page.getByText('Блок контента обновлен.')).toBeVisible()
+  contentRow = contentPanel.locator('.list-item-vertical').filter({ hasText: 'Заголовок E2E' })
+  await expect(contentRow).toContainText('Обновлённый блок E2E')
+  expect(api.getLastRequest('/api/admin/site-content/content-created-e2e', 'PUT')?.body).toMatchObject({ value: 'Обновлённый блок E2E' })
+
+  await contentPanel.getByRole('button', { name: 'Восстановить главную' }).click()
+  await contentPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Главная обновлена: создано 1, восстановлено 0.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/site-content/home-defaults', 'POST')).toBeTruthy()
+
+  await contentRow.getByRole('button', { name: 'Удалить' }).click()
+  await contentPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Блок контента удален.')).toBeVisible()
+  await expect(contentPanel.getByText('Контент не настроен')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/site-content/content-created-e2e', 'DELETE')).toBeTruthy()
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
 
 test('admin panel covers login and critical operational mutations across all sections', async ({ page }, testInfo) => {
   test.setTimeout(150_000)
