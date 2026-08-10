@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `595/615` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -86,12 +86,12 @@
 ## Проверки, которыми закрыт локальный продуктовый слой
 
 - [x] Backend full suite: `1125/1125`.
-- [x] Frontend unit tests: `121/121`.
+- [x] Frontend unit tests: `122/122`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
 - [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `124/124`.
-- [x] Responsive matrix: 19 viewport-конфигураций `305x568..2560x1440`, same-origin decode локальных WebP и representative screenshot review.
+- [x] Responsive matrix: 25 viewport-конфигураций `305x568..2560x1440`, точные пары `N/N+1` для всех CSS-breakpoints, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
 - [x] Encoding guard: OK.
@@ -150,13 +150,13 @@
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
 - [x] Admin production bundle budget: `5` chunks, largest `219849`, total raw `514172`, gzip `138052`.
-- [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 19 viewport-конфигураций без blank screen/overflow.
+- [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 25 viewport-конфигураций без blank screen/overflow.
 - [x] Public route metadata/focus lifecycle проходит direct load, navigation и browser Back на desktop/mobile.
 - [x] Admin metadata lifecycle проходит hydration/login, deep-link, 17 sections и logout на desktop/mobile.
 - [x] Admin section history/focus lifecycle проходит tabs, Back/Forward, role fallback и order-links на desktop/mobile.
 - [x] Admin invalid hash canonical fallback проходит direct/runtime recovery, focus и Back на desktop/mobile.
 - [x] Admin skip links сохраняют section hash при focus transfer, login и reload на desktop/mobile.
-- [x] Cabinet app-version modal удерживает focus, изолирует background/scroll и проходит 19-viewport responsive/WCAG gate.
+- [x] Cabinet app-version modal удерживает focus, изолирует background/scroll и проходит 25-viewport responsive/WCAG gate.
 - [x] Общие status badges различают составные negative/neutral/warning/success состояния и локализуют API casing.
 - [x] Shared/public/admin styles и browser CSSOM gate не допускают внешние runtime asset URL на любом экране.
 - [x] Подтверждаемые admin-операции удерживают async busy dialog до завершения API, блокируют повторный submit и проходят delayed desktop/mobile regression.
@@ -165,7 +165,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-10-cabinet-help-navigation`, версия `0.582.0`; пункт «Помощь» в cabinet header открывает `/help` и проверен desktop/mobile/305 px.
+- [x] Latest "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`; responsive matrix проверяет все девять CSS-breakpoints на точных парах `N/N+1`.
 
 ## Как вести дальше
 

@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-10.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-cabinet-help-navigation`, версия `0.582.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `595/615` проверяемых пунктов, готовность `96.7%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `596/616` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-10:
 
 - [x] `STATE-001` Backend test suite проходит: `1125/1125`.
-- [x] `STATE-002` Frontend test suite проходит: `121/121`.
+- [x] `STATE-002` Frontend test suite проходит: `122/122`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2076,6 +2076,10 @@ git diff --check
   - Что сделать: пользовательский action «Помощь» должен открывать полноценную инструкцию `/help`, а не FAQ `/faq`; cabinet-to-public URL должен оставаться корректным на desktop/mobile и узких viewport-ах.
   - Что сделано: header-link переведен на `${publicWebUrl}/help`; credential-free base URL resolver сохранен, а E2E проверяет точный destination до открытия release-modal.
   - Доказательство: до исправления source guard `0/1` и desktop/mobile browser `0/2` получали `/faq`; после исправления targeted `1/1` и `2/2`, локальный браузер на 305 px реально перешел на `/help`, all-screens `6/6`, полный Playwright `124/124`, frontend `121/121`, backend `1125/1125`, EF drift/fresh SQLite/secret scan зелёные. Внешние evidence не закрывались.
+- [x] `P11-ACC-306` Проверять обе стороны каждого CSS-breakpoint в responsive browser matrix. 2026-08-10.
+  - Что сделать: каждый `@media (max-width: Npx)` из shared/public/cabinet/admin CSS должен иметь browser viewport ровно `N` и `N+1`; новые breakpoints не должны оставаться без regression coverage.
+  - Что сделано: all-screens matrix расширена с 19 до 25 конфигураций точными границами `520`, `640`, `820`, `900`, `960` и `1280`; frontend source guard динамически извлекает все CSS breakpoints и проверяет пары, backend contract фиксирует размер и девять обязательных пар.
+  - Доказательство: до исправления targeted guard падал на отсутствующем `1280`, после исправления targeted `2/2`, all-screens `6/6` на 25 конфигурациях, полный Playwright `124/124`, frontend `122/122`, backend `1125/1125`, EF drift/fresh SQLite/secret scan зелёные. Внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2725,6 +2729,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-10-031` | P1 | Responsive regression | All-screens matrix проверяла `N+1` для breakpoints `520`, `640`, `820`, `900`, `960`, `1280`, но пропускала точные значения `N`; документация ошибочно заявляла обе стороны всех CSS-breakpoints. | Исправлено локально | Добавлены шесть точных boundary viewports и динамический frontend guard по всем CSS-файлам; backend contract и полный browser regression подтверждают 25 конфигураций и девять пар `N/N+1`. |
 | `BUG-2026-08-10-030` | P1 | Cabinet navigation | Пункт «Помощь» в header личного кабинета вел на `/faq` вместо полной инструкции `/help`, хотя карточка помощи внутри кабинета использовала правильный route. | Исправлено локально | Header destination исправлен; source guard, desktop/mobile E2E и реальный переход на 305 px проверяют точный `/help` URL через безопасный `publicWebUrl`. |
 | `BUG-2026-08-10-029` | P1 | Admin RBAC/actions | `runAction` сверял capability активного tab, а не целевой операции; writable Dashboard позволял finance-role программно выключить тариф из скрытого toolbar. | Исправлено локально | Dispatcher требует explicit target section во всех callsites и composite sections для migration; desktop/mobile denied regression подтверждает zero PATCH, а `66/66` admin lifecycle подтверждает разрешенные операции. Backend policies остаются второй границей. |
 | `BUG-2026-08-10-028` | P1 | Admin RBAC/forms | Releases, FAQ, content, scenarios, support и Telegram handlers полагались на hidden UI; finance-role мог программно отправить скрытую Telegram-форму без `botManage`. | Исправлено локально | Handler-level `canWriteSection` guards блокируют form submit и connection test; валидные hidden drafts и read-only support forms проходят desktop/mobile mutation-count regression. Backend RBAC сохранен как обязательная вторая граница. |

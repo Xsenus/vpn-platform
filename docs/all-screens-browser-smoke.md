@@ -14,7 +14,7 @@
 - отсутствие `pageerror`;
 - landmark, уникальные DOM `id`, `alt` у изображений и доступные имена controls/actions;
 - отсутствие document overflow и горизонтально обрезанных interactive controls;
-- responsive layout на 19 конфигурациях от `305x568` и `568x320` mobile landscape до `2560x1440`;
+- responsive layout на 25 конфигурациях от `305x568` и `568x320` mobile landscape до `2560x1440`;
 - ширины сразу после CSS-breakpoints: `391`, `521`, `641`, `769`, `821`, `901`, `961`, `1025`, `1281` px;
 - same-origin URL, browser decode и минимальный размер `1200x800` для ключевых background assets public/admin.
 
@@ -61,7 +61,7 @@ PNG создаются только при явном флаге внутри `f
 
 ## Результат 2026-08-09
 
-- Responsive matrix содержит 19 viewport-конфигураций и покрывает обе стороны всех используемых CSS-breakpoints.
+- Responsive matrix содержит 25 viewport-конфигураций и покрывает точные пары `390/391`, `520/521`, `640/641`, `768/769`, `820/821`, `900/901`, `960/961`, `1024/1025` и `1280/1281` для всех используемых CSS-breakpoints.
 - Встроена проверка local/same-origin decode фоновых WebP и их размеров.
 - Встроен `@axe-core/playwright`: WCAG 2.0/2.1/2.2 A/AA и best-practice правила без allow-list проверяют desktop и compact mobile состояния public, cabinet и всех 17 admin sections.
 - Representative public, account, `404`, cabinet и admin screenshots проверены вручную на desktop/mobile; временные PNG очищены.
@@ -85,16 +85,16 @@ PNG создаются только при явном флаге внутри `f
 - Payment recheck/partial refund/reload/full refund lifecycle сохраняет refundable amount и точный terminal blocker на desktop/mobile.
 - Failed notification retry сохраняет Pending/attempts reset/error cleanup после reload; read-only finance/support роли не получают write-control.
 - Admin production build содержит `5` JS chunks под fail-closed budget: raw `517701`, gzip `138757`, largest `219849` bytes.
-- Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 19 viewport-конфигураций.
+- Unknown public URL показывает main landmark и безопасное `404` состояние, возвращается на главную без console/page errors и проходит все 25 viewport-конфигураций.
 - Все шесть public route-состояний имеют собственные title/meta; SPA navigation и browser Back переводят focus в новый main на desktop/mobile.
 - Login и все 17 admin sections имеют exact title; payments/support/logout metadata lifecycle проходит desktop/mobile.
 - Admin Back/Forward и order-links восстанавливают hash, tabpanel, metadata и `admin-content` focus на desktop/mobile.
 - Unknown admin hash канонизируется в Dashboard; direct/runtime recovery, focus и Back проходят desktop/mobile.
 - Admin skip-ссылки сохраняют section hash при keyboard focus transfer до входа, после входа и после reload на desktop/mobile.
-- Cabinet app-version modal открывается на всех 19 viewport-конфигурациях и проходит bounds/overflow/control clipping, compact Axe, focus trap, inert/scroll isolation и opener restore.
+- Cabinet app-version modal открывается на всех 25 viewport-конфигурациях и проходит bounds/overflow/control clipping, compact Axe, focus trap, inert/scroll isolation и opener restore.
 - Shared status badge gate проверяет neutral `NotLinked`, success `Succeeded`, русскую подпись `Expired` и полный desktop/mobile lifecycle.
 - Page-quality gate анализирует CSSOM каждого экрана и отклоняет cross-origin `http(s)` asset URL даже в неактивных stylesheet rules; shared/public/admin source guard проверяет тот же контракт статически.
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-10-cabinet-help-navigation`, версия `0.582.0`; дополнительно визуально проверены public `/tariffs`, `/faq`, `/help` и cabinet-to-public переход на 305 px.
+- Latest "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`; source guard и browser matrix подтверждают обе стороны всех девяти CSS-breakpoints.

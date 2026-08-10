@@ -177,11 +177,11 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-09 локально подтверждено:
 
 - backend full suite: 1125/1125;
-- frontend tests: 121/121;
+- frontend tests: 122/122;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 124/124; responsive all-screens: 6/6 на 19 viewport-конфигурациях `305x568..2560x1440`;
+- browser console smoke: 124/124; responsive all-screens: 6/6 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -223,7 +223,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin section history/focus: tabs, Back/Forward и order-links desktop/mobile: OK.
 - admin invalid hash canonical fallback: direct/runtime recovery, focus и Back desktop/mobile: OK.
 - admin skip links preserve the active section hash through focus transfer, login and reload on desktop/mobile.
-- cabinet app-version modal traps keyboard focus, isolates background controls/scroll and passes the 19-viewport responsive/WCAG gate.
+- cabinet app-version modal traps keyboard focus, isolates background controls/scroll and passes the 25-viewport responsive/WCAG gate.
 - shared status badge semantics and case-insensitive Russian labels: OK.
 - shared/public/admin CSS external asset source guard and all-screen CSSOM origin gate: OK.
 - confirmed admin actions retain their async Promise, disable dialog controls and close only after API completion: OK.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-10-cabinet-help-navigation`, версия `0.582.0`; cabinet header «Помощь» ведет на полную инструкцию `/help` и проверен на desktop/mobile/305 px.
-- roadmap progress: `595/615` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`; responsive matrix и source guard проверяют точные пары по обе стороны всех девяти CSS-breakpoints.
+- roadmap progress: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

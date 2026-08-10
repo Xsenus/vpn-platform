@@ -13750,5 +13750,28 @@
         "text": "Roadmap progress is 595/615 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-responsive-breakpoint-pairs",
+    "version": "0.583.0",
+    "releasedAt": "2026-08-10T21:53:14+07:00",
+    "title": "Responsive-проверка охватывает все границы",
+    "summary": "All-screens matrix теперь проверяет точные пары по обе стороны каждого CSS-breakpoint.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "В матрицу добавлены отсутствовавшие точные границы 520, 640, 820, 900, 960 и 1280 px; всего проверяются 25 viewport-конфигураций."
+      },
+      {
+        "type": "improved",
+        "text": "Frontend source guard извлекает max-width из shared/public/cabinet/admin CSS и требует N/N+1 для каждого breakpoint; backend contract закрепляет тот же инвариант."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 596/616 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

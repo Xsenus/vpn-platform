@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.583.0 - 2026-08-10
+
+Release entry: `2026-08-10-responsive-breakpoint-pairs`.
+
+### Улучшено
+
+- Responsive all-screens matrix расширена с 19 до 25 конфигураций и теперь проверяет точные пары `N/N+1` для всех CSS-breakpoints `390`, `520`, `640`, `768`, `820`, `900`, `960`, `1024` и `1280` px.
+- Новый source guard автоматически извлекает `max-width` из shared/public/cabinet/admin CSS и не допускает появление breakpoint без обеих сторон в browser matrix; backend contract дублирует критический инвариант.
+
+### Проверено
+
+- До исправления targeted guard падал на первой отсутствующей точной границе `1280`; после расширения targeted frontend `2/2`, all-screens `6/6` и полный console-responsive Playwright `124/124` проходят.
+- Frontend `122/122`, typecheck/build, audit `0 vulnerabilities`; backend `1125/1125`, EF drift OK, fresh SQLite order/payment/subscription/access flow OK, secret scan `668/0`.
+- RoadmapCurrentStateTests, release/docs guards, strict UTF-8 и artifact cleanup подтверждены после синхронизации статуса.
+- Roadmap: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.582.0 - 2026-08-10
 
 Release entry: `2026-08-10-cabinet-help-navigation`.

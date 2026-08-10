@@ -24,10 +24,10 @@ Production-ready решение заблокировано следующими 
 
 - Backend full suite: `1125/1125`.
 - API Release build: OK.
-- Frontend unit tests: `121/121`.
+- Frontend unit tests: `122/122`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `124/124`; responsive all-screens: `6/6` на 19 viewport-конфигурациях `305x568..2560x1440`; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `124/124`; responsive all-screens: `6/6` на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-10-cabinet-help-navigation`, версия `0.582.0`; cabinet header «Помощь» открывает полный `/help` route, а локальный backend/frontend/browser regression, admin action/form capability boundaries, VPN form boundary, admin configuration URL boundary, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `595/615` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`; responsive matrix и source guard проверяют точные пары по обе стороны всех CSS-breakpoints, а локальный backend/frontend/browser regression, admin action/form capability boundaries, VPN form boundary, admin configuration URL boundary, cabinet URL boundary, async confirmation lifecycle, shared CSS asset-origin gate, status badge semantics/localization, cabinet modal focus/responsive lifecycle, admin hash lifecycle, metadata, `404`, bundle budget, SupportAgent, payment refund и VPN lifecycle пройдены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

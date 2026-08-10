@@ -121,7 +121,12 @@ public class AllScreensBrowserSmokeTests
         Assert.DoesNotContain("onConfirm={() => void ", adminApp, StringComparison.Ordinal);
         Assert.Contains("getByRole('button', { name: 'Выполняем...' })", adminSpec, StringComparison.Ordinal);
         Assert.Contains("delayNextProviderEnabled", adminSpec, StringComparison.Ordinal);
-        Assert.Equal(19, Regex.Matches(spec, "(?m)^  \\{ name: '[^']+', width: \\d+, height: \\d+ \\},?$").Count);
+        Assert.Equal(25, Regex.Matches(spec, "(?m)^  \\{ name: '[^']+', width: \\d+, height: \\d+ \\},?$").Count);
+        foreach (var breakpoint in new[] { 390, 520, 640, 768, 820, 900, 960, 1024, 1280 })
+        {
+            Assert.Matches($"width: {breakpoint}, height: \\d+", spec);
+            Assert.Matches($"width: {breakpoint + 1}, height: \\d+", spec);
+        }
     }
 
     [Fact]

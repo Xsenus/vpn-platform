@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: responsive breakpoint pairs
+
+Scope:
+- Every CSS `max-width` breakpoint used by shared UI, public web, cabinet or admin must be tested at the exact boundary and immediately above it.
+- The browser matrix must retain narrow portrait, mobile landscape and wide desktop coverage while adding missing exact boundaries.
+
+Results:
+- Roadmap progress: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-responsive-breakpoint-pairs`, version `0.583.0`.
+- Reproduction before fix: targeted source guard failed because the matrix had `1281` but no exact `1280`; exact `520`, `640`, `820`, `900` and `960` boundaries were also absent.
+- Responsive matrix: `25` viewport configurations `305x568..2560x1440`, including pairs `390/391`, `520/521`, `640/641`, `768/769`, `820/821`, `900/901`, `960/961`, `1024/1025` and `1280/1281`; all-screens `6/6` passed.
+- Frontend tests: `122/122`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; full console-responsive Playwright: `124/124`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; secret scan: `668` files, `0` findings.
+- Encoding guard: `14/14`; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: cabinet help navigation
 
 Scope:

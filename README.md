@@ -211,10 +211,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1125/1125` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `121/121`;
+- frontend unit tests: `122/122`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `124/124`; responsive matrix проверяет 19 конфигураций `305x568..2560x1440`, включая mobile landscape и обе стороны CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `124/124`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -282,7 +282,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - после межпанельного переноса карточки панелей сразу отражают освобождённую source capacity и занятую target capacity, а следующий API-refresh сохраняет фактические значения;
 - admin mutation lifecycle привязывает CRUD/payment/subscription/VPN/provisioning/bot completion к исходной сессии, блокирует duplicate submit и сохраняет новые form drafts при delayed save/reload;
 - public/cabinet mutation lifecycle блокирует duplicate auth/refresh/action requests, отбрасывает completion старой сессии и сохраняет более новые support/reset drafts;
-- публичная витрина и admin login используют три локальных WebP из production bundle вместо runtime Unsplash; desktop/mobile screenshots и 19 viewport-конфигураций проверены без overflow и clipped controls;
+- публичная витрина и admin login используют три локальных WebP из production bundle вместо runtime Unsplash; desktop/mobile screenshots и 25 viewport-конфигураций проверены без overflow и clipped controls;
 - axe проверяет WCAG 2.0/2.1/2.2 A/AA и best practices без allow-list на 6 public route-состояниях, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px;
 - критические admin-операции уведомлений, оплат/возвратов, подписок, VPN-доступа и поддержки выполняются desktop/mobile E2E; вкладка оплат объединена одним корректным `tabpanel`;
 - управляемая конфигурация admin-панели проходит stateful create/edit/delete browser lifecycle для тарифов, сценариев, релизов, FAQ и контента сайта на desktop/mobile;
@@ -290,13 +290,13 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - платежные аккаунты проходят secure create/edit/disable/reload/enable/check browser lifecycle без раскрытия write-only secrets на desktop/mobile;
 - настройки Telegram-бота проходят secure save/check/reload/edit browser lifecycle без возврата raw bot/webhook tokens на desktop/mobile;
 - admin production bundle: `5` JS chunks, largest `219849`, total raw `517701`, gzip `138757` bytes; build budget fail-closed проверяет largest/total raw/gzip;
-- неизвестный public URL показывает доступную страницу `404` с возвратом на главную/помощь и проходит desktop/mobile плюс 19-viewport responsive gate;
+- неизвестный public URL показывает доступную страницу `404` с возвратом на главную/помощь и проходит desktop/mobile плюс 25-viewport responsive gate;
 - public route metadata и focus/scroll lifecycle проходят direct load, SPA navigation и browser Back на desktop/mobile;
 - admin login/hydration и 17 hash-разделов синхронизируют title/meta description при deep-link, section switch и logout;
 - admin section navigation сохраняет browser history; Back/Forward и order-links синхронизируют hash, tabpanel, metadata и клавиатурный focus на desktop/mobile;
 - неизвестный admin hash канонизируется в `#dashboard`, сохраняя согласованные URL, tabpanel, title, focus и Back на desktop/mobile;
 - admin skip-ссылки переводят клавиатурный focus, не заменяя hash выбранного раздела до входа, после входа и после reload;
-- cabinet release-modal удерживает Tab/Shift+Tab, изолирует фон и scroll, закрывается Escape с возвратом opener и проходит 19-viewport responsive/WCAG gate;
+- cabinet release-modal удерживает Tab/Shift+Tab, изолирует фон и scroll, закрывается Escape с возвратом opener и проходит 25-viewport responsive/WCAG gate;
 - общие статусные метки различают составные negative/neutral/warning/success состояния и локализуют API-значения независимо от регистра;
 - shared и app-specific CSS не содержат внешних runtime asset URL; browser page-quality gate проверяет все загруженные stylesheet rules;
 - подтверждаемые admin-операции удерживают busy dialog до завершения Promise, блокируют повторный destructive submit и проходят delayed desktop/mobile regression;
@@ -306,7 +306,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - hidden admin forms не считаются capability boundary: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API;
 - admin action dispatcher проверяет capability целевого section во всех typed callsites; active Dashboard/Payments не разрешает hidden mutation другого раздела;
 - пункт «Помощь» в header личного кабинета открывает полноценную public-инструкцию `/help`; точный cabinet-to-public destination проверен source guard, desktop/mobile E2E и локальным браузером на 305 px;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-cabinet-help-navigation`, версия `0.582.0`;
-- roadmap progress: `595/615` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-10-responsive-breakpoint-pairs`, версия `0.583.0`;
+- roadmap progress: `596/616` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
