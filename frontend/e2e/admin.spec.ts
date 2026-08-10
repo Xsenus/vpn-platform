@@ -480,6 +480,11 @@ async function mockAdminApi(page: Page) {
     { id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, blockReason: null, suspendedAt: null, cancelledAt: null, lifecycleAttemptCount: 0, lifecycleProcessingStartedAt: null, lifecycleLeaseExpiresAt: null, lifecycleNextAttemptAt: null, lifecycleLastError: null, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now },
     { id: 'sub-cancelled', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Отменённая подписка', status: 'Cancelled', startAt: '2026-05-01T00:00:00Z', endAt: now, cancelledAt: now, gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-revoked', lastPaymentId: 'payment-old', renewalCount: 0, blockReason: null, suspendedAt: null, lifecycleAttemptCount: 0, lifecycleProcessingStartedAt: null, lifecycleLeaseExpiresAt: null, lifecycleNextAttemptAt: null, lifecycleLastError: null, accessUri: 'vless://cancelled-stale-secret@example.test', qrCodePath: 'qr://cancelled-stale-secret', configPath: 'config://cancelled-stale-secret', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }
   ]
+  const accessCredentials: Array<Record<string, unknown>> = [
+    { id: 'access-e2e', subscriptionId: 'sub-e2e', subscriptionStatus: 'Active', isTerminal: false, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-e2e', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://admin-e2e@example.test', qrCodePayload: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', status: 'Active', issuedAt: now, expiryDate: '2026-07-13T07:00:00Z', disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now },
+    { id: 'access-revoked', subscriptionId: 'sub-revoked', subscriptionStatus: 'Expired', isTerminal: true, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-revoked', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://revoked-admin-secret@example.test', qrCodePayload: 'vless://revoked-admin-secret@example.test', qrCodePath: 'qr://revoked-admin-secret', configPath: 'config://revoked-admin-secret', status: 'Revoked', issuedAt: now, expiryDate: now, disabledAt: now, lastSyncedAt: now, revision: 2, history: [{ id: 'history-revoked', accessCredentialId: 'access-revoked', subscriptionId: 'sub-revoked', eventType: 'AccessRevoked', oldValueJson: '{}', newValueJson: '{}', createdAt: now }], createdAt: now, updatedAt: now },
+    { id: 'access-cancelled-stale', subscriptionId: 'sub-cancelled', subscriptionStatus: 'Cancelled', isTerminal: true, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-cancelled-stale', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://cancelled-access-stale-secret@example.test', qrCodePayload: 'vless://cancelled-access-stale-secret@example.test', qrCodePath: 'qr://cancelled-access-stale-secret', configPath: 'config://cancelled-access-stale-secret', status: 'Active', issuedAt: now, expiryDate: now, disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now }
+  ]
   const inbounds: Array<Record<string, unknown>> = [
     { id: 'inbound-default', vpnPanelId: 'panel-eu', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 1000, usedCapacity: 12 },
     { id: 'inbound-backup', vpnPanelId: 'panel-eu', externalInboundId: '2', name: 'backup-vless', protocol: 'vless', port: 8443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: false, isActive: true, capacity: 20, usedCapacity: 3 },
@@ -755,11 +760,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/access-credentials') {
-      await fulfillJson(route, [
-        { id: 'access-e2e', subscriptionId: 'sub-e2e', subscriptionStatus: 'Active', isTerminal: false, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-e2e', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://admin-e2e@example.test', qrCodePayload: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', status: 'Active', issuedAt: now, expiryDate: '2026-07-13T07:00:00Z', disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now },
-        { id: 'access-revoked', subscriptionId: 'sub-revoked', subscriptionStatus: 'Expired', isTerminal: true, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-revoked', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://revoked-admin-secret@example.test', qrCodePayload: 'vless://revoked-admin-secret@example.test', qrCodePath: 'qr://revoked-admin-secret', configPath: 'config://revoked-admin-secret', status: 'Revoked', issuedAt: now, expiryDate: now, disabledAt: now, lastSyncedAt: now, revision: 2, history: [{ id: 'history-revoked', accessCredentialId: 'access-revoked', subscriptionId: 'sub-revoked', eventType: 'AccessRevoked', oldValueJson: '{}', newValueJson: '{}', createdAt: now }], createdAt: now, updatedAt: now },
-        { id: 'access-cancelled-stale', subscriptionId: 'sub-cancelled', subscriptionStatus: 'Cancelled', isTerminal: true, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-cancelled-stale', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://cancelled-access-stale-secret@example.test', qrCodePayload: 'vless://cancelled-access-stale-secret@example.test', qrCodePath: 'qr://cancelled-access-stale-secret', configPath: 'config://cancelled-access-stale-secret', status: 'Active', issuedAt: now, expiryDate: now, disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now }
-      ])
+      await fulfillJson(route, accessCredentials)
       return
     }
 
@@ -772,17 +773,28 @@ async function mockAdminApi(page: Page) {
       return
     }
 
-    const accessActionMatch = path.match(/^\/api\/admin\/access-credentials\/access-e2e\/(disable|sync|reset-traffic)$/)
+    const accessActionMatch = path.match(/^\/api\/admin\/access-credentials\/access-e2e\/(enable|disable|sync|reset-traffic)$/)
     if (method === 'POST' && accessActionMatch) {
-      const status = accessActionMatch[1] === 'disable' ? 'Disabled' : 'Active'
+      const action = accessActionMatch[1]
+      const status = action === 'disable' ? 'Disabled' : 'Active'
+      const current = accessCredentials[0]
+      const revision = Number(current.revision ?? 0) + 1
+      accessCredentials[0] = {
+        ...current,
+        status,
+        disabledAt: status === 'Disabled' ? now : null,
+        lastSyncedAt: now,
+        revision,
+        updatedAt: now
+      }
       await fulfillJson(route, {
         id: 'access-e2e',
         status,
         disabledAt: status === 'Disabled' ? now : null,
         lastSyncedAt: now,
-        revision: 2,
+        revision,
         usedTrafficBytes: 0,
-        message: accessActionMatch[1]
+        message: action
       })
       return
     }
@@ -2427,6 +2439,63 @@ test('admin 3x-ui client actions persist across reload', async ({ page }) => {
   for (const action of ['disable', 'enable', 'sync', 'reset-traffic']) {
     expect(api.getAuthorizedRequestCount(`/api/admin/vpn-clients/client-e2e/${action}`, 'POST', 'Bearer admin-vpn-client-token')).toBe(1)
   }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin VPN access actions persist status and revision across reload', async ({ page }) => {
+  test.setTimeout(120_000)
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-access-token', 'admin-access-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'VPN-доступы', 'vpn')
+
+  const vpnPanel = page.locator('#vpn')
+  let accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  await expect(accessRow).toContainText('версия: 1')
+  await accessRow.getByRole('button', { name: 'Отключить' }).click()
+  await vpnPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('VPN-доступ отключен.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/access-credentials/access-e2e/disable', 'POST')?.body).toEqual({ reason: 'manual_admin_action' })
+
+  accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  await expect(accessRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  await expect(accessRow).toContainText('версия: 2')
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  await expect(accessRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  await expect(accessRow).toContainText('версия: 2')
+
+  await accessRow.getByRole('button', { name: 'Включить' }).click()
+  await expect(page.getByText('VPN-доступ включен.')).toBeVisible()
+  await expect(accessRow.getByRole('button', { name: 'Отключить' })).toBeVisible()
+  await expect(accessRow).toContainText('версия: 3')
+  expect(api.getLastRequest('/api/admin/access-credentials/access-e2e/enable', 'POST')?.body).toEqual({ reason: 'manual_admin_action' })
+
+  await accessRow.getByRole('button', { name: 'Синхронизировать' }).click()
+  await expect(page.getByText('VPN-доступ синхронизирован.')).toBeVisible()
+  await expect(accessRow).toContainText('версия: 4')
+  expect(api.getLastRequest('/api/admin/access-credentials/access-e2e/sync', 'POST')?.body).toEqual({ reason: 'manual_admin_sync' })
+
+  await accessRow.getByRole('button', { name: 'Сбросить трафик' }).click()
+  await expect(vpnPanel.getByRole('dialog')).toContainText('SyncRequired')
+  await vpnPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Трафик VPN-доступа сброшен.')).toBeVisible()
+  await expect(accessRow).toContainText('версия: 5')
+  expect(api.getLastRequest('/api/admin/access-credentials/access-e2e/reset-traffic', 'POST')?.body).toEqual({ reason: 'manual_admin_reset_traffic' })
+
+  for (const action of ['disable', 'enable', 'sync', 'reset-traffic']) {
+    expect(api.getAuthorizedRequestCount(`/api/admin/access-credentials/access-e2e/${action}`, 'POST', 'Bearer admin-access-token')).toBe(1)
+  }
+  await expect(vpnPanel.getByText('vless://revoked-admin-secret@example.test', { exact: true })).toHaveCount(0)
+  await expect(vpnPanel.getByText('vless://cancelled-access-stale-secret@example.test', { exact: true })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })

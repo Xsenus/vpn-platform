@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.561.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-vpn-access-actions-lifecycle-e2e`.
+
+### Улучшено
+
+- Admin browser regression выполняет disable/reload/enable/sync/reset-traffic lifecycle VPN-доступа на desktop/mobile.
+- Stateful mock API сохраняет status, disabledAt и revision `1 -> 5`, проверяет reason payload и authorization всех action routes.
+- Terminal revoked/cancelled secrets остаются скрытыми; confirm-dialog, console errors и horizontal overflow проверяются после операций.
+
+### Проверено
+
+- Frontend `112/112`, typecheck/build всех приложений, dependency audit `0 vulnerabilities`.
+- Полный desktop/mobile console-responsive Playwright suite `94/94`; VPN access lifecycle проходит `2/2`, all-screens axe/responsive matrix `6/6`.
+- Backend `1112/1112`, fresh local SQLite checkout/payment/subscription/VPN smoke и secret scan `657/0` пройдены.
+- Реальные VPS/staging/live payment/production-like 3x-ui, provider, Telegram и SMTP evidence не переиспользовались.
+- Roadmap: `574/594` closed, readiness `96.6%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+
 ## 0.560.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-vpn-client-actions-lifecycle-e2e`.
