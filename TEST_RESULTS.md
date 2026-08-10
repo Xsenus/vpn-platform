@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-10.
 
+## Check 2026-08-10: admin hidden form capability boundary
+
+Scope:
+- Hidden or conditionally absent admin controls must not be the only write boundary for releases, FAQ, content, scenarios, support or Telegram settings.
+- Every affected mutation handler must reject a programmatic submit when the current admin session lacks the matching capability.
+
+Results:
+- Roadmap progress: `593/613` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-10-admin-hidden-form-capability-boundary`, version `0.580.0`.
+- Reproduction before fix: finance-role sent one Telegram settings PATCH through a hidden form on desktop and mobile. After fix targeted browser `2/2` and full console-responsive Playwright `124/124`.
+- Valid hidden release/FAQ/content/scenario drafts, Telegram save/test, and read-only support reply/note forms produce zero mutation requests without their section capability.
+- Frontend tests: `121/121`; typecheck/build all apps: OK; admin JS raw `517096`, gzip `138654`, largest `219849`; dependency audit: `0 vulnerabilities`.
+- Backend full suite: `1125/1125`; EF model drift: none; secret scan: `668` files, `0` findings.
+- Artifact cleanup: OK. Fresh SQLite latest release is verified after the release seed update; external evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-10: admin VPN form validation boundary
 
 Scope:

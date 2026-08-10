@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.580.0 - 2026-08-10
+
+Release entry: `2026-08-10-admin-hidden-form-capability-boundary`.
+
+### Исправлено
+
+- Admin mutation handlers для releases, FAQ, content, scenarios, support и Telegram settings повторно проверяют capability до validation и API; `hidden` форма больше не считается границей доступа.
+- Finance/read-only сессии не могут отправить programmatic submit, support reply/note и Telegram connection test в обход скрытых controls; backend RBAC остается второй fail-closed границей.
+
+### Проверено
+
+- До исправления finance-role отправлял PATCH Telegram settings на desktop/mobile; после исправления targeted browser `2/2` и полный console-responsive Playwright `124/124` зеленые.
+- Frontend `121/121`, typecheck/build, audit `0 vulnerabilities`; admin bundle raw `517096`, gzip `138654`, largest `219849`.
+- Backend `1125/1125`, EF drift отсутствует, secret scan `668/0`; fresh SQLite latest release подтверждается финальным gate.
+- Roadmap: `593/613` closed, readiness `96.7%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence остаются открытыми.
+
 ## 0.579.0 - 2026-08-10
 
 Release entry: `2026-08-10-admin-vpn-form-validation-boundary`.

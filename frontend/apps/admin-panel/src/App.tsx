@@ -2335,7 +2335,7 @@ export function App() {
   }
 
   const handleSaveRelease = async () => {
-    if (!token) return
+    if (!token || !canWriteSection('releases')) return
     const submittedForm = releaseForm
     const editingId = editingReleaseId
     const payload = {
@@ -2398,7 +2398,7 @@ export function App() {
   }
 
   const handleSaveFaq = async () => {
-    if (!token) return
+    if (!token || !canWriteSection('faq')) return
     const submittedForm = faqForm
     const editingId = editingFaqId
     const payload: FaqUpsertPayload = {
@@ -2460,7 +2460,7 @@ export function App() {
   }
 
   const handleSaveSiteContent = async () => {
-    if (!token) return
+    if (!token || !canWriteSection('content')) return
     const submittedForm = siteContentForm
     const editingId = editingSiteContentId
     const key = submittedForm.key.trim()
@@ -2544,7 +2544,7 @@ export function App() {
   }
 
   const handleSaveWorkScenario = async () => {
-    if (!token) return
+    if (!token || !canWriteSection('scenarios')) return
     const submittedForm = workScenarioForm
     const editingId = editingWorkScenarioId
     const validationErrors = validateWorkScenarioForm(submittedForm)
@@ -2742,7 +2742,7 @@ export function App() {
   }
 
   const handleReplySupport = async () => {
-    if (!token || !selectedSupportConversationId || !supportReplyText.trim()) return
+    if (!token || !canWriteSection('support') || !selectedSupportConversationId || !supportReplyText.trim()) return
     const conversationId = selectedSupportConversationId
     const operationId = sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
@@ -2778,7 +2778,7 @@ export function App() {
   }
 
   const handleSupportStatus = async (status: string, conversationId = selectedSupportConversationId) => {
-    if (!token || !conversationId) return
+    if (!token || !canWriteSection('support') || !conversationId) return
     const operationId = sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
     const conversation = supportConversations.find((item) => item.id === conversationId)
@@ -2807,7 +2807,7 @@ export function App() {
   }
 
   const handleSupportNote = async () => {
-    if (!token || !selectedSupportConversationId || !supportNoteText.trim()) return
+    if (!token || !canWriteSection('support') || !selectedSupportConversationId || !supportNoteText.trim()) return
     const conversationId = selectedSupportConversationId
     const operationId = sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
@@ -3189,6 +3189,7 @@ export function App() {
   })
 
   const handleSaveBotSettings = () => {
+    if (!token || !canWriteSection('bot')) return
     const validationErrors = validateTelegramBotUrlFields(botSettingsForm)
     if (validationErrors.length > 0) {
       setError(validationErrors[0])
@@ -3209,13 +3210,16 @@ export function App() {
     })
   }
 
-  const handleTestBotSettings = () => runAction('bot-settings-test', async (action) => {
-    const requestId = ++botSettingsCheckRequestId.current
-    const result = await api.testAdminTelegramBotSettings(token)
-    if (!action.isCurrent() || requestId !== botSettingsCheckRequestId.current) return
-    setBotSettingsCheck(result)
-    setNotice(result.isReady ? 'Telegram-бот готов к работе.' : 'Проверка Telegram-бота нашла настройки, которые нужно заполнить.')
-  })
+  const handleTestBotSettings = () => {
+    if (!token || !canWriteSection('bot')) return
+    return runAction('bot-settings-test', async (action) => {
+      const requestId = ++botSettingsCheckRequestId.current
+      const result = await api.testAdminTelegramBotSettings(token)
+      if (!action.isCurrent() || requestId !== botSettingsCheckRequestId.current) return
+      setBotSettingsCheck(result)
+      setNotice(result.isReady ? 'Telegram-бот готов к работе.' : 'Проверка Telegram-бота нашла настройки, которые нужно заполнить.')
+    })
+  }
 
   const providerFormSetup = providerSetup(providerForm.provider)
   const editingProviderAccount = editingProviderAccountId

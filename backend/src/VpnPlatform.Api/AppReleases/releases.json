@@ -13681,5 +13681,28 @@
         "text": "Roadmap progress is 592/612 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-10-admin-hidden-form-capability-boundary",
+    "version": "0.580.0",
+    "releasedAt": "2026-08-10T20:05:23+07:00",
+    "title": "Скрытые admin-формы не обходят права доступа",
+    "summary": "Mutation handlers проверяют capability самостоятельно, поэтому programmatic submit не превращает read-only сессию в write-сессию.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Releases, FAQ, content, scenarios, support reply/status/note и Telegram save/test повторно проверяют section capability до validation и API."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop/mobile regression принудительно отправляет валидные hidden forms и подтверждает нулевое число mutation-запросов без права записи."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 593/613 closed, readiness 96.7%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

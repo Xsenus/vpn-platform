@@ -566,6 +566,15 @@ async function mockAdminApi(page: Page) {
         })
         return
       }
+      if (loginEmail === 'readonly-e2e@example.test') {
+        await fulfillJson(route, {
+          accessToken: 'readonly-e2e-token',
+          refreshToken: 'readonly-e2e-refresh',
+          email: loginEmail,
+          displayName: 'Read-only E2E'
+        })
+        return
+      }
       await fulfillJson(route, {
         accessToken: 'admin-e2e-token',
         refreshToken: 'admin-e2e-refresh',
@@ -620,16 +629,19 @@ async function mockAdminApi(page: Page) {
       }
       const financeSession = request.headers().authorization === 'Bearer finance-e2e-token'
       const supportSession = request.headers().authorization === 'Bearer support-e2e-token'
+      const readOnlySession = request.headers().authorization === 'Bearer readonly-e2e-token'
       await fulfillJson(route, {
-        userId: financeSession ? 'finance-user' : supportSession ? 'support-user' : 'admin-user',
-        email: financeSession ? 'finance-e2e@example.test' : supportSession ? 'support-e2e@example.test' : 'admin-e2e@example.test',
-        displayName: financeSession ? 'Finance E2E' : supportSession ? 'Support E2E' : 'Admin E2E',
-        roles: [financeSession ? 'FinanceManager' : supportSession ? 'SupportAgent' : 'Admin'],
+        userId: financeSession ? 'finance-user' : supportSession ? 'support-user' : readOnlySession ? 'readonly-user' : 'admin-user',
+        email: financeSession ? 'finance-e2e@example.test' : supportSession ? 'support-e2e@example.test' : readOnlySession ? 'readonly-e2e@example.test' : 'admin-e2e@example.test',
+        displayName: financeSession ? 'Finance E2E' : supportSession ? 'Support E2E' : readOnlySession ? 'Read-only E2E' : 'Admin E2E',
+        roles: [financeSession ? 'FinanceManager' : supportSession ? 'SupportAgent' : readOnlySession ? 'ReadOnly' : 'Admin'],
         capabilities: financeSession
           ? { ...fullAdminCapabilities, adminWrite: false, supportRead: false, supportWrite: false, provisioningManage: false, vpnManage: false, botManage: false, settingsManage: false }
           : supportSession
             ? { ...fullAdminCapabilities, adminWrite: false, financeRead: false, financeWrite: false, provisioningManage: false, vpnManage: false, botManage: false, settingsManage: false }
-          : fullAdminCapabilities
+            : readOnlySession
+              ? { ...fullAdminCapabilities, adminWrite: false, financeWrite: false, supportWrite: false, provisioningManage: false, vpnManage: false, botManage: false, settingsManage: false }
+              : fullAdminCapabilities
       })
       return
     }
@@ -1878,6 +1890,10 @@ async function mockAdminApi(page: Page) {
         revision: 1,
         updatedAt: now
       }
+    },
+    prepareManagedConfigurationFixtures: () => {
+      faqEntries.splice(0, faqEntries.length, faqItem())
+      siteContentBlocks.splice(0, siteContentBlocks.length, siteContentBlock())
     },
     updateFirstDetailFixture: (userDisplayName: string, messageText: string) => {
       const nextUser = adminUser('user-first', userDisplayName, 'first@example.test')
@@ -3789,6 +3805,67 @@ test('admin panel covers login and critical operational mutations across all sec
   }
 
   expect(consoleErrors).toEqual([])
+})
+
+test('read-only admin capability boundary rejects hidden form programmatic submits', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.prepareManagedConfigurationFixtures()
+  await page.goto('/')
+  await page.locator('.admin-login-form input[type="email"]').fill('finance-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('FinancePassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  const editableSections = [page.locator('#releases'), page.locator('#faq'), page.locator('#content'), page.locator('#scenarios')]
+  for (const section of editableSections) {
+    await section.locator('button').filter({ hasText: 'Редактировать' }).first().evaluate((button) => (button as HTMLButtonElement).click())
+  }
+
+  const releaseForm = page.locator('#releases form').first()
+  const faqForm = page.locator('#faq form').first()
+  const contentForm = page.locator('#content form').first()
+  const scenarioForm = page.locator('#scenarios form').first()
+  await expect(releaseForm.getByLabel('Release ID')).toHaveValue('2026-06-13-admin-e2e-seed')
+  await expect(faqForm.getByLabel('Вопрос')).toHaveValue('Как проверить управляемый FAQ?')
+  await expect(contentForm.getByLabel('Ключ')).toHaveValue('home.e2e.title')
+  await expect(scenarioForm.getByLabel('Ключ')).toHaveValue('auto')
+
+  for (const form of [releaseForm, faqForm, contentForm, scenarioForm, page.locator('#bot form')]) {
+    await form.evaluate((element) => element.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+  }
+  await page.locator('#bot button').filter({ hasText: 'Проверить подключение' }).evaluate((button) => (button as HTMLButtonElement).click())
+  await page.waitForTimeout(250)
+
+  expect({
+    releases: api.getRequestCount('/api/app-version/admin/releases/release-admin-e2e', 'PUT'),
+    faq: api.getRequestCount('/api/admin/faq/faq-created-e2e', 'PUT'),
+    content: api.getRequestCount('/api/admin/site-content/content-created-e2e', 'PUT'),
+    scenarios: api.getRequestCount('/api/admin/work-scenarios/scenario-auto', 'PUT'),
+    bot: api.getRequestCount('/api/admin/telegram-bot/settings', 'PATCH'),
+    botTest: api.getRequestCount('/api/admin/telegram-bot/settings/test', 'POST')
+  }).toEqual({ releases: 0, faq: 0, content: 0, scenarios: 0, bot: 0, botTest: 0 })
+
+  await page.getByRole('button', { name: 'Завершить сессию' }).click()
+  await page.locator('.admin-login-form input[type="email"]').fill('readonly-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('ReadOnlyPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Поддержка', 'support')
+
+  const supportSection = page.locator('#support')
+  await supportSection.getByRole('combobox', { name: 'Обращение' }).selectOption('support-e2e')
+  const replyForm = supportSection.locator('form').nth(0)
+  const noteForm = supportSection.locator('form').nth(1)
+  await replyForm.getByLabel('Ответ пользователю').fill('Read-only reply', { force: true })
+  await noteForm.getByLabel('Внутренняя заметка').fill('Read-only note', { force: true })
+  for (const form of [replyForm, noteForm]) {
+    await form.evaluate((element) => element.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+  }
+  await page.waitForTimeout(250)
+  expect({
+    reply: api.getRequestCount('/api/admin/support/conversations/support-e2e/reply', 'POST'),
+    note: api.getRequestCount('/api/admin/support/conversations/support-e2e/notes', 'POST')
+  }).toEqual({ reply: 0, note: 0 })
 })
 
 test('finance role loads only permitted data and keeps common sections read-only', async ({ page }) => {

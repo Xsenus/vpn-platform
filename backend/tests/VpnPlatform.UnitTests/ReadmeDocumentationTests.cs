@@ -45,8 +45,8 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-10-admin-vpn-form-validation-boundary", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("122/122", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-10-admin-hidden-form-capability-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("124/124", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1125/1125",
-                     "2026-08-10-admin-vpn-form-validation-boundary",
-                     "0.579.0",
+                     "2026-08-10-admin-hidden-form-capability-boundary",
+                     "0.580.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",
