@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.601.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-auth-data-boundary`.
+
+### Исправлено
+
+- Неавторизованный cabinet больше не показывает нулевые приватные метрики и длинный набор empty states о подписках, VPN-ключах, заказах, платежах, доступах и реферальных начислениях до идентификации пользователя.
+- Экран входа теперь содержит только доступные до авторизации help/auth/password-reset поверхности; приватный dashboard монтируется после успешного login и подтверждённой загрузки профиля.
+- Auth boundary проверяет обе стороны перехода: без token запрос `/api/me` не отправляется, после login появляются реальный профиль, метрики и подписка без reload.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: unauthenticated экран показывал «Активных подписок» как фактическую нулевую метрику. После исправления targeted auth transition прошёл `2/2`.
+- Полный cabinet desktop/mobile regression прошёл `40/40`; login/register, refresh/logout, payment/renewal, QR, Telegram, support races и app-version lifecycle остались зелёными.
+- Полный console-responsive Playwright прошёл `148/148` за `8.6 min`, без failed/flaky/skipped; all-screens `6/6` на 25 viewport-конфигурациях. Auth UI просмотрен на 1280/393 px без overflow и overlap.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; cabinet bundle `364.41/105.46 kB`, admin bundle budget `521075/139799/max 221403`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `600`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `614/634` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.600.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-restored-data-boundary`.

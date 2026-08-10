@@ -14164,5 +14164,28 @@
         "text": "Roadmap progress is 613/633 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-cabinet-auth-data-boundary",
+    "version": "0.601.0",
+    "releasedAt": "2026-08-11T05:57:46+07:00",
+    "title": "Кабинет показывает приватные данные только после входа",
+    "summary": "До авторизации экран сосредоточен на входе и восстановлении доступа, а пользовательский dashboard появляется после загрузки реального профиля.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Нулевые метрики и пустые списки подписок, ключей и платежей больше не показываются посетителю до входа."
+      },
+      {
+        "type": "improved",
+        "text": "После успешного входа фактический профиль, метрики и подписка появляются сразу без перезагрузки страницы."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 614/634 closed, readiness 96.8%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

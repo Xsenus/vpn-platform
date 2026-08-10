@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet auth-data boundary
+
+Scope:
+- An unauthenticated cabinet must not present zero private metrics or empty user collections before any identity has been loaded.
+- The auth screen must remain complete and responsive, while successful login must reveal the real dashboard immediately without reload.
+
+Results:
+- Roadmap progress: `614/634` closed, readiness `96.8%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-auth-data-boundary`, version `0.601.0`.
+- Reproduction before fix: `cabinetDataReady` treated the absence of a token as loaded data, so login rendered «Активных подписок» plus false empty states for subscriptions, VPN keys, orders, payments, accesses and referral rewards; fail-first desktop/mobile was `0/2`.
+- After fix: aggregate/private surfaces require a confirmed profile; unauthenticated users retain help, login/register and password-reset controls, while `/api/me` remains at `0` before login.
+- Targeted auth transition: desktop/mobile `2/2`; after login one profile request completes, the real email, aggregate tile and subscription appear without reload, and horizontal overflow remains absent.
+- Full cabinet desktop/mobile regression: `40/40`; final console-responsive Playwright: `148/148` in `8.6 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: unauthenticated screenshots at 1280 and 393 CSS px confirmed coherent help/auth/reset composition, correctly fitting tabs/inputs/password toggles and no private empty-state tail, overlap or overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; cabinet bundle `364.41 kB`, gzip `105.46 kB`; admin bundle raw `521075`, gzip `139799`, largest `221403`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `600` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet restored-data boundary
 
 Scope:

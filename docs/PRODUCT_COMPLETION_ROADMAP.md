@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-restored-data-boundary`, версия `0.600.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `613/633` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-auth-data-boundary`, версия `0.601.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `614/634` проверяемых пунктов, готовность `96.8%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -2148,6 +2148,10 @@ git diff --check
   - Что сделать: transient failure общей первичной загрузки не должен выглядеть как подтверждённые нулевые метрики или пустые подписки, ключи, заказы, платежи, доступы и начисления; retry должен сохранять сессию и восстанавливать фактические данные.
   - Что сделано: aggregate/private dashboard-поверхности gated через подтверждённый профиль при активном token; recovery/login/reset остаются доступны, access/refresh tokens и существующие session/request generation guards сохранены.
   - Доказательство: до исправления fail-first desktop/mobile был `0/2`; после исправления targeted `2/2`, cabinet regression `38/38`, полный Playwright `146/146` за `8.8 min` без failed/flaky/skipped, all-screens `6/6`; recovery UI на 1280/393 px проверен без overflow/overlap. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
+- [x] `P11-ACC-324` Скрыть приватный cabinet dashboard до авторизации и загрузки профиля. 2026-08-11.
+  - Что сделать: unauthenticated экран не должен показывать нулевые пользовательские метрики и empty states приватных коллекций; после login реальные данные должны появляться без reload.
+  - Что сделано: aggregate/private dashboard требует подтверждённый profile; help/auth/password-reset остаются доступны до входа, `/api/me` не вызывается без token, успешный login открывает фактические метрики и подписку.
+  - Доказательство: до исправления fail-first desktop/mobile был `0/2`; после исправления targeted `2/2`, cabinet regression `40/40`, полный Playwright `148/148` за `8.6 min` без failed/flaky/skipped, all-screens `6/6`; auth UI на 1280/393 px проверен без overflow/overlap. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2797,6 +2801,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-014` | P1 | Cabinet / auth boundary | До авторизации экран входа показывал нулевые приватные метрики и empty states пользовательских коллекций, хотя профиль ещё не был загружен. | Исправлено локально | Profile-only aggregate/private data gate и проверенный login transition; desktop/mobile и полный responsive gate зелёные. |
 | `BUG-2026-08-11-013` | P1 | Cabinet / restored session | Transient failure общей первичной загрузки оставлял recovery-карточку одновременно с ложными нулевыми метриками и empty states приватных данных. | Исправлено локально | Aggregate/private data gate до подтверждённого профиля, сохранённая сессия и explicit retry; desktop/mobile и полный responsive gate зелёные. |
 | `BUG-2026-08-11-012` | P1 | Admin / user and VPN details | Transient detail failures уходили в общий banner; выбранный пользователь выглядел невыбранным, а VPN-панель одновременно показывала форму и ложное «Клиентов нет» без локального retry. | Исправлено локально | Scoped loading/error states, взаимоисключающие detail/empty/error состояния и generation-guarded explicit retry; desktop/mobile и полный responsive gate зелёные. |
 | `BUG-2026-08-11-011` | P1 | Admin / support messages | Transient failure messages endpoint уходил в общий banner, а карточка диалога одновременно показывала ложное «Сообщений нет» без локального retry. | Исправлено локально | Dialog-scoped alert, взаимоисключающие error/empty состояния и generation-guarded explicit retry; desktop/mobile и полный responsive gate зелёные. |

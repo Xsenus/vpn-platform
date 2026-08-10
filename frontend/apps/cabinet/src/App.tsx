@@ -158,7 +158,7 @@ export function App() {
   const showAuthValidation = authValidationErrors.length > 0 && Boolean(authEmail || authPassword || authDisplayName)
   const showResetRequestValidation = Boolean(resetEmail)
   const showResetConfirmValidation = Boolean(resetToken || newPassword)
-  const cabinetDataReady = !token || profile !== null
+  const cabinetDataReady = profile !== null
   const publicWebUrl = useMemo(
     () => resolveCabinetPublicWebUrl(configuredPublicWebUrl, typeof window === 'undefined' ? undefined : window.location),
     []

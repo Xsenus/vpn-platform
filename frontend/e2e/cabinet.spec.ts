@@ -17,6 +17,16 @@ const user = {
   status: 'Active'
 }
 
+const privateCabinetStateLabels = [
+  'Активных подписок',
+  'Подписок пока нет',
+  'VPN-ключей пока нет',
+  'Заказов нет',
+  'Платежей нет',
+  'Доступы не выдавались',
+  'Реферальных начислений нет'
+]
+
 const appVersionRelease = {
   id: 'release-cabinet-e2e',
   releaseId: '2026-08-10-cabinet-modal-focus',
@@ -866,6 +876,28 @@ async function seedCabinetSession(page: Page, accessToken: string, refreshToken:
   }, { accessToken, refreshToken })
 }
 
+test('cabinet auth hides private dashboard until the profile is loaded', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Вход в личный кабинет' })).toBeVisible()
+  for (const privateState of privateCabinetStateLabels) {
+    await expect(page.getByText(privateState, { exact: true })).toHaveCount(0)
+  }
+  expect(api.getRequestCount('/api/me')).toBe(0)
+
+  const authPanel = page.locator('#cabinet-auth-panel')
+  await authPanel.getByLabel('Email').fill(user.email)
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Войти', exact: true }).click()
+
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect(page.getByText('Активных подписок', { exact: true })).toBeVisible()
+  await expect(page.getByText(subscription.tariffName, { exact: true }).first()).toBeVisible()
+  expect(api.getRequestCount('/api/me')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('cabinet app version modal traps focus and restores its opener', async ({ page }) => {
   const browserErrors: string[] = []
   page.on('console', (message) => {
@@ -1227,15 +1259,7 @@ test('cabinet preserves a restored session after a transient profile failure', a
   await expect(page.getByRole('alert')).toContainText('Не удалось выполнить запрос. Попробуйте еще раз.')
   await expect(page.getByText('profile_temporarily_unavailable')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Повторить загрузку' })).toBeEnabled()
-  for (const falseLoadedState of [
-    'Активных подписок',
-    'Подписок пока нет',
-    'VPN-ключей пока нет',
-    'Заказов нет',
-    'Платежей нет',
-    'Доступы не выдавались',
-    'Реферальных начислений нет'
-  ]) {
+  for (const falseLoadedState of privateCabinetStateLabels) {
     await expect(page.getByText(falseLoadedState, { exact: true })).toHaveCount(0)
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
