@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.625.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-payment-provider-lock`.
+
+### Исправлено
+
+- Выбранный в кабинете способ оплаты теперь блокируется на всё время создания продления или повторной оплаты.
+- Видимый provider больше нельзя сменить, пока запрос использует ранее зафиксированный provider snapshot.
+- Native `disabled` и `aria-busy` селектора следуют общему cabinet mutation lifecycle и снимаются только после завершения команды.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: при delayed retry-payment селектор оставался enabled. После исправления targeted contract прошёл `2/2`, значение оставалось `YooKassa` до ответа и control снова включался после завершения.
+- Полный cabinet desktop/mobile regression прошёл `46/46`; первый полный console-responsive запуск дал `185/186` из-за невоспроизведённого нагрузочного timeout существующего mobile-admin VPN test, его isolated rerun прошёл `1/1`, финальный неизменённый full gate — `186/186` за `14.2 min` без failed/flaky/skipped.
+- Frontend `128/128`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.60/106.77 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite order/payment/subscription/access flow зелёный; encoding/documentation guard `57/57`, release seed `624`, secret scan `668` files/`0` findings.
+- Roadmap: `638/658` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.624.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-concurrent-busy-resource-owner`.

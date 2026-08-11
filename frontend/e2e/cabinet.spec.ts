@@ -292,6 +292,13 @@ const provider = {
   healthStatus: 'Healthy'
 }
 
+const alternateProvider = {
+  provider: 'Stripe',
+  publicName: 'Stripe sandbox',
+  mode: 'Sandbox',
+  healthStatus: 'Healthy'
+}
+
 function supportConversation(id: string, subject: string) {
   return {
     id,
@@ -388,6 +395,10 @@ async function mockCabinetApi(page: Page) {
   let invalidSubscriptionsResponse = false
   let failNextRenewalPayment = false
   let paymentProvidersFailureStatus: number | null = null
+  let multiplePaymentProviders = false
+  let delayNextRetryPayment = false
+  let delayedRetryPaymentReleased = false
+  let releaseDelayedRetryPayment: (() => void) | null = null
   let appVersionAvailable = false
   let appVersionSeen = true
   let appVersionLatestFailureStatus: number | null = null
@@ -681,7 +692,7 @@ async function mockCabinetApi(page: Page) {
         await fulfillJson(route, { error: 'payment_providers_temporarily_unavailable' }, paymentProvidersFailureStatus)
         return
       }
-      await fulfillJson(route, [provider])
+      await fulfillJson(route, multiplePaymentProviders ? [provider, alternateProvider] : [provider])
       return
     }
 
@@ -717,6 +728,14 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/me/orders/order-retryable/payments/YooKassa/init') {
+      if (delayNextRetryPayment) {
+        delayNextRetryPayment = false
+        if (!delayedRetryPaymentReleased) {
+          await new Promise<void>((resolve) => { releaseDelayedRetryPayment = resolve })
+        }
+        delayedRetryPaymentReleased = false
+        releaseDelayedRetryPayment = null
+      }
       await fulfillJson(route, {
         paymentId: 'payment-retry',
         redirectUrl: 'https://pay.example.test/retry',
@@ -852,6 +871,12 @@ async function mockCabinetApi(page: Page) {
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
     failPaymentProviders: (status = 503) => { paymentProvidersFailureStatus = status },
     allowPaymentProviders: () => { paymentProvidersFailureStatus = null },
+    useMultiplePaymentProviders: () => { multiplePaymentProviders = true },
+    delayNextRetryPaymentRequest: () => { delayNextRetryPayment = true },
+    releaseRetryPaymentRequest: () => {
+      delayedRetryPaymentReleased = true
+      releaseDelayedRetryPayment?.()
+    },
     showAppVersionRelease: () => { appVersionAvailable = true },
     showUnseenAppVersionRelease: () => {
       appVersionAvailable = true
@@ -1200,6 +1225,29 @@ test('cabinet payment providers fail once and recover only on explicit retry', a
   await expect(page.getByText('Доступно способов оплаты: 1.')).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить способы оплаты' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet locks the selected payment provider while retry payment is pending', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.useMultiplePaymentProviders()
+  api.delayNextRetryPaymentRequest()
+  await seedCabinetSession(page, 'access-token-provider-lock', 'refresh-token-provider-lock')
+
+  await page.goto('/')
+  const providerSelect = page.getByLabel('Способ оплаты для продления')
+  await expect(providerSelect).toHaveValue('YooKassa')
+
+  const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
+  await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
+  await expect.poll(() => api.getRequestCount('/api/me/orders/order-retryable/payments/YooKassa/init', 'POST')).toBe(1)
+
+  await expect(providerSelect).toBeDisabled()
+  await expect(providerSelect).toHaveValue('YooKassa')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+
+  api.releaseRetryPaymentRequest()
+  await expect(page.getByRole('heading', { name: 'Последняя повторная оплата' })).toBeVisible()
+  await expect(providerSelect).toBeEnabled()
 })
 
 test('cabinet support messages failure stays scoped and recovers on explicit retry', async ({ page }) => {

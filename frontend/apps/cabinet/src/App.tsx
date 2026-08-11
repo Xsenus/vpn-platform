@@ -1192,7 +1192,7 @@ export function App() {
               <div className="toolbar">
                 <label>
                   <span>Способ оплаты для продления</span>
-                  <select value={provider} disabled={paymentProvidersLoading || paymentProviders.length === 0} onChange={(e) => setProvider(e.target.value as PaymentProvider)}>
+                  <select value={provider} disabled={busy || paymentProvidersLoading || paymentProviders.length === 0} aria-busy={busy} onChange={(e) => setProvider(e.target.value as PaymentProvider)}>
                     {paymentProviders.map((item) => (
                       <option key={item.provider} value={item.provider}>{item.publicName || item.provider}{item.mode === 'Sandbox' ? ' · проверка' : ''}</option>
                     ))}

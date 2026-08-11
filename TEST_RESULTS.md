@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet payment provider lock
+
+Scope:
+- The visible cabinet payment-provider selection must match the provider snapshot used by a pending renewal or retry-payment request.
+- Provider selection must remain disabled and expose busy semantics until the current mutation finishes.
+
+Results:
+- Roadmap progress: `638/658` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-payment-provider-lock`, version `0.625.0`.
+- Reproduction before fix: delayed retry-payment sent the `YooKassa` request while the two-option provider select remained enabled. Fail-first desktop/mobile: `0/2` at `toBeDisabled()`.
+- After fix: the provider select derives `disabled` and `aria-busy` from the existing cabinet mutation lifecycle. Targeted desktop/mobile: `2/2`; the value stayed `YooKassa` while pending and the select became enabled only after the response.
+- Full cabinet desktop/mobile regression: `46/46`. First console-responsive run: `185/186`, with one existing mobile-admin VPN lifecycle notice timeout; isolated rerun: `1/1`; final unchanged full Playwright: `186/186` in `14.2 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: native control dimensions and toolbar layout are unchanged; pending selection remains visible and disabled without horizontal overflow, clipping or layout shift on desktop/mobile.
+- Frontend tests: `128/128`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.60/106.77 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `624` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin concurrent busy resource owner
 
 Scope:
