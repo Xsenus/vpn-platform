@@ -369,6 +369,7 @@ async function mockCabinetApi(page: Page) {
   let rejectedAuthorizedPath: string | null = null
   const expiredAccessTokens = new Set<string>()
   let failNextProfileStatus: number | null = null
+  const cabinetLoadFailures = new Map<string, number>()
   let delayNextProfile = false
   let delayedProfileReleased = false
   let releaseDelayedProfile: (() => void) | null = null
@@ -501,6 +502,11 @@ async function mockCabinetApi(page: Page) {
     if (rejectedAuthorizedPath === path && request.headers().authorization) {
       rejectedAuthorizedPath = null
       await fulfillJson(route, { error: 'user_not_active' }, 401)
+      return
+    }
+
+    if (method === 'GET' && cabinetLoadFailures.has(path)) {
+      await fulfillJson(route, { error: 'cabinet_load_temporarily_unavailable' }, cabinetLoadFailures.get(path)!)
       return
     }
 
@@ -791,6 +797,8 @@ async function mockCabinetApi(page: Page) {
     allowAuthorizedRequests: () => { authorizedRequestsRejected = false },
     expireAccessToken: (accessToken: string) => { expiredAccessTokens.add(`Bearer ${accessToken}`) },
     failNextProfileRequest: (status = 503) => { failNextProfileStatus = status },
+    failCabinetLoad: (path: string, status = 503) => { cabinetLoadFailures.set(path, status) },
+    allowCabinetLoad: (path: string) => { cabinetLoadFailures.delete(path) },
     delayNextProfileRequest: () => { delayNextProfile = true },
     releaseProfileRequest: () => {
       delayedProfileReleased = true
@@ -895,6 +903,43 @@ test('cabinet auth hides private dashboard until the profile is loaded', async (
   await expect(page.getByText('Активных подписок', { exact: true })).toBeVisible()
   await expect(page.getByText(subscription.tariffName, { exact: true }).first()).toBeVisible()
   expect(api.getRequestCount('/api/me')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet partial load errors stay scoped and recover without false private data', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.failCabinetLoad('/api/me/subscriptions')
+  api.failCabinetLoad('/api/me/orders')
+  api.failCabinetLoad('/api/me/telegram/status')
+  await seedCabinetSession(page, 'access-token-cabinet-partial-load', 'refresh-token-cabinet-partial-load')
+
+  await page.goto('/')
+
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect(page.getByText('Не удалось загрузить подписки и связанные VPN-доступы.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Подписок пока нет', { exact: true })).toHaveCount(0)
+  await expect(page.getByText(subscription.tariffName, { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Не удалось загрузить историю заказов.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Заказов нет', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Не удалось загрузить статус Telegram.', { exact: true })).toBeVisible()
+  await expect(page.getByText('NotLinked', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Создать ссылку на бота' })).toHaveCount(0)
+  await expect(page.getByText('YooKassa · 490 RUB', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText(/7 days/)).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+
+  api.allowCabinetLoad('/api/me/subscriptions')
+  api.allowCabinetLoad('/api/me/orders')
+  api.allowCabinetLoad('/api/me/telegram/status')
+  await page.getByRole('button', { name: 'Повторить загрузку данных' }).first().click()
+
+  await expect(page.getByText(subscription.tariffName, { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('490 RUB', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Создать ссылку на бота' })).toBeVisible()
+  await expect(page.getByText('Не удалось загрузить подписки и связанные VPN-доступы.', { exact: true })).toHaveCount(0)
+  expect(api.getRequestCount('/api/me/subscriptions')).toBe(2)
+  expect(api.getRequestCount('/api/me/orders')).toBe(2)
+  expect(api.getRequestCount('/api/me/telegram/status')).toBe(2)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
@@ -1654,9 +1699,12 @@ test('cabinet covers register, login, payments, subscription access and support'
   api.returnInvalidSubscriptionsResponse()
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Личный кабинет', exact: true })).toBeVisible()
-  await expect(page.getByRole('alert')).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await expect(page.getByText(user.email, { exact: true })).toHaveCount(0)
-  await expect(page.getByText('vless://cabinet-e2e@example.com:443', { exact: false })).toHaveCount(0)
+  const subscriptionsLoadError = page.locator('.cabinet-load-error').filter({ hasText: 'Не удалось загрузить подписки и связанные VPN-доступы.' })
+  await expect(subscriptionsLoadError).toContainText('Сервер вернул JSON-ответ с некорректными данными')
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect(page.getByText('Подписок пока нет', { exact: true })).toHaveCount(0)
+  await expect(page.getByText(subscription.tariffName, { exact: true })).toHaveCount(0)
+  await expect(page.getByText('vless://cabinet-e2e@example.com:443', { exact: false }).first()).toBeVisible()
 
   api.failLogout()
   await page.getByRole('button', { name: 'Выйти' }).click()

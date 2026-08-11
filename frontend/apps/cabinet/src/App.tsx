@@ -87,6 +87,24 @@ type CabinetRequestContext = {
   isCurrent: () => boolean
 }
 
+type CabinetLoadArea = 'profile' | 'subscriptions' | 'orders' | 'payments' | 'accesses' | 'referrals' | 'support' | 'telegram'
+
+type CabinetLoadError = {
+  area: CabinetLoadArea
+  message: string
+}
+
+const cabinetLoadAreaLabels: Record<CabinetLoadArea, string> = {
+  profile: 'профиль',
+  subscriptions: 'подписки',
+  orders: 'заказы',
+  payments: 'платежи',
+  accesses: 'VPN-доступы',
+  referrals: 'реферальные начисления',
+  support: 'обращения поддержки',
+  telegram: 'статус Telegram'
+}
+
 export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
@@ -113,6 +131,7 @@ export function App() {
   const [paymentProvidersError, setPaymentProvidersError] = useState('')
   const [provider, setProvider] = useState<PaymentProvider | ''>('')
   const [error, setError] = useState('')
+  const [loadErrors, setLoadErrors] = useState<CabinetLoadError[]>([])
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [sessionHydrating, setSessionHydrating] = useState(Boolean(token))
@@ -195,6 +214,28 @@ export function App() {
     ? ''
     : cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
   const currentQrAvailability = getAccessQrAvailability(linkedCurrentAccess ?? cabinetSummary.currentAccess)
+  const cabinetLoadErrorsFor = (...areas: CabinetLoadArea[]) => loadErrors.filter((item) => areas.includes(item.area))
+  const hasCabinetLoadError = (...areas: CabinetLoadArea[]) => cabinetLoadErrorsFor(...areas).length > 0
+  const hasCabinetMetricData = !hasCabinetLoadError('subscriptions')
+    || !hasCabinetLoadError('orders')
+    || !hasCabinetLoadError('referrals')
+    || !hasCabinetLoadError('support')
+
+  const renderCabinetLoadError = (message: string, areas: CabinetLoadArea[]) => {
+    const areaErrors = cabinetLoadErrorsFor(...areas)
+    if (areaErrors.length === 0) return null
+
+    return (
+      <div className="cabinet-load-error">
+        <ErrorBlock message={message} />
+        <p className="muted">Неподтверждённые данные скрыты, чтобы ошибка API не выглядела как фактический пустой результат.</p>
+        <CodeBlock>{areaErrors.map((item) => `${cabinetLoadAreaLabels[item.area]}: ${item.message}`).join('\n')}</CodeBlock>
+        <div className="toolbar mt-12">
+          <PrimaryButton type="button" disabled={busy} aria-busy={busy} onClick={() => void loadAll(token)}>Повторить загрузку данных</PrimaryButton>
+        </div>
+      </div>
+    )
+  }
 
   const selectSupportConversation = (conversationId: string) => {
     if (selectedSupportConversationIdRef.current === conversationId) return
@@ -244,6 +285,7 @@ export function App() {
     setPaymentProvidersLoading(false)
     setPaymentProvidersError('')
     setProvider('')
+    setLoadErrors([])
     setRenewalState(null)
     setRetryPaymentState(null)
     setQrSvgs({})
@@ -277,7 +319,7 @@ export function App() {
     return await loadAll(response.accessToken, { operationId })
   }
 
-  const loadAll = async (currentToken: string, options?: { operationId?: number, throwOnError?: boolean }) => {
+  const loadAll = async (currentToken: string, options?: { operationId?: number, throwOnProfileError?: boolean }) => {
     if (!currentToken) return false
 
     const operationId = options?.operationId ?? renderSessionOperationId
@@ -292,19 +334,31 @@ export function App() {
     }
 
     try {
+      const nextLoadErrors: CabinetLoadError[] = []
+      const loadArea = async <T,>(area: CabinetLoadArea, loader: () => Promise<T>, fallback: T): Promise<T> => {
+        try {
+          return await loader()
+        } catch (e) {
+          if (isCabinetSessionRejected(e) || (area === 'profile' && options?.throwOnProfileError)) throw e
+          nextLoadErrors.push({ area, message: normalizeApiError(e, `Не удалось загрузить ${cabinetLoadAreaLabels[area]}`) })
+          return fallback
+        }
+      }
+
       const [nextProfile, nextSubscriptions, nextOrders, nextPayments, nextAccesses, nextReferrals, nextSupportConversations, nextTelegramStatus] = await Promise.all([
-        api.getMe(currentToken),
-        api.getMySubscriptions(currentToken),
-        api.getMyOrders(currentToken),
-        api.getMyPayments(currentToken),
-        api.getMyAccesses(currentToken),
-        api.getMyReferrals(currentToken),
-        api.getMySupportConversations(currentToken),
-        api.getTelegramStatus(currentToken)
+        loadArea('profile', () => api.getMe(currentToken), profile),
+        loadArea('subscriptions', () => api.getMySubscriptions(currentToken), []),
+        loadArea('orders', () => api.getMyOrders(currentToken), []),
+        loadArea('payments', () => api.getMyPayments(currentToken), []),
+        loadArea('accesses', () => api.getMyAccesses(currentToken), []),
+        loadArea('referrals', () => api.getMyReferrals(currentToken), []),
+        loadArea('support', () => api.getMySupportConversations(currentToken), []),
+        loadArea('telegram', () => api.getTelegramStatus(currentToken), null)
       ])
 
       if (!operationIsCurrent()) return false
 
+      setLoadErrors(nextLoadErrors)
       setProfile(nextProfile)
       setSubscriptions(nextSubscriptions)
       setOrders(nextOrders)
@@ -319,10 +373,16 @@ export function App() {
         selectSupportConversation(nextSelectedConversationId)
       }
       setTelegramStatus(nextTelegramStatus)
+      if (nextLoadErrors.some((item) => item.area === 'orders')) setSupportOrderId('')
+      if (nextLoadErrors.some((item) => item.area === 'subscriptions')) setSupportSubscriptionId('')
+      if (!nextProfile) {
+        setError(nextLoadErrors.find((item) => item.area === 'profile')?.message ?? 'Не удалось загрузить профиль')
+        return false
+      }
       return true
     } catch (e) {
       if (!operationIsCurrent()) return false
-      if (options?.throwOnError) throw e
+      if (options?.throwOnProfileError) throw e
       handleAuthenticatedError(e, 'Не удалось загрузить кабинет')
       return false
     } finally {
@@ -400,7 +460,7 @@ export function App() {
 
     try {
       try {
-        return await loadAll(currentToken, { operationId, throwOnError: true })
+        return await loadAll(currentToken, { operationId, throwOnProfileError: true })
       } catch (e) {
         if (!operationIsCurrent()) return false
         if (!currentRefreshToken || !isCabinetAccessTokenExpired(e)) throw e
@@ -412,7 +472,7 @@ export function App() {
         setRefreshToken(response.refreshToken)
         writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
         writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-        return await loadAll(response.accessToken, { operationId, throwOnError: true })
+        return await loadAll(response.accessToken, { operationId, throwOnProfileError: true })
       }
     } catch (e) {
       if (!operationIsCurrent()) return false
@@ -903,12 +963,12 @@ export function App() {
         <ValidationModeBadge label="Проверочный режим оплат" />
       </div>
 
-      {cabinetDataReady && (
+      {cabinetDataReady && hasCabinetMetricData && (
         <div className="grid section">
-          <StatTile label="Активных подписок" value={activeSubscriptions} />
-          <StatTile label="Всего заказов" value={orders.length} />
-          <StatTile label="Реферальных начислений" value={referrals.length} />
-          <StatTile label="Открытых обращений" value={openSupportConversations} />
+          {!hasCabinetLoadError('subscriptions') && <StatTile label="Активных подписок" value={activeSubscriptions} />}
+          {!hasCabinetLoadError('orders') && <StatTile label="Всего заказов" value={orders.length} />}
+          {!hasCabinetLoadError('referrals') && <StatTile label="Реферальных начислений" value={referrals.length} />}
+          {!hasCabinetLoadError('support') && <StatTile label="Открытых обращений" value={openSupportConversations} />}
         </div>
       )}
 
@@ -932,53 +992,57 @@ export function App() {
       {profile && (
         <div className="section">
           <Card className="cabinet-current-card">
-            <div className="cabinet-current-main">
-              <p className="eyebrow">Текущий VPN-доступ</p>
-              {cabinetSummary.currentSubscription ? (
-                <>
-                  <div className="card-head">
-                    <div>
-                      <h3>{cabinetSummary.currentSubscription.tariffName || 'Активная подписка'}</h3>
-                      <p className="muted">
-                        Действует до {new Date(cabinetSummary.currentSubscription.endAt).toLocaleString()}
-                        {cabinetSummary.daysLeft !== null ? ` · осталось ${cabinetSummary.daysLeft} дн.` : ''}
-                      </p>
-                      <p className="muted">Сервер: {cabinetSummary.currentSubscription.nodeName ?? cabinetSummary.currentAccess?.serverName ?? 'ожидает назначения'}</p>
-                    </div>
-                    <StatusBadge value={cabinetSummary.currentSubscription.status} />
-                  </div>
-                  {currentConnectionLink ? (
+            {hasCabinetLoadError('subscriptions', 'accesses')
+              ? renderCabinetLoadError('Не удалось загрузить текущий VPN-доступ.', ['subscriptions', 'accesses'])
+              : <>
+                <div className="cabinet-current-main">
+                  <p className="eyebrow">Текущий VPN-доступ</p>
+                  {cabinetSummary.currentSubscription ? (
                     <>
-                      <CodeBlock>{currentConnectionLink}</CodeBlock>
-                      <div className="toolbar mt-12">
-                        <CopyButton value={currentConnectionLink} label="Скопировать ссылку" />
-                        {currentAccessId && <PrimaryButton disabled={busy || !currentQrAvailability.canGenerate} title={currentQrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(currentAccessId)}>Показать QR-код</PrimaryButton>}
-                        <PrimaryButton disabled={busy || !provider} aria-busy={busy} className="button-secondary" onClick={() => void handleRenew(cabinetSummary.currentSubscription!)}>Продлить</PrimaryButton>
+                      <div className="card-head">
+                        <div>
+                          <h3>{cabinetSummary.currentSubscription.tariffName || 'Активная подписка'}</h3>
+                          <p className="muted">
+                            Действует до {new Date(cabinetSummary.currentSubscription.endAt).toLocaleString()}
+                            {cabinetSummary.daysLeft !== null ? ` · осталось ${cabinetSummary.daysLeft} дн.` : ''}
+                          </p>
+                          <p className="muted">Сервер: {cabinetSummary.currentSubscription.nodeName ?? cabinetSummary.currentAccess?.serverName ?? 'ожидает назначения'}</p>
+                        </div>
+                        <StatusBadge value={cabinetSummary.currentSubscription.status} />
                       </div>
-                      {currentAccessId && qrSvgs[currentAccessId] && <QrCodePreview svg={qrSvgs[currentAccessId]} />}
+                      {currentConnectionLink ? (
+                        <>
+                          <CodeBlock>{currentConnectionLink}</CodeBlock>
+                          <div className="toolbar mt-12">
+                            <CopyButton value={currentConnectionLink} label="Скопировать ссылку" />
+                            {currentAccessId && <PrimaryButton disabled={busy || !currentQrAvailability.canGenerate} title={currentQrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(currentAccessId)}>Показать QR-код</PrimaryButton>}
+                            <PrimaryButton disabled={busy || !provider} aria-busy={busy} className="button-secondary" onClick={() => void handleRenew(cabinetSummary.currentSubscription!)}>Продлить</PrimaryButton>
+                          </div>
+                          {currentAccessId && qrSvgs[currentAccessId] && <QrCodePreview svg={qrSvgs[currentAccessId]} />}
+                        </>
+                      ) : currentAccessTerminalReason ? (
+                        <p className="safe-note" role="status">{currentAccessTerminalReason}</p>
+                      ) : (
+                        <EmptyState title="Ключ ещё готовится" description="После подтверждения оплаты ссылка подключения и QR-код появятся здесь автоматически." />
+                      )}
                     </>
-                  ) : currentAccessTerminalReason ? (
-                    <p className="safe-note" role="status">{currentAccessTerminalReason}</p>
                   ) : (
-                    <EmptyState title="Ключ ещё готовится" description="После подтверждения оплаты ссылка подключения и QR-код появятся здесь автоматически." />
+                    <EmptyState
+                      title="Подписки пока нет"
+                      description="Выберите тариф, оплатите заказ и вернитесь в кабинет: здесь появятся статус подписки, ссылка и QR-код."
+                      action={<a className="button" href={`${publicWebUrl}/tariffs`}>Выбрать тариф</a>}
+                    />
                   )}
-                </>
-              ) : (
-                <EmptyState
-                  title="Подписки пока нет"
-                  description="Выберите тариф, оплатите заказ и вернитесь в кабинет: здесь появятся статус подписки, ссылка и QR-код."
-                  action={<a className="button" href={`${publicWebUrl}/tariffs`}>Выбрать тариф</a>}
-                />
-              )}
-            </div>
-            <div className="cabinet-current-guide">
-              <strong>Как подключиться</strong>
-              <ol>
-                <li>Скопируйте ссылку или откройте QR-код.</li>
-                <li>Импортируйте ключ в VLESS/Xray-совместимый клиент.</li>
-                <li>Не пересылайте ключ другим людям.</li>
-              </ol>
-            </div>
+                </div>
+                <div className="cabinet-current-guide">
+                  <strong>Как подключиться</strong>
+                  <ol>
+                    <li>Скопируйте ссылку или откройте QR-код.</li>
+                    <li>Импортируйте ключ в VLESS/Xray-совместимый клиент.</li>
+                    <li>Не пересылайте ключ другим людям.</li>
+                  </ol>
+                </div>
+              </>}
           </Card>
         </div>
       )}
@@ -1123,36 +1187,44 @@ export function App() {
         <div className="section card-list">
           <Card>
             <h3>Профиль</h3>
-            <p><strong>{profile.displayName}</strong></p>
-            <p>{profile.email ?? 'email не указан'}</p>
-            <p>Реферальный код: <strong>{profile.referralCode}</strong></p>
-            <StatusBadge value={profile.status} />
+            {hasCabinetLoadError('profile')
+              ? renderCabinetLoadError('Не удалось обновить профиль.', ['profile'])
+              : <>
+                <p><strong>{profile.displayName}</strong></p>
+                <p>{profile.email ?? 'email не указан'}</p>
+                <p>Реферальный код: <strong>{profile.referralCode}</strong></p>
+                <StatusBadge value={profile.status} />
+              </>}
           </Card>
 
           <Card>
             <h3>Telegram</h3>
-            <p>Статус: <StatusBadge value={telegramStatus?.isLinked ? 'Linked' : 'NotLinked'} /></p>
-            {telegramStatus?.isLinked ? (
-              <>
-                <p>@{telegramStatus.username ?? telegramStatus.telegramUserId}</p>
-                <PrimaryButton disabled={busy} className="button-secondary" aria-busy={busy} onClick={() => void handleUnlinkTelegram()}>Отвязать Telegram</PrimaryButton>
-              </>
-            ) : (
-              <>
-                <PrimaryButton disabled={busy} aria-busy={busy} onClick={() => void handleCreateTelegramLink()}>Создать ссылку на бота</PrimaryButton>
-                {telegramLink && (
+            {hasCabinetLoadError('telegram')
+              ? renderCabinetLoadError('Не удалось загрузить статус Telegram.', ['telegram'])
+              : <>
+                <p>Статус: <StatusBadge value={telegramStatus?.isLinked ? 'Linked' : 'NotLinked'} /></p>
+                {telegramStatus?.isLinked ? (
                   <>
-                    <p>Ссылка действует до {new Date(telegramLink.expiresAt).toLocaleString()}</p>
-                    <ExternalLinkActions
-                      value={telegramLink.deepLinkUrl}
-                      openLabel="Открыть бота"
-                      ariaLabel="Открыть Telegram-бота в новой вкладке"
-                      invalidMessage="Ссылка на Telegram-бота отклонена как некорректная. Создайте новую ссылку."
-                    />
+                    <p>@{telegramStatus.username ?? telegramStatus.telegramUserId}</p>
+                    <PrimaryButton disabled={busy} className="button-secondary" aria-busy={busy} onClick={() => void handleUnlinkTelegram()}>Отвязать Telegram</PrimaryButton>
+                  </>
+                ) : (
+                  <>
+                    <PrimaryButton disabled={busy} aria-busy={busy} onClick={() => void handleCreateTelegramLink()}>Создать ссылку на бота</PrimaryButton>
+                    {telegramLink && (
+                      <>
+                        <p>Ссылка действует до {new Date(telegramLink.expiresAt).toLocaleString()}</p>
+                        <ExternalLinkActions
+                          value={telegramLink.deepLinkUrl}
+                          openLabel="Открыть бота"
+                          ariaLabel="Открыть Telegram-бота в новой вкладке"
+                          invalidMessage="Ссылка на Telegram-бота отклонена как некорректная. Создайте новую ссылку."
+                        />
+                      </>
+                    )}
                   </>
                 )}
-              </>
-            )}
+              </>}
           </Card>
 
           {renewalState && (
@@ -1202,89 +1274,99 @@ export function App() {
         <>
       <div className="section">
         <h2>Мои подписки</h2>
-        {subscriptions.length === 0 && (
-          <EmptyState
-            title="Подписок пока нет"
-            description="Купите VPN на странице тарифов — активная подписка появится здесь."
-            action={<a className="button" href={`${publicWebUrl}/tariffs`}>Перейти к тарифам</a>}
-          />
-        )}
-        <div className="card-list">
-          {subscriptions.map((subscription) => {
-            const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
-            const currentAccess = accesses.find((access) => access.id === subscription.currentAccessId)
-            const qrAvailability = getAccessQrAvailability(currentAccess)
-            const terminalReason = getCabinetAccessTerminalReason(currentAccess, subscription.status)
-            const isTerminal = Boolean(terminalReason)
-            return <div className="card" key={subscription.id}>
-              <div className="card-head">
-                <div>
-                  <h3>{subscription.tariffName || subscription.status}</h3>
-                  <p>Действует до: {new Date(subscription.endAt).toLocaleString()}</p>
-                  <p>Сервер: {subscription.nodeName ?? 'не назначен'}</p>
-                </div>
-                <StatusBadge value={subscription.status} />
-              </div>
-              {subscription.accessUri && !isTerminal && (
-                <>
-                  <CodeBlock>{subscription.accessUri}</CodeBlock>
-                  <div className="toolbar">
-                    <CopyButton value={subscription.accessUri} label="Скопировать ссылку" />
-                    {subscription.currentAccessId && <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(subscription.currentAccessId ?? '')}>Показать QR-код</PrimaryButton>}
+        {hasCabinetLoadError('subscriptions', 'accesses')
+          ? <Card>{renderCabinetLoadError('Не удалось загрузить подписки и связанные VPN-доступы.', ['subscriptions', 'accesses'])}</Card>
+          : <>
+            {subscriptions.length === 0 && (
+              <EmptyState
+                title="Подписок пока нет"
+                description="Купите VPN на странице тарифов — активная подписка появится здесь."
+                action={<a className="button" href={`${publicWebUrl}/tariffs`}>Перейти к тарифам</a>}
+              />
+            )}
+            <div className="card-list">
+              {subscriptions.map((subscription) => {
+                const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
+                const currentAccess = accesses.find((access) => access.id === subscription.currentAccessId)
+                const qrAvailability = getAccessQrAvailability(currentAccess)
+                const terminalReason = getCabinetAccessTerminalReason(currentAccess, subscription.status)
+                const isTerminal = Boolean(terminalReason)
+                return <div className="card" key={subscription.id}>
+                  <div className="card-head">
+                    <div>
+                      <h3>{subscription.tariffName || subscription.status}</h3>
+                      <p>Действует до: {new Date(subscription.endAt).toLocaleString()}</p>
+                      <p>Сервер: {subscription.nodeName ?? 'не назначен'}</p>
+                    </div>
+                    <StatusBadge value={subscription.status} />
                   </div>
-                </>
-              )}
-              {isTerminal && <p className="safe-note" role="status">{terminalReason}</p>}
-              {!isTerminal && subscription.qrCodePath && <CodeBlock>QR-содержимое: {subscription.qrCodePath}</CodeBlock>}
-              {!isTerminal && subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <QrCodePreview svg={qrSvgs[subscription.currentAccessId]} />}
-              {!isTerminal && subscription.configPath && <p>Конфигурация: {subscription.configPath}</p>}
-              {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый VLESS/Xray клиент. Если доступ требует проверки, дождитесь подтверждения администратора.</p>}
-              {renewalAvailability.canRenew ? (
-                <div className="toolbar">
-                  <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRenew(subscription)}>Продлить</PrimaryButton>
+                  {subscription.accessUri && !isTerminal && (
+                    <>
+                      <CodeBlock>{subscription.accessUri}</CodeBlock>
+                      <div className="toolbar">
+                        <CopyButton value={subscription.accessUri} label="Скопировать ссылку" />
+                        {subscription.currentAccessId && <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(subscription.currentAccessId ?? '')}>Показать QR-код</PrimaryButton>}
+                      </div>
+                    </>
+                  )}
+                  {isTerminal && <p className="safe-note" role="status">{terminalReason}</p>}
+                  {!isTerminal && subscription.qrCodePath && <CodeBlock>QR-содержимое: {subscription.qrCodePath}</CodeBlock>}
+                  {!isTerminal && subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <QrCodePreview svg={qrSvgs[subscription.currentAccessId]} />}
+                  {!isTerminal && subscription.configPath && <p>Конфигурация: {subscription.configPath}</p>}
+                  {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый VLESS/Xray клиент. Если доступ требует проверки, дождитесь подтверждения администратора.</p>}
+                  {renewalAvailability.canRenew ? (
+                    <div className="toolbar">
+                      <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRenew(subscription)}>Продлить</PrimaryButton>
+                    </div>
+                  ) : (
+                    <p className="safe-note" role="status">{renewalAvailability.reason}</p>
+                  )}
                 </div>
-              ) : (
-                <p className="safe-note" role="status">{renewalAvailability.reason}</p>
-              )}
+              })}
             </div>
-          })}
-        </div>
+          </>}
       </div>
 
       <div className="section">
         <h2>VPN-ключи</h2>
-        {accesses.length === 0 && <EmptyState title="VPN-ключей пока нет" description="После успешной оплаты здесь появятся ссылка, QR-код и срок действия." />}
-        <div className="card-list">
-          {accesses.map((access) => {
-            const qrAvailability = getAccessQrAvailability(access)
-            const terminalReason = getCabinetAccessTerminalReason(access)
-            const isTerminal = Boolean(terminalReason)
-            return <Card key={access.id}>
-              <div className="card-head">
-                <div>
-                  <h3>{access.serverName || access.providerType}</h3>
-                  <p className="muted">Действует до {access.expiryDate ? new Date(access.expiryDate).toLocaleString() : '—'} · revision {access.revision}</p>
-                </div>
-                <StatusBadge value={access.status} />
-              </div>
-              {isTerminal
-                ? <p className="safe-note" role="status">{terminalReason}</p>
-                : access.accessUri ? <CodeBlock>{access.accessUri}</CodeBlock> : <EmptyState title="Ссылка ещё не выдана" description="Если оплата прошла, обратитесь в поддержку." />}
-              {!isTerminal && <div className="toolbar mt-12">
-                <CopyButton value={access.accessUri} label="Скопировать ссылку" />
-                <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
-              </div>}
-              {!isTerminal && qrSvgs[access.id] && <QrCodePreview svg={qrSvgs[access.id]} />}
-              {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый Xray/VLESS клиент. Никому не пересылайте ключ.</p>}
-            </Card>
-          })}
-        </div>
+        {hasCabinetLoadError('accesses')
+          ? <Card>{renderCabinetLoadError('Не удалось загрузить VPN-ключи.', ['accesses'])}</Card>
+          : <>
+            {accesses.length === 0 && <EmptyState title="VPN-ключей пока нет" description="После успешной оплаты здесь появятся ссылка, QR-код и срок действия." />}
+            <div className="card-list">
+              {accesses.map((access) => {
+                const qrAvailability = getAccessQrAvailability(access)
+                const terminalReason = getCabinetAccessTerminalReason(access)
+                const isTerminal = Boolean(terminalReason)
+                return <Card key={access.id}>
+                  <div className="card-head">
+                    <div>
+                      <h3>{access.serverName || access.providerType}</h3>
+                      <p className="muted">Действует до {access.expiryDate ? new Date(access.expiryDate).toLocaleString() : '—'} · revision {access.revision}</p>
+                    </div>
+                    <StatusBadge value={access.status} />
+                  </div>
+                  {isTerminal
+                    ? <p className="safe-note" role="status">{terminalReason}</p>
+                    : access.accessUri ? <CodeBlock>{access.accessUri}</CodeBlock> : <EmptyState title="Ссылка ещё не выдана" description="Если оплата прошла, обратитесь в поддержку." />}
+                  {!isTerminal && <div className="toolbar mt-12">
+                    <CopyButton value={access.accessUri} label="Скопировать ссылку" />
+                    <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
+                  </div>}
+                  {!isTerminal && qrSvgs[access.id] && <QrCodePreview svg={qrSvgs[access.id]} />}
+                  {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый Xray/VLESS клиент. Никому не пересылайте ключ.</p>}
+                </Card>
+              })}
+            </div>
+          </>}
       </div>
 
       <div className="section card-list-two">
         <Card>
           <h3>История заказов</h3>
-          <div className="list-stack">
+          {hasCabinetLoadError('orders', 'payments')
+            ? renderCabinetLoadError('Не удалось загрузить историю заказов.', ['orders', 'payments'])
+            : <div className="list-stack">
             {orders.length === 0 && <EmptyState title="Заказов нет" description="Ваши покупки и продления появятся здесь." />}
             {orders.map((order) => {
               const orderPayments = paymentsByOrderId.get(order.id) ?? []
@@ -1329,12 +1411,14 @@ export function App() {
                 </div>
               )
             })}
-          </div>
+            </div>}
         </Card>
 
         <Card>
           <h3>История платежей</h3>
-          <div className="list-stack">
+          {hasCabinetLoadError('payments')
+            ? renderCabinetLoadError('Не удалось загрузить историю платежей.', ['payments'])
+            : <div className="list-stack">
             {payments.length === 0 && <EmptyState title="Платежей нет" description="История попыток оплаты появится после покупки или продления." />}
             {payments.map((payment) => (
               <div key={payment.id} className="list-item-vertical payment-record">
@@ -1365,7 +1449,7 @@ export function App() {
                 )}
               </div>
             ))}
-          </div>
+            </div>}
         </Card>
       </div>
 
@@ -1384,24 +1468,28 @@ export function App() {
                 <span>Тема</span>
                 <input value={supportSubject} onChange={(e) => setSupportSubject(e.target.value)} placeholder="Например, не прошла оплата" maxLength={160} required />
               </label>
-              <label>
-                <span>Связанный заказ</span>
-                <select value={supportOrderId} onChange={(e) => setSupportOrderId(e.target.value)}>
-                  <option value="">Без привязки к заказу</option>
-                  {orders.map((order) => (
-                    <option key={order.id} value={order.id}>{order.tariffName || order.tariffId} · {formatPaymentMoney(order.amount, order.currency)} · {order.status}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Связанная подписка</span>
-                <select value={supportSubscriptionId} onChange={(e) => setSupportSubscriptionId(e.target.value)}>
-                  <option value="">Без привязки к подписке</option>
-                  {subscriptions.map((subscription) => (
-                    <option key={subscription.id} value={subscription.id}>{subscription.tariffName || subscription.tariffId} · {subscription.status}</option>
-                  ))}
-                </select>
-              </label>
+              {hasCabinetLoadError('orders')
+                ? <p className="safe-note">Связанные заказы временно недоступны. Обращение будет создано без привязки к заказу.</p>
+                : <label>
+                  <span>Связанный заказ</span>
+                  <select value={supportOrderId} onChange={(e) => setSupportOrderId(e.target.value)}>
+                    <option value="">Без привязки к заказу</option>
+                    {orders.map((order) => (
+                      <option key={order.id} value={order.id}>{order.tariffName || order.tariffId} · {formatPaymentMoney(order.amount, order.currency)} · {order.status}</option>
+                    ))}
+                  </select>
+                </label>}
+              {hasCabinetLoadError('subscriptions')
+                ? <p className="safe-note">Связанные подписки временно недоступны. Обращение будет создано без привязки к подписке.</p>
+                : <label>
+                  <span>Связанная подписка</span>
+                  <select value={supportSubscriptionId} onChange={(e) => setSupportSubscriptionId(e.target.value)}>
+                    <option value="">Без привязки к подписке</option>
+                    {subscriptions.map((subscription) => (
+                      <option key={subscription.id} value={subscription.id}>{subscription.tariffName || subscription.tariffId} · {subscription.status}</option>
+                    ))}
+                  </select>
+                </label>}
               <label className="full-width">
                 <span>Сообщение</span>
                 <textarea value={supportText} onChange={(e) => setSupportText(e.target.value)} rows={4} placeholder="Опишите проблему: что делали, какой тариф или платеж проверяли, что увидели на экране." maxLength={4000} required />
@@ -1413,14 +1501,17 @@ export function App() {
           </Card>
 
           <Card>
-            <div className="section-header">
-              <div>
-                <h3>Мои обращения</h3>
-                {selectedSupportConversation && <p className="muted no-margin-bottom">{getSupportStatusMessage(selectedSupportConversation.status)}</p>}
-              </div>
-              {selectedSupportConversation && <StatusBadge value={selectedSupportConversation.status} />}
-            </div>
-            <div className="support-layout">
+            {hasCabinetLoadError('support')
+              ? renderCabinetLoadError('Не удалось загрузить обращения поддержки.', ['support'])
+              : <>
+                <div className="section-header">
+                  <div>
+                    <h3>Мои обращения</h3>
+                    {selectedSupportConversation && <p className="muted no-margin-bottom">{getSupportStatusMessage(selectedSupportConversation.status)}</p>}
+                  </div>
+                  {selectedSupportConversation && <StatusBadge value={selectedSupportConversation.status} />}
+                </div>
+                <div className="support-layout">
               <div className="list-stack">
                 {supportConversations.length === 0 && <EmptyState title="Обращений нет" description="Когда вы напишете в поддержку, переписка появится здесь." />}
                 {supportConversations.map((conversation) => (
@@ -1477,7 +1568,8 @@ export function App() {
                   </form>
                 )}
               </div>
-            </div>
+                </div>
+              </>}
           </Card>
         </div>
       )}
@@ -1485,7 +1577,9 @@ export function App() {
       <div className="section card-list-two">
         <Card>
           <h3>Выданные доступы</h3>
-          <div className="list-stack">
+          {hasCabinetLoadError('accesses')
+            ? renderCabinetLoadError('Не удалось загрузить выданные доступы.', ['accesses'])
+            : <div className="list-stack">
             {accesses.length === 0 && <EmptyState title="Доступы не выдавались" description="Когда подписка будет активирована, здесь появятся ключи и QR-коды." />}
             {accesses.map((access) => {
               const qrAvailability = getAccessQrAvailability(access)
@@ -1511,12 +1605,14 @@ export function App() {
                 {!isTerminal && <p className="muted">Подключение: импортируйте строку выше в VLESS/Xray клиент или используйте QR-код.</p>}
               </div>
             })}
-          </div>
+            </div>}
         </Card>
 
         <Card>
           <h3>Реферальные начисления</h3>
-          <div className="list-stack">
+          {hasCabinetLoadError('referrals')
+            ? renderCabinetLoadError('Не удалось загрузить реферальные начисления.', ['referrals'])
+            : <div className="list-stack">
             {referrals.length === 0 && <EmptyState title="Реферальных начислений нет" description="Когда появятся начисления, они будут показаны здесь." />}
             {referrals.map((reward) => (
               <div key={reward.id} className="list-item">
@@ -1527,7 +1623,7 @@ export function App() {
                 <StatusBadge value={reward.status} />
               </div>
             ))}
-          </div>
+            </div>}
         </Card>
       </div>
         </>

@@ -14233,5 +14233,28 @@
         "text": "Roadmap progress is 616/636 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-cabinet-section-load-boundary",
+    "version": "0.604.0",
+    "releasedAt": "2026-08-11T07:58:54+07:00",
+    "title": "Частичные ошибки кабинета не блокируют здоровые данные",
+    "summary": "Профиль и успешно загруженные области кабинета остаются доступны, а неподтверждённые подписки, платежи или статусы заменяются локальным восстановлением.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Сбой одного из восьми пользовательских endpoint больше не блокирует весь кабинет и не создаёт ложные empty states в затронутой области."
+      },
+      {
+        "type": "improved",
+        "text": "Независимые профиль, подписки, заказы, платежи, VPN-доступы, начисления, поддержка и Telegram получили локальные ошибки и явный повтор загрузки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 617/637 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

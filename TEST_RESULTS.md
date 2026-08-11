@@ -2,6 +2,25 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet section-load boundary
+
+Scope:
+- A failure in one of the eight aggregate cabinet endpoints must not block a verified profile or discard unrelated successful data.
+- Every failed area must hide fallback values and dependent actions, preserve session guards and recover through an explicit retry without reload or logout.
+
+Results:
+- Roadmap progress: `617/637` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-section-load-boundary`, version `0.604.0`.
+- Reproduction before fix: persistent subscriptions, orders and Telegram failures rejected the aggregate `Promise.all`, leaving the verified profile and all successful payment/access/referral/support responses behind the session recovery screen; fail-first desktop/mobile was `0/2`.
+- After fix: eight typed load areas collect controlled errors independently. Profile remains the admission boundary; `401/403`, token rotation and request/session generations keep their terminal behavior, while failed arrays/null values render only inside scoped recovery surfaces.
+- Support order/subscription selectors are replaced by explicit unlinked-mode notes when their source is unavailable, and stale selected IDs are cleared before a request can submit them.
+- Targeted boundary: desktop/mobile `2/2`; final cabinet desktop/mobile regression: `42/42`.
+- Final console-responsive Playwright: `154/154` in `8.8 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: full cabinet partial-error pages at 1280 and 393 CSS px kept healthy payments, VPN keys, support and referrals visible; local alerts, diagnostics and retry controls fitted without false data, overlap or horizontal overflow. Screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; cabinet bundle `368.01 kB`, gzip `106.29 kB`; admin bundle raw `525267`, gzip `140453`, largest `225595`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `603` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin section-load boundary
 
 Scope:

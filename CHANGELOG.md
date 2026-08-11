@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.604.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-section-load-boundary`.
+
+### Исправлено
+
+- Cabinet больше не использует all-or-nothing `Promise.all` для восьми независимых пользовательских областей: transient или malformed ответ необязательного endpoint не блокирует вход при успешно подтверждённом профиле.
+- Профиль, подписки, заказы, платежи, VPN-доступы, реферальные начисления, обращения поддержки и Telegram получили отдельные load-error boundaries; fallback-значения не показываются как фактические нули, empty states или доступные действия.
+- `401/403` по-прежнему завершают сессию, profile failure сохраняет прежний recovery/refresh flow, stale selection обращений сбрасывается, а support остаётся доступен без неподтверждённой привязки к заказу или подписке.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: сбой subscriptions/orders/Telegram полностью блокировал кабинет. После исправления targeted boundary прошёл `2/2`.
+- Финальный cabinet desktop/mobile regression прошёл `42/42`; полный console-responsive Playwright — `154/154` за `8.8 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Partial-error UI просмотрен на 1280/393 px: здоровые платежи, ключи, поддержка и начисления остаются доступны без overflow/overlap, ошибочные данные и действия скрыты; временные screenshots удалены.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; cabinet bundle `368.01/106.29 kB`, admin bundle `525267/140453/max 225595`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `603`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `617/637` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.603.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-section-load-boundary`.
