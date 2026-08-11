@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin auth command single-flight
+
+Scope:
+- Admin login, manual refresh and logout must each own one request when duplicate activation events arrive before React applies `busy` or `logoutBusy`.
+- Refresh must not reuse the same rotation token, logout must preserve backend revoke, and a later session operation must not inherit an old owner.
+
+Results:
+- Roadmap progress: `627/647` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-auth-command-single-flight`, version `0.614.0`.
+- Reproduction before fix: React state disabled the controls only after rerender; two synchronous events sent `login=2`, `refresh=2` with the same refresh token and `logout=2`. Fail-first desktop/mobile: `0/2`.
+- After fix: login, refresh and logout use separate operation-scoped `AdminSessionCommandRequest` owners, return the current Promise to duplicate callers, submit snapshots of the form/tokens and reset ownership at session boundaries. Targeted desktop/mobile contract: `2/2`, network counters `1/1/1`.
+- Final admin desktop/mobile regression: `82/82` in `6.6 min`; final console-responsive Playwright: `172/172` in `9.2 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: auth markup was unchanged; the responsive matrix confirmed login/loading/dashboard transitions without blank state, horizontal overflow, overlap or clipped controls.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `351.49 kB`, gzip `102.80 kB`; cabinet bundle `368.29/106.39 kB`; admin bundle raw `528406`, gzip `141215`, largest `228734`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `613` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin detail retry single-flight
 
 Scope:

@@ -562,6 +562,11 @@ type AdminDetailLoadRequest = {
   entityId: string
   promise: Promise<boolean>
 }
+type AdminSessionCommandRequest = {
+  operationId: number
+  key: string
+  promise: Promise<void>
+}
 
 type AdminActionContext = {
   operationId: number
@@ -1199,6 +1204,9 @@ export function App() {
   const sessionOperationId = useRef(0)
   const loadAllRequestId = useRef(0)
   const loadAllInFlight = useRef<AdminLoadRequest | null>(null)
+  const loginRequestInFlight = useRef<AdminSessionCommandRequest | null>(null)
+  const refreshSessionRequestInFlight = useRef<AdminSessionCommandRequest | null>(null)
+  const logoutRequestInFlight = useRef<AdminSessionCommandRequest | null>(null)
   const usersRequestId = useRef(0)
   const usersLoadInFlight = useRef<AdminUsersLoadRequest | null>(null)
   const actionRequestsInFlight = useRef(new Set<string>())
@@ -1966,6 +1974,9 @@ export function App() {
   const clearAdminSession = () => {
     sessionOperationId.current += 1
     loadAllInFlight.current = null
+    loginRequestInFlight.current = null
+    refreshSessionRequestInFlight.current = null
+    logoutRequestInFlight.current = null
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
     setToken('')
@@ -1975,116 +1986,155 @@ export function App() {
     clearAdminData()
   }
 
-  const handleLogin = async () => {
+  const handleLogin = (): Promise<void> => {
+    const activeRequest = loginRequestInFlight.current
+    if (activeRequest && sessionOperationId.current === activeRequest.operationId) return activeRequest.promise
     const validationErrors = validateAdminLogin(email, password)
     if (validationErrors.length > 0) {
       setError(validationErrors.join(' '))
-      return
+      return Promise.resolve()
     }
 
+    const normalizedEmail = email.trim()
+    const submittedPassword = password
     const operationId = ++sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const normalizedEmail = email.trim()
-      const response = await api.login(normalizedEmail, password)
-      if (!operationIsCurrent()) return
-      const verifiedSession = await verifyAdminSession(response.accessToken, response.refreshToken, true)
-      if (!operationIsCurrent()) return
-      writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
-      writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
-      if (rememberAdminEmail) {
-        writeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY, normalizedEmail)
-      } else {
-        removeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY)
+    const request: AdminSessionCommandRequest = { operationId, key: normalizedEmail, promise: Promise.resolve() }
+    const promise = (async () => {
+      setBusy(true)
+      setError('')
+      setNotice('')
+      try {
+        const response = await api.login(normalizedEmail, submittedPassword)
+        if (!operationIsCurrent()) return
+        const verifiedSession = await verifyAdminSession(response.accessToken, response.refreshToken, true)
+        if (!operationIsCurrent()) return
+        writeSessionStorageItem(TOKEN_STORAGE_KEY, response.accessToken)
+        writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken)
+        if (rememberAdminEmail) {
+          writeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY, normalizedEmail)
+        } else {
+          removeSessionStorageItem(ADMIN_EMAIL_STORAGE_KEY)
+        }
+        setAdminSession(verifiedSession)
+        setToken(response.accessToken)
+        setRefreshToken(response.refreshToken)
+        setPassword('')
+        setNotice('Сессия администратора открыта. Токены сохранены в sessionStorage и не показываются в UI.')
+        await loadAll(response.accessToken, verifiedSession, { operationId })
+      } catch (e) {
+        if (!operationIsCurrent()) return
+        setError(normalizeApiError(e, 'Не удалось получить admin token'))
+      } finally {
+        if (operationIsCurrent()) setBusy(false)
+        if (loginRequestInFlight.current === request) loginRequestInFlight.current = null
       }
-      setAdminSession(verifiedSession)
-      setToken(response.accessToken)
-      setRefreshToken(response.refreshToken)
-      setPassword('')
-      setNotice('Сессия администратора открыта. Токены сохранены в sessionStorage и не показываются в UI.')
-      await loadAll(response.accessToken, verifiedSession, { operationId })
-    } catch (e) {
-      if (!operationIsCurrent()) return
-      setError(normalizeApiError(e, 'Не удалось получить admin token'))
-    } finally {
-      if (operationIsCurrent()) setBusy(false)
-    }
+    })()
+    request.promise = promise
+    loginRequestInFlight.current = request
+    return promise
   }
 
-  const handleRefreshSession = async () => {
+  const handleRefreshSession = (): Promise<void> => {
+    const activeRequest = refreshSessionRequestInFlight.current
+    if (activeRequest
+      && sessionOperationId.current === activeRequest.operationId
+      && activeRequest.key === refreshToken) {
+      return activeRequest.promise
+    }
     if (!refreshToken) {
       setError('Сессия не найдена. Войдите заново.')
-      return
+      return Promise.resolve()
     }
 
+    const submittedAccessToken = token
+    const submittedRefreshToken = refreshToken
     const operationId = ++sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
-    let activeAccessToken = token
-    let activeRefreshToken = refreshToken
-    setBusy(true)
-    setError('')
-    setNotice('')
-    let refreshRotated = false
-    try {
-      const response = await api.refresh(refreshToken)
-      if (!operationIsCurrent()) return
-      refreshRotated = true
-      activeAccessToken = response.accessToken
-      activeRefreshToken = response.refreshToken
-      writeSessionStorageItem(TOKEN_STORAGE_KEY, activeAccessToken)
-      writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, activeRefreshToken)
-      setToken(activeAccessToken)
-      setRefreshToken(activeRefreshToken)
-      const verifiedSession = await verifyAdminSession(activeAccessToken, activeRefreshToken)
-      if (!operationIsCurrent()) return
-      setAdminSession(verifiedSession)
-      await loadAll(activeAccessToken, verifiedSession, { operationId })
-      setNotice('Сессия администратора обновлена.')
-    } catch (e) {
-      if (!operationIsCurrent()) return
-      if (isAdminSessionRejected(e)) {
-        const revokeRequest = api.logout(activeAccessToken || null, activeRefreshToken || null).catch(() => undefined)
-        clearAdminSession()
-        setError(e instanceof ApiClientError && e.status === 403 ? adminAccessDeniedMessage : adminSessionEndedMessage)
-        await revokeRequest
-      } else if (refreshRotated) {
-        clearAdminData()
-        setSessionHydrating(false)
-        setError(normalizeApiError(e, 'Не удалось проверить обновлённую сессию администратора'))
-      } else {
-        setError(normalizeApiError(e, 'Не удалось обновить сессию администратора'))
+    const request: AdminSessionCommandRequest = { operationId, key: submittedRefreshToken, promise: Promise.resolve() }
+    const promise = (async () => {
+      let activeAccessToken = submittedAccessToken
+      let activeRefreshToken = submittedRefreshToken
+      setBusy(true)
+      setError('')
+      setNotice('')
+      let refreshRotated = false
+      try {
+        const response = await api.refresh(submittedRefreshToken)
+        if (!operationIsCurrent()) return
+        refreshRotated = true
+        activeAccessToken = response.accessToken
+        activeRefreshToken = response.refreshToken
+        writeSessionStorageItem(TOKEN_STORAGE_KEY, activeAccessToken)
+        writeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY, activeRefreshToken)
+        setToken(activeAccessToken)
+        setRefreshToken(activeRefreshToken)
+        const verifiedSession = await verifyAdminSession(activeAccessToken, activeRefreshToken)
+        if (!operationIsCurrent()) return
+        setAdminSession(verifiedSession)
+        await loadAll(activeAccessToken, verifiedSession, { operationId })
+        setNotice('Сессия администратора обновлена.')
+      } catch (e) {
+        if (!operationIsCurrent()) return
+        if (isAdminSessionRejected(e)) {
+          const revokeRequest = api.logout(activeAccessToken || null, activeRefreshToken || null).catch(() => undefined)
+          clearAdminSession()
+          setError(e instanceof ApiClientError && e.status === 403 ? adminAccessDeniedMessage : adminSessionEndedMessage)
+          await revokeRequest
+        } else if (refreshRotated) {
+          clearAdminData()
+          setSessionHydrating(false)
+          setError(normalizeApiError(e, 'Не удалось проверить обновлённую сессию администратора'))
+        } else {
+          setError(normalizeApiError(e, 'Не удалось обновить сессию администратора'))
+        }
+      } finally {
+        if (operationIsCurrent()) setBusy(false)
+        if (refreshSessionRequestInFlight.current === request) refreshSessionRequestInFlight.current = null
       }
-    } finally {
-      if (operationIsCurrent()) setBusy(false)
-    }
+    })()
+    request.promise = promise
+    refreshSessionRequestInFlight.current = request
+    return promise
   }
 
-  const handleLogout = async () => {
-    if (logoutBusy) return
-    sessionOperationId.current += 1
-    setSessionHydrating(false)
-    setLogoutBusy(true)
-    setBusy(true)
-    setError('')
-    setNotice('')
-    let logoutFailed = false
-    try {
-      await api.logout(token || null, refreshToken || null)
-    } catch {
-      logoutFailed = true
-    } finally {
-      clearAdminSession()
-      if (logoutFailed) {
-        setError('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')
-      } else {
-        setNotice('Сессия администратора завершена. Данные панели очищены.')
-      }
-      setBusy(false)
-      setLogoutBusy(false)
+  const handleLogout = (): Promise<void> => {
+    const activeRequest = logoutRequestInFlight.current
+    if (activeRequest && sessionOperationId.current === activeRequest.operationId) return activeRequest.promise
+    const submittedAccessToken = token
+    const submittedRefreshToken = refreshToken
+    const operationId = ++sessionOperationId.current
+    const request: AdminSessionCommandRequest = {
+      operationId,
+      key: `${submittedAccessToken}\u0000${submittedRefreshToken}`,
+      promise: Promise.resolve()
     }
+    const promise = (async () => {
+      setSessionHydrating(false)
+      setLogoutBusy(true)
+      setBusy(true)
+      setError('')
+      setNotice('')
+      let logoutFailed = false
+      try {
+        await api.logout(submittedAccessToken || null, submittedRefreshToken || null)
+      } catch {
+        logoutFailed = true
+      } finally {
+        clearAdminSession()
+        if (logoutFailed) {
+          setError('Локальная сессия завершена, но отзыв серверной сессии не подтверждён. На чужом устройстве измените пароль из доверенного браузера.')
+        } else {
+          setNotice('Сессия администратора завершена. Данные панели очищены.')
+        }
+        setBusy(false)
+        setLogoutBusy(false)
+        if (logoutRequestInFlight.current === request) logoutRequestInFlight.current = null
+      }
+    })()
+    request.promise = promise
+    logoutRequestInFlight.current = request
+    return promise
   }
 
   const loadUserOverview = (

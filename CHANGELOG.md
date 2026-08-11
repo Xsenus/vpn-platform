@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.614.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-auth-command-single-flight`.
+
+### Исправлено
+
+- Синхронная повторная activation больше не отправляет два login, два refresh с одним rotation token или два backend logout до React busy-rerender.
+- Login, manual refresh и logout получили отдельные operation-scoped Promise owners, snapshots формы/токенов и session-boundary cleanup.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: `login=2`, `refresh=2`, `logout=2` вместо `1/1/1`. После исправления targeted auth single-flight contract прошел `2/2`.
+- Финальный admin desktop/mobile regression прошел `82/82` за `6.6 min`; полный console-responsive Playwright — `172/172` за `9.2 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Визуальная разметка не менялась; responsive gate подтвердил login/loading/dashboard transitions без blank state, overflow, overlap или clipped controls.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `351.49/102.80 kB`, cabinet bundle `368.29/106.39 kB`, admin bundle `528406/141215/max 228734`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зеленый; encoding guard `14/14`, release seed `613`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `627/647` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.613.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-detail-retry-single-flight`.

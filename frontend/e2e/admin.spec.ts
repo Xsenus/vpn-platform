@@ -2448,6 +2448,44 @@ test('admin keeps aggregate data reload single-flight across synchronous activat
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
+test('admin auth commands stay single-flight across synchronous activation', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-auth-command-token', 'admin-auth-command-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  const refreshButton = page.getByRole('button', { name: 'Обновить сессию' })
+  await refreshButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect(page.getByText('Сессия администратора обновлена.')).toBeVisible()
+
+  const logoutButton = page.getByRole('button', { name: 'Завершить сессию', exact: true })
+  await logoutButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible()
+
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  const loginButton = page.getByRole('button', { name: 'Войти в админку' })
+  await loginButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  expect({
+    refresh: api.getRequestCount('/api/auth/refresh', 'POST'),
+    logout: api.getRequestCount('/api/auth/logout', 'POST'),
+    login: api.getRequestCount('/api/auth/login', 'POST')
+  }).toEqual({ refresh: 1, logout: 1, login: 1 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('admin user filters recover locally and keep duplicate submits single-flight', async ({ page }) => {
   const browserErrors: string[] = []
   page.on('console', (message) => {

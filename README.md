@@ -214,7 +214,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - frontend unit tests: `125/125`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `170/170`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `172/172`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -322,7 +322,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - ручное обновление admin-данных имеет operation/token/session-scoped single-flight owner и не дублирует полный aggregate набор GET при синхронной повторной activation;
 - фильтры пользователей админки имеют operation/token/search/status-scoped single-flight owner, локальную ошибку без stale списка и явный retry;
 - повторные загрузки user overview, support messages и VPN panel details имеют operation/token/entity-scoped single-flight owner и не дублируют detail GET до busy-rerender;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-admin-detail-retry-single-flight`, версия `0.613.0`;
-- roadmap progress: `626/646` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- login, ручной refresh и logout админки имеют operation-scoped Promise owners и не дублируют auth-команды до busy-rerender;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-admin-auth-command-single-flight`, версия `0.614.0`;
+- roadmap progress: `627/647` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
