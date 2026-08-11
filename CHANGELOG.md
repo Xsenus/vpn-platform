@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.611.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-data-reload-single-flight`.
+
+### Исправлено
+
+- Синхронный двойной activation кнопки «Обновить данные» больше не запускает два полных набора admin GET до React busy-rerender.
+- `loadAll` получил operation/token/session-scoped request owner: повторный вызов получает уже выполняющийся Promise, а новая admin session operation не блокируется старым запросом.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: после initial load каждый из десяти контрольных endpoint имел `3` запроса вместо `2`. После исправления targeted single-flight contract прошёл `2/2`.
+- Финальный admin desktop/mobile regression прошёл `78/78`; полный console-responsive Playwright — `168/168` за `10.2 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Admin login UI просмотрен при 1280x720 px: экран читаем без blank state, horizontal overflow или clipped controls; authenticated mobile/desktop разделы покрыты Playwright.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `351.49/102.80 kB`, cabinet bundle `368.29/106.39 kB`, admin bundle `525576/140576/max 225904`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `610`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `624/644` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.610.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-data-reload-single-flight`.

@@ -543,6 +543,12 @@ function readAdminSectionFromHash(): AdminSectionId {
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
+type AdminLoadRequest = {
+  operationId: number
+  token: string
+  session: AdminSessionDto
+  promise: Promise<boolean>
+}
 
 type AdminActionContext = {
   operationId: number
@@ -1176,6 +1182,7 @@ export function App() {
   const restoredSessionHydrationStarted = useRef(false)
   const sessionOperationId = useRef(0)
   const loadAllRequestId = useRef(0)
+  const loadAllInFlight = useRef<AdminLoadRequest | null>(null)
   const usersRequestId = useRef(0)
   const actionRequestsInFlight = useRef(new Set<string>())
   const userOverviewRequestId = useRef(0)
@@ -1349,15 +1356,29 @@ export function App() {
     return true
   }
 
-  const loadAll = async (currentToken: string, currentSession: AdminSessionDto | null = adminSession, options?: { operationId?: number }) => {
+  const loadAll = async (currentToken: string, currentSession: AdminSessionDto | null = adminSession, options?: { operationId?: number }): Promise<boolean> => {
     if (!currentToken || !currentSession) return false
 
     const operationId = options?.operationId ?? renderSessionOperationId
     if (sessionOperationId.current !== operationId) return false
+    const activeRequest = loadAllInFlight.current
+    if (activeRequest?.operationId === operationId
+      && activeRequest.token === currentToken
+      && activeRequest.session === currentSession) {
+      return activeRequest.promise
+    }
     const requestId = ++loadAllRequestId.current
     const userListRequestId = ++usersRequestId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
       && loadAllRequestId.current === requestId
+    let completeRequest!: (result: boolean) => void
+    const request: AdminLoadRequest = {
+      operationId,
+      token: currentToken,
+      session: currentSession,
+      promise: new Promise<boolean>((resolve) => { completeRequest = resolve })
+    }
+    loadAllInFlight.current = request
     if (operationIsCurrent()) {
       setBusy(true)
       setError('')
@@ -1421,7 +1442,11 @@ export function App() {
       capabilities.botManage ? safeLoad('настройки Telegram-бота', () => api.getAdminTelegramBotSettings(currentToken), defaultBotSettings, errors) : defaultBotSettings
     ])
 
-    if (!operationIsCurrent()) return false
+    if (!operationIsCurrent()) {
+      completeRequest(false)
+      if (loadAllInFlight.current === request) loadAllInFlight.current = null
+      return false
+    }
 
     setSummary(nextSummary)
     setAuditLogs(nextAuditLogs)
@@ -1488,6 +1513,8 @@ export function App() {
       selectAdminUser(String(nextUsers[0]?.id ?? ''))
     }
     setBusy(false)
+    completeRequest(true)
+    if (loadAllInFlight.current === request) loadAllInFlight.current = null
     return true
   }
 
@@ -1877,6 +1904,7 @@ export function App() {
 
   const clearAdminSession = () => {
     sessionOperationId.current += 1
+    loadAllInFlight.current = null
     removeSessionStorageItem(TOKEN_STORAGE_KEY)
     removeSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY)
     setToken('')

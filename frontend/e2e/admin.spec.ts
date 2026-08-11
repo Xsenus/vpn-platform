@@ -2406,6 +2406,39 @@ test('admin restores a valid session once under StrictMode', async ({ page }) =>
   expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(0)
 })
 
+test('admin keeps aggregate data reload single-flight across synchronous activation', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-data-reload-token', 'admin-data-reload-refresh')
+  const loadPaths = [
+    '/api/admin/dashboard/summary',
+    '/api/admin/users',
+    '/api/admin/subscriptions',
+    '/api/admin/access-credentials',
+    '/api/admin/tariffs',
+    '/api/app-version/admin/releases',
+    '/api/admin/faq',
+    '/api/admin/servers',
+    '/api/admin/provisioning-runs',
+    '/api/admin/vpn-panels'
+  ]
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  expect(loadPaths.map((path) => api.getRequestCount(path))).toEqual(Array(10).fill(1))
+
+  const reloadButton = page.getByRole('button', { name: 'Обновить данные' })
+  await reloadButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+
+  await expect.poll(() => loadPaths.map((path) => api.getRequestCount(path))).toEqual(Array(10).fill(2))
+  await expect(page.getByText('Обновляем...')).toHaveCount(0)
+  await page.waitForTimeout(300)
+  expect(loadPaths.map((path) => api.getRequestCount(path))).toEqual(Array(10).fill(2))
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('admin rotates an expired restored access token once', async ({ page }) => {
   const api = await mockAdminApi(page)
   api.expireAccessToken('admin-e2e-token-expired')

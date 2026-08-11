@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin data reload single-flight
+
+Scope:
+- Manual admin data reload must own one aggregate request per session operation, token and verified session even when two activation events arrive before React applies `busy`.
+- A repeated caller must receive the current Promise, while logout/login must invalidate the old owner and permit the new session to load.
+
+Results:
+- Roadmap progress: `624/644` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-data-reload-single-flight`, version `0.611.0`.
+- Reproduction before fix: request IDs rejected the older result but did not prevent the network work; synchronous duplicate activation sent two additional calls to every aggregate admin endpoint. Fail-first desktop/mobile was `0/2`, with ten independent control counters at `3` instead of `2` including initial load.
+- After fix: `loadAllInFlight` owns the current Promise by session operation/token/session, returns it to duplicate callers and clears by request identity; session cleanup invalidates the owner. Targeted desktop/mobile contract: `2/2`.
+- Final admin desktop/mobile regression: `78/78`; final console-responsive Playwright: `168/168` in `10.2 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: admin login at 1280x720 had no blank state, horizontal overflow or clipped controls (`scrollWidth=clientWidth=1265`); authenticated sections are covered on desktop/mobile and the responsive matrix.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `351.49 kB`, gzip `102.80 kB`; cabinet bundle `368.29/106.39 kB`; admin bundle raw `525576`, gzip `140576`, largest `225904`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `610` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet data reload single-flight
 
 Scope:
