@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.620.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-subscription-access-resource-owner`.
+
+### Исправлено
+
+- Lifecycle-команды одной подписки и связанного VPN-доступа больше не выполняются параллельно через разные action IDs.
+- Admin `runAction` поддерживает несколько identity-safe resource keys; операция подписки владеет `subscription:<id>` и связанным `access:<id>`, а прямые VPN-команды используют тот же access boundary.
+- Кэшированный QR очищается перед любой мутацией подписки или VPN-доступа, поэтому после изменения provider state интерфейс не показывает потенциально устаревшую ссылку.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: при задержанном продлении подписки sibling sync подписки уходил в API, а связанный VPN-доступ оставался вызываемым. После исправления targeted contract прошёл `2/2`; принудительное снятие `disabled` также не обошло synchronous owner.
+- Subscription/VPN/support regression прошёл `8/8`, весь admin desktop/mobile — `86/86` за `7.8 min`; полный console-responsive Playwright — `176/176` за `12.3 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Общий busy-state работает между разделами подписок и VPN-доступов, освобождается только владельцем request identity и не меняет layout или размеры controls.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.59/106.77 kB`, admin bundle `529142/141520/max 229470`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `619`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `633/653` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.619.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-support-mutation-resource-owner`.

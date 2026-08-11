@@ -469,6 +469,10 @@ async function mockAdminApi(page: Page) {
   let delayNextProviderEnabledResponse = false
   let releaseDelayedProviderEnabled: (() => void) | null = null
   let failNextAccessQrStatus: number | null = null
+  let delayNextSubscriptionExtendResponse = false
+  let releaseDelayedSubscriptionExtend: (() => void) | null = null
+  let delayNextAccessQrResponse = false
+  let releaseDelayedAccessQr: (() => void) | null = null
   const notificationDeliveries: Array<Record<string, unknown>> = [{
     id: 'notification-e2e',
     userId: 'user-e2e',
@@ -797,6 +801,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/subscriptions/sub-e2e/extend') {
+      if (delayNextSubscriptionExtendResponse) {
+        delayNextSubscriptionExtendResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedSubscriptionExtend = resolve })
+        releaseDelayedSubscriptionExtend = null
+      }
       const days = Number((body as Record<string, unknown>)?.days ?? 0)
       const endAt = '2027-02-27T07:00:00Z'
       const gracePeriodEndAt = '2027-03-02T07:00:00Z'
@@ -908,6 +917,11 @@ async function mockAdminApi(page: Page) {
         failNextAccessQrStatus = null
         await fulfillJson(route, { message: 'VPN access URI is not available yet.' }, status)
         return
+      }
+      if (delayNextAccessQrResponse) {
+        delayNextAccessQrResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedAccessQr = resolve })
+        releaseDelayedAccessQr = null
       }
       await route.fulfill({
         status: 200,
@@ -1903,6 +1917,10 @@ async function mockAdminApi(page: Page) {
     delayNextProviderEnabled: () => { delayNextProviderEnabledResponse = true },
     releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
     failNextAccessQrRequest: (status = 503) => { failNextAccessQrStatus = status },
+    delayNextSubscriptionExtend: () => { delayNextSubscriptionExtendResponse = true },
+    releaseSubscriptionExtend: () => { releaseDelayedSubscriptionExtend?.() },
+    delayNextAccessQr: () => { delayNextAccessQrResponse = true },
+    releaseAccessQr: () => { releaseDelayedAccessQr?.() },
     preparePaymentLifecycle: () => {
       orders[0] = { ...orders[0], status: 'PendingPayment', lastPaymentStatus: 'Unknown', paidAt: null, updatedAt: now }
       payments[0] = {
@@ -2828,6 +2846,81 @@ test('admin serializes support mutations for one conversation', async ({ page })
   await expect(page.getByText('Ответ сохранен в обращении.', { exact: true })).toBeVisible()
   expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/reply')?.body)
     .toEqual({ text: 'Ответ после смены статуса', revision: 2 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin serializes subscription and VPN access commands per resource', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-resource-owner-token', 'admin-resource-owner-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+
+  const subscriptionsPanel = page.locator('#subscriptions')
+  let subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  api.delayNextSubscriptionExtend()
+  await subscriptionRow.evaluate((row) => {
+    const buttons = Array.from(row.querySelectorAll('button'))
+    buttons.find((button) => button.textContent?.trim() === 'Продлить')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    buttons.find((button) => button.textContent?.trim() === 'Синхронизировать доступ')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect.poll(() => api.getRequestCount('/api/admin/subscriptions/sub-e2e/extend', 'POST')).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/subscriptions/sub-e2e/sync-access', 'POST')).toBe(0)
+  await expect(subscriptionRow.getByRole('button', { name: 'Продлить' })).toBeDisabled()
+  await expect(subscriptionRow.getByRole('button', { name: 'Синхронизировать доступ' })).toBeDisabled()
+
+  await openAdminSection(page, 'VPN-доступы', 'vpn')
+  const vpnPanel = page.locator('#vpn')
+  let accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  const accessSyncButton = accessRow.getByRole('button', { name: 'Синхронизировать' })
+  await expect(accessSyncButton).toBeDisabled()
+  await accessSyncButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/sync', 'POST')).toBe(0)
+
+  api.releaseSubscriptionExtend()
+  await expect(page.getByText('Подписка продлена на 30 дней.', { exact: true })).toBeVisible()
+  accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  await accessRow.getByRole('button', { name: 'Синхронизировать' }).click()
+  await expect(page.getByText('VPN-доступ синхронизирован.', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/sync', 'POST')).toBe(1)
+
+  await openAdminSection(page, 'Подписки', 'subscriptions')
+  subscriptionRow = subscriptionsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await subscriptionRow.getByRole('button', { name: 'Синхронизировать доступ' }).click()
+  await expect(page.getByText('Текущий VPN-доступ подписки синхронизирован.', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/subscriptions/sub-e2e/sync-access', 'POST')).toBe(1)
+
+  await openAdminSection(page, 'VPN-доступы', 'vpn')
+  accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  api.delayNextAccessQr()
+  await accessRow.evaluate((row) => {
+    const buttons = Array.from(row.querySelectorAll('button'))
+    buttons.find((button) => button.textContent?.trim() === 'Показать QR')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    buttons.find((button) => button.textContent?.trim() === 'Синхронизировать')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect.poll(() => api.getRequestCount('/api/admin/access-credentials/access-e2e/qr')).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/sync', 'POST')).toBe(1)
+  await expect(accessRow.getByRole('button', { name: 'Показать QR' })).toBeDisabled()
+  await expect(accessRow.getByRole('button', { name: 'Синхронизировать' })).toBeDisabled()
+
+  api.releaseAccessQr()
+  await expect(accessRow.locator('.qr-preview')).toBeVisible()
+  accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  await accessRow.getByRole('button', { name: 'Синхронизировать' }).click()
+  await expect(page.getByText('VPN-доступ синхронизирован.', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/sync', 'POST')).toBe(2)
+  await expect(accessRow.locator('.qr-preview')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

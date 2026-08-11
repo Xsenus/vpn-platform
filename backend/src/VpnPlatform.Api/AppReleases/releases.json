@@ -14601,5 +14601,28 @@
         "text": "Roadmap progress is 632/652 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-admin-subscription-access-resource-owner",
+    "version": "0.620.0",
+    "releasedAt": "2026-08-11T16:41:06+07:00",
+    "title": "Команды подписки и VPN-доступа выполняются последовательно",
+    "summary": "Операции одной подписки и связанного VPN-доступа используют общие resource owners и не пересекают provider-state mutations.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Subscription lifecycle и direct VPN access commands больше не выполняются параллельно через разные action IDs или разделы."
+      },
+      {
+        "type": "improved",
+        "text": "Multi-key identity-safe owner синхронно блокирует sibling command, очищает cached QR перед mutation и освобождает busy-state только по request identity."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 633/653 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

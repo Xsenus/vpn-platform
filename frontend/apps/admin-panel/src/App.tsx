@@ -544,6 +544,20 @@ function supportActionResourceKey(conversationId: string) {
   return `support:${conversationId}`
 }
 
+function subscriptionActionResourceKey(subscriptionId: string) {
+  return `subscription:${subscriptionId}`
+}
+
+function accessActionResourceKey(accessId: string) {
+  return `access:${accessId}`
+}
+
+function subscriptionActionResourceKeys(subscriptionId: string, accessId: string | null | undefined) {
+  return accessId
+    ? [subscriptionActionResourceKey(subscriptionId), accessActionResourceKey(accessId)]
+    : [subscriptionActionResourceKey(subscriptionId)]
+}
+
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
@@ -1837,7 +1851,7 @@ export function App() {
     requiredSections: AdminSectionId | readonly AdminSectionId[] | null,
     id: string,
     action: (context: AdminActionContext) => Promise<void>,
-    resourceKey = id
+    resourceKeys: string | readonly string[] = id
   ) => {
     const sections = requiredSections === null ? [] : Array.isArray(requiredSections) ? requiredSections : [requiredSections]
     const deniedSection = sections.find((section) => !canWriteSection(section))
@@ -1848,11 +1862,16 @@ export function App() {
     const operationId = sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
     const requestKey = `${operationId}:${id}`
-    if (actionRequestsInFlight.current.has(requestKey) || actionResourceOwners.current.has(resourceKey)) return
+    const ownedResourceKeys = typeof resourceKeys === 'string' ? [resourceKeys] : [...new Set(resourceKeys)]
+    if (actionRequestsInFlight.current.has(requestKey) || ownedResourceKeys.some((key) => actionResourceOwners.current.has(key))) return
     actionRequestsInFlight.current.add(requestKey)
-    actionResourceOwners.current.set(resourceKey, requestKey)
+    for (const key of ownedResourceKeys) actionResourceOwners.current.set(key, requestKey)
     setActionBusyId(id)
-    setActionBusyResourceKeys((current) => new Set(current).add(resourceKey))
+    setActionBusyResourceKeys((current) => {
+      const next = new Set(current)
+      for (const key of ownedResourceKeys) next.add(key)
+      return next
+    })
     setError('')
     setNotice('')
     try {
@@ -1867,11 +1886,12 @@ export function App() {
       if (operationIsCurrent()) setError(normalizeApiError(e, 'Не удалось выполнить действие. Повторите попытку.'))
     } finally {
       actionRequestsInFlight.current.delete(requestKey)
-      if (actionResourceOwners.current.get(resourceKey) === requestKey) {
-        actionResourceOwners.current.delete(resourceKey)
+      const releasedResourceKeys = ownedResourceKeys.filter((key) => actionResourceOwners.current.get(key) === requestKey)
+      if (releasedResourceKeys.length > 0) {
+        for (const key of releasedResourceKeys) actionResourceOwners.current.delete(key)
         setActionBusyResourceKeys((current) => {
           const next = new Set(current)
-          next.delete(resourceKey)
+          for (const key of releasedResourceKeys) next.delete(key)
           return next
         })
       }
@@ -2845,7 +2865,18 @@ export function App() {
     })
   }
 
+  const clearAdminAccessQr = (accessId: string | null | undefined) => {
+    if (!accessId) return
+    setAdminQrSvgs((current) => {
+      if (!current[accessId]) return current
+      const next = { ...current }
+      delete next[accessId]
+      return next
+    })
+  }
+
   const handleSubscriptionAction = async (subscription: SubscriptionDto, action: AdminSubscriptionAction) => {
+    const resourceKeys = subscriptionActionResourceKeys(subscription.id, subscription.currentAccessId)
     const blocker = getAdminSubscriptionActionBlocker(subscription, action)
     if (blocker) {
       setError(blocker)
@@ -2854,11 +2885,12 @@ export function App() {
 
     if (action === 'activate') {
       await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
+        clearAdminAccessQr(subscription.currentAccessId)
         await api.activateAdminSubscription(token, subscription.id, 'manual_subscription_activate')
         if (!adminAction.isCurrent()) return
         setNotice('Подписка активирована, текущий VPN-доступ включен при наличии.')
         await adminAction.reloadAll()
-      })
+      }, resourceKeys)
       return
     }
 
@@ -2869,11 +2901,12 @@ export function App() {
         return
       }
       await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
+        clearAdminAccessQr(subscription.currentAccessId)
         await api.extendAdminSubscription(token, subscription.id, days, 'manual_admin_extend')
         if (!adminAction.isCurrent()) return
         setNotice(`Подписка продлена на ${days} дней.`)
         await adminAction.reloadAll()
-      })
+      }, resourceKeys)
       return
     }
 
@@ -2884,11 +2917,12 @@ export function App() {
       }
 
       await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
+        clearAdminAccessQr(subscription.currentAccessId)
         await api.syncAdminSubscriptionAccess(token, subscription.id, 'manual_subscription_sync')
         if (!adminAction.isCurrent()) return
         setNotice('Текущий VPN-доступ подписки синхронизирован.')
         await adminAction.reloadAll()
-      })
+      }, resourceKeys)
       return
     }
 
@@ -2898,13 +2932,14 @@ export function App() {
       cancel: () => api.cancelAdminSubscription(token, subscription.id, 'manual_admin_action')
     }
     await runAction('subscriptions', `${action}-${subscription.id}`, async (adminAction) => {
+      clearAdminAccessQr(subscription.currentAccessId)
       await map[action]()
       if (!adminAction.isCurrent()) return
       setNotice(action === 'cancel'
         ? 'Подписка отменена, VPN-доступ отозван и удален с сервера.'
         : `Подписка обновлена: ${shortId(subscription.id)}`)
       await adminAction.reloadAll()
-    })
+    }, resourceKeys)
   }
 
   const subscriptionMigrationOptions = (subscription: SubscriptionDto) => servers.filter((server) =>
@@ -2927,12 +2962,13 @@ export function App() {
 
     const targetNodeId = selectedTarget === 'auto' ? null : selectedTarget
     await runAction(['subscriptions', 'vpn'], `migrate-${subscription.id}`, async (action) => {
+      clearAdminAccessQr(subscription.currentAccessId)
       const result = await api.migrateAdminSubscription(token, subscription.id, targetNodeId)
       if (!action.isCurrent()) return
       setSubscriptionMigrationTargets((current) => ({ ...current, [subscription.id]: '' }))
       setNotice(`Подписка перенесена на сервер ${shortId(result.targetNodeId)}. Задача ${shortId(result.migrationJobId)} завершена.`)
       await action.reloadAll()
-    })
+    }, subscriptionActionResourceKeys(subscription.id, subscription.currentAccessId))
   }
 
   const handleAccessAction = async (access: AccessCredentialDto, enable: boolean) => {
@@ -2943,12 +2979,13 @@ export function App() {
     }
 
     await runAction('vpn', `${enable ? 'enable' : 'disable'}-${access.id}`, async (action) => {
+      clearAdminAccessQr(access.id)
       if (enable) await api.enableAdminAccess(token, access.id, 'manual_admin_action')
       else await api.disableAdminAccess(token, access.id, 'manual_admin_action')
       if (!action.isCurrent()) return
       setNotice(`VPN-доступ ${enable ? 'включен' : 'отключен'}.`)
       await action.reloadAll()
-    })
+    }, accessActionResourceKey(access.id))
   }
 
   const handleAccessSync = async (access: AccessCredentialDto) => {
@@ -2959,11 +2996,12 @@ export function App() {
     }
 
     await runAction('vpn', `sync-${access.id}`, async (action) => {
+      clearAdminAccessQr(access.id)
       await api.syncAdminAccess(token, access.id, 'manual_admin_sync')
       if (!action.isCurrent()) return
       setNotice('VPN-доступ синхронизирован.')
       await action.reloadAll()
-    })
+    }, accessActionResourceKey(access.id))
   }
 
   const handleAccessResetTraffic = async (access: AccessCredentialDto) => {
@@ -2974,6 +3012,7 @@ export function App() {
     }
 
     await runAction('vpn', `reset-${access.id}`, async (action) => {
+      clearAdminAccessQr(access.id)
       try {
         await api.resetAdminAccessTraffic(token, access.id, 'manual_admin_reset_traffic')
         if (!action.isCurrent()) return
@@ -2981,31 +3020,25 @@ export function App() {
       } finally {
         await action.reloadAll()
       }
-    })
+    }, accessActionResourceKey(access.id))
   }
 
 
   const handleAdminAccessQr = async (access: AccessCredentialDto) => {
-    const clearCachedQr = () => setAdminQrSvgs((current) => {
-      if (!current[access.id]) return current
-      const next = { ...current }
-      delete next[access.id]
-      return next
-    })
     const blocker = getAdminAccessCommandBlocker(access, 'qr')
     if (blocker) {
-      clearCachedQr()
+      clearAdminAccessQr(access.id)
       setError(blocker)
       return
     }
 
     await runAction(null, `qr-${access.id}`, async (action) => {
-      clearCachedQr()
+      clearAdminAccessQr(access.id)
       const svg = await api.getAdminAccessQrSvg(token, access.id)
       if (!action.isCurrent()) return
       setAdminQrSvgs((current) => ({ ...current, [access.id]: svg }))
       setNotice('QR-код загружен. Он содержит ссылку подключения и не добавляет дополнительных секретов.')
-    })
+    }, accessActionResourceKey(access.id))
   }
 
   const handleReplySupport = async () => {
@@ -4390,7 +4423,7 @@ export function App() {
           <div className="list-stack">
             {subscriptions.length === 0 && <EmptyState title="Подписок нет" description="После успешной оплаты подписка появится здесь." />}
             {subscriptions.slice(0, 12).map((subscription) => {
-              const isActionBusy = actionBusyId.endsWith(subscription.id)
+              const isActionBusy = actionBusyResourceKeys.has(subscriptionActionResourceKey(subscription.id))
               const actionAvailability = getAdminSubscriptionActionAvailability(subscription)
               const migrationOptions = subscriptionMigrationOptions(subscription)
               const canMigrate = Boolean(adminSession?.capabilities.vpnManage && subscription.currentServerId && subscription.currentAccessId && actionAvailability.canManage)
@@ -4446,6 +4479,7 @@ export function App() {
             {accessCredentials.slice(0, 12).map((access) => {
               const terminalReason = getAdminAccessTerminalReason(access)
               const isTerminal = Boolean(terminalReason)
+              const isActionBusy = actionBusyResourceKeys.has(accessActionResourceKey(access.id))
               return <div key={access.id} className="list-item-vertical">
                 <div className="item-head">
                   <strong>{access.providerType} · {isTerminal ? shortId(access.id) : (access.providerAccessId || shortId(access.id))}</strong>
@@ -4460,13 +4494,13 @@ export function App() {
                 {!isTerminal && adminQrSvgs[access.id] && <QrCodePreview svg={adminQrSvgs[access.id]} label={`QR-код доступа ${access.id}`} />}
                 {!isTerminal && <div className="toolbar">
                   <CopyButton value={access.accessUri} label="Скопировать URI" disabled={!access.accessUri} />
-                  <PrimaryButton disabled={!access.accessUri || actionBusyId === `qr-${access.id}`} onClick={() => void handleAdminAccessQr(access)}>Показать QR</PrimaryButton>
+                  <PrimaryButton disabled={!access.accessUri || isActionBusy} aria-busy={isActionBusy} onClick={() => void handleAdminAccessQr(access)}>Показать QR</PrimaryButton>
                   {canWriteSection('vpn') && <>
                     {access.status === 'Disabled'
-                      ? <PrimaryButton disabled={actionBusyId.includes(access.id)} className="button-secondary" onClick={() => void handleAccessAction(access, true)}>Включить</PrimaryButton>
-                      : <ConfirmButton disabled={actionBusyId.includes(access.id)} className="button-secondary" message="Отключить VPN-доступ? Пользователь потеряет возможность подключаться." onConfirm={() => handleAccessAction(access, false)}>Отключить</ConfirmButton>}
-                    <PrimaryButton disabled={actionBusyId === `sync-${access.id}`} onClick={() => void handleAccessSync(access)}>Синхронизировать</PrimaryButton>
-                    <ConfirmButton disabled={actionBusyId === `reset-${access.id}`} message="Необратимо обнулить счётчики трафика у VPN-провайдера? При сетевой неопределённости доступ получит статус SyncRequired для ручной сверки." onConfirm={() => handleAccessResetTraffic(access)}>Сбросить трафик</ConfirmButton>
+                      ? <PrimaryButton disabled={isActionBusy} className="button-secondary" onClick={() => void handleAccessAction(access, true)}>Включить</PrimaryButton>
+                      : <ConfirmButton disabled={isActionBusy} className="button-secondary" message="Отключить VPN-доступ? Пользователь потеряет возможность подключаться." onConfirm={() => handleAccessAction(access, false)}>Отключить</ConfirmButton>}
+                    <PrimaryButton disabled={isActionBusy} aria-busy={isActionBusy} onClick={() => void handleAccessSync(access)}>Синхронизировать</PrimaryButton>
+                    <ConfirmButton disabled={isActionBusy} message="Необратимо обнулить счётчики трафика у VPN-провайдера? При сетевой неопределённости доступ получит статус SyncRequired для ручной сверки." onConfirm={() => handleAccessResetTraffic(access)}>Сбросить трафик</ConfirmButton>
                   </>}
                 </div>}
               </div>

@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin subscription and VPN access resource owner
+
+Scope:
+- Subscription lifecycle commands and direct commands for its current VPN access must not overlap through different action IDs or sections.
+- Any provider-state mutation must invalidate a cached QR before the request starts.
+
+Results:
+- Roadmap progress: `633/653` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-subscription-access-resource-owner`, version `0.620.0`.
+- Reproduction before fix: while subscription extend was delayed, synchronous subscription sync still sent a POST and the linked access command remained callable. Fail-first desktop/mobile: `0/2`; sync-access count was `1` instead of `0`.
+- After fix: admin `runAction` owns one or more resource keys synchronously and releases each only by request identity. Subscription actions claim `subscription:<id>` plus current `access:<id>`; direct access actions and QR use the same access key. Targeted desktop/mobile: `2/2`, including a programmatic click after removing `disabled`.
+- Related lifecycle regression: `8/8`; full admin desktop/mobile: `86/86` in `7.8 min`; final console-responsive Playwright: `176/176` in `12.3 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: layout markup and dimensions were unchanged; shared busy states remain visible across section navigation without blank state, horizontal overflow or clipped controls. Cached QR is removed after access sync.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.59/106.77 kB`; admin bundle raw `529142`, gzip `141520`, largest `229470`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `619` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin support mutation resource owner
 
 Scope:
