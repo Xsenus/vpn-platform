@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.622.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-finance-resource-owner`.
+
+### Исправлено
+
+- Редактирование, включение/выключение и проверка настроек одного payment-provider account больше не выполняются параллельно через разные action IDs.
+- Order-level recheck и direct payment recheck/refund одного платежа используют общий order/payment boundary и не запускают повторный provider-state transition.
+- Shared busy-state блокирует sibling provider/payment controls, refund fields и edit submit; независимые аккаунты и заказы остаются доступными.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: при задержанном provider enabled mutation уходил provider check, а при задержанном order recheck уходил direct payment recheck (`1/1` вместо `0/0`). После исправления targeted contract прошёл `2/2`, включая programmatic обход disabled.
+- Finance/provider/refund/role regression прошёл `12/12` за `54.9 s`, весь admin desktop/mobile — `90/90` за `8.4 min`; полный console-responsive Playwright — `180/180` за `10.9 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `126/126`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.59/106.77 kB`, admin bundle `530248/141999/max 230576`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `57/57`, release seed `621`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `635/655` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.621.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-vpn-infrastructure-resource-owner`.

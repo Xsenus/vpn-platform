@@ -578,6 +578,24 @@ function provisioningRunActionResourceKey(runId: string) {
   return `provisioning-run:${runId}`
 }
 
+function paymentProviderActionResourceKey(accountId: string) {
+  return `payment-provider:${accountId}`
+}
+
+function orderActionResourceKey(orderId: string) {
+  return `order:${orderId}`
+}
+
+function paymentActionResourceKey(paymentId: string) {
+  return `payment:${paymentId}`
+}
+
+function paymentActionResourceKeys(paymentId: string, orderId?: string | null) {
+  return orderId
+    ? [paymentActionResourceKey(paymentId), orderActionResourceKey(orderId)]
+    : [paymentActionResourceKey(paymentId)]
+}
+
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
@@ -2401,7 +2419,7 @@ export function App() {
       setNotice(`Способ оплаты ${saved.name} ${editingId ? 'обновлен' : 'сохранен'}. Секреты не отображаются.`)
       if (providerFormRef.current === submittedForm && editingProviderAccountIdRef.current === editingId) resetProviderForm()
       await action.reloadAll()
-    })
+    }, editingId ? paymentProviderActionResourceKey(editingId) : 'provider-save')
   }
 
   const handleSetProviderEnabled = async (account: PaymentProviderAccountDto, enabled: boolean) => {
@@ -2410,7 +2428,7 @@ export function App() {
       if (!action.isCurrent()) return
       setNotice(`${account.name}: ${enabled ? 'включен' : 'выключен'}`)
       await action.reloadAll()
-    })
+    }, paymentProviderActionResourceKey(account.id))
   }
 
   const handleCheckProviderAccount = async (account: PaymentProviderAccountDto) => {
@@ -2420,7 +2438,7 @@ export function App() {
       setProviderCheckResults((current) => ({ ...current, [account.id]: result }))
       setPaymentProviderAccounts((current) => current.map((item) => item.id === account.id ? result.account : item))
       setNotice(`${account.name}: ${result.isReady ? 'настройки готовы' : 'в настройках найдены проблемы'}.`)
-    })
+    }, paymentProviderActionResourceKey(account.id))
   }
 
   const handleRecheckPayment = async (paymentId: string) => runAction('payments', paymentId, async (action) => {
@@ -2428,14 +2446,17 @@ export function App() {
     if (!action.isCurrent()) return
     setNotice(`Платеж ${shortId(payment.paymentId)} проверен: ${payment.status}`)
     await action.reloadAll()
-  })
+  }, paymentActionResourceKeys(paymentId, payments.find((payment) => payment.id === paymentId)?.orderId))
 
   const handleRecheckOrderPayment = async (order: OrderDto) => runAction('payments', `order-recheck-${order.id}`, async (action) => {
     const payment = await api.recheckAdminOrderPayment(token, order.id)
     if (!action.isCurrent()) return
     setNotice(`Заказ ${shortId(order.id)}: последний платеж ${shortId(payment.paymentId)} проверен, статус ${payment.status}.`)
     await action.reloadAll()
-  })
+  }, [
+    orderActionResourceKey(order.id),
+    ...(order.lastPaymentId ? [paymentActionResourceKey(order.lastPaymentId)] : [])
+  ])
 
   const openOrderUser = (order: OrderDto) => {
     selectAdminUser(order.userId)
@@ -2473,7 +2494,7 @@ export function App() {
       })
       setRefundReasons((current) => ({ ...current, [payment.id]: '' }))
       await action.reloadAll()
-    })
+    }, paymentActionResourceKeys(payment.id, payment.orderId))
   }
 
   const resetTariffForm = () => {
@@ -3565,6 +3586,8 @@ export function App() {
     ? paymentProviderAccounts.find((account) => account.id === editingProviderAccountId)
     : undefined
   const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
+  const providerFormActionBusy = actionBusyId === 'provider-save'
+    || Boolean(editingProviderAccountId && isActionResourceBusy(paymentProviderActionResourceKey(editingProviderAccountId)))
   const tariffFormErrors = validateTariffForm(tariffForm)
   const serverFormErrors = validateServerForm(serverForm)
   const serverFormActionBusy = actionBusyId === 'server-save'
@@ -4135,7 +4158,7 @@ export function App() {
         <Card>
           <h3>{editingProviderAccountId ? 'Редактирование способа оплаты' : 'Способы оплаты'}</h3>
           <p className="muted">Добавьте платежный аккаунт, включите его и проверьте готовность к оплатам. Секреты сохраняются скрыто.</p>
-          <form hidden={!canWriteSection('payments')} aria-busy={actionBusyId === 'provider-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveProviderAccount() }}>
+          <form hidden={!canWriteSection('payments')} aria-busy={providerFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveProviderAccount() }}>
             <fieldset className="form-section">
               <legend>Основные параметры</legend>
               <div className="provider-setup-note">
@@ -4193,7 +4216,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={providerFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={actionBusyId === 'provider-save' || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'provider-save'}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={providerFormActionBusy || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={providerFormActionBusy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
               {editingProviderAccountId && <PrimaryButton type="button" className="button-ghost" onClick={resetProviderForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -4237,9 +4260,9 @@ export function App() {
                 </div>
                 <div className="muted">{providerIssue(account)}</div>
                 <div className="toolbar" hidden={!canWriteSection('payments')}>
-                  <PrimaryButton className="button-secondary" onClick={() => editProviderAccount(account)}>Редактировать</PrimaryButton>
-                  <PrimaryButton className="button-secondary" disabled={actionBusyId === `provider-check-${account.id}`} onClick={() => void handleCheckProviderAccount(account)}>Проверить настройки</PrimaryButton>
-                  {account.isEnabled ? <ConfirmButton className="button-danger" disabled={actionBusyId === account.id} message={`Отключить способ оплаты "${account.publicName}"? Пользователи больше не увидят его при оплате.`} onConfirm={() => handleSetProviderEnabled(account, false)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === account.id} onClick={() => void handleSetProviderEnabled(account, true)}>Включить</PrimaryButton>}
+                  <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(paymentProviderActionResourceKey(account.id))} onClick={() => editProviderAccount(account)}>Редактировать</PrimaryButton>
+                  <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(paymentProviderActionResourceKey(account.id))} onClick={() => void handleCheckProviderAccount(account)}>Проверить настройки</PrimaryButton>
+                  {account.isEnabled ? <ConfirmButton className="button-danger" disabled={isActionResourceBusy(paymentProviderActionResourceKey(account.id))} message={`Отключить способ оплаты "${account.publicName}"? Пользователи больше не увидят его при оплате.`} onConfirm={() => handleSetProviderEnabled(account, false)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(paymentProviderActionResourceKey(account.id))} onClick={() => void handleSetProviderEnabled(account, true)}>Включить</PrimaryButton>}
                 </div>
               </div>
             ))}
@@ -4286,7 +4309,7 @@ export function App() {
                   <PrimaryButton className="button-secondary" onClick={() => openOrderUser(order)}>К пользователю</PrimaryButton>
                   <PrimaryButton className="button-secondary" disabled={!order.lastPaymentId} title={order.lastPaymentId ? undefined : 'У заказа нет платежной попытки'} onClick={() => openOrderPayment(order)}>К платежу</PrimaryButton>
                   <PrimaryButton className="button-secondary" disabled={!order.linkedSubscriptionId} title={order.linkedSubscriptionId ? undefined : 'У заказа нет связанной подписки'} onClick={() => openOrderSubscription(order)}>К подписке</PrimaryButton>
-                  <PrimaryButton hidden={!canWriteSection('payments')} disabled={!order.lastPaymentId || actionBusyId === `order-recheck-${order.id}`} title={order.lastPaymentId ? undefined : 'Сначала нужна платежная попытка'} onClick={() => void handleRecheckOrderPayment(order)}>Проверить оплату</PrimaryButton>
+                  <PrimaryButton hidden={!canWriteSection('payments')} disabled={!order.lastPaymentId || isActionResourceBusy(orderActionResourceKey(order.id), ...(order.lastPaymentId ? [paymentActionResourceKey(order.lastPaymentId)] : []))} title={order.lastPaymentId ? undefined : 'Сначала нужна платежная попытка'} onClick={() => void handleRecheckOrderPayment(order)}>Проверить оплату</PrimaryButton>
                 </div>
               </div>
             ))}
@@ -4302,6 +4325,7 @@ export function App() {
               const refundBlocker = refundBlockerText(payment)
               const refundAmount = refundAmounts[payment.id] ?? refundableAmount
               const refundReason = refundReasons[payment.id] ?? 'manual_admin_refund'
+              const paymentActionBusy = isActionResourceBusy(...paymentActionResourceKeys(payment.id, payment.orderId))
               return (
                 <div id={`payment-${payment.id}`} key={payment.id} className="list-item-vertical">
                   <div className="item-head">
@@ -4317,16 +4341,16 @@ export function App() {
                     </div>
                   </div>
                   <div className="toolbar" hidden={!canWriteSection('payments')}>
-                    <PrimaryButton disabled={actionBusyId === payment.id} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton>
+                    <PrimaryButton disabled={paymentActionBusy} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton>
                     <label className="inline-number-field">
                       <span>Сумма</span>
-                      <input value={refundAmount} onChange={(e) => setRefundAmounts((current) => ({ ...current, [payment.id]: Number(e.target.value) || 0 }))} type="number" min={0} max={refundableAmount} step="0.01" inputMode="decimal" disabled={!refundAllowed} />
+                      <input value={refundAmount} onChange={(e) => setRefundAmounts((current) => ({ ...current, [payment.id]: Number(e.target.value) || 0 }))} type="number" min={0} max={refundableAmount} step="0.01" inputMode="decimal" disabled={!refundAllowed || paymentActionBusy} />
                     </label>
                     <label className="compact-field">
                       <span>Причина</span>
-                      <input value={refundReason} onChange={(e) => setRefundReasons((current) => ({ ...current, [payment.id]: e.target.value }))} placeholder="manual_admin_refund" disabled={!refundAllowed} />
+                      <input value={refundReason} onChange={(e) => setRefundReasons((current) => ({ ...current, [payment.id]: e.target.value }))} placeholder="manual_admin_refund" disabled={!refundAllowed || paymentActionBusy} />
                     </label>
-                    <ConfirmButton disabled={actionBusyId === payment.id || !refundAllowed || refundAmount <= 0 || refundAmount > refundableAmount} className="button-secondary" message={`Вернуть ${refundAmount} ${payment.currency} по платежу ${shortId(payment.id)}? Действие будет записано в аудит.`} onConfirm={() => handleRefundPayment(payment)}>Вернуть платеж</ConfirmButton>
+                    <ConfirmButton disabled={paymentActionBusy || !refundAllowed || refundAmount <= 0 || refundAmount > refundableAmount} className="button-secondary" message={`Вернуть ${refundAmount} ${payment.currency} по платежу ${shortId(payment.id)}? Действие будет записано в аудит.`} onConfirm={() => handleRefundPayment(payment)}>Вернуть платеж</ConfirmButton>
                   </div>
                 </div>
               )

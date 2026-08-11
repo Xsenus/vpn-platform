@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin finance resource owner
+
+Scope:
+- Edit/toggle/check commands for one payment-provider account must not overlap through different action IDs.
+- Order-level and direct payment recheck/refund commands for one payment attempt must share one ownership boundary without blocking independent orders.
+
+Results:
+- Roadmap progress: `635/655` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-finance-resource-owner`, version `0.622.0`.
+- Reproduction before fix: while provider enabled mutation was delayed, provider check reached the API; while order recheck was delayed, direct payment recheck also reached the API. Fail-first desktop/mobile: `0/2`; sibling counts were `1/1` instead of `0/0`.
+- After fix: provider account commands claim `payment-provider:<id>`; order recheck claims `order:<id>` plus the latest `payment:<id>`, and direct recheck/refund claim the same payment/order pair. Targeted desktop/mobile: `2/2`, including programmatic clicks after removing `disabled`.
+- Related finance/provider/refund/role regression: `12/12` in `54.9 s`; full admin desktop/mobile: `90/90` in `8.4 min`; final console-responsive Playwright: `180/180` in `10.9 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: shared busy-state covers provider edit/check/toggle, order/direct payment commands and refund controls without layout shift, horizontal overflow, clipped controls or stuck confirmation dialogs.
+- Frontend tests: `126/126`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.59/106.77 kB`; admin bundle raw `530248`, gzip `141999`, largest `230576`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `621` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin VPN infrastructure resource owner
 
 Scope:

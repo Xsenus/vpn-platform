@@ -1647,6 +1647,19 @@ test('ApiClient admin payments expose refund readiness and send refund payload',
   assert.equal(refund.status, 'Succeeded')
 })
 
+test('admin source serializes finance commands by provider, order and payment resources', () => {
+  const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
+
+  assert.match(adminSource, /paymentProviderActionResourceKey\(editingId\)/)
+  assert.match(adminSource, /paymentProviderActionResourceKey\(account\.id\)/)
+  assert.match(adminSource, /paymentActionResourceKeys\(paymentId, payments\.find/)
+  assert.match(adminSource, /orderActionResourceKey\(order\.id\)/)
+  assert.match(adminSource, /paymentActionResourceKey\(order\.lastPaymentId\)/)
+  assert.match(adminSource, /paymentActionResourceKeys\(payment\.id, payment\.orderId\)/)
+  assert.match(adminSource, /const paymentActionBusy = isActionResourceBusy/)
+  assert.match(adminSource, /aria-busy=\{providerFormActionBusy\}/)
+})
+
 test('ApiClient admin subscription and VPN access actions are confirmation-friendly POST calls', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {

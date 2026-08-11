@@ -468,6 +468,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedTariffCreate: (() => void) | null = null
   let delayNextProviderEnabledResponse = false
   let releaseDelayedProviderEnabled: (() => void) | null = null
+  let delayNextOrderRecheckResponse = false
+  let releaseDelayedOrderRecheck: (() => void) | null = null
   let failNextAccessQrStatus: number | null = null
   let delayNextSubscriptionExtendResponse = false
   let releaseDelayedSubscriptionExtend: (() => void) | null = null
@@ -974,6 +976,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && (path === '/api/admin/payments/payment-e2e/recheck' || path === '/api/admin/orders/order-e2e/recheck-payment')) {
+      if (path === '/api/admin/orders/order-e2e/recheck-payment' && delayNextOrderRecheckResponse) {
+        delayNextOrderRecheckResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedOrderRecheck = resolve })
+        releaseDelayedOrderRecheck = null
+      }
       payments[0] = { ...payments[0], status: 'Succeeded', signatureValidated: true, canRefund: true, refundableAmount: 590 - Number(payments[0].refundedAmount ?? 0), refundBlockers: [], statusReason: null, updatedAt: now }
       orders[0] = { ...orders[0], status: 'PaymentReceived', lastPaymentStatus: 'Succeeded', updatedAt: now }
       await fulfillJson(route, { orderId: 'order-e2e', paymentId: 'payment-e2e', status: 'Succeeded', rawResponse: '{}', statusReason: null })
@@ -1937,6 +1944,8 @@ async function mockAdminApi(page: Page) {
     releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
     delayNextProviderEnabled: () => { delayNextProviderEnabledResponse = true },
     releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
+    delayNextOrderRecheck: () => { delayNextOrderRecheckResponse = true },
+    releaseOrderRecheck: () => { releaseDelayedOrderRecheck?.() },
     failNextAccessQrRequest: (status = 503) => { failNextAccessQrStatus = status },
     delayNextSubscriptionExtend: () => { delayNextSubscriptionExtendResponse = true },
     releaseSubscriptionExtend: () => { releaseDelayedSubscriptionExtend?.() },
@@ -3051,6 +3060,69 @@ test('admin serializes VPN infrastructure commands across parent resources', asy
   await serverRow.getByRole('button', { name: 'Health-check' }).click()
   await expect(page.getByText('Health-check EU Sandbox: Healthy')).toBeVisible()
   expect(api.getRequestCount('/api/admin/servers/server-eu/health-check', 'POST')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin serializes finance commands across provider and payment resources', async ({ page }) => {
+  test.setTimeout(120_000)
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-finance-resource-owner-token', 'admin-finance-resource-owner-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  let providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa sandbox' }).first()
+  api.delayNextProviderEnabled()
+  await providerRow.getByRole('button', { name: 'Выключить' }).click()
+  await paymentsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/payment-providers/accounts/provider-yookassa/enabled', 'POST')).toBe(1)
+
+  const providerCheckButton = providerRow.getByRole('button', { name: 'Проверить настройки' })
+  await expect(providerRow.getByRole('button', { name: 'Редактировать' })).toBeDisabled()
+  await expect(providerCheckButton).toBeDisabled()
+  await providerCheckButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  const providerCheckCountDuringEnable = api.getRequestCount('/api/admin/payment-providers/accounts/provider-yookassa/check', 'POST')
+
+  api.releaseProviderEnabled()
+  await expect(page.getByText('yookassa-sandbox: выключен')).toBeVisible()
+
+  let orderRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: '590 RUB · Admin Pro 30' }).first()
+  api.delayNextOrderRecheck()
+  await orderRow.getByRole('button', { name: 'Проверить оплату' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/orders/order-e2e/recheck-payment', 'POST')).toBe(1)
+
+  let paymentRow = page.locator('#payment-payment-e2e')
+  const paymentCheckButton = paymentRow.getByRole('button', { name: 'Проверить статус' })
+  await expect(orderRow.getByRole('button', { name: 'Проверить оплату' })).toBeDisabled()
+  await expect(paymentCheckButton).toBeDisabled()
+  await expect(paymentRow.getByRole('button', { name: 'Вернуть платеж' })).toBeDisabled()
+  await expect(paymentRow.getByRole('spinbutton', { name: 'Сумма' })).toBeDisabled()
+  await expect(paymentRow.getByRole('textbox', { name: 'Причина' })).toBeDisabled()
+  await paymentCheckButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  const directRecheckCountDuringOrderRecheck = api.getRequestCount('/api/admin/payments/payment-e2e/recheck', 'POST')
+
+  api.releaseOrderRecheck()
+  await expect(page.getByText('Заказ order-e2: последний платеж payment- проверен, статус Succeeded.')).toBeVisible()
+  providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa sandbox' }).first()
+  orderRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: '590 RUB · Admin Pro 30' }).first()
+  paymentRow = page.locator('#payment-payment-e2e')
+  await expect(providerRow.getByRole('button', { name: 'Проверить настройки' })).toBeEnabled()
+  await expect(orderRow.getByRole('button', { name: 'Проверить оплату' })).toBeEnabled()
+  await expect(paymentRow.getByRole('button', { name: 'Проверить статус' })).toBeEnabled()
+  expect({ providerCheckCountDuringEnable, directRecheckCountDuringOrderRecheck }).toEqual({
+    providerCheckCountDuringEnable: 0,
+    directRecheckCountDuringOrderRecheck: 0
+  })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

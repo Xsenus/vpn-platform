@@ -19,14 +19,14 @@ public class ProductAdminUiRoadmapSyncTests
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
                      "Backend full suite: `1125/1125`",
-                     "Frontend unit tests: `125/125`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `178/178`",
+                     "Frontend unit tests: `126/126`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `180/180`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-11-admin-vpn-infrastructure-resource-owner",
-                     "0.621.0"
+                     "2026-08-11-admin-finance-resource-owner",
+                     "0.622.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-11-admin-vpn-infrastructure-resource-owner", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-11-admin-vpn-infrastructure-resource-owner", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-11-admin-finance-resource-owner", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-11-admin-finance-resource-owner", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,11 +72,11 @@ public class ProductAdminUiRoadmapSyncTests
         foreach (var expected in new[]
                  {
                      "Backend full suite: `1125/1125`",
-                     "Frontend unit tests: `125/125`",
+                     "Frontend unit tests: `126/126`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-11-admin-vpn-infrastructure-resource-owner",
-                     "0.621.0",
+                     "2026-08-11-admin-finance-resource-owner",
+                     "0.622.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
