@@ -1377,6 +1377,37 @@ test('cabinet keeps manual refresh single-flight', async ({ page }) => {
   expect(api.getRequestCount('/api/auth/refresh', 'POST')).toBe(1)
 })
 
+test('cabinet keeps manual data reload single-flight across synchronous activation', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  await seedCabinetSession(page, 'access-token-data-reload', 'refresh-token-data-reload')
+  const loadPaths = [
+    '/api/me',
+    '/api/me/subscriptions',
+    '/api/me/orders',
+    '/api/me/payments',
+    '/api/me/accesses',
+    '/api/me/referrals',
+    '/api/me/support/conversations',
+    '/api/me/telegram/status'
+  ]
+
+  await page.goto('/')
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  expect(loadPaths.map((path) => api.getRequestCount(path))).toEqual(Array(8).fill(1))
+
+  const reloadButton = page.getByRole('button', { name: 'Обновить данные' })
+  await reloadButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+
+  await expect.poll(() => loadPaths.map((path) => api.getRequestCount(path))).toEqual(Array(8).fill(2))
+  await expect(page.getByText('Обновляем...')).toHaveCount(0)
+  await page.waitForTimeout(300)
+  expect(loadPaths.map((path) => api.getRequestCount(path))).toEqual(Array(8).fill(2))
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('cabinet invalidates stale QR after logout or a failed reload', async ({ page }) => {
   const api = await mockCabinetApi(page)
   api.delayNextQrRequest()

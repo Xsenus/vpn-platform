@@ -94,6 +94,12 @@ type CabinetLoadError = {
   message: string
 }
 
+type CabinetLoadRequest = {
+  operationId: number
+  token: string
+  promise: Promise<boolean>
+}
+
 const cabinetLoadAreaLabels: Record<CabinetLoadArea, string> = {
   profile: 'профиль',
   subscriptions: 'подписки',
@@ -151,6 +157,7 @@ export function App() {
   const restoredSessionHydrationStarted = useRef(false)
   const sessionOperationId = useRef(0)
   const loadAllRequestId = useRef(0)
+  const loadAllInFlight = useRef<CabinetLoadRequest | null>(null)
   const sessionActionInFlight = useRef<CabinetActionRequest | null>(null)
   const authActionInFlight = useRef<CabinetActionRequest | null>(null)
   const logoutInFlight = useRef(false)
@@ -251,6 +258,7 @@ export function App() {
   const clearSession = () => {
     sessionOperationId.current += 1
     loadAllRequestId.current += 1
+    loadAllInFlight.current = null
     sessionActionInFlight.current = null
     authActionInFlight.current = null
     logoutInFlight.current = false
@@ -319,75 +327,85 @@ export function App() {
     return await loadAll(response.accessToken, { operationId })
   }
 
-  const loadAll = async (currentToken: string, options?: { operationId?: number, throwOnProfileError?: boolean }) => {
-    if (!currentToken) return false
+  const loadAll = (currentToken: string, options?: { operationId?: number, throwOnProfileError?: boolean }): Promise<boolean> => {
+    if (!currentToken) return Promise.resolve(false)
 
     const operationId = options?.operationId ?? renderSessionOperationId
-    if (sessionOperationId.current !== operationId) return false
+    if (sessionOperationId.current !== operationId) return Promise.resolve(false)
+    const activeRequest = loadAllInFlight.current
+    if (activeRequest?.operationId === operationId && activeRequest.token === currentToken) return activeRequest.promise
+
     const requestId = ++loadAllRequestId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
       && loadAllRequestId.current === requestId
+    const request: CabinetLoadRequest = { operationId, token: currentToken, promise: Promise.resolve(false) }
+    const promise = (async () => {
+      if (operationIsCurrent()) {
+        setBusy(true)
+        setError('')
+      }
 
-    if (operationIsCurrent()) {
-      setBusy(true)
-      setError('')
-    }
-
-    try {
-      const nextLoadErrors: CabinetLoadError[] = []
-      const loadArea = async <T,>(area: CabinetLoadArea, loader: () => Promise<T>, fallback: T): Promise<T> => {
-        try {
-          return await loader()
-        } catch (e) {
-          if (isCabinetSessionRejected(e) || (area === 'profile' && options?.throwOnProfileError)) throw e
-          nextLoadErrors.push({ area, message: normalizeApiError(e, `Не удалось загрузить ${cabinetLoadAreaLabels[area]}`) })
-          return fallback
+      try {
+        const nextLoadErrors: CabinetLoadError[] = []
+        const loadArea = async <T,>(area: CabinetLoadArea, loader: () => Promise<T>, fallback: T): Promise<T> => {
+          try {
+            return await loader()
+          } catch (e) {
+            if (isCabinetSessionRejected(e) || (area === 'profile' && options?.throwOnProfileError)) throw e
+            nextLoadErrors.push({ area, message: normalizeApiError(e, `Не удалось загрузить ${cabinetLoadAreaLabels[area]}`) })
+            return fallback
+          }
         }
-      }
 
-      const [nextProfile, nextSubscriptions, nextOrders, nextPayments, nextAccesses, nextReferrals, nextSupportConversations, nextTelegramStatus] = await Promise.all([
-        loadArea('profile', () => api.getMe(currentToken), profile),
-        loadArea('subscriptions', () => api.getMySubscriptions(currentToken), []),
-        loadArea('orders', () => api.getMyOrders(currentToken), []),
-        loadArea('payments', () => api.getMyPayments(currentToken), []),
-        loadArea('accesses', () => api.getMyAccesses(currentToken), []),
-        loadArea('referrals', () => api.getMyReferrals(currentToken), []),
-        loadArea('support', () => api.getMySupportConversations(currentToken), []),
-        loadArea('telegram', () => api.getTelegramStatus(currentToken), null)
-      ])
+        const [nextProfile, nextSubscriptions, nextOrders, nextPayments, nextAccesses, nextReferrals, nextSupportConversations, nextTelegramStatus] = await Promise.all([
+          loadArea('profile', () => api.getMe(currentToken), profile),
+          loadArea('subscriptions', () => api.getMySubscriptions(currentToken), []),
+          loadArea('orders', () => api.getMyOrders(currentToken), []),
+          loadArea('payments', () => api.getMyPayments(currentToken), []),
+          loadArea('accesses', () => api.getMyAccesses(currentToken), []),
+          loadArea('referrals', () => api.getMyReferrals(currentToken), []),
+          loadArea('support', () => api.getMySupportConversations(currentToken), []),
+          loadArea('telegram', () => api.getTelegramStatus(currentToken), null)
+        ])
 
-      if (!operationIsCurrent()) return false
+        if (!operationIsCurrent()) return false
 
-      setLoadErrors(nextLoadErrors)
-      setProfile(nextProfile)
-      setSubscriptions(nextSubscriptions)
-      setOrders(nextOrders)
-      setPayments(nextPayments)
-      setAccesses(nextAccesses)
-      setReferrals(nextReferrals)
-      setSupportConversations(nextSupportConversations)
-      const nextSelectedConversationId = nextSupportConversations.some((item) => item.id === selectedSupportConversationIdRef.current)
-        ? selectedSupportConversationIdRef.current
-        : nextSupportConversations[0]?.id ?? ''
-      if (nextSelectedConversationId !== selectedSupportConversationIdRef.current) {
-        selectSupportConversation(nextSelectedConversationId)
-      }
-      setTelegramStatus(nextTelegramStatus)
-      if (nextLoadErrors.some((item) => item.area === 'orders')) setSupportOrderId('')
-      if (nextLoadErrors.some((item) => item.area === 'subscriptions')) setSupportSubscriptionId('')
-      if (!nextProfile) {
-        setError(nextLoadErrors.find((item) => item.area === 'profile')?.message ?? 'Не удалось загрузить профиль')
+        setLoadErrors(nextLoadErrors)
+        setProfile(nextProfile)
+        setSubscriptions(nextSubscriptions)
+        setOrders(nextOrders)
+        setPayments(nextPayments)
+        setAccesses(nextAccesses)
+        setReferrals(nextReferrals)
+        setSupportConversations(nextSupportConversations)
+        const nextSelectedConversationId = nextSupportConversations.some((item) => item.id === selectedSupportConversationIdRef.current)
+          ? selectedSupportConversationIdRef.current
+          : nextSupportConversations[0]?.id ?? ''
+        if (nextSelectedConversationId !== selectedSupportConversationIdRef.current) {
+          selectSupportConversation(nextSelectedConversationId)
+        }
+        setTelegramStatus(nextTelegramStatus)
+        if (nextLoadErrors.some((item) => item.area === 'orders')) setSupportOrderId('')
+        if (nextLoadErrors.some((item) => item.area === 'subscriptions')) setSupportSubscriptionId('')
+        if (!nextProfile) {
+          setError(nextLoadErrors.find((item) => item.area === 'profile')?.message ?? 'Не удалось загрузить профиль')
+          return false
+        }
+        return true
+      } catch (e) {
+        if (!operationIsCurrent()) return false
+        if (options?.throwOnProfileError) throw e
+        handleAuthenticatedError(e, 'Не удалось загрузить кабинет')
         return false
+      } finally {
+        if (operationIsCurrent()) setBusy(false)
+        if (loadAllInFlight.current === request) loadAllInFlight.current = null
       }
-      return true
-    } catch (e) {
-      if (!operationIsCurrent()) return false
-      if (options?.throwOnProfileError) throw e
-      handleAuthenticatedError(e, 'Не удалось загрузить кабинет')
-      return false
-    } finally {
-      if (operationIsCurrent()) setBusy(false)
-    }
+    })()
+
+    request.promise = promise
+    loadAllInFlight.current = request
+    return promise
   }
 
   const runSessionAction = async (
