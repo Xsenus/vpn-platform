@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Me;
 
@@ -15,11 +16,13 @@ public class CabinetAccessController : ControllerBase
 {
     private readonly IApplicationDbContext _db;
     private readonly IQrCodeGenerator _qrCodeGenerator;
+    private readonly IClock _clock;
 
-    public CabinetAccessController(IApplicationDbContext db, IQrCodeGenerator qrCodeGenerator)
+    public CabinetAccessController(IApplicationDbContext db, IQrCodeGenerator qrCodeGenerator, IClock? clock = null)
     {
         _db = db;
         _qrCodeGenerator = qrCodeGenerator;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet("{id:guid}/qr")]
@@ -54,6 +57,12 @@ public class CabinetAccessController : ControllerBase
         if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
         {
             return BadRequest(new { error = "Cancelled subscription VPN access QR code is not available." });
+        }
+
+        if (access.Subscription is null
+            || !BusinessRules.IsSubscriptionAccessAvailable(access.Subscription.Status, access.Subscription.EndAt, access.Subscription.GracePeriodEndAt, _clock.UtcNow))
+        {
+            return BadRequest(new { error = "Expired or inactive subscription VPN access QR code is not available." });
         }
 
         if (string.IsNullOrWhiteSpace(access.AccessUri))

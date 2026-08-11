@@ -66,7 +66,7 @@ const subscription = {
   tariffName: 'Pro 30 дней',
   status: 'Active',
   startAt: '2026-06-01T00:00:00Z',
-  endAt: '2026-07-01T00:00:00Z',
+  endAt: '2099-07-01T00:00:00Z',
   gracePeriodEndAt: null,
   autoRenewFlag: false,
   sourceChannel: 'Web',
@@ -408,6 +408,7 @@ async function mockCabinetApi(page: Page) {
   let failNextQrStatus: number | null = null
   let unsafeQrSvg = false
   let invalidSubscriptionsResponse = false
+  let expiringSubscriptionAccess = false
   let failNextRenewalPayment = false
   let paymentProvidersFailureStatus: number | null = null
   let multiplePaymentProviders = false
@@ -559,7 +560,15 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/subscriptions') {
-      await fulfillJson(route, invalidSubscriptionsResponse ? [{}] : [subscription, blockedSubscription, cancelledSubscription, cancelledStaleSubscription])
+      const currentSubscription = expiringSubscriptionAccess
+        ? {
+            ...subscription,
+            status: 'GracePeriod',
+            endAt: '2026-06-10T07:00:00Z',
+            gracePeriodEndAt: '2026-06-13T07:00:30Z'
+          }
+        : subscription
+      await fulfillJson(route, invalidSubscriptionsResponse ? [{}] : [currentSubscription, blockedSubscription, cancelledSubscription, cancelledStaleSubscription])
       return
     }
 
@@ -578,7 +587,14 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/accesses') {
-      await fulfillJson(route, [access, pendingAccess, revokedAccess, cancelledStaleAccess])
+      const currentAccess = expiringSubscriptionAccess
+        ? {
+            ...access,
+            subscriptionStatus: 'GracePeriod',
+            expiryDate: '2026-06-13T07:00:30Z'
+          }
+        : access
+      await fulfillJson(route, [currentAccess, pendingAccess, revokedAccess, cancelledStaleAccess])
       return
     }
 
@@ -904,6 +920,7 @@ async function mockCabinetApi(page: Page) {
     returnUnsafeQrSvg: () => { unsafeQrSvg = true },
     failNextQrRequest: (status = 503) => { failNextQrStatus = status },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
+    expireSubscriptionAccessSoon: () => { expiringSubscriptionAccess = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
     expireRenewalOrder: () => {
       renewalOrder = {
@@ -1068,6 +1085,32 @@ test('cabinet partial load errors stay scoped and recover without false private 
   expect(api.getRequestCount('/api/me/subscriptions')).toBe(2)
   expect(api.getRequestCount('/api/me/orders')).toBe(2)
   expect(api.getRequestCount('/api/me/telegram/status')).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet hides subscription secrets when the grace period expires without a refresh', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-13T07:00:00Z') })
+  await seedCabinetSession(page, 'access-token-expiring-access', 'refresh-token-expiring-access')
+  const api = await mockCabinetApi(page)
+  api.expireSubscriptionAccessSoon()
+
+  await page.goto('/')
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+  await expect(page.getByText(subscription.accessUri, { exact: true }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Показать QR-код' }).first().click()
+  await expect(page.locator('.qr-preview').first()).toBeVisible()
+
+  await page.clock.fastForward(30_100)
+
+  await expect(page.getByText(subscription.accessUri, { exact: true })).toHaveCount(0)
+  await expect(page.locator('.qr-preview')).toHaveCount(0)
+  await expect(page.getByText('Срок VPN-доступа истёк. Ключ и QR-код больше недоступны.', { exact: true })).toHaveCount(3)
+  const subscriptionCard = page.locator('.card-list .card').filter({ has: page.getByRole('heading', { name: subscription.tariffName }) })
+  const accessCard = page.locator('.card-list .card').filter({ has: page.getByRole('heading', { name: access.serverName }) })
+  await expect(subscriptionCard.getByRole('button', { name: 'Показать QR-код' })).toHaveCount(0)
+  await expect(subscriptionCard.getByRole('button', { name: /Скопировать ссылку/ })).toHaveCount(0)
+  await expect(accessCard.getByRole('button')).toHaveCount(0)
+  await expect(page.getByText('Подписки пока нет', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

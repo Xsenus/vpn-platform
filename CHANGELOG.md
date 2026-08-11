@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.635.0 - 2026-08-12
+
+Release entry: `2026-08-12-cabinet-access-grace-expiry`.
+
+### Исправлено
+
+- Кабинет скрывает VPN URI, provider ID, config и QR точно в момент окончания `gracePeriodEndAt ?? endAt`, не ожидая фонового lifecycle worker.
+- Обе пользовательские QR-точки и API-проекции используют единое effective-access правило и закрываются fail-closed для истёкшего доступа.
+- Открытая вкладка планирует ближайший срок подписки/доступа, очищает QR-кэш и обновляет все повторяющиеся access surfaces без reload.
+
+### Проверено
+
+- До исправления frontend fail-first был `9/10`, backend SQLite exact-boundary `0/2`, desktop/mobile browser `0/2`; после исправления targeted наборы прошли `10/10`, `16/16`, `24/24` и `2/2`.
+- Полный cabinet desktop/mobile regression прошел `62/62`; финальный console-responsive Playwright — `214/214` за `11.8 min` без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `134/134`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `357.69/104.34 kB`, cabinet bundle `372.71/107.60 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1127/1127`, build `0` warnings/errors, EF drift отсутствует и fresh SQLite flow с latest release зеленый; encoding/documentation/release guards `57/57`, release seed `634`, secret scan `668` files/`0` findings.
+- Roadmap: `648/668` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.634.0 - 2026-08-12
 
 Release entry: `2026-08-12-public-pending-checkout-live-expiry`.

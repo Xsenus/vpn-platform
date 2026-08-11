@@ -1,7 +1,23 @@
 import { AccessCredentialDto, SubscriptionDto } from '@vpn-platform/api-client'
 
-export function isCurrentSubscription(subscription: SubscriptionDto) {
-  return subscription.status === 'Active' || subscription.status === 'GracePeriod'
+export function getSubscriptionAccessExpiry(subscription: Pick<SubscriptionDto, 'endAt' | 'gracePeriodEndAt'>) {
+  return subscription.gracePeriodEndAt ?? subscription.endAt
+}
+
+export function getEffectiveSubscriptionStatus(subscription: SubscriptionDto, now = new Date()) {
+  if (subscription.status !== 'Active' && subscription.status !== 'GracePeriod') return subscription.status
+
+  const endAt = Date.parse(subscription.endAt)
+  const accessExpiry = Date.parse(getSubscriptionAccessExpiry(subscription))
+  const nowTime = now.getTime()
+  if (Number.isFinite(accessExpiry) && Number.isFinite(nowTime) && accessExpiry <= nowTime) return 'Expired'
+  if (subscription.status === 'Active' && Number.isFinite(endAt) && Number.isFinite(nowTime) && endAt <= nowTime) return 'GracePeriod'
+  return subscription.status
+}
+
+export function isCurrentSubscription(subscription: SubscriptionDto, now = new Date()) {
+  const status = getEffectiveSubscriptionStatus(subscription, now)
+  return status === 'Active' || status === 'GracePeriod'
 }
 
 export function formatReferralRewardType(type: string) {
@@ -32,8 +48,9 @@ export function getSubscriptionRenewalAvailability(subscription: SubscriptionDto
 }
 
 export function getCabinetAccessTerminalReason(
-  access: Pick<AccessCredentialDto, 'status' | 'subscriptionStatus' | 'isTerminal'> | null | undefined,
-  subscriptionStatus?: string | null
+  access: Pick<AccessCredentialDto, 'status' | 'subscriptionStatus' | 'isTerminal' | 'expiryDate'> | null | undefined,
+  subscriptionStatus?: string | null,
+  now = new Date()
 ) {
   if (access?.status === 'Revoked') {
     return 'Доступ отозван. Ключ и QR-код больше недоступны.'
@@ -43,6 +60,13 @@ export function getCabinetAccessTerminalReason(
     return 'Родительская подписка отменена. Ключ и QR-код больше недоступны.'
   }
 
+  const expiresAt = access?.expiryDate ? Date.parse(access.expiryDate) : Number.NaN
+  if (subscriptionStatus === 'Expired'
+    || access?.subscriptionStatus === 'Expired'
+    || (Number.isFinite(expiresAt) && expiresAt <= now.getTime())) {
+    return 'Срок VPN-доступа истёк. Ключ и QR-код больше недоступны.'
+  }
+
   if (access?.isTerminal) {
     return 'VPN-доступ завершён. Ключ и QR-код больше недоступны.'
   }
@@ -50,7 +74,10 @@ export function getCabinetAccessTerminalReason(
   return null
 }
 
-export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'accessUri' | 'status' | 'subscriptionStatus' | 'isTerminal'> | null | undefined) {
+export function getAccessQrAvailability(
+  access: Pick<AccessCredentialDto, 'accessUri' | 'status' | 'subscriptionStatus' | 'isTerminal' | 'expiryDate'> | null | undefined,
+  now = new Date()
+) {
   if (access?.status === 'Revoked') {
     return {
       canGenerate: false,
@@ -58,7 +85,7 @@ export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'acces
     }
   }
 
-  const terminalReason = getCabinetAccessTerminalReason(access)
+  const terminalReason = getCabinetAccessTerminalReason(access, undefined, now)
   if (terminalReason) return { canGenerate: false, reason: terminalReason }
 
   const canGenerate = Boolean(access?.accessUri?.trim())
@@ -68,26 +95,27 @@ export function getAccessQrAvailability(access: Pick<AccessCredentialDto, 'acces
   }
 }
 
-export function selectCurrentSubscription(subscriptions: SubscriptionDto[]) {
-  const sorted = subscriptions.filter(isCurrentSubscription).sort((left, right) => {
-    const leftEndAt = new Date(left.endAt).getTime()
-    const rightEndAt = new Date(right.endAt).getTime()
+export function selectCurrentSubscription(subscriptions: SubscriptionDto[], now = new Date()) {
+  const sorted = subscriptions.filter((subscription) => isCurrentSubscription(subscription, now)).sort((left, right) => {
+    const leftEndAt = Date.parse(getSubscriptionAccessExpiry(left))
+    const rightEndAt = Date.parse(getSubscriptionAccessExpiry(right))
     return rightEndAt - leftEndAt
   })
 
   return sorted[0] ?? null
 }
 
-export function findAccessForSubscription(subscription: SubscriptionDto | null, accesses: AccessCredentialDto[]) {
+export function findAccessForSubscription(subscription: SubscriptionDto | null, accesses: AccessCredentialDto[], now = new Date()) {
   if (!subscription) return null
 
   if (subscription.currentAccessId) {
     const linked = accesses.find((access) => access.id === subscription.currentAccessId)
-    if (linked) return getCabinetAccessTerminalReason(linked, subscription.status) ? null : linked
+    if (linked) return getCabinetAccessTerminalReason(linked, getEffectiveSubscriptionStatus(subscription, now), now) ? null : linked
   }
 
-  return accesses.find((access) => access.subscriptionId === subscription.id && access.status === 'Active' && !getCabinetAccessTerminalReason(access, subscription.status))
-    ?? accesses.find((access) => access.subscriptionId === subscription.id && !getCabinetAccessTerminalReason(access, subscription.status))
+  const effectiveStatus = getEffectiveSubscriptionStatus(subscription, now)
+  return accesses.find((access) => access.subscriptionId === subscription.id && access.status === 'Active' && !getCabinetAccessTerminalReason(access, effectiveStatus, now))
+    ?? accesses.find((access) => access.subscriptionId === subscription.id && !getCabinetAccessTerminalReason(access, effectiveStatus, now))
     ?? null
 }
 
@@ -99,18 +127,38 @@ export function daysUntil(dateValue?: string | null, now = new Date()) {
 }
 
 export function buildCabinetSummary(subscriptions: SubscriptionDto[], accesses: AccessCredentialDto[], now = new Date()) {
-  const currentSubscription = selectCurrentSubscription(subscriptions)
-  const currentAccess = findAccessForSubscription(currentSubscription, accesses)
+  const currentSubscription = selectCurrentSubscription(subscriptions, now)
+  const currentAccess = findAccessForSubscription(currentSubscription, accesses, now)
   const linkedCurrentAccess = currentSubscription?.currentAccessId
     ? accesses.find((access) => access.id === currentSubscription.currentAccessId)
     : null
-  const daysLeft = daysUntil(currentSubscription?.endAt, now)
+  const daysLeft = daysUntil(currentSubscription ? getSubscriptionAccessExpiry(currentSubscription) : null, now)
 
   return {
     currentSubscription,
     currentAccess,
     daysLeft,
-    hasActiveSubscription: currentSubscription ? isCurrentSubscription(currentSubscription) : false,
-    hasConnectionLink: !getCabinetAccessTerminalReason(linkedCurrentAccess, currentSubscription?.status) && Boolean(currentAccess?.accessUri || currentSubscription?.accessUri)
+    hasActiveSubscription: currentSubscription ? isCurrentSubscription(currentSubscription, now) : false,
+    hasConnectionLink: !getCabinetAccessTerminalReason(linkedCurrentAccess, currentSubscription ? getEffectiveSubscriptionStatus(currentSubscription, now) : null, now) && Boolean(currentAccess?.accessUri || currentSubscription?.accessUri)
   }
+}
+
+export function getNextCabinetAccessExpiryDelay(
+  subscriptions: SubscriptionDto[],
+  accesses: AccessCredentialDto[],
+  now = new Date()
+) {
+  const nowTime = now.getTime()
+  if (!Number.isFinite(nowTime)) return null
+
+  const deadlines = [
+    ...subscriptions
+      .filter((subscription) => subscription.status === 'Active' || subscription.status === 'GracePeriod')
+      .map((subscription) => Date.parse(getSubscriptionAccessExpiry(subscription))),
+    ...accesses
+      .filter((access) => access.status !== 'Revoked' && !access.isTerminal && access.expiryDate)
+      .map((access) => Date.parse(access.expiryDate!))
+  ].filter((deadline) => Number.isFinite(deadline) && deadline > nowTime)
+
+  return deadlines.length > 0 ? Math.min(...deadlines) - nowTime : null
 }

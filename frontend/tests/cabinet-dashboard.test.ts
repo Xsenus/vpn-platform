@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { AccessCredentialDto, SubscriptionDto } from '../packages/api-client/src/index.ts'
-import { buildCabinetSummary, daysUntil, findAccessForSubscription, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
+import { buildCabinetSummary, daysUntil, findAccessForSubscription, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
 
 function subscription(overrides: Partial<SubscriptionDto>): SubscriptionDto {
   return {
@@ -33,10 +33,11 @@ function access(overrides: Partial<AccessCredentialDto>): AccessCredentialDto {
 }
 
 test('cabinet dashboard selects current subscription before old records', () => {
+  const now = new Date('2026-05-27T00:00:00Z')
   const current = subscription({ id: 'current', status: 'GracePeriod', endAt: '2026-05-29T00:00:00Z' })
   const old = subscription({ id: 'old', status: 'Expired', endAt: '2026-05-10T00:00:00Z' })
 
-  assert.equal(selectCurrentSubscription([old, current])?.id, 'current')
+  assert.equal(selectCurrentSubscription([old, current], now)?.id, 'current')
 })
 
 test('cabinet dashboard does not treat expired subscriptions as current access', () => {
@@ -50,18 +51,52 @@ test('cabinet dashboard does not treat expired subscriptions as current access',
   assert.equal(summary.hasConnectionLink, false)
 })
 
+test('cabinet dashboard stops exposing stale access at the grace-period boundary', () => {
+  const now = new Date('2026-05-27T12:00:00Z')
+  const stale = subscription({
+    status: 'GracePeriod',
+    endAt: '2026-05-24T12:00:00Z',
+    gracePeriodEndAt: '2026-05-27T12:00:00Z',
+    currentAccessId: 'access-stale',
+    accessUri: 'vless://stale-secret'
+  })
+  const staleAccess = access({
+    id: 'access-stale',
+    expiryDate: '2026-05-27T12:00:00Z',
+    accessUri: 'vless://stale-secret'
+  })
+
+  const summary = buildCabinetSummary([stale], [staleAccess], now)
+
+  assert.equal(summary.currentSubscription, null)
+  assert.equal(summary.currentAccess, null)
+  assert.equal(summary.hasActiveSubscription, false)
+  assert.equal(summary.hasConnectionLink, false)
+  assert.equal(getEffectiveSubscriptionStatus(stale, now), 'Expired')
+  assert.equal(getCabinetAccessTerminalReason(staleAccess, 'Expired', now), 'Срок VPN-доступа истёк. Ключ и QR-код больше недоступны.')
+  assert.deepEqual(getAccessQrAvailability(staleAccess, now), {
+    canGenerate: false,
+    reason: 'Срок VPN-доступа истёк. Ключ и QR-код больше недоступны.'
+  })
+  assert.equal(getNextCabinetAccessExpiryDelay([
+    subscription({ endAt: '2026-05-27T12:05:00Z' }),
+    subscription({ endAt: '2026-05-27T12:10:00Z' })
+  ], [], now), 5 * 60 * 1000)
+})
+
 test('cabinet dashboard prefers the latest active subscription', () => {
+  const now = new Date('2026-05-27T00:00:00Z')
   const expiringSoon = subscription({ id: 'soon', status: 'Active', endAt: '2026-05-28T00:00:00Z' })
   const latest = subscription({ id: 'latest', status: 'Active', endAt: '2026-06-30T00:00:00Z' })
 
-  assert.equal(selectCurrentSubscription([expiringSoon, latest])?.id, 'latest')
+  assert.equal(selectCurrentSubscription([expiringSoon, latest], now)?.id, 'latest')
 })
 
 test('cabinet dashboard links access by currentAccessId and reports days left', () => {
   const current = subscription({ id: 'sub-2', currentAccessId: 'access-2', endAt: '2026-05-30T00:00:00Z' })
   const linkedAccess = access({ id: 'access-2', subscriptionId: 'sub-2', accessUri: 'vless://linked' })
 
-  assert.equal(findAccessForSubscription(current, [linkedAccess])?.accessUri, 'vless://linked')
+  assert.equal(findAccessForSubscription(current, [linkedAccess], new Date('2026-05-27T00:00:00Z'))?.accessUri, 'vless://linked')
   assert.equal(daysUntil(current.endAt, new Date('2026-05-27T00:00:00Z')), 3)
 
   const summary = buildCabinetSummary([current], [linkedAccess], new Date('2026-05-27T00:00:00Z'))

@@ -327,6 +327,75 @@ public class MeCabinetControllerTests
     }
 
     [Theory]
+    [InlineData(SubscriptionStatus.Active)]
+    [InlineData(SubscriptionStatus.GracePeriod)]
+    public async Task Cabinet_Should_Redact_Access_After_Grace_Period_And_Reject_All_Qr_Routes_On_Sqlite(SubscriptionStatus status)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock();
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Expired grace", Slug = $"expired-grace-{status}", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var node = new VpnNode { Id = Guid.NewGuid(), Name = "expired-grace-node", Host = "expired-grace.example.test", IpAddress = "192.0.2.33", Provider = "x3ui", Region = "eu", Country = "NL" };
+        var subscription = new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Status = status,
+            StartAt = clock.UtcNow.AddDays(-33),
+            EndAt = clock.UtcNow.AddDays(-3),
+            GracePeriodEndAt = clock.UtcNow
+        };
+        var access = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "expired-grace-provider-secret",
+            AccessUri = "vless://expired-grace-secret@example.test",
+            QrCodePath = "vless://expired-grace-qr-secret@example.test",
+            ConfigPath = "/configs/expired-grace-secret.json",
+            Status = AccessCredentialStatus.Active
+        };
+        db.Users.Add(User(userId, $"expired-grace-{status}@example.test"));
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+        subscription.CurrentAccessId = access.Id;
+        await db.SaveChangesAsync();
+
+        var qrGenerator = new SvgQrCodeGenerator(clock);
+        var meController = CreateController(db, userId, qrGenerator);
+        var subscriptionDto = Assert.Single(AssertOkList(await meController.GetSubscriptions(CancellationToken.None)));
+        var accessDto = Assert.Single(AssertOkList(await meController.GetAccesses(CancellationToken.None)));
+
+        Assert.Null(subscriptionDto.GetType().GetProperty("AccessUri")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath")!.GetValue(subscriptionDto));
+        Assert.True(Read<bool>(accessDto, "IsTerminal"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePayload"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePath"));
+        Assert.Equal(string.Empty, Read<string>(accessDto, "ConfigPath"));
+        Assert.Equal(clock.UtcNow, Read<DateTimeOffset>(accessDto, "ExpiryDate"));
+        Assert.IsType<BadRequestObjectResult>(await meController.GetAccessQr(access.Id, CancellationToken.None));
+
+        var cabinetController = new CabinetAccessController(db, qrGenerator, clock)
+        {
+            ControllerContext = new ControllerContext { HttpContext = HttpContextForUser(userId) }
+        };
+        Assert.IsType<BadRequestObjectResult>(await cabinetController.GetAccessQr(access.Id, CancellationToken.None));
+    }
+
+    [Theory]
     [InlineData("me")]
     [InlineData("cabinet")]
     public async Task Cabinet_Qr_Routes_Should_Wait_For_Subscription_Gate_And_Recheck_Cancelled_Status(string route)
@@ -445,7 +514,7 @@ public class MeCabinetControllerTests
         db.VpnNodes.Add(node);
         await db.SaveChangesAsync();
 
-        var now = new DateTimeOffset(2026, 6, 10, 10, 0, 0, TimeSpan.Zero);
+        var now = new TestClock().UtcNow;
         var subscription = new Subscription
         {
             Id = Guid.NewGuid(),
@@ -573,7 +642,7 @@ public class MeCabinetControllerTests
         var configuration = new ConfigurationBuilder().Build();
         var clock = new TestClock();
         var orderService = new VpnPlatform.Application.Services.OrderService(db, clock);
-        return new MeController(db, orderService, new VpnPlatform.Application.Services.CheckoutSessionService(db, clock, orderService), null!, null!, qrCodeGenerator!, configuration)
+        return new MeController(db, orderService, new VpnPlatform.Application.Services.CheckoutSessionService(db, clock, orderService), null!, null!, qrCodeGenerator!, configuration, clock)
         {
             ControllerContext = new ControllerContext
             {

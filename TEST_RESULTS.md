@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Cabinet access grace expiry
+
+Scope:
+- User-facing subscription and access DTOs must stop exposing VPN secrets at `gracePeriodEndAt ?? endAt`, before a delayed lifecycle worker updates the stored status.
+- An already open cabinet tab must remove URI, QR payload/cache and access actions at the exact deadline without a refresh.
+
+Results:
+- Roadmap progress: `648/668` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-cabinet-access-grace-expiry`, version `0.635.0`.
+- Reproduction before fix: frontend helper fail-first `9/10`; backend SQLite exact-boundary theory `0/2`; desktop/mobile browser fail-first `0/2`, with four stale URI copies still present after the grace deadline.
+- After fix: cabinet helper `10/10`; backend cabinet `16/16`; adjacent lifecycle/security `24/24`; targeted desktop/mobile browser `2/2`. Both user QR routes reject expired effective access, API DTOs redact provider/URI/QR/config values, and the open tab clears cached QR at the nearest access deadline.
+- Full cabinet desktop/mobile regression: `62/62`; final console-responsive Playwright: `214/214` in `11.8 min`, `0` failed/flaky/skipped; all-screens remains `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Frontend tests: `134/134`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `357.69 kB`, gzip `104.34 kB`; cabinet bundle `372.71/107.60 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1127/1127`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation/release guards: `57/57`; latest release SQLite verification: OK; release seed: `634` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Public pending checkout live expiry
 
 Scope:

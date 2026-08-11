@@ -146,7 +146,7 @@ const subscription = {
   tariffName: tariff.name,
   status: 'Active',
   startAt: '2026-06-01T00:00:00Z',
-  endAt: '2026-07-01T00:00:00Z',
+  endAt: '2099-07-01T00:00:00Z',
   gracePeriodEndAt: null,
   autoRenewFlag: false,
   sourceChannel: 'Web',

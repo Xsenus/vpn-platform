@@ -25,7 +25,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
-import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
+import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionAccessExpiry, getSubscriptionRenewalAvailability, isCurrentSubscription } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
 import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
@@ -154,6 +154,7 @@ export function App() {
   const [renewalState, setRenewalState] = useState<RenewalState>(null)
   const [retryPaymentState, setRetryPaymentState] = useState<RetryPaymentState>(null)
   const [paymentClockTick, setPaymentClockTick] = useState(0)
+  const [accessClockTick, setAccessClockTick] = useState(0)
   const [qrSvgs, setQrSvgs] = useState<Record<string, string>>({})
   const [resetEmail, setResetEmail] = useState('')
   const [resetToken, setResetToken] = useState('')
@@ -197,13 +198,14 @@ export function App() {
     []
   )
 
+  const cabinetNow = new Date()
   const activeSubscriptions = useMemo(
-    () => subscriptions.filter((item) => item.status === 'Active' || item.status === 'GracePeriod').length,
-    [subscriptions]
+    () => subscriptions.filter((item) => isCurrentSubscription(item, cabinetNow)).length,
+    [accessClockTick, subscriptions]
   )
   const cabinetSummary = useMemo(
-    () => buildCabinetSummary(subscriptions, accesses),
-    [subscriptions, accesses]
+    () => buildCabinetSummary(subscriptions, accesses, cabinetNow),
+    [accessClockTick, subscriptions, accesses]
   )
   const paymentsByOrderId = useMemo(
     () => groupPaymentsByOrderId(payments),
@@ -213,7 +215,7 @@ export function App() {
     () => new Map(orders.map((order) => [order.id, order])),
     [orders]
   )
-  const paymentNow = new Date()
+  const paymentNow = cabinetNow
   const renewalPaymentAvailability = renewalState
     ? getOrderPaymentAvailability(renewalState.order, paymentNow)
     : null
@@ -245,14 +247,14 @@ export function App() {
   const linkedCurrentAccess = cabinetSummary.currentSubscription?.currentAccessId
     ? accesses.find((access) => access.id === cabinetSummary.currentSubscription?.currentAccessId)
     : null
-  const currentAccessTerminalReason = getCabinetAccessTerminalReason(linkedCurrentAccess ?? cabinetSummary.currentAccess, cabinetSummary.currentSubscription?.status)
+  const currentAccessTerminalReason = getCabinetAccessTerminalReason(linkedCurrentAccess ?? cabinetSummary.currentAccess, cabinetSummary.currentSubscription ? getEffectiveSubscriptionStatus(cabinetSummary.currentSubscription, cabinetNow) : null, cabinetNow)
   const currentConnectionLink = currentAccessTerminalReason
     ? ''
     : cabinetSummary.currentAccess?.accessUri ?? cabinetSummary.currentSubscription?.accessUri ?? ''
   const currentAccessId = currentAccessTerminalReason
     ? ''
     : cabinetSummary.currentAccess?.id ?? cabinetSummary.currentSubscription?.currentAccessId ?? ''
-  const currentQrAvailability = getAccessQrAvailability(linkedCurrentAccess ?? cabinetSummary.currentAccess)
+  const currentQrAvailability = getAccessQrAvailability(linkedCurrentAccess ?? cabinetSummary.currentAccess, cabinetNow)
   const cabinetLoadErrorsFor = (...areas: CabinetLoadArea[]) => loadErrors.filter((item) => areas.includes(item.area))
   const hasCabinetLoadError = (...areas: CabinetLoadArea[]) => cabinetLoadErrorsFor(...areas).length > 0
   const hasCabinetMetricData = !hasCabinetLoadError('subscriptions')
@@ -630,6 +632,21 @@ export function App() {
   }, [orders, paymentClockTick, renewalState, retryPaymentState, token])
 
   useEffect(() => {
+    if (!token) return
+    const delay = getNextCabinetAccessExpiryDelay(subscriptions, accesses, cabinetNow)
+    if (delay === null) return
+
+    const timer = window.setTimeout(
+      () => {
+        setQrSvgs({})
+        setAccessClockTick((current) => current + 1)
+      },
+      Math.min(delay + 25, 2_147_483_647)
+    )
+    return () => window.clearTimeout(timer)
+  }, [accessClockTick, accesses, subscriptions, token])
+
+  useEffect(() => {
     if (!token || !selectedSupportConversation?.id) {
       supportMessagesRequestId.current += 1
       supportMessagesLoadInFlight.current = null
@@ -840,7 +857,7 @@ export function App() {
       delete next[accessId]
       return next
     })
-    const qrAvailability = getAccessQrAvailability(accesses.find((access) => access.id === accessId))
+    const qrAvailability = getAccessQrAvailability(accesses.find((access) => access.id === accessId), new Date())
     if (!qrAvailability.canGenerate) {
       clearCachedQr()
       setError(qrAvailability.reason ?? 'QR-код пока недоступен.')
@@ -1129,12 +1146,12 @@ export function App() {
                         <div>
                           <h3>{cabinetSummary.currentSubscription.tariffName || 'Активная подписка'}</h3>
                           <p className="muted">
-                            Действует до {new Date(cabinetSummary.currentSubscription.endAt).toLocaleString()}
+                            Доступ до {new Date(getSubscriptionAccessExpiry(cabinetSummary.currentSubscription)).toLocaleString()}
                             {cabinetSummary.daysLeft !== null ? ` · осталось ${cabinetSummary.daysLeft} дн.` : ''}
                           </p>
                           <p className="muted">Сервер: {cabinetSummary.currentSubscription.nodeName ?? cabinetSummary.currentAccess?.serverName ?? 'ожидает назначения'}</p>
                         </div>
-                        <StatusBadge value={cabinetSummary.currentSubscription.status} />
+                        <StatusBadge value={getEffectiveSubscriptionStatus(cabinetSummary.currentSubscription, cabinetNow)} />
                       </div>
                       {currentConnectionLink ? (
                         <>
@@ -1422,17 +1439,18 @@ export function App() {
               {subscriptions.map((subscription) => {
                 const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
                 const currentAccess = accesses.find((access) => access.id === subscription.currentAccessId)
-                const qrAvailability = getAccessQrAvailability(currentAccess)
-                const terminalReason = getCabinetAccessTerminalReason(currentAccess, subscription.status)
+                const effectiveStatus = getEffectiveSubscriptionStatus(subscription, cabinetNow)
+                const qrAvailability = getAccessQrAvailability(currentAccess, cabinetNow)
+                const terminalReason = getCabinetAccessTerminalReason(currentAccess, effectiveStatus, cabinetNow)
                 const isTerminal = Boolean(terminalReason)
                 return <div className="card" key={subscription.id}>
                   <div className="card-head">
                     <div>
                       <h3>{subscription.tariffName || subscription.status}</h3>
-                      <p>Действует до: {new Date(subscription.endAt).toLocaleString()}</p>
+                      <p>Доступ до: {new Date(getSubscriptionAccessExpiry(subscription)).toLocaleString()}</p>
                       <p>Сервер: {subscription.nodeName ?? 'не назначен'}</p>
                     </div>
-                    <StatusBadge value={subscription.status} />
+                    <StatusBadge value={effectiveStatus} />
                   </div>
                   {subscription.accessUri && !isTerminal && (
                     <>
@@ -1469,8 +1487,8 @@ export function App() {
             {accesses.length === 0 && <EmptyState title="VPN-ключей пока нет" description="После успешной оплаты здесь появятся ссылка, QR-код и срок действия." />}
             <div className="card-list">
               {accesses.map((access) => {
-                const qrAvailability = getAccessQrAvailability(access)
-                const terminalReason = getCabinetAccessTerminalReason(access)
+                const qrAvailability = getAccessQrAvailability(access, cabinetNow)
+                const terminalReason = getCabinetAccessTerminalReason(access, undefined, cabinetNow)
                 const isTerminal = Boolean(terminalReason)
                 return <Card key={access.id}>
                   <div className="card-head">
@@ -1716,8 +1734,8 @@ export function App() {
             : <div className="list-stack">
             {accesses.length === 0 && <EmptyState title="Доступы не выдавались" description="Когда подписка будет активирована, здесь появятся ключи и QR-коды." />}
             {accesses.map((access) => {
-              const qrAvailability = getAccessQrAvailability(access)
-              const terminalReason = getCabinetAccessTerminalReason(access)
+              const qrAvailability = getAccessQrAvailability(access, cabinetNow)
+              const terminalReason = getCabinetAccessTerminalReason(access, undefined, cabinetNow)
               const isTerminal = Boolean(terminalReason)
               return <div key={access.id} className="list-item-vertical">
                 <div className="card-head">

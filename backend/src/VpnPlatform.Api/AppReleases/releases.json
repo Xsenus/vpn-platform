@@ -14946,5 +14946,28 @@
         "text": "Roadmap progress is 647/667 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-cabinet-access-grace-expiry",
+    "version": "0.635.0",
+    "releasedAt": "2026-08-12T02:35:05+07:00",
+    "title": "VPN-доступ скрывается после льготного периода",
+    "summary": "Кабинет и пользовательские API закрывают доступ точно по effective deadline без ожидания фонового обновления статуса.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "URI, provider ID, config и QR больше не остаются доступными после окончания grace period."
+      },
+      {
+        "type": "improved",
+        "text": "Открытая вкладка кабинета очищает QR и обновляет доступность действий на ближайшей границе срока без reload."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 648/668 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
