@@ -27,7 +27,7 @@ import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkAction
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
-import { buildOrderExportText, canOpenPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
+import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -153,6 +153,7 @@ export function App() {
   const [authReferralCode, setAuthReferralCode] = useState('')
   const [renewalState, setRenewalState] = useState<RenewalState>(null)
   const [retryPaymentState, setRetryPaymentState] = useState<RetryPaymentState>(null)
+  const [paymentClockTick, setPaymentClockTick] = useState(0)
   const [qrSvgs, setQrSvgs] = useState<Record<string, string>>({})
   const [resetEmail, setResetEmail] = useState('')
   const [resetToken, setResetToken] = useState('')
@@ -208,24 +209,30 @@ export function App() {
     () => groupPaymentsByOrderId(payments),
     [payments]
   )
+  const ordersById = useMemo(
+    () => new Map(orders.map((order) => [order.id, order])),
+    [orders]
+  )
+  const paymentNow = new Date()
   const renewalPaymentAvailability = renewalState
-    ? getOrderPaymentAvailability(renewalState.order)
+    ? getOrderPaymentAvailability(renewalState.order, paymentNow)
     : null
   const renewalPaymentAttempt = renewalState?.payment
     ? payments.find((item) => item.orderId === renewalState.order.id && item.providerPaymentId === renewalState.payment?.paymentId) ?? null
     : null
   const renewalPaymentLinkAvailable = Boolean(
     renewalState?.payment
-    && renewalState.order.status === 'PendingPayment'
-    && (!renewalPaymentAttempt || canOpenPaymentConfirmation(renewalPaymentAttempt.status))
+    && canOpenOrderPaymentConfirmation(renewalState.order, renewalPaymentAttempt?.status ?? null, paymentNow)
   )
+  const retryPaymentAvailability = retryPaymentState
+    ? getOrderPaymentAvailability(retryPaymentState.order, paymentNow)
+    : null
   const retryPaymentAttempt = retryPaymentState
     ? payments.find((item) => item.orderId === retryPaymentState.order.id && item.providerPaymentId === retryPaymentState.payment.paymentId) ?? null
     : null
   const retryPaymentLinkAvailable = Boolean(
     retryPaymentState
-    && retryPaymentState.order.status === 'PendingPayment'
-    && (!retryPaymentAttempt || canOpenPaymentConfirmation(retryPaymentAttempt.status))
+    && canOpenOrderPaymentConfirmation(retryPaymentState.order, retryPaymentAttempt?.status ?? null, paymentNow)
   )
   const selectedSupportConversation = useMemo(
     () => selectCurrentSupportConversation(supportConversations, selectedSupportConversationId),
@@ -604,6 +611,23 @@ export function App() {
     // New login and refresh sessions are loaded by their handlers; this hydrates only a restored session.
     void hydrateRestoredSession(token, refreshToken)
   }, [])
+
+  useEffect(() => {
+    if (!token) return
+    const trackedOrders = [
+      ...orders,
+      ...(renewalState ? [renewalState.order] : []),
+      ...(retryPaymentState ? [retryPaymentState.order] : [])
+    ]
+    const delay = getNextOrderPaymentExpiryDelay(trackedOrders, paymentNow)
+    if (delay === null) return
+
+    const timer = window.setTimeout(
+      () => setPaymentClockTick((current) => current + 1),
+      Math.min(delay + 25, 2_147_483_647)
+    )
+    return () => window.clearTimeout(timer)
+  }, [orders, paymentClockTick, renewalState, retryPaymentState, token])
 
   useEffect(() => {
     if (!token || !selectedSupportConversation?.id) {
@@ -1374,7 +1398,7 @@ export function App() {
                     ariaLabel="Открыть повторную оплату в новой вкладке"
                     invalidMessage="Ссылка повторной оплаты отклонена как некорректная. Повторите операцию или обратитесь в поддержку."
                   />
-                : <p className="safe-note" role="status">{getOrderStatusMessage(retryPaymentState.order.status)}</p>}
+                : <p className="safe-note" role="status">{retryPaymentAvailability?.reason ?? getOrderStatusMessage(retryPaymentState.order.status)}</p>}
             </Card>
           )}
         </div>
@@ -1481,7 +1505,7 @@ export function App() {
             {orders.map((order) => {
               const orderPayments = paymentsByOrderId.get(order.id) ?? []
               const latestPayment = getLatestPaymentForOrder(order, orderPayments)
-              const paymentAvailability = getOrderPaymentAvailability(order)
+              const paymentAvailability = getOrderPaymentAvailability(order, paymentNow)
               const exportText = buildOrderExportText(order, orderPayments)
               const exportHref = `data:application/json;charset=utf-8,${encodeURIComponent(exportText)}`
 
@@ -1548,7 +1572,7 @@ export function App() {
                   <div><dt>Ошибка</dt><dd>{payment.failedAt ? new Date(payment.failedAt).toLocaleString() : payment.statusReason ?? '—'}</dd></div>
                   <div><dt>Активация</dt><dd>{payment.isActivationProcessed ? 'обработана' : 'ожидает'}</dd></div>
                 </dl>
-                {payment.confirmationUrl && canOpenPaymentConfirmation(payment.status) && (
+                {payment.confirmationUrl && canOpenOrderPaymentConfirmation(ordersById.get(payment.orderId), payment.status, paymentNow) && (
                   <ExternalLinkActions
                     value={payment.confirmationUrl}
                     openLabel="Открыть оплату"

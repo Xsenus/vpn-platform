@@ -14877,5 +14877,28 @@
         "text": "Roadmap progress is 644/664 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-cabinet-payment-link-expiry",
+    "version": "0.632.0",
+    "releasedAt": "2026-08-12T00:20:40+07:00",
+    "title": "Просроченная оплата больше не оставляет ссылку",
+    "summary": "Кабинет автоматически скрывает confirmation URL, когда родительский заказ больше нельзя оплачивать.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Renewal, retry и payment-history ссылки теперь проверяют срок и terminal-состояние родительского заказа."
+      },
+      {
+        "type": "improved",
+        "text": "Ближайший срок оплаты автоматически обновляет интерфейс без ручного refresh и показывает создание нового заказа."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 645/665 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -3,9 +3,11 @@ import assert from 'node:assert/strict'
 import type { OrderDto, PaymentAttemptDto } from '../packages/api-client/src/index.ts'
 import {
   buildOrderExportText,
+  canOpenOrderPaymentConfirmation,
   canOpenPaymentConfirmation,
   formatPaymentMoney,
   getLatestPaymentForOrder,
+  getNextOrderPaymentExpiryDelay,
   getOrderPaymentAvailability,
   getOrderStatusMessage,
   getPaymentStatusMessage,
@@ -97,6 +99,29 @@ test('cabinet payments exposes confirmation links only for open payment statuses
   for (const status of ['Succeeded', 'Failed', 'Cancelled', 'Refunded', 'PartiallyRefunded', 'Unknown']) {
     assert.equal(canOpenPaymentConfirmation(status), false, status)
   }
+})
+
+test('cabinet payments exposes confirmation links only while the parent order is payable', () => {
+  const now = new Date('2026-05-27T12:00:00Z')
+
+  assert.equal(canOpenOrderPaymentConfirmation(order(), 'Pending', now), true)
+  assert.equal(canOpenOrderPaymentConfirmation(order(), null, now), true)
+  assert.equal(canOpenOrderPaymentConfirmation(undefined, 'Pending', now), false)
+  assert.equal(canOpenOrderPaymentConfirmation(order({ expiresAt: '2026-05-27T12:00:00Z' }), 'Pending', now), false)
+  assert.equal(canOpenOrderPaymentConfirmation(order({ status: 'Completed' }), 'Pending', now), false)
+  assert.equal(canOpenOrderPaymentConfirmation(order(), 'Succeeded', now), false)
+})
+
+test('cabinet payments schedules the nearest future payable-order expiry', () => {
+  const now = new Date('2026-05-27T12:00:00Z')
+
+  assert.equal(getNextOrderPaymentExpiryDelay([
+    order({ id: 'later', expiresAt: '2026-05-27T12:00:05Z' }),
+    order({ id: 'nearest', expiresAt: '2026-05-27T12:00:02Z' }),
+    order({ id: 'terminal', status: 'Completed', expiresAt: '2026-05-27T12:00:01Z' }),
+    order({ id: 'already-expired', expiresAt: '2026-05-27T11:59:59Z' })
+  ], now), 2_000)
+  assert.equal(getNextOrderPaymentExpiryDelay([order({ status: 'Completed' })], now), null)
 })
 
 test('cabinet payments groups attempts by order and selects the newest attempt', () => {

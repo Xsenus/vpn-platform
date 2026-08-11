@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.632.0 - 2026-08-12
+
+Release entry: `2026-08-12-cabinet-payment-link-expiry`.
+
+### Исправлено
+
+- Кабинет больше не показывает provider confirmation URL, когда родительский заказ истёк по локальному времени, даже если payment attempt всё ещё имеет открытый статус.
+- Карточки последнего продления и повторной оплаты, история заказов и история платежей используют единый order-aware payment contract.
+- Ближайший срок оплаты автоматически обновляет интерфейс без ручной перезагрузки; отсутствующий родительский заказ скрывает payment link fail-closed.
+
+### Проверено
+
+- До исправления unit fail-first был `6/8`, а основной и long-login desktop/mobile browser fail-first — `0/2`: ссылки оставались после истечения или планировались от старого render time. После исправления targeted unit/source suite прошёл `68/68`, renewal/retry/current-login desktop/mobile — `6/6` без refresh и overflow.
+- Полный cabinet desktop/mobile regression прошёл `60/60`; all-screens — `6/6` за `8.2 min` на 25 viewport-конфигурациях. Первый обновлённый full gate дал `205/206`: mobile renewal успел корректно истечь внутри слишком узкого двухсекундного fake-clock fixture; после детерминированного 30-second test-window targeted `6/6`, финальный неизменённый console-responsive Playwright — `206/206` за `12.3 min` без failed/flaky/skipped.
+- Frontend `132/132`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `356.22/103.94 kB`, cabinet bundle `371.44/107.26 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `631`, secret scan `668` files/`0` findings.
+- Roadmap: `645/665` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.631.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-checkout-session-expiry`.

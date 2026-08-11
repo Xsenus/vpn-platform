@@ -171,6 +171,15 @@ const retryablePendingOrder = {
   expiresAt: '2099-06-14T00:00:00Z'
 }
 
+const unsafeLinkOrder = {
+  ...retryablePendingOrder,
+  id: 'order-unsafe-link',
+  tariffName: 'Заказ с некорректной ссылкой',
+  lastPaymentId: 'payment-unsafe-link',
+  lastPaymentStatus: 'Pending',
+  paymentAttemptsCount: 1
+}
+
 const paidPayment = {
   id: 'payment-paid',
   orderId: paidOrder.id,
@@ -556,8 +565,8 @@ async function mockCabinetApi(page: Page) {
 
     if (method === 'GET' && path === '/api/me/orders') {
       await fulfillJson(route, renewalOrderCreated
-        ? [renewalOrder, paidOrder, stalePendingOrder, retryableOrder]
-        : [paidOrder, stalePendingOrder, retryableOrder])
+        ? [renewalOrder, paidOrder, stalePendingOrder, retryableOrder, unsafeLinkOrder]
+        : [paidOrder, stalePendingOrder, retryableOrder, unsafeLinkOrder])
       return
     }
 
@@ -901,6 +910,27 @@ async function mockCabinetApi(page: Page) {
         ...renewalOrder,
         status: 'Expired',
         expiresAt: '2026-06-12T00:00:00Z'
+      }
+    },
+    expireRenewalOrderSoon: () => {
+      renewalOrder = {
+        ...renewalOrder,
+        status: 'PendingPayment',
+        expiresAt: '2026-06-13T07:00:30Z'
+      }
+    },
+    expireRetryableOrderSoon: () => {
+      retryableOrder = {
+        ...retryableOrder,
+        status: 'PendingPayment',
+        expiresAt: '2026-06-13T07:00:30Z'
+      }
+    },
+    expireRetryableOrderAfterAnonymousWait: () => {
+      retryableOrder = {
+        ...retryableOrder,
+        status: 'PendingPayment',
+        expiresAt: '2026-06-13T08:00:30Z'
       }
     },
     completeRenewalOrder: () => {
@@ -1389,6 +1419,77 @@ test('cabinet removes terminal payment links after retry status refresh', async 
   const retryPaymentHistoryCard = page.locator('.payment-record').filter({ hasText: 'payment-retry' })
   await expect(retryPaymentHistoryCard.getByText('Платеж успешно подтвержден', { exact: false })).toBeVisible()
   await expect(retryPaymentHistoryCard.getByRole('link', { name: 'Открыть оплату' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet removes retry payment links when the order expires without a refresh', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-13T07:00:00Z') })
+  const api = await mockCabinetApi(page)
+  api.expireRetryableOrderSoon()
+  await seedCabinetSession(page, 'access-token-expiring-retry', 'refresh-token-expiring-retry')
+
+  await page.goto('/')
+  const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
+  await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
+
+  const retryCard = page.getByRole('heading', { name: 'Последняя повторная оплата' }).locator('..')
+  const retryPaymentHistoryCard = page.locator('.payment-record').filter({ hasText: 'payment-retry' })
+  await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toBeVisible()
+  await expect(retryPaymentHistoryCard.getByRole('link', { name: 'Открыть оплату' })).toBeVisible()
+
+  await page.clock.fastForward(30_100)
+
+  await expect(retryCard.getByText('Срок оплаты заказа истёк.', { exact: false })).toBeVisible()
+  await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveCount(0)
+  await expect(retryPaymentHistoryCard.getByRole('link', { name: 'Открыть оплату' })).toHaveCount(0)
+  await expect(retryableOrderCard.getByText('Срок истек', { exact: true })).toBeVisible()
+  await expect(retryableOrderCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet removes a renewal payment link when the order expires without a refresh', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-13T07:00:00Z') })
+  const api = await mockCabinetApi(page)
+  api.expireRenewalOrderSoon()
+  await seedCabinetSession(page, 'access-token-expiring-renewal', 'refresh-token-expiring-renewal')
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Продлить' }).first().click()
+
+  const renewalCard = page.getByRole('heading', { name: 'Последнее продление' }).locator('..')
+  await expect(renewalCard.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toBeVisible()
+
+  await page.clock.fastForward(30_100)
+
+  await expect(renewalCard.getByText('Срок оплаты заказа истёк.', { exact: false })).toBeVisible()
+  await expect(renewalCard.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveCount(0)
+  await expect(renewalCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet schedules payment expiry from the current login time', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-13T07:00:00Z') })
+  const api = await mockCabinetApi(page)
+  api.expireRetryableOrderAfterAnonymousWait()
+
+  await page.goto('/')
+  await page.clock.fastForward(60 * 60 * 1_000)
+
+  const authPanel = page.locator('#cabinet-auth-panel')
+  await authPanel.getByLabel('Email').fill(user.email)
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Войти', exact: true }).click()
+
+  const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
+  await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
+  const retryCard = page.getByRole('heading', { name: 'Последняя повторная оплата' }).locator('..')
+  await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toBeVisible()
+
+  await page.clock.fastForward(30_100)
+
+  await expect(retryCard.getByText('Срок оплаты заказа истёк.', { exact: false })).toBeVisible()
+  await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveCount(0)
+  await expect(retryableOrderCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

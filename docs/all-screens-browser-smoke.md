@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-11-public-checkout-session-expiry`, версия `0.631.0`; истёкшая checkout-session блокируется до claim и не предлагает retry, а финальный полный browser gate проходит `200/200` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-12-cabinet-payment-link-expiry`, версия `0.632.0`; cabinet автоматически скрывает renewal/retry/history confirmation URL при истечении родительского заказа, а финальный полный browser gate проходит `206/206` без failed/flaky/skipped.

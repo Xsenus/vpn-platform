@@ -46,6 +46,33 @@ export function canOpenPaymentConfirmation(status: string) {
   return openConfirmationStatuses.has(status)
 }
 
+export function canOpenOrderPaymentConfirmation(
+  order: Pick<OrderDto, 'status' | 'expiresAt'> | null | undefined,
+  paymentStatus: string | null,
+  now = new Date()
+) {
+  if (!order || order.status !== 'PendingPayment' || getOrderPaymentAvailability(order, now).isExpired) return false
+  return paymentStatus === null || canOpenPaymentConfirmation(paymentStatus)
+}
+
+export function getNextOrderPaymentExpiryDelay(
+  orders: ReadonlyArray<Pick<OrderDto, 'status' | 'expiresAt'>>,
+  now = new Date()
+) {
+  const nowTime = now.getTime()
+  if (!Number.isFinite(nowTime)) return null
+
+  let nearestExpiry: number | null = null
+  for (const order of orders) {
+    if (!retryableOrderStatuses.has(order.status)) continue
+    const expiresAt = Date.parse(order.expiresAt)
+    if (!Number.isFinite(expiresAt) || expiresAt <= nowTime) continue
+    nearestExpiry = nearestExpiry === null ? expiresAt : Math.min(nearestExpiry, expiresAt)
+  }
+
+  return nearestExpiry === null ? null : nearestExpiry - nowTime
+}
+
 export function getOrderStatusMessage(status: string) {
   switch (status) {
     case 'PendingPayment':

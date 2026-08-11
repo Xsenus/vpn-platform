@@ -1,6 +1,22 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-11.
+Дата проверки: 2026-08-12.
+
+## Check 2026-08-12: Cabinet payment-link expiry
+
+Scope:
+- Renewal, retry and payment-history confirmation URLs must depend on both the payment attempt and its parent order.
+- A payable order that expires while the cabinet stays open must update automatically without a manual data refresh.
+
+Results:
+- Roadmap progress: `645/665` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-cabinet-payment-link-expiry`, version `0.632.0`.
+- Reproduction before fix: unit fail-first `6/8`; desktop/mobile browser fail-first `0/2`, because renewal/retry and history links remained available after the parent order expiry.
+- After fix: targeted unit/source suite `68/68`; renewal, retry and long-anonymous-wait/current-login desktop/mobile regression `6/6`. The link disappears at the expiry boundary without a refresh, the expired explanation and create-new-order action appear, history is fail-closed, and no horizontal overflow is introduced.
+- Full cabinet desktop/mobile regression: `60/60`; standalone all-screens: `6/6` in `8.2 min` on 25 viewport configurations `305x568..2560x1440`. The first updated console-responsive run was `205/206` because mobile renewal correctly crossed a two-second fake-clock expiry before the initial-link assertion; after widening only that deterministic fixture window, targeted `6/6` and final unchanged console-responsive Playwright `206/206` in `12.3 min`, `0` failed/flaky/skipped.
+- Frontend tests: `132/132`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `356.22 kB`, gzip `103.94 kB`; cabinet bundle `371.44/107.26 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `631` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
 
 ## Check 2026-08-11: Public checkout-session expiry
 
