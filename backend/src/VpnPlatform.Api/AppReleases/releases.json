@@ -14762,5 +14762,28 @@
         "text": "Roadmap progress is 639/659 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-cabinet-renewal-order-refresh",
+    "version": "0.627.0",
+    "releasedAt": "2026-08-11T20:41:56+07:00",
+    "title": "Статус продления обновляется вместе с заказом",
+    "summary": "Карточка последнего продления теперь сразу отражает актуальный статус заказа после обновления данных кабинета.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Истёкший, завершённый или отменённый заказ больше не остаётся в карточке продления с устаревшим статусом и действием повторной оплаты."
+      },
+      {
+        "type": "improved",
+        "text": "Карточка продления и история заказов используют единые правила доступности оплаты и показывают допустимый следующий шаг."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 640/660 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

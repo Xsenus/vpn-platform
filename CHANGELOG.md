@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.627.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-renewal-order-refresh`.
+
+### Исправлено
+
+- Успешное обновление данных кабинета теперь синхронизирует заметную карточку последнего продления с актуальным заказом из истории по его ID.
+- Истёкший, завершённый или отменённый renewal order больше не остаётся визуально в `PendingPayment` и не показывает устаревшую retry-команду после ручного reload.
+- Карточка продления использует тот же payment-availability контракт, что и история заказов: terminal/non-retry состояние объясняет причину и при необходимости предлагает создать новый заказ.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: после перехода сохранённого renewal order в `Expired` ручное обновление меняло историю, но карточка продолжала показывать retry. После исправления targeted contract прошёл `2/2`.
+- Полный cabinet desktop/mobile regression прошёл `50/50`; полный console-responsive Playwright — `190/190` за `13.1 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `128/128`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `370.04/106.84 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `626`, secret scan `668` files/`0` findings.
+- Roadmap: `640/660` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.626.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-renewal-provider-availability`.

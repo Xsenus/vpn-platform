@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet renewal order refresh
+
+Scope:
+- The prominent saved-renewal card must refresh from the persisted order returned by the cabinet orders endpoint.
+- Terminal and non-retry order states must use the same payment-availability contract as order history and must not expose a stale retry command.
+
+Results:
+- Roadmap progress: `640/660` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-renewal-order-refresh`, version `0.627.0`.
+- Reproduction before fix: after the saved renewal changed from `PendingPayment` to `Expired`, manual cabinet refresh updated order history but left the prominent renewal card and retry action stale. Fail-first desktop/mobile: `0/2`.
+- After fix: a successful orders reload replaces `renewalState.order` by matching ID, while an orders-area failure preserves the previous snapshot. The prominent card derives retry/recovery rendering from `getOrderPaymentAvailability`. Targeted desktop/mobile: `2/2`.
+- Full cabinet desktop/mobile regression: `50/50`; final console-responsive Playwright: `190/190` in `13.1 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: the terminal reason and existing compact link fit the renewal card without horizontal overflow, clipping or layout shift on desktop/mobile.
+- Frontend tests: `128/128`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `370.04/106.84 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `626` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet renewal provider availability
 
 Scope:

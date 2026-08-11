@@ -869,6 +869,13 @@ async function mockCabinetApi(page: Page) {
     failNextQrRequest: (status = 503) => { failNextQrStatus = status },
     returnInvalidSubscriptionsResponse: () => { invalidSubscriptionsResponse = true },
     failNextRenewalPayment: () => { failNextRenewalPayment = true },
+    expireRenewalOrder: () => {
+      renewalOrder = {
+        ...renewalOrder,
+        status: 'Expired',
+        expiresAt: '2026-06-12T00:00:00Z'
+      }
+    },
     failPaymentProviders: (status = 503) => { paymentProvidersFailureStatus = status },
     allowPaymentProviders: () => { paymentProvidersFailureStatus = null },
     useMultiplePaymentProviders: () => { multiplePaymentProviders = true },
@@ -1276,6 +1283,29 @@ test('cabinet disables renewal payment retry after providers become unavailable'
   })
   await page.waitForTimeout(100)
   expect(api.getRequestCount('/api/me/orders/order-renewal/payments/YooKassa/init', 'POST')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet refreshes the saved renewal order status and removes stale retry', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.failNextRenewalPayment()
+  await seedCabinetSession(page, 'access-token-renewal-status', 'refresh-token-renewal-status')
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Продлить' }).first().click()
+
+  const renewalCard = page.getByRole('heading', { name: 'Последнее продление' }).locator('..')
+  await expect(renewalCard.getByRole('button', { name: 'Повторить подготовку оплаты' })).toBeEnabled()
+  const orderLoadsBeforeRefresh = api.getRequestCount('/api/me/orders')
+
+  api.expireRenewalOrder()
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect.poll(() => api.getRequestCount('/api/me/orders')).toBe(orderLoadsBeforeRefresh + 1)
+
+  await expect(renewalCard.getByText('Срок истек', { exact: true })).toBeVisible()
+  await expect(renewalCard.getByText('Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.')).toBeVisible()
+  await expect(renewalCard.getByRole('button', { name: 'Повторить подготовку оплаты' })).toHaveCount(0)
+  await expect(renewalCard.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', /\/tariffs$/)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

@@ -208,6 +208,9 @@ export function App() {
     () => groupPaymentsByOrderId(payments),
     [payments]
   )
+  const renewalPaymentAvailability = renewalState
+    ? getOrderPaymentAvailability(renewalState.order)
+    : null
   const selectedSupportConversation = useMemo(
     () => selectCurrentSupportConversation(supportConversations, selectedSupportConversationId),
     [supportConversations, selectedSupportConversationId]
@@ -383,6 +386,13 @@ export function App() {
         setProfile(nextProfile)
         setSubscriptions(nextSubscriptions)
         setOrders(nextOrders)
+        if (!nextLoadErrors.some((item) => item.area === 'orders')) {
+          setRenewalState((current) => {
+            if (!current) return current
+            const refreshedOrder = nextOrders.find((item) => item.id === current.order.id)
+            return refreshedOrder ? { ...current, order: refreshedOrder } : current
+          })
+        }
         setPayments(nextPayments)
         setAccesses(nextAccesses)
         setReferrals(nextReferrals)
@@ -1314,12 +1324,17 @@ export function App() {
                     invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите продление или обратитесь в поддержку."
                   />
                 </>
-              ) : (
+              ) : renewalPaymentAvailability?.canRetry ? (
                 <>
                   <p className="safe-note">Заказ сохранён, но ссылка оплаты ещё не подготовлена. Повторная команда использует этот же заказ.</p>
                   <PrimaryButton type="button" onClick={handleRetryRenewalPayment} disabled={busy || !provider} aria-busy={busy}>
                     Повторить подготовку оплаты
                   </PrimaryButton>
+                </>
+              ) : (
+                <>
+                  <p className="safe-note" role="status">{renewalPaymentAvailability?.reason ?? getOrderStatusMessage(renewalState.order.status)}</p>
+                  {renewalPaymentAvailability?.shouldCreateNewOrder && <a className="button" href={`${publicWebUrl}/tariffs`}>Создать новый заказ</a>}
                 </>
               )}
             </Card>
