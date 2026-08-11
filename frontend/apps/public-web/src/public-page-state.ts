@@ -1,4 +1,4 @@
-import { normalizeApiError, type PublicPaymentProviderDto, type TariffDto } from '@vpn-platform/api-client'
+import { normalizeApiError, type OrderDto, type PublicPaymentProviderDto, type TariffDto } from '@vpn-platform/api-client'
 
 export type PublicListState = 'loading' | 'error' | 'empty' | 'ready'
 
@@ -58,4 +58,30 @@ export function canStartCheckout(
 
 export function getCheckoutErrorMessage(error: unknown, fallback: string) {
   return normalizeApiError(error, fallback)
+}
+
+export function getPendingCheckoutOrderAvailability(
+  order: Pick<OrderDto, 'status' | 'expiresAt'>,
+  now = new Date()
+) {
+  const hasRetryableStatus = order.status === 'PendingPayment' || order.status === 'Failed'
+  const expiresAt = Date.parse(order.expiresAt)
+  const isExpired = order.status === 'Expired'
+    || (hasRetryableStatus && !Number.isNaN(expiresAt) && expiresAt <= now.getTime())
+
+  if (isExpired) {
+    return {
+      canRetry: false,
+      shouldCreateNewOrder: true,
+      isExpired: true,
+      reason: 'Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.'
+    }
+  }
+
+  return {
+    canRetry: hasRetryableStatus,
+    shouldCreateNewOrder: order.status === 'Cancelled' || order.status === 'Canceled',
+    isExpired: false,
+    reason: hasRetryableStatus ? null : 'Этот заказ больше нельзя отправить на повторную оплату.'
+  }
 }

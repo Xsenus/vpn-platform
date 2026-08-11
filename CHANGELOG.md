@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.629.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-expired-partial-checkout`.
+
+### Исправлено
+
+- Публичный checkout больше не пытается повторно инициализировать оплату для уже истёкшего частичного заказа после входа в аккаунт.
+- Допустимость повторной оплаты теперь определяется по сохранённым backend-статусу и `expiresAt`: только живые `PendingPayment`/`Failed` заказы отправляются в payment init.
+- Для истёкшего заказа показываются однозначный статус и действие «Создать новый заказ»; устаревший partial checkout очищается при переходе к тарифам.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: просроченный claimed order отправлялся в payment init и зацикливал пользователя на недопустимом retry. После исправления targeted contract прошёл `2/2`, payment init не вызывается.
+- Полный public desktop/mobile regression прошёл `42/42`; полный console-responsive Playwright — `196/196` за `12.5 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `130/130`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.94/103.23 kB`, cabinet bundle `370.75/107.00 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `628`, secret scan `668` files/`0` findings.
+- Roadmap: `642/662` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.628.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-terminal-payment-links`.

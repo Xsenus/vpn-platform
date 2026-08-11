@@ -19,14 +19,14 @@ public class ProductAdminUiRoadmapSyncTests
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
                      "Backend full suite: `1125/1125`",
-                     "Frontend unit tests: `129/129`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `194/194`",
+                     "Frontend unit tests: `130/130`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `196/196`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-11-cabinet-terminal-payment-links",
-                     "0.628.0"
+                     "2026-08-11-public-expired-partial-checkout",
+                     "0.629.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-11-cabinet-terminal-payment-links", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-11-cabinet-terminal-payment-links", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-11-public-expired-partial-checkout", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-11-public-expired-partial-checkout", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,11 +72,11 @@ public class ProductAdminUiRoadmapSyncTests
         foreach (var expected in new[]
                  {
                      "Backend full suite: `1125/1125`",
-                     "Frontend unit tests: `129/129`",
+                     "Frontend unit tests: `130/130`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-11-cabinet-terminal-payment-links",
-                     "0.628.0",
+                     "2026-08-11-public-expired-partial-checkout",
+                     "0.629.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

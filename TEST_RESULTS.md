@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public expired partial checkout
+
+Scope:
+- A claimed partial checkout must initialize payment only while its persisted order remains retryable and unexpired.
+- An expired order must keep the user on a truthful recovery surface without calling payment init or offering an impossible retry.
+
+Results:
+- Roadmap progress: `642/662` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-expired-partial-checkout`, version `0.629.0`.
+- Reproduction before fix: a claimed order whose `expiresAt` had elapsed was still sent to payment init and left the user with a retry command that the backend must reject. Fail-first desktop/mobile: `0/2`.
+- After fix: `getPendingCheckoutOrderAvailability` accepts only live `PendingPayment`/`Failed` orders; the checkout handler checks the contract before payment init, while an expired order shows a create-new-order action. Targeted desktop/mobile coverage: `2/2`, payment init requests: `0`.
+- Full public desktop/mobile regression: `42/42`; final console-responsive Playwright: `196/196` in `12.5 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: the expired status, reason and create-new-order action fit without horizontal overflow or duplicate alerts on desktop/mobile.
+- Frontend tests: `130/130`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.94 kB`, gzip `103.23 kB`; cabinet bundle `370.75/107.00 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `628` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet terminal payment links
 
 Scope:

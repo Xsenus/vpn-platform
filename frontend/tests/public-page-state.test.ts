@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import type { PublicPaymentProviderDto, TariffDto } from '../packages/api-client/src/index.ts'
-import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPublicListState, getTariffFeatures } from '../apps/public-web/src/public-page-state.ts'
+import type { OrderDto, PublicPaymentProviderDto, TariffDto } from '../packages/api-client/src/index.ts'
+import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures } from '../apps/public-web/src/public-page-state.ts'
 
 function tariff(overrides: Partial<TariffDto>): TariffDto {
   return {
@@ -47,6 +47,19 @@ function provider(overrides: Partial<PublicPaymentProviderDto> = {}): PublicPaym
   }
 }
 
+function order(overrides: Partial<OrderDto> = {}): OrderDto {
+  return {
+    id: 'order-1',
+    userId: 'user-1',
+    tariffId: 'tariff-1',
+    amount: 490,
+    currency: 'RUB',
+    status: 'PendingPayment',
+    expiresAt: '2026-05-27T12:15:00Z',
+    ...overrides
+  }
+}
+
 test('public page state parses tariff features from array and JSON safely', () => {
   assert.deepEqual(getTariffFeatures(tariff({ features: [' Автовыдача ', '', 'QR-код'] })), ['Автовыдача', 'QR-код'])
   assert.deepEqual(getTariffFeatures(tariff({ featuresJson: '["До 3 устройств","Поддержка"]' })), ['До 3 устройств', 'Поддержка'])
@@ -82,4 +95,19 @@ test('public checkout translates promo failures and hides unrelated English diag
   assert.equal(getCheckoutErrorMessage(new Error('Promo code usage limit for this account has been reached.'), 'Ошибка'), 'Вы уже использовали этот промокод максимально допустимое число раз.')
   assert.equal(getCheckoutErrorMessage(new Error('Payment provider is unavailable.'), 'Ошибка'), 'Ошибка')
   assert.equal(getCheckoutErrorMessage(null, 'Не удалось оформить покупку.'), 'Не удалось оформить покупку.')
+})
+
+test('public partial checkout retries only a live backend-supported order', () => {
+  const now = new Date('2026-05-27T12:00:00Z')
+
+  assert.equal(getPendingCheckoutOrderAvailability(order(), now).canRetry, true)
+  assert.equal(getPendingCheckoutOrderAvailability(order({ status: 'Failed' }), now).canRetry, true)
+
+  const expired = getPendingCheckoutOrderAvailability(order({ expiresAt: '2026-05-27T11:59:59Z' }), now)
+  assert.equal(expired.canRetry, false)
+  assert.equal(expired.shouldCreateNewOrder, true)
+  assert.equal(expired.isExpired, true)
+  assert.match(expired.reason ?? '', /Срок оплаты заказа истёк/)
+
+  assert.equal(getPendingCheckoutOrderAvailability(order({ status: 'Completed' }), now).canRetry, false)
 })

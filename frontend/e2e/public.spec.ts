@@ -125,6 +125,7 @@ async function mockPublicApi(page: Page) {
   let checkoutRequestCount = 0
   let checkoutClaimRequestCount = 0
   let paymentInitRequestCount = 0
+  let expiredCheckoutOrder = false
   let unsafePaymentLink = false
   let invalidCheckoutResponse = false
   let invalidAuthResponse = false
@@ -264,7 +265,7 @@ async function mockPublicApi(page: Page) {
       userId: null,
       orderId: null,
       status: 'open',
-      expiresAt: '2026-06-14T00:00:00Z',
+      expiresAt: '2099-06-14T00:00:00Z',
       emailHint: null
     })
   })
@@ -392,7 +393,7 @@ async function mockPublicApi(page: Page) {
       amount: 299,
       currency: 'RUB',
       status: 'PendingPayment',
-      expiresAt: '2026-06-14T00:00:00Z',
+      expiresAt: expiredCheckoutOrder ? '2026-06-12T00:00:00Z' : '2099-06-14T00:00:00Z',
       linkedSubscriptionId: null
     })
   })
@@ -452,6 +453,7 @@ async function mockPublicApi(page: Page) {
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
     delayCheckoutClaim: (delayMs: number) => { checkoutClaimDelayMs = delayMs },
     failNextPaymentInit: () => { failNextPaymentInit = true },
+    returnExpiredCheckoutOrder: () => { expiredCheckoutOrder = true },
     delayNextPaymentInit: (delayMs: number) => { paymentInitDelayMs = delayMs },
     delayNextForgotPassword: () => { delayNextForgotPasswordRequest = true },
     releaseForgotPassword: () => { releaseDelayedForgotPassword?.() },
@@ -920,6 +922,29 @@ test('authenticated public checkout owns one claim and payment initialization', 
   await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toBeVisible()
   await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 2 })
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
+})
+
+test('public checkout does not initialize payment for an expired claimed order', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.returnExpiredCheckoutOrder()
+
+  await page.goto('/tariffs')
+  await expect(page.getByRole('link', { name: /Привет, Public E2E/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+
+  await expect(page).toHaveURL(/\/account$/)
+  await expect(page.getByRole('heading', { name: 'Срок оплаты заказа истёк' })).toBeVisible()
+  await expect(page.getByText('Создайте новый заказ с актуальным сроком оплаты.', { exact: false })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Повторить оплату' })).toHaveCount(0)
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 0 })
+
+  const newOrderLink = page.getByRole('link', { name: 'Создать новый заказ' })
+  await expect(newOrderLink).toHaveAttribute('href', '/tariffs')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('public checkout result cannot cross a logout and login boundary', async ({ page }) => {

@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-terminal-payment-links`, версия `0.628.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `641/661` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-public-expired-partial-checkout`, версия `0.629.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `642/662` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-10:
 
 - [x] `STATE-001` Backend test suite проходит: `1125/1125`.
-- [x] `STATE-002` Frontend test suite проходит: `129/129`.
+- [x] `STATE-002` Frontend test suite проходит: `130/130`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2260,6 +2260,10 @@ git diff --check
   - Что сделать: renewal/retry карточки и история платежей не должны предлагать provider URL после завершения, ошибки, отмены, возврата или неизвестного payment state; успешный orders reload обязан обновлять snapshot повторной оплаты по ID.
   - Что сделано: общий `canOpenPaymentConfirmation` разрешает ссылку только для `New`, `Pending`, `WaitingConfirmation`; `loadAll` синхронизирует `retryPaymentState.order`, а обе заметные карточки и история используют единый fail-closed contract и terminal status text.
   - Доказательство: до исправления fail-first desktop/mobile был `0/2`: после `Completed/Succeeded` заметная retry-карточка оставляла старую provider URL; после исправления targeted renewal/retry `4/4`, cabinet regression `54/54`, полный Playwright `194/194` за `13.2 min` без failed/flaky/skipped, all-screens `6/6`. Frontend `129/129`, typecheck/build/audit зелёные; backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
+- [x] `P11-ACC-352` Не повторять оплату просроченного публичного partial checkout. 2026-08-11.
+  - Что сделать: после claim заказа публичный checkout обязан проверить persisted status и `expiresAt` до payment init; просроченный или terminal заказ не должен уходить в заведомо отклоняемый API-вызов или показывать недопустимый retry.
+  - Что сделано: `getPendingCheckoutOrderAvailability` разрешает retry только для живых `PendingPayment`/`Failed`; handler применяет контракт до payment init, а expired/recovery UI показывает причину и действие «Создать новый заказ» с очисткой старого partial checkout.
+  - Доказательство: до исправления fail-first desktop/mobile был `0/2`: просроченный claimed order отправлялся в payment init; после исправления targeted `2/2` с `paymentInit=0`, public regression `42/42`, полный Playwright `196/196` за `12.5 min` без failed/flaky/skipped, all-screens `6/6`. Frontend `130/130`, typecheck/build/audit зелёные; backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2909,6 +2913,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-042` | P1 | Public / partial checkout | После claim просроченного заказа публичный checkout всё равно вызывал payment init и предлагал повторить заведомо недопустимую оплату. | Исправлено локально | Persisted status/`expiresAt` проверяются до API; expired UI предлагает новый заказ, desktop/mobile/public/full responsive regression зелёные. |
 | `BUG-2026-08-11-041` | P1 | Cabinet / payment confirmation links | После terminal order/payment transition заметные renewal/retry карточки и история могли продолжать показывать старую provider confirmation URL. | Исправлено локально | Ссылки доступны только для `New/Pending/WaitingConfirmation`; snapshots синхронизируются после reload, desktop/mobile/full responsive regression зелёные. |
 | `BUG-2026-08-11-040` | P1 | Cabinet / renewal order refresh | После ручного обновления истории заметная карточка сохранённого продления продолжала использовать старый `PendingPayment` snapshot и показывала retry для уже истёкшего заказа. | Исправлено локально | Успешный orders reload синхронизирует renewal snapshot по ID, а карточка использует общий payment-availability contract; desktop/mobile recovery regression и полный responsive gate зелёные. |
 | `BUG-2026-08-11-039` | P1 | Cabinet / renewal payment retry | После сохранения renewal order и последующего provider reload `503` кнопка повторной подготовки оплаты оставалась активной, хотя handler без provider молча завершался. | Исправлено локально | Retry control использует `busy || !provider` и ARIA, handler остаётся fail-closed; desktop/mobile recovery regression и полный responsive gate зелёные. |
