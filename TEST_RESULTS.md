@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Access state compensation
+
+Scope:
+- VPN access enable/disable must compensate a completed provider mutation when local persistence fails or the request is cancelled after the provider call.
+- Failed compensation must leave a durable `SyncRequired` marker and must not persist a false success audit.
+
+Results:
+- Roadmap progress: `651/671` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-access-state-compensation`, version `0.638.0`.
+- Reproduction before fix: valid SQLite fail-first `0/6`; lifecycle made no inverse provider call and persisted `Error` plus staged success evidence after local save failure.
+- After fix: compensation/cancellation SQLite suite `6/6`; successful rollback preserves the original access status and stores only compensated failure evidence, while failed rollback stores `SyncRequired`, increments revision and records `provider_state_unknown`. Adjacent lifecycle/admin/expiry suite: `53/53`.
+- Backend full suite: `1140/1140`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding guard and latest release SQLite verification: OK after seed synchronization; release seed: `637` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Documentation/release guards are green after this status update. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Admin subscription effective expiry
 
 Scope:

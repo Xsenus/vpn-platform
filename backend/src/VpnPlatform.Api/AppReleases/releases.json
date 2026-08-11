@@ -15015,5 +15015,28 @@
         "text": "Roadmap progress is 650/670 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-access-state-compensation",
+    "version": "0.638.0",
+    "releasedAt": "2026-08-12T05:18:53+07:00",
+    "title": "Состояние VPN-доступа восстанавливается после локального сбоя",
+    "summary": "Enable и disable компенсируют успешную операцию провайдера, если локальное сохранение завершилось ошибкой или отменой.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "После local save failure сервис выполняет обратный provider-вызов и сохраняет исходный локальный статус без ложного success audit."
+      },
+      {
+        "type": "improved",
+        "text": "Неудачная компенсация переводит доступ в SyncRequired, записывает отдельные history/audit и явно требует ручной сверки с провайдером; отмена после внешней мутации использует тот же безопасный путь."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 651/671 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

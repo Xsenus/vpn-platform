@@ -86,6 +86,139 @@ public class VpnAccessAutomationMvpTests
         Assert.True(await db.AccessCredentialHistories.AnyAsync(x => x.EventType.Contains("Failed")));
     }
 
+    [Theory]
+    [InlineData("disable", AccessCredentialStatus.Active)]
+    [InlineData("enable", AccessCredentialStatus.Disabled)]
+    public async Task Local_Save_Failure_After_Access_State_Change_Should_Compensate_Provider_And_Preserve_Local_State(
+        string operation,
+        AccessCredentialStatus initialStatus)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var provider = new TrackingVpnProvider();
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var nodeId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+        var accessId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = $"local-save-{operation}@example.test", DisplayName = "Client", Status = UserStatus.Active });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Premium", Slug = $"local-save-{operation}", DurationDays = 30, Price = 490, Currency = "RUB" });
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1", Capacity = 100, UsedCapacity = 1 });
+        db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = clock.UtcNow, EndAt = clock.UtcNow.AddDays(30), CurrentServerId = nodeId });
+        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = "client-local-save", ServerId = nodeId, AccessUri = "vless://client", Status = initialStatus });
+        await db.SaveChangesAsync();
+        provider.AfterDisable = operation == "disable" ? () => db.FailNextSave = true : null;
+        provider.AfterEnable = operation == "enable" ? () => db.FailNextSave = true : null;
+
+        var result = operation == "disable"
+            ? await service.DisableAccessAsync(accessId, "manual_admin_disable", "test", null, CancellationToken.None)
+            : await service.EnableAccessAsync(accessId, "test", null, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(1, provider.DisableCalls);
+        Assert.Equal(1, provider.EnableCalls);
+        db.ChangeTracker.Clear();
+        Assert.Equal(initialStatus, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Single(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x =>
+            x.Action == $"access.{operation}.failed"
+            && x.AfterJson.Contains("compensated", StringComparison.Ordinal));
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == $"access.{operation}");
+    }
+
+    [Theory]
+    [InlineData("disable", AccessCredentialStatus.Active, true, false)]
+    [InlineData("enable", AccessCredentialStatus.Disabled, false, true)]
+    public async Task Local_Save_Failure_After_Access_State_Change_Should_Mark_Reconciliation_When_Compensation_Fails(
+        string operation,
+        AccessCredentialStatus initialStatus,
+        bool failEnable,
+        bool failDisable)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var provider = new TrackingVpnProvider { ThrowOnEnable = failEnable, ThrowOnDisable = failDisable };
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var nodeId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+        var accessId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = $"local-save-failed-{operation}@example.test", DisplayName = "Client", Status = UserStatus.Active });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Premium", Slug = $"local-save-failed-{operation}", DurationDays = 30, Price = 490, Currency = "RUB" });
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1", Capacity = 100, UsedCapacity = 1 });
+        db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = clock.UtcNow, EndAt = clock.UtcNow.AddDays(30), CurrentServerId = nodeId });
+        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = "client-local-save", ServerId = nodeId, AccessUri = "vless://client", Status = initialStatus });
+        await db.SaveChangesAsync();
+        provider.AfterDisable = operation == "disable" ? () => db.FailNextSave = true : null;
+        provider.AfterEnable = operation == "enable" ? () => db.FailNextSave = true : null;
+
+        var result = operation == "disable"
+            ? await service.DisableAccessAsync(accessId, "manual_admin_disable", "test", null, CancellationToken.None)
+            : await service.EnableAccessAsync(accessId, "test", null, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("reconciliation", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, provider.DisableCalls);
+        Assert.Equal(1, provider.EnableCalls);
+        db.ChangeTracker.Clear();
+        Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == $"access.{operation}.compensation_failed");
+    }
+
+    [Theory]
+    [InlineData("disable", AccessCredentialStatus.Active)]
+    [InlineData("enable", AccessCredentialStatus.Disabled)]
+    public async Task Cancellation_After_Access_State_Change_Should_Compensate_Provider_And_Rethrow(
+        string operation,
+        AccessCredentialStatus initialStatus)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        using var cancellation = new CancellationTokenSource();
+        var provider = new TrackingVpnProvider();
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var nodeId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+        var accessId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = $"cancel-local-save-{operation}@example.test", DisplayName = "Client", Status = UserStatus.Active });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Premium", Slug = $"cancel-local-save-{operation}", DurationDays = 30, Price = 490, Currency = "RUB" });
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1", Capacity = 100, UsedCapacity = 1 });
+        db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = clock.UtcNow, EndAt = clock.UtcNow.AddDays(30), CurrentServerId = nodeId });
+        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = "client-cancel-local-save", ServerId = nodeId, AccessUri = "vless://client", Status = initialStatus });
+        await db.SaveChangesAsync();
+        provider.AfterDisable = operation == "disable" ? cancellation.Cancel : null;
+        provider.AfterEnable = operation == "enable" ? cancellation.Cancel : null;
+
+        async Task Act() => await (operation == "disable"
+            ? service.DisableAccessAsync(accessId, "manual_admin_disable", "test", null, cancellation.Token)
+            : service.EnableAccessAsync(accessId, "test", null, cancellation.Token));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(Act);
+        Assert.Equal(1, provider.DisableCalls);
+        Assert.Equal(1, provider.EnableCalls);
+        db.ChangeTracker.Clear();
+        Assert.Equal(initialStatus, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x =>
+            x.Action == $"access.{operation}.failed"
+            && x.AfterJson.Contains("compensated", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Provider_Disable_Cancellation_Should_Persist_Unknown_State_And_Rethrow()
     {
@@ -353,10 +486,13 @@ public class VpnAccessAutomationMvpTests
         public int SyncCalls { get; private set; }
         public int ResetCalls { get; private set; }
         public bool ThrowOnDisable { get; init; }
+        public bool ThrowOnEnable { get; init; }
         public bool ThrowOnReset { get; init; }
         public Action? CancelDisable { get; init; }
         public string? CancelOperation { get; init; }
         public Action? Cancel { get; init; }
+        public Action? AfterDisable { get; set; }
+        public Action? AfterEnable { get; set; }
 
         public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new VpnProvisionResult($"client-{request.SubscriptionId:N}", "vless://client", "vless://client", "/config.json"));
@@ -370,6 +506,7 @@ public class VpnAccessAutomationMvpTests
             CancelDisable?.Invoke();
             cancellationToken.ThrowIfCancellationRequested();
             if (ThrowOnDisable) throw new InvalidOperationException("provider disabled with secret token value");
+            AfterDisable?.Invoke();
             return Task.CompletedTask;
         }
 
@@ -377,6 +514,8 @@ public class VpnAccessAutomationMvpTests
         {
             EnableCalls += 1;
             CancelIfRequested("enable", cancellationToken);
+            if (ThrowOnEnable) throw new InvalidOperationException("provider enable failed");
+            AfterEnable?.Invoke();
             return Task.CompletedTask;
         }
 
@@ -404,6 +543,22 @@ public class VpnAccessAutomationMvpTests
             if (!string.Equals(CancelOperation, operation, StringComparison.Ordinal)) return;
             Cancel?.Invoke();
             cancellationToken.ThrowIfCancellationRequested();
+        }
+    }
+
+    private sealed class FailingSaveApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : ApplicationDbContext(options)
+    {
+        public bool FailNextSave { get; set; }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (FailNextSave)
+            {
+                FailNextSave = false;
+                throw new DbUpdateException("Injected access lifecycle persistence failure.");
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
         }
     }
 }

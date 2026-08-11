@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.638.0 - 2026-08-12
+
+Release entry: `2026-08-12-access-state-compensation`.
+
+### Исправлено
+
+- Lifecycle `enable/disable` теперь отличает ошибку провайдера от локального `SaveChanges` failure после уже завершённой внешней мутации.
+- При локальном сбое сервис удаляет незакоммиченные success history/audit и выполняет обратный provider-вызов с независимым токеном; успешная компенсация сохраняет исходный локальный статус.
+- Если rollback не удался, доступ получает `SyncRequired`, новую revision и отдельные redacted history/audit с `provider_state_unknown`; поздняя отмена запроса проходит через тот же компенсационный путь и затем пробрасывается вызывающему коду.
+
+### Проверено
+
+- Валидный SQLite fail-first: `0/6`; после исправления compensation/cancellation suite `6/6`, смежные lifecycle/admin/expiry `53/53`.
+- Backend `1140/1140`; Release build `0` warnings/errors; fresh SQLite order/payment/subscription/access flow и EF drift check зелёные.
+- Frontend `136/136`, typecheck/build всех приложений и audit `0 vulnerabilities`; UI не менялся, актуальный полный browser inventory этого прохода остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- Encoding/documentation/release guards и latest release SQLite verification выполнены после синхронизации seed (`637` entries); secret scan `668` files/`0` findings, временные smoke-артефакты очищены.
+- Roadmap: `651/671` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.637.0 - 2026-08-12
 
 Release entry: `2026-08-12-admin-subscription-effective-expiry`.

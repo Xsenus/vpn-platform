@@ -187,10 +187,12 @@ public class VpnAccessLifecycleService
             return Result<AdminAccessActionResult>.Failure($"VPN access status transition {access.Status} -> {AccessCredentialStatus.Disabled} is not allowed.");
         }
 
+        var providerMutationCompleted = false;
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
             await provider.DisableAccessAsync(access.ProviderAccessId, cancellationToken);
+            providerMutationCompleted = true;
             StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Disabled, now);
             access.DisabledAt = now;
             access.Revision += 1;
@@ -199,8 +201,23 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access disabled."));
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            if (providerMutationCompleted)
+            {
+                await CompensateAccessStatePersistenceFailureAsync(
+                    access.Id,
+                    access.ProviderType,
+                    access.ProviderAccessId,
+                    before,
+                    attemptedEnable: false,
+                    failureEventType: $"{eventType ?? "AccessDisable"}Cancelled",
+                    reason,
+                    actorUserId,
+                    ex);
+                throw;
+            }
+
             MarkSyncRequired(access, now);
             AddHistory(access, $"{eventType ?? "AccessDisable"}Cancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
             AddAudit("access.disable.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
@@ -209,6 +226,20 @@ public class VpnAccessLifecycleService
         }
         catch (Exception ex)
         {
+            if (providerMutationCompleted)
+            {
+                return await CompensateAccessStatePersistenceFailureAsync(
+                    access.Id,
+                    access.ProviderType,
+                    access.ProviderAccessId,
+                    before,
+                    attemptedEnable: false,
+                    failureEventType: $"{eventType ?? "AccessDisable"}Failed",
+                    reason,
+                    actorUserId,
+                    ex);
+            }
+
             var safeError = SafeError(ex.Message);
             StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
             AddHistory(access, $"{eventType ?? "AccessDisable"}Failed", before, new { access.Status, error = safeError, reason });
@@ -240,10 +271,12 @@ public class VpnAccessLifecycleService
             return Result<AdminAccessActionResult>.Failure($"VPN access status transition {access.Status} -> {AccessCredentialStatus.Active} is not allowed.");
         }
 
+        var providerMutationCompleted = false;
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
             await provider.EnableAccessAsync(access.ProviderAccessId, cancellationToken);
+            providerMutationCompleted = true;
             StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Active, now);
             access.DisabledAt = null;
             access.LastSyncedAt = now;
@@ -253,8 +286,23 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access enabled."));
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            if (providerMutationCompleted)
+            {
+                await CompensateAccessStatePersistenceFailureAsync(
+                    access.Id,
+                    access.ProviderType,
+                    access.ProviderAccessId,
+                    before,
+                    attemptedEnable: true,
+                    failureEventType: "AccessEnableCancelled",
+                    reason,
+                    actorUserId,
+                    ex);
+                throw;
+            }
+
             MarkSyncRequired(access, now);
             AddHistory(access, "AccessEnableCancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
             AddAudit("access.enable.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
@@ -263,6 +311,20 @@ public class VpnAccessLifecycleService
         }
         catch (Exception ex)
         {
+            if (providerMutationCompleted)
+            {
+                return await CompensateAccessStatePersistenceFailureAsync(
+                    access.Id,
+                    access.ProviderType,
+                    access.ProviderAccessId,
+                    before,
+                    attemptedEnable: true,
+                    failureEventType: "AccessEnableFailed",
+                    reason,
+                    actorUserId,
+                    ex);
+            }
+
             var safeError = SafeError(ex.Message);
             StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
             AddHistory(access, "AccessEnableFailed", before, new { access.Status, error = safeError, reason });
@@ -394,6 +456,101 @@ public class VpnAccessLifecycleService
 
     private static object Snapshot(AccessCredential access)
         => new { access.Status, access.ProviderAccessId, access.DisabledAt, access.LastSyncedAt, access.Revision };
+
+    private async Task<Result<AdminAccessActionResult>> CompensateAccessStatePersistenceFailureAsync(
+        Guid accessId,
+        string providerType,
+        string providerAccessId,
+        object before,
+        bool attemptedEnable,
+        string failureEventType,
+        string? reason,
+        Guid? actorUserId,
+        Exception operationError)
+    {
+        var operation = attemptedEnable ? "enable" : "disable";
+        var safeError = SafeError(operationError.Message);
+        ClearTracker();
+
+        try
+        {
+            var provider = _vpnProviderFactory.Get(providerType);
+            if (attemptedEnable)
+            {
+                await provider.DisableAccessAsync(providerAccessId, CancellationToken.None);
+            }
+            else
+            {
+                await provider.EnableAccessAsync(providerAccessId, CancellationToken.None);
+            }
+        }
+        catch (Exception compensationError)
+        {
+            ClearTracker();
+            var uncertainAccess = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == accessId, CancellationToken.None);
+            if (uncertainAccess is not null)
+            {
+                MarkSyncRequired(uncertainAccess, _clock.UtcNow);
+                uncertainAccess.Revision += 1;
+                var safeCompensationError = SafeError(compensationError.Message);
+                AddHistory(uncertainAccess, $"{failureEventType}CompensationFailed", before, new
+                {
+                    uncertainAccess.Status,
+                    reason,
+                    error = safeError,
+                    compensationError = safeCompensationError,
+                    outcome = "provider_state_unknown"
+                });
+                AddAudit($"access.{operation}.compensation_failed", uncertainAccess, before, new
+                {
+                    uncertainAccess.Status,
+                    reason,
+                    error = safeError,
+                    compensationError = safeCompensationError,
+                    compensated = false,
+                    outcome = "provider_state_unknown"
+                }, actorUserId);
+                await _db.SaveChangesAsync(CancellationToken.None);
+            }
+
+            return Result<AdminAccessActionResult>.Failure(
+                $"VPN access {operation} failed and provider rollback failed; manual provider reconciliation is required.");
+        }
+
+        ClearTracker();
+        var persistedAccess = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == accessId, CancellationToken.None);
+        if (persistedAccess is not null)
+        {
+            AddHistory(persistedAccess, failureEventType, before, new
+            {
+                persistedAccess.Status,
+                reason,
+                error = safeError,
+                compensated = true,
+                outcome = "local_persistence_failed"
+            });
+            AddAudit($"access.{operation}.failed", persistedAccess, before, new
+            {
+                persistedAccess.Status,
+                reason,
+                error = safeError,
+                compensated = true,
+                outcome = "local_persistence_failed"
+            }, actorUserId);
+            await _db.SaveChangesAsync(CancellationToken.None);
+        }
+
+        return Result<AdminAccessActionResult>.Failure(
+            $"VPN access {operation} local persistence failed; provider state was restored.");
+    }
+
+    private void ClearTracker()
+    {
+        if (_db is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
+    }
 
     private static void MarkSyncRequired(AccessCredential access, DateTimeOffset now)
     {
