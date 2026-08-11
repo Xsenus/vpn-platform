@@ -478,6 +478,7 @@ async function mockPublicApi(page: Page) {
       faq: homeFaqRequestCount,
       content: homeContentRequestCount
     }),
+    getHomeContentRequestCount: () => homeContentRequestCount,
     failTariffsLoad: () => { tariffsLoadShouldFail = true },
     allowTariffsLoad: () => { tariffsLoadShouldFail = false },
     failPaymentProvidersLoad: () => { paymentProvidersLoadShouldFail = true },
@@ -607,6 +608,24 @@ test('public landing claims managed loads and distinguishes FAQ failure from emp
   await expect(page.getByRole('heading', { name: 'Как оплатить VPN?' })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить FAQ' })).toHaveCount(0)
   await expect.poll(api.getLandingLoadRequestCounts).toEqual({ faq: 2, content: 1 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('public tariffs and account each claim one managed content load under StrictMode', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.delayHomeContent(150)
+
+  await page.goto('/tariffs')
+  await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
+  await expect.poll(api.getHomeContentRequestCount).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getHomeContentRequestCount()).toBe(1)
+
+  await page.goto('/account')
+  await expect(page.getByRole('heading', { name: 'Аккаунт', level: 1 })).toBeVisible()
+  await expect.poll(api.getHomeContentRequestCount).toBe(2)
+  await page.waitForTimeout(300)
+  expect(api.getHomeContentRequestCount()).toBe(2)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

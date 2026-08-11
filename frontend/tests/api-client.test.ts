@@ -2685,7 +2685,7 @@ test('ApiClient exposes safe notification delivery monitoring and retry', async 
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
-test('frontend sources include managed FAQ surfaces', () => {
+test('frontend sources include managed public content surfaces', () => {
   const publicSource = readFileSync(new URL('../apps/public-web/src/App.tsx', import.meta.url), 'utf8')
   const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
 
@@ -2701,6 +2701,10 @@ test('frontend sources include managed FAQ surfaces', () => {
   assert.match(publicSource, /homeFaqLoadInFlightRef/)
   assert.match(publicSource, /requestId === homeFaqRequestIdRef\.current/)
   assert.match(publicSource, /Повторить загрузку FAQ/)
+  assert.match(publicSource, /function useManagedHomeContent\(\)/)
+  assert.match(publicSource, /managedHomeContentInitialLoadStartedRef/)
+  assert.match(publicSource, /managedHomeContentMountedRef\.current/)
+  assert.equal((publicSource.match(/const pageContent = useManagedHomeContent\(\)/g) ?? []).length, 2)
   assert.match(adminSource, /id="faq"/)
   assert.match(adminSource, /getAdminFaq/)
   assert.match(adminSource, /createAdminFaq/)

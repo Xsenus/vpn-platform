@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public managed content load lifecycle
+
+Scope:
+- Tariffs and account routes must each claim exactly one managed home-content request under React StrictMode.
+- CMS completion must remain owned by the mounted route while built-in fallback content stays available on network failure.
+
+Results:
+- Roadmap progress: `622/642` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-managed-content-load-lifecycle`, version `0.609.0`.
+- Reproduction before fix: both pages used unguarded mount effects; `/tariffs` started `2` identical CMS GET requests under StrictMode, and `/account` also allowed completion without an unmount ownership guard. Fail-first desktop/mobile was `0/2`.
+- After fix: shared `useManagedHomeContent` owns one component-scoped initial attempt, ignores completion while unmounted and preserves the existing default-content fallback. Targeted desktop/mobile contract: `2/2`.
+- Final public desktop/mobile regression: `40/40`; final console-responsive Playwright: `164/164` in `9.7 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: `/tariffs` and the top/bottom account forms at 1280x720 had no blank screen, horizontal overflow or unintended actionable overlap; mobile rendering is covered by the dedicated mobile-public run and responsive matrix.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `351.49 kB`, gzip `102.80 kB`; cabinet bundle `368.01/106.29 kB`; admin bundle raw `525267`, gzip `140453`, largest `225595`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `608` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public landing load lifecycle
 
 Scope:

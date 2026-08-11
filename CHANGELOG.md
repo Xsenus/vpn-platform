@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.609.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-managed-content-load-lifecycle`.
+
+### Исправлено
+
+- Страницы тарифов и аккаунта больше не отправляют по два одинаковых managed CMS GET при React StrictMode effect replay.
+- Общий `useManagedHomeContent` владеет одной initial попыткой на mounted route и отклоняет completion после ухода со страницы; встроенный fallback-контент сохранён.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: уже `/tariffs` получал `2` initial CMS GET вместо `1`. После исправления targeted lifecycle contract прошёл `2/2` и подтвердил по одной попытке на `/tariffs` и `/account`.
+- Финальный public desktop/mobile regression прошёл `40/40`; полный console-responsive Playwright — `164/164` за `9.7 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Tariffs/account просмотрены в браузере при 1280x720 px: обе части account-форм, retry-состояния тарифов и sticky navigation читаемы без blank screen, horizontal overflow или нецелевого overlap; mobile coverage подтверждён отдельным Playwright-проектом.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `351.49/102.80 kB`, cabinet bundle `368.01/106.29 kB`, admin bundle `525267/140453/max 225595`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `608`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `622/642` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.608.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-landing-load-lifecycle`.

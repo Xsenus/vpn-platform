@@ -176,6 +176,30 @@ function mapContent(blocks: SiteContentBlockDto[]) {
   }, {})
 }
 
+function useManagedHomeContent() {
+  const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
+  const managedHomeContentMountedRef = useRef(false)
+  const managedHomeContentInitialLoadStartedRef = useRef(false)
+
+  useEffect(() => {
+    managedHomeContentMountedRef.current = true
+    if (!managedHomeContentInitialLoadStartedRef.current) {
+      managedHomeContentInitialLoadStartedRef.current = true
+      api.getHomeContent()
+        .then((items) => {
+          if (managedHomeContentMountedRef.current) setPageContent({ ...defaultHomeContent, ...mapContent(items) })
+        })
+        .catch(() => {
+          if (managedHomeContentMountedRef.current) setPageContent(defaultHomeContent)
+        })
+    }
+
+    return () => { managedHomeContentMountedRef.current = false }
+  }, [])
+
+  return pageContent
+}
+
 function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
   const [homeFaq, setHomeFaq] = useState<FaqItem[]>([])
   const [homeFaqLoading, setHomeFaqLoading] = useState(true)
@@ -432,7 +456,7 @@ function TariffsPage({ onPendingCheckout }: {
   const [paymentProvidersLoadAttempt, setPaymentProvidersLoadAttempt] = useState(0)
   const [provider, setProvider] = useState<PaymentProvider | ''>('')
   const [pendingTariffId, setPendingTariffId] = useState<string>('')
-  const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
+  const pageContent = useManagedHomeContent()
   const checkoutInFlightRef = useRef(false)
   const checkoutRequestIdRef = useRef(0)
   const navigate = useNavigate()
@@ -447,19 +471,6 @@ function TariffsPage({ onPendingCheckout }: {
         chooseProvider: content('home.checkout.unavailable.chooseProvider')
       })
   const tariffsState = getPublicListState(tariffsLoading, tariffsError, tariffs.length)
-
-  useEffect(() => {
-    let cancelled = false
-    api.getHomeContent()
-      .then((items) => {
-        if (!cancelled) setPageContent({ ...defaultHomeContent, ...mapContent(items) })
-      })
-      .catch(() => {
-        if (!cancelled) setPageContent(defaultHomeContent)
-      })
-
-    return () => { cancelled = true }
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -801,7 +812,7 @@ function AccountPage({
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [resetMessage, setResetMessage] = useState('')
-  const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
+  const pageContent = useManagedHomeContent()
   const accountActionInFlightRef = useRef<string | null>(null)
   const accountActionRequestIdRef = useRef(0)
   const resetEmailRef = useRef(resetEmail)
@@ -809,12 +820,6 @@ function AccountPage({
   resetEmailRef.current = resetEmail
   newPasswordRef.current = newPassword
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
-
-  useEffect(() => {
-    api.getHomeContent()
-      .then((items) => setPageContent({ ...defaultHomeContent, ...mapContent(items) }))
-      .catch(() => setPageContent(defaultHomeContent))
-  }, [])
 
   useEffect(() => () => {
     accountActionRequestIdRef.current += 1
