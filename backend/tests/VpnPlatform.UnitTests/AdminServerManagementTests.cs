@@ -21,6 +21,80 @@ namespace VpnPlatform.UnitTests;
 public class AdminServerManagementTests
 {
     [Theory]
+    [InlineData(false, "ssh")]
+    [InlineData(false, "panel")]
+    [InlineData(true, "ssh")]
+    [InlineData(true, "panel")]
+    public async Task Server_Secret_Write_Should_Fail_Closed_When_Protector_Is_Unavailable_On_Sqlite(bool update, string secretKind)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = NewNode($"secret-guard-{update}-{secretKind}");
+        node.ProtectedSshCredential = "v1:existing-ssh-secret";
+        node.SshCredentialRef = "secretref:ssh:existing";
+        node.ProtectedPanelPassword = "v1:existing-panel-secret";
+        node.PanelSecretRef = "secretref:panel:existing";
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var request = UpdateRequest(node) with
+        {
+            Name = $"mutated-{node.Name}",
+            SshAuthMethod = "password",
+            SshCredential = secretKind == "ssh" ? "new-ssh-secret" : null,
+            PanelPassword = secretKind == "panel" ? "new-panel-secret" : null
+        };
+        var controller = CreateController(db, includeSecretProtector: false);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        var unavailable = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync();
+        Assert.Equal(node.Id, persisted.Id);
+        Assert.Equal(node.Name, persisted.Name);
+        Assert.Equal("v1:existing-ssh-secret", persisted.ProtectedSshCredential);
+        Assert.Equal("secretref:ssh:existing", persisted.SshCredentialRef);
+        Assert.Equal("v1:existing-panel-secret", persisted.ProtectedPanelPassword);
+        Assert.Equal("secretref:panel:existing", persisted.PanelSecretRef);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action is "server.create" or "server.update" or "server.secret.rotate");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Server_Metadata_Write_Should_Not_Require_Secret_Protector_On_Sqlite(bool update)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = NewNode($"metadata-guard-{update}");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var request = UpdateRequest(node) with { Name = $"updated-{node.Name}" };
+        var controller = CreateController(db, includeSecretProtector: false);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = update
+            ? await db.VpnNodes.SingleAsync(x => x.Id == node.Id)
+            : await db.VpnNodes.SingleAsync(x => x.Id != node.Id);
+        Assert.Equal(request.Name, persisted.Name);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (update ? "server.update" : "server.create"));
+    }
+
+    [Theory]
     [InlineData(false, "name")]
     [InlineData(false, "capacity")]
     [InlineData(false, "priority")]
@@ -519,7 +593,10 @@ public class AdminServerManagementTests
             node.PublicPort,
             node.NodeGroupId);
 
-    private static AdminOperationsController CreateController(ApplicationDbContext db, IVpnProvider? vpnProvider = null)
+    private static AdminOperationsController CreateController(
+        ApplicationDbContext db,
+        IVpnProvider? vpnProvider = null,
+        bool includeSecretProtector = true)
     {
         var protector = CreateSecretProtector();
         var provisioning = new ProvisioningService(db, new TestClock(), protector);
@@ -529,7 +606,7 @@ public class AdminServerManagementTests
             paymentOrchestrator: null!,
             paymentProviderAccounts: new PaymentProviderAccountService(db, protector, new TestClock()),
             vpnAccessLifecycleService: null,
-            secretProtector: protector,
+            secretProtector: includeSecretProtector ? protector : null,
             qrCodeGenerator: new SvgQrCodeGenerator(new TestClock()),
             vpnProviderFactory: new TestVpnProviderFactory(vpnProvider ?? new TestVpnProvider(HealthStatus.Healthy)));
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };

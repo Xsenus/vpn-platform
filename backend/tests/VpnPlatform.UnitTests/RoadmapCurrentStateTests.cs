@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-12-server-payload-validation";
-    private const string CurrentVersion = "0.643.0";
+    private const string CurrentReleaseId = "2026-08-12-server-secret-protection-fail-closed";
+    private const string CurrentVersion = "0.644.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,7 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-12", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1166/1166`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1172/1172`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `136/136`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
@@ -305,9 +305,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1166/1166", readme, StringComparison.Ordinal);
-        Assert.Contains("1166/1166", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1166/1166", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1172/1172", readme, StringComparison.Ordinal);
+        Assert.Contains("1172/1172", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1172/1172", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

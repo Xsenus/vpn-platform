@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-12 локально подтверждено:
 
-- backend на .NET 9: `1166/1166` unit tests;
+- backend на .NET 9: `1172/1172` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `136/136`;
 - frontend typecheck и production build: OK;
@@ -343,8 +343,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет и пользовательские API скрывают VPN URI/QR/config/provider ID точно по effective access deadline, не ожидая фонового lifecycle worker;
 - административные access DTO, QR и provider-команды используют тот же effective deadline; открытая админка скрывает секреты без reload и оставляет только безопасное отключение у провайдера;
 - административные sync/migration подписки, dashboard и user overview используют effective expiry; открытая админка обновляет команды и метрики без reload, а grace-period unblock согласован с backend state machine;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-server-payload-validation`, версия `0.643.0`;
-- backend create/update VPN-сервера отклоняет невалидные semantic ranges и неизвестную node group до записи, не подменяет ошибочный payload defaults и одинаково нормализует валидные значения;
-- roadmap progress: `656/676` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-server-secret-protection-fail-closed`, версия `0.644.0`;
+- backend create/update VPN-сервера возвращает `503` до node/audit mutation, если запрос несёт новый SSH/panel secret, а обязательный protector недоступен; metadata-only изменения остаются доступны;
+- roadmap progress: `657/677` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

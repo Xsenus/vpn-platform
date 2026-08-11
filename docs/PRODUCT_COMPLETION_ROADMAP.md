@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-server-payload-validation`, версия `0.643.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `656/676` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-server-secret-protection-fail-closed`, версия `0.644.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `657/677` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1166/1166`.
+- [x] `STATE-001` Backend test suite проходит: `1172/1172`.
 - [x] `STATE-002` Frontend test suite проходит: `136/136`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2320,6 +2320,10 @@ git diff --check
   - Что сделать: direct create/update API не должен обходить UI-валидатор, молча заменять невалидные ranges defaults, сохранять пустое имя/невалидный inbound или завершаться FK exception для неизвестной node group.
   - Что сделано: общий pre-mutation validator отклоняет пустое имя, неположительные capacity/priority, public port вне `1..65535` и неположительный panel inbound ID; `NodeGroupId` проверяется до записи, а create/update используют одинаковую нормализацию и больше не подменяют невалидный payload defaults.
   - Доказательство: SQLite fail-first `0/14`, включая `200` и два FK exceptions; после исправления negative/positive semantic matrix и весь server-management suite `34/34`, backend `1166/1166`, frontend `136/136`, typecheck/build/audit зелёные. UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальный VPS/staging/3x-ui smoke не заменялся локальными тестами.
+- [x] `P11-ACC-367` Закрыть ложный успех записи VPN server secrets без protector. 2026-08-12.
+  - Что сделать: direct create/update не должен возвращать успех и сохранять необратимый placeholder как configured credential, если новый SSH или panel secret нельзя защитить; metadata-only write не должен зависеть от protector.
+  - Что сделано: общий secret-write guard возвращает controlled `503` до node/audit mutation, HTTP endpoints больше не генерируют `validation-placeholder`, а metadata-only create/update сохраняет прежний контракт.
+  - Доказательство: SQLite fail-first `0/4` для create/update SSH/panel secret; после исправления secret boundary `6/6`, server/security `49/49`, backend `1172/1172`, frontend `136/136`, typecheck/build/audit зелёные. UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальный VPS/staging/3x-ui smoke не заменялся локальными тестами.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2969,6 +2973,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-004` | P1 | Admin VPN server secrets | Без `ISecretProtector` create/update возвращал `200`, сохранял необратимый `validation-placeholder` и помечал SSH/panel credential как configured. | Исправлено локально | Единый ранний `503`, отсутствие node/secret-ref/audit mutations и сохранение metadata-only write подтверждены SQLite `6/6`. |
 | `BUG-2026-08-12-003` | P1 | Admin VPN server API | Direct create/update обходил UI semantic validation: пустое имя и невалидные capacity/priority/ports/inbound сохранялись или заменялись defaults, неизвестная node group давала FK/500. | Исправлено локально | Общий pre-mutation validator, controlled node-group lookup и SQLite create/update matrix `16/16` подтверждают отсутствие partial node/audit изменений и сохранение валидной привязки. |
 | `BUG-2026-08-12-002` | P0 | Admin VPN access actions | При отсутствующем lifecycle-сервисе enable/disable локально меняли credential и возвращали `200`, хотя VPN-провайдер не вызывался; sync/reset для того же сбоя возвращали обычный `400`. | Исправлено локально | Единый ранний `503`, отсутствие credential/history/audit mutations и раздельные terminal/expired guards покрыты SQLite `4/4` и boundary `11/11`. |
 | `BUG-2026-08-12-001` | P1 | Cabinet / payment-link expiry | Открытая renewal/retry/history confirmation URL продолжала отображаться после локального истечения родительского `PendingPayment`, пока пользователь вручную не обновит данные; старый render timestamp мог отложить expiry после долгого ожидания до login. | Исправлено локально | Order-aware link policy, current-time render tick, nearest-expiry timer и desktop/mobile regression скрывают ссылки автоматически и показывают новый заказ. |

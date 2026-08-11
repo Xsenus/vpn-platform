@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: VPN server secret protection fail-closed
+
+Scope:
+- Direct admin create/update API must not report a saved SSH or panel secret when the required protector is unavailable.
+- Failed secret writes must leave node, secret references and audit history unchanged, while metadata-only writes remain available.
+
+Results:
+- Roadmap progress: `657/677` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-server-secret-protection-fail-closed`, version `0.644.0`.
+- Reproduction before fix: SQLite regression `0/4`; create/update for SSH and panel secrets returned `200` and persisted irreversible `validation-placeholder` values as configured credentials.
+- After fix: secret writes return controlled `503` before node/audit mutation; metadata-only create/update still succeeds. Secret boundary: `6/6`; full server/security suite: `49/49`.
+- Backend full suite: `1172/1172`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow and latest release: OK; scoped formatter: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding/documentation/release guards: `57/57`; release seed: `643` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Real VPS/staging/3x-ui validation remains external and no live item was closed from local evidence.
+
 ## Check 2026-08-12: VPN server payload validation
 
 Scope:

@@ -15153,5 +15153,28 @@
         "text": "Roadmap progress is 656/676 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-server-secret-protection-fail-closed",
+    "version": "0.644.0",
+    "releasedAt": "2026-08-12T06:39:50+07:00",
+    "title": "VPN-секреты не сохраняются без доступной защиты",
+    "summary": "Create и update VPN-сервера завершаются controlled 503, если новый SSH или panel secret нельзя защитить.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "API больше не возвращает успех и не сохраняет необратимый validation-placeholder, когда ISecretProtector недоступен."
+      },
+      {
+        "type": "improved",
+        "text": "Secret write останавливается до node, secret reference и audit mutations, а metadata-only create/update сохраняет прежний контракт."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 657/677 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

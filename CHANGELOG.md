@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.644.0 - 2026-08-12
+
+Release entry: `2026-08-12-server-secret-protection-fail-closed`.
+
+### Исправлено
+
+- Direct create/update VPN-сервера больше не подтверждает сохранение нового SSH или panel secret, если обязательный `ISecretProtector` недоступен.
+- Необратимый `validation-placeholder` больше не создаётся HTTP write-путями и не помечается как готовый protected credential.
+- Secret write возвращает controlled `503` до node/audit mutation; metadata-only create/update остаётся доступен без protector.
+
+### Проверено
+
+- SQLite fail-first `0/4`: create/update для SSH и panel secret возвращали `200` и сохраняли placeholder; после исправления secret boundary `6/6`, полный server/security suite `49/49`.
+- Backend `1172/1172`; Release build `0` warnings/errors; frontend `136/136`; typecheck/build всех приложений и audit `0 vulnerabilities` зелёные.
+- UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- EF drift отсутствует; fresh SQLite flow подтвердил latest release; seed содержит `643` записи, encoding/release guards `57/57`, secret scan `668` files/`0` findings.
+- Roadmap: `657/677` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; real VPS/staging/3x-ui evidence не заменялся локальными проверками.
+
 ## 0.643.0 - 2026-08-12
 
 Release entry: `2026-08-12-server-payload-validation`.

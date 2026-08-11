@@ -1605,6 +1605,11 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = payloadError });
         }
 
+        if (RequiresServerSecretProtection(request) && _secretProtector is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "Server secret protection service is unavailable." });
+        }
+
         var host = ProvisioningService.NormalizeHost(string.IsNullOrWhiteSpace(request.Host) ? request.IpAddress : request.Host);
         if (string.IsNullOrWhiteSpace(host) || !ProvisioningService.IsValidHost(host))
         {
@@ -1638,9 +1643,7 @@ public class AdminOperationsController : ControllerBase
         var legacySshKeyPath = string.Empty;
         if (!string.IsNullOrWhiteSpace(request.SshCredential))
         {
-            protectedCredential = _secretProtector is not null
-                ? _secretProtector.Protect(request.SshCredential.Trim())
-                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(request.SshCredential.Trim()))).ToLowerInvariant();
+            protectedCredential = _secretProtector!.Protect(request.SshCredential.Trim());
         }
         else if (!string.IsNullOrWhiteSpace(request.SshPrivateKeyPath))
         {
@@ -1650,9 +1653,7 @@ public class AdminOperationsController : ControllerBase
 
         var protectedPanelPassword = string.IsNullOrWhiteSpace(request.PanelPassword)
             ? string.Empty
-            : _secretProtector is not null
-                ? _secretProtector.Protect(request.PanelPassword.Trim())
-                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(request.PanelPassword.Trim()))).ToLowerInvariant();
+            : _secretProtector!.Protect(request.PanelPassword.Trim());
 
         var tags = NormalizeServerTags(request.TagsCsv, owner, authMethod, string.IsNullOrWhiteSpace(protectedCredential) ? "missing" : "protected", request.ValidationMode);
 
@@ -1704,6 +1705,11 @@ public class AdminOperationsController : ControllerBase
         if (payloadError is not null)
         {
             return BadRequest(new { error = payloadError });
+        }
+
+        if (RequiresServerSecretProtection(request) && _secretProtector is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "Server secret protection service is unavailable." });
         }
 
         await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
@@ -1773,9 +1779,7 @@ public class AdminOperationsController : ControllerBase
         if (rotatedSshCredential)
         {
             var sshCredential = request.SshCredential!.Trim();
-            node.ProtectedSshCredential = _secretProtector is not null
-                ? _secretProtector.Protect(sshCredential)
-                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(sshCredential))).ToLowerInvariant();
+            node.ProtectedSshCredential = _secretProtector!.Protect(sshCredential);
             node.SshCredentialRef = $"secretref:ssh:{Guid.NewGuid():N}";
             node.SshPrivateKeyPath = string.Empty;
         }
@@ -1789,9 +1793,7 @@ public class AdminOperationsController : ControllerBase
         if (rotatedPanelPassword)
         {
             var panelPassword = request.PanelPassword!.Trim();
-            node.ProtectedPanelPassword = _secretProtector is not null
-                ? _secretProtector.Protect(panelPassword)
-                : "validation-placeholder:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(panelPassword))).ToLowerInvariant();
+            node.ProtectedPanelPassword = _secretProtector!.Protect(panelPassword);
             node.PanelSecretRef = $"secretref:panel:{Guid.NewGuid():N}";
             node.PanelPassword = string.Empty;
         }
@@ -3216,6 +3218,10 @@ public class AdminOperationsController : ControllerBase
 
         return null;
     }
+
+    private static bool RequiresServerSecretProtection(CreateServerHttpRequest request)
+        => !string.IsNullOrWhiteSpace(request.SshCredential)
+            || !string.IsNullOrWhiteSpace(request.PanelPassword);
 
     private static bool TryNormalizeServerPanelBaseUrl(string? value, out string normalized, out string error)
     {
