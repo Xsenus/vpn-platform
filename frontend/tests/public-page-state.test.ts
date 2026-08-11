@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { OrderDto, PublicPaymentProviderDto, TariffDto } from '../packages/api-client/src/index.ts'
-import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures } from '../apps/public-web/src/public-page-state.ts'
+import { canOpenCheckoutPayment, canStartCheckout, getCheckoutErrorMessage, getCheckoutPaymentExpiryDelay, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures } from '../apps/public-web/src/public-page-state.ts'
 
 function tariff(overrides: Partial<TariffDto>): TariffDto {
   return {
@@ -127,4 +127,17 @@ test('public partial checkout retries only a live backend-supported order', () =
   assert.equal(processing.shouldForgetPendingCheckout, true)
   assert.equal(processing.shouldCreateNewOrder, false)
   assert.equal(processing.title, 'Подключаем VPN-доступ')
+})
+
+test('public checkout exposes a payment link only until the retryable order expires', () => {
+  const now = new Date('2026-05-27T12:00:00Z')
+
+  assert.equal(canOpenCheckoutPayment(order(), now), true)
+  assert.equal(canOpenCheckoutPayment(order({ status: 'Failed' }), now), true)
+  assert.equal(getCheckoutPaymentExpiryDelay(order(), now), 15 * 60 * 1000)
+
+  assert.equal(canOpenCheckoutPayment(order({ expiresAt: '2026-05-27T12:00:00Z' }), now), false)
+  assert.equal(canOpenCheckoutPayment(order({ status: 'Completed' }), now), false)
+  assert.equal(getCheckoutPaymentExpiryDelay(order({ expiresAt: '2026-05-27T12:00:00Z' }), now), null)
+  assert.equal(getCheckoutPaymentExpiryDelay(order({ status: 'Completed' }), now), null)
 })

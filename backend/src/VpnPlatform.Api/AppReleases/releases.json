@@ -14900,5 +14900,28 @@
         "text": "Roadmap progress is 645/665 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-public-payment-link-expiry",
+    "version": "0.633.0",
+    "releasedAt": "2026-08-12T01:04:56+07:00",
+    "title": "Просроченная public-оплата больше не оставляет ссылку",
+    "summary": "Public account автоматически скрывает redirect URL, когда checkout-заказ больше нельзя оплачивать.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Ссылка последней public-покупки теперь проверяет retryable status и срок snapshot-заказа."
+      },
+      {
+        "type": "improved",
+        "text": "Граница срока автоматически обновляет карточку без refresh и показывает создание нового заказа."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 646/666 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

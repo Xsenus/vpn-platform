@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Public payment-link expiry
+
+Scope:
+- The payment redirect returned after a public checkout claim must remain available only while its snapshot order is retryable and unexpired.
+- An open account page must transition to explicit expired recovery at the order expiry boundary without a manual refresh.
+
+Results:
+- Roadmap progress: `646/666` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-public-payment-link-expiry`, version `0.633.0`.
+- Reproduction before fix: desktop/mobile browser fail-first `0/2`; the payment link remained available after a controlled 30-second order expiry.
+- After fix: targeted public page-state unit suite `6/6`, public-web typecheck and desktop/mobile browser regression `2/2`. The link disappears without refresh, the status changes to expired, exact recovery copy and create-new-order action appear, and no horizontal overflow is introduced.
+- Full public desktop/mobile regression: `48/48`; final unchanged console-responsive Playwright: `208/208` in `11.0 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Frontend tests: `133/133`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `357.13 kB`, gzip `104.23 kB`; cabinet bundle `371.43/107.26 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `632` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-12: Cabinet payment-link expiry
 
 Scope:

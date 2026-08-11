@@ -211,10 +211,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1125/1125` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `132/132`;
+- frontend unit tests: `133/133`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `206/206`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `208/208`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -338,7 +338,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - renewal/retry карточки и история платежей показывают provider confirmation URL только для `New/Pending/WaitingConfirmation`, после terminal/unknown transition ссылка скрывается;
 - кабинет связывает confirmation URL со сроком родительского заказа и автоматически скрывает renewal/retry/history ссылки в момент истечения без ручного refresh;
 - публичный checkout сохраняет срок session, блокирует просроченный pre-claim flow и завершает legacy backend-expiry без payment init или retry-петли;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-cabinet-payment-link-expiry`, версия `0.632.0`;
-- roadmap progress: `645/665` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- карточка последней public-покупки автоматически скрывает redirect URL в момент истечения checkout-заказа и показывает явное создание нового заказа;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-public-payment-link-expiry`, версия `0.633.0`;
+- roadmap progress: `646/666` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

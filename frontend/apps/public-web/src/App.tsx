@@ -20,7 +20,7 @@ import {
 import { Card, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
 import { getPendingCheckoutSessionAvailability, isCheckoutSessionExpiredError, parsePendingCheckout, type PendingCheckout } from './pending-checkout'
-import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
+import { canOpenCheckoutPayment, canStartCheckout, getCheckoutErrorMessage, getCheckoutPaymentExpiryDelay, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 import { getPublicRouteMetadata } from './public-route'
 import { getPublicSessionCheckError, isPublicAccessTokenExpired, isPublicSessionRejected, publicSessionEndedMessage } from './public-session'
 
@@ -842,6 +842,7 @@ function AccountPage({
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [resetMessage, setResetMessage] = useState('')
+  const [checkoutClockTick, setCheckoutClockTick] = useState(0)
   const pageContent = useManagedHomeContent()
   const accountActionInFlightRef = useRef<string | null>(null)
   const accountActionRequestIdRef = useRef(0)
@@ -871,12 +872,31 @@ function AccountPage({
   const pendingCheckoutSessionAvailability = pendingCheckout
     ? getPendingCheckoutSessionAvailability(pendingCheckout)
     : null
+  const checkoutNow = new Date()
+  const lastCheckoutOrderAvailability = lastCheckout
+    ? getPendingCheckoutOrderAvailability(lastCheckout.order, checkoutNow)
+    : null
+  const canOpenLastCheckoutPayment = lastCheckout
+    ? canOpenCheckoutPayment(lastCheckout.order, checkoutNow)
+    : false
   const canRetryPendingCheckout = pendingCheckoutOrder
     ? Boolean(pendingCheckoutOrderAvailability?.canRetry)
     : (pendingCheckoutSessionAvailability?.canClaim ?? true)
   const shouldCreateNewCheckoutOrder = pendingCheckoutOrderAvailability?.shouldCreateNewOrder
     ?? pendingCheckoutSessionAvailability?.shouldCreateNewOrder
     ?? false
+
+  useEffect(() => {
+    if (!lastCheckout) return
+    const delay = getCheckoutPaymentExpiryDelay(lastCheckout.order, checkoutNow)
+    if (delay === null) return
+
+    const timer = window.setTimeout(
+      () => setCheckoutClockTick((current) => current + 1),
+      Math.min(delay + 25, 2_147_483_647)
+    )
+    return () => window.clearTimeout(timer)
+  }, [checkoutClockTick, lastCheckout])
 
   const switchAuthMode = (nextMode: 'login' | 'register') => {
     setMode(nextMode)
@@ -983,7 +1003,7 @@ function AccountPage({
       <h2 className="sr-only">Состояние аккаунта</h2>
       <div className="grid">
         <StatTile label="Авторизация" value={profile ? 'подключен' : token ? (sessionHydrationBusy ? 'проверяется' : 'требует проверки') : 'не выполнена'} />
-        <StatTile label="Покупка" value={pendingCheckoutOrderAvailability?.statusLabel ?? pendingCheckoutSessionAvailability?.statusLabel ?? (pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто')} />
+        <StatTile label="Покупка" value={pendingCheckoutOrderAvailability?.statusLabel ?? pendingCheckoutSessionAvailability?.statusLabel ?? (pendingCheckout ? 'ожидает привязки' : lastCheckoutOrderAvailability?.statusLabel ?? (lastCheckout ? 'есть заказ' : 'пока пусто'))} />
         <StatTile label="Рефералы" value={profile?.referralCode ?? 'будет после входа'} />
       </div>
 
@@ -1070,17 +1090,28 @@ function AccountPage({
               <h3>{content('home.checkout.resultTitle')}</h3>
               <p>Тариф: {lastCheckout.tariffName}</p>
               <p>Способ оплаты: {lastCheckout.provider}</p>
-              <p>Статус: <StatusBadge value={lastCheckout.order.status} /></p>
+              <p>Статус: <StatusBadge value={lastCheckoutOrderAvailability?.isExpired ? 'Expired' : lastCheckout.order.status} /></p>
               <p>ID заказа: {lastCheckout.order.id}</p>
               <p>ID платежа: {lastCheckout.payment.paymentId}</p>
-              <p className="muted">{content('home.checkout.afterPaymentText')}</p>
-              <ExternalLinkActions
-                value={lastCheckout.payment.redirectUrl}
-                openLabel={content('home.checkout.openPaymentCta')}
-                copyLabel={content('home.checkout.copyPaymentLink')}
-                ariaLabel="Открыть оплату в новой вкладке"
-                invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите оформление или обратитесь в поддержку."
-              />
+              {canOpenLastCheckoutPayment
+                ? <>
+                    <p className="muted">{content('home.checkout.afterPaymentText')}</p>
+                    <ExternalLinkActions
+                      value={lastCheckout.payment.redirectUrl}
+                      openLabel={content('home.checkout.openPaymentCta')}
+                      copyLabel={content('home.checkout.copyPaymentLink')}
+                      ariaLabel="Открыть оплату в новой вкладке"
+                      invalidMessage="Ссылка оплаты отклонена как некорректная. Повторите оформление или обратитесь в поддержку."
+                    />
+                  </>
+                : <>
+                    <p className="muted" role="status">{lastCheckoutOrderAvailability?.reason ?? 'Этот заказ больше нельзя оплатить.'}</p>
+                    {lastCheckoutOrderAvailability?.shouldCreateNewOrder && (
+                      <div className="form-actions">
+                        <Link className="button" to="/tariffs">Создать новый заказ</Link>
+                      </div>
+                    )}
+                  </>}
             </Card>
           )}
         </div>

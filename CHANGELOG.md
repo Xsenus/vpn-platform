@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.633.0 - 2026-08-12
+
+Release entry: `2026-08-12-public-payment-link-expiry`.
+
+### Исправлено
+
+- Public account больше не оставляет redirect URL после истечения заказа, созданного через checkout-session.
+- Доступность ссылки оплаты проверяет retryable order status и `expiresAt`, а открытая вкладка автоматически обновляется на границе срока без ручного refresh.
+- Просроченная карточка показывает статус `Expired`, точное объяснение и действие «Создать новый заказ» вместо недействительной ссылки.
+
+### Проверено
+
+- До исправления desktop/mobile fail-first был `0/2`: после fake-clock expiry ссылка оставалась доступна. После исправления targeted unit `6/6`, typecheck public-web и desktop/mobile regression `2/2` прошли без overflow.
+- Полный public desktop/mobile regression прошёл `48/48`; финальный console-responsive Playwright — `208/208` за `11.0 min` без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `133/133`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `357.13/104.23 kB`, cabinet bundle `371.43/107.26 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `632`, secret scan `668` files/`0` findings.
+- Roadmap: `646/666` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.632.0 - 2026-08-12
 
 Release entry: `2026-08-12-cabinet-payment-link-expiry`.

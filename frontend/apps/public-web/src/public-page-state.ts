@@ -145,3 +145,22 @@ export function getPendingCheckoutOrderAvailability(
     reason: hasRetryableStatus ? null : 'Этот заказ больше нельзя отправить на повторную оплату.'
   }
 }
+
+export function canOpenCheckoutPayment(
+  order: Pick<OrderDto, 'status' | 'expiresAt'>,
+  now = new Date()
+) {
+  return getPendingCheckoutOrderAvailability(order, now).canRetry
+}
+
+export function getCheckoutPaymentExpiryDelay(
+  order: Pick<OrderDto, 'status' | 'expiresAt'>,
+  now = new Date()
+) {
+  if (!canOpenCheckoutPayment(order, now)) return null
+
+  const expiresAt = Date.parse(order.expiresAt)
+  const nowTime = now.getTime()
+  if (!Number.isFinite(expiresAt) || !Number.isFinite(nowTime) || expiresAt <= nowTime) return null
+  return expiresAt - nowTime
+}
