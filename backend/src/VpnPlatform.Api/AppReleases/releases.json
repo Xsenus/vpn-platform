@@ -15061,5 +15061,28 @@
         "text": "Roadmap progress is 652/672 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-access-sync-read-failure",
+    "version": "0.640.0",
+    "releasedAt": "2026-08-12T05:43:34+07:00",
+    "title": "Ошибка чтения usage не портит VPN-доступ",
+    "summary": "Read-only sync failure сохраняет фактический статус доступа и записывает отдельную безопасную диагностику.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Временная ошибка чтения usage больше не переводит Active или Disabled VPN-доступ в Error и не меняет LastSyncedAt/revision."
+      },
+      {
+        "type": "improved",
+        "text": "History и audit сохраняют redacted outcome provider_read_failed, не смешивая monitoring failure с реальным состоянием provider-клиента."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 653/673 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

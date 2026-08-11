@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Access sync read failure
+
+Scope:
+- Read-only provider usage failure must not mutate a valid Active or Disabled access state.
+- Failure diagnostics must remain durable and redacted without changing LastSyncedAt or revision.
+
+Results:
+- Roadmap progress: `653/673` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-access-sync-read-failure`, version `0.640.0`.
+- Reproduction before fix: valid SQLite fail-first `0/2`; both Active and Disabled accesses became Error after a read-only provider usage exception.
+- After fix: active/disabled SQLite suite `2/2`; status, DisabledAt, LastSyncedAt and revision remain unchanged, with one `provider_read_failed` history/audit record. Adjacent lifecycle/admin/expiry suite: `59/59`.
+- Backend full suite: `1146/1146`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; formatter for changed C# files: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding guard and latest release SQLite verification: OK after seed synchronization; release seed: `639` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Documentation/release guards are green after this status update. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Access sync/reset persistence
 
 Scope:

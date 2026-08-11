@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.640.0 - 2026-08-12
+
+Release entry: `2026-08-12-access-sync-read-failure`.
+
+### Исправлено
+
+- Read-only ошибка `SyncAccessAsync/GetUsageAsync` больше не переводит рабочий `Active` или намеренно `Disabled` доступ в `Error`.
+- Provider read failure сохраняет `DisabledAt`, `LastSyncedAt` и revision, записывая только redacted `provider_read_failed` history/audit.
+- Monitoring failure теперь отделён от local persistence failure после успешного чтения и от необратимого traffic reset.
+
+### Проверено
+
+- Валидный SQLite fail-first `0/2`; после исправления active/disabled `2/2`, смежные lifecycle/admin/expiry `59/59`.
+- Backend `1146/1146`; Release build `0` warnings/errors; fresh SQLite, EF drift и formatter по изменённым C# файлам зелёные.
+- Frontend `136/136`, typecheck/build всех приложений и audit `0 vulnerabilities`; UI не менялся, актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- Encoding/documentation/release guards и latest release SQLite verification выполнены после синхронизации seed (`639` entries); secret scan `668` files/`0` findings, временные smoke-артефакты очищены.
+- Roadmap: `653/673` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.639.0 - 2026-08-12
 
 Release entry: `2026-08-12-access-sync-reset-persistence`.

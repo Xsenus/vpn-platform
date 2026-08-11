@@ -404,9 +404,8 @@ public class VpnAccessLifecycleService
             }
 
             var safeError = SafeError(ex.Message);
-            StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
-            AddHistory(access, "AccessSyncFailed", before, new { access.Status, error = safeError, reason });
-            AddAudit("access.sync.failed", access, before, new { access.Status, error = safeError, reason }, actorUserId);
+            AddHistory(access, "AccessSyncFailed", before, new { access.Status, error = safeError, reason, outcome = "provider_read_failed" });
+            AddAudit("access.sync.failed", access, before, new { access.Status, error = safeError, reason, outcome = "provider_read_failed" }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Failure($"VPN access sync failed: {safeError}");
         }

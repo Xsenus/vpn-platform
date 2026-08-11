@@ -356,6 +356,44 @@ public class VpnAccessAutomationMvpTests
     }
 
     [Theory]
+    [InlineData(AccessCredentialStatus.Active)]
+    [InlineData(AccessCredentialStatus.Disabled)]
+    public async Task Provider_Sync_Read_Failure_Should_Preserve_Access_State_And_Write_Failure_Evidence(
+        AccessCredentialStatus initialStatus)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var provider = new TrackingVpnProvider { ThrowOnSync = true };
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var accessId = await SeedActiveSqliteAccessAsync(db, clock, $"sync-read-{initialStatus}");
+        var access = await db.AccessCredentials.SingleAsync();
+        access.Status = initialStatus;
+        access.DisabledAt = initialStatus == AccessCredentialStatus.Disabled ? clock.UtcNow.AddHours(-2) : null;
+        await db.SaveChangesAsync();
+        var originalLastSyncedAt = access.LastSyncedAt;
+        var originalRevision = access.Revision;
+
+        var result = await service.SyncAccessAsync(accessId, "test", null, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(1, provider.SyncCalls);
+        db.ChangeTracker.Clear();
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(initialStatus, persistedAccess.Status);
+        Assert.Equal(originalLastSyncedAt, persistedAccess.LastSyncedAt);
+        Assert.Equal(originalRevision, persistedAccess.Revision);
+        Assert.Collection(await db.AccessCredentialHistories.ToListAsync(), x =>
+        {
+            Assert.Equal("AccessSyncFailed", x.EventType);
+            Assert.Contains("provider_read_failed", x.NewValueJson, StringComparison.Ordinal);
+        });
+        Assert.Collection(await db.AuditLogs.ToListAsync(), x => Assert.Equal("access.sync.failed", x.Action));
+    }
+
+    [Theory]
     [InlineData("sync", AccessCredentialStatus.Active, "AccessSyncCancelled", "access.sync.cancelled")]
     [InlineData("reset", AccessCredentialStatus.SyncRequired, "AccessTrafficResetCancelled", "access.reset_traffic.cancelled")]
     public async Task Cancellation_After_Completed_Access_Action_Should_Persist_Only_Cancellation_Evidence_And_Rethrow(
@@ -589,6 +627,7 @@ public class VpnAccessAutomationMvpTests
         public int ResetCalls { get; private set; }
         public bool ThrowOnDisable { get; init; }
         public bool ThrowOnEnable { get; init; }
+        public bool ThrowOnSync { get; init; }
         public bool ThrowOnReset { get; init; }
         public Action? CancelDisable { get; init; }
         public string? CancelOperation { get; init; }
@@ -627,6 +666,7 @@ public class VpnAccessAutomationMvpTests
         {
             SyncCalls += 1;
             CancelIfRequested("sync", cancellationToken);
+            if (ThrowOnSync) throw new InvalidOperationException("provider usage read failed");
             AfterSync?.Invoke();
             return Task.FromResult(new VpnUsageSnapshot(providerAccessId, 1234, 1, DateTimeOffset.UtcNow));
         }
