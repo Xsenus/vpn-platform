@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.623.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-managed-config-resource-owner`.
+
+### Исправлено
+
+- Команды одного тарифа, релиза, FAQ-записи и рабочего сценария больше не выполняются параллельно через разные action IDs.
+- Создание, редактирование, удаление и восстановление контента главной используют общий global boundary и не пересекают массовое восстановление defaults.
+- Сохранение и проверка настроек Telegram-бота используют единый resource owner и shared busy-state.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: tariff toggle пропускал второй PATCH, home defaults restore — content create, bot settings save — connection test (`2/1/1` вместо `1/0/0`). После исправления targeted contract прошёл `2/2`, включая programmatic обход disabled.
+- Managed configuration/Telegram/role regression прошёл `8/8` за `1.7 min`; полный console-responsive Playwright — `182/182` за `11.9 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `127/127`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.59/106.77 kB`, admin bundle `530419/142085/max 230747`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `622`, secret scan `668` files/`0` findings.
+- Roadmap: `636/656` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.622.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-finance-resource-owner`.

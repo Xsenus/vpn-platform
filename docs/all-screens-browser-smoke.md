@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-11-admin-finance-resource-owner`, версия `0.622.0`; provider account и order/payment команды используют общие identity-safe resource owners и shared busy-state, а полный browser gate проходит `180/180` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-11-admin-managed-config-resource-owner`, версия `0.623.0`; managed configuration entity/global команды и Telegram save/test используют общие resource owners и shared busy-state, а полный browser gate проходит `182/182` без failed/flaky/skipped.

@@ -596,6 +596,26 @@ function paymentActionResourceKeys(paymentId: string, orderId?: string | null) {
     : [paymentActionResourceKey(paymentId)]
 }
 
+function tariffActionResourceKey(tariffId: string) {
+  return `tariff:${tariffId}`
+}
+
+function appReleaseActionResourceKey(releaseId: string) {
+  return `app-release:${releaseId}`
+}
+
+function faqActionResourceKey(faqId: string) {
+  return `faq:${faqId}`
+}
+
+const siteContentActionResourceKey = 'site-content'
+
+function workScenarioActionResourceKey(scenarioId: string) {
+  return `work-scenario:${scenarioId}`
+}
+
+const botSettingsActionResourceKey = 'bot-settings'
+
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
@@ -2560,7 +2580,7 @@ export function App() {
         && tariffFeaturesTextRef.current === submittedFeaturesText
         && editingTariffIdRef.current === editingId) resetTariffForm()
       await action.reloadAll()
-    })
+    }, tariffActionResourceKey(editingId || 'create'))
   }
 
   const handleToggleTariff = async (tariff: TariffDto) => {
@@ -2569,7 +2589,7 @@ export function App() {
       if (!action.isCurrent()) return
       setNotice(`Тариф ${tariff.name} обновлён.`)
       await action.reloadAll()
-    })
+    }, tariffActionResourceKey(tariff.id))
   }
 
   const handleDeleteTariff = async (tariff: TariffDto) => {
@@ -2579,7 +2599,7 @@ export function App() {
       if (editingTariffIdRef.current === tariff.id) resetTariffForm()
       setNotice(result.archived ? `Тариф ${tariff.name} архивирован и скрыт с витрины.` : `Тариф ${tariff.name} удалён.`)
       await action.reloadAll()
-    })
+    }, tariffActionResourceKey(tariff.id))
   }
 
   const resetReferralProgramForm = () => {
@@ -2685,7 +2705,7 @@ export function App() {
       setNotice(editingId ? 'Релиз обновлен.' : 'Релиз создан.')
       if (releaseFormRef.current === submittedForm && editingReleaseIdRef.current === editingId) resetReleaseForm()
       await action.reloadAll()
-    })
+    }, appReleaseActionResourceKey(editingId || 'create'))
   }
 
   const handleDeleteRelease = async (release: AppReleaseDto) => {
@@ -2695,7 +2715,7 @@ export function App() {
       if (editingReleaseIdRef.current === release.id) resetReleaseForm()
       setNotice(`Релиз ${release.version} удален.`)
       await action.reloadAll()
-    })
+    }, appReleaseActionResourceKey(release.id))
   }
 
   const resetFaqForm = () => {
@@ -2745,7 +2765,7 @@ export function App() {
       setNotice(editingId ? 'Вопрос FAQ обновлен.' : 'Вопрос FAQ создан.')
       if (faqFormRef.current === submittedForm && editingFaqIdRef.current === editingId) resetFaqForm()
       await action.reloadAll()
-    })
+    }, faqActionResourceKey(editingId || 'create'))
   }
 
   const handleDeleteFaq = async (entry: FaqItem) => {
@@ -2757,7 +2777,7 @@ export function App() {
       if (editingFaqIdRef.current === faqId) resetFaqForm()
       setNotice('Вопрос FAQ удален.')
       await action.reloadAll()
-    })
+    }, faqActionResourceKey(faqId))
   }
 
   const resetSiteContentForm = () => {
@@ -2809,7 +2829,7 @@ export function App() {
       setNotice(editingId ? 'Блок контента обновлен.' : 'Блок контента создан.')
       if (siteContentFormRef.current === submittedForm && editingSiteContentIdRef.current === editingId) resetSiteContentForm()
       await action.reloadAll()
-    })
+    }, siteContentActionResourceKey)
   }
 
   const handleDeleteSiteContent = async (block: SiteContentBlockDto) => {
@@ -2819,7 +2839,7 @@ export function App() {
       if (editingSiteContentIdRef.current === block.id) resetSiteContentForm()
       setNotice('Блок контента удален.')
       await action.reloadAll()
-    })
+    }, siteContentActionResourceKey)
   }
 
   const handleRestoreHomeContentDefaults = async () => {
@@ -2830,7 +2850,7 @@ export function App() {
       setHomeContentReadiness(result.readiness)
       setNotice(`Главная обновлена: создано ${result.created}, восстановлено ${result.restored}.`)
       await action.reloadAll()
-    })
+    }, siteContentActionResourceKey)
   }
 
   const resetWorkScenarioForm = () => {
@@ -2894,7 +2914,7 @@ export function App() {
       setNotice(editingId ? 'Сценарий работы обновлен.' : 'Сценарий работы создан.')
       if (workScenarioFormRef.current === submittedForm && editingWorkScenarioIdRef.current === editingId) resetWorkScenarioForm()
       await action.reloadAll()
-    })
+    }, workScenarioActionResourceKey(editingId || 'create'))
   }
 
   const handleDeleteWorkScenario = async (scenario: WorkScenarioDto) => {
@@ -2904,7 +2924,7 @@ export function App() {
       if (editingWorkScenarioIdRef.current === scenario.id) resetWorkScenarioForm()
       setNotice('Сценарий работы удален.')
       await action.reloadAll()
-    })
+    }, workScenarioActionResourceKey(scenario.id))
   }
 
   const clearAdminAccessQr = (accessId: string | null | undefined) => {
@@ -3567,7 +3587,7 @@ export function App() {
       botSettingsCheckRequestId.current += 1
       setBotSettingsCheck(null)
       setNotice('Настройки Telegram-бота сохранены. Токены остаются скрытыми и не возвращаются из API.')
-    })
+    }, botSettingsActionResourceKey)
   }
 
   const handleTestBotSettings = () => {
@@ -3578,7 +3598,7 @@ export function App() {
       if (!action.isCurrent() || requestId !== botSettingsCheckRequestId.current) return
       setBotSettingsCheck(result)
       setNotice(result.isReady ? 'Telegram-бот готов к работе.' : 'Проверка Telegram-бота нашла настройки, которые нужно заполнить.')
-    })
+    }, botSettingsActionResourceKey)
   }
 
   const providerFormSetup = providerSetup(providerForm.provider)
@@ -3589,6 +3609,12 @@ export function App() {
   const providerFormActionBusy = actionBusyId === 'provider-save'
     || Boolean(editingProviderAccountId && isActionResourceBusy(paymentProviderActionResourceKey(editingProviderAccountId)))
   const tariffFormErrors = validateTariffForm(tariffForm)
+  const tariffFormActionBusy = isActionResourceBusy(tariffActionResourceKey(editingTariffId || 'create'))
+  const releaseFormActionBusy = isActionResourceBusy(appReleaseActionResourceKey(editingReleaseId || 'create'))
+  const faqFormActionBusy = isActionResourceBusy(faqActionResourceKey(editingFaqId || 'create'))
+  const siteContentActionBusy = isActionResourceBusy(siteContentActionResourceKey)
+  const workScenarioFormActionBusy = isActionResourceBusy(workScenarioActionResourceKey(editingWorkScenarioId || 'create'))
+  const botSettingsActionBusy = isActionResourceBusy(botSettingsActionResourceKey)
   const serverFormErrors = validateServerForm(serverForm)
   const serverFormActionBusy = actionBusyId === 'server-save'
     || Boolean(editingServerId && isActionResourceBusy(serverActionResourceKey(editingServerId)))
@@ -4365,7 +4391,7 @@ export function App() {
       <div id="tariffs" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('tariffs')} hidden={activeSection !== 'tariffs' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingTariffId ? 'Редактирование тарифа' : 'Новый тариф'}</h3>
-          <form hidden={!canWriteSection('tariffs')} aria-busy={actionBusyId === 'tariff-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveTariff() }}>
+          <form hidden={!canWriteSection('tariffs')} aria-busy={tariffFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveTariff() }}>
             <fieldset className="form-section">
               <legend>Цена и срок</legend>
               <div className="form-grid">
@@ -4415,7 +4441,7 @@ export function App() {
             </div>
             <FormValidationSummary errors={tariffFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || actionBusyId === 'tariff-save' || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'tariff-save'}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || tariffFormActionBusy || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={tariffFormActionBusy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
               {editingTariffId && <PrimaryButton type="button" className="button-ghost" onClick={resetTariffForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -4424,7 +4450,7 @@ export function App() {
           <h3>Список тарифов</h3>
           <div className="list-stack">
             {tariffs.length === 0 && <EmptyState title="Тарифов нет" description="Создайте первый тариф, чтобы он появился на странице покупки." />}
-            {tariffs.map((tariff) => <div key={tariff.id} className="list-item-vertical"><div className="item-head"><div><strong>{tariff.name}</strong><div className="muted">{tariff.description || '—'}</div><div className="muted">{tariff.durationDays} дней · {tariff.maxDevices} устройств · порядок {tariff.sortOrder ?? 0} · сценарий {tariff.provisioningScenario || 'auto'}</div><div className="muted">{parseTariffFeatures(tariff).join(' · ') || 'Преимущества не заполнены'}</div></div><div className="item-status"><strong>{tariff.price} {tariff.currency}</strong>{tariff.badge && <StatusBadge value={tariff.badge} />}<StatusBadge value={tariff.isActive === false ? 'Disabled' : 'Enabled'} /></div></div><div className="toolbar" hidden={!canWriteSection('tariffs')}><PrimaryButton className="button-secondary" onClick={() => editTariff(tariff)}>Редактировать</PrimaryButton>{tariff.isActive === false ? <PrimaryButton className="button-ghost" disabled={actionBusyId === tariff.id} onClick={() => void handleToggleTariff(tariff)}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === tariff.id} message={`Выключить тариф "${tariff.name}"? Он исчезнет с публичной витрины и из Telegram.`} onConfirm={() => handleToggleTariff(tariff)}>Выключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `delete-${tariff.id}`} message={`Удалить тариф "${tariff.name}"? Если есть заказы или подписки, тариф будет архивирован и скрыт с витрины.`} onConfirm={() => handleDeleteTariff(tariff)}>Удалить</ConfirmButton></div></div>)}
+            {tariffs.map((tariff) => <div key={tariff.id} className="list-item-vertical"><div className="item-head"><div><strong>{tariff.name}</strong><div className="muted">{tariff.description || '—'}</div><div className="muted">{tariff.durationDays} дней · {tariff.maxDevices} устройств · порядок {tariff.sortOrder ?? 0} · сценарий {tariff.provisioningScenario || 'auto'}</div><div className="muted">{parseTariffFeatures(tariff).join(' · ') || 'Преимущества не заполнены'}</div></div><div className="item-status"><strong>{tariff.price} {tariff.currency}</strong>{tariff.badge && <StatusBadge value={tariff.badge} />}<StatusBadge value={tariff.isActive === false ? 'Disabled' : 'Enabled'} /></div></div><div className="toolbar" hidden={!canWriteSection('tariffs')}><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(tariffActionResourceKey(tariff.id))} onClick={() => editTariff(tariff)}>Редактировать</PrimaryButton>{tariff.isActive === false ? <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(tariffActionResourceKey(tariff.id))} onClick={() => void handleToggleTariff(tariff)}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(tariffActionResourceKey(tariff.id))} message={`Выключить тариф "${tariff.name}"? Он исчезнет с публичной витрины и из Telegram.`} onConfirm={() => handleToggleTariff(tariff)}>Выключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={isActionResourceBusy(tariffActionResourceKey(tariff.id))} message={`Удалить тариф "${tariff.name}"? Если есть заказы или подписки, тариф будет архивирован и скрыт с витрины.`} onConfirm={() => handleDeleteTariff(tariff)}>Удалить</ConfirmButton></div></div>)}
           </div>
         </Card>
       </div>
@@ -4817,7 +4843,7 @@ export function App() {
               {botSettingsCheck.requiredActions.length === 0 && <div className="muted">Обязательные настройки заполнены. Можно проверять реальный диалог с ботом в Telegram.</div>}
             </div>
           )}
-          <form aria-busy={actionBusyId === 'bot-settings'} onSubmit={(event) => { event.preventDefault(); void handleSaveBotSettings() }}>
+          <form aria-busy={botSettingsActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveBotSettings() }}>
             <fieldset className="form-section">
               <legend>Подключение Telegram</legend>
               <div className="form-grid">
@@ -4843,8 +4869,8 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={botSettingsFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || actionBusyId === 'bot-settings' || botSettingsFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings'}>Сохранить настройки бота</PrimaryButton>
-              <PrimaryButton className="button-secondary" type="button" disabled={!token || actionBusyId === 'bot-settings-test'} title={adminDisabledTitle} aria-busy={actionBusyId === 'bot-settings-test'} onClick={() => { void handleTestBotSettings() }}>Проверить подключение</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || botSettingsActionBusy || botSettingsFormErrors.length > 0} title={adminDisabledTitle} aria-busy={botSettingsActionBusy}>Сохранить настройки бота</PrimaryButton>
+              <PrimaryButton className="button-secondary" type="button" disabled={!token || botSettingsActionBusy} title={adminDisabledTitle} aria-busy={botSettingsActionBusy} onClick={() => { void handleTestBotSettings() }}>Проверить подключение</PrimaryButton>
             </div>
           </form>
         </Card>
@@ -4854,7 +4880,7 @@ export function App() {
         <Card>
           <h3>{editingReleaseId ? 'Редактировать релиз' : 'Создать релиз'}</h3>
           <p className="muted">Эти записи показываются пользователям в окне «Что нового» после входа в личный кабинет. Будущие даты публикации не показываются до наступления времени.</p>
-          <form hidden={!canWriteSection('releases')} aria-busy={actionBusyId === 'release-create' || actionBusyId === `release-update-${editingReleaseId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveRelease() }}>
+          <form hidden={!canWriteSection('releases')} aria-busy={releaseFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveRelease() }}>
             <fieldset className="form-section">
               <legend>Публикация</legend>
               <div className="form-grid">
@@ -4885,7 +4911,7 @@ export function App() {
               <PrimaryButton type="button" className="button-secondary mt-12" onClick={addReleaseItem}>Добавить пункт</PrimaryButton>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !releaseForm.releaseId || !releaseForm.title || !releaseForm.summary} title={adminDisabledTitle}>
+              <PrimaryButton type="submit" disabled={!token || releaseFormActionBusy || !releaseForm.releaseId || !releaseForm.title || !releaseForm.summary} title={adminDisabledTitle} aria-busy={releaseFormActionBusy}>
                 {editingReleaseId ? 'Сохранить релиз' : 'Создать релиз'}
               </PrimaryButton>
               {editingReleaseId && <PrimaryButton type="button" className="button-secondary" onClick={resetReleaseForm}>Отменить редактирование</PrimaryButton>}
@@ -4935,8 +4961,8 @@ export function App() {
                   {release.items.map((item, index) => <div key={`${release.id}-${index}`} className="list-item"><span>{item.type}: {item.text}</span></div>)}
                 </div>
                 <div className="toolbar" hidden={!canWriteSection('releases')}>
-                  <PrimaryButton className="button-secondary" onClick={() => editRelease(release)}>Редактировать</PrimaryButton>
-                  <ConfirmButton className="button-danger" disabled={actionBusyId === `release-delete-${release.id}`} message={`Удалить релиз "${release.title}"? Пользователи больше не увидят его в истории.`} onConfirm={() => handleDeleteRelease(release)}>Удалить</ConfirmButton>
+                  <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(appReleaseActionResourceKey(release.id))} onClick={() => editRelease(release)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={isActionResourceBusy(appReleaseActionResourceKey(release.id))} message={`Удалить релиз "${release.title}"? Пользователи больше не увидят его в истории.`} onConfirm={() => handleDeleteRelease(release)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}
@@ -4948,7 +4974,7 @@ export function App() {
         <Card>
           <h3>{editingFaqId ? 'Редактировать вопрос' : 'Создать вопрос FAQ'}</h3>
           <p className="muted">Эти вопросы показываются на публичной странице FAQ. Неактивные записи остаются в админке, но скрываются от пользователей.</p>
-          <form hidden={!canWriteSection('faq')} aria-busy={actionBusyId === 'faq-create' || actionBusyId === `faq-update-${editingFaqId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveFaq() }}>
+          <form hidden={!canWriteSection('faq')} aria-busy={faqFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveFaq() }}>
             <fieldset className="form-section">
               <legend>Содержание</legend>
               <label><span>Вопрос</span><input value={faqForm.question} onChange={(e) => updateFaqForm('question', e.target.value)} placeholder="Как подключиться?" maxLength={300} required /></label>
@@ -4965,7 +4991,7 @@ export function App() {
               <label className="checkbox-row"><input checked={faqForm.showOnFaqPage} onChange={(e) => updateFaqForm('showOnFaqPage', e.target.checked)} type="checkbox" /> Показывать на странице FAQ</label>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !faqForm.question || !faqForm.answer} title={adminDisabledTitle}>
+              <PrimaryButton type="submit" disabled={!token || faqFormActionBusy || !faqForm.question || !faqForm.answer} title={adminDisabledTitle} aria-busy={faqFormActionBusy}>
                 {editingFaqId ? 'Сохранить вопрос' : 'Создать вопрос'}
               </PrimaryButton>
               {editingFaqId && <PrimaryButton type="button" className="button-secondary" onClick={resetFaqForm}>Отменить редактирование</PrimaryButton>}
@@ -5016,8 +5042,8 @@ export function App() {
                   </div>
                 </div>
                 <div className="toolbar" hidden={!canWriteSection('faq')}>
-                  <PrimaryButton className="button-secondary" onClick={() => editFaq(entry)}>Редактировать</PrimaryButton>
-                  <ConfirmButton className="button-danger" disabled={actionBusyId === `faq-delete-${entry.id}`} message={`Удалить вопрос "${entry.question}"?`} onConfirm={() => handleDeleteFaq(entry)}>Удалить</ConfirmButton>
+                  <PrimaryButton className="button-secondary" disabled={Boolean(entry.id && isActionResourceBusy(faqActionResourceKey(entry.id)))} onClick={() => editFaq(entry)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={Boolean(entry.id && isActionResourceBusy(faqActionResourceKey(entry.id)))} message={`Удалить вопрос "${entry.question}"?`} onConfirm={() => handleDeleteFaq(entry)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}
@@ -5053,7 +5079,7 @@ export function App() {
             <div className="toolbar" hidden={!canWriteSection('content')}>
               <ConfirmButton
                 className="button-secondary"
-                disabled={!token || actionBusyId === 'content-restore-defaults'}
+                disabled={!token || siteContentActionBusy}
                 message="Восстановить обязательные блоки главной? Недостающие блоки будут созданы, пустые или выключенные обязательные блоки получат безопасные значения по умолчанию."
                 onConfirm={() => handleRestoreHomeContentDefaults()}
               >
@@ -5061,7 +5087,7 @@ export function App() {
               </ConfirmButton>
             </div>
           </div>
-          <form hidden={!canWriteSection('content')} aria-busy={actionBusyId === 'content-create' || actionBusyId === `content-update-${editingSiteContentId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveSiteContent() }}>
+          <form hidden={!canWriteSection('content')} aria-busy={siteContentActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveSiteContent() }}>
             <fieldset className="form-section">
               <legend>Идентификация</legend>
               <div className="form-grid">
@@ -5084,7 +5110,7 @@ export function App() {
               <p>{siteContentForm.value || 'Предпросмотр текста'}</p>
             </div>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || !siteContentForm.key} title={adminDisabledTitle}>{editingSiteContentId ? 'Сохранить блок' : 'Создать блок'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || siteContentActionBusy || !siteContentForm.key} title={adminDisabledTitle} aria-busy={siteContentActionBusy}>{editingSiteContentId ? 'Сохранить блок' : 'Создать блок'}</PrimaryButton>
               {editingSiteContentId && <PrimaryButton type="button" className="button-secondary" onClick={resetSiteContentForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -5104,8 +5130,8 @@ export function App() {
                   <div className="item-status"><StatusBadge value={block.isActive ? 'Published' : 'Hidden'} /><StatusBadge value={block.inputType} /></div>
                 </div>
                 <div className="toolbar" hidden={!canWriteSection('content')}>
-                  <PrimaryButton className="button-secondary" onClick={() => editSiteContent(block)}>Редактировать</PrimaryButton>
-                  <ConfirmButton className="button-danger" disabled={actionBusyId === `content-delete-${block.id}`} message={`Удалить блок "${block.label}"? На сайте будет использован fallback-текст из приложения.`} onConfirm={() => handleDeleteSiteContent(block)}>Удалить</ConfirmButton>
+                  <PrimaryButton className="button-secondary" disabled={siteContentActionBusy} onClick={() => editSiteContent(block)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={siteContentActionBusy} message={`Удалить блок "${block.label}"? На сайте будет использован fallback-текст из приложения.`} onConfirm={() => handleDeleteSiteContent(block)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}
@@ -5117,7 +5143,7 @@ export function App() {
         <Card>
           <h3>{editingWorkScenarioId ? 'Редактировать сценарий' : 'Создать сценарий работы'}</h3>
           <p className="muted">Сценарий описывает выдачу VPN после оплаты, поведение при ошибке, возврате, продлении и окончании подписки. Тариф выбирает сценарий по ключу.</p>
-          <form hidden={!canWriteSection('scenarios')} aria-busy={actionBusyId === 'scenario-create' || actionBusyId === `scenario-update-${editingWorkScenarioId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveWorkScenario() }}>
+          <form hidden={!canWriteSection('scenarios')} aria-busy={workScenarioFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveWorkScenario() }}>
             <fieldset className="form-section">
               <legend>Основные параметры</legend>
               <div className="form-grid">
@@ -5163,7 +5189,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={workScenarioFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || !!actionBusyId || workScenarioFormErrors.length > 0} title={adminDisabledTitle}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || workScenarioFormActionBusy || workScenarioFormErrors.length > 0} title={adminDisabledTitle} aria-busy={workScenarioFormActionBusy}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
               {editingWorkScenarioId && <PrimaryButton type="button" className="button-secondary" onClick={resetWorkScenarioForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -5184,8 +5210,8 @@ export function App() {
                   <div className="item-status"><StatusBadge value={scenario.isActive ? 'Active' : 'Hidden'} /><StatusBadge value={scenario.generateQrCode ? 'QR' : 'No QR'} /></div>
                 </div>
                 <div className="toolbar" hidden={!canWriteSection('scenarios')}>
-                  <PrimaryButton className="button-secondary" onClick={() => editWorkScenario(scenario)}>Редактировать</PrimaryButton>
-                  <ConfirmButton className="button-danger" disabled={actionBusyId === `scenario-delete-${scenario.id}`} message={`Удалить сценарий "${scenario.name}"? Если он выбран в тарифе, API не даст удалить его.`} onConfirm={() => handleDeleteWorkScenario(scenario)}>Удалить</ConfirmButton>
+                  <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(workScenarioActionResourceKey(scenario.id))} onClick={() => editWorkScenario(scenario)}>Редактировать</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={isActionResourceBusy(workScenarioActionResourceKey(scenario.id))} message={`Удалить сценарий "${scenario.name}"? Если он выбран в тарифе, API не даст удалить его.`} onConfirm={() => handleDeleteWorkScenario(scenario)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}

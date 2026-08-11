@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-admin-finance-resource-owner`, версия `0.622.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `635/655` проверяемых пунктов, готовность `96.9%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-admin-managed-config-resource-owner`, версия `0.623.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `636/656` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-10:
 
 - [x] `STATE-001` Backend test suite проходит: `1125/1125`.
-- [x] `STATE-002` Frontend test suite проходит: `126/126`.
+- [x] `STATE-002` Frontend test suite проходит: `127/127`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2236,6 +2236,10 @@ git diff --check
   - Что сделать: edit/toggle/check одного payment-provider account и order/direct recheck/refund одного платежа не должны пересекаться через разные action IDs; независимые аккаунты и заказы не должны блокировать друг друга.
   - Что сделано: provider-команды используют `payment-provider:<id>`; order recheck атомарно владеет `order:<id>` и последним `payment:<id>`, direct recheck/refund используют ту же пару. Shared busy-state покрывает provider edit/check/toggle, order/payment commands, refund fields и edit submit.
   - Доказательство: до исправления fail-first desktop/mobile был `0/2`, при задержанном provider enabled mutation уходил provider check, а при задержанном order recheck — direct payment recheck (`1/1`); после исправления targeted `2/2`, включая programmatic UI bypass, finance regression `12/12` за `54.9 s`, admin regression `90/90` за `8.4 min`, полный Playwright `180/180` за `10.9 min` без failed/flaky/skipped, all-screens `6/6`. Frontend `126/126`, typecheck/build/audit зелёные; backend `1125/1125`, EF drift/fresh SQLite зелёные; layout не менялся, внешние evidence не закрывались.
+- [x] `P11-ACC-346` Сериализовать команды управляемой конфигурации по entity/global resource. 2026-08-11.
+  - Что сделать: tariff/release/FAQ/scenario sibling commands одной сущности, все site-content writes и Telegram settings save/test не должны пересекаться через разные action IDs; независимые сущности должны оставаться параллельными.
+  - Что сделано: тарифы, релизы, FAQ и сценарии используют entity keys с отдельным create key; site-content create/update/delete/restore используют один global boundary; Telegram save/test используют один settings key. Shared busy-state покрывает формы, строки и restore/test controls.
+  - Доказательство: до исправления fail-first desktop/mobile был `0/2`, при задержанных tariff toggle, home defaults restore и bot settings save уходили sibling PATCH/create/test (`2/1/1` вместо `1/0/0`); после исправления targeted `2/2`, включая programmatic UI bypass, managed/Telegram/role regression `8/8` за `1.7 min`, полный Playwright `182/182` за `11.9 min` без failed/flaky/skipped, all-screens `6/6`. Frontend `127/127`, typecheck/build/audit зелёные; backend `1125/1125`, EF drift/fresh SQLite зелёные; layout не менялся, внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2885,6 +2889,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-036` | P1 | Admin / managed configuration | Tariff, release, FAQ, content, scenario и Telegram sibling-команды использовали разные action IDs и могли параллельно менять одну сущность или global configuration state. | Исправлено локально | Entity/global identity-safe resource owners, shared busy-state и desktop/mobile/full responsive regression. |
 | `BUG-2026-08-11-035` | P1 | Admin / finance commands | Provider account edit/toggle/check и order/direct payment recheck использовали разные action IDs и могли параллельно менять один provider/payment state. | Исправлено локально | Identity-safe owners `payment-provider:<id>`, `order:<id>` и `payment:<id>`, shared busy-state и desktop/mobile/full responsive regression. |
 | `BUG-2026-08-11-034` | P1 | Admin / VPN infrastructure commands | Panel/inbound/client и server/provisioning команды одной remote hierarchy использовали разные action IDs и могли пересекать provider/deploy state. | Исправлено локально | Иерархические multi-key owners для panel/inbound/client и provisioning-run/server, shared busy-state между разделами и desktop/mobile/full responsive regression. |
 | `BUG-2026-08-11-033` | P1 | Admin / subscription and VPN commands | Lifecycle-команды одной подписки и связанного VPN-доступа использовали разные action IDs, могли пересекаться и оставлять cached QR после provider-state mutation. | Исправлено локально | Multi-key identity-safe resource owner для `subscription:<id>`/`access:<id>`, shared busy-state между разделами, QR invalidation и desktop/mobile/full responsive regression. |

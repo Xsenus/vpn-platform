@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin managed configuration resource owner
+
+Scope:
+- Tariff, release, FAQ and work-scenario mutations for one entity must not overlap through different action IDs.
+- Site-content restore and CRUD commands must share one global boundary; Telegram settings save and connection test must share one settings boundary.
+
+Results:
+- Roadmap progress: `636/656` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-managed-config-resource-owner`, version `0.623.0`.
+- Reproduction before fix: while tariff toggle, home defaults restore and bot settings save were delayed, programmatic sibling commands reached the API. Fail-first desktop/mobile: `0/2`; counters were `2/1/1` instead of `1/0/0`.
+- After fix: tariff/release/FAQ/scenario commands claim entity keys, all site-content writes claim one global key, and Telegram save/test claim one settings key. Targeted desktop/mobile: `2/2`, including programmatic submits/clicks after removing `disabled`.
+- Related managed configuration/Telegram/role regression: `8/8` in `1.7 min`; final console-responsive Playwright: `182/182` in `11.9 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: shared busy-state covers managed edit/delete/toggle/restore/save/test controls without layout shift, horizontal overflow, clipped controls or stuck confirmation dialogs.
+- Frontend tests: `127/127`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.59/106.77 kB`; admin bundle raw `530419`, gzip `142085`, largest `230747`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `622` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin finance resource owner
 
 Scope:

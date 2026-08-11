@@ -466,6 +466,12 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedSupportStatus: (() => void) | null = null
   let delayNextTariffCreateResponse = false
   let releaseDelayedTariffCreate: (() => void) | null = null
+  let delayNextTariffPatchResponse = false
+  let releaseDelayedTariffPatch: (() => void) | null = null
+  let delayNextHomeDefaultsResponse = false
+  let releaseDelayedHomeDefaults: (() => void) | null = null
+  let delayNextBotSettingsSaveResponse = false
+  let releaseDelayedBotSettingsSave: (() => void) | null = null
   let delayNextProviderEnabledResponse = false
   let releaseDelayedProviderEnabled: (() => void) | null = null
   let delayNextOrderRecheckResponse = false
@@ -1213,6 +1219,11 @@ async function mockAdminApi(page: Page) {
 
     const tariffMutationMatch = path.match(/^\/api\/admin\/tariffs\/([^/]+)$/)
     if (tariffMutationMatch && method === 'PATCH') {
+      if (delayNextTariffPatchResponse) {
+        delayNextTariffPatchResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedTariffPatch = resolve })
+        releaseDelayedTariffPatch = null
+      }
       const index = tariffs.findIndex((item) => item.id === tariffMutationMatch[1])
       const updated = tariff({ ...tariffs[index], ...(body as Record<string, unknown>), id: tariffMutationMatch[1], updatedAt: now })
       if (index >= 0) tariffs[index] = updated
@@ -1375,6 +1386,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/site-content/home-defaults') {
+      if (delayNextHomeDefaultsResponse) {
+        delayNextHomeDefaultsResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedHomeDefaults = resolve })
+        releaseDelayedHomeDefaults = null
+      }
       await fulfillJson(route, {
         created: 1,
         restored: 0,
@@ -1822,6 +1838,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'PATCH' && path === '/api/admin/telegram-bot/settings') {
+      if (delayNextBotSettingsSaveResponse) {
+        delayNextBotSettingsSaveResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedBotSettingsSave = resolve })
+        releaseDelayedBotSettingsSave = null
+      }
       const payload = body as Record<string, unknown>
       botSettings = telegramBotSettings({
         ...botSettings,
@@ -1942,6 +1963,12 @@ async function mockAdminApi(page: Page) {
     },
     delayNextTariffCreate: () => { delayNextTariffCreateResponse = true },
     releaseTariffCreate: () => { releaseDelayedTariffCreate?.() },
+    delayNextTariffPatch: () => { delayNextTariffPatchResponse = true },
+    releaseTariffPatch: () => { releaseDelayedTariffPatch?.() },
+    delayNextHomeDefaults: () => { delayNextHomeDefaultsResponse = true },
+    releaseHomeDefaults: () => { releaseDelayedHomeDefaults?.() },
+    delayNextBotSettingsSave: () => { delayNextBotSettingsSaveResponse = true },
+    releaseBotSettingsSave: () => { releaseDelayedBotSettingsSave?.() },
     delayNextProviderEnabled: () => { delayNextProviderEnabledResponse = true },
     releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
     delayNextOrderRecheck: () => { delayNextOrderRecheckResponse = true },
@@ -3122,6 +3149,73 @@ test('admin serializes finance commands across provider and payment resources', 
   expect({ providerCheckCountDuringEnable, directRecheckCountDuringOrderRecheck }).toEqual({
     providerCheckCountDuringEnable: 0,
     directRecheckCountDuringOrderRecheck: 0
+  })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin serializes managed configuration commands per resource', async ({ page }) => {
+  test.setTimeout(120_000)
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-managed-resource-owner-token', 'admin-managed-resource-owner-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Тарифы', 'tariffs')
+
+  const tariffsPanel = page.locator('#tariffs')
+  let tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' }).first()
+  api.delayNextTariffPatch()
+  await tariffRow.getByRole('button', { name: 'Выключить' }).click()
+  await tariffsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'PATCH')).toBe(1)
+
+  const editTariffButton = tariffRow.getByRole('button', { name: 'Редактировать' })
+  await editTariffButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await tariffsPanel.getByLabel('Короткое описание').fill('Параллельное изменение не должно уйти.')
+  await tariffsPanel.locator('form').evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+  await page.waitForTimeout(300)
+  const tariffPatchCountDuringToggle = api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'PATCH')
+  api.releaseTariffPatch()
+  await expect(page.getByText(/Тариф Admin Pro 30 обновлён\.|Тариф обновлён\./)).toBeVisible()
+
+  await openAdminSection(page, 'Контент сайта', 'content')
+  const contentPanel = page.locator('#content')
+  await contentPanel.getByLabel('Ключ').fill('home.race.test')
+  await contentPanel.getByLabel('Название поля').fill('Race test')
+  await contentPanel.getByLabel('Значение').fill('Не создавать во время restore')
+  api.delayNextHomeDefaults()
+  await contentPanel.getByRole('button', { name: 'Восстановить главную' }).click()
+  await contentPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/site-content/home-defaults', 'POST')).toBe(1)
+  await contentPanel.locator('form').evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
+  await page.waitForTimeout(300)
+  const contentCreateCountDuringRestore = api.getRequestCount('/api/admin/site-content', 'POST')
+  api.releaseHomeDefaults()
+  await expect(page.getByText(/Главная обновлена/)).toBeVisible()
+
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+  const botPanel = page.locator('#bot')
+  await botPanel.getByLabel('Приветствие').fill('Managed owner test')
+  api.delayNextBotSettingsSave()
+  await botPanel.getByRole('button', { name: 'Сохранить настройки бота' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/telegram-bot/settings', 'PATCH')).toBe(1)
+  const botTestButton = botPanel.getByRole('button', { name: 'Проверить подключение' })
+  await botTestButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  const botTestCountDuringSave = api.getRequestCount('/api/admin/telegram-bot/settings/test', 'POST')
+  api.releaseBotSettingsSave()
+  await expect(page.getByText(/Настройки Telegram-бота сохранены/)).toBeVisible()
+
+  expect({ tariffPatchCountDuringToggle, contentCreateCountDuringRestore, botTestCountDuringSave }).toEqual({
+    tariffPatchCountDuringToggle: 1,
+    contentCreateCountDuringRestore: 0,
+    botTestCountDuringSave: 0
   })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })

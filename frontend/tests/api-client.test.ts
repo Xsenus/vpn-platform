@@ -1660,6 +1660,23 @@ test('admin source serializes finance commands by provider, order and payment re
   assert.match(adminSource, /aria-busy=\{providerFormActionBusy\}/)
 })
 
+test('admin source serializes managed configuration commands by entity and global resources', () => {
+  const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
+
+  assert.match(adminSource, /tariffActionResourceKey\(editingId \|\| 'create'\)/)
+  assert.match(adminSource, /tariffActionResourceKey\(tariff\.id\)/)
+  assert.match(adminSource, /appReleaseActionResourceKey\(editingId \|\| 'create'\)/)
+  assert.match(adminSource, /appReleaseActionResourceKey\(release\.id\)/)
+  assert.match(adminSource, /faqActionResourceKey\(editingId \|\| 'create'\)/)
+  assert.match(adminSource, /faqActionResourceKey\(faqId\)/)
+  assert.match(adminSource, /}, siteContentActionResourceKey\)/)
+  assert.match(adminSource, /workScenarioActionResourceKey\(editingId \|\| 'create'\)/)
+  assert.match(adminSource, /workScenarioActionResourceKey\(scenario\.id\)/)
+  assert.match(adminSource, /}, botSettingsActionResourceKey\)/)
+  assert.match(adminSource, /aria-busy=\{siteContentActionBusy\}/)
+  assert.match(adminSource, /aria-busy=\{botSettingsActionBusy\}/)
+})
+
 test('ApiClient admin subscription and VPN access actions are confirmation-friendly POST calls', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
