@@ -1599,6 +1599,12 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
     public async Task<IActionResult> AddServer([FromBody] CreateServerHttpRequest request, CancellationToken cancellationToken)
     {
+        var payloadError = ValidateServerPayload(request);
+        if (payloadError is not null)
+        {
+            return BadRequest(new { error = payloadError });
+        }
+
         var host = ProvisioningService.NormalizeHost(string.IsNullOrWhiteSpace(request.Host) ? request.IpAddress : request.Host);
         if (string.IsNullOrWhiteSpace(host) || !ProvisioningService.IsValidHost(host))
         {
@@ -1613,6 +1619,12 @@ public class AdminOperationsController : ControllerBase
         if (!TryNormalizeServerPanelBaseUrl(request.PanelBaseUrl, out var panelBaseUrl, out var panelBaseUrlError))
         {
             return BadRequest(new { error = panelBaseUrlError });
+        }
+
+        if (request.NodeGroupId.HasValue
+            && !await _db.NodeGroups.AsNoTracking().AnyAsync(x => x.Id == request.NodeGroupId.Value, cancellationToken))
+        {
+            return BadRequest(new { error = "VPN node group does not exist." });
         }
 
         var authMethod = ProvisioningService.NormalizeAuthMethod(request.SshAuthMethod ?? (string.IsNullOrWhiteSpace(request.SshCredential) ? "ssh_key" : "ssh_key"));
@@ -1646,31 +1658,31 @@ public class AdminOperationsController : ControllerBase
 
         var node = new VpnNode
         {
-            Name = request.Name,
+            Name = request.Name.Trim(),
             Host = string.IsNullOrWhiteSpace(request.Host) ? host : request.Host.Trim(),
-            IpAddress = request.IpAddress,
-            Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider,
-            Region = request.Region,
-            Country = request.Country,
-            Datacenter = request.Datacenter,
-            Capacity = request.Capacity > 0 ? request.Capacity : 5000,
-            SupportedProtocolsCsv = string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv) ? "vless,vmess,trojan" : request.SupportedProtocolsCsv,
-            Priority = request.Priority > 0 ? request.Priority : 100,
+            IpAddress = request.IpAddress.Trim(),
+            Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim(),
+            Region = request.Region.Trim(),
+            Country = request.Country.Trim(),
+            Datacenter = request.Datacenter.Trim(),
+            Capacity = request.Capacity,
+            SupportedProtocolsCsv = string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv) ? "vless,vmess,trojan" : request.SupportedProtocolsCsv.Trim(),
+            Priority = request.Priority,
             TagsCsv = tags,
-            SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser,
-            SshPort = request.SshPort > 0 ? request.SshPort : 22,
+            SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim(),
+            SshPort = request.SshPort,
             SshPrivateKeyPath = legacySshKeyPath,
             ProtectedSshCredential = protectedCredential,
             SshCredentialRef = string.IsNullOrWhiteSpace(protectedCredential) ? string.Empty : $"secretref:ssh:{Guid.NewGuid():N}",
             SkipHostKeyChecking = request.SkipHostKeyChecking,
             PanelBaseUrl = panelBaseUrl,
-            PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername,
+            PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername.Trim(),
             PanelPassword = string.Empty,
             ProtectedPanelPassword = protectedPanelPassword,
             PanelSecretRef = string.IsNullOrWhiteSpace(protectedPanelPassword) ? string.Empty : $"secretref:panel:{Guid.NewGuid():N}",
             PanelInboundId = request.PanelInboundId,
-            PublicHostname = request.PublicHostname ?? string.Empty,
-            PublicPort = request.PublicPort > 0 ? request.PublicPort : 443,
+            PublicHostname = request.PublicHostname?.Trim() ?? string.Empty,
+            PublicPort = request.PublicPort,
             NodeGroupId = request.NodeGroupId,
             Status = NodeStatus.New,
             HealthStatus = HealthStatus.Unknown,
@@ -1688,6 +1700,12 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
     public async Task<IActionResult> UpdateServer(Guid id, [FromBody] CreateServerHttpRequest request, CancellationToken cancellationToken)
     {
+        var payloadError = ValidateServerPayload(request);
+        if (payloadError is not null)
+        {
+            return BadRequest(new { error = payloadError });
+        }
+
         await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null)
@@ -1711,13 +1729,19 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = panelBaseUrlError });
         }
 
+        if (request.NodeGroupId.HasValue
+            && !await _db.NodeGroups.AsNoTracking().AnyAsync(x => x.Id == request.NodeGroupId.Value, cancellationToken))
+        {
+            return BadRequest(new { error = "VPN node group does not exist." });
+        }
+
         var authMethod = ProvisioningService.NormalizeAuthMethod(request.SshAuthMethod ?? ProvisioningService.GetSshAuthMethod(node));
         if (!string.IsNullOrWhiteSpace(request.SshCredential) && authMethod != "password" && authMethod != "ssh_key")
         {
             return BadRequest(new { error = "Unsupported SSH auth method." });
         }
 
-        var capacity = request.Capacity > 0 ? request.Capacity : 5000;
+        var capacity = request.Capacity;
         if (capacity < node.UsedCapacity)
         {
             return BadRequest(new { error = "Server capacity cannot be lower than used capacity." });
@@ -1781,15 +1805,15 @@ public class AdminOperationsController : ControllerBase
         node.Datacenter = request.Datacenter.Trim();
         node.Capacity = capacity;
         node.SupportedProtocolsCsv = string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv) ? "vless,vmess,trojan" : request.SupportedProtocolsCsv.Trim();
-        node.Priority = request.Priority > 0 ? request.Priority : 100;
+        node.Priority = request.Priority;
         node.SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim();
-        node.SshPort = request.SshPort > 0 ? request.SshPort : 22;
+        node.SshPort = request.SshPort;
         node.SkipHostKeyChecking = request.SkipHostKeyChecking;
         node.PanelBaseUrl = panelBaseUrl;
         node.PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername.Trim();
         node.PanelInboundId = request.PanelInboundId;
         node.PublicHostname = request.PublicHostname?.Trim() ?? string.Empty;
-        node.PublicPort = request.PublicPort > 0 ? request.PublicPort : 443;
+        node.PublicPort = request.PublicPort;
         node.NodeGroupId = request.NodeGroupId;
         node.TagsCsv = NormalizeServerTags(request.TagsCsv, owner, authMethod, ProvisioningService.CredentialsConfigured(node) ? "protected" : "missing", request.ValidationMode);
         node.UpdatedAt = _clock.UtcNow;
@@ -3161,6 +3185,36 @@ public class AdminOperationsController : ControllerBase
             });
 
         return string.Join(',', userTags.Concat(systemTags.Select(tag => $"{tag.Key}:{tag.Value}")));
+    }
+
+    private static string? ValidateServerPayload(CreateServerHttpRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return "Server name is required.";
+        }
+
+        if (request.Capacity <= 0)
+        {
+            return "Server capacity must be greater than zero.";
+        }
+
+        if (request.Priority <= 0)
+        {
+            return "Server priority must be greater than zero.";
+        }
+
+        if (request.PublicPort <= 0 || request.PublicPort > 65535)
+        {
+            return "Public port must be between 1 and 65535.";
+        }
+
+        if (request.PanelInboundId is <= 0)
+        {
+            return "Panel inbound ID must be greater than zero.";
+        }
+
+        return null;
     }
 
     private static bool TryNormalizeServerPanelBaseUrl(string? value, out string normalized, out string error)

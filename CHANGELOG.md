@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.643.0 - 2026-08-12
+
+Release entry: `2026-08-12-server-payload-validation`.
+
+### Исправлено
+
+- Direct create/update VPN-сервера больше не обходит semantic validation административной формы и не подменяет невалидные capacity/priority/ports скрытыми defaults.
+- Пустое имя и неположительный panel inbound ID отклоняются до node/audit mutation.
+- Неизвестный `NodeGroupId` возвращает controlled `400` вместо FK exception/`500`; существующая группа принимается для create/update.
+
+### Проверено
+
+- SQLite fail-first `0/14`: двенадцать payload-вариантов вернули `200`, два unknown node-group завершились FK exception; после исправления negative/positive server matrix и весь server-management suite `34/34`.
+- Backend `1166/1166`; Release build `0` warnings/errors; frontend `136/136`; typecheck/build всех приложений и audit `0 vulnerabilities` зелёные.
+- UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- EF drift отсутствует; fresh SQLite flow подтвердил latest release; seed содержит `642` записи, encoding/release guards `57/57`, secret scan `668` files/`0` findings.
+- Roadmap: `656/676` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; real VPS/staging/3x-ui evidence не заменялся локальными проверками.
+
 ## 0.642.0 - 2026-08-12
 
 Release entry: `2026-08-12-access-lifecycle-fail-closed`.

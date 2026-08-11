@@ -15130,5 +15130,28 @@
         "text": "Roadmap progress is 655/675 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-server-payload-validation",
+    "version": "0.643.0",
+    "releasedAt": "2026-08-12T06:28:31+07:00",
+    "title": "VPN-серверы отклоняют невалидную конфигурацию",
+    "summary": "Create и update VPN-сервера используют единую backend-валидацию до изменения базы данных.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Пустое имя, невалидные capacity, priority, public port и panel inbound больше не сохраняются и не заменяются скрытыми defaults."
+      },
+      {
+        "type": "improved",
+        "text": "Неизвестная node group возвращает controlled 400 до записи; валидная привязка принимается, а строковые поля нормализуются одинаково для create и update."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 656/676 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

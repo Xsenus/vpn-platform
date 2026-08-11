@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: VPN server payload validation
+
+Scope:
+- Direct admin create/update API must enforce the same required fields and numeric semantics as the server form instead of silently applying defaults.
+- Unknown node-group references must fail before persistence without a database exception or partial node/audit mutation.
+
+Results:
+- Roadmap progress: `656/676` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-server-payload-validation`, version `0.643.0`.
+- Reproduction before fix: SQLite regression `0/14`; empty name and invalid capacity/priority/public-port/panel-inbound payloads returned `200`, while unknown node groups raised two FK exceptions.
+- After fix: invalid payloads return controlled `400` before mutation; valid existing node-group create/update succeeds and normalized fields are persisted. Full server-management suite: `34/34`.
+- Backend full suite: `1166/1166`; server-management: `34/34`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow and latest release: OK; scoped formatter: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding/documentation/release guards: `57/57`; release seed: `642` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Real VPS/staging/3x-ui validation remains external and no live item was closed from local evidence.
+
 ## Check 2026-08-12: Admin access lifecycle fail-closed
 
 Scope:

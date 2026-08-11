@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-access-lifecycle-fail-closed`, версия `0.642.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `655/675` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-server-payload-validation`, версия `0.643.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `656/676` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1150/1150`.
+- [x] `STATE-001` Backend test suite проходит: `1166/1166`.
 - [x] `STATE-002` Frontend test suite проходит: `136/136`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2316,6 +2316,10 @@ git diff --check
   - Что сделать: enable/disable не должны локально менять credential и возвращать успех без вызова VPN-провайдера, если обязательный lifecycle-сервис не передан в контроллер; sync/reset и mutation-команды должны использовать единый unavailable-контракт.
   - Что сделано: локальный enable/disable fallback удалён; все четыре direct access action возвращают `503 Service Unavailable` до чтений, lifecycle gate, provider call и записей. Terminal/expired boundary-тесты используют настоящий lifecycle с provider factory, которая запрещает неожиданный внешний вызов.
   - Доказательство: SQLite fail-first `0/4` (`enable/disable` возвращали `200`, `sync/reset` — `400`); после исправления lifecycle/admin targeted `58/58`, boundary `11/11`, backend `1150/1150`, frontend `136/136`, typecheck/build/audit зелёные. UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальные VPS/staging/payment/3x-ui/Telegram/SMTP evidence не закрывались.
+- [x] `P11-ACC-366` Валидировать VPN server payload на backend-границе. 2026-08-12.
+  - Что сделать: direct create/update API не должен обходить UI-валидатор, молча заменять невалидные ranges defaults, сохранять пустое имя/невалидный inbound или завершаться FK exception для неизвестной node group.
+  - Что сделано: общий pre-mutation validator отклоняет пустое имя, неположительные capacity/priority, public port вне `1..65535` и неположительный panel inbound ID; `NodeGroupId` проверяется до записи, а create/update используют одинаковую нормализацию и больше не подменяют невалидный payload defaults.
+  - Доказательство: SQLite fail-first `0/14`, включая `200` и два FK exceptions; после исправления negative/positive semantic matrix и весь server-management suite `34/34`, backend `1166/1166`, frontend `136/136`, typecheck/build/audit зелёные. UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальный VPS/staging/3x-ui smoke не заменялся локальными тестами.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2965,6 +2969,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-003` | P1 | Admin VPN server API | Direct create/update обходил UI semantic validation: пустое имя и невалидные capacity/priority/ports/inbound сохранялись или заменялись defaults, неизвестная node group давала FK/500. | Исправлено локально | Общий pre-mutation validator, controlled node-group lookup и SQLite create/update matrix `16/16` подтверждают отсутствие partial node/audit изменений и сохранение валидной привязки. |
 | `BUG-2026-08-12-002` | P0 | Admin VPN access actions | При отсутствующем lifecycle-сервисе enable/disable локально меняли credential и возвращали `200`, хотя VPN-провайдер не вызывался; sync/reset для того же сбоя возвращали обычный `400`. | Исправлено локально | Единый ранний `503`, отсутствие credential/history/audit mutations и раздельные terminal/expired guards покрыты SQLite `4/4` и boundary `11/11`. |
 | `BUG-2026-08-12-001` | P1 | Cabinet / payment-link expiry | Открытая renewal/retry/history confirmation URL продолжала отображаться после локального истечения родительского `PendingPayment`, пока пользователь вручную не обновит данные; старый render timestamp мог отложить expiry после долгого ожидания до login. | Исправлено локально | Order-aware link policy, current-time render tick, nearest-expiry timer и desktop/mobile regression скрывают ссылки автоматически и показывают новый заказ. |
 | `BUG-2026-08-11-044` | P1 | Public / checkout-session expiry | Persisted checkout терял backend `expiresAt`, поэтому истёкшая до login session продолжала claim/payment flow и предлагала недопустимый retry. | Исправлено локально | Time-aware pre-claim guard, legacy exact-error fallback и desktop/mobile regression подтверждают `paymentInit=0` и очистку storage. |

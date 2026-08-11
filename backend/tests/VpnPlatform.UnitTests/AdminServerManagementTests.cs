@@ -20,6 +20,103 @@ namespace VpnPlatform.UnitTests;
 
 public class AdminServerManagementTests
 {
+    [Theory]
+    [InlineData(false, "name")]
+    [InlineData(false, "capacity")]
+    [InlineData(false, "priority")]
+    [InlineData(false, "public-port-low")]
+    [InlineData(false, "public-port-high")]
+    [InlineData(false, "panel-inbound")]
+    [InlineData(false, "node-group")]
+    [InlineData(true, "name")]
+    [InlineData(true, "capacity")]
+    [InlineData(true, "priority")]
+    [InlineData(true, "public-port-low")]
+    [InlineData(true, "public-port-high")]
+    [InlineData(true, "panel-inbound")]
+    [InlineData(true, "node-group")]
+    public async Task Server_Write_Should_Reject_Invalid_Semantic_Payload_On_Sqlite(bool update, string field)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = NewNode($"semantic-{field}");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var request = UpdateRequest(node) with
+        {
+            Name = field == "name" ? "  " : node.Name,
+            Capacity = field == "capacity" ? 0 : node.Capacity,
+            Priority = field == "priority" ? 0 : node.Priority,
+            PublicPort = field switch
+            {
+                "public-port-low" => 0,
+                "public-port-high" => 65536,
+                _ => node.PublicPort
+            },
+            PanelInboundId = field == "panel-inbound" ? 0 : node.PanelInboundId,
+            NodeGroupId = field == "node-group" ? Guid.NewGuid() : node.NodeGroupId
+        };
+        var controller = CreateController(db);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync();
+        Assert.Equal(node.Id, persisted.Id);
+        Assert.Equal(node.Name, persisted.Name);
+        Assert.Equal(node.Capacity, persisted.Capacity);
+        Assert.Equal(node.Priority, persisted.Priority);
+        Assert.Equal(node.PublicPort, persisted.PublicPort);
+        Assert.Equal(node.PanelInboundId, persisted.PanelInboundId);
+        Assert.Equal(node.NodeGroupId, persisted.NodeGroupId);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == (update ? "server.update" : "server.create"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Server_Write_Should_Accept_Existing_Node_Group_And_Normalize_Payload_On_Sqlite(bool update)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var group = new NodeGroup { Name = $"semantic-group-{update}", Region = "eu" };
+        var node = NewNode($"semantic-valid-{update}");
+        db.NodeGroups.Add(group);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var request = UpdateRequest(node) with
+        {
+            Name = $"  {node.Name}  ",
+            Provider = "  x3ui  ",
+            NodeGroupId = group.Id
+        };
+        var controller = CreateController(db);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        var saved = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(saved.Value);
+        db.ChangeTracker.Clear();
+        var persisted = update
+            ? await db.VpnNodes.SingleAsync(x => x.Id == node.Id)
+            : await db.VpnNodes.SingleAsync(x => x.Id != node.Id);
+        Assert.Equal(node.Name, persisted.Name);
+        Assert.Equal("x3ui", persisted.Provider);
+        Assert.Equal(group.Id, persisted.NodeGroupId);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (update ? "server.update" : "server.create"));
+    }
+
     [Fact]
     public async Task DisableServer_Should_Close_Server_For_New_Users_And_Write_Audit()
     {
