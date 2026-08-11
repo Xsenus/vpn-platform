@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.631.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-checkout-session-expiry`.
+
+### Исправлено
+
+- Публичный checkout сохраняет `expiresAt` checkout-session и не отправляет claim, если срок оформления уже истёк до входа пользователя.
+- Истёкшая session показывает отдельный статус, объяснение и действие «Создать новый заказ» вместо заведомо недопустимой повторной привязки.
+- Legacy sessionStorage-записи без `expiresAt` остаются совместимыми: точный backend-ответ `Checkout session expired` переводит их в тот же terminal recovery после одного claim и без payment init.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: истёкшая checkout-session теряла `expiresAt` и продолжала claim/payment flow. После исправления targeted contract прошёл `2/2`: новая schema даёт `claim=0`, legacy fallback — `claim=1`, в обоих случаях `paymentInit=0` и storage очищен.
+- Полный public desktop/mobile regression прошёл `46/46`. Первый полный console-responsive запуск дал `199/200` из-за невоспроизведённого нагрузочного timeout существующего mobile-admin VPN lifecycle; isolated rerun прошёл `1/1`, финальный неизменённый полный gate — `200/200` за `12.8 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `130/130`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `356.22/103.94 kB`, cabinet bundle `370.75/107.00 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `630`, secret scan `668` files/`0` findings.
+- Roadmap: `644/664` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.630.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-completed-checkout-recovery`.

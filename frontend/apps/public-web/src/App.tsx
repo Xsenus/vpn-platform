@@ -19,7 +19,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
-import { parsePendingCheckout, type PendingCheckout } from './pending-checkout'
+import { getPendingCheckoutSessionAvailability, isCheckoutSessionExpiredError, parsePendingCheckout, type PendingCheckout } from './pending-checkout'
 import { canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 import { getPublicRouteMetadata } from './public-route'
 import { getPublicSessionCheckError, isPublicAccessTokenExpired, isPublicSessionRejected, publicSessionEndedMessage } from './public-session'
@@ -582,7 +582,7 @@ function TariffsPage({ onPendingCheckout }: {
       })
       if (requestId !== checkoutRequestIdRef.current) return
 
-      const pending = { token: session.token, tariffName: tariff.name, provider }
+      const pending = { token: session.token, tariffName: tariff.name, provider, expiresAt: session.expiresAt }
       writeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY, JSON.stringify(pending))
       onPendingCheckout(pending)
       navigate('/account')
@@ -868,6 +868,15 @@ function AccountPage({
   const pendingCheckoutOrderAvailability = pendingCheckoutOrder
     ? getPendingCheckoutOrderAvailability(pendingCheckoutOrder)
     : null
+  const pendingCheckoutSessionAvailability = pendingCheckout
+    ? getPendingCheckoutSessionAvailability(pendingCheckout)
+    : null
+  const canRetryPendingCheckout = pendingCheckoutOrder
+    ? Boolean(pendingCheckoutOrderAvailability?.canRetry)
+    : (pendingCheckoutSessionAvailability?.canClaim ?? true)
+  const shouldCreateNewCheckoutOrder = pendingCheckoutOrderAvailability?.shouldCreateNewOrder
+    ?? pendingCheckoutSessionAvailability?.shouldCreateNewOrder
+    ?? false
 
   const switchAuthMode = (nextMode: 'login' | 'register') => {
     setMode(nextMode)
@@ -974,7 +983,7 @@ function AccountPage({
       <h2 className="sr-only">Состояние аккаунта</h2>
       <div className="grid">
         <StatTile label="Авторизация" value={profile ? 'подключен' : token ? (sessionHydrationBusy ? 'проверяется' : 'требует проверки') : 'не выполнена'} />
-        <StatTile label="Покупка" value={pendingCheckoutOrderAvailability?.statusLabel ?? (pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто')} />
+        <StatTile label="Покупка" value={pendingCheckoutOrderAvailability?.statusLabel ?? pendingCheckoutSessionAvailability?.statusLabel ?? (pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто')} />
         <StatTile label="Рефералы" value={profile?.referralCode ?? 'будет после входа'} />
       </div>
 
@@ -1001,7 +1010,7 @@ function AccountPage({
             <ErrorBlock message={checkoutError} />
             {pendingCheckout && profile && (
               <div className="form-actions">
-                {(!pendingCheckoutOrder || pendingCheckoutOrderAvailability?.canRetry) && (
+                {canRetryPendingCheckout && (
                   <PrimaryButton type="button" disabled={claimBusy} aria-busy={claimBusy} onClick={onRetryPendingCheckout}>{pendingCheckoutOrder ? 'Повторить оплату' : 'Повторить привязку'}</PrimaryButton>
                 )}
                 <PrimaryButton type="button" className="button-ghost" disabled={claimBusy} onClick={onClearPendingCheckout}>Отменить эту покупку</PrimaryButton>
@@ -1029,26 +1038,27 @@ function AccountPage({
             <Card>
               <h3>{claimBusy
                 ? (pendingCheckoutOrder ? 'Готовим оплату' : 'Привязываем покупку')
-                : pendingCheckoutOrderAvailability?.title ?? 'Покупка ожидает привязки'}</h3>
+                : pendingCheckoutOrderAvailability?.title ?? pendingCheckoutSessionAvailability?.title ?? 'Покупка ожидает привязки'}</h3>
               <p>Тариф: {pendingCheckout.tariffName}</p>
               <p>Способ оплаты: {pendingCheckout.provider}</p>
               {pendingCheckoutOrder && <p>ID заказа: {pendingCheckoutOrder.id}</p>}
               {claimBusy
                 ? <LoadingBlock label={pendingCheckoutOrder ? 'Повторно готовим ссылку оплаты...' : 'Создаём заказ и готовим оплату...'} />
-                : <p className="muted" role={pendingCheckoutOrderAvailability && !pendingCheckoutOrderAvailability.canRetry ? 'status' : undefined}>
+                : <p className="muted" role={!canRetryPendingCheckout ? 'status' : undefined}>
                     {pendingCheckoutOrderAvailability?.reason
+                      ?? pendingCheckoutSessionAvailability?.reason
                       ?? (pendingCheckoutOrder ? 'Заказ сохранён. Повторная команда подготовит оплату для этого же заказа.' : 'Покупка будет привязана к текущему аккаунту, затем появится ссылка на оплату.')}
                   </p>}
               {!claimBusy && (
                 <div className="form-actions">
-                  {(!pendingCheckoutOrder || pendingCheckoutOrderAvailability?.canRetry) && (
+                  {canRetryPendingCheckout && (
                     <PrimaryButton type="button" onClick={onRetryPendingCheckout}>{pendingCheckoutOrder ? 'Повторить оплату' : 'Привязать покупку'}</PrimaryButton>
                   )}
-                  {pendingCheckoutOrderAvailability?.shouldCreateNewOrder && (
+                  {shouldCreateNewCheckoutOrder && (
                     <Link className="button" to="/tariffs" onClick={onClearPendingCheckout}>Создать новый заказ</Link>
                   )}
                   <PrimaryButton type="button" className="button-ghost" onClick={onClearPendingCheckout}>
-                    {pendingCheckoutOrderAvailability && !pendingCheckoutOrderAvailability.canRetry ? 'Закрыть' : 'Отменить'}
+                    {!canRetryPendingCheckout ? 'Закрыть' : 'Отменить'}
                   </PrimaryButton>
                 </div>
               )}
@@ -1376,6 +1386,14 @@ export function App() {
     const attemptKey = `${token}:${pendingCheckout.token}:${claimAttempt}`
     if (checkoutClaimAttemptKeyRef.current === attemptKey) return
 
+    const sessionAvailability = getPendingCheckoutSessionAvailability(pendingCheckout)
+    if (!sessionAvailability.canClaim) {
+      checkoutClaimAttemptKeyRef.current = attemptKey
+      if (sessionAvailability.shouldForgetPendingCheckout) removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
+      setCheckoutError('')
+      return
+    }
+
     checkoutClaimAttemptKeyRef.current = attemptKey
     checkoutClaimInFlightRef.current = true
     const requestId = ++checkoutClaimRequestIdRef.current
@@ -1406,6 +1424,12 @@ export function App() {
         removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
       } catch (e) {
         if (requestId !== checkoutClaimRequestIdRef.current) return
+        if (!order && isCheckoutSessionExpiredError(e)) {
+          setPendingCheckout((current) => current ? { ...current, expiresAt: '1970-01-01T00:00:00.000Z' } : current)
+          removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
+          setCheckoutError('')
+          return
+        }
         const fallback = order
           ? `Заказ ${order.id} создан, но ссылку оплаты подготовить не удалось.`
           : 'Не удалось привязать покупку.'

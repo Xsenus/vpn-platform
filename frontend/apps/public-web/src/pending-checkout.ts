@@ -1,9 +1,10 @@
-import { isPaymentProvider, type PaymentProvider } from '@vpn-platform/api-client'
+import { ApiClientError, isPaymentProvider, type PaymentProvider } from '@vpn-platform/api-client'
 
 export type PendingCheckout = {
   token: string
   tariffName: string
   provider: PaymentProvider
+  expiresAt: string | null
 }
 
 const maxPersistedCheckoutLength = 4_096
@@ -24,12 +25,14 @@ export function parsePendingCheckout(raw: string | null): PendingCheckout | null
 
   const candidate = value as Record<string, unknown>
   const tariffName = typeof candidate.tariffName === 'string' ? candidate.tariffName.trim() : ''
+  const expiresAt = typeof candidate.expiresAt === 'string' ? candidate.expiresAt.trim() : null
   if (
     typeof candidate.token !== 'string'
     || !checkoutTokenPattern.test(candidate.token)
     || tariffName.length === 0
     || tariffName.length > maxTariffNameLength
     || !isPaymentProvider(candidate.provider)
+    || (candidate.expiresAt !== undefined && (!expiresAt || !Number.isFinite(Date.parse(expiresAt))))
   ) {
     return null
   }
@@ -37,6 +40,32 @@ export function parsePendingCheckout(raw: string | null): PendingCheckout | null
   return {
     token: candidate.token,
     tariffName,
-    provider: candidate.provider
+    provider: candidate.provider,
+    expiresAt
   }
+}
+
+export function getPendingCheckoutSessionAvailability(pending: Pick<PendingCheckout, 'expiresAt'>, now = new Date()) {
+  const expiresAt = pending.expiresAt ? Date.parse(pending.expiresAt) : Number.NaN
+  const isExpired = Number.isFinite(expiresAt) && expiresAt <= now.getTime()
+
+  return {
+    canClaim: !isExpired,
+    shouldCreateNewOrder: isExpired,
+    shouldForgetPendingCheckout: isExpired,
+    title: isExpired ? 'Срок оформления покупки истёк' : null,
+    statusLabel: isExpired ? 'срок оформления истёк' : null,
+    reason: isExpired ? 'Время оформления закончилось. Выберите тариф и создайте новый заказ.' : null
+  }
+}
+
+export function isCheckoutSessionExpiredError(error: unknown) {
+  if (!(error instanceof ApiClientError)) return false
+  const payload = error.payload
+  const raw = typeof payload === 'string'
+    ? payload
+    : payload && typeof payload === 'object' && 'error' in payload && typeof (payload as Record<string, unknown>).error === 'string'
+      ? String((payload as Record<string, unknown>).error)
+      : ''
+  return raw.trim().toLowerCase() === 'checkout session expired.'
 }

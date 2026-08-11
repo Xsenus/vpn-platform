@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public checkout-session expiry
+
+Scope:
+- The public checkout must preserve the checkout-session expiry returned by the backend and stop before claim when that session has already expired.
+- Legacy persisted entries without an expiry must recover from the exact backend terminal response without payment initialization or an infinite retry action.
+
+Results:
+- Roadmap progress: `644/664` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-checkout-session-expiry`, version `0.631.0`.
+- Reproduction before fix: checkout persistence discarded `expiresAt`, so an already expired session continued into claim/payment flow. Fail-first desktop/mobile: `0/2`.
+- After fix: new persisted entries stop locally with `claim=0`; a legacy entry receives one terminal backend claim and is converted to the same expired recovery. Targeted desktop/mobile: `2/2`; both paths keep `paymentInit=0` and clear storage.
+- Full public desktop/mobile regression: `46/46`. Initial console-responsive run: `199/200` because an existing mobile-admin VPN lifecycle success message exceeded its timeout; isolated unchanged rerun: `1/1`; final unchanged console-responsive Playwright: `200/200` in `12.8 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: expired-session title, exact explanation, create-new-order and close actions fit without horizontal overflow or a contradictory retry command on desktop/mobile.
+- Frontend tests: `130/130`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `356.22 kB`, gzip `103.94 kB`; cabinet bundle `370.75/107.00 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `630` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public completed checkout recovery
 
 Scope:

@@ -125,6 +125,8 @@ async function mockPublicApi(page: Page) {
   let checkoutRequestCount = 0
   let checkoutClaimRequestCount = 0
   let paymentInitRequestCount = 0
+  let expiredCheckoutSession = false
+  let expiredCheckoutClaimResponse = false
   let expiredCheckoutOrder = false
   let claimedCheckoutOrderStatus = 'PendingPayment'
   let unsafePaymentLink = false
@@ -261,12 +263,12 @@ async function mockPublicApi(page: Page) {
 
     await fulfillJson(route, {
       id: 'checkout-session-1',
-      token: 'public-checkout-token',
+      token: 'public_checkout_token_12345678901234567890',
       tariffId: 'tariff-start',
       userId: null,
       orderId: null,
       status: 'open',
-      expiresAt: '2099-06-14T00:00:00Z',
+      expiresAt: expiredCheckoutSession ? '2026-06-12T00:00:00Z' : '2099-06-14T00:00:00Z',
       emailHint: null
     })
   })
@@ -381,10 +383,14 @@ async function mockPublicApi(page: Page) {
     })
   })
 
-  await page.route('**/api/me/checkout-sessions/public-checkout-token/claim', async (route) => {
+  await page.route('**/api/me/checkout-sessions/public_checkout_token_12345678901234567890/claim', async (route) => {
     checkoutClaimRequestCount += 1
     if (checkoutClaimDelayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, checkoutClaimDelayMs))
+    }
+    if (expiredCheckoutClaimResponse) {
+      await fulfillJson(route, { error: 'Checkout session expired.' }, 400)
+      return
     }
     await fulfillJson(route, {
       id: 'public-order',
@@ -452,6 +458,8 @@ async function mockPublicApi(page: Page) {
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
+    returnExpiredCheckoutSession: () => { expiredCheckoutSession = true },
+    failCheckoutClaimAsExpired: () => { expiredCheckoutClaimResponse = true },
     delayCheckoutClaim: (delayMs: number) => { checkoutClaimDelayMs = delayMs },
     failNextPaymentInit: () => { failNextPaymentInit = true },
     returnExpiredCheckoutOrder: () => { expiredCheckoutOrder = true },
@@ -947,6 +955,42 @@ test('public checkout does not initialize payment for an expired claimed order',
   const newOrderLink = page.getByRole('link', { name: 'Создать новый заказ' })
   await expect(newOrderLink).toHaveAttribute('href', '/tariffs')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('public checkout does not claim an expired checkout session', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.returnExpiredCheckoutSession()
+
+  await page.goto('/tariffs')
+  await expect(page.getByRole('link', { name: /Привет, Public E2E/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+
+  await expect(page).toHaveURL(/\/account$/)
+  await expect(page.getByRole('heading', { name: 'Срок оформления покупки истёк' })).toBeVisible()
+  await expect(page.getByText('Время оформления закончилось. Выберите тариф и создайте новый заказ.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Повторить привязку' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Создать новый заказ' })).toHaveAttribute('href', '/tariffs')
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 0, paymentInit: 0 })
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+
+  api.failCheckoutClaimAsExpired()
+  await page.evaluate(() => {
+    sessionStorage.setItem('vpn-platform-pending-checkout', JSON.stringify({
+      token: 'public_checkout_token_12345678901234567890',
+      tariffName: 'Start 30 дней',
+      provider: 'YooKassa'
+    }))
+  })
+  await page.reload()
+
+  await expect(page.getByRole('heading', { name: 'Срок оформления покупки истёк' })).toBeVisible()
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 0 })
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
 })
 
 test('public checkout resolves an already completed claimed order without a stale retry loop', async ({ page }) => {
