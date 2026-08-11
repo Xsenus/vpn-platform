@@ -372,11 +372,14 @@ function TariffsPage({ onPendingCheckout }: {
 }) {
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
   const [tariffsLoading, setTariffsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [errorContentKey, setErrorContentKey] = useState('')
+  const [tariffsErrorContentKey, setTariffsErrorContentKey] = useState('')
+  const [tariffsLoadAttempt, setTariffsLoadAttempt] = useState(0)
+  const [checkoutError, setCheckoutError] = useState('')
   const [promoCode, setPromoCode] = useState('')
   const [paymentProviders, setPaymentProviders] = useState<PublicPaymentProviderDto[]>([])
   const [paymentProvidersLoading, setPaymentProvidersLoading] = useState(true)
+  const [paymentProvidersErrorContentKey, setPaymentProvidersErrorContentKey] = useState('')
+  const [paymentProvidersLoadAttempt, setPaymentProvidersLoadAttempt] = useState(0)
   const [provider, setProvider] = useState<PaymentProvider | ''>('')
   const [pendingTariffId, setPendingTariffId] = useState<string>('')
   const [pageContent, setPageContent] = useState<Record<string, string>>(defaultHomeContent)
@@ -384,13 +387,16 @@ function TariffsPage({ onPendingCheckout }: {
   const checkoutRequestIdRef = useRef(0)
   const navigate = useNavigate()
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
-  const visibleError = errorContentKey ? content(errorContentKey) : error
-  const checkoutUnavailableReason = getCheckoutUnavailableReason(paymentProvidersLoading, paymentProviders, provider, {
-    loading: content('home.checkout.unavailable.loading'),
-    noProviders: content('home.checkout.unavailable.noProviders'),
-    chooseProvider: content('home.checkout.unavailable.chooseProvider')
-  })
-  const tariffsState = getPublicListState(tariffsLoading, visibleError, tariffs.length)
+  const tariffsError = tariffsErrorContentKey ? content(tariffsErrorContentKey) : ''
+  const paymentProvidersError = paymentProvidersErrorContentKey ? content(paymentProvidersErrorContentKey) : ''
+  const checkoutUnavailableReason = paymentProvidersError
+    ? 'Способы оплаты не загружены. Повторите загрузку выше.'
+    : getCheckoutUnavailableReason(paymentProvidersLoading, paymentProviders, provider, {
+        loading: content('home.checkout.unavailable.loading'),
+        noProviders: content('home.checkout.unavailable.noProviders'),
+        chooseProvider: content('home.checkout.unavailable.chooseProvider')
+      })
+  const tariffsState = getPublicListState(tariffsLoading, tariffsError, tariffs.length)
 
   useEffect(() => {
     let cancelled = false
@@ -401,20 +407,34 @@ function TariffsPage({ onPendingCheckout }: {
       .catch(() => {
         if (!cancelled) setPageContent(defaultHomeContent)
       })
+
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
     setTariffsLoading(true)
+    setTariffsErrorContentKey('')
     api.getTariffs()
       .then((items) => {
         if (!cancelled) setTariffs(items)
       })
       .catch(() => {
         if (cancelled) return
-        setError('')
-        setErrorContentKey('home.errors.tariffsLoad')
+        setTariffs([])
+        setTariffsErrorContentKey('home.errors.tariffsLoad')
       })
       .finally(() => {
         if (!cancelled) setTariffsLoading(false)
       })
+
+    return () => { cancelled = true }
+  }, [tariffsLoadAttempt])
+
+  useEffect(() => {
+    let cancelled = false
     setPaymentProvidersLoading(true)
+    setPaymentProvidersErrorContentKey('')
     api.getPublicPaymentProviders()
       .then((items) => {
         if (cancelled) return
@@ -425,28 +445,35 @@ function TariffsPage({ onPendingCheckout }: {
         if (cancelled) return
         setPaymentProviders([])
         setProvider('')
-        setError('')
-        setErrorContentKey('home.errors.paymentProvidersLoad')
+        setPaymentProvidersErrorContentKey('home.errors.paymentProvidersLoad')
       })
       .finally(() => {
         if (!cancelled) setPaymentProvidersLoading(false)
       })
 
-    return () => {
-      cancelled = true
-      checkoutRequestIdRef.current += 1
-      checkoutInFlightRef.current = false
-    }
+    return () => { cancelled = true }
+  }, [paymentProvidersLoadAttempt])
+
+  useEffect(() => () => {
+    checkoutRequestIdRef.current += 1
+    checkoutInFlightRef.current = false
   }, [])
+
+  const retryTariffsLoad = () => {
+    setTariffsLoadAttempt((current) => current + 1)
+  }
+
+  const retryPaymentProvidersLoad = () => {
+    setPaymentProvidersLoadAttempt((current) => current + 1)
+  }
 
   const handleCheckout = async (tariff: TariffDto) => {
     if (checkoutInFlightRef.current) return
 
-    setError('')
-    setErrorContentKey('')
+    setCheckoutError('')
 
     if (!provider) {
-      setError(content('home.errors.noPaymentProviders'))
+      setCheckoutError(content('home.errors.noPaymentProviders'))
       return
     }
 
@@ -470,7 +497,7 @@ function TariffsPage({ onPendingCheckout }: {
       navigate('/account')
     } catch (e) {
       if (requestId === checkoutRequestIdRef.current) {
-        setError(getCheckoutErrorMessage(e, content('home.errors.checkoutCreate')))
+        setCheckoutError(getCheckoutErrorMessage(e, content('home.errors.checkoutCreate')))
       }
     } finally {
       if (requestId === checkoutRequestIdRef.current) {
@@ -508,22 +535,38 @@ function TariffsPage({ onPendingCheckout }: {
             </label>
           </div>
           {paymentProvidersLoading && <LoadingBlock label={content('home.checkout.unavailable.loading')} />}
-          {!paymentProvidersLoading && paymentProviders.length === 0 && <EmptyState title={content('home.checkout.providersEmptyTitle')} description={content('home.checkout.providersEmptyDescription')} />}
+          {!paymentProvidersLoading && paymentProvidersError && (
+            <div className="tariff-load-recovery">
+              <ErrorBlock message={paymentProvidersError} />
+              <div className="form-actions">
+                <PrimaryButton type="button" className="button-secondary" onClick={retryPaymentProvidersLoad}>Повторить загрузку способов оплаты</PrimaryButton>
+              </div>
+            </div>
+          )}
+          {!paymentProvidersLoading && !paymentProvidersError && paymentProviders.length === 0 && <EmptyState title={content('home.checkout.providersEmptyTitle')} description={content('home.checkout.providersEmptyDescription')} />}
           {!paymentProvidersLoading && paymentProviders.length > 0 && <p className="muted">Доступно способов оплаты: {paymentProviders.length}. Показываются только включенные и готовые web-провайдеры.</p>}
           <p className="muted">{content('home.checkout.settingsHint')}</p>
         </Card>
       </div>
 
-      {visibleError && (
+      {checkoutError && (
         <div className="section">
-          <ErrorBlock message={visibleError} />
+          <ErrorBlock message={checkoutError} />
         </div>
       )}
 
       <div className="section card-list">
         {tariffsState === 'loading' && <LoadingBlock label="Загружаем тарифы..." />}
+        {tariffsState === 'error' && (
+          <Card className="tariff-load-recovery">
+            <ErrorBlock message={tariffsError} />
+            <div className="form-actions">
+              <PrimaryButton type="button" className="button-secondary" onClick={retryTariffsLoad}>Повторить загрузку тарифов</PrimaryButton>
+            </div>
+          </Card>
+        )}
         {tariffsState === 'empty' && <EmptyState title="Тарифы пока не опубликованы" description="Администратор должен включить тариф для public/Telegram витрины." />}
-        {tariffs.map((tariff) => {
+        {tariffsState === 'ready' && tariffs.map((tariff) => {
           const features = tariffFeatures(tariff)
           const checkoutAvailable = canStartCheckout(pendingTariffId, paymentProvidersLoading, paymentProviders, provider)
           const buttonUnavailableReason = pendingTariffId

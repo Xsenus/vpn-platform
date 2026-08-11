@@ -132,6 +132,10 @@ async function mockPublicApi(page: Page) {
   let wrongShapeTariffsResponse = false
   let invalidItemTariffsResponse = false
   let oversizedTariffsResponse = false
+  let tariffsLoadShouldFail = false
+  let paymentProvidersLoadShouldFail = false
+  let tariffsRequestCount = 0
+  let paymentProvidersRequestCount = 0
   let homeContentDelayMs = 0
   let customTariffsLoadError = ''
   let failNextPaymentInit = false
@@ -167,6 +171,11 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/public/tariffs', async (route) => {
+    tariffsRequestCount += 1
+    if (tariffsLoadShouldFail) {
+      await fulfillJson(route, { error: 'tariffs unavailable' }, 503)
+      return
+    }
     if (oversizedTariffsResponse) {
       await route.fulfill({
         status: 200,
@@ -195,6 +204,11 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/public/payments/providers', async (route) => {
+    paymentProvidersRequestCount += 1
+    if (paymentProvidersLoadShouldFail) {
+      await fulfillJson(route, { error: 'payment providers unavailable' }, 503)
+      return
+    }
     await fulfillJson(route, paymentProviders)
   })
 
@@ -435,6 +449,14 @@ async function mockPublicApi(page: Page) {
       claim: checkoutClaimRequestCount,
       paymentInit: paymentInitRequestCount
     }),
+    getPublicLoadRequestCounts: () => ({
+      tariffs: tariffsRequestCount,
+      paymentProviders: paymentProvidersRequestCount
+    }),
+    failTariffsLoad: () => { tariffsLoadShouldFail = true },
+    allowTariffsLoad: () => { tariffsLoadShouldFail = false },
+    failPaymentProvidersLoad: () => { paymentProvidersLoadShouldFail = true },
+    allowPaymentProvidersLoad: () => { paymentProvidersLoadShouldFail = false },
     returnUnsafePaymentLink: () => { unsafePaymentLink = true },
     returnInvalidCheckoutResponse: () => { invalidCheckoutResponse = true },
     returnInvalidAuthResponse: () => { invalidAuthResponse = true },
@@ -470,6 +492,54 @@ test('public tariffs applies managed error content after a slower content respon
   await expect(page.getByRole('alert')).toContainText('Тарифы обновляются. Вернитесь через несколько минут.')
   await expect(page.getByRole('alert')).not.toContainText('Не удалось загрузить тарифы.')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('public tariff and payment-provider failures stay scoped and recover explicitly', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.failPaymentProvidersLoad()
+
+  await page.goto('/tariffs')
+  await expect(page.getByText('Start 30 дней')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить способы оплаты. Покупка временно недоступна.' })).toBeVisible()
+  await expect(page.getByText('Нет доступных способов оплаты')).toHaveCount(0)
+  await expect(page.getByText('Тарифы пока не опубликованы')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Купить' }).first()).toBeDisabled()
+  const providerFailureCounts = api.getPublicLoadRequestCounts()
+  await page.waitForTimeout(300)
+  expect(api.getPublicLoadRequestCounts()).toEqual(providerFailureCounts)
+
+  api.allowPaymentProvidersLoad()
+  await page.getByRole('button', { name: 'Повторить загрузку способов оплаты' }).click()
+  await expect(page.getByLabel('Способ оплаты')).toHaveValue('YooKassa')
+  await expect(page.getByRole('button', { name: 'Купить' }).first()).toBeEnabled()
+  await expect.poll(api.getPublicLoadRequestCounts).toEqual({
+    tariffs: providerFailureCounts.tariffs,
+    paymentProviders: providerFailureCounts.paymentProviders + 1
+  })
+
+  api.failTariffsLoad()
+  await page.reload()
+  await expect(page.getByText('Доступно способов оплаты: 1.')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить тарифы. Обновите страницу или попробуйте позже.' })).toBeVisible()
+  await expect(page.getByText('Тарифы пока не опубликованы')).toHaveCount(0)
+  await expect(page.getByText('Нет доступных способов оплаты')).toHaveCount(0)
+  const tariffFailureCounts = api.getPublicLoadRequestCounts()
+  await page.waitForTimeout(300)
+  expect(api.getPublicLoadRequestCounts()).toEqual(tariffFailureCounts)
+
+  api.allowTariffsLoad()
+  await page.getByRole('button', { name: 'Повторить загрузку тарифов' }).click()
+  await expect(page.getByText('Start 30 дней')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Купить' }).first()).toBeEnabled()
+  await expect.poll(api.getPublicLoadRequestCounts).toEqual({
+    tariffs: tariffFailureCounts.tariffs + 1,
+    paymentProviders: tariffFailureCounts.paymentProviders
+  })
+  const layout = await page.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    contentWidth: document.documentElement.scrollWidth
+  }))
+  expect(layout.contentWidth).toBeLessThanOrEqual(layout.viewportWidth + 1)
 })
 
 test('public tariffs handles invalid MIME, shape, item and size without a render crash', async ({ page }) => {

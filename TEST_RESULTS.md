@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public catalog load recovery
+
+Scope:
+- Tariff and payment-provider GET failures must remain independent, preserve the healthy neighboring area and never look like a successful empty response.
+- Each failed area must settle after one attempt and recover explicitly without reload, request loops or loss of late managed CMS error copy.
+
+Results:
+- Roadmap progress: `619/639` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-catalog-load-recovery`, version `0.606.0`.
+- Reproduction before fix: tariffs, payment providers and checkout mutation shared `error/errorContentKey`; provider `503` rendered the healthy tariff plus both a load alert and false «Нет доступных способов оплаты», exposed no retry and could overwrite a concurrent tariff diagnostic. Fail-first desktop/mobile was `0/2`.
+- After fix: CMS content, tariffs and providers use independent effects; tariffs/providers own loading/error/empty state and retry attempts, while checkout mutation keeps a separate error. Failed providers preserve tariff cards with an exact unavailable reason; failed tariffs preserve the ready provider selector.
+- Targeted boundary: desktop/mobile `2/2`; final public desktop/mobile regression: `34/34`.
+- Final console-responsive Playwright: `158/158` in `8.9 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: provider and tariff recovery pages at 1280 and 393 CSS px kept their healthy neighboring area visible; error/empty states were mutually exclusive, text/buttons fitted and no overlap or horizontal overflow appeared. Screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `350.31 kB`, gzip `102.50 kB`; cabinet bundle `368.01/106.29 kB`; admin bundle raw `525267`, gzip `140453`, largest `225595`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `605` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public checkout session boundary
 
 Scope:

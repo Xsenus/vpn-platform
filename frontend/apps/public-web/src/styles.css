@@ -421,6 +421,15 @@
   margin-bottom: 18px;
 }
 
+.tariff-load-recovery {
+  display: grid;
+  gap: 12px;
+}
+
+.tariff-load-recovery .form-actions {
+  margin-top: 0;
+}
+
 .faq-list {
   gap: 12px;
 }

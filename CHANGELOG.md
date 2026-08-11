@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.606.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-catalog-load-recovery`.
+
+### Исправлено
+
+- Публичная страница тарифов больше не объединяет ошибки каталога, способов оплаты и checkout mutation в один race-dependent state.
+- Transient или malformed failure тарифов и payment providers остаётся в своей области, не создаёт ложный empty-state и не скрывает успешно загруженную соседнюю область.
+- Обе загрузки получили явный локальный retry без reload; кнопки покупки при provider failure выключены с точной причиной, а CMS-тексты ошибок продолжают обновлять уже показанный recovery-state.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: provider `503` показывал одновременно ошибку и ложное «Нет доступных способов оплаты», а retry отсутствовал. После исправления targeted boundary прошёл `2/2`.
+- Финальный public desktop/mobile regression прошёл `34/34`; полный console-responsive Playwright — `158/158` за `8.9 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Provider/tariff recovery UI просмотрен на 1280/393 px: здоровая область остаётся видимой, error/empty взаимоисключены, сообщения и full-width mobile retry помещаются без overlap или horizontal overflow; временные screenshots удалены.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `350.31/102.50 kB`, cabinet bundle `368.01/106.29 kB`, admin bundle `525267/140453/max 225595`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `605`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `619/639` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.605.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-checkout-session-boundary`.
