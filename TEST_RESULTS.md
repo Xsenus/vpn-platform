@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin VPN infrastructure resource owner
+
+Scope:
+- Panel, inbound and client commands that mutate one remote 3x-ui hierarchy must not overlap through different action IDs.
+- Provisioning-run commands and server lifecycle/health/provision commands for the same node must share one ownership boundary across sections.
+
+Results:
+- Roadmap progress: `634/654` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-vpn-infrastructure-resource-owner`, version `0.621.0`.
+- Reproduction before fix: while panel sync was delayed, panel test, child inbound set-default and child client sync all reached the API. Fail-first desktop/mobile: `0/2`; sibling counts were `1/1/1` instead of `0/0/0`.
+- After fix: panel/inbound/client actions claim hierarchical resource keys; client migration claims source and target resources. Provisioning actions claim `provisioning-run:<id>` plus `server:<nodeId>`, shared with server commands. Targeted desktop/mobile: `2/2`, including programmatic clicks after removing `disabled`.
+- Related VPN infrastructure/provisioning/client/migration regression: `10/10` in `3.2 min`; full admin desktop/mobile: `88/88` in `9.4 min`; final console-responsive Playwright: `178/178` in `11.3 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: no layout nodes or dimensions changed; shared busy states cover row commands and edit forms without blank state, horizontal overflow, clipped controls or stuck confirmation dialogs.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.59/106.77 kB`; admin bundle raw `529885`, gzip `141838`, largest `230213`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `620` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin subscription and VPN access resource owner
 
 Scope:

@@ -14624,5 +14624,28 @@
         "text": "Roadmap progress is 633/653 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-admin-vpn-infrastructure-resource-owner",
+    "version": "0.621.0",
+    "releasedAt": "2026-08-11T17:26:03+07:00",
+    "title": "Команды VPN-инфраструктуры выполняются последовательно",
+    "summary": "Панели, inbound-правила, клиенты, серверы и provisioning runs используют иерархические resource owners и не пересекают remote state mutations.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Sibling panel/inbound/client и server/provisioning commands больше не выполняются параллельно через разные action IDs или разделы."
+      },
+      {
+        "type": "improved",
+        "text": "Multi-key owner резервирует parent и child resources, включая source/target client migration, и освобождает busy-state только по request identity."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 634/654 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

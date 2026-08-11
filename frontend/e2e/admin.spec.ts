@@ -473,6 +473,12 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedSubscriptionExtend: (() => void) | null = null
   let delayNextAccessQrResponse = false
   let releaseDelayedAccessQr: (() => void) | null = null
+  let delayNextVpnPanelSyncResponse = false
+  let releaseDelayedVpnPanelSync: (() => void) | null = null
+  let delayNextVpnClientSyncResponse = false
+  let releaseDelayedVpnClientSync: (() => void) | null = null
+  let delayNextProvisioningDeployResponse = false
+  let releaseDelayedProvisioningDeploy: (() => void) | null = null
   const notificationDeliveries: Array<Record<string, unknown>> = [{
     id: 'notification-e2e',
     userId: 'user-e2e',
@@ -1574,6 +1580,11 @@ async function mockAdminApi(page: Page) {
     if (provisioningActionMatch && method === 'POST') {
       const runId = provisioningActionMatch[1]
       const action = provisioningActionMatch[2]
+      if (action === 'deploy' && delayNextProvisioningDeployResponse) {
+        delayNextProvisioningDeployResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedProvisioningDeploy = resolve })
+        releaseDelayedProvisioningDeploy = null
+      }
       const index = provisioningRuns.findIndex((item) => item.id === runId)
       const run = provisioningRuns[index]
       if (action === 'cancel') {
@@ -1670,6 +1681,11 @@ async function mockAdminApi(page: Page) {
 
     const panelSyncMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)\/sync$/)
     if (method === 'POST' && panelSyncMatch) {
+      if (delayNextVpnPanelSyncResponse) {
+        delayNextVpnPanelSyncResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedVpnPanelSync = resolve })
+        releaseDelayedVpnPanelSync = null
+      }
       await fulfillJson(route, { id: `panel-sync-${panelSyncMatch[1]}`, vpnPanelId: panelSyncMatch[1], status: 'Succeeded', startedAt: '2026-06-13T07:07:00Z', finishedAt: '2026-06-13T07:07:10Z', summaryJson: '{"clients":1}', errorMessage: '' })
       return
     }
@@ -1748,6 +1764,11 @@ async function mockAdminApi(page: Page) {
     if (method === 'POST' && vpnClientActionMatch) {
       const index = clients.findIndex((item) => item.id === vpnClientActionMatch[1])
       const action = vpnClientActionMatch[2]
+      if (action === 'sync' && delayNextVpnClientSyncResponse) {
+        delayNextVpnClientSyncResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedVpnClientSync = resolve })
+        releaseDelayedVpnClientSync = null
+      }
       const updated = {
         ...clients[index],
         enable: action === 'enable' ? true : action === 'disable' ? false : clients[index]?.enable,
@@ -1921,6 +1942,12 @@ async function mockAdminApi(page: Page) {
     releaseSubscriptionExtend: () => { releaseDelayedSubscriptionExtend?.() },
     delayNextAccessQr: () => { delayNextAccessQrResponse = true },
     releaseAccessQr: () => { releaseDelayedAccessQr?.() },
+    delayNextVpnPanelSync: () => { delayNextVpnPanelSyncResponse = true },
+    releaseVpnPanelSync: () => { releaseDelayedVpnPanelSync?.() },
+    delayNextVpnClientSync: () => { delayNextVpnClientSyncResponse = true },
+    releaseVpnClientSync: () => { releaseDelayedVpnClientSync?.() },
+    delayNextProvisioningDeploy: () => { delayNextProvisioningDeployResponse = true },
+    releaseProvisioningDeploy: () => { releaseDelayedProvisioningDeploy?.() },
     preparePaymentLifecycle: () => {
       orders[0] = { ...orders[0], status: 'PendingPayment', lastPaymentStatus: 'Unknown', paidAt: null, updatedAt: now }
       payments[0] = {
@@ -2921,6 +2948,109 @@ test('admin serializes subscription and VPN access commands per resource', async
   await expect(page.getByText('VPN-доступ синхронизирован.', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/sync', 'POST')).toBe(2)
   await expect(accessRow.locator('.qr-preview')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin serializes VPN infrastructure commands across parent resources', async ({ page }) => {
+  test.setTimeout(120_000)
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-vpn-resource-owner-token', 'admin-vpn-resource-owner-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, '3x-ui панели', 'panels')
+
+  const panelsPanel = page.locator('#panels')
+  let panelRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'EU 3x-ui Sandbox' }).first()
+  let inboundRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'backup-vless' })
+  let clientRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'client@example.test' })
+  api.delayNextVpnPanelSync()
+  await panelsPanel.evaluate((panel) => {
+    const rows = Array.from(panel.querySelectorAll<HTMLElement>('.list-item-vertical'))
+    const panelRow = rows.find((row) => row.textContent?.includes('EU 3x-ui Sandbox'))
+    const inboundRow = rows.find((row) => row.textContent?.includes('backup-vless'))
+    const clientRow = rows.find((row) => row.textContent?.includes('client@example.test'))
+    const click = (row: HTMLElement | undefined, label: string) => Array.from(row?.querySelectorAll('button') ?? [])
+      .find((button) => button.textContent?.trim() === label)
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    click(panelRow, 'Синхронизировать')
+    click(panelRow, 'Проверить')
+    click(inboundRow, 'Сделать основным')
+    click(clientRow, 'Синхронизировать')
+  })
+  await expect.poll(() => api.getRequestCount('/api/admin/vpn-panels/panel-eu/sync', 'POST')).toBe(1)
+  await page.waitForTimeout(300)
+  expect({
+    panelTest: api.getRequestCount('/api/admin/vpn-panels/panel-eu/test-connection', 'POST'),
+    inboundDefault: api.getRequestCount('/api/admin/vpn-inbounds/inbound-backup/set-default', 'POST'),
+    clientSync: api.getRequestCount('/api/admin/vpn-clients/client-e2e/sync', 'POST')
+  }).toEqual({ panelTest: 0, inboundDefault: 0, clientSync: 0 })
+  await expect(panelRow.getByRole('button', { name: 'Проверить' })).toBeDisabled()
+  await expect(inboundRow.getByRole('button', { name: 'Сделать основным' })).toBeDisabled()
+  await expect(clientRow.getByRole('button', { name: 'Синхронизировать' })).toBeDisabled()
+
+  api.releaseVpnPanelSync()
+  await expect(page.getByText(/Синхронизация Succeeded/)).toBeVisible()
+
+  panelRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'EU 3x-ui Sandbox' }).first()
+  clientRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'client@example.test' })
+  await clientRow.getByRole('button', { name: 'Отключить' }).click()
+  await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: disable.')).toBeVisible()
+  clientRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'client@example.test' })
+  api.delayNextVpnClientSync()
+  await clientRow.getByRole('button', { name: 'Синхронизировать' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/vpn-clients/client-e2e/sync', 'POST')).toBe(1)
+  const enableClientButton = clientRow.getByRole('button', { name: 'Включить' })
+  await expect(enableClientButton).toBeDisabled()
+  await enableClientButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/vpn-clients/client-e2e/enable', 'POST')).toBe(0)
+  api.releaseVpnClientSync()
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: synced.')).toBeVisible()
+
+  await openAdminSection(page, 'Подготовка VPS', 'provisioning')
+  const provisioningPanel = page.locator('#provisioning')
+  let runRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' }).first()
+  api.delayNextProvisioningDeploy()
+  await runRow.getByRole('button', { name: 'Развернуть' }).click()
+  await provisioningPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/provisioning-runs/provisioning-e2e/deploy', 'POST')).toBe(1)
+  await expect(runRow.getByRole('button', { name: 'Отменить' })).toBeDisabled()
+
+  await openAdminSection(page, 'Серверы', 'nodes')
+  const nodesPanel = page.locator('#nodes')
+  let serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' }).first()
+  const healthButton = serverRow.getByRole('button', { name: 'Health-check' })
+  await expect(healthButton).toBeDisabled()
+  await healthButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/servers/server-eu/health-check', 'POST')).toBe(0)
+
+  await openAdminSection(page, 'Подготовка VPS', 'provisioning')
+  runRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' }).first()
+  const supportButton = runRow.getByRole('button', { name: 'Нужна поддержка' })
+  await expect(supportButton).toBeDisabled()
+  await supportButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/provisioning-runs/provisioning-e2e/support-needed', 'POST')).toBe(0)
+
+  api.releaseProvisioningDeploy()
+  await expect(page.getByText(/Развертывание поставлено в очередь/)).toBeVisible()
+  await openAdminSection(page, 'Серверы', 'nodes')
+  serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' }).first()
+  await serverRow.getByRole('button', { name: 'Health-check' }).click()
+  await expect(page.getByText('Health-check EU Sandbox: Healthy')).toBeVisible()
+  expect(api.getRequestCount('/api/admin/servers/server-eu/health-check', 'POST')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

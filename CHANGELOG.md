@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.621.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-vpn-infrastructure-resource-owner`.
+
+### Исправлено
+
+- Команды одной 3x-ui панели, её inbound-правил и клиентов больше не выполняются параллельно через разные action IDs; panel mutation владеет общим parent resource до завершения reload/details.
+- Команды одного VPN-клиента используют client/inbound/panel resource keys, а миграция атомарно резервирует source и target панели/inbound-правила.
+- Lifecycle/health/precheck/provision/delete одного VPN-сервера и deploy/cancel/retry/support связанного provisioning run используют общий server boundary между разделами.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: при задержанном panel sync одновременно уходили panel test, inbound set-default и client sync (`1/1/1` вместо `0/0/0`). После исправления targeted contract прошёл `2/2`, включая programmatic обход disabled для client/run/server команд.
+- Расширенный VPN infrastructure/provisioning/client/migration regression прошёл `10/10` за `3.2 min`, весь admin desktop/mobile — `88/88` за `9.4 min`; полный console-responsive Playwright — `178/178` за `11.3 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Shared busy-state блокирует sibling controls и формы редактирования между panel/inbound/client и server/provisioning разделами без изменения размеров/layout.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.59/106.77 kB`, admin bundle `529885/141838/max 230213`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `57/57`, release seed `620`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `634/654` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.620.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-subscription-access-resource-owner`.

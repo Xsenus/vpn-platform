@@ -558,6 +558,26 @@ function subscriptionActionResourceKeys(subscriptionId: string, accessId: string
     : [subscriptionActionResourceKey(subscriptionId)]
 }
 
+function vpnPanelActionResourceKey(panelId: string) {
+  return `vpn-panel:${panelId}`
+}
+
+function vpnInboundActionResourceKey(inboundId: string) {
+  return `vpn-inbound:${inboundId}`
+}
+
+function vpnClientActionResourceKey(clientId: string) {
+  return `vpn-client:${clientId}`
+}
+
+function serverActionResourceKey(serverId: string) {
+  return `server:${serverId}`
+}
+
+function provisioningRunActionResourceKey(runId: string) {
+  return `provisioning-run:${runId}`
+}
+
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
@@ -1210,6 +1230,7 @@ export function App() {
   const [logoutBusy, setLogoutBusy] = useState(false)
   const [actionBusyId, setActionBusyId] = useState('')
   const [actionBusyResourceKeys, setActionBusyResourceKeys] = useState<ReadonlySet<string>>(() => new Set())
+  const isActionResourceBusy = (...resourceKeys: string[]) => resourceKeys.some((key) => actionBusyResourceKeys.has(key))
   const [serverForm, setServerForm] = useState<ServerFormState>(defaultServerForm)
   const [editingServerId, setEditingServerId] = useState<string | null>(null)
   const [providerForm, setProviderForm] = useState<UpsertPaymentProviderAccountPayload>(defaultProviderForm)
@@ -3187,7 +3208,7 @@ export function App() {
       if (formIsCurrent && action.isCurrent() && selectedVpnPanelIdRef.current === saved.id) {
         await loadVpnPanelDetails(saved.id, token, action.operationId)
       }
-    })
+    }, editingId ? vpnPanelActionResourceKey(editingId) : 'vpn-panel-save')
   }
 
   const handleTestVpnPanel = (panelId: string) => runAction('panels', `test-${panelId}`, async (action) => {
@@ -3196,7 +3217,7 @@ export function App() {
     setNotice(`Проверка панели: ${result.status} (${result.version || 'версия неизвестна'})`)
     await action.reloadAll()
     await loadVpnPanelDetails(panelId, token, action.operationId)
-  })
+  }, vpnPanelActionResourceKey(panelId))
 
   const handleSyncVpnPanel = (panelId: string) => runAction('panels', `sync-${panelId}`, async (action) => {
     const result = await api.syncAdminVpnPanel(token, panelId)
@@ -3204,7 +3225,7 @@ export function App() {
     setNotice(`Синхронизация ${result.status}: ${result.summaryJson || result.errorMessage}`)
     await action.reloadAll()
     await loadVpnPanelDetails(panelId, token, action.operationId)
-  })
+  }, vpnPanelActionResourceKey(panelId))
 
   const handleSetVpnPanelStatus = (panel: VpnPanelDto, status: 'Active' | 'Disabled') => runAction('panels', `panel-status-${panel.id}`, async (action) => {
     const saved = await api.updateAdminVpnPanel(token, panel.id, { status })
@@ -3212,7 +3233,7 @@ export function App() {
     setNotice(`Панель ${saved.name}: статус ${saved.status}.`)
     await action.reloadAll()
     await loadVpnPanelDetails(panel.id, token, action.operationId)
-  })
+  }, vpnPanelActionResourceKey(panel.id))
 
   const handleDeleteVpnPanel = (panel: VpnPanelDto) => runAction('panels', `panel-delete-${panel.id}`, async (action) => {
     const result = await api.deleteAdminVpnPanel(token, panel.id)
@@ -3223,7 +3244,7 @@ export function App() {
     if (selectedVpnPanelIdRef.current === panel.id && result.deleted) selectVpnPanel('')
     if (editingVpnPanelIdRef.current === panel.id) cancelVpnPanelEdit()
     await action.reloadAll()
-  })
+  }, vpnPanelActionResourceKey(panel.id))
 
   const handleSaveInbound = () => {
     if (!token || !canWriteSection('panels')) return
@@ -3235,6 +3256,9 @@ export function App() {
       setError(`Inbound: ${validationErrors.join(' ')}`)
       return
     }
+    const resourceKeys = editingId
+      ? [vpnPanelActionResourceKey(panelId), vpnInboundActionResourceKey(editingId)]
+      : vpnPanelActionResourceKey(panelId)
     return runAction('panels', editingId ? `update-inbound-${editingId}` : 'create-inbound', async (action) => {
       const saved = editingId
         ? await api.updateAdminVpnInbound(token, editingId, submittedForm)
@@ -3248,7 +3272,7 @@ export function App() {
         setInboundForm(defaultInboundForm)
       }
       await loadVpnPanelDetails(panelId, token, action.operationId)
-    })
+    }, resourceKeys)
   }
 
   const handleSetDefaultInbound = (inboundId: string) => runAction('panels', inboundId, async (action) => {
@@ -3256,7 +3280,7 @@ export function App() {
     if (!action.isCurrent()) return
     setNotice('Основное inbound-правило обновлено.')
     await loadVpnPanelDetails(selectedVpnPanelId, token, action.operationId)
-  })
+  }, [vpnPanelActionResourceKey(vpnInbounds.find((inbound) => inbound.id === inboundId)?.vpnPanelId ?? selectedVpnPanelId), vpnInboundActionResourceKey(inboundId)])
 
   const handleToggleInboundActive = (inbound: VpnInboundDto) => runAction('panels', `toggle-inbound-${inbound.id}`, async (action) => {
     const nextIsActive = !inbound.isActive
@@ -3271,7 +3295,7 @@ export function App() {
       setInboundForm(defaultInboundForm)
     }
     await loadVpnPanelDetails(selectedVpnPanelId, token, action.operationId)
-  })
+  }, [vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id)])
 
   const editInbound = (inbound: VpnInboundDto) => {
     setEditingInboundId(inbound.id)
@@ -3297,29 +3321,37 @@ export function App() {
     } finally {
       await loadVpnPanelDetails(selectedVpnPanelId, token, adminAction.operationId)
     }
-  })
+  }, [vpnPanelActionResourceKey(client.vpnPanelId), vpnInboundActionResourceKey(client.vpnInboundId), vpnClientActionResourceKey(client.id)])
 
-  const handleMigrateVpnClient = (client: VpnClientDto) => runAction('panels', `vpn-client-migrate-${client.id}`, async (action) => {
+  const handleMigrateVpnClient = (client: VpnClientDto) => {
     const targetInboundId = vpnClientMigrationTargets[client.id]
     if (!targetInboundId) return
     const targetInbound = vpnMigrationInbounds.find((inbound) => inbound.id === targetInboundId)
     const targetPanel = vpnPanels.find((panel) => panel.id === targetInbound?.vpnPanelId)
-    const saved = await api.migrateAdminVpnClient(token, client.id, targetInboundId)
-    if (!action.isCurrent()) return
-    if (client.vpnPanelId !== saved.vpnPanelId) {
-      setVpnPanels((current) => current.map((panel) => {
-        if (panel.id === client.vpnPanelId) return { ...panel, usedCapacity: Math.max(0, panel.usedCapacity - 1) }
-        if (panel.id === saved.vpnPanelId) return { ...panel, usedCapacity: panel.usedCapacity + 1 }
-        return panel
-      }))
-    }
-    setNotice(`VPN-клиент ${saved.email} перенесен: ${targetPanel?.name ?? shortId(saved.vpnPanelId)} · ${targetInbound?.name ?? shortId(saved.vpnInboundId)}.`)
-    if (saved.vpnPanelId !== selectedVpnPanelIdRef.current) {
-      selectVpnPanel(saved.vpnPanelId)
-    } else {
-      await loadVpnPanelDetails(saved.vpnPanelId, token, action.operationId)
-    }
-  })
+    const resourceKeys = [
+      vpnPanelActionResourceKey(client.vpnPanelId),
+      vpnInboundActionResourceKey(client.vpnInboundId),
+      vpnClientActionResourceKey(client.id),
+      ...(targetInbound ? [vpnPanelActionResourceKey(targetInbound.vpnPanelId), vpnInboundActionResourceKey(targetInbound.id)] : [])
+    ]
+    return runAction('panels', `vpn-client-migrate-${client.id}`, async (action) => {
+      const saved = await api.migrateAdminVpnClient(token, client.id, targetInboundId)
+      if (!action.isCurrent()) return
+      if (client.vpnPanelId !== saved.vpnPanelId) {
+        setVpnPanels((current) => current.map((panel) => {
+          if (panel.id === client.vpnPanelId) return { ...panel, usedCapacity: Math.max(0, panel.usedCapacity - 1) }
+          if (panel.id === saved.vpnPanelId) return { ...panel, usedCapacity: panel.usedCapacity + 1 }
+          return panel
+        }))
+      }
+      setNotice(`VPN-клиент ${saved.email} перенесен: ${targetPanel?.name ?? shortId(saved.vpnPanelId)} · ${targetInbound?.name ?? shortId(saved.vpnInboundId)}.`)
+      if (saved.vpnPanelId !== selectedVpnPanelIdRef.current) {
+        selectVpnPanel(saved.vpnPanelId)
+      } else {
+        await loadVpnPanelDetails(saved.vpnPanelId, token, action.operationId)
+      }
+    }, resourceKeys)
+  }
 
   const updateVpnClientMigrationTarget = (clientId: string, targetInboundId: string) => setVpnClientMigrationTargets((current) => ({ ...current, [clientId]: targetInboundId }))
   const migrationOptionGroupsForClient = (client: VpnClientDto) => {
@@ -3394,7 +3426,7 @@ export function App() {
         setServerForm({ ...defaultServerForm, provider: submittedForm.provider, region: submittedForm.region, country: submittedForm.country, datacenter: submittedForm.datacenter })
       }
       await action.reloadAll()
-    })
+    }, editingId ? serverActionResourceKey(editingId) : 'server-save')
   }
 
   const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate' | 'disable') => {
@@ -3408,7 +3440,7 @@ export function App() {
       if (!adminAction.isCurrent()) return
       setNotice(`Сервер ${server.name}: ${actionLabel}.`)
       await adminAction.reloadAll()
-    })
+    }, serverActionResourceKey(server.id))
   }
 
   const handleDeleteServer = (server: VpnNodeDto) => runAction('nodes', `delete-server-${server.id}`, async (action) => {
@@ -3419,21 +3451,21 @@ export function App() {
       : `Сервер ${server.name} удалён.`)
     if (editingServerIdRef.current === server.id) cancelServerEdit()
     await action.reloadAll()
-  })
+  }, serverActionResourceKey(server.id))
 
   const handleCheckServerHealth = (server: VpnNodeDto) => runAction('nodes', `health-server-${server.id}`, async (action) => {
     const check = await api.checkAdminServerHealth(token, server.id)
     if (!action.isCurrent()) return
     setNotice(`Health-check ${server.name}: ${check.status}${check.errorText ? ` · ${check.errorText}` : ''}`)
     await action.reloadAll()
-  })
+  }, serverActionResourceKey(server.id))
 
   const handleQueuePrecheck = (serverId: string) => runAction('nodes', `precheck-${serverId}`, async (action) => {
     const response = await api.precheckAdminServer(token, serverId)
     if (!action.isCurrent()) return
     setNotice(`Проверка поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. ID запуска: ${response.runId}`)
     await action.reloadAll()
-  })
+  }, serverActionResourceKey(serverId))
 
   const handleQueueProvision = async (serverId: string) => {
     await runAction('nodes', `provision-${serverId}`, async (action) => {
@@ -3441,7 +3473,14 @@ export function App() {
       if (!action.isCurrent()) return
       setNotice(`Подготовка сервера поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await action.reloadAll()
-    })
+    }, serverActionResourceKey(serverId))
+  }
+
+  const provisioningActionResourceKeys = (runId: string) => {
+    const run = provisioningRuns.find((item) => item.id === runId)
+    return run
+      ? [provisioningRunActionResourceKey(runId), serverActionResourceKey(run.nodeId)]
+      : [provisioningRunActionResourceKey(runId)]
   }
 
   const handleRetryProvisioningRun = (runId: string) => runAction('provisioning', `retry-${runId}`, async (action) => {
@@ -3449,7 +3488,7 @@ export function App() {
     if (!action.isCurrent()) return
     setNotice(`Повтор поставлен в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. Новый ID запуска: ${response.runId}`)
     await action.reloadAll()
-  })
+  }, provisioningActionResourceKeys(runId))
 
   const handleRetryNotificationDelivery = (deliveryId: string) => runAction('audit', `retry-notification-${deliveryId}`, async (action) => {
     await api.retryAdminNotificationDelivery(token, deliveryId)
@@ -3464,7 +3503,7 @@ export function App() {
       if (!action.isCurrent()) return
       setNotice(`Развертывание поставлено в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await action.reloadAll()
-    })
+    }, provisioningActionResourceKeys(runId))
   }
 
   const handleCancelProvisioningRun = (runId: string) => {
@@ -3478,7 +3517,7 @@ export function App() {
       if (!action.isCurrent()) return
       setNotice('Запуск подготовки сервера отменен.')
       await action.reloadAll()
-    })
+    }, provisioningActionResourceKeys(runId))
   }
 
   const handleProvisioningSupportNeeded = (runId: string) => runAction('provisioning', `support-run-${runId}`, async (action) => {
@@ -3486,7 +3525,7 @@ export function App() {
     if (!action.isCurrent()) return
     setNotice(`Обращение в поддержку: ${response.supportConversationId}`)
     await action.reloadAll()
-  })
+  }, provisioningActionResourceKeys(runId))
 
   const handleSaveBotSettings = () => {
     if (!token || !canWriteSection('bot')) return
@@ -3528,6 +3567,16 @@ export function App() {
   const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
   const tariffFormErrors = validateTariffForm(tariffForm)
   const serverFormErrors = validateServerForm(serverForm)
+  const serverFormActionBusy = actionBusyId === 'server-save'
+    || Boolean(editingServerId && isActionResourceBusy(serverActionResourceKey(editingServerId)))
+  const vpnPanelFormActionBusy = actionBusyId === 'vpn-panel-save'
+    || Boolean(editingVpnPanelId && isActionResourceBusy(vpnPanelActionResourceKey(editingVpnPanelId)))
+  const inboundFormActionBusy = actionBusyId === 'create-inbound'
+    || actionBusyId === `update-inbound-${editingInboundId}`
+    || Boolean(selectedVpnPanelId && isActionResourceBusy(
+      vpnPanelActionResourceKey(selectedVpnPanelId),
+      ...(editingInboundId ? [vpnInboundActionResourceKey(editingInboundId)] : [])
+    ))
   const vpnPanelFormErrors = validateVpnPanelForm(vpnPanelForm, Boolean(editingVpnPanelId))
   const inboundFormErrors = validateInboundForm(inboundForm, selectedVpnPanelId)
   const workScenarioFormErrors = validateWorkScenarioForm(workScenarioForm)
@@ -4530,15 +4579,15 @@ export function App() {
                 </div>
                 {server.provisioningOperatorWarning && <div className="safe-note">{server.provisioningOperatorWarning}</div>}
                 <div className="toolbar" hidden={!canWriteSection('nodes')}>
-                  <PrimaryButton className="button-secondary" onClick={() => editServer(server)}>Редактировать</PrimaryButton>
-                  <PrimaryButton disabled={actionBusyId === `health-server-${server.id}`} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton>
-                  <PrimaryButton disabled={server.status === 'Archived'} onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton>
-                  <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server)} message={`Запустить подготовку сервера "${server.name}"? Режим: ${server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте precheck перед запуском.'}`} onConfirm={() => handleQueueProvision(server.id)}>Подготовить</ConfirmButton>
-                  <ConfirmButton className="button-secondary" disabled={server.status === 'Archived'} message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>
-                  <PrimaryButton className="button-secondary" disabled={server.status === 'Archived'} onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
-                  <ConfirmButton className="button-secondary" disabled={server.status === 'Archived'} message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
-                  <ConfirmButton className="button-secondary" disabled={server.status === 'Disabled' || server.status === 'Archived'} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => handleServerMode(server, 'disable')}>Отключить</ConfirmButton>
-                  <ConfirmButton className="button-danger" disabled={actionBusyId === `delete-server-${server.id}`} message={`Удалить сервер "${server.name}"? При наличии подписок, VPN-доступов, запусков подготовки, health-check или миграций он будет архивирован.`} onConfirm={() => handleDeleteServer(server)}>Удалить</ConfirmButton>
+                  <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => editServer(server)}>Редактировать</PrimaryButton>
+                  <PrimaryButton disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton>
+                  <PrimaryButton disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server) || isActionResourceBusy(serverActionResourceKey(server.id))} message={`Запустить подготовку сервера "${server.name}"? Режим: ${server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте precheck перед запуском.'}`} onConfirm={() => handleQueueProvision(server.id)}>Подготовить</ConfirmButton>
+                  <ConfirmButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>
+                  <PrimaryButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
+                  <ConfirmButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
+                  <ConfirmButton className="button-secondary" disabled={server.status === 'Disabled' || server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => handleServerMode(server, 'disable')}>Отключить</ConfirmButton>
+                  <ConfirmButton className="button-danger" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message={`Удалить сервер "${server.name}"? При наличии подписок, VPN-доступов, запусков подготовки, health-check или миграций он будет архивирован.`} onConfirm={() => handleDeleteServer(server)}>Удалить</ConfirmButton>
                 </div>
               </div>
             ))}
@@ -4546,7 +4595,7 @@ export function App() {
         </Card>
         <Card>
           <h3>{editingServerId ? 'Редактировать VPN-сервер' : 'Добавить VPN-сервер'}</h3>
-          <form hidden={!canWriteSection('nodes')} aria-busy={actionBusyId === 'server-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveServer() }}>
+          <form hidden={!canWriteSection('nodes')} aria-busy={serverFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveServer() }}>
             <fieldset className="form-section">
               <legend>Идентификация сервера</legend>
               <div className="form-grid">
@@ -4584,7 +4633,7 @@ export function App() {
             <p className="muted">SSH-доступ защищается API и не возвращается обратно. Проверочный режим не выполняет реальный SSH-деплой.</p>
             <FormValidationSummary errors={serverFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={actionBusyId === 'server-save' || !token || serverFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'server-save'}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={serverFormActionBusy || !token || serverFormErrors.length > 0} title={adminDisabledTitle} aria-busy={serverFormActionBusy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
               {editingServerId && <PrimaryButton type="button" className="button-ghost" onClick={cancelServerEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -4595,7 +4644,7 @@ export function App() {
         <Card>
           <h3>{editingVpnPanelId ? 'Редактировать 3x-ui панель' : '3x-ui панели'}</h3>
           <p className="safe-note">В проверочном режиме тест и синхронизация идут через безопасный путь без реального подключения к 3x-ui.</p>
-          <form hidden={!canWriteSection('panels')} aria-busy={actionBusyId === 'vpn-panel-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveVpnPanel() }}>
+          <form hidden={!canWriteSection('panels')} aria-busy={vpnPanelFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveVpnPanel() }}>
             <fieldset className="form-section">
               <legend>Доступ к панели</legend>
               <div className="form-grid">
@@ -4618,12 +4667,12 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={vpnPanelFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={actionBusyId === 'vpn-panel-save' || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={actionBusyId === 'vpn-panel-save'}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={vpnPanelFormActionBusy || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={vpnPanelFormActionBusy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
               {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
           {vpnPanels.length === 0 && <EmptyState title="3x-ui панели не добавлены" description="Добавьте панель, чтобы управлять inbound-правилами, клиентами и синхронизацией." />}
-          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · проверка {formatDate(panel.lastHealthCheckAt)} · синхронизация {formatDate(panel.lastSyncAt)}</div>{panel.lastError && <div className="error-text">Последняя ошибка: {panel.lastError}</div>}</div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectVpnPanel(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('panels') && <><PrimaryButton className="button-secondary" onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={actionBusyId === `panel-status-${panel.id}`} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={actionBusyId === `panel-status-${panel.id}`} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={actionBusyId === `panel-delete-${panel.id}`} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></>}</div></div>)}</div>
+          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · проверка {formatDate(panel.lastHealthCheckAt)} · синхронизация {formatDate(panel.lastSyncAt)}</div>{panel.lastError && <div className="error-text">Последняя ошибка: {panel.lastError}</div>}</div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectVpnPanel(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('panels') && <><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></>}</div></div>)}</div>
         </Card>
         <Card>
           <h3>Детали панели</h3>
@@ -4640,7 +4689,7 @@ export function App() {
           {!selectedVpnPanelId && <p className="muted">Выберите панель.</p>}
           {selectedVpnPanelId && !vpnPanelDetailsLoading && !vpnPanelDetailsError && <>
           <h4>Inbound-правила</h4>
-          <form hidden={!canWriteSection('panels')} aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} onSubmit={(event) => { event.preventDefault(); void handleSaveInbound() }}>
+          <form hidden={!canWriteSection('panels')} aria-busy={inboundFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveInbound() }}>
             <fieldset className="form-section">
               <legend>{editingInboundId ? 'Редактирование inbound-правила' : 'Параметры нового inbound-правила'}</legend>
               <div className="form-grid">
@@ -4660,18 +4709,27 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={inboundFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={inboundFormErrors.length > 0 || actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`} aria-busy={actionBusyId === 'create-inbound' || actionBusyId === `update-inbound-${editingInboundId}`}>{editingInboundId ? 'Сохранить inbound-правило' : 'Создать inbound-правило'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={inboundFormErrors.length > 0 || inboundFormActionBusy} aria-busy={inboundFormActionBusy}>{editingInboundId ? 'Сохранить inbound-правило' : 'Создать inbound-правило'}</PrimaryButton>
               {editingInboundId && <PrimaryButton type="button" className="button-ghost" onClick={cancelInboundEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
-          <div className="list-stack mt-12">{vpnInbounds.map((inbound) => <div key={inbound.id} className="list-item-vertical"><div className="item-head"><div><strong>{inbound.name}</strong><div className="muted">{inbound.protocol}:{inbound.port} · внешний ID {inbound.externalInboundId} · емкость {inbound.usedCapacity}/{inbound.capacity}</div><div className="muted">stream: {inbound.streamSettingsJson}</div></div><div className="item-status"><StatusBadge value={inbound.isActive ? 'Active' : 'Inactive'} />{inbound.isDefault && <StatusBadge value="Default" />}</div></div><div className="toolbar" hidden={!canWriteSection('panels')}><PrimaryButton className="button-secondary" onClick={() => editInbound(inbound)}>Редактировать</PrimaryButton>{!inbound.isDefault && inbound.isActive && <PrimaryButton disabled={actionBusyId === inbound.id} onClick={() => void handleSetDefaultInbound(inbound.id)}>Сделать основным</PrimaryButton>}{inbound.isActive ? <ConfirmButton className="button-secondary" disabled={actionBusyId === `toggle-inbound-${inbound.id}`} message={`Выключить inbound-правило "${inbound.name}"? Новые VPN-доступы не будут использовать его для выдачи.`} onConfirm={() => handleToggleInboundActive(inbound)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === `toggle-inbound-${inbound.id}`} onClick={() => void handleToggleInboundActive(inbound)}>Включить</PrimaryButton>}</div></div>)}</div>
+          <div className="list-stack mt-12">{vpnInbounds.map((inbound) => <div key={inbound.id} className="list-item-vertical"><div className="item-head"><div><strong>{inbound.name}</strong><div className="muted">{inbound.protocol}:{inbound.port} · внешний ID {inbound.externalInboundId} · емкость {inbound.usedCapacity}/{inbound.capacity}</div><div className="muted">stream: {inbound.streamSettingsJson}</div></div><div className="item-status"><StatusBadge value={inbound.isActive ? 'Active' : 'Inactive'} />{inbound.isDefault && <StatusBadge value="Default" />}</div></div><div className="toolbar" hidden={!canWriteSection('panels')}><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => editInbound(inbound)}>Редактировать</PrimaryButton>{!inbound.isDefault && inbound.isActive && <PrimaryButton disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => void handleSetDefaultInbound(inbound.id)}>Сделать основным</PrimaryButton>}{inbound.isActive ? <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} message={`Выключить inbound-правило "${inbound.name}"? Новые VPN-доступы не будут использовать его для выдачи.`} onConfirm={() => handleToggleInboundActive(inbound)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => void handleToggleInboundActive(inbound)}>Включить</PrimaryButton>}</div></div>)}</div>
           <h4>Клиенты, здоровье и синхронизация</h4>
           <div className="list-stack">{vpnClients.map((client) => {
             const inbound = vpnInbounds.find((item) => item.id === client.vpnInboundId)
             const migrationOptionGroups = migrationOptionGroupsForClient(client)
             const migrationOptionsCount = migrationOptionGroups.reduce((total, group) => total + group.inbounds.length, 0)
+            const selectedMigrationInbound = vpnMigrationInbounds.find((item) => item.id === vpnClientMigrationTargets[client.id])
+            const clientActionBusy = isActionResourceBusy(
+              vpnPanelActionResourceKey(client.vpnPanelId),
+              vpnInboundActionResourceKey(client.vpnInboundId),
+              vpnClientActionResourceKey(client.id),
+              ...(selectedMigrationInbound
+                ? [vpnPanelActionResourceKey(selectedMigrationInbound.vpnPanelId), vpnInboundActionResourceKey(selectedMigrationInbound.id)]
+                : [])
+            )
             const clientNeedsReconciliation = client.syncStatus.includes('uncertain') || client.syncStatus.includes('compensation-failed')
-            return <div key={client.id} className="list-item-vertical"><div className="item-head"><div><strong>{client.email}</strong><div className="muted">UUID {client.uuid} · inbound {inbound?.name ?? shortId(client.vpnInboundId)} · до {formatDate(client.expiryTime)}</div><div className="muted">Синхронизация: {client.syncStatus || 'unknown'} · {formatDate(client.lastSyncedAt)} · лимит устройств {client.limitIp ?? 0}</div></div><div className="item-status"><StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} />{clientNeedsReconciliation && <StatusBadge value="SyncRequired" />}{inbound && <StatusBadge value={inbound.protocol} />}</div></div><div className="toolbar" hidden={!canWriteSection('panels')}>{client.enable ? <ConfirmButton className="button-secondary" disabled={actionBusyId === `vpn-client-disable-${client.id}`} message={`Отключить VPN-клиента "${client.email}"? Пользователь потеряет подключение.`} onConfirm={() => handleVpnClientAction(client, 'disable')}>Отключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={actionBusyId === `vpn-client-enable-${client.id}`} onClick={() => void handleVpnClientAction(client, 'enable')}>Включить</PrimaryButton>}<PrimaryButton disabled={actionBusyId === `vpn-client-sync-${client.id}`} onClick={() => void handleVpnClientAction(client, 'sync')}>Синхронизировать</PrimaryButton><ConfirmButton disabled={actionBusyId === `vpn-client-reset-${client.id}`} message={`Необратимо обнулить счётчики трафика VPN-клиента "${client.email}" в 3x-ui? При сетевой неопределённости клиент будет помечен для ручной сверки.`} onConfirm={() => handleVpnClientAction(client, 'reset')}>Сбросить трафик</ConfirmButton>{migrationOptionsCount > 0 && <><select aria-label={`Целевой inbound для ${client.email}`} value={vpnClientMigrationTargets[client.id] ?? ''} onChange={(e) => updateVpnClientMigrationTarget(client.id, e.target.value)}><option value="">Выберите inbound</option>{migrationOptionGroups.map((group) => <optgroup key={group.panel.id} label={`${group.panel.name} · ${group.panel.region}`}>{group.inbounds.map((option) => <option key={option.id} value={option.id}>{option.name} · {option.protocol}:{option.port} · {option.usedCapacity}/{option.capacity}</option>)}</optgroup>)}</select><ConfirmButton disabled={!vpnClientMigrationTargets[client.id] || actionBusyId === `vpn-client-migrate-${client.id}`} message={`Перенести VPN-клиента "${client.email}"? Сначала будет занято по одному временному slot целевой панели, inbound и связанного VPN-сервера; после успешного удаления source-копии старые slots освободятся. При ошибке перенос будет отменён.`} onConfirm={() => handleMigrateVpnClient(client)}>Перенести</ConfirmButton></>}</div></div>
+            return <div key={client.id} className="list-item-vertical"><div className="item-head"><div><strong>{client.email}</strong><div className="muted">UUID {client.uuid} · inbound {inbound?.name ?? shortId(client.vpnInboundId)} · до {formatDate(client.expiryTime)}</div><div className="muted">Синхронизация: {client.syncStatus || 'unknown'} · {formatDate(client.lastSyncedAt)} · лимит устройств {client.limitIp ?? 0}</div></div><div className="item-status"><StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} />{clientNeedsReconciliation && <StatusBadge value="SyncRequired" />}{inbound && <StatusBadge value={inbound.protocol} />}</div></div><div className="toolbar" hidden={!canWriteSection('panels')}>{client.enable ? <ConfirmButton className="button-secondary" disabled={clientActionBusy} message={`Отключить VPN-клиента "${client.email}"? Пользователь потеряет подключение.`} onConfirm={() => handleVpnClientAction(client, 'disable')}>Отключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={clientActionBusy} onClick={() => void handleVpnClientAction(client, 'enable')}>Включить</PrimaryButton>}<PrimaryButton disabled={clientActionBusy} onClick={() => void handleVpnClientAction(client, 'sync')}>Синхронизировать</PrimaryButton><ConfirmButton disabled={clientActionBusy} message={`Необратимо обнулить счётчики трафика VPN-клиента "${client.email}" в 3x-ui? При сетевой неопределённости клиент будет помечен для ручной сверки.`} onConfirm={() => handleVpnClientAction(client, 'reset')}>Сбросить трафик</ConfirmButton>{migrationOptionsCount > 0 && <><select aria-label={`Целевой inbound для ${client.email}`} value={vpnClientMigrationTargets[client.id] ?? ''} onChange={(e) => updateVpnClientMigrationTarget(client.id, e.target.value)}><option value="">Выберите inbound</option>{migrationOptionGroups.map((group) => <optgroup key={group.panel.id} label={`${group.panel.name} · ${group.panel.region}`}>{group.inbounds.map((option) => <option key={option.id} value={option.id}>{option.name} · {option.protocol}:{option.port} · {option.usedCapacity}/{option.capacity}</option>)}</optgroup>)}</select><ConfirmButton disabled={!vpnClientMigrationTargets[client.id] || clientActionBusy} message={`Перенести VPN-клиента "${client.email}"? Сначала будет занято по одному временному slot целевой панели, inbound и связанного VPN-сервера; после успешного удаления source-копии старые slots освободятся. При ошибке перенос будет отменён.`} onConfirm={() => handleMigrateVpnClient(client)}>Перенести</ConfirmButton></>}</div></div>
           })}{vpnClients.length === 0 && <EmptyState title="Клиентов нет" description="После выдачи VPN-доступов клиенты 3x-ui появятся здесь." />}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ok'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.errorMessage || (run.summaryJson !== '{}' ? run.summaryJson : '') || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
           </>}
         </Card>
@@ -5133,10 +5191,10 @@ export function App() {
                 {run.precheckReportPreview && <pre className="safe-note">{run.precheckReportPreview}</pre>}
                 <div className="muted">{run.lastError || run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
                 <div className="toolbar" hidden={!canWriteSection('provisioning')}>
-                  <PrimaryButton disabled={!token || actionBusyId === `retry-${run.id}` || !canRetryProvisioningRun(run.status)} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton>
-                  <ConfirmButton disabled={!token || actionBusyId === `deploy-run-${run.id}` || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В live-режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => handleDeployProvisioningRun(run.id)}>Развернуть</ConfirmButton>
-                  <ConfirmButton disabled={!token || actionBusyId === `cancel-run-${run.id}` || !canCancelProvisioningRun(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton>
-                  <PrimaryButton disabled={!token || actionBusyId === `support-run-${run.id}`} onClick={() => void handleProvisioningSupportNeeded(run.id)}>Нужна поддержка</PrimaryButton>
+                  <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canRetryProvisioningRun(run.status)} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton>
+                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В live-режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => handleDeployProvisioningRun(run.id)}>Развернуть</ConfirmButton>
+                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canCancelProvisioningRun(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton>
+                  <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId))} onClick={() => void handleProvisioningSupportNeeded(run.id)}>Нужна поддержка</PrimaryButton>
                 </div>
               </div>
             ))}
