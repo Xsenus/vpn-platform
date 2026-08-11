@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-11-admin-auth-command-single-flight`, версия `0.614.0`; admin login, manual refresh и logout имеют operation-scoped in-flight Promise owners, поэтому synchronous activation не повторяет auth-команду или rotation token. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `627/647` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-11-cabinet-recovery-load-single-flight`, версия `0.615.0`; payment-provider discovery и messages retry кабинета имеют session/token/scope-scoped in-flight Promise owners, поэтому synchronous activation не повторяет recovery GET. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `628/648` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

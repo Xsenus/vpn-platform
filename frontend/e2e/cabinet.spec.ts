@@ -1157,7 +1157,10 @@ test('cabinet payment providers fail once and recover only on explicit retry', a
   await expect(page.getByText('Нет включенных способов оплаты для оплат из кабинета.')).toHaveCount(0)
 
   api.allowPaymentProviders()
-  await page.getByRole('button', { name: 'Повторить загрузку способов оплаты' }).click()
+  await page.getByRole('button', { name: 'Повторить загрузку способов оплаты' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect.poll(() => api.getRequestCount('/api/public/payments/providers')).toBe(2)
   const providerSelect = page.getByLabel('Способ оплаты для продления')
   await expect(providerSelect).toBeEnabled()
@@ -1183,7 +1186,10 @@ test('cabinet support messages failure stays scoped and recovers on explicit ret
   await expect(page.getByRole('heading', { name: 'Сообщений нет' })).toHaveCount(0)
 
   api.allowSupportMessages()
-  await page.getByRole('button', { name: 'Повторить загрузку переписки' }).click()
+  await page.getByRole('button', { name: 'Повторить загрузку переписки' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect.poll(() => api.getRequestCount(messagesPath)).toBe(2)
   await expect(page.getByText('Секрет первой переписки', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить переписку поддержки' })).toHaveCount(0)

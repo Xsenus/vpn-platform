@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.615.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-recovery-load-single-flight`.
+
+### Исправлено
+
+- Синхронный двойной retry больше не отправляет два дополнительных запроса способов оплаты или сообщений выбранной переписки до React loading-rerender.
+- Обе recovery-загрузки получили session/token/scope-scoped Promise owners с очисткой по identity, смене переписки и session boundary.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/4`: обе recovery-точки получали `3` запроса вместо `2`, включая исходную неудачную попытку. После исправления targeted contract прошёл `4/4`.
+- Финальный cabinet desktop/mobile regression прошёл `44/44` за `53.9 s`; полный console-responsive Playwright — `172/172` за `9.2 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Визуальная разметка recovery-панелей не менялась; responsive gate подтвердил отсутствие blank state, overflow, overlap или clipped controls.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `351.49/102.80 kB`, cabinet bundle `369.08/106.56 kB`, admin bundle `528406/141215/max 228734`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `614`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `628/648` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.614.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-auth-command-single-flight`.

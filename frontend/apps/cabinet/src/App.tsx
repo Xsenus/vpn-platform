@@ -100,6 +100,10 @@ type CabinetLoadRequest = {
   promise: Promise<boolean>
 }
 
+type CabinetScopedLoadRequest = CabinetLoadRequest & {
+  scopeKey: string
+}
+
 const cabinetLoadAreaLabels: Record<CabinetLoadArea, string> = {
   profile: 'профиль',
   subscriptions: 'подписки',
@@ -162,8 +166,10 @@ export function App() {
   const authActionInFlight = useRef<CabinetActionRequest | null>(null)
   const logoutInFlight = useRef(false)
   const supportMessagesRequestId = useRef(0)
+  const supportMessagesLoadInFlight = useRef<CabinetScopedLoadRequest | null>(null)
   const supportMessagesEffectSkipId = useRef('')
   const paymentProvidersRequestId = useRef(0)
+  const paymentProvidersLoadInFlight = useRef<CabinetScopedLoadRequest | null>(null)
   const paymentProvidersEffectToken = useRef<string | null>(null)
   const selectedSupportConversationIdRef = useRef(selectedSupportConversationId)
   const supportCreateDraftRef = useRef('')
@@ -248,6 +254,7 @@ export function App() {
     if (selectedSupportConversationIdRef.current === conversationId) return
     selectedSupportConversationIdRef.current = conversationId
     supportMessagesRequestId.current += 1
+    supportMessagesLoadInFlight.current = null
     setSupportMessages([])
     setSupportLoading(false)
     setSupportMessagesError('')
@@ -263,8 +270,10 @@ export function App() {
     authActionInFlight.current = null
     logoutInFlight.current = false
     supportMessagesRequestId.current += 1
+    supportMessagesLoadInFlight.current = null
     supportMessagesEffectSkipId.current = ''
     paymentProvidersRequestId.current += 1
+    paymentProvidersLoadInFlight.current = null
     paymentProvidersEffectToken.current = null
     setToken('')
     setRefreshToken('')
@@ -506,37 +515,56 @@ export function App() {
     }
   }
 
-  const loadSupportMessages = async (
+  const loadSupportMessages = (
     conversationId: string,
     currentToken = token,
     operationId = renderSessionOperationId
-  ) => {
-    if (!currentToken || !conversationId || sessionOperationId.current !== operationId || selectedSupportConversationIdRef.current !== conversationId) return false
+  ): Promise<boolean> => {
+    if (!currentToken || !conversationId || sessionOperationId.current !== operationId || selectedSupportConversationIdRef.current !== conversationId) return Promise.resolve(false)
+
+    const activeRequest = supportMessagesLoadInFlight.current
+    if (activeRequest
+      && activeRequest.operationId === operationId
+      && activeRequest.token === currentToken
+      && activeRequest.scopeKey === conversationId) {
+      return activeRequest.promise
+    }
+
     const requestId = ++supportMessagesRequestId.current
     const requestIsCurrent = () => sessionOperationId.current === operationId
       && supportMessagesRequestId.current === requestId
       && selectedSupportConversationIdRef.current === conversationId
-
-    setSupportMessages([])
-    setSupportLoading(true)
-    setSupportMessagesError('')
-    try {
-      const messages = await api.getMySupportMessages(currentToken, conversationId)
-      if (!requestIsCurrent()) return false
-      setSupportMessages(messages)
-      setSupportMessagesError('')
-      return true
-    } catch (e) {
-      if (!requestIsCurrent()) return false
-      if (isCabinetSessionRejected(e)) {
-        handleAuthenticatedError(e, 'Не удалось загрузить переписку поддержки')
-      } else {
-        setSupportMessagesError(normalizeApiError(e, 'Не удалось загрузить переписку поддержки'))
-      }
-      return false
-    } finally {
-      if (requestIsCurrent()) setSupportLoading(false)
+    const request: CabinetScopedLoadRequest = {
+      operationId,
+      token: currentToken,
+      scopeKey: conversationId,
+      promise: Promise.resolve(false)
     }
+    supportMessagesLoadInFlight.current = request
+    request.promise = (async () => {
+      setSupportMessages([])
+      setSupportLoading(true)
+      setSupportMessagesError('')
+      try {
+        const messages = await api.getMySupportMessages(currentToken, conversationId)
+        if (!requestIsCurrent()) return false
+        setSupportMessages(messages)
+        setSupportMessagesError('')
+        return true
+      } catch (e) {
+        if (!requestIsCurrent()) return false
+        if (isCabinetSessionRejected(e)) {
+          handleAuthenticatedError(e, 'Не удалось загрузить переписку поддержки')
+        } else {
+          setSupportMessagesError(normalizeApiError(e, 'Не удалось загрузить переписку поддержки'))
+        }
+        return false
+      } finally {
+        if (requestIsCurrent()) setSupportLoading(false)
+        if (supportMessagesLoadInFlight.current === request) supportMessagesLoadInFlight.current = null
+      }
+    })()
+    return request.promise
   }
 
   useEffect(() => {
@@ -549,6 +577,7 @@ export function App() {
   useEffect(() => {
     if (!token || !selectedSupportConversation?.id) {
       supportMessagesRequestId.current += 1
+      supportMessagesLoadInFlight.current = null
       setSupportMessages([])
       setSupportLoading(false)
       setSupportMessagesError('')
@@ -563,42 +592,66 @@ export function App() {
     void loadSupportMessages(selectedSupportConversation.id, token, sessionOperationId.current)
   }, [token, selectedSupportConversation?.id])
 
-  const loadPaymentProviders = useCallback((currentToken: string) => {
-    const requestId = ++paymentProvidersRequestId.current
-    const requestIsCurrent = () => paymentProvidersRequestId.current === requestId
-
+  const loadPaymentProviders = useCallback((currentToken: string, operationId = sessionOperationId.current): Promise<boolean> => {
     if (!currentToken) {
+      paymentProvidersRequestId.current += 1
+      paymentProvidersLoadInFlight.current = null
       setPaymentProvidersLoading(false)
       setPaymentProvidersError('')
       setPaymentProviders([])
       setProvider('')
-      return
+      return Promise.resolve(false)
     }
 
-    setPaymentProvidersLoading(true)
-    setPaymentProvidersError('')
-    api.getPublicPaymentProviders()
-      .then((items) => {
-        if (!requestIsCurrent()) return
+    if (sessionOperationId.current !== operationId) return Promise.resolve(false)
+
+    const scopeKey = 'payment-providers'
+    const activeRequest = paymentProvidersLoadInFlight.current
+    if (activeRequest
+      && activeRequest.operationId === operationId
+      && activeRequest.token === currentToken
+      && activeRequest.scopeKey === scopeKey) {
+      return activeRequest.promise
+    }
+
+    const requestId = ++paymentProvidersRequestId.current
+    const requestIsCurrent = () => sessionOperationId.current === operationId
+      && paymentProvidersRequestId.current === requestId
+    const request: CabinetScopedLoadRequest = {
+      operationId,
+      token: currentToken,
+      scopeKey,
+      promise: Promise.resolve(false)
+    }
+    paymentProvidersLoadInFlight.current = request
+    request.promise = (async () => {
+      setPaymentProvidersLoading(true)
+      setPaymentProvidersError('')
+      try {
+        const items = await api.getPublicPaymentProviders()
+        if (!requestIsCurrent()) return false
         setPaymentProviders(items)
         setPaymentProvidersError('')
         setProvider((current) => current && items.some((item) => item.provider === current) ? current : (items[0]?.provider ?? ''))
-      })
-      .catch((e: unknown) => {
-        if (!requestIsCurrent()) return
+        return true
+      } catch (e: unknown) {
+        if (!requestIsCurrent()) return false
         setPaymentProviders([])
         setProvider('')
         setPaymentProvidersError(normalizeApiError(e, 'Не удалось загрузить способы оплаты.'))
-      })
-      .finally(() => {
+        return false
+      } finally {
         if (requestIsCurrent()) setPaymentProvidersLoading(false)
-      })
+        if (paymentProvidersLoadInFlight.current === request) paymentProvidersLoadInFlight.current = null
+      }
+    })()
+    return request.promise
   }, [api])
 
   useEffect(() => {
     if (paymentProvidersEffectToken.current === token) return
     paymentProvidersEffectToken.current = token
-    loadPaymentProviders(token)
+    void loadPaymentProviders(token, sessionOperationId.current)
   }, [loadPaymentProviders, token])
 
 

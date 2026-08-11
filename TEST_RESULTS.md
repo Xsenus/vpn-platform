@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet recovery load single-flight
+
+Scope:
+- Payment-provider discovery and selected support-thread retry must each own one request when duplicate activation events arrive before React applies `loading`.
+- A conversation or session change must still invalidate the old owner and reject stale completion.
+
+Results:
+- Roadmap progress: `628/648` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-recovery-load-single-flight`, version `0.615.0`.
+- Reproduction before fix: request generation rejected stale results but did not own network work; two synchronous retry events produced `3` requests instead of `2`, including the initial failed attempt. Fail-first desktop/mobile: `0/4`.
+- After fix: both loaders use session/token/scope-scoped `CabinetScopedLoadRequest` owners, return the current Promise to duplicate callers and reset ownership by request identity, selected conversation and session boundary. Targeted desktop/mobile contract: `4/4`, both network counters stayed at `2`.
+- Final cabinet desktop/mobile regression: `44/44` in `53.9 s`; final console-responsive Playwright: `172/172` in `9.2 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: recovery markup was unchanged; the responsive matrix confirmed cabinet loading/error/ready transitions without blank state, horizontal overflow, overlap or clipped controls.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `351.49 kB`, gzip `102.80 kB`; cabinet bundle `369.08/106.56 kB`; admin bundle raw `528406`, gzip `141215`, largest `228734`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `614` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin auth command single-flight
 
 Scope:
