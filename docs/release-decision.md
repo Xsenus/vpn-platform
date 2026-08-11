@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `125/125`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `150/150`; responsive all-screens: `6/6` на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `152/152`; responsive all-screens: `6/6` на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-11-admin-initial-data-boundary`, версия `0.602.0`; admin-panel не показывает false operational states между проверкой роли и первой загрузкой, а focus переходит в готовый dashboard. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `615/635` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-11-admin-section-load-boundary`, версия `0.603.0`; partial aggregate failures заменяют затронутый admin-раздел локальным recovery-state без ложных данных, а здоровые разделы остаются доступны. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `616/636` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

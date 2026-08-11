@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.603.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-section-load-boundary`.
+
+### Исправлено
+
+- Частичный сбой общей загрузки admin-panel больше не превращает fallback-массивы в ложные нулевые метрики, empty states или доступные формы внутри затронутого раздела.
+- Все разделы связаны с их API-областями: активный ошибочный раздел заменяется локальной recovery-панелью с диагностикой и явным повтором, а незатронутые разделы остаются доступны.
+- Tab/tabpanel ARIA-связь сохраняется и для recovery-панели; в здоровом разделе вместо сырых деталей показывается краткое уведомление о количестве частичных ошибок.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: dashboard, users и payments показывали неподтверждённые данные после ответов `500`. После исправления targeted boundary прошёл `2/2`.
+- Финальный admin desktop/mobile regression прошёл `76/76` за `6.3 min`; полный console-responsive Playwright — `152/152` за `8.7 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Recovery UI просмотрен на 1280/393 px без overflow, overlap и ложных данных; временные screenshots удалены.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; admin bundle `525267/140453/max 225595`, cabinet bundle `364.41/105.46 kB`.
+- Backend `1125/1125`, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `602`, secret scan `668` files/`0` findings, временные browser-артефакты удалены.
+- Roadmap: `616/636` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.602.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-initial-data-boundary`.

@@ -428,6 +428,7 @@ async function mockAdminApi(page: Page) {
   let dashboardShouldDeny = false
   let delayNextDashboardResponse = false
   let releaseDelayedDashboard: (() => void) | null = null
+  const adminLoadFailures = new Map<string, number>()
   const expiredAdminAccessTokens = new Set<string>()
   let failNextAdminSessionStatus: number | null = null
   let refreshFailureStatus: number | null = null
@@ -652,6 +653,11 @@ async function mockAdminApi(page: Page) {
               ? { ...fullAdminCapabilities, adminWrite: false, financeWrite: false, supportWrite: false, provisioningManage: false, vpnManage: false, botManage: false, settingsManage: false }
               : fullAdminCapabilities
       })
+      return
+    }
+
+    if (method === 'GET' && adminLoadFailures.has(path)) {
+      await fulfillJson(route, { error: 'admin_load_temporarily_unavailable' }, adminLoadFailures.get(path)!)
       return
     }
 
@@ -1826,6 +1832,8 @@ async function mockAdminApi(page: Page) {
     denyNextDashboard: () => { dashboardShouldDeny = true },
     delayNextDashboard: () => { delayNextDashboardResponse = true },
     releaseDashboard: () => { releaseDelayedDashboard?.() },
+    failAdminLoad: (path: string, status = 503) => { adminLoadFailures.set(path, status) },
+    allowAdminLoad: (path: string) => { adminLoadFailures.delete(path) },
     expireAccessToken: (accessToken: string) => { expiredAdminAccessTokens.add(`Bearer ${accessToken}`) },
     failNextAdminSessionRequest: (status = 503) => { failNextAdminSessionStatus = status },
     failRefreshRequest: (status = 401) => { refreshFailureStatus = status },
@@ -2523,14 +2531,14 @@ test('admin clears private data and filters before a new login', async ({ page }
   await expect(page.getByText('auth.login', { exact: true })).toHaveCount(0)
 })
 
-async function openAdminSection(page: Page, name: string, id: string) {
+async function openAdminSection(page: Page, name: string, id: string, expectedPanelId = id) {
   const tab = page.getByRole('tab', { name })
   if (await tab.isVisible()) {
     await tab.click()
   } else {
     await page.getByRole('combobox', { name: 'Раздел' }).selectOption(id)
   }
-  await expect(page.locator(`#${id}`)).toBeVisible()
+  await expect(page.locator(`#${expectedPanelId}`)).toBeVisible()
 }
 
 test('admin failed notification retry persists safe queue state across reload', async ({ page }) => {
@@ -3579,6 +3587,53 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   expect(browserErrors).toEqual([])
 })
 
+test('admin partial load errors stay scoped and recover without false section data', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  const failedPaths = [
+    '/api/admin/dashboard/summary',
+    '/api/admin/users',
+    '/api/admin/orders'
+  ]
+  for (const path of failedPaths) api.failAdminLoad(path)
+
+  await page.goto('/')
+  await page.locator('.admin-login-form input[type="email"]').fill('admin-e2e@example.test')
+  await page.locator('.admin-login-form input[type="password"]').fill('AdminPassword123!')
+  await page.getByRole('button', { name: 'Войти в админку' }).click()
+
+  await expect(page.getByText('Не удалось загрузить раздел «Дашборд».', { exact: true })).toBeVisible()
+  await expect(page.locator('#admin-section-tab-dashboard')).toHaveAttribute('aria-controls', 'admin-section-load-error')
+  await expect(page.locator('#admin-section-load-error')).toHaveAttribute('aria-labelledby', 'admin-section-tab-dashboard')
+  await expect(page.getByText('Всего пользователей', { exact: true })).toBeHidden()
+  await expect(page.getByText('Заказов пока нет', { exact: true })).toBeHidden()
+
+  await openAdminSection(page, 'Поддержка', 'support')
+  await expect(page.getByText('Не удалось загрузить часть данных (3). Откройте затронутый раздел и повторите загрузку.', { exact: true })).toBeVisible()
+  await expect(page.locator('#support .list-item-vertical strong').filter({ hasText: 'Проверка доступа' }).first()).toBeVisible()
+
+  await openAdminSection(page, 'Пользователи', 'users', 'admin-section-load-error')
+  await expect(page.getByText('Не удалось загрузить раздел «Пользователи».', { exact: true })).toBeVisible()
+  await expect(page.locator('#admin-section-load-error')).toHaveAttribute('aria-labelledby', 'admin-section-tab-users')
+  await expect(page.getByText('Пользователи не найдены', { exact: true })).toBeHidden()
+
+  await openAdminSection(page, 'Оплаты', 'payments', 'admin-section-load-error')
+  await expect(page.getByText('Не удалось загрузить раздел «Оплаты».', { exact: true })).toBeVisible()
+  await expect(page.getByText('Заказов нет', { exact: true })).toBeHidden()
+
+  for (const path of failedPaths) api.allowAdminLoad(path)
+  await page.getByRole('button', { name: 'Повторить загрузку раздела', exact: true }).click()
+  await expect(page.locator('#admin-section-tab-payments')).toHaveAttribute('aria-controls', 'payments')
+  await expect(page.getByText('YooKassa sandbox', { exact: true })).toBeVisible()
+  await expect(page.locator('#payments').getByText('590 RUB · Admin Pro 30', { exact: true })).toBeVisible()
+
+  await openAdminSection(page, 'Пользователи', 'users')
+  await expect(page.getByText('Client E2E', { exact: true }).first()).toBeVisible()
+  await openAdminSection(page, 'Дашборд', 'dashboard')
+  await expect(page.locator('.stat-tile').filter({ hasText: 'Всего пользователей' })).toContainText('4')
+  for (const path of failedPaths) expect(api.getRequestCount(path)).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('admin login hides operational data until the initial load completes', async ({ page }) => {
   const api = await mockAdminApi(page)
   api.delayNextDashboard()
@@ -3917,55 +3972,56 @@ test('admin panel covers login and critical operational mutations across all sec
   api.returnInvalidBotSettingsResponse()
   api.returnInvalidVpnPanelsResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()
-  await expect(page.locator('.code-block').filter({ hasText: 'servers:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await expect(page.locator('.code-block').filter({ hasText: 'подготовка серверов:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await expect(page.locator('.code-block').filter({ hasText: 'настройки Telegram-бота:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await expect(page.locator('.code-block').filter({ hasText: 'VPN-панели:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await openAdminSection(page, '3x-ui панели', 'panels')
-  await expect(stalePanelsSection.getByText('3x-ui панели не добавлены')).toBeVisible()
+  await expect(page.getByText('Не удалось загрузить раздел «Telegram-бот».', { exact: true })).toBeVisible()
+  await expect(page.locator('#admin-section-load-error .code-block')).toContainText('настройки Telegram-бота: Сервер вернул JSON-ответ с некорректными данными')
+  await openAdminSection(page, '3x-ui панели', 'panels', 'admin-section-load-error')
+  await expect(page.locator('#admin-section-load-error .code-block')).toContainText('VPN-панели: Сервер вернул JSON-ответ с некорректными данными')
+  await expect(stalePanelsSection.getByText('3x-ui панели не добавлены')).toBeHidden()
   await page.waitForTimeout(1400)
   await expect(stalePanelsSection.getByText('EU 3x-ui Sandbox', { exact: true })).toHaveCount(0)
   await expect(stalePanelsSection.getByText('default-vless', { exact: true })).toHaveCount(0)
   await expect(stalePanelsSection.getByText('client@example.test', { exact: true })).toHaveCount(0)
   await expect(stalePanelsSection.getByText('Remote panel sync failed.', { exact: true })).toHaveCount(0)
-  await expect(stalePanelsSection.getByRole('combobox', { name: 'Панель' })).toHaveValue('')
+  await expect(stalePanelsSection.getByRole('combobox', { name: 'Панель' })).toBeHidden()
 
-  await openAdminSection(page, 'Серверы', 'nodes')
-  await expect(staleNodesSection.getByText('VPN-серверы не добавлены')).toBeVisible()
+  await openAdminSection(page, 'Серверы', 'nodes', 'admin-section-load-error')
+  await expect(page.locator('#admin-section-load-error .code-block')).toContainText('servers: Сервер вернул JSON-ответ с некорректными данными')
+  await expect(staleNodesSection.getByText('VPN-серверы не добавлены')).toBeHidden()
   await expect(staleNodesSection.getByText('EU Sandbox', { exact: true })).toHaveCount(0)
-  await expect(staleNodesSection.getByRole('heading', { name: 'Добавить VPN-сервер' })).toBeVisible()
-  await expect(staleNodesSection.getByLabel('Название')).toHaveValue('')
+  await expect(staleNodesSection.getByRole('heading', { name: 'Добавить VPN-сервер' })).toBeHidden()
+  await expect(staleNodesSection.getByLabel('Название')).toBeHidden()
 
-  await openAdminSection(page, 'Подготовка VPS', 'provisioning')
-  await expect(staleProvisioningSection.getByText('Запусков подготовки нет')).toBeVisible()
+  await openAdminSection(page, 'Подготовка VPS', 'provisioning', 'admin-section-load-error')
+  await expect(page.locator('#admin-section-load-error .code-block')).toContainText('подготовка серверов: Сервер вернул JSON-ответ с некорректными данными')
+  await expect(staleProvisioningSection.getByText('Запусков подготовки нет')).toBeHidden()
   await expect(staleProvisioningSection.getByText('VPS precheck ready.', { exact: true })).toHaveCount(0)
 
-  await openAdminSection(page, 'Telegram-бот', 'bot')
-  await expect(staleBotSection.getByText('@не настроен', { exact: true })).toBeVisible()
+  await openAdminSection(page, 'Telegram-бот', 'bot', 'admin-section-load-error')
+  await expect(staleBotSection.getByText('@не настроен', { exact: true })).toBeHidden()
   await expect(staleBotSection.getByRole('status').filter({ hasText: 'Проверка подключения' })).toHaveCount(0)
-  await expect(staleBotSection.getByLabel('Username публичного бота')).toHaveValue('')
+  await expect(staleBotSection.getByLabel('Username публичного бота')).toBeHidden()
 
   api.returnInvalidTariffsResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()
-  await expect(page.locator('.code-block').filter({ hasText: 'tariffs:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await openAdminSection(page, 'Тарифы', 'tariffs')
-  await expect(page.getByText('Тарифов нет')).toBeVisible()
+  await openAdminSection(page, 'Тарифы', 'tariffs', 'admin-section-load-error')
+  await expect(page.locator('#admin-section-load-error .code-block')).toContainText('tariffs: Сервер вернул JSON-ответ с некорректными данными')
+  await expect(page.getByText('Тарифов нет')).toBeHidden()
   await expect(page.locator('#tariffs').getByText('Admin Pro 30', { exact: true })).toHaveCount(0)
   await expect(page.locator('#tariffs').getByText('E2E Premium 45', { exact: true })).toHaveCount(0)
 
   api.returnInvalidPaymentProviderAccountsResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()
-  await expect(page.locator('.code-block').filter({ hasText: 'способы оплаты:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await openAdminSection(page, 'Оплаты', 'payments')
-  await expect(page.getByText('Способы оплаты не настроены')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments', 'admin-section-load-error')
+  await expect(page.locator('#admin-section-load-error .code-block')).toContainText('способы оплаты: Сервер вернул JSON-ответ с некорректными данными')
+  await expect(page.getByText('Способы оплаты не настроены')).toBeHidden()
   await expect(page.locator('#payments').getByText('YooKassa sandbox', { exact: true })).toHaveCount(0)
 
   api.returnInvalidUsersResponse()
   await page.getByRole('button', { name: 'Обновить данные' }).click()
-  await expect(page.locator('.code-block').filter({ hasText: 'users:' })).toContainText('Сервер вернул JSON-ответ с некорректными данными')
-  await openAdminSection(page, 'Пользователи', 'users')
-  await expect(page.getByText('Пользователи не найдены')).toBeVisible()
-  await expect(page.getByText('Выберите пользователя.')).toBeVisible()
+  await openAdminSection(page, 'Пользователи', 'users', 'admin-section-load-error')
+  await expect(page.locator('#admin-section-load-error .code-block')).toContainText('users: Сервер вернул JSON-ответ с некорректными данными')
+  await expect(page.getByText('Пользователи не найдены')).toBeHidden()
+  await expect(page.getByText('Выберите пользователя.')).toBeHidden()
   await expect(page.locator('#users').getByText('client@example.test', { exact: true })).toHaveCount(0)
 
   api.failLogout()

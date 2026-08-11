@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin section-load boundary
+
+Scope:
+- A partial failure in the aggregate admin load must stay scoped to every affected section and must not expose fallback arrays as factual zero metrics, empty collections or editable forms.
+- Healthy sections must remain usable, while the failed section provides explicit diagnostics and recovery with valid tab/tabpanel semantics.
+
+Results:
+- Roadmap progress: `616/636` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-section-load-boundary`, version `0.603.0`.
+- Reproduction before fix: failed dashboard summary, users and orders/payment requests were collected only in a global diagnostic block; affected dashboard, users and payments panels still rendered fallback metrics, empty states and forms. Fail-first desktop/mobile was `0/2`.
+- After fix: `adminSectionLoadAreas` maps all 17 sections to their aggregate API areas; `activeSectionLoadFailed` replaces an affected panel with a section-scoped alert, safe diagnostics and explicit aggregate retry. Healthy sections remain available with a compact partial-error notice.
+- Targeted boundary: desktop/mobile `2/2`; final admin desktop/mobile regression: `76/76` in `6.3 min`.
+- Final console-responsive Playwright: `152/152` in `8.7 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: recovery panels at 1280 and 393 CSS px preserved coherent layout, ARIA tab ownership and readable diagnostics without false data, overlap or horizontal overflow; screenshots were temporary and removed during cleanup.
+- Frontend tests: fail-first source contract `124/125`, corrected `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; admin bundle raw `525267`, gzip `140453`, largest `225595`; cabinet bundle `364.41 kB`, gzip `105.46 kB`.
+- Backend full suite: `1125/1125`; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `602` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin initial-data boundary
 
 Scope:

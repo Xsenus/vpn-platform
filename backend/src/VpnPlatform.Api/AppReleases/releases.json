@@ -14210,5 +14210,28 @@
         "text": "Roadmap progress is 615/635 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-admin-section-load-boundary",
+    "version": "0.603.0",
+    "releasedAt": "2026-08-11T07:26:27+07:00",
+    "title": "Ошибки загрузки админки остаются внутри раздела",
+    "summary": "При частичном сбое API затронутый раздел показывает локальное восстановление и не выдаёт незагруженные массивы за подтверждённый пустой результат.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Ложные нулевые метрики, пустые списки и формы скрываются в каждом разделе, чьи данные не удалось загрузить."
+      },
+      {
+        "type": "improved",
+        "text": "Локальная ошибка содержит диагностику и явный повтор, а здоровые разделы остаются доступными с кратким общим уведомлением."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 616/636 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

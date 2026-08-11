@@ -76,7 +76,7 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
 - Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
 - Telegram bot settings проходят secure save/check/reload/edit lifecycle без раскрытия write-only bot/webhook tokens на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `150/150`; all-screens: `6/6`.
+- `npm run e2e:console --prefix frontend`: `152/152`; all-screens: `6/6`.
 - Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит на desktop/mobile без раскрытия SSH/panel credentials.
 - Safe provisioning validation lifecycle проходит desktop/mobile с mode/risk/operator warning и без реального SSH/Ansible.
 - 3x-ui client disable/reload/enable/sync/reset-traffic lifecycle проходит desktop/mobile без console errors и overflow.
@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-11-admin-initial-data-boundary`, версия `0.602.0`; после подтверждения роли admin-panel ждёт первую фактическую выборку без ложных метрик/empty states, сохраняет focus transition, а полный browser gate проходит `150/150` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-11-admin-section-load-boundary`, версия `0.603.0`; при частичном сбое общей выборки admin-panel скрывает неподтверждённые данные только затронутого раздела, сохраняет здоровые разделы и локальный retry, а полный browser gate проходит `152/152` без failed/flaky/skipped.

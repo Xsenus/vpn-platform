@@ -434,6 +434,26 @@ const adminSectionDescriptions: Record<AdminSectionId, string> = {
   provisioning: 'Подготовка VPS, precheck, deploy, отмена запусков и запрос поддержки.'
 }
 
+const adminSectionLoadAreas: Record<AdminSectionId, readonly string[]> = {
+  dashboard: ['dashboard', 'orders', 'payments', 'обращения поддержки', 'подготовка серверов'],
+  users: ['users'],
+  support: ['обращения поддержки'],
+  audit: ['аудит', 'email-уведомления'],
+  payments: ['orders', 'payments', 'способы оплаты', 'события оплат', 'refunds'],
+  tariffs: ['tariffs', 'сценарии работы'],
+  referrals: ['реферальные программы', 'реферальные начисления'],
+  subscriptions: ['subscriptions', 'servers'],
+  vpn: ['accesses'],
+  nodes: ['servers'],
+  panels: ['VPN-панели'],
+  provisioning: ['подготовка серверов', 'servers'],
+  bot: ['настройки Telegram-бота'],
+  releases: ['Что нового', 'сводка релизов'],
+  faq: ['FAQ', 'сводка FAQ'],
+  content: ['контент сайта', 'готовность главной'],
+  scenarios: ['сценарии работы', 'tariffs']
+}
+
 const adminSectionGroups: Array<{ title: string; ids: AdminSectionId[] }> = [
   { title: 'Операции', ids: ['dashboard', 'users', 'support', 'audit'] },
   { title: 'Продажи', ids: ['payments', 'tariffs', 'referrals', 'subscriptions'] },
@@ -1219,6 +1239,8 @@ export function App() {
   const availableAdminSectionIds = useMemo(() => new Set(availableAdminSections.map(([id]) => id)), [availableAdminSections])
   const activeSectionLabel = adminSectionLabel(activeSection)
   const activeSectionDescription = adminSectionDescriptions[activeSection]
+  const activeSectionLoadErrors = loadErrors.filter((item) => adminSectionLoadAreas[activeSection].includes(item.area))
+  const activeSectionLoadFailed = activeSectionLoadErrors.length > 0
   const activeSectionIndex = Math.max(0, availableAdminSections.findIndex(([id]) => id === activeSection))
   const previousAdminSection = activeSectionIndex > 0 ? availableAdminSections[activeSectionIndex - 1][0] : null
   const nextAdminSection = activeSectionIndex < availableAdminSections.length - 1 ? availableAdminSections[activeSectionIndex + 1][0] : null
@@ -3449,7 +3471,7 @@ export function App() {
                     className={activeSection === id ? 'active' : undefined}
                     aria-selected={activeSection === id}
                     aria-current={activeSection === id ? 'page' : undefined}
-                    aria-controls={id}
+                    aria-controls={activeSection === id && activeSectionLoadFailed ? 'admin-section-load-error' : id}
                     tabIndex={activeSection === id ? 0 : -1}
                     title={adminSectionDescriptions[id]}
                     onClick={(event) => {
@@ -3487,9 +3509,22 @@ export function App() {
       {busy && <LoadingBlock label="Загружаем данные admin-panel..." />}
       {notice && <p className="toast-success" role="status" aria-live="polite">{notice}</p>}
       {error && <ErrorBlock message={error} />}
-      {loadErrors.length > 0 && <CodeBlock>{loadErrors.map((item) => `${item.area}: ${item.message}`).join('\n')}</CodeBlock>}
+      {loadErrors.length > 0 && !activeSectionLoadFailed && <ErrorBlock message={`Не удалось загрузить часть данных (${loadErrors.length}). Откройте затронутый раздел и повторите загрузку.`} />}
 
-      <div id="dashboard" className="grid section" role="tabpanel" aria-labelledby={adminSectionTabId('dashboard')} hidden={activeSection !== 'dashboard'}>
+      {activeSectionLoadFailed && (
+        <div id="admin-section-load-error" className="section" role="tabpanel" aria-labelledby={adminSectionTabId(activeSection)}>
+          <Card>
+            <ErrorBlock message={`Не удалось загрузить раздел «${activeSectionLabel}».`} />
+            <p className="muted">Данные раздела скрыты, чтобы ошибка API не выглядела как подтверждённый пустой результат.</p>
+            <CodeBlock>{activeSectionLoadErrors.map((item) => `${item.area}: ${item.message}`).join('\n')}</CodeBlock>
+            <div className="toolbar mt-12">
+              <PrimaryButton type="button" disabled={busy} aria-busy={busy} onClick={() => void loadAll(token)}>Повторить загрузку раздела</PrimaryButton>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <div id="dashboard" className="grid section" role="tabpanel" aria-labelledby={adminSectionTabId('dashboard')} hidden={activeSection !== 'dashboard' || activeSectionLoadFailed}>
         <StatTile label="Всего пользователей" value={derivedSummary.totalUsers} />
         <StatTile label="Telegram-пользователи" value={derivedSummary.telegramUsers} />
         <StatTile label="Активные подписки" value={derivedSummary.activeSubscriptions} />
@@ -3505,7 +3540,7 @@ export function App() {
       </div>
 
       {summary?.productionReadiness && (
-        <div className="section" hidden={activeSection !== 'dashboard'}>
+        <div className="section" hidden={activeSection !== 'dashboard' || activeSectionLoadFailed}>
           <SectionCard
             title={canReadFinance ? 'Готовность к live-продажам' : 'Готовность инфраструктуры'}
             description={canReadFinance
@@ -3547,7 +3582,7 @@ export function App() {
         </div>
       )}
 
-      <div className="section card-list-two" hidden={activeSection !== 'dashboard'}>
+      <div className="section card-list-two" hidden={activeSection !== 'dashboard' || activeSectionLoadFailed}>
         {canReadFinance && <SectionCard title="Последние заказы" description="Последние заказы с оплатой и связанной подпиской.">
           {orders.length === 0 ? <EmptyState title="Заказов пока нет" description="После покупок на сайте или в Telegram здесь появятся заказы." /> : (
             <div className="list-stack">
@@ -3565,7 +3600,7 @@ export function App() {
         </SectionCard>
       </div>
 
-      <div id="audit" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('audit')} hidden={activeSection !== 'audit'}>
+      <div id="audit" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('audit')} hidden={activeSection !== 'audit' || activeSectionLoadFailed}>
         <Card>
           <h3>Журнал аудита</h3>
           <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void loadAll(token) }}>
@@ -3646,7 +3681,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="users" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('users')} hidden={activeSection !== 'users'}>
+      <div id="users" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('users')} hidden={activeSection !== 'users' || activeSectionLoadFailed}>
         <Card>
           <h3>Пользователи</h3>
           <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void loadUsers() }}>
@@ -3800,7 +3835,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="payments" className="section" role="tabpanel" aria-labelledby={adminSectionTabId('payments')} hidden={activeSection !== 'payments'}>
+      <div id="payments" className="section" role="tabpanel" aria-labelledby={adminSectionTabId('payments')} hidden={activeSection !== 'payments' || activeSectionLoadFailed}>
         <div className="card-list-two">
         <Card>
           <h3>{editingProviderAccountId ? 'Редактирование способа оплаты' : 'Способы оплаты'}</h3>
@@ -4008,7 +4043,7 @@ export function App() {
         </div>
       </div>
 
-      <div id="tariffs" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('tariffs')} hidden={activeSection !== 'tariffs'}>
+      <div id="tariffs" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('tariffs')} hidden={activeSection !== 'tariffs' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingTariffId ? 'Редактирование тарифа' : 'Новый тариф'}</h3>
           <form hidden={!canWriteSection('tariffs')} aria-busy={actionBusyId === 'tariff-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveTariff() }}>
@@ -4075,7 +4110,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="referrals" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('referrals')} hidden={activeSection !== 'referrals'}>
+      <div id="referrals" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('referrals')} hidden={activeSection !== 'referrals' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingReferralProgramId ? 'Редактирование программы' : 'Новая реферальная программа'}</h3>
           <form hidden={!canWriteSection('referrals')} aria-busy={actionBusyId === 'referral-program-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveReferralProgram() }}>
@@ -4136,7 +4171,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="subscriptions" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('subscriptions')} hidden={activeSection !== 'subscriptions'}>
+      <div id="subscriptions" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('subscriptions')} hidden={activeSection !== 'subscriptions' || activeSectionLoadFailed}>
         <Card>
           <h3>Подписки</h3>
           <div className="list-stack">
@@ -4190,7 +4225,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="vpn" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('vpn')} hidden={activeSection !== 'vpn'}>
+      <div id="vpn" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('vpn')} hidden={activeSection !== 'vpn' || activeSectionLoadFailed}>
         <Card>
           <h3>VPN-доступы</h3>
           <div className="list-stack">
@@ -4227,7 +4262,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="nodes" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('nodes')} hidden={activeSection !== 'nodes'}>
+      <div id="nodes" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('nodes')} hidden={activeSection !== 'nodes' || activeSectionLoadFailed}>
         <Card>
           <h3>VPN-серверы</h3>
           <div className="list-stack">
@@ -4309,7 +4344,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="panels" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('panels')} hidden={activeSection !== 'panels'}>
+      <div id="panels" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('panels')} hidden={activeSection !== 'panels' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingVpnPanelId ? 'Редактировать 3x-ui панель' : '3x-ui панели'}</h3>
           <p className="safe-note">В проверочном режиме тест и синхронизация идут через безопасный путь без реального подключения к 3x-ui.</p>
@@ -4395,7 +4430,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="support" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('support')} hidden={activeSection !== 'support'}>
+      <div id="support" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('support')} hidden={activeSection !== 'support' || activeSectionLoadFailed}>
         <Card>
           <h3>Обращения в поддержку</h3>
           <div className="list-stack">{supportConversations.length === 0 && <EmptyState title="Нет обращений" description="Сообщения из кабинета и Telegram появятся в этом списке." />}{supportConversations.slice(0, 12).map((conversation) => {
@@ -4428,7 +4463,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="bot" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('bot')} hidden={activeSection !== 'bot'}>
+      <div id="bot" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('bot')} hidden={activeSection !== 'bot' || activeSectionLoadFailed}>
         <Card>
           <h3>Настройки Telegram-бота</h3>
           <div className="list-item-vertical">
@@ -4486,7 +4521,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="releases" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('releases')} hidden={activeSection !== 'releases'}>
+      <div id="releases" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('releases')} hidden={activeSection !== 'releases' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingReleaseId ? 'Редактировать релиз' : 'Создать релиз'}</h3>
           <p className="muted">Эти записи показываются пользователям в окне «Что нового» после входа в личный кабинет. Будущие даты публикации не показываются до наступления времени.</p>
@@ -4580,7 +4615,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="faq" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('faq')} hidden={activeSection !== 'faq'}>
+      <div id="faq" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('faq')} hidden={activeSection !== 'faq' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingFaqId ? 'Редактировать вопрос' : 'Создать вопрос FAQ'}</h3>
           <p className="muted">Эти вопросы показываются на публичной странице FAQ. Неактивные записи остаются в админке, но скрываются от пользователей.</p>
@@ -4661,7 +4696,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="content" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('content')} hidden={activeSection !== 'content'}>
+      <div id="content" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('content')} hidden={activeSection !== 'content' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingSiteContentId ? 'Редактировать блок контента' : 'Создать блок контента'}</h3>
           <p className="muted">Эти поля используются публичной главной страницей. Неактивные блоки остаются в админке, но не попадают в public API.</p>
@@ -4749,7 +4784,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="scenarios" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('scenarios')} hidden={activeSection !== 'scenarios'}>
+      <div id="scenarios" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('scenarios')} hidden={activeSection !== 'scenarios' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingWorkScenarioId ? 'Редактировать сценарий' : 'Создать сценарий работы'}</h3>
           <p className="muted">Сценарий описывает выдачу VPN после оплаты, поведение при ошибке, возврате, продлении и окончании подписки. Тариф выбирает сценарий по ключу.</p>
@@ -4829,7 +4864,7 @@ export function App() {
         </Card>
       </div>
 
-      <div id="provisioning" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('provisioning')} hidden={activeSection !== 'provisioning'}>
+      <div id="provisioning" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('provisioning')} hidden={activeSection !== 'provisioning' || activeSectionLoadFailed}>
         <Card>
           <h3>Подготовка VPS</h3>
           <p className="safe-note">В проверочном режиме реальный SSH/Ansible-деплой выключен, пока это явно не разрешено настройками сервера.</p>
