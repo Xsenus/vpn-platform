@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet app-version mark-seen single-flight
+
+Scope:
+- Closing «Что нового» must persist one server acknowledgement even when two close events arrive before React unmount.
+- A transient acknowledgement failure must keep local dismissal safe and permit exactly one later server-sync retry.
+
+Results:
+- Roadmap progress: `631/651` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-app-version-seen-single-flight`, version `0.618.0`.
+- Reproduction before fix: two synchronous close events both called `/api/app-version/mark-seen` before the modal unmounted. Fail-first desktop/mobile: `0/2`, with `2` POST requests instead of `1`.
+- After fix: a session/release-scoped Promise owner returns duplicate caller the current acknowledgement, resets on token/user boundary and clears by request identity. Targeted desktop/mobile: `2/2`; a simulated `503` remained locally dismissed and the next manual close sent one new retry.
+- Full app-version regression: `12/12`; full cabinet desktop/mobile: `44/44` in `58.6 s`; final console-responsive Playwright: `172/172` in `12.1 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: markup was unchanged; modal loading/error/empty/current/history, focus trap, inert background, scroll lock, opener restore and logout/login lifecycle remained correct without blank state, horizontal overflow or clipped controls.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.59/106.77 kB`; admin bundle raw `528406`, gzip `141215`, largest `228734`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `617` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet app-version latest single-flight
 
 Scope:

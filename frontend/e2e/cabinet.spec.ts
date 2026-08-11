@@ -392,6 +392,7 @@ async function mockCabinetApi(page: Page) {
   let appVersionSeen = true
   let appVersionLatestFailureStatus: number | null = null
   let appVersionHistoryFailureStatus: number | null = null
+  let appVersionMarkSeenFailureStatus: number | null = null
   let emptyAppVersionHistory = false
   let delayNextAppVersionHistory = false
   let delayedAppVersionHistoryReleased = false
@@ -783,6 +784,10 @@ async function mockCabinetApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/app-version/mark-seen') {
+      if (appVersionMarkSeenFailureStatus !== null) {
+        await fulfillJson(route, { error: 'mark_seen_temporarily_unavailable' }, appVersionMarkSeenFailureStatus)
+        return
+      }
       await fulfillJson(route, { releaseId: appVersionRelease.releaseId, seen: true })
       return
     }
@@ -856,6 +861,8 @@ async function mockCabinetApi(page: Page) {
     allowAppVersionLatest: () => { appVersionLatestFailureStatus = null },
     failAppVersionHistory: (status = 503) => { appVersionHistoryFailureStatus = status },
     allowAppVersionHistory: () => { appVersionHistoryFailureStatus = null },
+    failAppVersionMarkSeen: (status = 503) => { appVersionMarkSeenFailureStatus = status },
+    allowAppVersionMarkSeen: () => { appVersionMarkSeenFailureStatus = null },
     returnEmptyAppVersionHistory: () => { emptyAppVersionHistory = true },
     delayNextAppVersionHistory: () => { delayNextAppVersionHistory = true },
     releaseAppVersionHistory: () => {
@@ -1021,6 +1028,7 @@ test('cabinet app version waits for the user identity before applying a local di
 test('cabinet app version preserves a manual open while the user identity is loading', async ({ page }) => {
   const api = await mockCabinetApi(page)
   api.showAppVersionRelease()
+  api.failAppVersionMarkSeen()
   api.delayNextProfileRequest()
   await seedCabinetSession(page, 'access-token-version-manual', 'refresh-token-version-manual')
 
@@ -1039,6 +1047,22 @@ test('cabinet app version preserves a manual open while the user identity is loa
   await expect(dialog).toBeVisible()
   await page.waitForTimeout(300)
   expect(api.getRequestCount('/api/app-version/latest')).toBe(1)
+
+  await dialog.getByRole('button', { name: 'Закрыть окно что нового' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await expect(dialog).toHaveCount(0)
+  await expect.poll(() => api.getRequestCount('/api/app-version/mark-seen', 'POST')).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/app-version/mark-seen', 'POST')).toBe(1)
+
+  api.allowAppVersionMarkSeen()
+  await opener.click()
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Закрыть окно что нового' }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect.poll(() => api.getRequestCount('/api/app-version/mark-seen', 'POST')).toBe(2)
 })
 
 test('cabinet app version manual failure and empty result retry only on demand', async ({ page }) => {

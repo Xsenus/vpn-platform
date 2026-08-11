@@ -326,7 +326,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - повторные загрузки способов оплаты и выбранной переписки в кабинете имеют session/token/scope-scoped Promise owners и не дублируют recovery GET до loading-rerender;
 - initial/retry загрузки тарифов и public payment providers имеют component-scoped claims, in-flight и generation guards и не дублируют GET под StrictMode;
 - auto-load, раннее ручное открытие и retry cabinet «Что нового» используют единый token/user/session-scoped latest loader и не дублируют GET до React loading-rerender;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-app-version-latest-single-flight`, версия `0.617.0`;
-- roadmap progress: `630/650` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- server acknowledgement закрытия cabinet «Что нового» имеет session/release-scoped Promise owner, не дублирует `mark-seen` POST и допускает следующую попытку после transient failure;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-app-version-seen-single-flight`, версия `0.618.0`;
+- roadmap progress: `631/651` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

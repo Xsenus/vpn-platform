@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-11-cabinet-app-version-latest-single-flight`, версия `0.617.0`; auto-load, раннее manual open и retry cabinet app-version используют единый token/user/session-scoped latest loader с synchronous in-flight lock и не повторяют GET до loading-rerender.
-- roadmap progress: `630/650` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-11-cabinet-app-version-seen-single-flight`, версия `0.618.0`; server acknowledgement закрытия cabinet app-version имеет session/release-scoped Promise owner, не повторяет `mark-seen` POST и допускает следующую попытку после transient failure.
+- roadmap progress: `631/651` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.618.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-app-version-seen-single-flight`.
+
+### Исправлено
+
+- Два синхронных события закрытия cabinet «Что нового» больше не отправляют два `mark-seen` POST до React unmount.
+- Session/release-scoped Promise owner возвращает duplicate caller текущий результат, сбрасывается на token/user boundary и разрешает новую server-sync попытку после transient failure.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: двойное закрытие отправляло `2` POST вместо `1`. После исправления targeted contract прошёл `2/2`, включая silent `503` и одну последующую retry-попытку.
+- Полный app-version regression прошёл `12/12`, весь cabinet desktop/mobile — `44/44` за `58.6 s`; полный console-responsive Playwright — `172/172` за `12.1 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Разметка не менялась; modal loading/error/empty/current/history, focus/inert/scroll isolation, opener restore и logout/login lifecycle остались зелёными без overflow или clipped controls.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.59/106.77 kB`, admin bundle `528406/141215/max 228734`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `617`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `631/651` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.617.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-app-version-latest-single-flight`.

@@ -11,6 +11,12 @@ type AppVersionGateProps = {
   onManualOpenHandled: () => void
 }
 
+type AppVersionSeenRequest = {
+  sessionRequestId: number
+  releaseId: string
+  promise: Promise<void>
+}
+
 const itemLabels: Record<string, string> = {
   new: 'Новое',
   improved: 'Улучшено',
@@ -82,6 +88,7 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
   const latestLoadInFlightRef = useRef(false)
   const latestManualFeedbackRequestedRef = useRef(false)
   const historyRequestIdRef = useRef(0)
+  const markSeenInFlightRef = useRef<AppVersionSeenRequest | null>(null)
 
   useEffect(() => {
     mountedRef.current = true
@@ -146,6 +153,7 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     historyRequestIdRef.current += 1
     latestLoadInFlightRef.current = false
     latestManualFeedbackRequestedRef.current = false
+    markSeenInFlightRef.current = null
     setLatest(null)
     setHistory([])
     setSelectedReleaseId('')
@@ -223,11 +231,31 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     if (!token || !userId || !release) return
 
     writeDismissed(dismissedKey(userId, release.releaseId))
-    try {
-      await api.markAppVersionSeen(token, release.releaseId)
-    } catch {
-      // The local dismissal prevents repeated auto-open while the next request retries server sync.
+    const sessionRequestId = sessionRequestIdRef.current
+    const activeRequest = markSeenInFlightRef.current
+    if (activeRequest
+      && activeRequest.sessionRequestId === sessionRequestId
+      && activeRequest.releaseId === release.releaseId) {
+      await activeRequest.promise
+      return
     }
+
+    const request: AppVersionSeenRequest = {
+      sessionRequestId,
+      releaseId: release.releaseId,
+      promise: Promise.resolve()
+    }
+    markSeenInFlightRef.current = request
+    request.promise = (async () => {
+      try {
+        await api.markAppVersionSeen(token, release.releaseId)
+      } catch {
+        // The local dismissal prevents repeated auto-open while the next close retries server sync.
+      } finally {
+        if (markSeenInFlightRef.current === request) markSeenInFlightRef.current = null
+      }
+    })()
+    await request.promise
   }
 
   if (!open) return null
