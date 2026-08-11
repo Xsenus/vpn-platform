@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.616.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-catalog-load-single-flight`.
+
+### Исправлено
+
+- Public `/tariffs` больше не отправляет по два initial GET тарифов и способов оплаты при React StrictMode effect replay.
+- Обе области получили component-scoped initial claims, in-flight locks, mounted/request-generation guards и duplicate-safe retry.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: initial counters составляли `tariffs=2`, `paymentProviders=2` вместо `1/1`. После исправления targeted initial/retry contract прошёл `4/4`.
+- Финальный public desktop/mobile regression прошёл `40/40` за `30.9 s`; полный console-responsive Playwright — `172/172` за `10.6 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Визуальная разметка не менялась; responsive gate подтвердил loading/error/empty/ready/checkout states без blank state, overflow, overlap или clipped controls.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.08/106.56 kB`, admin bundle `528406/141215/max 228734`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `615`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `629/649` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.615.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-recovery-load-single-flight`.

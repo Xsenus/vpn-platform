@@ -324,7 +324,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - повторные загрузки user overview, support messages и VPN panel details имеют operation/token/entity-scoped single-flight owner и не дублируют detail GET до busy-rerender;
 - login, ручной refresh и logout админки имеют operation-scoped Promise owners и не дублируют auth-команды до busy-rerender;
 - повторные загрузки способов оплаты и выбранной переписки в кабинете имеют session/token/scope-scoped Promise owners и не дублируют recovery GET до loading-rerender;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-recovery-load-single-flight`, версия `0.615.0`;
-- roadmap progress: `628/648` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- initial/retry загрузки тарифов и public payment providers имеют component-scoped claims, in-flight и generation guards и не дублируют GET под StrictMode;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-public-catalog-load-single-flight`, версия `0.616.0`;
+- roadmap progress: `629/649` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

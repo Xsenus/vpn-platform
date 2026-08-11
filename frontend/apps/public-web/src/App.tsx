@@ -447,18 +447,24 @@ function TariffsPage({ onPendingCheckout }: {
   const [tariffs, setTariffs] = useState<TariffDto[]>([])
   const [tariffsLoading, setTariffsLoading] = useState(true)
   const [tariffsErrorContentKey, setTariffsErrorContentKey] = useState('')
-  const [tariffsLoadAttempt, setTariffsLoadAttempt] = useState(0)
   const [checkoutError, setCheckoutError] = useState('')
   const [promoCode, setPromoCode] = useState('')
   const [paymentProviders, setPaymentProviders] = useState<PublicPaymentProviderDto[]>([])
   const [paymentProvidersLoading, setPaymentProvidersLoading] = useState(true)
   const [paymentProvidersErrorContentKey, setPaymentProvidersErrorContentKey] = useState('')
-  const [paymentProvidersLoadAttempt, setPaymentProvidersLoadAttempt] = useState(0)
   const [provider, setProvider] = useState<PaymentProvider | ''>('')
   const [pendingTariffId, setPendingTariffId] = useState<string>('')
   const pageContent = useManagedHomeContent()
   const checkoutInFlightRef = useRef(false)
   const checkoutRequestIdRef = useRef(0)
+  const tariffsMountedRef = useRef(false)
+  const tariffsInitialLoadStartedRef = useRef(false)
+  const tariffsLoadInFlightRef = useRef(false)
+  const tariffsRequestIdRef = useRef(0)
+  const paymentProvidersMountedRef = useRef(false)
+  const paymentProvidersInitialLoadStartedRef = useRef(false)
+  const paymentProvidersLoadInFlightRef = useRef(false)
+  const paymentProvidersRequestIdRef = useRef(0)
   const navigate = useNavigate()
   const content = (key: string) => pageContent[key] ?? defaultHomeContent[key] ?? ''
   const tariffsError = tariffsErrorContentKey ? content(tariffsErrorContentKey) : ''
@@ -472,48 +478,72 @@ function TariffsPage({ onPendingCheckout }: {
       })
   const tariffsState = getPublicListState(tariffsLoading, tariffsError, tariffs.length)
 
-  useEffect(() => {
-    let cancelled = false
+  const loadTariffs = useCallback(() => {
+    if (tariffsLoadInFlightRef.current) return
+    tariffsLoadInFlightRef.current = true
+    const requestId = ++tariffsRequestIdRef.current
     setTariffsLoading(true)
     setTariffsErrorContentKey('')
     api.getTariffs()
       .then((items) => {
-        if (!cancelled) setTariffs(items)
+        if (tariffsMountedRef.current && requestId === tariffsRequestIdRef.current) setTariffs(items)
       })
       .catch(() => {
-        if (cancelled) return
+        if (!tariffsMountedRef.current || requestId !== tariffsRequestIdRef.current) return
         setTariffs([])
         setTariffsErrorContentKey('home.errors.tariffsLoad')
       })
       .finally(() => {
-        if (!cancelled) setTariffsLoading(false)
+        if (!tariffsMountedRef.current || requestId !== tariffsRequestIdRef.current) return
+        tariffsLoadInFlightRef.current = false
+        setTariffsLoading(false)
       })
-
-    return () => { cancelled = true }
-  }, [tariffsLoadAttempt])
+  }, [])
 
   useEffect(() => {
-    let cancelled = false
+    tariffsMountedRef.current = true
+    if (!tariffsInitialLoadStartedRef.current) {
+      tariffsInitialLoadStartedRef.current = true
+      loadTariffs()
+    }
+
+    return () => { tariffsMountedRef.current = false }
+  }, [loadTariffs])
+
+  const loadPaymentProviders = useCallback(() => {
+    if (paymentProvidersLoadInFlightRef.current) return
+    paymentProvidersLoadInFlightRef.current = true
+    const requestId = ++paymentProvidersRequestIdRef.current
     setPaymentProvidersLoading(true)
     setPaymentProvidersErrorContentKey('')
     api.getPublicPaymentProviders()
       .then((items) => {
-        if (cancelled) return
+        if (!paymentProvidersMountedRef.current || requestId !== paymentProvidersRequestIdRef.current) return
         setPaymentProviders(items)
         setProvider((current) => current && items.some((item) => item.provider === current) ? current : (items[0]?.provider ?? ''))
       })
       .catch(() => {
-        if (cancelled) return
+        if (!paymentProvidersMountedRef.current || requestId !== paymentProvidersRequestIdRef.current) return
         setPaymentProviders([])
         setProvider('')
         setPaymentProvidersErrorContentKey('home.errors.paymentProvidersLoad')
       })
       .finally(() => {
-        if (!cancelled) setPaymentProvidersLoading(false)
+        if (!paymentProvidersMountedRef.current || requestId !== paymentProvidersRequestIdRef.current) return
+        paymentProvidersLoadInFlightRef.current = false
+        setPaymentProvidersLoading(false)
       })
+  }, [])
 
-    return () => { cancelled = true }
-  }, [paymentProvidersLoadAttempt])
+  useEffect(() => {
+    paymentProvidersMountedRef.current = true
+    if (!paymentProvidersInitialLoadStartedRef.current) {
+      paymentProvidersInitialLoadStartedRef.current = true
+      loadPaymentProviders()
+    }
+
+    return () => { paymentProvidersMountedRef.current = false }
+  }, [loadPaymentProviders])
 
   useEffect(() => () => {
     checkoutRequestIdRef.current += 1
@@ -521,11 +551,11 @@ function TariffsPage({ onPendingCheckout }: {
   }, [])
 
   const retryTariffsLoad = () => {
-    setTariffsLoadAttempt((current) => current + 1)
+    loadTariffs()
   }
 
   const retryPaymentProvidersLoad = () => {
-    setPaymentProvidersLoadAttempt((current) => current + 1)
+    loadPaymentProviders()
   }
 
   const handleCheckout = async (tariff: TariffDto) => {

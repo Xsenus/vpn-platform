@@ -14509,5 +14509,28 @@
         "text": "Roadmap progress is 628/648 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-public-catalog-load-single-flight",
+    "version": "0.616.0",
+    "releasedAt": "2026-08-11T14:02:28+07:00",
+    "title": "Public-каталог загружается одной попыткой",
+    "summary": "Тарифы и способы оплаты используют одну initial загрузку под StrictMode и не дублируют API-вызовы при повторном retry.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "React StrictMode effect replay больше не отправляет второй initial GET тарифов или public payment providers."
+      },
+      {
+        "type": "improved",
+        "text": "Component-scoped initial claims, in-flight locks и mounted/request-generation guards защищают initial load, duplicate retry и completion после ухода со страницы."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 629/649 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

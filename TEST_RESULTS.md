@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public catalog load single-flight
+
+Scope:
+- Public tariff and payment-provider initial loads must each make one request under React StrictMode effect replay.
+- Explicit recovery must remain area-scoped, duplicate-safe and protected from completion after route unmount.
+
+Results:
+- Roadmap progress: `629/649` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-catalog-load-single-flight`, version `0.616.0`.
+- Reproduction before fix: local effect cancellation rejected the first result but did not own network work; StrictMode sent `tariffs=2` and `paymentProviders=2` initial GETs instead of `1/1`. Fail-first desktop/mobile: `0/2`.
+- After fix: both loaders use component-scoped initial claims, synchronous in-flight locks, mounted flags and request-generation guards. Targeted desktop/mobile initial/retry contract: `4/4`; initial counters stayed `1/1`, two synchronous retries added one area request each.
+- Final public desktop/mobile regression: `40/40` in `30.9 s`; final console-responsive Playwright: `172/172` in `10.6 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: markup was unchanged; the responsive matrix confirmed tariff/provider loading, error, empty, ready and checkout states without blank state, horizontal overflow, overlap or clipped controls.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.08/106.56 kB`; admin bundle raw `528406`, gzip `141215`, largest `228734`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `615` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet recovery load single-flight
 
 Scope:

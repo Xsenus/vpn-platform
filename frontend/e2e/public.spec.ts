@@ -539,7 +539,10 @@ test('public tariff and payment-provider failures stay scoped and recover explic
   expect(api.getPublicLoadRequestCounts()).toEqual(providerFailureCounts)
 
   api.allowPaymentProvidersLoad()
-  await page.getByRole('button', { name: 'Повторить загрузку способов оплаты' }).click()
+  await page.getByRole('button', { name: 'Повторить загрузку способов оплаты' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect(page.getByLabel('Способ оплаты')).toHaveValue('YooKassa')
   await expect(page.getByRole('button', { name: 'Купить' }).first()).toBeEnabled()
   await expect.poll(api.getPublicLoadRequestCounts).toEqual({
@@ -558,7 +561,10 @@ test('public tariff and payment-provider failures stay scoped and recover explic
   expect(api.getPublicLoadRequestCounts()).toEqual(tariffFailureCounts)
 
   api.allowTariffsLoad()
-  await page.getByRole('button', { name: 'Повторить загрузку тарифов' }).click()
+  await page.getByRole('button', { name: 'Повторить загрузку тарифов' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect(page.getByText('Start 30 дней')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Купить' }).first()).toBeEnabled()
   await expect.poll(api.getPublicLoadRequestCounts).toEqual({
@@ -618,8 +624,10 @@ test('public tariffs and account each claim one managed content load under Stric
   await page.goto('/tariffs')
   await expect(page.getByRole('heading', { name: 'Тарифы' })).toBeVisible()
   await expect.poll(api.getHomeContentRequestCount).toBe(1)
+  await expect.poll(api.getPublicLoadRequestCounts).toEqual({ tariffs: 1, paymentProviders: 1 })
   await page.waitForTimeout(300)
   expect(api.getHomeContentRequestCount()).toBe(1)
+  expect(api.getPublicLoadRequestCounts()).toEqual({ tariffs: 1, paymentProviders: 1 })
 
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: 'Аккаунт', level: 1 })).toBeVisible()
