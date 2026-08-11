@@ -1035,8 +1035,10 @@ test('cabinet app version preserves a manual open while the user identity is loa
 
   api.releaseProfileRequest()
   await expect(page.getByText(user.email, { exact: true })).toBeVisible()
-  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBeGreaterThan(0)
+  await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBe(1)
   await expect(dialog).toBeVisible()
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/app-version/latest')).toBe(1)
 })
 
 test('cabinet app version manual failure and empty result retry only on demand', async ({ page }) => {
@@ -1059,7 +1061,10 @@ test('cabinet app version manual failure and empty result retry only on demand',
   await expect(dialog.getByRole('alert')).toContainText('Не удалось загрузить информацию об обновлениях')
 
   api.allowAppVersionLatest()
-  await dialog.getByRole('button', { name: 'Повторить загрузку' }).click()
+  await dialog.getByRole('button', { name: 'Повторить загрузку' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBe(3)
   await expect(dialog.getByRole('status')).toContainText('Опубликованные обновления пока отсутствуют')
   await page.waitForTimeout(300)
@@ -1067,7 +1072,10 @@ test('cabinet app version manual failure and empty result retry only on demand',
   expect(api.getRequestCount('/api/app-version/history')).toBe(0)
 
   api.showAppVersionRelease()
-  await dialog.getByRole('button', { name: 'Повторить загрузку' }).click()
+  await dialog.getByRole('button', { name: 'Повторить загрузку' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect.poll(() => api.getRequestCount('/api/app-version/latest')).toBe(4)
   await expect(page.getByRole('dialog', { name: appVersionRelease.title })).toBeVisible()
   await expect.poll(() => api.getRequestCount('/api/app-version/history')).toBe(1)

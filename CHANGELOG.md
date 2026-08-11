@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.617.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-app-version-latest-single-flight`.
+
+### Исправлено
+
+- Раннее ручное открытие «Что нового» больше не запускает второй latest GET одновременно с session-загрузкой после завершения profile hydration.
+- Auto-load, manual open и retry используют единый token/user/session-scoped loader с synchronous in-flight lock, mounted guard и request generation.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/4`: раннее открытие давало `2` latest GET вместо `1`, а двойной retry увеличивал счётчик с `2` до `4` вместо `3`. После исправления targeted contract прошёл `4/4`.
+- Полный app-version regression прошёл `12/12`, весь cabinet desktop/mobile — `44/44` за `1.0 min`; полный console-responsive Playwright — `172/172` без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Разметка модального окна не менялась; desktop/mobile regression подтвердил loading/error/empty/current/history, focus/inert/scroll isolation и logout/login lifecycle без overflow или clipped controls.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.27/106.67 kB`, admin bundle `528406/141215/max 228734`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `616`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `630/650` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.616.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-catalog-load-single-flight`.

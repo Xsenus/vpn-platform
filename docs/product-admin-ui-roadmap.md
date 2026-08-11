@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `629/649` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `630/650` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -165,7 +165,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-11-public-catalog-load-single-flight`, версия `0.616.0`; initial/retry загрузки public tariffs/payment providers имеют component-scoped claims, in-flight и generation guards и не дублируются под StrictMode.
+- [x] Latest "Что нового": `2026-08-11-cabinet-app-version-latest-single-flight`, версия `0.617.0`; auto-load, раннее manual open и retry cabinet app-version используют единый token/user/session-scoped latest loader с synchronous in-flight lock и не дублируют GET.
 
 ## Как вести дальше
 

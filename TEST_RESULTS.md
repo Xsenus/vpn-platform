@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet app-version latest single-flight
+
+Scope:
+- Session auto-load and an early manual «Что нового» intent must share one latest-release request after profile hydration.
+- Explicit latest retry must remain duplicate-safe while preserving loading/error/empty/current/history and session-generation boundaries.
+
+Results:
+- Roadmap progress: `630/650` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-app-version-latest-single-flight`, version `0.617.0`.
+- Reproduction before fix: session and manual effects both called `/api/app-version/latest` when a saved manual intent met the newly loaded profile; synchronous double retry also bypassed React loading state. Fail-first desktop/mobile: `0/4`, with `2` requests instead of `1` and `4` instead of `3`.
+- After fix: auto-load, manual open and retry use one token/user/session-scoped loader with a synchronous in-flight lock, mounted guard and request generation. Targeted desktop/mobile contract: `4/4`; full app-version regression: `12/12`; full cabinet desktop/mobile: `44/44` in `1.0 min`.
+- Final console-responsive Playwright: `172/172`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: modal markup was unchanged; desktop/mobile checks confirmed loading, error, empty, current and history states, focus trap, inert background, scroll lock and logout/login lifecycle without blank state, horizontal overflow or clipped controls.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.27/106.67 kB`; admin bundle raw `528406`, gzip `141215`, largest `228734`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `616` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public catalog load single-flight
 
 Scope:

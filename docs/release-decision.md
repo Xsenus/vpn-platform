@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-11-public-catalog-load-single-flight`, версия `0.616.0`; initial/retry загрузки public tariffs/payment providers имеют component-scoped claims, in-flight и generation guards, поэтому StrictMode replay и synchronous retry не повторяют GET. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `629/649` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-11-cabinet-app-version-latest-single-flight`, версия `0.617.0`; auto-load, раннее manual open и retry cabinet app-version используют единый token/user/session-scoped latest loader с synchronous in-flight lock, поэтому hydration overlap и duplicate retry не повторяют GET. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `630/650` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

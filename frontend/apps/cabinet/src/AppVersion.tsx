@@ -74,14 +74,78 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
   const [loadingLatest, setLoadingLatest] = useState(false)
   const [latestError, setLatestError] = useState('')
   const [latestEmpty, setLatestEmpty] = useState(false)
+  const mountedRef = useRef(false)
   const sessionRequestIdRef = useRef(0)
+  const sessionKeyRef = useRef('')
+  const sessionApiRef = useRef<ApiClient | null>(null)
   const latestRequestIdRef = useRef(0)
+  const latestLoadInFlightRef = useRef(false)
+  const latestManualFeedbackRequestedRef = useRef(false)
   const historyRequestIdRef = useRef(0)
 
   useEffect(() => {
-    const sessionRequestId = ++sessionRequestIdRef.current
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  const loadLatest = useCallback((manualFeedback: boolean) => {
+    if (!token || !userId) return
+
+    if (manualFeedback) {
+      latestManualFeedbackRequestedRef.current = true
+      setLoadingLatest(true)
+      setLatestError('')
+      setLatestEmpty(false)
+    }
+    if (latestLoadInFlightRef.current) return
+
+    latestLoadInFlightRef.current = true
+    const sessionRequestId = sessionRequestIdRef.current
+    const latestRequestId = ++latestRequestIdRef.current
+    const requestIsCurrent = () => mountedRef.current
+      && sessionRequestIdRef.current === sessionRequestId
+      && latestRequestIdRef.current === latestRequestId
+    api.getLatestAppVersion(token)
+      .then((response) => {
+        if (!requestIsCurrent()) return
+        const release = response.latestRelease ?? null
+        setLatest(release)
+        setSelectedReleaseId(release?.releaseId ?? '')
+        setLatestError('')
+        if (latestManualFeedbackRequestedRef.current) setLatestEmpty(!release)
+        if (release && !response.seenByCurrentUser && !readDismissed(dismissedKey(userId, release.releaseId))) {
+          setOpen(true)
+        }
+      })
+      .catch(() => {
+        if (!requestIsCurrent()) return
+        setLatest(null)
+        if (latestManualFeedbackRequestedRef.current) {
+          setSelectedReleaseId('')
+          setLatestError('Не удалось загрузить информацию об обновлениях.')
+        }
+      })
+      .finally(() => {
+        if (!requestIsCurrent()) return
+        latestLoadInFlightRef.current = false
+        if (latestManualFeedbackRequestedRef.current) {
+          latestManualFeedbackRequestedRef.current = false
+          setLoadingLatest(false)
+        }
+      })
+  }, [api, token, userId])
+
+  useEffect(() => {
+    const sessionKey = token && userId ? `${token}:${userId}` : ''
+    if (sessionApiRef.current === api && sessionKeyRef.current === sessionKey) return
+
+    sessionApiRef.current = api
+    sessionKeyRef.current = sessionKey
+    sessionRequestIdRef.current += 1
     latestRequestIdRef.current += 1
     historyRequestIdRef.current += 1
+    latestLoadInFlightRef.current = false
+    latestManualFeedbackRequestedRef.current = false
     setLatest(null)
     setHistory([])
     setSelectedReleaseId('')
@@ -94,59 +158,12 @@ export function AppVersionGate({ api, token, userId, manualOpenSignal, onManualO
     setOpen(false)
 
     if (!token || !userId) return
-
-    const latestRequestId = ++latestRequestIdRef.current
-    const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
-      && latestRequestIdRef.current === latestRequestId
-    api.getLatestAppVersion(token)
-      .then((response) => {
-        if (!requestIsCurrent()) return
-        const release = response.latestRelease ?? null
-        setLatest(release)
-        setSelectedReleaseId(release?.releaseId ?? '')
-        if (release && !response.seenByCurrentUser && !readDismissed(dismissedKey(userId, release.releaseId))) {
-          setOpen(true)
-        }
-      })
-      .catch(() => {
-        if (requestIsCurrent()) setLatest(null)
-      })
-
-    return () => {
-      if (sessionRequestIdRef.current === sessionRequestId) sessionRequestIdRef.current += 1
-      latestRequestIdRef.current += 1
-      historyRequestIdRef.current += 1
-    }
-  }, [api, token, userId])
+    loadLatest(false)
+  }, [api, loadLatest, token, userId])
 
   const loadLatestForManualOpen = useCallback(() => {
-    if (!token || !userId) return
-
-    const sessionRequestId = sessionRequestIdRef.current
-    const latestRequestId = ++latestRequestIdRef.current
-    const requestIsCurrent = () => sessionRequestIdRef.current === sessionRequestId
-      && latestRequestIdRef.current === latestRequestId
-    setLoadingLatest(true)
-    setLatestError('')
-    setLatestEmpty(false)
-    api.getLatestAppVersion(token)
-      .then((response) => {
-        if (!requestIsCurrent()) return
-        const release = response.latestRelease ?? null
-        setLatest(release)
-        setSelectedReleaseId(release?.releaseId ?? '')
-        setLatestEmpty(!release)
-      })
-      .catch(() => {
-        if (!requestIsCurrent()) return
-        setLatest(null)
-        setSelectedReleaseId('')
-        setLatestError('Не удалось загрузить информацию об обновлениях.')
-      })
-      .finally(() => {
-        if (requestIsCurrent()) setLoadingLatest(false)
-      })
-  }, [api, token, userId])
+    loadLatest(true)
+  }, [loadLatest])
 
   useEffect(() => {
     if (!manualOpenSignal) return
