@@ -27,7 +27,7 @@ import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkAction
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getSubscriptionRenewalAvailability } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
-import { buildOrderExportText, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
+import { buildOrderExportText, canOpenPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -211,6 +211,22 @@ export function App() {
   const renewalPaymentAvailability = renewalState
     ? getOrderPaymentAvailability(renewalState.order)
     : null
+  const renewalPaymentAttempt = renewalState?.payment
+    ? payments.find((item) => item.orderId === renewalState.order.id && item.providerPaymentId === renewalState.payment?.paymentId) ?? null
+    : null
+  const renewalPaymentLinkAvailable = Boolean(
+    renewalState?.payment
+    && renewalState.order.status === 'PendingPayment'
+    && (!renewalPaymentAttempt || canOpenPaymentConfirmation(renewalPaymentAttempt.status))
+  )
+  const retryPaymentAttempt = retryPaymentState
+    ? payments.find((item) => item.orderId === retryPaymentState.order.id && item.providerPaymentId === retryPaymentState.payment.paymentId) ?? null
+    : null
+  const retryPaymentLinkAvailable = Boolean(
+    retryPaymentState
+    && retryPaymentState.order.status === 'PendingPayment'
+    && (!retryPaymentAttempt || canOpenPaymentConfirmation(retryPaymentAttempt.status))
+  )
   const selectedSupportConversation = useMemo(
     () => selectCurrentSupportConversation(supportConversations, selectedSupportConversationId),
     [supportConversations, selectedSupportConversationId]
@@ -388,6 +404,11 @@ export function App() {
         setOrders(nextOrders)
         if (!nextLoadErrors.some((item) => item.area === 'orders')) {
           setRenewalState((current) => {
+            if (!current) return current
+            const refreshedOrder = nextOrders.find((item) => item.id === current.order.id)
+            return refreshedOrder ? { ...current, order: refreshedOrder } : current
+          })
+          setRetryPaymentState((current) => {
             if (!current) return current
             const refreshedOrder = nextOrders.find((item) => item.id === current.order.id)
             return refreshedOrder ? { ...current, order: refreshedOrder } : current
@@ -994,7 +1015,7 @@ export function App() {
   }
 
   const handleRetryRenewalPayment = async () => {
-    if (!token || !provider || !renewalState || renewalState.payment) return
+    if (!token || !provider || !renewalState || renewalPaymentLinkAvailable) return
     const paymentAvailability = getOrderPaymentAvailability(renewalState.order)
     if (!paymentAvailability.canRetry) {
       setError(paymentAvailability.reason ?? 'Этот заказ нельзя оплатить повторно. Создайте новый заказ.')
@@ -1314,7 +1335,7 @@ export function App() {
               <p>ID подписки: {renewalState.subscriptionId}</p>
               <p>ID заказа: {renewalState.order.id}</p>
               <p>Статус заказа: <StatusBadge value={renewalState.order.status} /></p>
-              {renewalState.payment ? (
+              {renewalState.payment && renewalPaymentLinkAvailable ? (
                 <>
                   <p>ID платежа: {renewalState.payment.paymentId}</p>
                   <ExternalLinkActions
@@ -1344,13 +1365,16 @@ export function App() {
             <Card>
               <h3>Последняя повторная оплата</h3>
               <p>Заказ: {retryPaymentState.order.tariffName || retryPaymentState.order.id}</p>
+              <p>Статус заказа: <StatusBadge value={retryPaymentState.order.status} /></p>
               <p>ID платежа: {retryPaymentState.payment.paymentId}</p>
-              <ExternalLinkActions
-                value={retryPaymentState.payment.redirectUrl}
-                openLabel="Открыть оплату"
-                ariaLabel="Открыть повторную оплату в новой вкладке"
-                invalidMessage="Ссылка повторной оплаты отклонена как некорректная. Повторите операцию или обратитесь в поддержку."
-              />
+              {retryPaymentLinkAvailable
+                ? <ExternalLinkActions
+                    value={retryPaymentState.payment.redirectUrl}
+                    openLabel="Открыть оплату"
+                    ariaLabel="Открыть повторную оплату в новой вкладке"
+                    invalidMessage="Ссылка повторной оплаты отклонена как некорректная. Повторите операцию или обратитесь в поддержку."
+                  />
+                : <p className="safe-note" role="status">{getOrderStatusMessage(retryPaymentState.order.status)}</p>}
             </Card>
           )}
         </div>
@@ -1524,7 +1548,7 @@ export function App() {
                   <div><dt>Ошибка</dt><dd>{payment.failedAt ? new Date(payment.failedAt).toLocaleString() : payment.statusReason ?? '—'}</dd></div>
                   <div><dt>Активация</dt><dd>{payment.isActivationProcessed ? 'обработана' : 'ожидает'}</dd></div>
                 </dl>
-                {payment.confirmationUrl && (
+                {payment.confirmationUrl && canOpenPaymentConfirmation(payment.status) && (
                   <ExternalLinkActions
                     value={payment.confirmationUrl}
                     openLabel="Открыть оплату"

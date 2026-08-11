@@ -210,7 +210,13 @@ const unsafeLinkPayment = {
   id: 'payment-unsafe-link',
   orderId: 'order-unsafe-link',
   providerPaymentId: 'unsafe-link-attempt',
-  confirmationUrl: 'javascript:alert(1)'
+  confirmationUrl: 'javascript:alert(1)',
+  status: 'Pending',
+  signatureValidated: false,
+  isActivationProcessed: false,
+  activationProcessedAt: null,
+  paidAt: null,
+  webhookEventsCount: 0
 }
 
 const access = {
@@ -426,6 +432,8 @@ async function mockCabinetApi(page: Page) {
     redirectUrl: 'https://pay.example.test/renewal',
     rawResponse: '{"sandbox":true}'
   }
+  let retryableOrder = { ...retryablePendingOrder }
+  let retryPaymentAttempt: typeof paidPayment | null = null
 
   const record = (route: Route) => {
     const request = route.request()
@@ -548,13 +556,15 @@ async function mockCabinetApi(page: Page) {
 
     if (method === 'GET' && path === '/api/me/orders') {
       await fulfillJson(route, renewalOrderCreated
-        ? [renewalOrder, paidOrder, stalePendingOrder, retryablePendingOrder]
-        : [paidOrder, stalePendingOrder, retryablePendingOrder])
+        ? [renewalOrder, paidOrder, stalePendingOrder, retryableOrder]
+        : [paidOrder, stalePendingOrder, retryableOrder])
       return
     }
 
     if (method === 'GET' && path === '/api/me/payments') {
-      await fulfillJson(route, [paidPayment, unsafeLinkPayment])
+      await fulfillJson(route, retryPaymentAttempt
+        ? [retryPaymentAttempt, paidPayment, unsafeLinkPayment]
+        : [paidPayment, unsafeLinkPayment])
       return
     }
 
@@ -736,6 +746,23 @@ async function mockCabinetApi(page: Page) {
         delayedRetryPaymentReleased = false
         releaseDelayedRetryPayment = null
       }
+      retryPaymentAttempt = {
+        ...paidPayment,
+        id: 'payment-retry-local',
+        orderId: retryableOrder.id,
+        providerPaymentId: 'payment-retry',
+        externalEventId: 'evt-payment-retry',
+        idempotencyKey: 'idem-payment-retry',
+        confirmationUrl: 'https://pay.example.test/retry',
+        status: 'Pending',
+        signatureValidated: false,
+        isActivationProcessed: false,
+        activationProcessedAt: null,
+        paidAt: null,
+        webhookEventsCount: 0,
+        createdAt: now,
+        updatedAt: now
+      }
       await fulfillJson(route, {
         paymentId: 'payment-retry',
         redirectUrl: 'https://pay.example.test/retry',
@@ -874,6 +901,38 @@ async function mockCabinetApi(page: Page) {
         ...renewalOrder,
         status: 'Expired',
         expiresAt: '2026-06-12T00:00:00Z'
+      }
+    },
+    completeRenewalOrder: () => {
+      renewalOrder = {
+        ...renewalOrder,
+        status: 'Completed',
+        paidAt: '2026-06-13T08:00:00Z',
+        lastPaymentStatus: 'Succeeded',
+        updatedAt: '2026-06-13T08:00:00Z'
+      }
+    },
+    completeRetryPayment: () => {
+      retryableOrder = {
+        ...retryableOrder,
+        status: 'Completed',
+        paidAt: '2026-06-13T08:00:00Z',
+        lastPaymentId: 'payment-retry-local',
+        lastPaymentStatus: 'Succeeded',
+        paymentAttemptsCount: 1,
+        updatedAt: '2026-06-13T08:00:00Z'
+      }
+      if (retryPaymentAttempt) {
+        retryPaymentAttempt = {
+          ...retryPaymentAttempt,
+          status: 'Succeeded',
+          signatureValidated: true,
+          isActivationProcessed: true,
+          activationProcessedAt: '2026-06-13T08:00:00Z',
+          paidAt: '2026-06-13T08:00:00Z',
+          webhookEventsCount: 1,
+          updatedAt: '2026-06-13T08:00:00Z'
+        }
       }
     },
     failPaymentProviders: (status = 503) => { paymentProvidersFailureStatus = status },
@@ -1309,6 +1368,50 @@ test('cabinet refreshes the saved renewal order status and removes stale retry',
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
+test('cabinet removes terminal payment links after retry status refresh', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  await seedCabinetSession(page, 'access-token-terminal-payment-link', 'refresh-token-terminal-payment-link')
+
+  await page.goto('/')
+  const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
+  await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
+
+  const retryCard = page.getByRole('heading', { name: 'Последняя повторная оплата' }).locator('..')
+  await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveAttribute('href', 'https://pay.example.test/retry')
+
+  api.completeRetryPayment()
+  const orderLoadsBeforeRefresh = api.getRequestCount('/api/me/orders')
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect.poll(() => api.getRequestCount('/api/me/orders')).toBe(orderLoadsBeforeRefresh + 1)
+
+  await expect(retryCard.getByText('Оплата подтверждена', { exact: false })).toBeVisible()
+  await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveCount(0)
+  const retryPaymentHistoryCard = page.locator('.payment-record').filter({ hasText: 'payment-retry' })
+  await expect(retryPaymentHistoryCard.getByText('Платеж успешно подтвержден', { exact: false })).toBeVisible()
+  await expect(retryPaymentHistoryCard.getByRole('link', { name: 'Открыть оплату' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('cabinet removes the renewal payment link after completed order refresh', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  await seedCabinetSession(page, 'access-token-terminal-renewal-link', 'refresh-token-terminal-renewal-link')
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Продлить' }).first().click()
+
+  const renewalCard = page.getByRole('heading', { name: 'Последнее продление' }).locator('..')
+  await expect(renewalCard.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveAttribute('href', 'https://pay.example.test/renewal')
+
+  api.completeRenewalOrder()
+  const orderLoadsBeforeRefresh = api.getRequestCount('/api/me/orders')
+  await page.getByRole('button', { name: 'Обновить данные' }).click()
+  await expect.poll(() => api.getRequestCount('/api/me/orders')).toBe(orderLoadsBeforeRefresh + 1)
+
+  await expect(renewalCard.getByText('Оплата подтверждена', { exact: false })).toBeVisible()
+  await expect(renewalCard.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('cabinet support messages failure stays scoped and recovers on explicit retry', async ({ page }) => {
   const api = await mockCabinetApi(page)
   api.useSupportConversationRaceFixture()
@@ -1711,9 +1814,10 @@ test('cabinet covers register, login, payments, subscription access and support'
   const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
   await page.evaluate(() => window.history.replaceState({}, '', '/?source=private-campaign#payment-history'))
   await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
-  await expect(page.getByRole('heading', { name: 'Последняя повторная оплата' })).toBeVisible()
-  await expect(page.getByText('payment-retry')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveAttribute('href', 'https://pay.example.test/retry')
+  const lastRetryPaymentCard = page.getByRole('heading', { name: 'Последняя повторная оплата' }).locator('..')
+  await expect(lastRetryPaymentCard).toBeVisible()
+  await expect(lastRetryPaymentCard.getByText('ID платежа: payment-retry')).toBeVisible()
+  await expect(lastRetryPaymentCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveAttribute('href', 'https://pay.example.test/retry')
   expect(api.getLastRequest('/api/me/orders/order-retryable/payments/YooKassa/init')?.body).toEqual({ returnUrl: 'http://127.0.0.1:5294' })
 
   const blockedCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Заблокированный тариф' }) })

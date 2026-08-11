@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-renewal-order-refresh`, версия `0.627.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `640/660` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-cabinet-terminal-payment-links`, версия `0.628.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `641/661` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-10:
 
 - [x] `STATE-001` Backend test suite проходит: `1125/1125`.
-- [x] `STATE-002` Frontend test suite проходит: `128/128`.
+- [x] `STATE-002` Frontend test suite проходит: `129/129`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2256,6 +2256,10 @@ git diff --check
   - Что сделать: успешная перезагрузка orders должна обновлять сохранённый `renewalState.order` по ID, а локальная ошибка orders не должна заменять подтверждённый snapshot fallback-данными; заметная карточка обязана использовать тот же payment-availability контракт, что и история.
   - Что сделано: `loadAll` после успешной загрузки orders заменяет snapshot продления актуальным заказом с тем же ID; карточка повторно вычисляет retry/terminal/recovery состояние через `getOrderPaymentAvailability`, показывает причину и допустимый следующий шаг.
   - Доказательство: до исправления fail-first desktop/mobile был `0/2`: после перехода renewal order в `Expired` ручной reload обновлял историю, но оставлял карточку в `PendingPayment` с retry; после исправления targeted `2/2`, cabinet regression `50/50`, полный Playwright `190/190` за `13.1 min` без failed/flaky/skipped, all-screens `6/6`. Frontend `128/128`, typecheck/build/audit зелёные; backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
+- [x] `P11-ACC-351` Скрывать payment confirmation URL после terminal transition. 2026-08-11.
+  - Что сделать: renewal/retry карточки и история платежей не должны предлагать provider URL после завершения, ошибки, отмены, возврата или неизвестного payment state; успешный orders reload обязан обновлять snapshot повторной оплаты по ID.
+  - Что сделано: общий `canOpenPaymentConfirmation` разрешает ссылку только для `New`, `Pending`, `WaitingConfirmation`; `loadAll` синхронизирует `retryPaymentState.order`, а обе заметные карточки и история используют единый fail-closed contract и terminal status text.
+  - Доказательство: до исправления fail-first desktop/mobile был `0/2`: после `Completed/Succeeded` заметная retry-карточка оставляла старую provider URL; после исправления targeted renewal/retry `4/4`, cabinet regression `54/54`, полный Playwright `194/194` за `13.2 min` без failed/flaky/skipped, all-screens `6/6`. Frontend `129/129`, typecheck/build/audit зелёные; backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2905,6 +2909,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-041` | P1 | Cabinet / payment confirmation links | После terminal order/payment transition заметные renewal/retry карточки и история могли продолжать показывать старую provider confirmation URL. | Исправлено локально | Ссылки доступны только для `New/Pending/WaitingConfirmation`; snapshots синхронизируются после reload, desktop/mobile/full responsive regression зелёные. |
 | `BUG-2026-08-11-040` | P1 | Cabinet / renewal order refresh | После ручного обновления истории заметная карточка сохранённого продления продолжала использовать старый `PendingPayment` snapshot и показывала retry для уже истёкшего заказа. | Исправлено локально | Успешный orders reload синхронизирует renewal snapshot по ID, а карточка использует общий payment-availability contract; desktop/mobile recovery regression и полный responsive gate зелёные. |
 | `BUG-2026-08-11-039` | P1 | Cabinet / renewal payment retry | После сохранения renewal order и последующего provider reload `503` кнопка повторной подготовки оплаты оставалась активной, хотя handler без provider молча завершался. | Исправлено локально | Retry control использует `busy || !provider` и ARIA, handler остаётся fail-closed; desktop/mobile recovery regression и полный responsive gate зелёные. |
 | `BUG-2026-08-11-038` | P1 | Cabinet / payment provider selection | Во время pending renewal/retry-payment селектор способа оплаты оставался активным, поэтому UI мог показывать новый provider, пока API-команда использовала прежний snapshot. | Исправлено локально | Select следует общему mutation busy-state через native disabled/ARIA; desktop/mobile delayed regression и полный responsive gate зелёные. |

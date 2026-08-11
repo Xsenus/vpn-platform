@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet terminal payment links
+
+Scope:
+- Payment confirmation URLs must remain available only while the persisted payment is open at the provider.
+- Prominent renewal/retry cards and payment history must hide stale URLs after terminal order/payment transitions and preserve responsive layout.
+
+Results:
+- Roadmap progress: `641/661` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-terminal-payment-links`, version `0.628.0`.
+- Reproduction before fix: after a retry order/payment changed from `PendingPayment/Pending` to `Completed/Succeeded`, manual cabinet refresh left the prominent retry card linked to the old provider URL. Fail-first desktop/mobile: `0/2`.
+- After fix: `canOpenPaymentConfirmation` allow-lists only `New`, `Pending` and `WaitingConfirmation`; successful orders reload also refreshes the retry-payment order snapshot. Renewal/retry cards and payment history share this fail-closed contract. Targeted desktop/mobile renewal/retry coverage: `4/4`.
+- Full cabinet desktop/mobile regression: `54/54`; final console-responsive Playwright: `194/194` in `13.2 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: terminal status text replaces the link toolbar without horizontal overflow, clipping or layout shift on desktop/mobile; open pending links retain their existing dimensions and security validation.
+- Frontend tests: `129/129`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `370.75/107.00 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `627` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet renewal order refresh
 
 Scope:

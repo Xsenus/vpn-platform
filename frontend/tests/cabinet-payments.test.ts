@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import type { OrderDto, PaymentAttemptDto } from '../packages/api-client/src/index.ts'
 import {
   buildOrderExportText,
+  canOpenPaymentConfirmation,
   formatPaymentMoney,
   getLatestPaymentForOrder,
   getOrderPaymentAvailability,
@@ -86,6 +87,16 @@ test('cabinet payments returns human messages and tones for important statuses',
   assert.equal(getPaymentStatusTone('Succeeded'), 'success')
   assert.equal(getPaymentStatusTone('PartiallyRefunded'), 'success')
   assert.equal(getPaymentStatusTone('Failed'), 'failed')
+})
+
+test('cabinet payments exposes confirmation links only for open payment statuses', () => {
+  for (const status of ['New', 'Pending', 'WaitingConfirmation']) {
+    assert.equal(canOpenPaymentConfirmation(status), true, status)
+  }
+
+  for (const status of ['Succeeded', 'Failed', 'Cancelled', 'Refunded', 'PartiallyRefunded', 'Unknown']) {
+    assert.equal(canOpenPaymentConfirmation(status), false, status)
+  }
 })
 
 test('cabinet payments groups attempts by order and selects the newest attempt', () => {

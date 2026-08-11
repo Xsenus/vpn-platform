@@ -6,6 +6,7 @@ const retryableOrderStatuses = new Set(['PendingPayment', 'Failed'])
 const successfulStatuses = new Set(['Paid', 'Completed', 'Succeeded', 'Success', 'Activated', 'Refunded', 'PartiallyRefunded'])
 const failedStatuses = new Set(['Failed', 'Canceled', 'Cancelled', 'Expired', 'Rejected'])
 const pendingStatuses = new Set(['Pending', 'PendingPayment', 'Created', 'Processing', 'WaitingForCapture'])
+const openConfirmationStatuses = new Set(['New', 'Pending', 'WaitingConfirmation'])
 
 export function formatPaymentMoney(amount: number, currency: string) {
   return `${amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${currency}`
@@ -39,6 +40,10 @@ export function getPaymentStatusTone(status: string): PaymentStatusTone {
   if (failedStatuses.has(status)) return 'failed'
   if (pendingStatuses.has(status)) return 'pending'
   return 'neutral'
+}
+
+export function canOpenPaymentConfirmation(status: string) {
+  return openConfirmationStatuses.has(status)
 }
 
 export function getOrderStatusMessage(status: string) {

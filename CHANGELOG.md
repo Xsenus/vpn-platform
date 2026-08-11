@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.628.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-terminal-payment-links`.
+
+### Исправлено
+
+- Кабинет больше не показывает confirmation URL для завершённых, ошибочных, отменённых, возвращённых или неизвестных payment states.
+- Ссылки оплаты теперь доступны только для backend-статусов `New`, `Pending` и `WaitingConfirmation`; terminal/unknown состояние закрывается fail-closed.
+- Карточки последнего продления и повторной оплаты синхронизируются с актуальным order snapshot, показывают подтверждённый статус после reload и используют тот же link-availability contract, что история платежей.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: после перехода retry order/payment в `Completed/Succeeded` заметная карточка продолжала показывать старую payment URL. После исправления targeted renewal/retry contract прошёл `4/4`.
+- Полный cabinet desktop/mobile regression прошёл `54/54`; полный console-responsive Playwright — `194/194` за `13.2 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `129/129`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `370.75/107.00 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `627`, secret scan `668` files/`0` findings.
+- Roadmap: `641/661` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.627.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-renewal-order-refresh`.

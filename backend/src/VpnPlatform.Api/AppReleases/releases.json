@@ -14785,5 +14785,28 @@
         "text": "Roadmap progress is 640/660 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-cabinet-terminal-payment-links",
+    "version": "0.628.0",
+    "releasedAt": "2026-08-11T21:17:11+07:00",
+    "title": "Завершённые платежи больше не открывают старую ссылку",
+    "summary": "Кабинет скрывает ссылку провайдера сразу после подтверждения, ошибки, отмены или возврата платежа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Карточки продления, повторной оплаты и история платежей больше не предлагают устаревшую ссылку после terminal transition."
+      },
+      {
+        "type": "improved",
+        "text": "Payment URL доступна только для открытых статусов New, Pending и WaitingConfirmation; остальные состояния показывают актуальный результат операции."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 641/661 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
