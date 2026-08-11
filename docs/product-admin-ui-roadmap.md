@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `651/671` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `652/672` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1140/1140`.
+- [x] Backend full suite: `1144/1144`.
 - [x] Frontend unit tests: `136/136`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-12-access-state-compensation`, версия `0.638.0`; access enable/disable компенсирует provider mutation после local persistence failure или поздней отмены, а неудачный rollback оставляет `SyncRequired` и redacted reconciliation audit.
+- [x] Latest "Что нового": `2026-08-12-access-sync-reset-persistence`, версия `0.639.0`; sync/reset после local persistence failure не сохраняет success evidence, а необратимый reset оставляет `SyncRequired` и redacted reconciliation audit.
 
 ## Как вести дальше
 

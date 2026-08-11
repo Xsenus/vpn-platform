@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.639.0 - 2026-08-12
+
+Release entry: `2026-08-12-access-sync-reset-persistence`.
+
+### Исправлено
+
+- Завершённый provider sync больше не сохраняет новый `LastSyncedAt`, ложный success audit и статус `Error`, если локальный commit завершился ошибкой или поздней отменой.
+- Traffic reset после local persistence failure очищает staged success evidence и сохраняет один `SyncRequired` reconciliation record с новой revision.
+- Cancellation после успешного возврата provider отличается от cancellation внутри provider: durable failure/cancel evidence сохраняется независимо, затем исходная отмена пробрасывается вызывающему коду.
+
+### Проверено
+
+- Валидный SQLite fail-first `0/4`; после исправления completed-action suite `4/4`, смежные lifecycle/admin/expiry `57/57`.
+- Backend `1144/1144`; Release build `0` warnings/errors; fresh SQLite order/payment/subscription/access flow, EF drift и formatter по изменённым C# файлам зелёные.
+- Frontend `136/136`, typecheck/build всех приложений и audit `0 vulnerabilities`; UI не менялся, актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- Encoding/documentation/release guards и latest release SQLite verification выполнены после синхронизации seed (`638` entries); secret scan `668` files/`0` findings, временные smoke-артефакты очищены.
+- Roadmap: `652/672` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.638.0 - 2026-08-12
 
 Release entry: `2026-08-12-access-state-compensation`.

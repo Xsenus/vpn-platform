@@ -319,6 +319,81 @@ public class VpnAccessAutomationMvpTests
     }
 
     [Theory]
+    [InlineData("sync", AccessCredentialStatus.Active, "AccessSyncFailed", "access.sync.failed")]
+    [InlineData("reset", AccessCredentialStatus.SyncRequired, "AccessTrafficResetFailed", "access.reset_traffic.failed")]
+    public async Task Local_Save_Failure_After_Completed_Access_Action_Should_Persist_Only_Failure_Evidence(
+        string operation,
+        AccessCredentialStatus expectedStatus,
+        string expectedHistory,
+        string expectedAudit)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var provider = new TrackingVpnProvider();
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var accessId = await SeedActiveSqliteAccessAsync(db, clock, $"completed-{operation}");
+        var originalLastSyncedAt = (await db.AccessCredentials.SingleAsync()).LastSyncedAt;
+        provider.AfterSync = operation == "sync" ? () => db.FailNextSave = true : null;
+        provider.AfterReset = operation == "reset" ? () => db.FailNextSave = true : null;
+
+        var result = operation == "sync"
+            ? await service.SyncAccessAsync(accessId, "test", null, CancellationToken.None)
+            : await service.ResetTrafficAsync(accessId, "test", null, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(operation == "sync" ? 1 : 0, provider.SyncCalls);
+        Assert.Equal(operation == "reset" ? 1 : 0, provider.ResetCalls);
+        db.ChangeTracker.Clear();
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(expectedStatus, persistedAccess.Status);
+        if (operation == "sync") Assert.Equal(originalLastSyncedAt, persistedAccess.LastSyncedAt);
+        Assert.Collection(await db.AccessCredentialHistories.ToListAsync(), x => Assert.Equal(expectedHistory, x.EventType));
+        Assert.Collection(await db.AuditLogs.ToListAsync(), x => Assert.Equal(expectedAudit, x.Action));
+    }
+
+    [Theory]
+    [InlineData("sync", AccessCredentialStatus.Active, "AccessSyncCancelled", "access.sync.cancelled")]
+    [InlineData("reset", AccessCredentialStatus.SyncRequired, "AccessTrafficResetCancelled", "access.reset_traffic.cancelled")]
+    public async Task Cancellation_After_Completed_Access_Action_Should_Persist_Only_Cancellation_Evidence_And_Rethrow(
+        string operation,
+        AccessCredentialStatus expectedStatus,
+        string expectedHistory,
+        string expectedAudit)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new FailingSaveApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        using var cancellation = new CancellationTokenSource();
+        var provider = new TrackingVpnProvider();
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var accessId = await SeedActiveSqliteAccessAsync(db, clock, $"completed-cancel-{operation}");
+        var originalLastSyncedAt = (await db.AccessCredentials.SingleAsync()).LastSyncedAt;
+        provider.AfterSync = operation == "sync" ? cancellation.Cancel : null;
+        provider.AfterReset = operation == "reset" ? cancellation.Cancel : null;
+
+        async Task Act() => await (operation == "sync"
+            ? service.SyncAccessAsync(accessId, "test", null, cancellation.Token)
+            : service.ResetTrafficAsync(accessId, "test", null, cancellation.Token));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(Act);
+        Assert.Equal(operation == "sync" ? 1 : 0, provider.SyncCalls);
+        Assert.Equal(operation == "reset" ? 1 : 0, provider.ResetCalls);
+        db.ChangeTracker.Clear();
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(expectedStatus, persistedAccess.Status);
+        if (operation == "sync") Assert.Equal(originalLastSyncedAt, persistedAccess.LastSyncedAt);
+        Assert.Collection(await db.AccessCredentialHistories.ToListAsync(), x => Assert.Equal(expectedHistory, x.EventType));
+        Assert.Collection(await db.AuditLogs.ToListAsync(), x => Assert.Equal(expectedAudit, x.Action));
+    }
+
+    [Theory]
     [InlineData("disable", AccessCredentialStatus.Active)]
     [InlineData("enable", AccessCredentialStatus.Disabled)]
     [InlineData("sync", AccessCredentialStatus.Active)]
@@ -466,6 +541,33 @@ public class VpnAccessAutomationMvpTests
         return new ApplicationDbContext(options);
     }
 
+    private static async Task<Guid> SeedActiveSqliteAccessAsync(ApplicationDbContext db, IClock clock, string suffix)
+    {
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var nodeId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+        var accessId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = $"{suffix}@example.test", DisplayName = "Client", Status = UserStatus.Active });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Premium", Slug = suffix, DurationDays = 30, Price = 490, Currency = "RUB" });
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1", Capacity = 100, UsedCapacity = 1 });
+        db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = clock.UtcNow, EndAt = clock.UtcNow.AddDays(30), CurrentServerId = nodeId });
+        db.AccessCredentials.Add(new AccessCredential
+        {
+            Id = accessId,
+            SubscriptionId = subscriptionId,
+            ProviderType = "x3ui",
+            ProviderAccessId = $"client-{suffix}",
+            ServerId = nodeId,
+            AccessUri = "vless://client",
+            Status = AccessCredentialStatus.Active,
+            LastSyncedAt = clock.UtcNow.AddDays(-1),
+            Revision = 3
+        });
+        await db.SaveChangesAsync();
+        return accessId;
+    }
+
     private sealed class FixedClock : IClock
     {
         public DateTimeOffset UtcNow { get; } = new(2026, 5, 19, 12, 0, 0, TimeSpan.Zero);
@@ -493,6 +595,8 @@ public class VpnAccessAutomationMvpTests
         public Action? Cancel { get; init; }
         public Action? AfterDisable { get; set; }
         public Action? AfterEnable { get; set; }
+        public Action? AfterSync { get; set; }
+        public Action? AfterReset { get; set; }
 
         public Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
             => Task.FromResult(new VpnProvisionResult($"client-{request.SubscriptionId:N}", "vless://client", "vless://client", "/config.json"));
@@ -523,6 +627,7 @@ public class VpnAccessAutomationMvpTests
         {
             SyncCalls += 1;
             CancelIfRequested("sync", cancellationToken);
+            AfterSync?.Invoke();
             return Task.FromResult(new VpnUsageSnapshot(providerAccessId, 1234, 1, DateTimeOffset.UtcNow));
         }
 
@@ -531,6 +636,7 @@ public class VpnAccessAutomationMvpTests
             ResetCalls += 1;
             CancelIfRequested("reset", cancellationToken);
             if (ThrowOnReset) throw new InvalidOperationException("traffic reset outcome is unknown");
+            AfterReset?.Invoke();
             return Task.CompletedTask;
         }
 

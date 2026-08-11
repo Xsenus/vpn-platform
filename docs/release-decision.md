@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1140/1140`.
+- Backend full suite: `1144/1144`.
 - API Release build: OK.
 - Frontend unit tests: `136/136`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-12-access-state-compensation`, версия `0.638.0`; access enable/disable компенсирует provider mutation после local persistence failure или поздней отмены, а неудачный rollback сохраняет `SyncRequired`. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `651/671` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-12-access-sync-reset-persistence`, версия `0.639.0`; completed sync/reset не сохраняет ложный success после local persistence failure, а необратимый reset оставляет `SyncRequired`. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `652/672` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

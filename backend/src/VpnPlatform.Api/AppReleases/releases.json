@@ -15038,5 +15038,28 @@
         "text": "Roadmap progress is 651/671 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-access-sync-reset-persistence",
+    "version": "0.639.0",
+    "releasedAt": "2026-08-12T05:33:41+07:00",
+    "title": "Sync и сброс трафика не сохраняют ложный успех",
+    "summary": "Завершённые provider sync/reset сохраняют только корректное failure evidence, если локальная запись не удалась или была отменена.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Local save failure после sync больше не переводит рабочий доступ в Error, не меняет LastSyncedAt и не сохраняет success history/audit."
+      },
+      {
+        "type": "improved",
+        "text": "Необратимый traffic reset при local save failure или поздней отмене оставляет один SyncRequired reconciliation record с новой revision; caller cancellation по-прежнему пробрасывается."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 652/672 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

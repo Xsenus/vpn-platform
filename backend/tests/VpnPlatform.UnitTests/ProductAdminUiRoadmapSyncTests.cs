@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-12",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1140/1140`",
+                     "Backend full suite: `1144/1144`",
                      "Frontend unit tests: `136/136`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `218/218`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-12-access-state-compensation",
-                     "0.638.0"
+                     "2026-08-12-access-sync-reset-persistence",
+                     "0.639.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-12-access-state-compensation", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-12-access-state-compensation", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-access-sync-reset-persistence", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-access-sync-reset-persistence", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1140/1140`",
+                     "Backend full suite: `1144/1144`",
                      "Frontend unit tests: `136/136`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-12-access-state-compensation",
-                     "0.638.0",
+                     "2026-08-12-access-sync-reset-persistence",
+                     "0.639.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

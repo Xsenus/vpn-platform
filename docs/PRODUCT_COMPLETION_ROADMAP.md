@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-access-state-compensation`, версия `0.638.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `651/671` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-access-sync-reset-persistence`, версия `0.639.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `652/672` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-10:
 
-- [x] `STATE-001` Backend test suite проходит: `1140/1140`.
+- [x] `STATE-001` Backend test suite проходит: `1144/1144`.
 - [x] `STATE-002` Frontend test suite проходит: `136/136`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2300,6 +2300,10 @@ git diff --check
   - Что сделать: успешная внешняя мутация не должна оставлять provider и локальный `AccessCredential` в разных состояниях при `SaveChanges` failure или отмене; неудачный обратный вызов должен оставлять durable reconciliation marker без ложного success audit.
   - Что сделано: lifecycle различает provider failure и локальный сбой после завершённой мутации, очищает незакоммиченные success history/audit, выполняет обратный enable/disable с независимым токеном и сохраняет исходный статус; при неудачной компенсации ставит `SyncRequired`, увеличивает revision и пишет отдельные redacted history/audit с `provider_state_unknown`.
   - Доказательство: валидный SQLite fail-first `0/6`; после исправления compensation/cancellation suite `6/6`, смежные lifecycle/admin/expiry `53/53`, backend `1140/1140`, frontend `136/136`, typecheck/build/audit, Release build `0` warnings/errors, fresh SQLite и EF drift зелёные. UI не менялся; актуальный полный browser inventory этого прохода остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальные VPS/staging/payment/3x-ui/Telegram/SMTP evidence не закрывались.
+- [x] `P11-ACC-362` Не сохранять ложный success после local persistence failure у sync/reset. 2026-08-12.
+  - Что сделать: завершённый provider sync/reset не должен повторно сохранять staged success history/audit вместе с failure/cancellation evidence; read-only sync не должен портить рабочий access, а необратимый reset обязан оставлять durable reconciliation marker.
+  - Что сделано: lifecycle отличает provider failure от local save/cancellation после успешного возврата, очищает tracker и перечитывает исходный access; sync сохраняет Active и прежний `LastSyncedAt`, reset переводит доступ в `SyncRequired` с новой revision, а обе операции записывают ровно один redacted failure/cancel record.
+  - Доказательство: SQLite fail-first `0/4`; после исправления completed-action suite `4/4`, смежные lifecycle/admin/expiry `57/57`, backend `1144/1144`, frontend `136/136`, typecheck/build/audit, Release build `0` warnings/errors, fresh SQLite, EF drift и scoped formatter зелёные. UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальные VPS/staging/payment/3x-ui/Telegram/SMTP evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

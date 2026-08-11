@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-12-access-state-compensation`, версия `0.638.0`; backend access lifecycle компенсирует provider state после local persistence failure, UI не менялся, а актуальный полный browser inventory проходит `218/218` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-12-access-sync-reset-persistence`, версия `0.639.0`; backend sync/reset удаляет ложный success после local persistence failure, UI не менялся, а актуальный полный browser inventory проходит `218/218` без failed/flaky/skipped.

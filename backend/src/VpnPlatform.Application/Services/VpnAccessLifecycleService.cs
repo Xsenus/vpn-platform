@@ -351,10 +351,12 @@ public class VpnAccessLifecycleService
 
         var now = _clock.UtcNow;
         var before = Snapshot(access);
+        var providerActionCompleted = false;
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
             var usage = await provider.SyncAccessAsync(access.ProviderAccessId, cancellationToken);
+            providerActionCompleted = true;
             access.LastSyncedAt = usage.SyncedAt;
             access.UpdatedAt = now;
             AddHistory(access, "AccessSynced", before, new { access.Status, access.LastSyncedAt, usage.UsedTrafficBytes, usage.ActiveConnections, reason });
@@ -362,8 +364,23 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access synced.", usage.UsedTrafficBytes));
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            if (providerActionCompleted)
+            {
+                await PersistCompletedAccessActionFailureAsync(
+                    access.Id,
+                    before,
+                    "AccessSyncCancelled",
+                    "access.sync.cancelled",
+                    reason,
+                    actorUserId,
+                    ex,
+                    markSyncRequired: false,
+                    outcome: "local_persistence_cancelled");
+                throw;
+            }
+
             AddHistory(access, "AccessSyncCancelled", before, new { access.Status, reason, outcome = "cancelled" });
             AddAudit("access.sync.cancelled", access, before, new { access.Status, reason, outcome = "cancelled" }, actorUserId);
             await _db.SaveChangesAsync(CancellationToken.None);
@@ -371,6 +388,21 @@ public class VpnAccessLifecycleService
         }
         catch (Exception ex)
         {
+            if (providerActionCompleted)
+            {
+                await PersistCompletedAccessActionFailureAsync(
+                    access.Id,
+                    before,
+                    "AccessSyncFailed",
+                    "access.sync.failed",
+                    reason,
+                    actorUserId,
+                    ex,
+                    markSyncRequired: false,
+                    outcome: "local_persistence_failed");
+                return Result<AdminAccessActionResult>.Failure("VPN access sync local persistence failed; provider data was not committed.");
+            }
+
             var safeError = SafeError(ex.Message);
             StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
             AddHistory(access, "AccessSyncFailed", before, new { access.Status, error = safeError, reason });
@@ -396,10 +428,12 @@ public class VpnAccessLifecycleService
         }
         var now = _clock.UtcNow;
         var before = Snapshot(access);
+        var providerActionCompleted = false;
         try
         {
             var provider = _vpnProviderFactory.Get(access.ProviderType);
             await provider.ResetTrafficAsync(access.ProviderAccessId, cancellationToken);
+            providerActionCompleted = true;
             access.LastSyncedAt = now;
             access.UpdatedAt = now;
             AddHistory(access, "AccessTrafficReset", before, new { access.Status, access.LastSyncedAt, reason });
@@ -407,8 +441,23 @@ public class VpnAccessLifecycleService
             await _db.SaveChangesAsync(cancellationToken);
             return Result<AdminAccessActionResult>.Success(ToResult(access, "Access traffic reset."));
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            if (providerActionCompleted)
+            {
+                await PersistCompletedAccessActionFailureAsync(
+                    access.Id,
+                    before,
+                    "AccessTrafficResetCancelled",
+                    "access.reset_traffic.cancelled",
+                    reason,
+                    actorUserId,
+                    ex,
+                    markSyncRequired: true,
+                    outcome: "provider_state_changed_local_persistence_cancelled");
+                throw;
+            }
+
             MarkSyncRequired(access, now);
             AddHistory(access, "AccessTrafficResetCancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
             AddAudit("access.reset_traffic.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
@@ -417,6 +466,22 @@ public class VpnAccessLifecycleService
         }
         catch (Exception ex)
         {
+            if (providerActionCompleted)
+            {
+                await PersistCompletedAccessActionFailureAsync(
+                    access.Id,
+                    before,
+                    "AccessTrafficResetFailed",
+                    "access.reset_traffic.failed",
+                    reason,
+                    actorUserId,
+                    ex,
+                    markSyncRequired: true,
+                    outcome: "provider_state_changed_local_persistence_failed");
+                return Result<AdminAccessActionResult>.Failure(
+                    "VPN access traffic was reset by the provider, but local persistence failed; manual reconciliation is required.");
+            }
+
             var safeError = SafeError(ex.Message);
             MarkSyncRequired(access, now);
             AddHistory(access, "AccessTrafficResetFailed", before, new { access.Status, error = safeError, reason, outcome = "provider_state_unknown" });
@@ -542,6 +607,48 @@ public class VpnAccessLifecycleService
 
         return Result<AdminAccessActionResult>.Failure(
             $"VPN access {operation} local persistence failed; provider state was restored.");
+    }
+
+    private async Task PersistCompletedAccessActionFailureAsync(
+        Guid accessId,
+        object before,
+        string eventType,
+        string auditAction,
+        string? reason,
+        Guid? actorUserId,
+        Exception operationError,
+        bool markSyncRequired,
+        string outcome)
+    {
+        ClearTracker();
+        var persistedAccess = await _db.AccessCredentials.FirstOrDefaultAsync(x => x.Id == accessId, CancellationToken.None);
+        if (persistedAccess is null)
+        {
+            return;
+        }
+
+        if (markSyncRequired)
+        {
+            MarkSyncRequired(persistedAccess, _clock.UtcNow);
+            persistedAccess.Revision += 1;
+        }
+
+        var safeError = SafeError(operationError.Message);
+        AddHistory(persistedAccess, eventType, before, new
+        {
+            persistedAccess.Status,
+            reason,
+            error = safeError,
+            outcome
+        });
+        AddAudit(auditAction, persistedAccess, before, new
+        {
+            persistedAccess.Status,
+            reason,
+            error = safeError,
+            outcome
+        }, actorUserId);
+        await _db.SaveChangesAsync(CancellationToken.None);
     }
 
     private void ClearTracker()

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Access sync/reset persistence
+
+Scope:
+- Completed provider sync/reset must not persist staged success evidence together with failure/cancellation records when local persistence fails.
+- Read-only sync must preserve the original access state; irreversible reset must leave durable reconciliation state.
+
+Results:
+- Roadmap progress: `652/672` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-access-sync-reset-persistence`, version `0.639.0`.
+- Reproduction before fix: valid SQLite fail-first `0/4`; sync changed `LastSyncedAt` and persisted `Error`, while reset and late cancellation stored both success and failure history/audit.
+- After fix: completed-action SQLite suite `4/4`; sync preserves Active and the previous timestamp, reset stores `SyncRequired` with a new revision, and each path stores exactly one redacted failure/cancel record. Adjacent lifecycle/admin/expiry suite: `57/57`.
+- Backend full suite: `1144/1144`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; formatter for changed C# files: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding guard and latest release SQLite verification: OK after seed synchronization; release seed: `638` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Documentation/release guards are green after this status update. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Access state compensation
 
 Scope:
