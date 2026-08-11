@@ -1650,7 +1650,7 @@ test('ApiClient admin payments expose refund readiness and send refund payload',
 test('admin source serializes finance commands by provider, order and payment resources', () => {
   const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
 
-  assert.match(adminSource, /paymentProviderActionResourceKey\(editingId\)/)
+  assert.match(adminSource, /paymentProviderActionResourceKey\(editingId \|\| 'create'\)/)
   assert.match(adminSource, /paymentProviderActionResourceKey\(account\.id\)/)
   assert.match(adminSource, /paymentActionResourceKeys\(paymentId, payments\.find/)
   assert.match(adminSource, /orderActionResourceKey\(order\.id\)/)
@@ -1675,6 +1675,19 @@ test('admin source serializes managed configuration commands by entity and globa
   assert.match(adminSource, /}, botSettingsActionResourceKey\)/)
   assert.match(adminSource, /aria-busy=\{siteContentActionBusy\}/)
   assert.match(adminSource, /aria-busy=\{botSettingsActionBusy\}/)
+})
+
+test('admin source derives concurrent busy state only from resource owners', () => {
+  const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
+
+  assert.doesNotMatch(adminSource, /actionBusyId|setActionBusyId/)
+  assert.match(adminSource, /paymentProviderActionResourceKey\(editingId \|\| 'create'\)/)
+  assert.match(adminSource, /vpnPanelActionResourceKey\(editingId \|\| 'create'\)/)
+  assert.match(adminSource, /serverActionResourceKey\(editingId \|\| 'create'\)/)
+  assert.match(adminSource, /referralProgramActionResourceKey/)
+  assert.match(adminSource, /notificationDeliveryActionResourceKey\(deliveryId\)/)
+  assert.match(adminSource, /const providerFormActionBusy = isActionResourceBusy/)
+  assert.match(adminSource, /const referralProgramFormActionBusy = isActionResourceBusy/)
 })
 
 test('ApiClient admin subscription and VPN access actions are confirmation-friendly POST calls', async () => {

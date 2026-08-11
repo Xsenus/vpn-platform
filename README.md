@@ -211,10 +211,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 - backend на .NET 9: `1125/1125` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `127/127`;
+- frontend unit tests: `128/128`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `182/182`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `184/184`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -331,7 +331,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - panel/inbound/client и server/provisioning команды используют иерархические identity-safe resource owners и shared busy-state; client migration атомарно резервирует source/target ресурсы;
 - payment-provider edit/toggle/check и order/direct payment recheck/refund используют общие identity-safe resource owners; независимые аккаунты и заказы остаются параллельными;
 - tariff/release/FAQ/scenario entity commands, global site-content writes и Telegram settings save/test используют общие resource owners и shared busy-state;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-admin-managed-config-resource-owner`, версия `0.623.0`;
-- roadmap progress: `636/656` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- все admin mutation indicators используют многозначный resource-owner set; независимая команда не сбрасывает busy-state незавершённой формы или строки;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-admin-concurrent-busy-resource-owner`, версия `0.624.0`;
+- roadmap progress: `637/657` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

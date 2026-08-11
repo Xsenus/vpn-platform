@@ -582,6 +582,12 @@ function paymentProviderActionResourceKey(accountId: string) {
   return `payment-provider:${accountId}`
 }
 
+const referralProgramActionResourceKey = 'referral-program:form'
+
+function notificationDeliveryActionResourceKey(deliveryId: string) {
+  return `notification-delivery:${deliveryId}`
+}
+
 function orderActionResourceKey(orderId: string) {
   return `order:${orderId}`
 }
@@ -1266,7 +1272,6 @@ export function App() {
   const [busy, setBusy] = useState(false)
   const [sessionHydrating, setSessionHydrating] = useState(Boolean(token))
   const [logoutBusy, setLogoutBusy] = useState(false)
-  const [actionBusyId, setActionBusyId] = useState('')
   const [actionBusyResourceKeys, setActionBusyResourceKeys] = useState<ReadonlySet<string>>(() => new Set())
   const isActionResourceBusy = (...resourceKeys: string[]) => resourceKeys.some((key) => actionBusyResourceKeys.has(key))
   const [serverForm, setServerForm] = useState<ServerFormState>(defaultServerForm)
@@ -1925,7 +1930,6 @@ export function App() {
     if (actionRequestsInFlight.current.has(requestKey) || ownedResourceKeys.some((key) => actionResourceOwners.current.has(key))) return
     actionRequestsInFlight.current.add(requestKey)
     for (const key of ownedResourceKeys) actionResourceOwners.current.set(key, requestKey)
-    setActionBusyId(id)
     setActionBusyResourceKeys((current) => {
       const next = new Set(current)
       for (const key of ownedResourceKeys) next.add(key)
@@ -1954,7 +1958,6 @@ export function App() {
           return next
         })
       }
-      if (operationIsCurrent()) setActionBusyId((current) => current === id ? '' : current)
     }
   }
 
@@ -2069,7 +2072,6 @@ export function App() {
     setLoadErrors([])
     actionRequestsInFlight.current.clear()
     actionResourceOwners.current.clear()
-    setActionBusyId('')
     setActionBusyResourceKeys(new Set())
   }
 
@@ -2439,7 +2441,7 @@ export function App() {
       setNotice(`Способ оплаты ${saved.name} ${editingId ? 'обновлен' : 'сохранен'}. Секреты не отображаются.`)
       if (providerFormRef.current === submittedForm && editingProviderAccountIdRef.current === editingId) resetProviderForm()
       await action.reloadAll()
-    }, editingId ? paymentProviderActionResourceKey(editingId) : 'provider-save')
+    }, paymentProviderActionResourceKey(editingId || 'create'))
   }
 
   const handleSetProviderEnabled = async (account: PaymentProviderAccountDto, enabled: boolean) => {
@@ -2647,7 +2649,7 @@ export function App() {
       setNotice(editingId ? 'Реферальная программа обновлена.' : 'Реферальная программа создана.')
       if (referralProgramFormRef.current === submittedForm && editingReferralProgramIdRef.current === editingId) resetReferralProgramForm()
       await action.reloadAll()
-    })
+    }, referralProgramActionResourceKey)
   }
 
   const resetReleaseForm = () => {
@@ -3249,7 +3251,7 @@ export function App() {
       if (formIsCurrent && action.isCurrent() && selectedVpnPanelIdRef.current === saved.id) {
         await loadVpnPanelDetails(saved.id, token, action.operationId)
       }
-    }, editingId ? vpnPanelActionResourceKey(editingId) : 'vpn-panel-save')
+    }, vpnPanelActionResourceKey(editingId || 'create'))
   }
 
   const handleTestVpnPanel = (panelId: string) => runAction('panels', `test-${panelId}`, async (action) => {
@@ -3467,7 +3469,7 @@ export function App() {
         setServerForm({ ...defaultServerForm, provider: submittedForm.provider, region: submittedForm.region, country: submittedForm.country, datacenter: submittedForm.datacenter })
       }
       await action.reloadAll()
-    }, editingId ? serverActionResourceKey(editingId) : 'server-save')
+    }, serverActionResourceKey(editingId || 'create'))
   }
 
   const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate' | 'disable') => {
@@ -3536,7 +3538,7 @@ export function App() {
     if (!action.isCurrent()) return
     setNotice('Email-уведомление возвращено в очередь доставки.')
     await action.reloadAll()
-  })
+  }, notificationDeliveryActionResourceKey(deliveryId))
 
   const handleDeployProvisioningRun = (runId: string) => {
     return runAction('provisioning', `deploy-run-${runId}`, async (action) => {
@@ -3606,8 +3608,7 @@ export function App() {
     ? paymentProviderAccounts.find((account) => account.id === editingProviderAccountId)
     : undefined
   const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
-  const providerFormActionBusy = actionBusyId === 'provider-save'
-    || Boolean(editingProviderAccountId && isActionResourceBusy(paymentProviderActionResourceKey(editingProviderAccountId)))
+  const providerFormActionBusy = isActionResourceBusy(paymentProviderActionResourceKey(editingProviderAccountId || 'create'))
   const tariffFormErrors = validateTariffForm(tariffForm)
   const tariffFormActionBusy = isActionResourceBusy(tariffActionResourceKey(editingTariffId || 'create'))
   const releaseFormActionBusy = isActionResourceBusy(appReleaseActionResourceKey(editingReleaseId || 'create'))
@@ -3615,14 +3616,11 @@ export function App() {
   const siteContentActionBusy = isActionResourceBusy(siteContentActionResourceKey)
   const workScenarioFormActionBusy = isActionResourceBusy(workScenarioActionResourceKey(editingWorkScenarioId || 'create'))
   const botSettingsActionBusy = isActionResourceBusy(botSettingsActionResourceKey)
+  const referralProgramFormActionBusy = isActionResourceBusy(referralProgramActionResourceKey)
   const serverFormErrors = validateServerForm(serverForm)
-  const serverFormActionBusy = actionBusyId === 'server-save'
-    || Boolean(editingServerId && isActionResourceBusy(serverActionResourceKey(editingServerId)))
-  const vpnPanelFormActionBusy = actionBusyId === 'vpn-panel-save'
-    || Boolean(editingVpnPanelId && isActionResourceBusy(vpnPanelActionResourceKey(editingVpnPanelId)))
-  const inboundFormActionBusy = actionBusyId === 'create-inbound'
-    || actionBusyId === `update-inbound-${editingInboundId}`
-    || Boolean(selectedVpnPanelId && isActionResourceBusy(
+  const serverFormActionBusy = isActionResourceBusy(serverActionResourceKey(editingServerId || 'create'))
+  const vpnPanelFormActionBusy = isActionResourceBusy(vpnPanelActionResourceKey(editingVpnPanelId || 'create'))
+  const inboundFormActionBusy = Boolean(selectedVpnPanelId && isActionResourceBusy(
       vpnPanelActionResourceKey(selectedVpnPanelId),
       ...(editingInboundId ? [vpnInboundActionResourceKey(editingInboundId)] : [])
     ))
@@ -3991,8 +3989,8 @@ export function App() {
                     <PrimaryButton
                       className="button-ghost"
                       onClick={() => void handleRetryNotificationDelivery(delivery.id)}
-                      disabled={actionBusyId === `retry-notification-${delivery.id}`}
-                      aria-busy={actionBusyId === `retry-notification-${delivery.id}`}
+                      disabled={isActionResourceBusy(notificationDeliveryActionResourceKey(delivery.id))}
+                      aria-busy={isActionResourceBusy(notificationDeliveryActionResourceKey(delivery.id))}
                     >
                       Повторить
                     </PrimaryButton>
@@ -4458,7 +4456,7 @@ export function App() {
       <div id="referrals" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('referrals')} hidden={activeSection !== 'referrals' || activeSectionLoadFailed}>
         <Card>
           <h3>{editingReferralProgramId ? 'Редактирование программы' : 'Новая реферальная программа'}</h3>
-          <form hidden={!canWriteSection('referrals')} aria-busy={actionBusyId === 'referral-program-save'} onSubmit={(event) => { event.preventDefault(); void handleSaveReferralProgram() }}>
+          <form hidden={!canWriteSection('referrals')} aria-busy={referralProgramFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveReferralProgram() }}>
             <fieldset className="form-section">
               <legend>Публикация</legend>
               <div className="form-grid">
@@ -4495,7 +4493,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={referralProgramFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={actionBusyId === 'referral-program-save' || referralProgramFormErrors.length > 0} aria-busy={actionBusyId === 'referral-program-save'}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={referralProgramFormActionBusy || referralProgramFormErrors.length > 0} aria-busy={referralProgramFormActionBusy}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
               {editingReferralProgramId && <PrimaryButton type="button" className="button-ghost" onClick={resetReferralProgramForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -4504,7 +4502,7 @@ export function App() {
           <h3>Программы</h3>
           <div className="list-stack">
             {referralPrograms.length === 0 && <EmptyState title="Программ нет" description="Создайте программу и активируйте ее для начислений после первой покупки." />}
-            {referralPrograms.map((program) => <div key={program.id} className="list-item-vertical"><div className="item-head"><div><strong>{program.name}</strong><div className="muted">Период: {formatDate(program.startAt)} - {formatDate(program.endAt)}</div><div className="muted">Обновлена: {formatDate(program.updatedAt)}</div></div><StatusBadge value={program.status} /></div><div className="toolbar" hidden={!canWriteSection('referrals')}><PrimaryButton className="button-secondary" onClick={() => editReferralProgram(program)}>Редактировать</PrimaryButton></div></div>)}
+            {referralPrograms.map((program) => <div key={program.id} className="list-item-vertical"><div className="item-head"><div><strong>{program.name}</strong><div className="muted">Период: {formatDate(program.startAt)} - {formatDate(program.endAt)}</div><div className="muted">Обновлена: {formatDate(program.updatedAt)}</div></div><StatusBadge value={program.status} /></div><div className="toolbar" hidden={!canWriteSection('referrals')}><PrimaryButton className="button-secondary" disabled={referralProgramFormActionBusy} onClick={() => editReferralProgram(program)}>Редактировать</PrimaryButton></div></div>)}
           </div>
         </Card>
         <Card>

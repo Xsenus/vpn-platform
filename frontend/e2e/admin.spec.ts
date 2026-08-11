@@ -472,6 +472,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedHomeDefaults: (() => void) | null = null
   let delayNextBotSettingsSaveResponse = false
   let releaseDelayedBotSettingsSave: (() => void) | null = null
+  let delayNextProviderCreateResponse = false
+  let releaseDelayedProviderCreate: (() => void) | null = null
   let delayNextProviderEnabledResponse = false
   let releaseDelayedProviderEnabled: (() => void) | null = null
   let delayNextOrderRecheckResponse = false
@@ -1022,6 +1024,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/payment-providers/accounts') {
+      if (delayNextProviderCreateResponse) {
+        delayNextProviderCreateResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedProviderCreate = resolve })
+        releaseDelayedProviderCreate = null
+      }
       const payload = body as Record<string, unknown>
       const account = paymentProviderAccount({
         id: 'provider-created-e2e',
@@ -1969,6 +1976,8 @@ async function mockAdminApi(page: Page) {
     releaseHomeDefaults: () => { releaseDelayedHomeDefaults?.() },
     delayNextBotSettingsSave: () => { delayNextBotSettingsSaveResponse = true },
     releaseBotSettingsSave: () => { releaseDelayedBotSettingsSave?.() },
+    delayNextProviderCreate: () => { delayNextProviderCreateResponse = true },
+    releaseProviderCreate: () => { releaseDelayedProviderCreate?.() },
     delayNextProviderEnabled: () => { delayNextProviderEnabledResponse = true },
     releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
     delayNextOrderRecheck: () => { delayNextOrderRecheckResponse = true },
@@ -3217,6 +3226,50 @@ test('admin serializes managed configuration commands per resource', async ({ pa
     contentCreateCountDuringRestore: 0,
     botTestCountDuringSave: 0
   })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin keeps form busy while an independent command finishes', async ({ page }) => {
+  test.setTimeout(120_000)
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-multi-action-busy-token', 'admin-multi-action-busy-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  await paymentsPanel.getByLabel('Внутреннее имя').fill('parallel-provider-e2e')
+  await paymentsPanel.getByLabel('Название для пользователя').fill('Parallel Provider E2E')
+  await paymentsPanel.getByLabel('Shop ID магазина').fill('parallel-shop-e2e')
+  await paymentsPanel.getByRole('textbox', { name: /^Секретный ключ/ }).fill('parallel-api-key')
+  await paymentsPanel.getByRole('textbox', { name: /^Секрет webhook/ }).fill('parallel-webhook-key')
+  await paymentsPanel.getByLabel('URL возврата после оплаты').fill('https://cabinet.example.test/payment-return')
+  await paymentsPanel.getByLabel('URL webhook в YooKassa').fill('https://api.example.test/api/webhooks/payments/yookassa')
+
+  const saveButton = paymentsPanel.getByRole('button', { name: 'Сохранить способ оплаты' })
+  api.delayNextProviderCreate()
+  await saveButton.click()
+  await expect.poll(() => api.getRequestCount('/api/admin/payment-providers/accounts', 'POST')).toBe(1)
+  await expect(saveButton).toBeDisabled()
+
+  const existingProviderRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa sandbox' }).first()
+  await existingProviderRow.getByRole('button', { name: 'Проверить настройки' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/payment-providers/accounts/provider-yookassa/check', 'POST')).toBe(1)
+  await expect(page.getByText('yookassa-sandbox: настройки готовы.')).toBeVisible()
+
+  await expect(saveButton).toBeDisabled()
+  await expect(paymentsPanel.locator('form').first()).toHaveAttribute('aria-busy', 'true')
+  await saveButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/payment-providers/accounts', 'POST')).toBe(1)
+
+  api.releaseProviderCreate()
+  await expect(page.getByText('Способ оплаты parallel-provider-e2e сохранен. Секреты не отображаются.')).toBeVisible()
+  await expect(saveButton).toBeEnabled()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

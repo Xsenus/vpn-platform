@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin concurrent busy resource owner
+
+Scope:
+- A completed independent admin command must not clear the visible busy state of another in-flight command.
+- All mutation forms and row commands must derive busy state from the multi-owner resource set instead of one scalar action ID.
+
+Results:
+- Roadmap progress: `637/657` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-concurrent-busy-resource-owner`, version `0.624.0`.
+- Reproduction before fix: delayed provider create was initially disabled, but a completed check of another provider overwrote and cleared the scalar action ID, leaving the pending form enabled with `aria-busy=false`. Fail-first desktop/mobile: `0/2`.
+- After fix: `actionBusyId` is removed; provider/panel/server/inbound forms, referral save and notification retry use resource keys. Targeted desktop/mobile: `2/2`; programmatic submit kept provider create POST count at `1`.
+- Related notification/provider/VPN infrastructure/critical admin regression: `12/12` in `4.2 min`; final console-responsive Playwright: `184/184` in `13.1 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: pending form remains disabled and `aria-busy=true` while independent row commands complete; no layout shift, horizontal overflow, clipped controls or stuck confirmation dialogs.
+- Frontend tests: `128/128`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.59/106.77 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `623` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin managed configuration resource owner
 
 Scope:

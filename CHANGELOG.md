@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.624.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-concurrent-busy-resource-owner`.
+
+### Исправлено
+
+- Параллельная независимая admin-команда больше не сбрасывает индикатор и `disabled` незавершённой формы или строки.
+- Однослотовый `actionBusyId` удалён; create/edit формы payment provider, VPN panel, server и inbound используют многозначный resource-owner set.
+- Referral save и retry отдельных email-уведомлений получили явные resource keys и устойчивый shared busy-state.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: завершившийся provider check делал pending provider-create форму enabled и `aria-busy=false`. После исправления targeted contract прошёл `2/2`, duplicate programmatic submit не отправил второй POST.
+- Notification/provider/VPN infrastructure/critical admin regression прошёл `12/12` за `4.2 min`; полный console-responsive Playwright — `184/184` за `13.1 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `128/128`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.59/106.77 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `623`, secret scan `668` files/`0` findings.
+- Roadmap: `637/657` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.623.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-managed-config-resource-owner`.
