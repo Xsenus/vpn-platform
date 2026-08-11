@@ -540,6 +540,10 @@ function readAdminSectionFromHash(): AdminSectionId {
   return parseAdminSectionHref(window.location.hash) ?? adminSections[0][0]
 }
 
+function supportActionResourceKey(conversationId: string) {
+  return `support:${conversationId}`
+}
+
 type GenericUser = AdminUserDto
 type ServerFormState = CreateServerPayload
 type LoadError = { area: string; message: string }
@@ -1191,6 +1195,7 @@ export function App() {
   const [sessionHydrating, setSessionHydrating] = useState(Boolean(token))
   const [logoutBusy, setLogoutBusy] = useState(false)
   const [actionBusyId, setActionBusyId] = useState('')
+  const [actionBusyResourceKeys, setActionBusyResourceKeys] = useState<ReadonlySet<string>>(() => new Set())
   const [serverForm, setServerForm] = useState<ServerFormState>(defaultServerForm)
   const [editingServerId, setEditingServerId] = useState<string | null>(null)
   const [providerForm, setProviderForm] = useState<UpsertPaymentProviderAccountPayload>(defaultProviderForm)
@@ -1210,6 +1215,7 @@ export function App() {
   const usersRequestId = useRef(0)
   const usersLoadInFlight = useRef<AdminUsersLoadRequest | null>(null)
   const actionRequestsInFlight = useRef(new Set<string>())
+  const actionResourceOwners = useRef(new Map<string, string>())
   const userOverviewRequestId = useRef(0)
   const userOverviewLoadInFlight = useRef<AdminDetailLoadRequest | null>(null)
   const supportMessagesRequestId = useRef(0)
@@ -1827,7 +1833,12 @@ export function App() {
     goToAdminSection(availableAdminSections[nextIndex][0], 'tab')
   }
 
-  const runAction = async (requiredSections: AdminSectionId | readonly AdminSectionId[] | null, id: string, action: (context: AdminActionContext) => Promise<void>) => {
+  const runAction = async (
+    requiredSections: AdminSectionId | readonly AdminSectionId[] | null,
+    id: string,
+    action: (context: AdminActionContext) => Promise<void>,
+    resourceKey = id
+  ) => {
     const sections = requiredSections === null ? [] : Array.isArray(requiredSections) ? requiredSections : [requiredSections]
     const deniedSection = sections.find((section) => !canWriteSection(section))
     if (deniedSection) {
@@ -1837,9 +1848,11 @@ export function App() {
     const operationId = sessionOperationId.current
     const operationIsCurrent = () => sessionOperationId.current === operationId
     const requestKey = `${operationId}:${id}`
-    if (actionRequestsInFlight.current.has(requestKey)) return
+    if (actionRequestsInFlight.current.has(requestKey) || actionResourceOwners.current.has(resourceKey)) return
     actionRequestsInFlight.current.add(requestKey)
+    actionResourceOwners.current.set(resourceKey, requestKey)
     setActionBusyId(id)
+    setActionBusyResourceKeys((current) => new Set(current).add(resourceKey))
     setError('')
     setNotice('')
     try {
@@ -1854,6 +1867,14 @@ export function App() {
       if (operationIsCurrent()) setError(normalizeApiError(e, 'Не удалось выполнить действие. Повторите попытку.'))
     } finally {
       actionRequestsInFlight.current.delete(requestKey)
+      if (actionResourceOwners.current.get(resourceKey) === requestKey) {
+        actionResourceOwners.current.delete(resourceKey)
+        setActionBusyResourceKeys((current) => {
+          const next = new Set(current)
+          next.delete(resourceKey)
+          return next
+        })
+      }
       if (operationIsCurrent()) setActionBusyId((current) => current === id ? '' : current)
     }
   }
@@ -1968,7 +1989,9 @@ export function App() {
     setBotSettingsCheck(null)
     setLoadErrors([])
     actionRequestsInFlight.current.clear()
+    actionResourceOwners.current.clear()
     setActionBusyId('')
+    setActionBusyResourceKeys(new Set())
   }
 
   const clearAdminSession = () => {
@@ -3018,7 +3041,7 @@ export function App() {
       if (operationIsCurrent() && selectedSupportConversationIdRef.current === conversationId) {
         await loadSupportMessages(conversationId, token, operationId)
       }
-    })
+    }, supportActionResourceKey(conversationId))
   }
 
   const handleSupportStatus = async (status: string, conversationId = selectedSupportConversationId) => {
@@ -3047,7 +3070,7 @@ export function App() {
       if (operationIsCurrent() && selectedSupportConversationIdRef.current === conversationId) {
         await loadSupportMessages(conversationId, token, operationId)
       }
-    })
+    }, supportActionResourceKey(conversationId))
   }
 
   const handleSupportNote = async () => {
@@ -3078,7 +3101,7 @@ export function App() {
       if (operationIsCurrent() && selectedSupportConversationIdRef.current === conversationId) {
         await loadSupportMessages(conversationId, token, operationId)
       }
-    })
+    }, supportActionResourceKey(conversationId))
   }
 
   const editVpnPanel = (panel: VpnPanelDto) => {
@@ -4624,7 +4647,7 @@ export function App() {
         <Card>
           <h3>Обращения в поддержку</h3>
           <div className="list-stack">{supportConversations.length === 0 && <EmptyState title="Нет обращений" description="Сообщения из кабинета и Telegram появятся в этом списке." />}{supportConversations.slice(0, 12).map((conversation) => {
-            const statusBusy = actionBusyId === `support-status-${conversation.id}`
+            const statusBusy = actionBusyResourceKeys.has(supportActionResourceKey(conversation.id))
             return <div key={conversation.id} className={`list-item-vertical${selectedSupportConversationId === conversation.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{conversation.subject || 'Обращение в поддержку'}</strong><div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · пользователь:{shortId(conversation.userId)}</div><div className="muted">Ответственный: {shortId(conversation.assignedToUserId)} · заметка: {conversation.internalNote || '—'}</div></div><StatusBadge value={conversation.status} /></div><div className="toolbar"><PrimaryButton className={selectedSupportConversationId === conversation.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectSupportConversation(conversation.id)}>{selectedSupportConversationId === conversation.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('support') && <><PrimaryButton className="button-secondary" disabled={statusBusy} aria-busy={statusBusy} onClick={() => void handleSupportStatus('pending', conversation.id)}>В ожидание</PrimaryButton><PrimaryButton disabled={statusBusy} aria-busy={statusBusy} onClick={() => void handleSupportStatus(conversation.status === 'closed' ? 'open' : 'closed', conversation.id)} className="button-secondary">{conversation.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}</PrimaryButton></>}</div></div>
           })}</div>
         </Card>
@@ -4642,13 +4665,13 @@ export function App() {
           )}
           {!supportMessagesLoading && !supportMessagesError && selectedSupportConversationId && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Для выбранного обращения сообщения пока не сохранены." />}
           <div className="list-stack mt-12">{supportMessages.slice(-12).map((message) => <div key={message.id} className="list-item-vertical"><div className="card-head"><strong>{message.direction}{message.isInternalNote ? ' · внутренняя заметка' : ''}</strong><span className="muted">{formatDate(message.createdAt)}</span></div><div>{message.text}</div></div>)}</div>
-          <form hidden={!canWriteSection('support')} className="mt-12" aria-busy={actionBusyId === `support-reply-${selectedSupportConversationId}`} onSubmit={(event) => { event.preventDefault(); void handleReplySupport() }}>
+          <form hidden={!canWriteSection('support')} className="mt-12" aria-busy={actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))} onSubmit={(event) => { event.preventDefault(); void handleReplySupport() }}>
             <label><span>Ответ пользователю</span><textarea value={supportReplyText} onChange={(e) => setSupportReplyText(e.target.value)} rows={3} placeholder="Текст ответа" /></label>
-            <PrimaryButton type="submit" disabled={!selectedSupportConversationId || !supportReplyText.trim() || actionBusyId === `support-reply-${selectedSupportConversationId}`} aria-busy={actionBusyId === `support-reply-${selectedSupportConversationId}`}>{supportConversations.find((conversation) => conversation.id === selectedSupportConversationId)?.telegramUserId ? 'Отправить через Telegram' : 'Сохранить ответ'}</PrimaryButton>
+            <PrimaryButton type="submit" disabled={!selectedSupportConversationId || !supportReplyText.trim() || actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))} aria-busy={actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))}>{supportConversations.find((conversation) => conversation.id === selectedSupportConversationId)?.telegramUserId ? 'Отправить через Telegram' : 'Сохранить ответ'}</PrimaryButton>
           </form>
-          <form hidden={!canWriteSection('support')} className="mt-12" aria-busy={actionBusyId === `support-note-${selectedSupportConversationId}`} onSubmit={(event) => { event.preventDefault(); void handleSupportNote() }}>
+          <form hidden={!canWriteSection('support')} className="mt-12" aria-busy={actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))} onSubmit={(event) => { event.preventDefault(); void handleSupportNote() }}>
             <label><span>Внутренняя заметка</span><textarea value={supportNoteText} onChange={(e) => setSupportNoteText(e.target.value)} rows={2} placeholder="Видно только администраторам" /></label>
-            <PrimaryButton type="submit" disabled={!selectedSupportConversationId || !supportNoteText.trim() || actionBusyId === `support-note-${selectedSupportConversationId}`} aria-busy={actionBusyId === `support-note-${selectedSupportConversationId}`} className="button-secondary">Добавить заметку</PrimaryButton>
+            <PrimaryButton type="submit" disabled={!selectedSupportConversationId || !supportNoteText.trim() || actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))} aria-busy={actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))} className="button-secondary">Добавить заметку</PrimaryButton>
           </form>
         </Card>
       </div>

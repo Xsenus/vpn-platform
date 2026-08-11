@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin support mutation resource owner
+
+Scope:
+- Status, reply and internal-note mutations for one support conversation must not run concurrently with the same optimistic revision.
+- A blocked sibling submit must preserve its draft and become available after the current resource owner finishes.
+
+Results:
+- Roadmap progress: `632/652` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-support-mutation-resource-owner`, version `0.619.0`.
+- Reproduction before fix: while one support status PATCH was delayed, programmatic reply and note submits used separate action IDs and crossed the same conversation/revision boundary. Fail-first desktop/mobile: `0/2`; reply POST count was `1` instead of `0`.
+- After fix: admin `runAction` owns an optional resource key synchronously, clears it only by request identity and exposes a shared busy set. Status/reply/note use `support:{conversationId}`; targeted desktop/mobile: `2/2`, blocked drafts were preserved and later requests used revisions `1` and `2`.
+- Expanded support/managed regression: `24/24` in `4.9 min`; full admin desktop/mobile: `84/84` in `7.4 min`; final console-responsive Playwright: `174/174` in `10.6 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: layout markup and dimensions were unchanged; shared busy states, focus, section navigation, role boundaries and support controls remained operable without blank state, horizontal overflow or clipped controls.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.59/106.77 kB`; admin bundle raw `528640`, gzip `141319`, largest `228968`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `618` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet app-version mark-seen single-flight
 
 Scope:

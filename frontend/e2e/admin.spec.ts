@@ -2786,6 +2786,51 @@ test('support agent keeps channel-aware conversation lifecycle across reload', a
   expect(browserErrors).toEqual([])
 })
 
+test('admin serializes support mutations for one conversation', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.useSupportLifecycleFixture()
+  api.delayNextSupportStatus()
+  await seedAdminSession(page, 'admin-support-owner-token', 'admin-support-owner-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Поддержка', 'support')
+
+  const supportPanel = page.locator('#support')
+  const selectedConversation = supportPanel.locator('.list-item-vertical.selected-item').filter({ hasText: 'Проверка доступа' })
+  const replyInput = supportPanel.getByLabel('Ответ пользователю')
+  const noteInput = supportPanel.getByLabel('Внутренняя заметка')
+  await replyInput.fill('Ответ после смены статуса')
+  await noteInput.fill('Заметка после смены статуса')
+
+  await selectedConversation.getByRole('button', { name: 'В ожидание' }).click()
+  await expect.poll(() => api.getRequestCount('/api/admin/support/conversations/support-e2e/status', 'PATCH')).toBe(1)
+
+  await supportPanel.locator('form').evaluateAll((forms) => {
+    for (const form of forms) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  await page.waitForTimeout(300)
+  expect(api.getRequestCount('/api/admin/support/conversations/support-e2e/reply', 'POST')).toBe(0)
+  expect(api.getRequestCount('/api/admin/support/conversations/support-e2e/notes', 'POST')).toBe(0)
+  await expect(replyInput).toHaveValue('Ответ после смены статуса')
+  await expect(noteInput).toHaveValue('Заметка после смены статуса')
+
+  api.releaseSupportStatus()
+  await expect(page.getByText('Статус обращения обновлен: pending.', { exact: true })).toBeVisible()
+
+  await supportPanel.getByRole('button', { name: 'Добавить заметку' }).click()
+  await expect(page.getByText('Внутренняя заметка сохранена.', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/notes')?.body)
+    .toEqual({ text: 'Заметка после смены статуса', revision: 1 })
+  await expect(replyInput).toHaveValue('Ответ после смены статуса')
+
+  await supportPanel.getByRole('button', { name: 'Сохранить ответ' }).click()
+  await expect(page.getByText('Ответ сохранен в обращении.', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/support/conversations/support-e2e/reply')?.body)
+    .toEqual({ text: 'Ответ после смены статуса', revision: 2 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('admin payment recheck and refunds persist across reload', async ({ page }) => {
   test.setTimeout(150_000)
   const browserErrors: string[] = []

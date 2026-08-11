@@ -45,8 +45,8 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-11-cabinet-app-version-seen-single-flight", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("172/172", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-11-admin-support-mutation-resource-owner", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("174/174", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1125/1125",
-                     "2026-08-11-cabinet-app-version-seen-single-flight",
-                     "0.618.0",
+                     "2026-08-11-admin-support-mutation-resource-owner",
+                     "0.619.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

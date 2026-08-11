@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.619.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-support-mutation-resource-owner`.
+
+### Исправлено
+
+- Разные mutation-команды одного обращения поддержки больше не отправляются параллельно с одной и той же optimistic `revision`.
+- Общий admin `runAction` получил identity-safe resource owner; status, reply и internal note одного обращения используют единый busy/ownership boundary, сохраняя независимость разных ресурсов.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: во время задержанного status PATCH админка отправляла reply POST вместо ожидаемых `0` дополнительных mutations. После исправления targeted contract прошёл `2/2`; черновики сохранились, а note/reply последовательно ушли с revisions `1` и `2`.
+- Расширенный support/managed regression прошёл `24/24` за `4.9 min`, весь admin desktop/mobile — `84/84` за `7.4 min`; полный console-responsive Playwright — `174/174` за `10.6 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Общий busy-state блокирует status/reply/note одного обращения без изменения layout; focus, navigation, role boundaries, support lifecycle и responsive controls остались зелёными.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.59/106.77 kB`, admin bundle `528640/141319/max 228968`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `618`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `632/652` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.618.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-app-version-seen-single-flight`.

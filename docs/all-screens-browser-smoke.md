@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-11-cabinet-app-version-seen-single-flight`, версия `0.618.0`; server acknowledgement закрытия cabinet app-version имеет session/release-scoped Promise owner, не дублирует `mark-seen` POST и допускает следующую попытку после transient failure, а полный browser gate проходит `172/172` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-11-admin-support-mutation-resource-owner`, версия `0.619.0`; status/reply/internal note одного admin support conversation используют общий identity-safe resource owner и shared busy-state, а полный browser gate проходит `174/174` без failed/flaky/skipped.
