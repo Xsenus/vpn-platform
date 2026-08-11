@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin detail retry single-flight
+
+Scope:
+- User overview, support messages and VPN panel details must each own one request per admin session operation, token and selected entity when duplicate retry events arrive before React applies `busy`.
+- Existing request-generation guards must still reject completion after selection or session changes.
+
+Results:
+- Roadmap progress: `626/646` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-detail-retry-single-flight`, version `0.613.0`.
+- Reproduction before fix: generation IDs rejected stale results but did not own network work; synchronous duplicate retry sent two additional user-overview GETs, two support-message GETs and two full five-request VPN panel detail loads. Fail-first desktop/mobile: `0/6`, with each control counter at `3` instead of `2` including the initial failed attempt.
+- After fix: all three loaders use operation/token/entity-scoped `AdminDetailLoadRequest` owners, return the current Promise to duplicate callers and clear ownership by request identity, selection and session boundaries. Targeted desktop/mobile contract: `6/6`.
+- Final admin desktop/mobile regression: `80/80` in `6.6 min`; final console-responsive Playwright: `170/170` in `9.2 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: recovery markup was unchanged; the full responsive matrix confirmed all admin sections without horizontal overflow, overlap or clipped controls.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `351.49 kB`, gzip `102.80 kB`; cabinet bundle `368.29/106.39 kB`; admin bundle raw `527630`, gzip `140994`, largest `227958`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `612` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin user filter load recovery
 
 Scope:

@@ -321,7 +321,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - ручное обновление cabinet-данных имеет session/token-scoped single-flight owner и не дублирует восемь приватных GET при синхронной повторной activation;
 - ручное обновление admin-данных имеет operation/token/session-scoped single-flight owner и не дублирует полный aggregate набор GET при синхронной повторной activation;
 - фильтры пользователей админки имеют operation/token/search/status-scoped single-flight owner, локальную ошибку без stale списка и явный retry;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-admin-user-filter-load-recovery`, версия `0.612.0`;
-- roadmap progress: `625/645` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- повторные загрузки user overview, support messages и VPN panel details имеют operation/token/entity-scoped single-flight owner и не дублируют detail GET до busy-rerender;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-admin-detail-retry-single-flight`, версия `0.613.0`;
+- roadmap progress: `626/646` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

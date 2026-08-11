@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.613.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-detail-retry-single-flight`.
+
+### Исправлено
+
+- Синхронный двойной retry больше не повторяет загрузку карточки пользователя, сообщений поддержки или пятизапросный набор деталей VPN-панели до React busy-rerender.
+- User overview, support messages и VPN panel details получили operation/token/entity-scoped Promise owners с очисткой по request identity, смене выбора и session boundary.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/6`: каждая контрольная detail-точка получала `3` вызова вместо `2`. После исправления targeted single-flight/recovery contract прошел `6/6`.
+- Финальный admin desktop/mobile regression прошел `80/80` за `6.6 min`; полный console-responsive Playwright — `170/170` за `9.2 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Визуальная структура локальных recovery-панелей не менялась; responsive gate подтвердил отсутствие overflow/overlap и корректное отображение всех admin sections.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `351.49/102.80 kB`, cabinet bundle `368.29/106.39 kB`, admin bundle `527630/140994/max 227958`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зеленый; encoding guard `14/14`, release seed `612`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `626/646` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.612.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-user-filter-load-recovery`.

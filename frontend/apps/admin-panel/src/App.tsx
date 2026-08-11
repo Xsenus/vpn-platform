@@ -556,6 +556,12 @@ type AdminUsersLoadRequest = {
   status: string
   promise: Promise<boolean>
 }
+type AdminDetailLoadRequest = {
+  operationId: number
+  token: string
+  entityId: string
+  promise: Promise<boolean>
+}
 
 type AdminActionContext = {
   operationId: number
@@ -1159,6 +1165,7 @@ export function App() {
   const [vpnPanels, setVpnPanels] = useState<VpnPanelDto[]>([])
   const [selectedVpnPanelId, setSelectedVpnPanelId] = useState('')
   const vpnPanelDetailsRequestId = useRef(0)
+  const vpnPanelDetailsLoadInFlight = useRef<AdminDetailLoadRequest | null>(null)
   const [vpnPanelDetailsLoading, setVpnPanelDetailsLoading] = useState(false)
   const [vpnPanelDetailsError, setVpnPanelDetailsError] = useState('')
   const [vpnInbounds, setVpnInbounds] = useState<VpnInboundDto[]>([])
@@ -1196,7 +1203,9 @@ export function App() {
   const usersLoadInFlight = useRef<AdminUsersLoadRequest | null>(null)
   const actionRequestsInFlight = useRef(new Set<string>())
   const userOverviewRequestId = useRef(0)
+  const userOverviewLoadInFlight = useRef<AdminDetailLoadRequest | null>(null)
   const supportMessagesRequestId = useRef(0)
+  const supportMessagesLoadInFlight = useRef<AdminDetailLoadRequest | null>(null)
   const selectedUserIdRef = useRef(selectedUserId)
   const selectedSupportConversationIdRef = useRef(selectedSupportConversationId)
   const selectedVpnPanelIdRef = useRef(selectedVpnPanelId)
@@ -1329,6 +1338,7 @@ export function App() {
     if (selectedUserIdRef.current === userId) return
     selectedUserIdRef.current = userId
     userOverviewRequestId.current += 1
+    userOverviewLoadInFlight.current = null
     setUserOverview(null)
     setUserOverviewLoading(false)
     setUserOverviewError('')
@@ -1339,6 +1349,7 @@ export function App() {
     if (selectedSupportConversationIdRef.current === conversationId) return
     selectedSupportConversationIdRef.current = conversationId
     supportMessagesRequestId.current += 1
+    supportMessagesLoadInFlight.current = null
     setSupportMessages([])
     setSupportMessagesLoading(false)
     setSupportMessagesError('')
@@ -1853,6 +1864,7 @@ export function App() {
     setSelectedUserId('')
     setUserOverview(null)
     userOverviewRequestId.current += 1
+    userOverviewLoadInFlight.current = null
     setUserOverviewLoading(false)
     setUserOverviewError('')
     setUserSearch('')
@@ -1882,6 +1894,7 @@ export function App() {
     setSelectedSupportConversationId('')
     setSupportMessages([])
     supportMessagesRequestId.current += 1
+    supportMessagesLoadInFlight.current = null
     setSupportMessagesLoading(false)
     setSupportMessagesError('')
     setSupportReplyText('')
@@ -1930,6 +1943,8 @@ export function App() {
     setSubscriptionMigrationTargets({})
     setVpnHealthChecks([])
     setVpnSyncRuns([])
+    vpnPanelDetailsRequestId.current += 1
+    vpnPanelDetailsLoadInFlight.current = null
     setVpnPanelDetailsLoading(false)
     setVpnPanelDetailsError('')
     setVpnPanelForm(defaultVpnPanelForm)
@@ -2072,64 +2087,91 @@ export function App() {
     }
   }
 
-  const loadUserOverview = async (
+  const loadUserOverview = (
     userId: string,
     currentToken = token,
     operationId = sessionOperationId.current
-  ) => {
-    if (!currentToken || !userId) return false
+  ): Promise<boolean> => {
+    if (!currentToken || !userId || sessionOperationId.current !== operationId || selectedUserIdRef.current !== userId) return Promise.resolve(false)
+    const activeRequest = userOverviewLoadInFlight.current
+    if (activeRequest?.operationId === operationId
+      && activeRequest.token === currentToken
+      && activeRequest.entityId === userId) {
+      return activeRequest.promise
+    }
     const requestId = ++userOverviewRequestId.current
     const requestIsCurrent = () => sessionOperationId.current === operationId
       && userOverviewRequestId.current === requestId
       && selectedUserIdRef.current === userId
-    setUserOverview(null)
-    setUserOverviewLoading(true)
-    setUserOverviewError('')
-    try {
-      const overview = await api.getAdminUserOverview(currentToken, userId)
-      if (!requestIsCurrent()) return false
-      setUserOverview(overview)
+    const request: AdminDetailLoadRequest = { operationId, token: currentToken, entityId: userId, promise: Promise.resolve(false) }
+    const promise = (async () => {
+      setUserOverview(null)
+      setUserOverviewLoading(true)
       setUserOverviewError('')
-      return true
-    } catch (e) {
-      if (!requestIsCurrent()) return false
-      setUserOverviewError(normalizeApiError(e, 'Не удалось загрузить карточку пользователя'))
-      return false
-    } finally {
-      if (requestIsCurrent()) setUserOverviewLoading(false)
-    }
+      try {
+        const overview = await api.getAdminUserOverview(currentToken, userId)
+        if (!requestIsCurrent()) return false
+        setUserOverview(overview)
+        setUserOverviewError('')
+        return true
+      } catch (e) {
+        if (!requestIsCurrent()) return false
+        setUserOverviewError(normalizeApiError(e, 'Не удалось загрузить карточку пользователя'))
+        return false
+      } finally {
+        if (requestIsCurrent()) setUserOverviewLoading(false)
+        if (userOverviewLoadInFlight.current === request) userOverviewLoadInFlight.current = null
+      }
+    })()
+    request.promise = promise
+    userOverviewLoadInFlight.current = request
+    return promise
   }
 
-  const loadSupportMessages = async (
+  const loadSupportMessages = (
     conversationId: string,
     currentToken = token,
     operationId = sessionOperationId.current
-  ) => {
-    if (!currentToken || !conversationId) return false
+  ): Promise<boolean> => {
+    if (!currentToken || !conversationId || sessionOperationId.current !== operationId || selectedSupportConversationIdRef.current !== conversationId) return Promise.resolve(false)
+    const activeRequest = supportMessagesLoadInFlight.current
+    if (activeRequest?.operationId === operationId
+      && activeRequest.token === currentToken
+      && activeRequest.entityId === conversationId) {
+      return activeRequest.promise
+    }
     const requestId = ++supportMessagesRequestId.current
     const requestIsCurrent = () => sessionOperationId.current === operationId
       && supportMessagesRequestId.current === requestId
       && selectedSupportConversationIdRef.current === conversationId
-    setSupportMessages([])
-    setSupportMessagesLoading(true)
-    setSupportMessagesError('')
-    try {
-      const messages = await api.getAdminSupportMessages(currentToken, conversationId)
-      if (!requestIsCurrent()) return false
-      setSupportMessages(messages)
+    const request: AdminDetailLoadRequest = { operationId, token: currentToken, entityId: conversationId, promise: Promise.resolve(false) }
+    const promise = (async () => {
+      setSupportMessages([])
+      setSupportMessagesLoading(true)
       setSupportMessagesError('')
-      return true
-    } catch (e) {
-      if (!requestIsCurrent()) return false
-      setSupportMessagesError(normalizeApiError(e, 'Не удалось загрузить сообщения поддержки'))
-      return false
-    } finally {
-      if (requestIsCurrent()) setSupportMessagesLoading(false)
-    }
+      try {
+        const messages = await api.getAdminSupportMessages(currentToken, conversationId)
+        if (!requestIsCurrent()) return false
+        setSupportMessages(messages)
+        setSupportMessagesError('')
+        return true
+      } catch (e) {
+        if (!requestIsCurrent()) return false
+        setSupportMessagesError(normalizeApiError(e, 'Не удалось загрузить сообщения поддержки'))
+        return false
+      } finally {
+        if (requestIsCurrent()) setSupportMessagesLoading(false)
+        if (supportMessagesLoadInFlight.current === request) supportMessagesLoadInFlight.current = null
+      }
+    })()
+    request.promise = promise
+    supportMessagesLoadInFlight.current = request
+    return promise
   }
 
   const clearVpnPanelDetails = () => {
     vpnPanelDetailsRequestId.current += 1
+    vpnPanelDetailsLoadInFlight.current = null
     setVpnInbounds([])
     setVpnMigrationInbounds([])
     setVpnClients([])
@@ -2140,50 +2182,63 @@ export function App() {
     setVpnPanelDetailsError('')
   }
 
-  const loadVpnPanelDetails = async (
+  const loadVpnPanelDetails = (
     panelId: string,
     currentToken = token,
     operationId = renderSessionOperationId
-  ) => {
-    if (!currentToken || !panelId || sessionOperationId.current !== operationId || selectedVpnPanelIdRef.current !== panelId) return false
+  ): Promise<boolean> => {
+    if (!currentToken || !panelId || sessionOperationId.current !== operationId || selectedVpnPanelIdRef.current !== panelId) return Promise.resolve(false)
+    const activeRequest = vpnPanelDetailsLoadInFlight.current
+    if (activeRequest?.operationId === operationId
+      && activeRequest.token === currentToken
+      && activeRequest.entityId === panelId) {
+      return activeRequest.promise
+    }
     const requestId = ++vpnPanelDetailsRequestId.current
     const requestIsCurrent = () => sessionOperationId.current === operationId
       && requestId === vpnPanelDetailsRequestId.current
       && selectedVpnPanelIdRef.current === panelId
-    setVpnPanelDetailsLoading(true)
-    setVpnPanelDetailsError('')
-    try {
-      const [nextInbounds, nextMigrationInbounds, nextClients, nextHealthChecks, nextSyncRuns] = await Promise.all([
-        api.getAdminVpnPanelInbounds(currentToken, panelId),
-        api.getAdminVpnInbounds(currentToken),
-        api.getAdminVpnPanelClients(currentToken, panelId),
-        api.getAdminVpnPanelHealthChecks(currentToken, panelId),
-        api.getAdminVpnPanelSyncRuns(currentToken, panelId)
-      ])
-      if (!requestIsCurrent()) return false
-      setVpnInbounds(nextInbounds)
-      setVpnMigrationInbounds(nextMigrationInbounds)
-      setVpnClients(nextClients)
-      setVpnClientMigrationTargets((current) => {
-        const next: Record<string, string> = {}
-        for (const client of nextClients) {
-          const currentTarget = current[client.id]
-          next[client.id] = currentTarget && nextMigrationInbounds.some((inbound) => inbound.id === currentTarget) ? currentTarget : ''
-        }
-        return next
-      })
-      setVpnHealthChecks(nextHealthChecks)
-      setVpnSyncRuns(nextSyncRuns)
+    const request: AdminDetailLoadRequest = { operationId, token: currentToken, entityId: panelId, promise: Promise.resolve(false) }
+    const promise = (async () => {
+      setVpnPanelDetailsLoading(true)
       setVpnPanelDetailsError('')
-      return true
-    } catch (e) {
-      if (!requestIsCurrent()) return false
-      clearVpnPanelDetails()
-      setVpnPanelDetailsError(normalizeApiError(e, 'Не удалось загрузить детали VPN-панели'))
-      return false
-    } finally {
-      if (requestIsCurrent()) setVpnPanelDetailsLoading(false)
-    }
+      try {
+        const [nextInbounds, nextMigrationInbounds, nextClients, nextHealthChecks, nextSyncRuns] = await Promise.all([
+          api.getAdminVpnPanelInbounds(currentToken, panelId),
+          api.getAdminVpnInbounds(currentToken),
+          api.getAdminVpnPanelClients(currentToken, panelId),
+          api.getAdminVpnPanelHealthChecks(currentToken, panelId),
+          api.getAdminVpnPanelSyncRuns(currentToken, panelId)
+        ])
+        if (!requestIsCurrent()) return false
+        setVpnInbounds(nextInbounds)
+        setVpnMigrationInbounds(nextMigrationInbounds)
+        setVpnClients(nextClients)
+        setVpnClientMigrationTargets((current) => {
+          const next: Record<string, string> = {}
+          for (const client of nextClients) {
+            const currentTarget = current[client.id]
+            next[client.id] = currentTarget && nextMigrationInbounds.some((inbound) => inbound.id === currentTarget) ? currentTarget : ''
+          }
+          return next
+        })
+        setVpnHealthChecks(nextHealthChecks)
+        setVpnSyncRuns(nextSyncRuns)
+        setVpnPanelDetailsError('')
+        return true
+      } catch (e) {
+        if (!requestIsCurrent()) return false
+        clearVpnPanelDetails()
+        setVpnPanelDetailsError(normalizeApiError(e, 'Не удалось загрузить детали VPN-панели'))
+        return false
+      } finally {
+        if (requestIsCurrent()) setVpnPanelDetailsLoading(false)
+        if (vpnPanelDetailsLoadInFlight.current === request) vpnPanelDetailsLoadInFlight.current = null
+      }
+    })()
+    request.promise = promise
+    vpnPanelDetailsLoadInFlight.current = request
+    return promise
   }
 
   const resetProviderForm = () => {

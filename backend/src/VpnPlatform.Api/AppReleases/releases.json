@@ -14440,5 +14440,28 @@
         "text": "Roadmap progress is 625/645 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-admin-detail-retry-single-flight",
+    "version": "0.613.0",
+    "releasedAt": "2026-08-11T12:36:46+07:00",
+    "title": "Детали админки загружаются одной операцией",
+    "summary": "Повторная загрузка карточки пользователя, сообщений поддержки и деталей VPN-панели использует текущий in-flight запрос и не дублирует API-вызовы.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Синхронный двойной retry больше не запускает второй user overview GET, support messages GET или пятизапросный VPN panel details load до busy-rerender."
+      },
+      {
+        "type": "improved",
+        "text": "Operation/token/entity-scoped Promise owners возвращают duplicate caller текущий результат и сбрасываются при смене выбранной записи или admin session."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 626/646 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

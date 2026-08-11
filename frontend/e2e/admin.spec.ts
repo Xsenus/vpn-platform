@@ -2195,7 +2195,10 @@ test('admin support messages failure stays scoped and recovers on explicit retry
   await expect(dialogCard.getByRole('heading', { name: 'Сообщений нет' })).toHaveCount(0)
 
   api.allowSupportMessages()
-  await dialogCard.getByRole('button', { name: 'Повторить загрузку сообщений' }).click()
+  await dialogCard.getByRole('button', { name: 'Повторить загрузку сообщений' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect.poll(() => api.getRequestCount(messagesPath)).toBe(2)
   await expect(dialogCard.getByText('Старое сообщение первого обращения', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить сообщения поддержки' })).toHaveCount(0)
@@ -2222,7 +2225,10 @@ test('admin user overview failure stays scoped and recovers on explicit retry', 
   await expect(overviewCard.getByText('Выберите пользователя.')).toHaveCount(0)
 
   api.allowUserOverview()
-  await overviewCard.getByRole('button', { name: 'Повторить загрузку карточки' }).click()
+  await overviewCard.getByRole('button', { name: 'Повторить загрузку карточки' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect.poll(() => api.getRequestCount(overviewPath)).toBe(2)
   await expect(overviewCard.getByText('Первый пользователь', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить карточку пользователя' })).toHaveCount(0)
@@ -2248,7 +2254,10 @@ test('admin VPN panel detail failure stays scoped and recovers on explicit retry
   await expect(detailsCard.getByRole('heading', { name: 'Клиентов нет' })).toHaveCount(0)
 
   api.allowVpnPanelDetails()
-  await detailsCard.getByRole('button', { name: 'Повторить загрузку деталей' }).click()
+  await detailsCard.getByRole('button', { name: 'Повторить загрузку деталей' }).evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
   await expect.poll(() => api.getRequestCount(inboundsPath)).toBe(2)
   await expect(detailsCard.getByText('default-vless', { exact: true })).toBeVisible()
   await expect(detailsCard.getByText('client@example.test', { exact: true })).toBeVisible()
