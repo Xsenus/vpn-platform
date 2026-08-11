@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public FAQ load lifecycle
+
+Scope:
+- FAQ must claim one initial request under React StrictMode and must not let an obsolete or unmounted request completion mutate the page.
+- A failed load must settle without request loops, hide the successful empty-state and recover through exactly one explicit retry.
+
+Results:
+- Roadmap progress: `620/640` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-faq-load-lifecycle`, version `0.607.0`.
+- Reproduction before fix: the FAQ effect had no initial claim, mounted ownership or request generation; StrictMode sent two GET requests on desktop and mobile. Fail-first was `0/2`, with `Expected 1 / Received 2` in both projects.
+- After fix: one component-scoped initial claim starts the request, an in-flight guard rejects duplicate actions, and mounted/request-ID checks reject stale callbacks. Failure clears data, remains mutually exclusive with «FAQ пока пуст» and exposes one local retry.
+- Targeted boundary: desktop/mobile `2/2`; final public desktop/mobile regression: `36/36`.
+- Final console-responsive Playwright: `160/160` in `10.6 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: FAQ recovery at 1440x900 and 305x700 CSS px kept alert, full-width mobile retry, search and category controls readable without overlap or horizontal overflow. The browser tab and temporary server were closed.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `350.62 kB`, gzip `102.59 kB`; cabinet bundle `368.01/106.29 kB`; admin bundle raw `525267`, gzip `140453`, largest `225595`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `606` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public catalog load recovery
 
 Scope:

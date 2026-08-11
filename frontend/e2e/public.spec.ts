@@ -134,8 +134,10 @@ async function mockPublicApi(page: Page) {
   let oversizedTariffsResponse = false
   let tariffsLoadShouldFail = false
   let paymentProvidersLoadShouldFail = false
+  let faqLoadShouldFail = false
   let tariffsRequestCount = 0
   let paymentProvidersRequestCount = 0
+  let faqRequestCount = 0
   let homeContentDelayMs = 0
   let customTariffsLoadError = ''
   let failNextPaymentInit = false
@@ -167,6 +169,14 @@ async function mockPublicApi(page: Page) {
   })
 
   await page.route('**/api/public/content/faq**', async (route) => {
+    const isHomeRequest = new URL(route.request().url()).searchParams.get('home') === 'true'
+    if (!isHomeRequest) {
+      faqRequestCount += 1
+      if (faqLoadShouldFail) {
+        await fulfillJson(route, { error: 'faq unavailable' }, 503)
+        return
+      }
+    }
     await fulfillJson(route, faqItems)
   })
 
@@ -453,10 +463,13 @@ async function mockPublicApi(page: Page) {
       tariffs: tariffsRequestCount,
       paymentProviders: paymentProvidersRequestCount
     }),
+    getFaqLoadRequestCount: () => faqRequestCount,
     failTariffsLoad: () => { tariffsLoadShouldFail = true },
     allowTariffsLoad: () => { tariffsLoadShouldFail = false },
     failPaymentProvidersLoad: () => { paymentProvidersLoadShouldFail = true },
     allowPaymentProvidersLoad: () => { paymentProvidersLoadShouldFail = false },
+    failFaqLoad: () => { faqLoadShouldFail = true },
+    allowFaqLoad: () => { faqLoadShouldFail = false },
     returnUnsafePaymentLink: () => { unsafePaymentLink = true },
     returnInvalidCheckoutResponse: () => { invalidCheckoutResponse = true },
     returnInvalidAuthResponse: () => { invalidAuthResponse = true },
@@ -540,6 +553,25 @@ test('public tariff and payment-provider failures stay scoped and recover explic
     contentWidth: document.documentElement.scrollWidth
   }))
   expect(layout.contentWidth).toBeLessThanOrEqual(layout.viewportWidth + 1)
+})
+
+test('public FAQ claims one StrictMode load and recovers only on explicit retry', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.failFaqLoad()
+
+  await page.goto('/faq')
+  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить FAQ')
+  await expect(page.getByText('FAQ пока пуст')).toHaveCount(0)
+  await expect.poll(api.getFaqLoadRequestCount).toBe(1)
+  await page.waitForTimeout(300)
+  expect(api.getFaqLoadRequestCount()).toBe(1)
+
+  api.allowFaqLoad()
+  await page.getByRole('button', { name: 'Повторить загрузку' }).click()
+  await expect(page.getByText('Как оплатить VPN?', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect.poll(api.getFaqLoadRequestCount).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('public tariffs handles invalid MIME, shape, item and size without a render crash', async ({ page }) => {

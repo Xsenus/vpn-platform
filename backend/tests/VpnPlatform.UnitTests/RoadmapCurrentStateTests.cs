@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-11-public-catalog-load-recovery";
-    private const string CurrentVersion = "0.606.0";
+    private const string CurrentReleaseId = "2026-08-11-public-faq-load-lifecycle";
+    private const string CurrentVersion = "0.607.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -74,6 +74,7 @@ public class RoadmapCurrentStateTests
         Assert.Contains("[x] `P11-ACC-327`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-328`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-329`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-330`", roadmap, StringComparison.Ordinal);
 
         foreach (var stillOpen in new[]
                  {

@@ -613,18 +613,42 @@ function FaqPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState(FAQ_ALL_CATEGORY)
+  const faqMountedRef = useRef(false)
+  const faqInitialLoadStartedRef = useRef(false)
+  const faqLoadInFlightRef = useRef(false)
+  const faqRequestIdRef = useRef(0)
 
   const loadFaq = useCallback(() => {
+    if (faqLoadInFlightRef.current) return
+    faqLoadInFlightRef.current = true
+    const requestId = faqRequestIdRef.current + 1
+    faqRequestIdRef.current = requestId
     setLoading(true)
     setError('')
     api.getFaq()
-      .then(setItems)
-      .catch(() => setError('Не удалось загрузить FAQ. Проверьте подключение к API и попробуйте еще раз.'))
-      .finally(() => setLoading(false))
+      .then((nextItems) => {
+        if (faqMountedRef.current && requestId === faqRequestIdRef.current) setItems(nextItems)
+      })
+      .catch(() => {
+        if (!faqMountedRef.current || requestId !== faqRequestIdRef.current) return
+        setItems([])
+        setError('Не удалось загрузить FAQ. Проверьте подключение к API и попробуйте еще раз.')
+      })
+      .finally(() => {
+        if (!faqMountedRef.current || requestId !== faqRequestIdRef.current) return
+        faqLoadInFlightRef.current = false
+        setLoading(false)
+      })
   }, [])
 
   useEffect(() => {
-    loadFaq()
+    faqMountedRef.current = true
+    if (!faqInitialLoadStartedRef.current) {
+      faqInitialLoadStartedRef.current = true
+      loadFaq()
+    }
+
+    return () => { faqMountedRef.current = false }
   }, [loadFaq])
 
   const categories = useMemo(() => getFaqCategories(items), [items])

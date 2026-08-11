@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-11.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-public-catalog-load-recovery`, версия `0.606.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `619/639` проверяемых пунктов, готовность `96.9%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-11-public-faq-load-lifecycle`, версия `0.607.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `620/640` проверяемых пунктов, готовность `96.9%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -2172,6 +2172,10 @@ git diff --check
   - Что сделать: независимые GET failures не должны перезаписывать друг друга, скрывать здоровую соседнюю область или выглядеть как подтверждённый empty response; recovery не должен требовать reload.
   - Что сделано: CMS, tariffs, providers и checkout mutation разделены по state/effect boundaries; обе API-области получили взаимоисключающие loading/error/empty состояния и явный retry, а provider failure передаёт точный blocker в тарифные CTA.
   - Доказательство: до исправления fail-first desktop/mobile был `0/2`; после исправления targeted `2/2`, финальный public regression `34/34`, полный Playwright `158/158` за `8.9 min` без failed/flaky/skipped, all-screens `6/6`; обе recovery-страницы на 1280/393 px проверены без false empty, overflow/overlap. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
+- [x] `P11-ACC-330` Защитить lifecycle загрузки публичного FAQ. 2026-08-11.
+  - Что сделать: React StrictMode не должен дублировать initial FAQ request; failed/stale/unmounted completion не должен создавать request loop, ложный empty-state или перезаписывать актуальный UI.
+  - Что сделано: FAQ использует component-scoped initial claim, in-flight single-flight и mounted/request generation guards; failure очищает данные и восстанавливается ровно одним явным retry.
+  - Доказательство: до исправления fail-first desktop/mobile был `0/2` с `2` initial GET вместо `1`; после исправления targeted `2/2`, финальный public regression `36/36`, полный Playwright `160/160` за `10.6 min` без failed/flaky/skipped, all-screens `6/6`; recovery UI на 1440x900/305x700 px проверен без false empty, overflow/overlap. Frontend `125/125`, backend `1125/1125`, EF drift/fresh SQLite зелёные; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2821,6 +2825,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-11-020` | P1 | Public FAQ / request lifecycle | StrictMode отправлял два initial FAQ GET; effect не владел callback, поэтому устаревшая попытка могла изменить UI, а single-flight contract отсутствовал. | Исправлено локально | Initial claim, mounted/request generation guards, mutually exclusive error/empty и один explicit retry; desktop/mobile/full responsive regression зелёные. |
 | `BUG-2026-08-11-019` | P1 | Public tariffs / load recovery | Тарифы, payment providers и checkout mutation делили общий error-state: параллельные ошибки перезаписывались, provider failure показывал false empty, а обе GET-ошибки требовали reload. | Исправлено локально | Независимые loading/error/empty/retry boundaries, точный CTA blocker и сохранение managed CMS copy; desktop/mobile/full responsive regression зелёные. |
 | `BUG-2026-08-11-018` | P0 | Public checkout / session boundary | Успешный `lastCheckout` не очищался при logout/session rejection/password reset и после нового login в той же вкладке снова показывал прежние ID заказа, ID платежа и redirect URL. | Исправлено локально | Общая session cleanup удаляет checkout result и order-bearing diagnostics; fail-first/desktop/mobile/full responsive regression зелёные. |
 | `BUG-2026-08-11-017` | P1 | Cabinet / partial load | Единый `Promise.all` блокировал весь кабинет при сбое любого из восьми endpoint, отбрасывал успешные ответы и не различал ложные fallback-состояния по областям. | Исправлено локально | Typed independent load areas, локальные взаимоисключающие data/error boundaries, безопасный support unlink mode и explicit retry; desktop/mobile/full responsive regression зелёные. |

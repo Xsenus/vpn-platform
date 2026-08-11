@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.607.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-faq-load-lifecycle`.
+
+### Исправлено
+
+- Публичный FAQ больше не отправляет два initial GET-запроса при React StrictMode effect replay.
+- Загрузка FAQ получила component ownership, single-flight claim и request generation guard: callback после ухода со страницы или устаревшей попытки не меняет UI.
+- Ошибка FAQ остается отдельным recovery-state без ложного «FAQ пока пуст», не запускает фоновый request loop и восстанавливается ровно одним явным повтором.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: каждый initial render отправлял `2` FAQ-запроса вместо `1`. После исправления targeted boundary прошёл `2/2`.
+- Финальный public desktop/mobile regression прошёл `36/36`; полный console-responsive Playwright — `160/160` за `10.6 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Recovery UI просмотрен на 1440x900 и 305x700 px: alert, retry, поиск и категория помещаются без false empty, overlap или horizontal overflow; временная browser-сессия закрыта.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `350.62/102.59 kB`, cabinet bundle `368.01/106.29 kB`, admin bundle `525267/140453/max 225595`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зеленый; encoding guard `14/14`, release seed `606`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `620/640` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.606.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-catalog-load-recovery`.

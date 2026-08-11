@@ -14302,5 +14302,28 @@
         "text": "Roadmap progress is 619/639 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-11-public-faq-load-lifecycle",
+    "version": "0.607.0",
+    "releasedAt": "2026-08-11T09:31:20+07:00",
+    "title": "FAQ загружается одной актуальной попыткой",
+    "summary": "Публичный FAQ выполняет один initial request под StrictMode, отклоняет устаревшие callbacks и восстанавливается явным повтором без ложного пустого состояния.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "React StrictMode больше не дублирует initial FAQ GET; component ownership и request generation не позволяют stale completion изменить страницу."
+      },
+      {
+        "type": "improved",
+        "text": "Ошибка FAQ отделена от успешного empty-state, не запускает фоновый request loop и исправляется ровно одним explicit retry."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 620/640 closed, readiness 96.9%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
