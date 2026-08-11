@@ -479,6 +479,7 @@ async function mockAdminApi(page: Page) {
   let delayNextOrderRecheckResponse = false
   let releaseDelayedOrderRecheck: (() => void) | null = null
   let failNextAccessQrStatus: number | null = null
+  let expiringAdminAccess = false
   let delayNextSubscriptionExtendResponse = false
   let releaseDelayedSubscriptionExtend: (() => void) | null = null
   let delayNextAccessQrResponse = false
@@ -533,11 +534,11 @@ async function mockAdminApi(page: Page) {
     })
   ]
   const subscriptions: Array<Record<string, unknown>> = [
-    { id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2026-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, blockReason: null, suspendedAt: null, cancelledAt: null, lifecycleAttemptCount: 0, lifecycleProcessingStartedAt: null, lifecycleLeaseExpiresAt: null, lifecycleNextAttemptAt: null, lifecycleLastError: null, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now },
+    { id: 'sub-e2e', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', status: 'Active', startAt: now, endAt: '2099-07-13T07:00:00Z', gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-e2e', lastPaymentId: 'payment-e2e', renewalCount: 0, blockReason: null, suspendedAt: null, cancelledAt: null, lifecycleAttemptCount: 0, lifecycleProcessingStartedAt: null, lifecycleLeaseExpiresAt: null, lifecycleNextAttemptAt: null, lifecycleLastError: null, accessUri: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now },
     { id: 'sub-cancelled', userId: 'user-e2e', tariffId: 'tariff-admin-pro', tariffName: 'Отменённая подписка', status: 'Cancelled', startAt: '2026-05-01T00:00:00Z', endAt: now, cancelledAt: now, gracePeriodEndAt: null, autoRenewFlag: false, sourceChannel: 'Web', currentServerId: 'server-eu', currentAccessId: 'access-revoked', lastPaymentId: 'payment-old', renewalCount: 0, blockReason: null, suspendedAt: null, lifecycleAttemptCount: 0, lifecycleProcessingStartedAt: null, lifecycleLeaseExpiresAt: null, lifecycleNextAttemptAt: null, lifecycleLastError: null, accessUri: 'vless://cancelled-stale-secret@example.test', qrCodePath: 'qr://cancelled-stale-secret', configPath: 'config://cancelled-stale-secret', nodeName: 'EU Sandbox', createdAt: now, updatedAt: now }
   ]
   const accessCredentials: Array<Record<string, unknown>> = [
-    { id: 'access-e2e', subscriptionId: 'sub-e2e', subscriptionStatus: 'Active', isTerminal: false, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-e2e', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://admin-e2e@example.test', qrCodePayload: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', status: 'Active', issuedAt: now, expiryDate: '2026-07-13T07:00:00Z', disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now },
+    { id: 'access-e2e', subscriptionId: 'sub-e2e', subscriptionStatus: 'Active', isTerminal: false, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-e2e', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://admin-e2e@example.test', qrCodePayload: 'vless://admin-e2e@example.test', qrCodePath: 'qr://admin', configPath: 'config://admin', status: 'Active', issuedAt: now, expiryDate: '2099-07-13T07:00:00Z', disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now },
     { id: 'access-revoked', subscriptionId: 'sub-revoked', subscriptionStatus: 'Expired', isTerminal: true, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-revoked', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://revoked-admin-secret@example.test', qrCodePayload: 'vless://revoked-admin-secret@example.test', qrCodePath: 'qr://revoked-admin-secret', configPath: 'config://revoked-admin-secret', status: 'Revoked', issuedAt: now, expiryDate: now, disabledAt: now, lastSyncedAt: now, revision: 2, history: [{ id: 'history-revoked', accessCredentialId: 'access-revoked', subscriptionId: 'sub-revoked', eventType: 'AccessRevoked', oldValueJson: '{}', newValueJson: '{}', createdAt: now }], createdAt: now, updatedAt: now },
     { id: 'access-cancelled-stale', subscriptionId: 'sub-cancelled', subscriptionStatus: 'Cancelled', isTerminal: true, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-cancelled-stale', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://cancelled-access-stale-secret@example.test', qrCodePayload: 'vless://cancelled-access-stale-secret@example.test', qrCodePath: 'qr://cancelled-access-stale-secret', configPath: 'config://cancelled-access-stale-secret', status: 'Active', issuedAt: now, expiryDate: now, disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now }
   ]
@@ -923,7 +924,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/access-credentials') {
-      await fulfillJson(route, accessCredentials)
+      await fulfillJson(route, expiringAdminAccess
+        ? accessCredentials.map((access, index) => index === 0
+          ? { ...access, expiryDate: '2026-06-13T07:00:30Z' }
+          : access)
+        : accessCredentials)
       return
     }
 
@@ -1983,6 +1988,7 @@ async function mockAdminApi(page: Page) {
     delayNextOrderRecheck: () => { delayNextOrderRecheckResponse = true },
     releaseOrderRecheck: () => { releaseDelayedOrderRecheck?.() },
     failNextAccessQrRequest: (status = 503) => { failNextAccessQrStatus = status },
+    expireAdminAccessSoon: () => { expiringAdminAccess = true },
     delayNextSubscriptionExtend: () => { delayNextSubscriptionExtendResponse = true },
     releaseSubscriptionExtend: () => { releaseDelayedSubscriptionExtend?.() },
     delayNextAccessQr: () => { delayNextAccessQrResponse = true },
@@ -3958,6 +3964,43 @@ test('admin subscription operations persist lifecycle across reload', async ({ p
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
+})
+
+test('admin hides expired VPN secrets and preserves only provider disable remediation without refresh', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-13T07:00:00Z') })
+  const api = await mockAdminApi(page)
+  api.expireAdminAccessSoon()
+  await seedAdminSession(page, 'admin-expiring-access-token', 'admin-expiring-access-refresh')
+
+  await page.goto('/#vpn')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  const vpnPanel = page.locator('#vpn')
+  let accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'vless://admin-e2e@example.test' })
+  await expect(accessRow).toBeVisible()
+  await accessRow.getByRole('button', { name: 'Показать QR' }).click()
+  await expect(accessRow.locator('.qr-preview')).toBeVisible()
+
+  await page.clock.fastForward(30_100)
+
+  await expect(page.getByText('vless://admin-e2e@example.test', { exact: false })).toHaveCount(0)
+  await expect(page.locator('.qr-preview')).toHaveCount(0)
+  accessRow = vpnPanel.locator('.list-item-vertical').filter({ hasText: 'access-e' })
+  await expect(accessRow).toContainText('Срок VPN-доступа истёк.')
+  await expect(accessRow).toContainText('клиент провайдера: скрыт')
+  await expect(accessRow.getByRole('button', { name: 'Отключить у провайдера' })).toBeVisible()
+  for (const name of ['Показать QR', 'Скопировать URI', 'Включить', 'Синхронизировать', 'Сбросить трафик']) {
+    await expect(accessRow.getByRole('button', { name })).toHaveCount(0)
+  }
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/enable', 'POST')).toBe(0)
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/sync', 'POST')).toBe(0)
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/reset-traffic', 'POST')).toBe(0)
+
+  await accessRow.getByRole('button', { name: 'Отключить у провайдера' }).click()
+  await vpnPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('VPN-доступ отключен.')).toBeVisible()
+  expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/disable', 'POST')).toBe(1)
+  await expect(accessRow.getByRole('button', { name: 'Отключить у провайдера' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('admin VPN access actions persist status and revision across reload', async ({ page }) => {

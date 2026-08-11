@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Admin access grace expiry
+
+Scope:
+- Admin access lists, user overview and QR must redact VPN secrets at `gracePeriodEndAt ?? endAt`, independently of delayed persisted status transitions.
+- Non-remedial provider commands must stop before the provider call, while disable remains available to remove an expired access from the provider.
+
+Results:
+- Roadmap progress: `649/669` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-admin-access-grace-expiry`, version `0.636.0`.
+- Reproduction before fix: backend admin/lifecycle boundary suite `29/35`; frontend helper lacked an effective-expiry contract; desktop/mobile browser fail-first `0/2`, with URI and QR retained after the deadline.
+- After fix: backend targeted `35/35`; frontend `135/135`; targeted expiry browser `2/2`. API projections redact provider/URI/QR/config values, QR and enable/sync/reset stop before provider history/audit mutations, and the open tab clears cached QR at the deadline while preserving provider disable remediation.
+- The first full console run exposed a cancelled-subscription remediation conflict at `214/216`; after excluding cancelled access fail-closed, targeted expiry plus full admin-flow passed `4/4`, and the final console-responsive Playwright passed `216/216` in `13.7 min`, `0` failed/flaky/skipped; all-screens remains `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Frontend typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `357.69 kB`, gzip `104.34 kB`; cabinet bundle `372.71/107.60 kB`; admin bundle raw `531616`, gzip `142394`, largest `231944`.
+- Backend full suite: `1132/1132`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation/release guards: `57/57`; latest release SQLite verification: OK; release seed: `635` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Cabinet access grace expiry
 
 Scope:

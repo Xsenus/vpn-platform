@@ -166,7 +166,7 @@ public class VpnAccessLifecycleService
 
     public async Task<Result<AdminAccessActionResult>> DisableAccessAsync(AccessCredential access, string? eventType, string? reason, Guid? actorUserId, CancellationToken cancellationToken)
     {
-        var parentError = GetParentSubscriptionError(access, "disabled");
+        var parentError = GetParentSubscriptionError(access, "disabled", allowUnavailableSubscription: true);
         if (parentError is not null)
         {
             return Result<AdminAccessActionResult>.Failure(parentError);
@@ -218,11 +218,16 @@ public class VpnAccessLifecycleService
         }
     }
 
-    public async Task<Result<AdminAccessActionResult>> EnableAccessAsync(Guid accessId, string? reason, Guid? actorUserId, CancellationToken cancellationToken)
+    public async Task<Result<AdminAccessActionResult>> EnableAccessAsync(
+        Guid accessId,
+        string? reason,
+        Guid? actorUserId,
+        CancellationToken cancellationToken,
+        bool allowUnavailableSubscription = false)
     {
         var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == accessId, cancellationToken);
         if (access is null) return Result<AdminAccessActionResult>.Failure("VPN access not found.");
-        var parentError = GetParentSubscriptionError(access, "enabled");
+        var parentError = GetParentSubscriptionError(access, "enabled", allowUnavailableSubscription);
         if (parentError is not null)
         {
             return Result<AdminAccessActionResult>.Failure(parentError);
@@ -362,10 +367,30 @@ public class VpnAccessLifecycleService
     private static AdminAccessActionResult ToResult(AccessCredential access, string? message = null, long? usedTrafficBytes = null)
         => new(access.Id, access.Status.ToString(), access.DisabledAt, access.LastSyncedAt, access.Revision, usedTrafficBytes, message);
 
-    private static string? GetParentSubscriptionError(AccessCredential access, string operation)
-        => access.Subscription?.Status == SubscriptionStatus.Cancelled
-            ? $"Cancelled subscription VPN access cannot be {operation}."
+    private string? GetParentSubscriptionError(
+        AccessCredential access,
+        string operation,
+        bool allowUnavailableSubscription = false)
+    {
+        if (access.Subscription is null)
+        {
+            return $"VPN access without a parent subscription cannot be {operation}.";
+        }
+
+        if (access.Subscription.Status == SubscriptionStatus.Cancelled)
+        {
+            return $"Cancelled subscription VPN access cannot be {operation}.";
+        }
+
+        return !allowUnavailableSubscription
+            && !BusinessRules.IsSubscriptionAccessAvailable(
+                access.Subscription.Status,
+                access.Subscription.EndAt,
+                access.Subscription.GracePeriodEndAt,
+                _clock.UtcNow)
+            ? $"Expired or inactive subscription VPN access cannot be {operation}."
             : null;
+    }
 
     private static object Snapshot(AccessCredential access)
         => new { access.Status, access.ProviderAccessId, access.DisabledAt, access.LastSyncedAt, access.Revision };

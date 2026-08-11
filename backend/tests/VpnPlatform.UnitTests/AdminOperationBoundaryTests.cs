@@ -334,6 +334,68 @@ public class AdminOperationBoundaryTests
         Assert.Equal(AccessCredentialStatus.Active, (await db.AccessCredentials.SingleAsync()).Status);
     }
 
+    [Theory]
+    [InlineData(SubscriptionStatus.Active)]
+    [InlineData(SubscriptionStatus.GracePeriod)]
+    public async Task Effective_Expiry_Should_Redact_Admin_Access_And_Reject_Qr_And_Enable_On_Sqlite(SubscriptionStatus status)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var now = new DateTimeOffset(2026, 8, 12, 0, 0, 0, TimeSpan.Zero);
+        var user = User(Guid.NewGuid());
+        var tariff = new Tariff { Name = "Expired", Slug = $"expired-admin-boundary-{status}", DurationDays = 30, Price = 500m, Currency = "RUB", IsActive = true };
+        var node = Node("expired-source", NodeStatus.Ready, true);
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var subscription = new Subscription
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            Status = status,
+            StartAt = now.AddDays(-33),
+            EndAt = status == SubscriptionStatus.Active ? now.AddDays(10) : now.AddDays(-3),
+            GracePeriodEndAt = now,
+            CurrentServerId = node.Id
+        };
+        var access = new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderType = "x3ui",
+            ProviderAccessId = "expired-provider-secret",
+            AccessUri = "vless://expired-admin-secret@example.test",
+            QrCodePath = "vless://expired-admin-qr-secret@example.test",
+            ConfigPath = "/configs/expired-admin-secret.json",
+            Status = AccessCredentialStatus.Disabled,
+            IssuedAt = now.AddDays(-30)
+        };
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+        subscription.CurrentAccessId = access.Id;
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(now), new SvgQrCodeGenerator(new FixedClock(now)));
+        var accessList = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(await controller.GetAccessCredentials(CancellationToken.None)).Value);
+
+        Assert.Contains("\"IsTerminal\":true", accessList, StringComparison.Ordinal);
+        Assert.Contains(JsonSerializer.Serialize(now).Trim('"'), accessList, StringComparison.Ordinal);
+        Assert.DoesNotContain("expired-provider-secret", accessList, StringComparison.Ordinal);
+        Assert.DoesNotContain("expired-admin-secret", accessList, StringComparison.Ordinal);
+        Assert.IsType<BadRequestObjectResult>(await controller.GetAccessCredentialQr(access.Id, CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.EnableAccessCredential(access.Id, new AdminAccessActionHttpRequest("test"), CancellationToken.None));
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        Assert.Equal(AccessCredentialStatus.Disabled, (await db.AccessCredentials.SingleAsync()).Status);
+    }
+
     private static AdminOperationsController CreateController(
         ApplicationDbContext db,
         Guid adminId,

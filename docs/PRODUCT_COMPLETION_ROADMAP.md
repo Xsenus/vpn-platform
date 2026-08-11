@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-cabinet-access-grace-expiry`, версия `0.635.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `648/668` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-admin-access-grace-expiry`, версия `0.636.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `649/669` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-10:
 
-- [x] `STATE-001` Backend test suite проходит: `1127/1127`.
-- [x] `STATE-002` Frontend test suite проходит: `134/134`.
+- [x] `STATE-001` Backend test suite проходит: `1132/1132`.
+- [x] `STATE-002` Frontend test suite проходит: `135/135`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2288,6 +2288,10 @@ git diff --check
   - Что сделать: кабинет не должен показывать URI, provider ID, config или QR после `gracePeriodEndAt ?? endAt`, даже если lifecycle worker ещё не обновил сохранённый статус подписки.
   - Что сделано: backend применяет единое effective-access правило к subscription/access DTO и обеим пользовательским QR-точкам; кабинет вычисляет effective status по текущему времени, очищает QR-кэш и обновляет все повторяющиеся access surfaces ближайшим deadline timer без reload.
   - Доказательство: до исправления frontend fail-first был `9/10`, backend exact-boundary SQLite `0/2`, desktop/mobile browser `0/2`; после исправления кабинетные unit `10/10`, backend cabinet `16/16`, lifecycle/security `24/24`, browser regression `2/2`, полный cabinet desktop/mobile `62/62`, финальный Playwright `214/214` за `11.8 min` без failed/flaky/skipped. Frontend `134/134`, typecheck/build/audit зелёные; backend `1127/1127`, Release build и EF drift зелёные; fresh SQLite flow проверен; внешние evidence не закрывались.
+
+- [x] `P11-ACC-359` Скрывать административный VPN-доступ и опасные provider-команды на effective expiry. 2026-08-12.
+
+  - Доказательство: до исправления backend admin/lifecycle boundary-suite был `29/35`, frontend helper не учитывал expiry, desktop/mobile browser был `0/2`; после исправления backend targeted `35/35`, frontend `135/135`, expiry browser `2/2`, полный admin-flow `2/2`. Первый полный прогон выявил cancelled-remediation конфликт `214/216`; после fail-closed уточнения targeted desktop/mobile прошёл `4/4`, финальный Playwright `216/216` за `13.7 min` без failed/flaky/skipped. Backend `1132/1132`, typecheck/build/audit зелёные, fresh SQLite/EF drift/encoding/secret guards проверены; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

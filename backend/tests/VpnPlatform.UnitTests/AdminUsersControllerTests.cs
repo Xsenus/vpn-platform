@@ -460,6 +460,21 @@ public class AdminUsersControllerTests
         Assert.Equal(string.Empty, cancelledAccess.GetProperty("QrCodePath").GetString());
         Assert.Equal(string.Empty, cancelledAccess.GetProperty("ConfigPath").GetString());
 
+        savedSubscription.Status = SubscriptionStatus.GracePeriod;
+        savedSubscription.CancelledAt = null;
+        savedSubscription.EndAt = now.AddDays(-3);
+        savedSubscription.GracePeriodEndAt = now;
+        await db.SaveChangesAsync();
+        using var expiredDocument = ToJson(await CreateController(db, UserRoles.Admin).GetOverview(userId, CancellationToken.None));
+        var expiredAccess = expiredDocument.RootElement.GetProperty("AccessCredentials")[0];
+        Assert.Equal("GracePeriod", expiredAccess.GetProperty("SubscriptionStatus").GetString());
+        Assert.True(expiredAccess.GetProperty("IsTerminal").GetBoolean());
+        Assert.Equal(string.Empty, expiredAccess.GetProperty("ProviderAccessId").GetString());
+        Assert.Equal(string.Empty, expiredAccess.GetProperty("AccessUri").GetString());
+        Assert.Equal(string.Empty, expiredAccess.GetProperty("QrCodePath").GetString());
+        Assert.Equal(string.Empty, expiredAccess.GetProperty("ConfigPath").GetString());
+        Assert.Equal(now, expiredAccess.GetProperty("ExpiryDate").GetDateTimeOffset());
+
         using var financeDocument = ToJson(await CreateController(db, UserRoles.FinanceManager).GetOverview(userId, CancellationToken.None));
         Assert.Equal(1, financeDocument.RootElement.GetProperty("Orders").GetArrayLength());
         Assert.Equal(1, financeDocument.RootElement.GetProperty("Payments").GetArrayLength());

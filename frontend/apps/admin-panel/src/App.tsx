@@ -56,7 +56,7 @@ import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, For
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 import { canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
-import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from './admin-accesses'
+import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
 import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
@@ -1200,6 +1200,7 @@ export function App() {
   const [subscriptions, setSubscriptions] = useState<SubscriptionDto[]>([])
   const [accessCredentials, setAccessCredentials] = useState<AccessCredentialDto[]>([])
   const [adminQrSvgs, setAdminQrSvgs] = useState<Record<string, string>>({})
+  const [adminAccessClockTick, setAdminAccessClockTick] = useState(0)
   const [orders, setOrders] = useState<OrderDto[]>([])
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
   const [orderSearch, setOrderSearch] = useState('')
@@ -1392,6 +1393,7 @@ export function App() {
   const dashboardFailedPayments = canReadFinance ? payments.filter((item) => item.status === 'Failed' || item.status === 'Cancelled').slice(0, 3) : []
   const dashboardFailedProvisioningRuns = provisioningRuns.filter((run) => ['Failed', 'PrecheckFailed'].includes(run.status)).slice(0, 3)
   const dashboardOpenSupportConversations = canReadSupport ? supportConversations.filter((conversation) => conversation.status !== 'closed').slice(0, 3) : []
+  const adminAccessNow = useMemo(() => new Date(), [accessCredentials, adminAccessClockTick, userOverview])
   const userOverviewStats = useMemo(() => buildAdminUserOverviewStats(userOverview), [userOverview])
   const filteredOrders = useMemo(() => {
     const searchText = orderSearch.trim().toLowerCase()
@@ -1832,6 +1834,20 @@ export function App() {
       setUserOverviewError('')
     }
   }, [token, selectedUserId])
+
+  useEffect(() => {
+    if (!token) return
+
+    const overviewAccesses = userOverview?.accessCredentials ?? []
+    const delay = getNextAdminAccessExpiryDelay([...accessCredentials, ...overviewAccesses])
+    if (delay === null) return
+
+    const timeoutId = window.setTimeout(() => {
+      setAdminQrSvgs({})
+      setAdminAccessClockTick((current) => current + 1)
+    }, Math.min(delay, 2_147_483_647))
+    return () => window.clearTimeout(timeoutId)
+  }, [accessCredentials, adminAccessClockTick, token, userOverview])
 
   const updateServerForm = <K extends keyof ServerFormState>(key: K, value: ServerFormState[K]) => setServerForm((current) => ({ ...current, [key]: value }))
   const updateProviderForm = <K extends keyof UpsertPaymentProviderAccountPayload>(key: K, value: UpsertPaymentProviderAccountPayload[K]) => setProviderForm((current) => ({ ...current, [key]: value }))
@@ -4137,7 +4153,7 @@ export function App() {
                     <div>
                       <strong>{access.providerType} · {access.serverName || shortId(access.serverId)}</strong>
                       <div className="muted">выдан {formatDate(access.issuedAt)} · sync {formatDate(access.lastSyncedAt)} · ревизия {access.revision}</div>
-                      {getAdminAccessTerminalReason(access)
+                      {getAdminAccessTerminalReason(access, adminAccessNow)
                         ? <div className="muted user-overview-link">Ключ скрыт: подписка или доступ завершены.</div>
                         : <div className="muted user-overview-link">{access.accessUri || 'URI не выдан'}</div>}
                     </div>
@@ -4574,9 +4590,14 @@ export function App() {
           <div className="list-stack">
             {accessCredentials.length === 0 && <EmptyState title="VPN-доступы пока не созданы" description="После оплаты здесь появится ссылка подключения, статус и история синхронизаций." />}
             {accessCredentials.slice(0, 12).map((access) => {
-              const terminalReason = getAdminAccessTerminalReason(access)
+              const terminalReason = getAdminAccessTerminalReason(access, adminAccessNow)
               const isTerminal = Boolean(terminalReason)
               const isActionBusy = actionBusyResourceKeys.has(accessActionResourceKey(access.id))
+              const canDisableExpiredAccess = canWriteSection('vpn')
+                && isAdminAccessExpired(access, adminAccessNow)
+                && access.subscriptionStatus !== 'Cancelled'
+                && access.status !== 'Disabled'
+                && access.status !== 'Revoked'
               return <div key={access.id} className="list-item-vertical">
                 <div className="item-head">
                   <strong>{access.providerType} · {isTerminal ? shortId(access.id) : (access.providerAccessId || shortId(access.id))}</strong>
@@ -4599,6 +4620,9 @@ export function App() {
                     <PrimaryButton disabled={isActionBusy} aria-busy={isActionBusy} onClick={() => void handleAccessSync(access)}>Синхронизировать</PrimaryButton>
                     <ConfirmButton disabled={isActionBusy} message="Необратимо обнулить счётчики трафика у VPN-провайдера? При сетевой неопределённости доступ получит статус SyncRequired для ручной сверки." onConfirm={() => handleAccessResetTraffic(access)}>Сбросить трафик</ConfirmButton>
                   </>}
+                </div>}
+                {canDisableExpiredAccess && <div className="toolbar">
+                  <ConfirmButton disabled={isActionBusy} className="button-secondary" message="Отключить истёкший VPN-доступ у провайдера?" onConfirm={() => handleAccessAction(access, false)}>Отключить у провайдера</ConfirmButton>
                 </div>}
               </div>
             })}

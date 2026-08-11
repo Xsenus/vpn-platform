@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { AccessCredentialDto } from '../packages/api-client/src/index.ts'
-import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason } from '../apps/admin-panel/src/admin-accesses.ts'
+import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from '../apps/admin-panel/src/admin-accesses.ts'
 
 function access(overrides: Partial<AccessCredentialDto> = {}): AccessCredentialDto {
   return {
@@ -22,7 +22,7 @@ function access(overrides: Partial<AccessCredentialDto> = {}): AccessCredentialD
 }
 
 test('cancelled parent subscription makes a stale active access terminal', () => {
-  const staleAccess = access({ subscriptionStatus: 'Cancelled', status: 'Active', isTerminal: true })
+  const staleAccess = access({ subscriptionStatus: 'Cancelled', status: 'Active', isTerminal: true, expiryDate: '2026-08-01T00:00:00Z' })
   const reason = 'Родительская подписка отменена. Ключ и provider-команды скрыты; доступна только история.'
 
   assert.equal(getAdminAccessTerminalReason(staleAccess), reason)
@@ -35,4 +35,19 @@ test('active access permits commands but requires a URI for copy and QR', () => 
   assert.equal(getAdminAccessTerminalReason(access()), null)
   assert.equal(getAdminAccessCommandBlocker(access(), 'sync'), null)
   assert.equal(getAdminAccessCommandBlocker(access({ accessUri: '' }), 'qr'), 'VPN URI ещё не выдан.')
+})
+
+test('expired admin access hides secrets and commands but preserves provider disable remediation', () => {
+  const now = new Date('2026-08-12T00:00:00Z')
+  const expiredAccess = access({ expiryDate: now.toISOString(), status: 'Active' })
+  const reason = 'Срок VPN-доступа истёк. Ключ и provider-команды скрыты; доступно только отключение у провайдера и история.'
+
+  assert.equal(isAdminAccessExpired(expiredAccess, now), true)
+  assert.equal(getAdminAccessTerminalReason(expiredAccess, now), reason)
+  for (const command of ['copy', 'qr', 'enable', 'sync', 'reset'] as const) {
+    assert.equal(getAdminAccessCommandBlocker(expiredAccess, command, now), reason)
+  }
+  assert.equal(getAdminAccessCommandBlocker(expiredAccess, 'disable', now), null)
+  assert.equal(getAdminAccessCommandBlocker(access({ ...expiredAccess, status: 'Disabled' }), 'disable', now), reason)
+  assert.equal(getNextAdminAccessExpiryDelay([access({ expiryDate: '2026-08-12T00:00:30Z' })], now), 30_000)
 })

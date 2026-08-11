@@ -234,6 +234,58 @@ public class VpnAccessAutomationMvpTests
         Assert.Equal(accessStatus, (await db.AccessCredentials.SingleAsync()).Status);
     }
 
+    [Theory]
+    [InlineData("enable", AccessCredentialStatus.Disabled)]
+    [InlineData("sync", AccessCredentialStatus.Active)]
+    [InlineData("reset", AccessCredentialStatus.Active)]
+    public async Task Expired_Grace_Period_Should_Reject_NonRemedial_Access_Command_Before_Provider_Call_On_Sqlite(
+        string operation,
+        AccessCredentialStatus accessStatus)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var provider = new TrackingVpnProvider();
+        var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var nodeId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+        var accessId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = $"expired-{operation}@example.test", DisplayName = "Client", Status = UserStatus.Active });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Premium", Slug = $"expired-{operation}", DurationDays = 30, Price = 490, Currency = "RUB" });
+        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "NL-1", Host = "nl1.example.test", IpAddress = "127.0.0.1", Capacity = 100, UsedCapacity = 1 });
+        db.Subscriptions.Add(new Subscription
+        {
+            Id = subscriptionId,
+            UserId = userId,
+            TariffId = tariffId,
+            Status = SubscriptionStatus.GracePeriod,
+            StartAt = clock.UtcNow.AddDays(-33),
+            EndAt = clock.UtcNow.AddDays(-3),
+            GracePeriodEndAt = clock.UtcNow
+        });
+        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = $"expired-client-{operation}", ServerId = nodeId, AccessUri = $"vless://expired-{operation}-secret", Status = accessStatus });
+        await db.SaveChangesAsync();
+
+        var result = operation switch
+        {
+            "enable" => await service.EnableAccessAsync(accessId, "test", null, CancellationToken.None),
+            "sync" => await service.SyncAccessAsync(accessId, "test", null, CancellationToken.None),
+            "reset" => await service.ResetTrafficAsync(accessId, "test", null, CancellationToken.None),
+            _ => throw new InvalidOperationException($"Unsupported test operation: {operation}")
+        };
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("expired", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.DisableCalls + provider.EnableCalls + provider.SyncCalls + provider.ResetCalls);
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        Assert.Equal(accessStatus, (await db.AccessCredentials.SingleAsync()).Status);
+    }
+
     [Fact]
     public async Task Revoked_Access_Should_Reject_Traffic_Reset_Without_Calling_Provider()
     {

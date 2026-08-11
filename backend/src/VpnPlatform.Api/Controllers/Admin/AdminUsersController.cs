@@ -7,6 +7,7 @@ using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Admin;
 
@@ -16,10 +17,12 @@ namespace VpnPlatform.Api.Controllers.Admin;
 public class AdminUsersController : ControllerBase
 {
     private readonly IApplicationDbContext _db;
+    private readonly IClock _clock;
 
-    public AdminUsersController(IApplicationDbContext db)
+    public AdminUsersController(IApplicationDbContext db, IClock? clock = null)
     {
         _db = db;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet]
@@ -187,32 +190,48 @@ public class AdminUsersController : ControllerBase
             .ToListAsync(cancellationToken);
         subscriptions = subscriptions.OrderByDescending(x => x.StartAt).Take(20).ToList();
 
-        var accesses = await _db.AccessCredentials.AsNoTracking()
+        var now = _clock.UtcNow;
+        var accessEntities = await _db.AccessCredentials.AsNoTracking()
+            .Include(x => x.Subscription)
+            .Include(x => x.Server)
             .Where(x => x.Subscription != null && x.Subscription.UserId == id)
-            .Select(x => new
+            .ToListAsync(cancellationToken);
+        var accesses = accessEntities.Select(x =>
+        {
+            var subscriptionAvailable = x.Subscription is not null
+                && BusinessRules.IsSubscriptionAccessAvailable(
+                    x.Subscription.Status,
+                    x.Subscription.EndAt,
+                    x.Subscription.GracePeriodEndAt,
+                    now);
+            var accessAvailable = x.Status != AccessCredentialStatus.Revoked && subscriptionAvailable;
+            return new
             {
                 x.Id,
                 x.SubscriptionId,
                 UserId = x.Subscription != null ? x.Subscription.UserId : (Guid?)null,
                 SubscriptionStatus = x.Subscription != null ? x.Subscription.Status.ToString() : string.Empty,
-                IsTerminal = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled),
+                IsTerminal = !accessAvailable,
                 x.ProviderType,
-                ProviderAccessId = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.ProviderAccessId,
+                ProviderAccessId = accessAvailable ? x.ProviderAccessId : string.Empty,
                 x.ServerId,
                 ServerName = x.Server != null ? x.Server.Name : string.Empty,
                 Status = x.Status.ToString(),
-                AccessUri = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.AccessUri,
-                QrCodePath = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.QrCodePath,
-                QrCodePayload = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.QrCodePath,
-                ConfigPath = x.Status == AccessCredentialStatus.Revoked || (x.Subscription != null && x.Subscription.Status == SubscriptionStatus.Cancelled) ? string.Empty : x.ConfigPath,
+                AccessUri = accessAvailable ? x.AccessUri : string.Empty,
+                QrCodePath = accessAvailable ? x.QrCodePath : string.Empty,
+                QrCodePayload = accessAvailable ? x.QrCodePath : string.Empty,
+                ConfigPath = accessAvailable ? x.ConfigPath : string.Empty,
                 x.IssuedAt,
+                ExpiryDate = x.Subscription is not null
+                    ? BusinessRules.GetSubscriptionAccessEnd(x.Subscription.EndAt, x.Subscription.GracePeriodEndAt)
+                    : (DateTimeOffset?)null,
                 x.DisabledAt,
                 x.LastSyncedAt,
                 x.Revision,
                 x.CreatedAt,
                 x.UpdatedAt
-            })
-            .ToListAsync(cancellationToken);
+            };
+        }).ToList();
         accesses = accesses.OrderByDescending(x => x.IssuedAt).Take(20).ToList();
 
         var telegramUserIds = telegramAccounts.Select(t => t.TelegramUserId).ToList();

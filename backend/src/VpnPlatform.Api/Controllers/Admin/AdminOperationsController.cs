@@ -398,6 +398,7 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminRead)]
     public async Task<IActionResult> GetAccessCredentials(CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         var accessCredentials = await _db.AccessCredentials.AsNoTracking()
             .Include(x => x.Subscription)
             .Include(x => x.Server)
@@ -407,34 +408,46 @@ public class AdminOperationsController : ControllerBase
         return Ok(accessCredentials
             .OrderByDescending(x => x.CreatedAt)
             .Take(300)
-            .Select(x => new
+            .Select(x =>
             {
-                IsTerminal = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled,
-                x.Id,
-                x.SubscriptionId,
-                UserId = x.Subscription?.UserId,
-                SubscriptionStatus = x.Subscription?.Status.ToString() ?? string.Empty,
-                x.ProviderType,
-                ProviderAccessId = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.ProviderAccessId,
-                x.ServerId,
-                ServerName = x.Server?.Name ?? string.Empty,
-                AccessUri = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.AccessUri,
-                QrCodePayload = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.QrCodePath,
-                QrCodePath = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.QrCodePath,
-                ConfigPath = x.Status == AccessCredentialStatus.Revoked || x.Subscription?.Status == SubscriptionStatus.Cancelled ? string.Empty : x.ConfigPath,
-                Status = x.Status.ToString(),
-                x.IssuedAt,
-                ExpiryDate = x.Subscription?.EndAt,
-                x.DisabledAt,
-                x.LastSyncedAt,
-                x.Revision,
-                History = x.History
-                .OrderByDescending(h => h.CreatedAt)
-                .Take(5)
-                .Select(h => new AdminAccessCredentialHistoryDto(h.Id, h.AccessCredentialId, h.SubscriptionId, h.EventType, h.OldValueJson, h.NewValueJson, h.CreatedAt))
-                .ToList(),
-                x.CreatedAt,
-                x.UpdatedAt
+                var subscriptionAvailable = x.Subscription is not null
+                    && BusinessRules.IsSubscriptionAccessAvailable(
+                        x.Subscription.Status,
+                        x.Subscription.EndAt,
+                        x.Subscription.GracePeriodEndAt,
+                        now);
+                var accessAvailable = x.Status != AccessCredentialStatus.Revoked && subscriptionAvailable;
+                return new
+                {
+                    IsTerminal = !accessAvailable,
+                    x.Id,
+                    x.SubscriptionId,
+                    UserId = x.Subscription?.UserId,
+                    SubscriptionStatus = x.Subscription?.Status.ToString() ?? string.Empty,
+                    x.ProviderType,
+                    ProviderAccessId = accessAvailable ? x.ProviderAccessId : string.Empty,
+                    x.ServerId,
+                    ServerName = x.Server?.Name ?? string.Empty,
+                    AccessUri = accessAvailable ? x.AccessUri : string.Empty,
+                    QrCodePayload = accessAvailable ? x.QrCodePath : string.Empty,
+                    QrCodePath = accessAvailable ? x.QrCodePath : string.Empty,
+                    ConfigPath = accessAvailable ? x.ConfigPath : string.Empty,
+                    Status = x.Status.ToString(),
+                    x.IssuedAt,
+                    ExpiryDate = x.Subscription is not null
+                        ? BusinessRules.GetSubscriptionAccessEnd(x.Subscription.EndAt, x.Subscription.GracePeriodEndAt)
+                        : (DateTimeOffset?)null,
+                    x.DisabledAt,
+                    x.LastSyncedAt,
+                    x.Revision,
+                    History = x.History
+                        .OrderByDescending(h => h.CreatedAt)
+                        .Take(5)
+                        .Select(h => new AdminAccessCredentialHistoryDto(h.Id, h.AccessCredentialId, h.SubscriptionId, h.EventType, h.OldValueJson, h.NewValueJson, h.CreatedAt))
+                        .ToList(),
+                    x.CreatedAt,
+                    x.UpdatedAt
+                };
             }).ToList());
     }
 
@@ -469,7 +482,8 @@ public class AdminOperationsController : ControllerBase
                 subscription.CurrentAccess.Id,
                 request.Reason ?? "manual_subscription_extend",
                 ResolveUserId(),
-                cancellationToken);
+                cancellationToken,
+                allowUnavailableSubscription: true);
             if (!accessResult.IsSuccess)
             {
                 return BadRequest(new { error = accessResult.Error });
@@ -519,7 +533,8 @@ public class AdminOperationsController : ControllerBase
                 subscription.CurrentAccess.Id,
                 request?.Reason ?? "manual_subscription_activate",
                 ResolveUserId(),
-                cancellationToken);
+                cancellationToken,
+                allowUnavailableSubscription: true);
             if (!result.IsSuccess)
             {
                 return BadRequest(new { error = result.Error });
@@ -612,7 +627,8 @@ public class AdminOperationsController : ControllerBase
                 subscription.CurrentAccess.Id,
                 request?.Reason ?? "manual_subscription_unblock",
                 ResolveUserId(),
-                cancellationToken);
+                cancellationToken,
+                allowUnavailableSubscription: true);
             if (!accessResult.IsSuccess)
             {
                 return BadRequest(new { error = accessResult.Error });
@@ -718,6 +734,16 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Revoked VPN access QR code is not available." });
         }
 
+        if (access.Subscription is null
+            || !BusinessRules.IsSubscriptionAccessAvailable(
+                access.Subscription.Status,
+                access.Subscription.EndAt,
+                access.Subscription.GracePeriodEndAt,
+                _clock.UtcNow))
+        {
+            return BadRequest(new { error = "Expired or inactive subscription VPN access QR code is not available." });
+        }
+
         if (_qrCodeGenerator is null)
         {
             return BadRequest(new { error = "QR code generator is not configured." });
@@ -802,6 +828,16 @@ public class AdminOperationsController : ControllerBase
         if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
         {
             return BadRequest(new { error = "Cancelled subscription VPN access cannot be enabled." });
+        }
+
+        if (access.Subscription is null
+            || !BusinessRules.IsSubscriptionAccessAvailable(
+                access.Subscription.Status,
+                access.Subscription.EndAt,
+                access.Subscription.GracePeriodEndAt,
+                _clock.UtcNow))
+        {
+            return BadRequest(new { error = "Expired or inactive subscription VPN access cannot be enabled." });
         }
 
         var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });

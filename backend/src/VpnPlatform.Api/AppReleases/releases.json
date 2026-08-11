@@ -14969,5 +14969,28 @@
         "text": "Roadmap progress is 648/668 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-admin-access-grace-expiry",
+    "version": "0.636.0",
+    "releasedAt": "2026-08-12T03:24:29+07:00",
+    "title": "Админка скрывает истёкший VPN-доступ",
+    "summary": "Административные API и интерфейс закрывают VPN-секреты и опасные provider-команды точно по effective deadline.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "URI, provider ID, config и QR больше не остаются в admin access DTO и user overview после окончания grace period."
+      },
+      {
+        "type": "improved",
+        "text": "Открытая админка очищает QR без reload и оставляет только безопасное отключение истёкшего доступа у провайдера."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 649/669 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

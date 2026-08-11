@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.636.0 - 2026-08-12
+
+Release entry: `2026-08-12-admin-access-grace-expiry`.
+
+### Исправлено
+
+- Административные access DTO и user overview скрывают URI, provider ID, config и QR точно по `gracePeriodEndAt ?? endAt`, даже если lifecycle worker ещё не обновил статус.
+- QR, `enable`, `sync` и reset traffic отклоняются до вызова VPN-провайдера после effective expiry; remedial disable остаётся доступным для фактического отключения истёкшего доступа.
+- Открытая админка планирует ближайший access deadline, очищает QR-кэш и без reload оставляет только безопасное отключение у провайдера и историю.
+
+### Проверено
+
+- До исправления backend boundary-suite был `29/35`, frontend helper не имел expiry-контракта, desktop/mobile browser был `0/2`; после исправления backend targeted `35/35`, frontend `135/135`, expiry browser `2/2` и полный admin-flow `2/2`.
+- Первый полный browser regression выявил конфликт remedial-команды у отменённой подписки: `214/216`; после fail-closed уточнения targeted desktop/mobile прошёл `4/4`, финальный console-responsive Playwright — `216/216` за `13.7 min` без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `357.69/104.34 kB`, cabinet bundle `372.71/107.60 kB`, admin bundle `531616/142394/max 231944`.
+- Backend `1132/1132`, build `0` warnings/errors, EF drift отсутствует и fresh SQLite flow с latest release зелёный; encoding/documentation/release guards `57/57`, release seed `635`, secret scan `668` files/`0` findings.
+- Roadmap: `649/669` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.635.0 - 2026-08-12
 
 Release entry: `2026-08-12-cabinet-access-grace-expiry`.

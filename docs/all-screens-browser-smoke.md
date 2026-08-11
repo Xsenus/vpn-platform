@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-12-cabinet-access-grace-expiry`, версия `0.635.0`; кабинет автоматически скрывает VPN-секреты по effective deadline без reload, а финальный полный browser gate проходит `214/214` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-12-admin-access-grace-expiry`, версия `0.636.0`; админка автоматически скрывает VPN-секреты по effective deadline без reload, оставляет только provider disable, а финальный полный browser gate проходит `216/216` без failed/flaky/skipped.
