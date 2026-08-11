@@ -22,12 +22,12 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1132/1132`.
+- Backend full suite: `1134/1134`.
 - API Release build: OK.
-- Frontend unit tests: `135/135`.
+- Frontend unit tests: `136/136`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `216/216`; responsive all-screens: `6/6` на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `218/218`; responsive all-screens: `6/6` на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints; local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-12-admin-access-grace-expiry`, версия `0.636.0`; admin DTO/QR/provider-команды закрываются по effective access deadline, а UI оставляет только безопасное provider disable. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `649/669` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-12-admin-subscription-effective-expiry`, версия `0.637.0`; admin subscription sync/migration и effective-state метрики закрываются на deadline без reload, а unblock корректно возвращает подписку в grace period. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `650/670` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

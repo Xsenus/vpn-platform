@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.637.0 - 2026-08-12
+
+Release entry: `2026-08-12-admin-subscription-effective-expiry`.
+
+### Исправлено
+
+- Административные sync и migration подписки теперь отклоняются до provider/job side effects после `gracePeriodEndAt ?? endAt`, даже если сохранённый статус ещё `Active` или `GracePeriod`.
+- Dashboard и user overview считают active/expiring subscriptions и VPN accesses по effective state, а не по устаревшему строковому статусу.
+- Разблокировка после paid end, но до grace end, возвращает подписку в `GracePeriod` и включает доступ; на точной границе grace end остаётся `Expired` без provider enable.
+- API client принимает законный `GracePeriod` unblock response вместо ложной ошибки malformed DTO; dashboard summary повторно запрашивается на subscription deadline.
+- Открытая админка планирует ближайший срок подписки и без reload убирает migration, отключает sync и показывает точную причину истечения на desktop/mobile.
+
+### Проверено
+
+- До исправления frontend fail-first был `132/136`, backend compile fail-first подтвердил отсутствие инъецируемого clock boundary, desktop/mobile browser был `0/2`; после исправления targeted backend `35/35`, frontend `136/136`, expiry browser `2/2` и focused admin flow `4/4`.
+- Полный browser inventory прошёл `218/218` как эквивалентные изолированные группы `52 public + 62 cabinet + 98 admin + 6 all-screens`, без failed/flaky/skipped; единая команда дважды достигала shell timeout, а один повтор переиспользовал завершавшийся webserver и был исключён как инфраструктурный результат.
+- Typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `357.70/104.34 kB`, cabinet bundle `372.73/107.60 kB`, admin bundle `532896/142757/max 233210`.
+- Backend `1134/1134`, build `0` warnings/errors, EF drift отсутствует и fresh SQLite flow зелёный; encoding/documentation/release guards и latest release SQLite verification выполнены после синхронизации seed, secret scan `668` files/`0` findings.
+- Roadmap: `650/670` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.636.0 - 2026-08-12
 
 Release entry: `2026-08-12-admin-access-grace-expiry`.

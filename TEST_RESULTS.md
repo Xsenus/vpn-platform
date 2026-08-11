@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Admin subscription effective expiry
+
+Scope:
+- Admin subscription sync/migration, dashboard counters and user overview metrics must use `gracePeriodEndAt ?? endAt`, independently of delayed persisted status transitions.
+- Unblock between paid end and grace end must restore `GracePeriod`; exact grace-end commands must stay fail-closed without provider/job side effects.
+
+Results:
+- Roadmap progress: `650/670` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-admin-subscription-effective-expiry`, version `0.637.0`.
+- Reproduction before fix: frontend helper fail-first `132/136`; backend compile fail-first exposed the non-injectable dashboard clock; desktop/mobile browser fail-first `0/2`, with sync and migration still available after the effective deadline.
+- After fix: backend targeted SQLite/controller suite `35/35`; frontend `136/136`; targeted expiry browser `2/2`; focused expiry plus subscription lifecycle desktop/mobile `4/4`. Sync/migration reject before provider/job/audit side effects, grace unblock uses the state machine and is accepted by the API client, and the open tab changes controls plus refreshes dashboard summary at the exact deadline.
+- Full browser inventory: `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped. The monolithic command exceeded the shell timeout; one retry reused a terminating parent webserver and produced only `ERR_CONNECTION_REFUSED`, so neither incomplete infrastructure run was counted as release evidence.
+- Frontend typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `357.70 kB`, gzip `104.34 kB`; cabinet bundle `372.73/107.60 kB`; admin bundle raw `532896`, gzip `142757`, largest `233210`.
+- Backend full suite: `1134/1134`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation/release guards and latest release SQLite verification: OK after seed synchronization; release seed: `636` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Admin access grace expiry
 
 Scope:

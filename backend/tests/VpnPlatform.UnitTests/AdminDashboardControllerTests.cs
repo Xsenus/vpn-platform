@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
@@ -105,6 +106,25 @@ public class AdminDashboardControllerTests
             CreatedAt = now,
             UpdatedAt = now
         });
+        db.Subscriptions.AddRange(
+            new Subscription
+            {
+                UserId = userId,
+                TariffId = tariffId,
+                Status = SubscriptionStatus.Active,
+                StartAt = now.AddDays(-30),
+                EndAt = now.AddDays(-3),
+                GracePeriodEndAt = now
+            },
+            new Subscription
+            {
+                UserId = userId,
+                TariffId = tariffId,
+                Status = SubscriptionStatus.GracePeriod,
+                StartAt = now.AddDays(-30),
+                EndAt = now.AddDays(-1),
+                GracePeriodEndAt = now.AddDays(2)
+            });
         db.SiteContentBlocks.AddRange(
             new SiteContentBlock { Key = "telegram_bot.enabled", Group = "telegram_bot", Label = "Enabled", Value = "true", InputType = "checkbox" },
             new SiteContentBlock { Key = "telegram_bot.mode", Group = "telegram_bot", Label = "Mode", Value = "LongPolling", InputType = "select" },
@@ -112,7 +132,7 @@ public class AdminDashboardControllerTests
             new SiteContentBlock { Key = "telegram_bot.bot_token_protected", Group = "telegram_bot", Label = "Token", Value = "protected-token", InputType = "secret" });
         await db.SaveChangesAsync();
 
-        var controller = new AdminDashboardController(db)
+        var controller = new AdminDashboardController(db, clock: new FixedClock(now))
         {
             ControllerContext = new ControllerContext
             {
@@ -134,8 +154,15 @@ public class AdminDashboardControllerTests
         Assert.Equal(expectedFinanceCount, summary.RecentOrders);
         Assert.Equal(expectedSupportCount, summary.SupportConversationsCount);
         Assert.Equal(expectedSupportCount, summary.OpenSupportConversations);
+        Assert.Equal(1, summary.ActiveSubscriptions);
+        Assert.Equal(1, summary.ExpiringSubscriptions);
         Assert.Equal(expectPaymentChecks, summary.ProductionReadiness.Checks.Any(x => x.Key == "payment-provider"));
         Assert.Equal(expectPaymentChecks, summary.ProductionReadiness.Checks.Any(x => x.Key == "payment-webhook"));
         Assert.Equal(expectBotCheck, summary.ProductionReadiness.Checks.Any(x => x.Key == "telegram-bot"));
+    }
+
+    private sealed class FixedClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; } = utcNow;
     }
 }

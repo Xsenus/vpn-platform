@@ -480,6 +480,7 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedOrderRecheck: (() => void) | null = null
   let failNextAccessQrStatus: number | null = null
   let expiringAdminAccess = false
+  let expiringAdminSubscription = false
   let delayNextSubscriptionExtendResponse = false
   let releaseDelayedSubscriptionExtend: (() => void) | null = null
   let delayNextAccessQrResponse = false
@@ -797,7 +798,11 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/subscriptions') {
-      await fulfillJson(route, subscriptions)
+      await fulfillJson(route, expiringAdminSubscription
+        ? subscriptions.map((subscription, index) => index === 0
+          ? { ...subscription, endAt: '2026-06-10T07:00:00Z', gracePeriodEndAt: '2026-06-13T07:00:30Z', status: 'GracePeriod' }
+          : subscription)
+        : subscriptions)
       return
     }
 
@@ -1989,6 +1994,7 @@ async function mockAdminApi(page: Page) {
     releaseOrderRecheck: () => { releaseDelayedOrderRecheck?.() },
     failNextAccessQrRequest: (status = 503) => { failNextAccessQrStatus = status },
     expireAdminAccessSoon: () => { expiringAdminAccess = true },
+    expireAdminSubscriptionSoon: () => { expiringAdminSubscription = true },
     delayNextSubscriptionExtend: () => { delayNextSubscriptionExtendResponse = true },
     releaseSubscriptionExtend: () => { releaseDelayedSubscriptionExtend?.() },
     delayNextAccessQr: () => { delayNextAccessQrResponse = true },
@@ -4000,6 +4006,34 @@ test('admin hides expired VPN secrets and preserves only provider disable remedi
   await expect(page.getByText('VPN-доступ отключен.')).toBeVisible()
   expect(api.getRequestCount('/api/admin/access-credentials/access-e2e/disable', 'POST')).toBe(1)
   await expect(accessRow.getByRole('button', { name: 'Отключить у провайдера' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin stops expired subscription provider commands without refresh', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-13T07:00:00Z') })
+  const api = await mockAdminApi(page)
+  api.expireAdminSubscriptionSoon()
+  await seedAdminSession(page, 'admin-expiring-subscription-token', 'admin-expiring-subscription-refresh')
+
+  await page.goto('/#subscriptions')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  const subscriptionsPanel = page.locator('#subscriptions')
+  const subscriptionRow = subscriptionsPanel.locator('#subscription-sub-e2e')
+  await expect(subscriptionRow.getByRole('button', { name: 'Синхронизировать доступ' })).toBeEnabled()
+  await expect(subscriptionRow.getByLabel('Целевой сервер для миграции подписки sub-e2e')).toBeVisible()
+
+  await page.clock.fastForward(30_100)
+
+  await expect(subscriptionRow).toContainText('Срок VPN-доступа подписки истёк.')
+  await expect(subscriptionRow).toContainText('Access expired')
+  await expect(subscriptionRow.getByRole('button', { name: 'Синхронизировать доступ' })).toBeDisabled()
+  await expect(subscriptionRow.getByLabel('Целевой сервер для миграции подписки sub-e2e')).toHaveCount(0)
+  await expect(subscriptionRow.getByRole('button', { name: 'Продлить' })).toBeVisible()
+  await expect(subscriptionRow.getByRole('button', { name: 'Заблокировать' })).toBeVisible()
+  await expect(subscriptionRow.getByRole('button', { name: 'Отменить' })).toBeVisible()
+  await expect.poll(() => api.getRequestCount('/api/admin/dashboard/summary')).toBe(2)
+  expect(api.getRequestCount('/api/admin/subscriptions/sub-e2e/sync-access', 'POST')).toBe(0)
+  expect(api.getRequestCount('/api/admin/subscriptions/sub-e2e/migrate', 'POST')).toBe(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

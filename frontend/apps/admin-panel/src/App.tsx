@@ -57,7 +57,7 @@ import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } fr
 import { canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from './admin-accesses'
-import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, type AdminSubscriptionAction } from './admin-subscriptions'
+import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, getAdminSubscriptionEffectiveEndTime, getNextAdminSubscriptionExpiryDelay, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
 import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
 import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
@@ -1370,12 +1370,17 @@ export function App() {
   const adminLoginErrors = useMemo(() => validateAdminLogin(email, password), [email, password])
   const showAdminLoginErrors = adminLoginErrors.length > 0 && Boolean(email || password)
   const referralProgramFormErrors = useMemo(() => validateReferralProgramForm(referralProgramForm), [referralProgramForm])
+  const adminAccessNow = useMemo(() => new Date(), [accessCredentials, adminAccessClockTick, subscriptions, userOverview])
 
   const derivedSummary = useMemo(() => ({
     totalUsers: summary?.totalUsers ?? users.length,
     telegramUsers: summary?.telegramUsers ?? users.filter((item) => s(item.authSource, '') === 'Telegram').length,
-    activeSubscriptions: summary?.activeSubscriptions ?? subscriptions.filter((item) => item.status === 'Active').length,
-    expiringSubscriptions: summary?.expiringSubscriptions ?? subscriptions.filter((item) => item.status === 'Active' && new Date(item.endAt).getTime() <= Date.now() + 7 * 24 * 60 * 60 * 1000).length,
+    activeSubscriptions: summary?.activeSubscriptions ?? subscriptions.filter((item) => getAdminSubscriptionActionAvailability(item, adminAccessNow).isAccessAvailable).length,
+    expiringSubscriptions: summary?.expiringSubscriptions ?? subscriptions.filter((item) => {
+      const availability = getAdminSubscriptionActionAvailability(item, adminAccessNow)
+      return availability.isAccessAvailable
+        && getAdminSubscriptionEffectiveEndTime(item) <= adminAccessNow.getTime() + 7 * 24 * 60 * 60 * 1000
+    }).length,
     paidOrders: summary?.paidOrders ?? orders.filter((item) => item.status === 'PaymentReceived' || item.status === 'Completed').length,
     pendingOrders: summary?.pendingOrders ?? orders.filter((item) => item.status === 'PendingPayment' || item.status === 'Draft').length,
     failedPayments: summary?.failedPayments ?? payments.filter((item) => item.status === 'Failed' || item.status === 'Cancelled').length,
@@ -1389,12 +1394,11 @@ export function App() {
     supportConversationsCount: summary?.supportConversationsCount ?? supportConversations.length,
     openSupportConversations: summary?.openSupportConversations ?? supportConversations.filter((item) => item.status === 'open' || item.status === 'pending').length,
     provisioningErrors: summary?.provisioningErrors ?? provisioningRuns.filter((item) => item.status === 'Failed').length
-  }), [summary, users, subscriptions, accessCredentials, orders, payments, servers, provisioningRuns, supportConversations, vpnPanels])
+  }), [adminAccessNow, summary, users, subscriptions, accessCredentials, orders, payments, servers, provisioningRuns, supportConversations, vpnPanels])
   const dashboardFailedPayments = canReadFinance ? payments.filter((item) => item.status === 'Failed' || item.status === 'Cancelled').slice(0, 3) : []
   const dashboardFailedProvisioningRuns = provisioningRuns.filter((run) => ['Failed', 'PrecheckFailed'].includes(run.status)).slice(0, 3)
   const dashboardOpenSupportConversations = canReadSupport ? supportConversations.filter((conversation) => conversation.status !== 'closed').slice(0, 3) : []
-  const adminAccessNow = useMemo(() => new Date(), [accessCredentials, adminAccessClockTick, userOverview])
-  const userOverviewStats = useMemo(() => buildAdminUserOverviewStats(userOverview), [userOverview])
+  const userOverviewStats = useMemo(() => buildAdminUserOverviewStats(userOverview, adminAccessNow), [adminAccessNow, userOverview])
   const filteredOrders = useMemo(() => {
     const searchText = orderSearch.trim().toLowerCase()
     return orders.filter((order) => {
@@ -1839,15 +1843,31 @@ export function App() {
     if (!token) return
 
     const overviewAccesses = userOverview?.accessCredentials ?? []
-    const delay = getNextAdminAccessExpiryDelay([...accessCredentials, ...overviewAccesses])
-    if (delay === null) return
+    const accessDelay = getNextAdminAccessExpiryDelay([...accessCredentials, ...overviewAccesses])
+    const subscriptionDelay = getNextAdminSubscriptionExpiryDelay([
+      ...subscriptions,
+      ...(userOverview?.subscriptions ?? [])
+    ])
+    const delays = [accessDelay, subscriptionDelay].filter((delay): delay is number => delay !== null)
+    if (delays.length === 0) return
+    const nextDelay = Math.min(...delays)
+    const refreshDashboardSummary = subscriptionDelay !== null && subscriptionDelay === nextDelay
+    const operationId = sessionOperationId.current
 
     const timeoutId = window.setTimeout(() => {
       setAdminQrSvgs({})
       setAdminAccessClockTick((current) => current + 1)
-    }, Math.min(delay, 2_147_483_647))
+      if (refreshDashboardSummary) {
+        setSummary(null)
+        void api.getAdminDashboardSummary(token)
+          .then((nextSummary) => {
+            if (sessionOperationId.current === operationId) setSummary(nextSummary)
+          })
+          .catch(() => undefined)
+      }
+    }, Math.min(nextDelay, 2_147_483_647))
     return () => window.clearTimeout(timeoutId)
-  }, [accessCredentials, adminAccessClockTick, token, userOverview])
+  }, [accessCredentials, adminAccessClockTick, subscriptions, token, userOverview])
 
   const updateServerForm = <K extends keyof ServerFormState>(key: K, value: ServerFormState[K]) => setServerForm((current) => ({ ...current, [key]: value }))
   const updateProviderForm = <K extends keyof UpsertPaymentProviderAccountPayload>(key: K, value: UpsertPaymentProviderAccountPayload[K]) => setProviderForm((current) => ({ ...current, [key]: value }))
@@ -2955,9 +2975,12 @@ export function App() {
     })
   }
 
-  const handleSubscriptionAction = async (subscription: SubscriptionDto, action: AdminSubscriptionAction) => {
+  const handleSubscriptionAction = async (
+    subscription: SubscriptionDto,
+    action: Exclude<AdminSubscriptionAction, 'migrate'>
+  ) => {
     const resourceKeys = subscriptionActionResourceKeys(subscription.id, subscription.currentAccessId)
-    const blocker = getAdminSubscriptionActionBlocker(subscription, action)
+    const blocker = getAdminSubscriptionActionBlocker(subscription, action, new Date())
     if (blocker) {
       setError(blocker)
       return
@@ -3030,6 +3053,12 @@ export function App() {
     && server.usedCapacity < server.capacity)
 
   const handleMigrateSubscription = async (subscription: SubscriptionDto) => {
+    const blocker = getAdminSubscriptionActionBlocker(subscription, 'migrate', new Date())
+    if (blocker) {
+      setError(blocker)
+      return
+    }
+
     const selectedTarget = subscriptionMigrationTargets[subscription.id]
     if (!subscription.currentServerId) {
       setError('У подписки нет исходного VPN-сервера для миграции.')
@@ -4537,9 +4566,9 @@ export function App() {
             {subscriptions.length === 0 && <EmptyState title="Подписок нет" description="После успешной оплаты подписка появится здесь." />}
             {subscriptions.slice(0, 12).map((subscription) => {
               const isActionBusy = actionBusyResourceKeys.has(subscriptionActionResourceKey(subscription.id))
-              const actionAvailability = getAdminSubscriptionActionAvailability(subscription)
+              const actionAvailability = getAdminSubscriptionActionAvailability(subscription, adminAccessNow)
               const migrationOptions = subscriptionMigrationOptions(subscription)
-              const canMigrate = Boolean(adminSession?.capabilities.vpnManage && subscription.currentServerId && subscription.currentAccessId && actionAvailability.canManage)
+              const canMigrate = Boolean(adminSession?.capabilities.vpnManage && actionAvailability.canMigrate)
               return (
                 <div id={`subscription-${subscription.id}`} key={subscription.id} className="list-item-vertical">
                   <div className="item-head">
@@ -4553,6 +4582,7 @@ export function App() {
                     <div className="item-status">
                       <StatusBadge value={subscription.status} />
                       <StatusBadge value={subscription.currentAccessId ? 'Access linked' : 'No access'} />
+                      {actionAvailability.isEffectivelyExpired && <StatusBadge value="Access expired" />}
                     </div>
                   </div>
                   {actionAvailability.reason && <p className="safe-note" role="status">{actionAvailability.reason}</p>}
@@ -4565,7 +4595,7 @@ export function App() {
                       <PrimaryButton disabled={isActionBusy} onClick={() => void handleSubscriptionAction(subscription, 'activate')}>Активировать</PrimaryButton>
                     )}
                     <PrimaryButton disabled={isActionBusy} onClick={() => void handleSubscriptionAction(subscription, 'extend')}>Продлить</PrimaryButton>
-                    <PrimaryButton className="button-secondary" disabled={isActionBusy || !actionAvailability.canSync} title={actionAvailability.canSync ? undefined : 'У подписки нет текущего VPN-доступа'} onClick={() => void handleSubscriptionAction(subscription, 'sync')}>Синхронизировать доступ</PrimaryButton>
+                    <PrimaryButton className="button-secondary" disabled={isActionBusy || !actionAvailability.canSync} title={actionAvailability.canSync ? undefined : getAdminSubscriptionActionBlocker(subscription, 'sync', adminAccessNow) ?? undefined} onClick={() => void handleSubscriptionAction(subscription, 'sync')}>Синхронизировать доступ</PrimaryButton>
                     {actionAvailability.canToggleBlock && <ConfirmButton className="button-secondary" disabled={isActionBusy} message={`${subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'} подписку? Это влияет на доступ пользователя.`} onConfirm={() => handleSubscriptionAction(subscription, subscription.status === 'Blocked' ? 'unblock' : 'block')}>{subscription.status === 'Blocked' ? 'Разблокировать' : 'Заблокировать'}</ConfirmButton>}
                     {actionAvailability.canCancel && <ConfirmButton className="button-danger" disabled={isActionBusy} message="Отменить подписку без возможности восстановления? VPN-доступ будет отозван и удален с сервера, а занятый слот освободится." onConfirm={() => handleSubscriptionAction(subscription, 'cancel')}>Отменить</ConfirmButton>}
                   </div>}

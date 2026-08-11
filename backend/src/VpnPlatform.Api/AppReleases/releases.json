@@ -14992,5 +14992,28 @@
         "text": "Roadmap progress is 649/669 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-admin-subscription-effective-expiry",
+    "version": "0.637.0",
+    "releasedAt": "2026-08-12T04:45:34+07:00",
+    "title": "Команды подписки закрываются после истечения срока",
+    "summary": "Админка и API используют effective deadline для sync, migration, метрик и разблокировки подписки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Sync и migration больше не вызывают VPN-провайдера или migration job после effective expiry подписки."
+      },
+      {
+        "type": "improved",
+        "text": "Dashboard, user overview и открытая вкладка админки обновляют effective state на точной границе grace period без reload; API client принимает GracePeriod после unblock."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 650/670 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

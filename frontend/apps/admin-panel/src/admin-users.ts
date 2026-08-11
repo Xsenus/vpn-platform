@@ -1,4 +1,6 @@
 import { AdminUserOverviewDto } from '@vpn-platform/api-client'
+import { getAdminAccessTerminalReason } from './admin-accesses'
+import { getAdminSubscriptionActionAvailability } from './admin-subscriptions'
 
 export type AdminUserOverviewStats = {
   ordersCount: number
@@ -29,7 +31,7 @@ function stringValue(value: unknown, fallback = '') {
   return typeof value === 'string' && value.trim() ? value : fallback
 }
 
-export function buildAdminUserOverviewStats(overview: AdminUserOverviewDto | null): AdminUserOverviewStats {
+export function buildAdminUserOverviewStats(overview: AdminUserOverviewDto | null, now = new Date()): AdminUserOverviewStats {
   if (!overview) {
     return {
       ordersCount: 0,
@@ -49,8 +51,9 @@ export function buildAdminUserOverviewStats(overview: AdminUserOverviewDto | nul
     }
   }
 
-  const activeSubscriptionsCount = overview.subscriptions.filter((item) => ['active', 'graceperiod'].includes(status(item.status))).length
-  const activeAccessesCount = overview.accessCredentials.filter((item) => ['active', 'syncrequired'].includes(status(item.status))).length
+  const activeSubscriptionsCount = overview.subscriptions.filter((item) => getAdminSubscriptionActionAvailability(item, now).isAccessAvailable).length
+  const activeAccessesCount = overview.accessCredentials.filter((item) =>
+    ['active', 'syncrequired'].includes(status(item.status)) && !getAdminAccessTerminalReason(item, now)).length
   const blockedTelegramAccountsCount = overview.telegramAccounts.filter((item) => item.isBlocked).length
   const openSupportConversationsCount = overview.supportConversations.filter((item) => status(item.status) !== 'closed').length
   const failedPaymentsCount = overview.payments.filter((item) => ['failed', 'cancelled', 'unknown'].includes(status(item.status))).length

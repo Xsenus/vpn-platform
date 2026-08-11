@@ -38,15 +38,15 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1132/1132", readme, StringComparison.Ordinal);
-        Assert.Contains("135/135", readme, StringComparison.Ordinal);
+        Assert.Contains("1134/1134", readme, StringComparison.Ordinal);
+        Assert.Contains("136/136", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-12-admin-access-grace-expiry", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("216/216", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-12-admin-subscription-effective-expiry", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("218/218", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -58,9 +58,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "1132/1132",
-                     "2026-08-12-admin-access-grace-expiry",
-                     "0.636.0",
+                     "1134/1134",
+                     "2026-08-12-admin-subscription-effective-expiry",
+                     "0.637.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

@@ -32,8 +32,8 @@ public static class StatusStateMachine
         [SubscriptionStatus.Active] = [SubscriptionStatus.PendingActivation, SubscriptionStatus.GracePeriod, SubscriptionStatus.Expired, SubscriptionStatus.Suspended, SubscriptionStatus.Cancelled, SubscriptionStatus.Blocked],
         [SubscriptionStatus.GracePeriod] = [SubscriptionStatus.Active, SubscriptionStatus.Expired, SubscriptionStatus.Cancelled, SubscriptionStatus.Blocked],
         [SubscriptionStatus.Expired] = [SubscriptionStatus.Active, SubscriptionStatus.Cancelled, SubscriptionStatus.Blocked],
-        [SubscriptionStatus.Suspended] = [SubscriptionStatus.Active, SubscriptionStatus.Expired, SubscriptionStatus.Cancelled, SubscriptionStatus.Blocked],
-        [SubscriptionStatus.Blocked] = [SubscriptionStatus.Active, SubscriptionStatus.Expired, SubscriptionStatus.Cancelled]
+        [SubscriptionStatus.Suspended] = [SubscriptionStatus.Active, SubscriptionStatus.GracePeriod, SubscriptionStatus.Expired, SubscriptionStatus.Cancelled, SubscriptionStatus.Blocked],
+        [SubscriptionStatus.Blocked] = [SubscriptionStatus.Active, SubscriptionStatus.GracePeriod, SubscriptionStatus.Expired, SubscriptionStatus.Cancelled]
     };
 
     private static readonly IReadOnlyDictionary<AccessCredentialStatus, AccessCredentialStatus[]> AccessTransitions = new Dictionary<AccessCredentialStatus, AccessCredentialStatus[]>

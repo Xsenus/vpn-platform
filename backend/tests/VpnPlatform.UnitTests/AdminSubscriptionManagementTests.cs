@@ -130,6 +130,39 @@ public class AdminSubscriptionManagementTests
     }
 
     [Fact]
+    public async Task Expired_Grace_Subscription_Sync_Should_Reject_Before_Provider_Call_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 5, 7, 15, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        var access = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
+        subscription.Status = SubscriptionStatus.GracePeriod;
+        subscription.EndAt = clock.UtcNow.AddDays(-3);
+        subscription.GracePeriodEndAt = clock.UtcNow;
+        access.Status = AccessCredentialStatus.Active;
+        access.DisabledAt = null;
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var controller = CreateController(db, provider, clock);
+        var result = await controller.SyncSubscriptionAccess(
+            ids.SubscriptionId,
+            new AdminAccessActionHttpRequest("operator sync"),
+            CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("expired", JsonSerializer.Serialize(badRequest.Value), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.SyncCalls);
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task Direct_Access_Sync_Should_Wait_For_Subscription_Gate_And_Recheck_Cancelled_Status()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -235,7 +268,7 @@ public class AdminSubscriptionManagementTests
     }
 
     [Fact]
-    public async Task Unblock_Subscription_Ending_Now_Should_Expire_Without_Enabling_Access()
+    public async Task Unblock_Subscription_At_Paid_End_Should_Restore_GracePeriod_And_Enable_Access()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -247,6 +280,7 @@ public class AdminSubscriptionManagementTests
         var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
         subscription.Status = SubscriptionStatus.Blocked;
         subscription.EndAt = clock.UtcNow;
+        subscription.GracePeriodEndAt = clock.UtcNow.AddDays(3);
         subscription.BlockReason = "manual hold";
         await db.SaveChangesAsync();
         var provider = new TrackingVpnProvider(clock.UtcNow);
@@ -257,11 +291,38 @@ public class AdminSubscriptionManagementTests
         db.ChangeTracker.Clear();
         var persistedSubscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
         var persistedAccess = await db.AccessCredentials.SingleAsync(x => x.Id == ids.AccessId);
-        Assert.Equal(SubscriptionStatus.Expired, persistedSubscription.Status);
+        Assert.Equal(SubscriptionStatus.GracePeriod, persistedSubscription.Status);
         Assert.Null(persistedSubscription.BlockReason);
-        Assert.Equal(AccessCredentialStatus.Disabled, persistedAccess.Status);
-        Assert.Equal(0, provider.EnableCalls);
+        Assert.Equal(AccessCredentialStatus.Active, persistedAccess.Status);
+        Assert.Equal(1, provider.EnableCalls);
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "subscription.unblock");
+    }
+
+    [Fact]
+    public async Task Unblock_Subscription_At_Grace_End_Should_Expire_Without_Enabling_Access()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 4, 10, 30, 0, TimeSpan.Zero));
+        var ids = await SeedSubscriptionWithDisabledAccessAsync(db, clock.UtcNow);
+        var subscription = await db.Subscriptions.SingleAsync(x => x.Id == ids.SubscriptionId);
+        subscription.Status = SubscriptionStatus.Blocked;
+        subscription.EndAt = clock.UtcNow.AddDays(-3);
+        subscription.GracePeriodEndAt = clock.UtcNow;
+        subscription.BlockReason = "manual hold";
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider(clock.UtcNow);
+        var controller = CreateController(db, provider, clock);
+
+        Assert.IsType<OkObjectResult>(await controller.UnblockSubscription(ids.SubscriptionId, new AdminAccessActionHttpRequest("reviewed"), CancellationToken.None));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(SubscriptionStatus.Expired, (await db.Subscriptions.SingleAsync()).Status);
+        Assert.Equal(AccessCredentialStatus.Disabled, (await db.AccessCredentials.SingleAsync()).Status);
+        Assert.Equal(0, provider.EnableCalls);
     }
 
     [Theory]

@@ -31,7 +31,7 @@ function overview(overrides: Partial<AdminUserOverviewDto> = {}): AdminUserOverv
   }
 }
 
-test('admin user overview stats aggregates commercial and attention state', () => {
+test('admin user overview stats aggregates commercial and effective access state', () => {
   const result = buildAdminUserOverviewStats(overview({
     telegramAccounts: [
       { id: 'tg-1', telegramUserId: 777001, username: 'client_tg', firstName: '', lastName: '', languageCode: 'ru', isBlocked: true, linkedAt: now, lastSeenAt: now }
@@ -44,16 +44,18 @@ test('admin user overview stats aggregates commercial and attention state', () =
       { id: 'pay-2', orderId: 'order-1', provider: 'YooKassa', providerPaymentId: 'pay_2', externalEventId: 'evt_2', amount: 490, currency: 'RUB', status: 'Failed', signatureValidated: false, createdAt: now, updatedAt: now }
     ],
     subscriptions: [
-      { id: 'sub-1', userId: 'user-1', tariffId: 'tariff-1', tariffName: 'Premium', status: 'Active', startAt: now, endAt: now },
-      { id: 'sub-2', userId: 'user-1', tariffId: 'tariff-1', tariffName: 'Premium', status: 'Blocked', startAt: now, endAt: now }
+      { id: 'sub-1', userId: 'user-1', tariffId: 'tariff-1', tariffName: 'Premium', status: 'Active', startAt: now, endAt: '2026-07-10T12:00:00Z' },
+      { id: 'sub-2', userId: 'user-1', tariffId: 'tariff-1', tariffName: 'Premium', status: 'Blocked', startAt: now, endAt: now },
+      { id: 'sub-stale', userId: 'user-1', tariffId: 'tariff-1', tariffName: 'Premium', status: 'Active', startAt: now, endAt: now }
     ],
     accessCredentials: [
-      { id: 'access-1', subscriptionId: 'sub-1', providerType: 'x3ui', providerAccessId: 'client-1', serverId: 'node-1', accessUri: 'vless://client', qrCodePath: 'vless://client', configPath: '', status: 'Active', issuedAt: now, revision: 1 }
+      { id: 'access-1', subscriptionId: 'sub-1', providerType: 'x3ui', providerAccessId: 'client-1', serverId: 'node-1', accessUri: 'vless://client', qrCodePath: 'vless://client', configPath: '', status: 'Active', issuedAt: now, expiryDate: '2026-07-10T12:00:00Z', revision: 1 },
+      { id: 'access-stale', subscriptionId: 'sub-stale', subscriptionStatus: 'Active', isTerminal: false, providerType: 'x3ui', providerAccessId: 'client-stale', serverId: 'node-1', accessUri: 'vless://stale', qrCodePath: 'vless://stale', configPath: '', status: 'Active', issuedAt: now, expiryDate: now, revision: 1 }
     ],
     supportConversations: [
       { id: 'support-1', userId: 'user-1', telegramUserId: 777001, channel: 'telegram', status: 'open', subject: 'Help', assignedToUserId: null, internalNote: 'VIP', createdAt: now, updatedAt: now }
     ]
-  }))
+  }), new Date(now))
 
   assert.equal(result.ordersCount, 1)
   assert.equal(result.paymentsCount, 2)

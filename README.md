@@ -209,12 +209,12 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-12 локально подтверждено:
 
-- backend на .NET 9: `1132/1132` unit tests;
+- backend на .NET 9: `1134/1134` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `135/135`;
+- frontend unit tests: `136/136`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `216/216`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `218/218`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -342,7 +342,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - анонимная checkout-session и partial order после ошибки payment init автоматически переходят в expired recovery без login, клика или reload;
 - кабинет и пользовательские API скрывают VPN URI/QR/config/provider ID точно по effective access deadline, не ожидая фонового lifecycle worker;
 - административные access DTO, QR и provider-команды используют тот же effective deadline; открытая админка скрывает секреты без reload и оставляет только безопасное отключение у провайдера;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-admin-access-grace-expiry`, версия `0.636.0`;
-- roadmap progress: `649/669` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- административные sync/migration подписки, dashboard и user overview используют effective expiry; открытая админка обновляет команды и метрики без reload, а grace-period unblock согласован с backend state machine;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-admin-subscription-effective-expiry`, версия `0.637.0`;
+- roadmap progress: `650/670` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

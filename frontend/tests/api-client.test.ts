@@ -1703,7 +1703,7 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
         : path.endsWith('/block')
           ? { id: 'sub-1', status: 'Blocked', blockReason: 'abuse' }
           : path.endsWith('/unblock')
-            ? { id: 'sub-1', status: 'Active' }
+            ? { id: 'sub-1', status: 'GracePeriod' }
             : path.endsWith('/cancel')
               ? { id: 'sub-1', status: 'Cancelled', cancelledAt: '2026-08-09T08:00:00Z' }
               : path.endsWith('/sync-access')
@@ -1720,7 +1720,7 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
   await client.extendAdminSubscription('admin-token', 'sub-1', 30, 'manual')
   await client.activateAdminSubscription('admin-token', 'sub-1', 'activate')
   await client.blockAdminSubscription('admin-token', 'sub-1', 'abuse')
-  await client.unblockAdminSubscription('admin-token', 'sub-1', 'resolved')
+  const unblockResult = await client.unblockAdminSubscription('admin-token', 'sub-1', 'resolved')
   await client.cancelAdminSubscription('admin-token', 'sub-1', 'customer request')
   await client.syncAdminSubscriptionAccess('admin-token', 'sub-1', 'manual subscription sync')
   await client.migrateAdminSubscription('admin-token', 'sub-1', 'node-2')
@@ -1733,6 +1733,7 @@ test('ApiClient admin subscription and VPN access actions are confirmation-frien
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/activate')
   assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/block')
   assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/unblock')
+  assert.equal(unblockResult.status, 'GracePeriod')
   assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/cancel')
   assert.equal(calls[5]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/sync-access')
   assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/subscriptions/sub-1/migrate')

@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1132/1132", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-12-admin-access-grace-expiry", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1134/1134", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-12-admin-subscription-effective-expiry", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1132/1132",
-                     "2026-08-12-admin-access-grace-expiry",
-                     "0.636.0",
+                     "1134/1134",
+                     "2026-08-12-admin-subscription-effective-expiry",
+                     "0.637.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-12-admin-access-grace-expiry",
-                     "0.636.0",
+                     "2026-08-12-admin-subscription-effective-expiry",
+                     "0.637.0",
                      "522/542",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: `1132/1132`",
+                     "Backend full suite: `1134/1134`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `639` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-12-admin-access-grace-expiry",
-                     "0.636.0",
+                     "2026-08-12-admin-subscription-effective-expiry",
+                     "0.637.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "Backend `1132/1132`",
+                     "Backend `1134/1134`",
                      "PostgreSQL SQL",
                      "secret scan `639` files, `0` findings"
                  })

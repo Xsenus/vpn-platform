@@ -122,6 +122,20 @@ public class AdminOperationBoundaryTests
         Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, fullTarget.Id, CancellationToken.None));
         Assert.Empty(await db.MigrationJobs.ToListAsync());
 
+        subscription.Status = SubscriptionStatus.GracePeriod;
+        subscription.EndAt = now.AddDays(-3);
+        subscription.GracePeriodEndAt = now;
+        await db.SaveChangesAsync();
+        var expiredMigration = Assert.IsType<BadRequestObjectResult>(await controller.MigrateSubscription(subscription.Id, target.Id, CancellationToken.None));
+        Assert.Contains("expired", JsonSerializer.Serialize(expiredMigration.Value), StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.MigrationJobs.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+
+        subscription.Status = SubscriptionStatus.Active;
+        subscription.EndAt = now.AddDays(29);
+        subscription.GracePeriodEndAt = null;
+        await db.SaveChangesAsync();
+
         var activeJob = new MigrationJob { SourceNodeId = source.Id, TargetNodeId = target.Id, Status = MigrationJobStatus.Running, Type = "single-subscription", RequestedAt = now };
         activeJob.Items.Add(new MigrationItem { SubscriptionId = subscription.Id, OldAccessId = access.Id, Status = MigrationJobStatus.Running });
         db.MigrationJobs.Add(activeJob);

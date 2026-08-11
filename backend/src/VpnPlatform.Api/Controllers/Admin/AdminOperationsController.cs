@@ -608,13 +608,17 @@ public class AdminOperationsController : ControllerBase
 
         var now = _clock.UtcNow;
         var before = JsonSerializer.Serialize(new { subscription.Status, subscription.BlockReason });
-        var nextStatus = subscription.EndAt > now ? SubscriptionStatus.Active : SubscriptionStatus.Expired;
+        var nextStatus = subscription.EndAt > now
+            ? SubscriptionStatus.Active
+            : BusinessRules.GetSubscriptionAccessEnd(subscription.EndAt, subscription.GracePeriodEndAt) > now
+                ? SubscriptionStatus.GracePeriod
+                : SubscriptionStatus.Expired;
         if (!StatusStateMachine.CanTransition(subscription.Status, nextStatus))
         {
             return BadRequest(new { error = $"Subscription status transition {subscription.Status} -> {nextStatus} is not allowed." });
         }
 
-        if (nextStatus == SubscriptionStatus.Active
+        if (nextStatus is SubscriptionStatus.Active or SubscriptionStatus.GracePeriod
             && subscription.CurrentAccess is not null
             && subscription.CurrentAccess.Status != AccessCredentialStatus.Active)
         {
@@ -689,6 +693,15 @@ public class AdminOperationsController : ControllerBase
         if (subscription.Status == SubscriptionStatus.Cancelled)
         {
             return BadRequest(new { error = "Cancelled subscription VPN access cannot be synchronized." });
+        }
+
+        if (!BusinessRules.IsSubscriptionAccessAvailable(
+                subscription.Status,
+                subscription.EndAt,
+                subscription.GracePeriodEndAt,
+                _clock.UtcNow))
+        {
+            return BadRequest(new { error = "Expired or inactive subscription VPN access cannot be synchronized." });
         }
 
         if (!subscription.CurrentAccessId.HasValue)
@@ -926,6 +939,15 @@ public class AdminOperationsController : ControllerBase
             if (subscription.Status == SubscriptionStatus.Cancelled)
             {
                 return BadRequest(new { error = "Cancelled subscription cannot be migrated." });
+            }
+
+            if (!BusinessRules.IsSubscriptionAccessAvailable(
+                    subscription.Status,
+                    subscription.EndAt,
+                    subscription.GracePeriodEndAt,
+                    _clock.UtcNow))
+            {
+                return BadRequest(new { error = "Expired or inactive subscription cannot be migrated." });
             }
 
             if (!subscription.CurrentServerId.HasValue)

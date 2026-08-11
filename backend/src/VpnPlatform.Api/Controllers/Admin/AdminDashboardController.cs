@@ -8,6 +8,7 @@ using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Admin;
 
@@ -19,29 +20,39 @@ public class AdminDashboardController : ControllerBase
     private readonly IApplicationDbContext _db;
     private readonly IConfiguration? _configuration;
     private readonly IHostEnvironment? _environment;
+    private readonly IClock _clock;
 
-    public AdminDashboardController(IApplicationDbContext db, IConfiguration? configuration = null, IHostEnvironment? environment = null)
+    public AdminDashboardController(
+        IApplicationDbContext db,
+        IConfiguration? configuration = null,
+        IHostEnvironment? environment = null,
+        IClock? clock = null)
     {
         _db = db;
         _configuration = configuration;
         _environment = environment;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var expiringAt = now.AddDays(7);
         var recentSince = now.AddDays(-7);
         var roles = User?.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray() ?? [];
         var canReadFinance = AdminPolicies.HasAccess(roles, AdminPolicies.FinanceRead);
         var canReadSupport = AdminPolicies.HasAccess(roles, AdminPolicies.SupportRead);
         var canManageBot = AdminPolicies.HasAccess(roles, AdminPolicies.BotManage);
-        var activeSubscriptionEndDates = await _db.Subscriptions
+        var subscriptionCandidates = await _db.Subscriptions
             .AsNoTracking()
-            .Where(x => x.Status == SubscriptionStatus.Active)
-            .Select(x => x.EndAt)
+            .Where(x => x.Status == SubscriptionStatus.Active || x.Status == SubscriptionStatus.GracePeriod)
+            .Select(x => new { x.Status, x.EndAt, x.GracePeriodEndAt })
             .ToListAsync(cancellationToken);
+        var activeSubscriptionEndDates = subscriptionCandidates
+            .Where(x => BusinessRules.IsSubscriptionAccessAvailable(x.Status, x.EndAt, x.GracePeriodEndAt, now))
+            .Select(x => BusinessRules.GetSubscriptionAccessEnd(x.EndAt, x.GracePeriodEndAt))
+            .ToList();
         var recentPaymentDates = canReadFinance
             ? await _db.Payments
             .AsNoTracking()

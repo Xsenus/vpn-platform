@@ -3405,7 +3405,7 @@ export class ApiClient {
   }
 
   unblockAdminSubscription(token: string, id: string, reason?: string | null): Promise<AdminSubscriptionStatusResultDto> {
-    return this.request<AdminSubscriptionStatusResultDto>(`/api/admin/subscriptions/${id}/unblock`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is AdminSubscriptionStatusResultDto => isAdminSubscriptionStatusResultDto(value, id, new Set(['Active', 'Expired'])))
+    return this.request<AdminSubscriptionStatusResultDto>(`/api/admin/subscriptions/${id}/unblock`, { method: 'POST', token, body: JSON.stringify({ reason: reason ?? null }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is AdminSubscriptionStatusResultDto => isAdminSubscriptionStatusResultDto(value, id, new Set(['Active', 'GracePeriod', 'Expired'])))
   }
 
   cancelAdminSubscription(token: string, id: string, reason?: string | null): Promise<AdminSubscriptionCancelResultDto> {
