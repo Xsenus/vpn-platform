@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.626.0 - 2026-08-11
+
+Release entry: `2026-08-11-cabinet-renewal-provider-availability`.
+
+### Исправлено
+
+- Кнопка повторной подготовки оплаты продления больше не остаётся активной, если после обновления сессии доступные payment providers не загрузились.
+- Заведомо no-op команда теперь блокируется тем же `busy || !provider` условием, что и остальные cabinet payment actions.
+- Retry-кнопка передаёт точное `aria-busy` во время операции, а handler по-прежнему fail-closed отклоняет программный вызов без provider.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: после provider `503` сохранённый renewal показывал enabled retry-кнопку. После исправления targeted contract прошёл `2/2`, programmatic bypass не отправил второй payment init.
+- Полный cabinet desktop/mobile regression прошёл `48/48`; полный console-responsive Playwright — `188/188` за `11.7 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `128/128`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `352.02/102.86 kB`, cabinet bundle `369.62/106.77 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `625`, secret scan `668` files/`0` findings.
+- Roadmap: `639/659` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.625.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-payment-provider-lock`.

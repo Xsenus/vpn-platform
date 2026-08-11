@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-11-cabinet-payment-provider-lock`, версия `0.625.0`; cabinet фиксирует видимый payment provider на всё время renewal/retry mutation, а полный browser gate проходит `186/186` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-11-cabinet-renewal-provider-availability`, версия `0.626.0`; cabinet не предлагает renewal payment retry без доступного provider, а полный browser gate проходит `188/188` без failed/flaky/skipped.

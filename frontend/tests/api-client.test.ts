@@ -2954,6 +2954,7 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(cabinetSource, /getPublicPaymentProviders/)
   assert.match(cabinetSource, /paymentProvidersLoading/)
   assert.match(cabinetSource, /<select value=\{provider\} disabled=\{busy \|\| paymentProvidersLoading \|\| paymentProviders\.length === 0\} aria-busy=\{busy\}/)
+  assert.match(cabinetSource, /onClick=\{handleRetryRenewalPayment\} disabled=\{busy \|\| !provider\} aria-busy=\{busy\}/)
   assert.match(cabinetSource, /loadAllInFlight/)
   assert.match(cabinetSource, /activeRequest\?\.operationId === operationId && activeRequest\.token === currentToken/)
   assert.match(cabinetSource, /loadAllInFlight\.current === request/)

@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Cabinet renewal provider availability
+
+Scope:
+- A saved renewal order must not expose an actionable payment retry when no web payment provider is currently available.
+- The retry control and handler must remain fail-closed after a session rotation and provider reload failure.
+
+Results:
+- Roadmap progress: `639/659` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-cabinet-renewal-provider-availability`, version `0.626.0`.
+- Reproduction before fix: payment init failed after saving a renewal order; a later session refresh received provider `503`, cleared the selected provider, but «Повторить подготовку оплаты» remained enabled. Fail-first desktop/mobile: `0/2`.
+- After fix: renewal payment retry uses `disabled={busy || !provider}` and `aria-busy={busy}`. Targeted desktop/mobile: `2/2`; removing the native disabled attribute programmatically still kept payment-init POST count at `1`.
+- Full cabinet desktop/mobile regression: `48/48`; final console-responsive Playwright: `188/188` in `11.7 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: the existing button keeps stable dimensions and remains visibly disabled next to the provider recovery alert without horizontal overflow, clipping or layout shift on desktop/mobile.
+- Frontend tests: `128/128`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `352.02 kB`, gzip `102.86 kB`; cabinet bundle `369.62/106.77 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `625` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet payment provider lock
 
 Scope:

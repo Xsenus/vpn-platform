@@ -214,7 +214,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - frontend unit tests: `128/128`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `186/186`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `188/188`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -333,7 +333,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - tariff/release/FAQ/scenario entity commands, global site-content writes и Telegram settings save/test используют общие resource owners и shared busy-state;
 - все admin mutation indicators используют многозначный resource-owner set; независимая команда не сбрасывает busy-state незавершённой формы или строки;
 - cabinet блокирует выбор способа оплаты до завершения продления или retry-payment, поэтому видимый provider совпадает с отправленным snapshot;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-payment-provider-lock`, версия `0.625.0`;
-- roadmap progress: `638/658` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- повторная подготовка оплаты сохранённого renewal недоступна без активного web payment provider и остаётся fail-closed при программном вызове;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-11-cabinet-renewal-provider-availability`, версия `0.626.0`;
+- roadmap progress: `639/659` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

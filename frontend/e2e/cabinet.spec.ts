@@ -1250,6 +1250,35 @@ test('cabinet locks the selected payment provider while retry payment is pending
   await expect(providerSelect).toBeEnabled()
 })
 
+test('cabinet disables renewal payment retry after providers become unavailable', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.failNextRenewalPayment()
+  await seedCabinetSession(page, 'access-token-renewal-provider-loss', 'refresh-token-renewal-provider-loss')
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Продлить' }).first().click()
+
+  const renewalCard = page.getByRole('heading', { name: 'Последнее продление' }).locator('..')
+  const retryButton = renewalCard.getByRole('button', { name: 'Повторить подготовку оплаты' })
+  await expect(retryButton).toBeEnabled()
+  expect(api.getRequestCount('/api/me/orders/order-renewal/payments/YooKassa/init', 'POST')).toBe(1)
+
+  api.failPaymentProviders()
+  await page.getByRole('button', { name: 'Обновить сессию' }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить способы оплаты' })).toBeVisible()
+  await expect(page.getByText('Сессия обновлена.')).toBeVisible()
+
+  await expect(retryButton).toBeDisabled()
+  await expect(retryButton).toHaveAttribute('aria-busy', 'false')
+  await retryButton.evaluate((button) => {
+    button.removeAttribute('disabled')
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  await page.waitForTimeout(100)
+  expect(api.getRequestCount('/api/me/orders/order-renewal/payments/YooKassa/init', 'POST')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('cabinet support messages failure stays scoped and recovers on explicit retry', async ({ page }) => {
   const api = await mockCabinetApi(page)
   api.useSupportConversationRaceFixture()

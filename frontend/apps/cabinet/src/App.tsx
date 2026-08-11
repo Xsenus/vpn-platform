@@ -1317,7 +1317,7 @@ export function App() {
               ) : (
                 <>
                   <p className="safe-note">Заказ сохранён, но ссылка оплаты ещё не подготовлена. Повторная команда использует этот же заказ.</p>
-                  <PrimaryButton type="button" onClick={handleRetryRenewalPayment} disabled={busy}>
+                  <PrimaryButton type="button" onClick={handleRetryRenewalPayment} disabled={busy || !provider} aria-busy={busy}>
                     Повторить подготовку оплаты
                   </PrimaryButton>
                 </>
