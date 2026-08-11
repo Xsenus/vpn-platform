@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public completed checkout recovery
+
+Scope:
+- A repeated checkout-session claim may return the same user's already completed or processing order and must not present it as an unpaid retry.
+- Non-retry order state must remain visible for the current page while the persisted checkout is cleared before any reload or session boundary.
+
+Results:
+- Roadmap progress: `643/663` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-completed-checkout-recovery`, version `0.630.0`.
+- Reproduction before fix: a repeated claim returning `Completed` rendered «Заказ создан, оплата не подготовлена» and left the pending checkout in session storage. Fail-first desktop/mobile: `0/2`.
+- After fix: status-aware copy covers payment received, fulfillment, completed, partial, refunded, cancelled and expired states; non-retry checkout storage is removed before the handler returns. Targeted desktop/mobile: `2/2`; after reload request counts remain `checkout=1`, `claim=1`, `paymentInit=0`.
+- Full public desktop/mobile regression: `44/44`; final console-responsive Playwright: `198/198` in `11.6 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: completed status, exact explanation and «Закрыть» action fit without horizontal overflow or a contradictory retry command on desktop/mobile.
+- Frontend tests: `130/130`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `355.14 kB`, gzip `103.59 kB`; cabinet bundle `370.75/107.00 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `629` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public expired partial checkout
 
 Scope:

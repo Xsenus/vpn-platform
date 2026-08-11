@@ -110,4 +110,21 @@ test('public partial checkout retries only a live backend-supported order', () =
   assert.match(expired.reason ?? '', /Срок оплаты заказа истёк/)
 
   assert.equal(getPendingCheckoutOrderAvailability(order({ status: 'Completed' }), now).canRetry, false)
+
+  const completed = getPendingCheckoutOrderAvailability(order({ status: 'Completed' }), now)
+  assert.equal(completed.shouldForgetPendingCheckout, true)
+  assert.equal(completed.shouldCreateNewOrder, false)
+  assert.equal(completed.title, 'Покупка завершена')
+  assert.equal(completed.statusLabel, 'покупка завершена')
+  assert.equal(completed.reason, 'Оплата подтверждена. Подписка и VPN-доступ появятся в личном кабинете.')
+
+  const cancelled = getPendingCheckoutOrderAvailability(order({ status: 'Cancelled' }), now)
+  assert.equal(cancelled.shouldForgetPendingCheckout, true)
+  assert.equal(cancelled.shouldCreateNewOrder, true)
+  assert.equal(cancelled.title, 'Заказ отменён')
+
+  const processing = getPendingCheckoutOrderAvailability(order({ status: 'FulfillmentInProgress' }), now)
+  assert.equal(processing.shouldForgetPendingCheckout, true)
+  assert.equal(processing.shouldCreateNewOrder, false)
+  assert.equal(processing.title, 'Подключаем VPN-доступ')
 })

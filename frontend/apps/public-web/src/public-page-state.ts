@@ -73,15 +73,75 @@ export function getPendingCheckoutOrderAvailability(
     return {
       canRetry: false,
       shouldCreateNewOrder: true,
+      shouldForgetPendingCheckout: true,
       isExpired: true,
+      title: 'Срок оплаты заказа истёк',
+      statusLabel: 'срок оплаты истёк',
       reason: 'Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.'
+    }
+  }
+
+  const resolvedCopy: Record<string, { title: string; statusLabel: string; reason: string; shouldCreateNewOrder?: boolean }> = {
+    PaymentReceived: {
+      title: 'Оплата получена',
+      statusLabel: 'оплата получена',
+      reason: 'Платёж подтверждён. Заказ передан на подключение VPN-доступа.'
+    },
+    FulfillmentInProgress: {
+      title: 'Подключаем VPN-доступ',
+      statusLabel: 'доступ подключается',
+      reason: 'Оплата подтверждена. VPN-доступ подготавливается автоматически.'
+    },
+    Completed: {
+      title: 'Покупка завершена',
+      statusLabel: 'покупка завершена',
+      reason: 'Оплата подтверждена. Подписка и VPN-доступ появятся в личном кабинете.'
+    },
+    PartiallyProcessed: {
+      title: 'Завершаем выдачу доступа',
+      statusLabel: 'требует завершения',
+      reason: 'Оплата подтверждена, но выдача VPN-доступа ещё завершается. Проверьте личный кабинет или обратитесь в поддержку.'
+    },
+    Refunded: {
+      title: 'Платёж возвращён',
+      statusLabel: 'платёж возвращён',
+      reason: 'Возврат оформлен. Для новой покупки выберите тариф заново.',
+      shouldCreateNewOrder: true
+    },
+    Cancelled: {
+      title: 'Заказ отменён',
+      statusLabel: 'заказ отменён',
+      reason: 'Заказ отменён. Для новой покупки выберите тариф заново.',
+      shouldCreateNewOrder: true
+    },
+    Canceled: {
+      title: 'Заказ отменён',
+      statusLabel: 'заказ отменён',
+      reason: 'Заказ отменён. Для новой покупки выберите тариф заново.',
+      shouldCreateNewOrder: true
+    }
+  }
+
+  const resolved = resolvedCopy[order.status]
+  if (resolved) {
+    return {
+      canRetry: false,
+      shouldCreateNewOrder: resolved.shouldCreateNewOrder ?? false,
+      shouldForgetPendingCheckout: true,
+      isExpired: false,
+      title: resolved.title,
+      statusLabel: resolved.statusLabel,
+      reason: resolved.reason
     }
   }
 
   return {
     canRetry: hasRetryableStatus,
-    shouldCreateNewOrder: order.status === 'Cancelled' || order.status === 'Canceled',
+    shouldCreateNewOrder: false,
+    shouldForgetPendingCheckout: !hasRetryableStatus,
     isExpired: false,
+    title: hasRetryableStatus ? 'Заказ создан, оплата не подготовлена' : 'Заказ пока нельзя оплатить',
+    statusLabel: hasRetryableStatus ? 'заказ создан' : 'требует проверки',
     reason: hasRetryableStatus ? null : 'Этот заказ больше нельзя отправить на повторную оплату.'
   }
 }

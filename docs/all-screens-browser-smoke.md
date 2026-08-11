@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-11-public-expired-partial-checkout`, версия `0.629.0`; публичный partial checkout не вызывает payment init для просроченного claimed order, а полный browser gate проходит `196/196` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-11-public-completed-checkout-recovery`, версия `0.630.0`; завершённый claimed order показывает точный статус и не восстанавливается после reload, а полный browser gate проходит `198/198` без failed/flaky/skipped.

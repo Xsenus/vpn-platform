@@ -974,7 +974,7 @@ function AccountPage({
       <h2 className="sr-only">Состояние аккаунта</h2>
       <div className="grid">
         <StatTile label="Авторизация" value={profile ? 'подключен' : token ? (sessionHydrationBusy ? 'проверяется' : 'требует проверки') : 'не выполнена'} />
-        <StatTile label="Покупка" value={pendingCheckoutOrder ? 'заказ создан' : pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто'} />
+        <StatTile label="Покупка" value={pendingCheckoutOrderAvailability?.statusLabel ?? (pendingCheckout ? 'ожидает привязки' : lastCheckout ? 'есть заказ' : 'пока пусто')} />
         <StatTile label="Рефералы" value={profile?.referralCode ?? 'будет после входа'} />
       </div>
 
@@ -1029,9 +1029,7 @@ function AccountPage({
             <Card>
               <h3>{claimBusy
                 ? (pendingCheckoutOrder ? 'Готовим оплату' : 'Привязываем покупку')
-                : pendingCheckoutOrderAvailability?.isExpired
-                  ? 'Срок оплаты заказа истёк'
-                  : pendingCheckoutOrder ? 'Заказ создан, оплата не подготовлена' : 'Покупка ожидает привязки'}</h3>
+                : pendingCheckoutOrderAvailability?.title ?? 'Покупка ожидает привязки'}</h3>
               <p>Тариф: {pendingCheckout.tariffName}</p>
               <p>Способ оплаты: {pendingCheckout.provider}</p>
               {pendingCheckoutOrder && <p>ID заказа: {pendingCheckoutOrder.id}</p>}
@@ -1049,7 +1047,9 @@ function AccountPage({
                   {pendingCheckoutOrderAvailability?.shouldCreateNewOrder && (
                     <Link className="button" to="/tariffs" onClick={onClearPendingCheckout}>Создать новый заказ</Link>
                   )}
-                  <PrimaryButton type="button" className="button-ghost" onClick={onClearPendingCheckout}>Отменить</PrimaryButton>
+                  <PrimaryButton type="button" className="button-ghost" onClick={onClearPendingCheckout}>
+                    {pendingCheckoutOrderAvailability && !pendingCheckoutOrderAvailability.canRetry ? 'Закрыть' : 'Отменить'}
+                  </PrimaryButton>
                 </div>
               )}
             </Card>
@@ -1279,6 +1279,7 @@ export function App() {
     setProfile(null)
     setLastCheckout(null)
     setPendingCheckoutOrder(null)
+    if (!readSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)) setPendingCheckout(null)
     setCheckoutError('')
   }
 
@@ -1390,6 +1391,9 @@ export function App() {
         }
         const paymentAvailability = getPendingCheckoutOrderAvailability(order)
         if (!paymentAvailability.canRetry) {
+          if (paymentAvailability.shouldForgetPendingCheckout) {
+            removeSessionStorageItem(PENDING_CHECKOUT_STORAGE_KEY)
+          }
           setCheckoutError('')
           return
         }

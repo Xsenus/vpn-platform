@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.630.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-completed-checkout-recovery`.
+
+### Исправлено
+
+- Повторный claim уже завершённого заказа больше не показывает ложное состояние «оплата не подготовлена» и не оставляет public checkout в reload-петле.
+- Публичная карточка различает `PaymentReceived`, `FulfillmentInProgress`, `Completed`, `PartiallyProcessed`, `Refunded`, `Cancelled` и `Expired`, показывая точный статус и допустимое следующее действие.
+- Неретрайные результаты удаляются из `sessionStorage` до выхода из checkout handler, но остаются видимыми в текущей вкладке до действия «Закрыть».
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: завершённый claimed order показывался как неподготовленная оплата, а persisted checkout оставался для нового claim после reload. После исправления targeted contract прошёл `2/2`, после reload `claim=1`, `paymentInit=0`.
+- Полный public desktop/mobile regression прошёл `44/44`; полный console-responsive Playwright — `198/198` за `11.6 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `130/130`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `355.14/103.59 kB`, cabinet bundle `370.75/107.00 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зелёные; encoding/documentation guard `57/57`, release seed `629`, secret scan `668` files/`0` findings.
+- Roadmap: `643/663` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.629.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-expired-partial-checkout`.
