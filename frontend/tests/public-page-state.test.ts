@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { OrderDto, PublicPaymentProviderDto, TariffDto } from '../packages/api-client/src/index.ts'
-import { canOpenCheckoutPayment, canStartCheckout, getCheckoutErrorMessage, getCheckoutPaymentExpiryDelay, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures } from '../apps/public-web/src/public-page-state.ts'
+import { canOpenCheckoutPayment, canStartCheckout, getCheckoutErrorMessage, getCheckoutPaymentExpiryDelay, getCheckoutUnavailableReason, getNextPublicCheckoutExpiryDelay, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures } from '../apps/public-web/src/public-page-state.ts'
 
 function tariff(overrides: Partial<TariffDto>): TariffDto {
   return {
@@ -140,4 +140,9 @@ test('public checkout exposes a payment link only until the retryable order expi
   assert.equal(canOpenCheckoutPayment(order({ status: 'Completed' }), now), false)
   assert.equal(getCheckoutPaymentExpiryDelay(order({ expiresAt: '2026-05-27T12:00:00Z' }), now), null)
   assert.equal(getCheckoutPaymentExpiryDelay(order({ status: 'Completed' }), now), null)
+  assert.equal(getNextPublicCheckoutExpiryDelay([
+    order({ expiresAt: '2026-05-27T12:15:00Z' }),
+    order({ expiresAt: '2026-05-27T12:05:00Z' })
+  ], { expiresAt: '2026-05-27T12:10:00Z' }, now), 5 * 60 * 1000)
+  assert.equal(getNextPublicCheckoutExpiryDelay([], { expiresAt: null }, now), null)
 })

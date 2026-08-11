@@ -14923,5 +14923,28 @@
         "text": "Roadmap progress is 646/666 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-public-pending-checkout-live-expiry",
+    "version": "0.634.0",
+    "releasedAt": "2026-08-12T01:27:11+07:00",
+    "title": "Незавершенная покупка обновляется при истечении срока",
+    "summary": "Public account автоматически переводит сохраненную session и partial order в точное expired-состояние.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Anonymous checkout больше не обещает автоматическую привязку после истечения session."
+      },
+      {
+        "type": "fixed",
+        "text": "Partial order после ошибки payment init автоматически убирает все retry-действия на границе срока."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 647/667 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

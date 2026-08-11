@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.634.0 - 2026-08-12
+
+Release entry: `2026-08-12-public-pending-checkout-live-expiry`.
+
+### Исправлено
+
+- Анонимная карточка сохраненного checkout автоматически переходит в истекшее состояние на границе срока session без входа или refresh.
+- Partial checkout после ошибки payment init автоматически убирает обе retry-кнопки, когда claimed order истекает в открытой вкладке.
+- Единый current-time timer отслеживает session, partial order или последний checkout snapshot и показывает только допустимые действия восстановления.
+
+### Проверено
+
+- До исправления desktop/mobile fail-first был `0/4`: anonymous session сохраняла ложное обещание привязки, partial order оставлял две retry-кнопки. После исправления targeted unit `9/9`, public typecheck и browser regression `4/4` прошли без overflow.
+- Полный public desktop/mobile regression прошел `52/52`; финальный console-responsive Playwright — `212/212` за `11.0 min` без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Frontend `133/133`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `357.69/104.34 kB`, cabinet bundle `371.43/107.26 kB`, admin bundle `530213/142009/max 230541`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow и latest release verification зеленые; encoding/documentation guard `57/57`, release seed `633`, secret scan `668` files/`0` findings.
+- Roadmap: `647/667` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.633.0 - 2026-08-12
 
 Release entry: `2026-08-12-public-payment-link-expiry`.

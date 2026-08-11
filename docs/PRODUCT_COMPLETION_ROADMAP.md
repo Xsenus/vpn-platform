@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-public-payment-link-expiry`, версия `0.633.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `646/666` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-public-pending-checkout-live-expiry`, версия `0.634.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `647/667` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -2280,6 +2280,10 @@ git diff --check
   - Что сделать: карточка последней public-покупки не должна оставлять redirect URL после истечения snapshot-заказа; открытая account-страница обязана перейти к явному expired recovery без ручного refresh.
   - Что сделано: `canOpenCheckoutPayment` связывает payment surface с retryable order status и `expiresAt`; `getCheckoutPaymentExpiryDelay` планирует current-render-time обновление, после которого карточка показывает `Expired`, точную причину и создание нового заказа.
   - Доказательство: до исправления desktop/mobile fail-first был `0/2`; после исправления targeted unit `6/6`, browser regression `2/2`, полный public desktop/mobile `48/48`, финальный Playwright `208/208` за `11.0 min` без failed/flaky/skipped, all-screens `6/6` на 25 viewport. Frontend `133/133`, typecheck/build/audit зелёные; backend `1125/1125`, Release build и EF drift зелёные; fresh SQLite latest release проверен; внешние evidence не закрывались.
+- [x] `P11-ACC-357` Обновлять сохранённую public-покупку в момент истечения без действия пользователя. 2026-08-12.
+  - Что сделать: анонимная checkout-session и claimed order после ошибки payment init должны перейти в expired recovery по локальному сроку без login, клика или reload; ложные auto-claim и retry действия не должны оставаться видимыми.
+  - Что сделано: `getPendingCheckoutSessionExpiryDelay` рассчитывает session deadline, а общий таймер `AccountPage` выбирает ближайший срок для анонимной session, partial order или последней покупки и обновляет доступность действий по текущему времени.
+  - Доказательство: до исправления desktop/mobile fail-first был `0/4`; после исправления targeted unit `9/9`, browser regression `4/4`, полный public desktop/mobile `52/52`, финальный Playwright `212/212` за `11.0 min` без failed/flaky/skipped, all-screens `6/6` на 25 viewport. Frontend `133/133`, typecheck/build/audit зелёные; backend `1125/1125`, Release build и EF drift зелёные; fresh SQLite latest release проверен; внешние evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

@@ -1,4 +1,5 @@
 import { normalizeApiError, type OrderDto, type PublicPaymentProviderDto, type TariffDto } from '@vpn-platform/api-client'
+import { getPendingCheckoutSessionExpiryDelay, type PendingCheckout } from './pending-checkout'
 
 export type PublicListState = 'loading' | 'error' | 'empty' | 'ready'
 
@@ -163,4 +164,17 @@ export function getCheckoutPaymentExpiryDelay(
   const nowTime = now.getTime()
   if (!Number.isFinite(expiresAt) || !Number.isFinite(nowTime) || expiresAt <= nowTime) return null
   return expiresAt - nowTime
+}
+
+export function getNextPublicCheckoutExpiryDelay(
+  orders: ReadonlyArray<Pick<OrderDto, 'status' | 'expiresAt'>>,
+  pending: Pick<PendingCheckout, 'expiresAt'> | null,
+  now = new Date()
+) {
+  const delays = [
+    ...orders.map((order) => getCheckoutPaymentExpiryDelay(order, now)),
+    pending ? getPendingCheckoutSessionExpiryDelay(pending, now) : null
+  ].filter((delay): delay is number => delay !== null)
+
+  return delays.length > 0 ? Math.min(...delays) : null
 }

@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Public pending checkout live expiry
+
+Scope:
+- An anonymous saved checkout session must update at its expiry boundary without waiting for login or refresh.
+- A claimed order retained after payment-init failure must remove every retry action when its payment window expires.
+
+Results:
+- Roadmap progress: `647/667` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-public-pending-checkout-live-expiry`, version `0.634.0`.
+- Reproduction before fix: desktop/mobile browser fail-first `0/4`; the anonymous card kept promising automatic claim and the partial-order error/card surfaces retained two retry buttons after expiry.
+- After fix: targeted session/order unit suite `9/9`, public-web typecheck and desktop/mobile browser regression `4/4`. Session, partial order and last-checkout snapshot share one current-time expiry schedule; expired copy/actions fit without horizontal overflow.
+- Full public desktop/mobile regression: `52/52`; final console-responsive Playwright: `212/212` in `11.0 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Frontend tests: `133/133`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `357.69 kB`, gzip `104.34 kB`; cabinet bundle `371.43/107.26 kB`; admin bundle raw `530213`, gzip `142009`, largest `230541`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding/documentation guards: `57/57`; latest release SQLite verification: OK; release seed: `633` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-12: Public payment-link expiry
 
 Scope:

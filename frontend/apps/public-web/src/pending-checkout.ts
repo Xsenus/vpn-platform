@@ -59,6 +59,18 @@ export function getPendingCheckoutSessionAvailability(pending: Pick<PendingCheck
   }
 }
 
+export function getPendingCheckoutSessionExpiryDelay(
+  pending: Pick<PendingCheckout, 'expiresAt'>,
+  now = new Date()
+) {
+  if (!getPendingCheckoutSessionAvailability(pending, now).canClaim || !pending.expiresAt) return null
+
+  const expiresAt = Date.parse(pending.expiresAt)
+  const nowTime = now.getTime()
+  if (!Number.isFinite(expiresAt) || !Number.isFinite(nowTime) || expiresAt <= nowTime) return null
+  return expiresAt - nowTime
+}
+
 export function isCheckoutSessionExpiredError(error: unknown) {
   if (!(error instanceof ApiClientError)) return false
   const payload = error.payload

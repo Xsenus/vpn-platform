@@ -20,7 +20,7 @@ import {
 import { Card, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { FAQ_ALL_CATEGORY, filterFaqItems, getFaqCategories, normalizeFaqCategory } from './faq-utils'
 import { getPendingCheckoutSessionAvailability, isCheckoutSessionExpiredError, parsePendingCheckout, type PendingCheckout } from './pending-checkout'
-import { canOpenCheckoutPayment, canStartCheckout, getCheckoutErrorMessage, getCheckoutPaymentExpiryDelay, getCheckoutUnavailableReason, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
+import { canOpenCheckoutPayment, canStartCheckout, getCheckoutErrorMessage, getCheckoutUnavailableReason, getNextPublicCheckoutExpiryDelay, getPendingCheckoutOrderAvailability, getPublicListState, getTariffFeatures as tariffFeatures } from './public-page-state'
 import { getPublicRouteMetadata } from './public-route'
 import { getPublicSessionCheckError, isPublicAccessTokenExpired, isPublicSessionRejected, publicSessionEndedMessage } from './public-session'
 
@@ -887,8 +887,11 @@ function AccountPage({
     ?? false
 
   useEffect(() => {
-    if (!lastCheckout) return
-    const delay = getCheckoutPaymentExpiryDelay(lastCheckout.order, checkoutNow)
+    const trackedOrders = [
+      ...(pendingCheckoutOrder ? [pendingCheckoutOrder] : []),
+      ...(lastCheckout ? [lastCheckout.order] : [])
+    ]
+    const delay = getNextPublicCheckoutExpiryDelay(trackedOrders, pendingCheckout, checkoutNow)
     if (delay === null) return
 
     const timer = window.setTimeout(
@@ -896,7 +899,7 @@ function AccountPage({
       Math.min(delay + 25, 2_147_483_647)
     )
     return () => window.clearTimeout(timer)
-  }, [checkoutClockTick, lastCheckout])
+  }, [checkoutClockTick, lastCheckout, pendingCheckout, pendingCheckoutOrder])
 
   const switchAuthMode = (nextMode: 'login' | 'register') => {
     setMode(nextMode)
@@ -1119,12 +1122,19 @@ function AccountPage({
         <div className="section">
           {pendingCheckout && (
             <Card>
-              <h3>Покупка сохранена</h3>
+              <h3>{pendingCheckoutSessionAvailability?.title ?? 'Покупка сохранена'}</h3>
               <p>Тариф: {pendingCheckout.tariffName}</p>
               <p>Способ оплаты: {pendingCheckout.provider}</p>
-              <p className="muted">Войдите или создайте аккаунт ниже. После входа заказ привяжется автоматически, и появится ссылка на оплату.</p>
+              <p className="muted" role={pendingCheckoutSessionAvailability?.canClaim ? undefined : 'status'}>
+                {pendingCheckoutSessionAvailability?.reason ?? 'Войдите или создайте аккаунт ниже. После входа заказ привяжется автоматически, и появится ссылка на оплату.'}
+              </p>
               <div className="form-actions">
-                <PrimaryButton type="button" className="button-ghost" onClick={onClearPendingCheckout}>Отменить эту покупку</PrimaryButton>
+                {pendingCheckoutSessionAvailability?.shouldCreateNewOrder && (
+                  <Link className="button" to="/tariffs" onClick={onClearPendingCheckout}>Создать новый заказ</Link>
+                )}
+                <PrimaryButton type="button" className="button-ghost" onClick={onClearPendingCheckout}>
+                  {pendingCheckoutSessionAvailability?.canClaim ? 'Отменить эту покупку' : 'Закрыть'}
+                </PrimaryButton>
               </div>
             </Card>
           )}
@@ -1132,7 +1142,7 @@ function AccountPage({
             <div className="section-header">
               <div>
                 <h3>{mode === 'login' ? 'Вход' : 'Регистрация'}</h3>
-                {pendingCheckout && <p className="muted">После входа покупка будет привязана к вашему аккаунту автоматически.</p>}
+                {pendingCheckout && pendingCheckoutSessionAvailability?.canClaim && <p className="muted">После входа покупка будет привязана к вашему аккаунту автоматически.</p>}
               </div>
               <SegmentedTabs
                 idPrefix="public-auth"

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ApiClientError, isPaymentProvider } from '../packages/api-client/src/index.ts'
-import { getPendingCheckoutSessionAvailability, isCheckoutSessionExpiredError, parsePendingCheckout } from '../apps/public-web/src/pending-checkout.ts'
+import { getPendingCheckoutSessionAvailability, getPendingCheckoutSessionExpiryDelay, isCheckoutSessionExpiredError, parsePendingCheckout } from '../apps/public-web/src/pending-checkout.ts'
 
 const validCheckout = {
   token: 'checkout_token_1234567890123456789012345678',
@@ -50,6 +50,21 @@ test('pending checkout parser restores only a bounded valid checkout', () => {
   assert.equal(expired.shouldCreateNewOrder, true)
   assert.equal(expired.shouldForgetPendingCheckout, true)
   assert.equal(expired.title, 'Срок оформления покупки истёк')
+  assert.equal(
+    getPendingCheckoutSessionExpiryDelay(
+      { expiresAt: '2026-06-14T00:15:00Z' },
+      new Date('2026-06-14T00:00:00Z')
+    ),
+    15 * 60 * 1000
+  )
+  assert.equal(
+    getPendingCheckoutSessionExpiryDelay(
+      { expiresAt: '2026-06-14T00:00:00Z' },
+      new Date('2026-06-14T00:00:00Z')
+    ),
+    null
+  )
+  assert.equal(getPendingCheckoutSessionExpiryDelay({ expiresAt: null }, new Date('2026-06-14T00:00:00Z')), null)
 
   assert.equal(isCheckoutSessionExpiredError(new ApiClientError('Ошибка', 400, { error: 'Checkout session expired.' })), true)
   assert.equal(isCheckoutSessionExpiredError(new ApiClientError('Ошибка', 400, { error: 'Checkout session not found.' })), false)
