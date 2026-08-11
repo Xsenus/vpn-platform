@@ -544,60 +544,6 @@ public class AdminAutomationMvpTests
     }
 
     [Fact]
-    public async Task Access_Disable_Enable_Should_Update_State_And_Write_History()
-    {
-        await using var db = CreateDbContext();
-        var subscriptionId = Guid.NewGuid();
-        var nodeId = Guid.NewGuid();
-        var accessId = Guid.NewGuid();
-        db.Subscriptions.Add(new Subscription
-        {
-            Id = subscriptionId,
-            UserId = Guid.NewGuid(),
-            TariffId = Guid.NewGuid(),
-            Status = SubscriptionStatus.Active,
-            StartAt = DateTimeOffset.UtcNow.AddDays(-1),
-            EndAt = DateTimeOffset.UtcNow.AddDays(30)
-        });
-        db.VpnNodes.Add(new VpnNode { Id = nodeId, Name = "Node", Host = "node", Region = "NL" });
-        db.AccessCredentials.Add(new AccessCredential
-        {
-            Id = accessId,
-            SubscriptionId = subscriptionId,
-            ServerId = nodeId,
-            ProviderAccessId = "provider-client-1",
-            AccessUri = "vless://example",
-            Status = AccessCredentialStatus.Active
-        });
-        await db.SaveChangesAsync();
-
-        var controller = CreateOperationsController(db);
-        var disable = await controller.DisableAccessCredential(accessId, new AdminAccessActionHttpRequest("abuse"), CancellationToken.None);
-        var enable = await controller.EnableAccessCredential(accessId, new AdminAccessActionHttpRequest("resolved"), CancellationToken.None);
-
-        var disableResult = Assert.IsType<AdminAccessActionResult>(Assert.IsType<OkObjectResult>(disable).Value);
-        var enableResult = Assert.IsType<AdminAccessActionResult>(Assert.IsType<OkObjectResult>(enable).Value);
-        Assert.Equal(accessId, disableResult.Id);
-        Assert.Equal(AccessCredentialStatus.Disabled.ToString(), disableResult.Status);
-        Assert.NotNull(disableResult.DisabledAt);
-        Assert.Equal(2, disableResult.Revision);
-        Assert.Equal(accessId, enableResult.Id);
-        Assert.Equal(AccessCredentialStatus.Active.ToString(), enableResult.Status);
-        Assert.Null(enableResult.DisabledAt);
-        Assert.Equal(3, enableResult.Revision);
-        var access = await db.AccessCredentials.SingleAsync(x => x.Id == accessId);
-        Assert.Equal(AccessCredentialStatus.Active, access.Status);
-        Assert.Null(access.DisabledAt);
-        Assert.Equal(3, access.Revision);
-        var history = await db.AccessCredentialHistories.Where(x => x.AccessCredentialId == accessId).ToListAsync();
-        Assert.Contains(history, x => x.EventType == "manual_admin_disable");
-        Assert.Contains(history, x => x.EventType == "manual_admin_enable");
-        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.disable" && x.EntityId == accessId.ToString());
-        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.enable" && x.EntityId == accessId.ToString());
-    }
-
-
-    [Fact]
     public async Task Provisioning_Run_Views_Should_Redact_Secret_Like_Log_Values()
     {
         await using var db = CreateDbContext();

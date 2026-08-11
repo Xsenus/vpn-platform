@@ -775,6 +775,11 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> DisableAccessCredential(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        if (_vpnAccessLifecycleService is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "VPN access lifecycle service is not configured." });
+        }
+
         var subscriptionId = await _db.AccessCredentials.AsNoTracking()
             .Where(x => x.Id == id)
             .Select(x => (Guid?)x.SubscriptionId)
@@ -782,48 +787,19 @@ public class AdminOperationsController : ControllerBase
         if (!subscriptionId.HasValue) return NotFound();
         await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
 
-        if (_vpnAccessLifecycleService is not null)
-        {
-            var result = await _vpnAccessLifecycleService.DisableAccessAsync(id, "manual_admin_disable", request?.Reason, ResolveUserId(), cancellationToken);
-            return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-        }
-
-        var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (access is null) return NotFound();
-        if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
-        {
-            return BadRequest(new { error = "Cancelled subscription VPN access cannot be disabled." });
-        }
-
-        var now = _clock.UtcNow;
-        var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
-        var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Disabled, now);
-        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
-        access.DisabledAt = now;
-        access.Revision += 1;
-        _db.AccessCredentialHistories.Add(new AccessCredentialHistory
-        {
-            AccessCredentialId = access.Id,
-            SubscriptionId = access.SubscriptionId,
-            EventType = "manual_admin_disable",
-            OldValueJson = before,
-            NewValueJson = JsonSerializer.Serialize(new { access.Status, access.DisabledAt, request?.Reason })
-        });
-        AddAuditLog("access.disable", "AccessCredential", id, before, JsonSerializer.Serialize(new { access.Status, access.DisabledAt, request?.Reason }));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new AdminAccessActionResult(
-            access.Id,
-            access.Status.ToString(),
-            access.DisabledAt,
-            access.LastSyncedAt,
-            access.Revision,
-            Message: "Access disabled."));
+        var result = await _vpnAccessLifecycleService.DisableAccessAsync(id, "manual_admin_disable", request?.Reason, ResolveUserId(), cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("access-credentials/{id:guid}/enable")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> EnableAccessCredential(Guid id, [FromBody] AdminAccessActionHttpRequest? request, CancellationToken cancellationToken)
     {
+        if (_vpnAccessLifecycleService is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "VPN access lifecycle service is not configured." });
+        }
+
         var subscriptionId = await _db.AccessCredentials.AsNoTracking()
             .Where(x => x.Id == id)
             .Select(x => (Guid?)x.SubscriptionId)
@@ -831,51 +807,8 @@ public class AdminOperationsController : ControllerBase
         if (!subscriptionId.HasValue) return NotFound();
         await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(subscriptionId.Value, cancellationToken);
 
-        if (_vpnAccessLifecycleService is not null)
-        {
-            var result = await _vpnAccessLifecycleService.EnableAccessAsync(id, request?.Reason, ResolveUserId(), cancellationToken);
-            return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-        }
-
-        var access = await _db.AccessCredentials.Include(x => x.Subscription).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (access is null) return NotFound();
-        if (access.Subscription?.Status == SubscriptionStatus.Cancelled)
-        {
-            return BadRequest(new { error = "Cancelled subscription VPN access cannot be enabled." });
-        }
-
-        if (access.Subscription is null
-            || !BusinessRules.IsSubscriptionAccessAvailable(
-                access.Subscription.Status,
-                access.Subscription.EndAt,
-                access.Subscription.GracePeriodEndAt,
-                _clock.UtcNow))
-        {
-            return BadRequest(new { error = "Expired or inactive subscription VPN access cannot be enabled." });
-        }
-
-        var before = JsonSerializer.Serialize(new { access.Status, access.DisabledAt });
-        var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Active, _clock.UtcNow);
-        if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
-        access.DisabledAt = null;
-        access.Revision += 1;
-        _db.AccessCredentialHistories.Add(new AccessCredentialHistory
-        {
-            AccessCredentialId = access.Id,
-            SubscriptionId = access.SubscriptionId,
-            EventType = "manual_admin_enable",
-            OldValueJson = before,
-            NewValueJson = JsonSerializer.Serialize(new { access.Status, request?.Reason })
-        });
-        AddAuditLog("access.enable", "AccessCredential", id, before, JsonSerializer.Serialize(new { access.Status, request?.Reason }));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(new AdminAccessActionResult(
-            access.Id,
-            access.Status.ToString(),
-            access.DisabledAt,
-            access.LastSyncedAt,
-            access.Revision,
-            Message: "Access enabled."));
+        var result = await _vpnAccessLifecycleService.EnableAccessAsync(id, request?.Reason, ResolveUserId(), cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("access-credentials/{id:guid}/sync")]
@@ -884,7 +817,7 @@ public class AdminOperationsController : ControllerBase
     {
         if (_vpnAccessLifecycleService is null)
         {
-            return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "VPN access lifecycle service is not configured." });
         }
 
         var subscriptionId = await _db.AccessCredentials.AsNoTracking()
@@ -904,7 +837,7 @@ public class AdminOperationsController : ControllerBase
     {
         if (_vpnAccessLifecycleService is null)
         {
-            return BadRequest(new { error = "VPN access lifecycle service is not configured." });
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "VPN access lifecycle service is not configured." });
         }
 
         var subscriptionId = await _db.AccessCredentials.AsNoTracking()

@@ -19,6 +19,71 @@ namespace VpnPlatform.UnitTests;
 
 public class AdminOperationBoundaryTests
 {
+    [Theory]
+    [InlineData("disable")]
+    [InlineData("enable")]
+    [InlineData("sync")]
+    [InlineData("reset-traffic")]
+    public async Task Access_Action_Without_Lifecycle_Service_Should_Fail_Closed_On_Sqlite(string action)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var now = new DateTimeOffset(2026, 8, 12, 8, 0, 0, TimeSpan.Zero);
+        var user = User(Guid.NewGuid());
+        var tariff = new Tariff { Name = "Lifecycle boundary", Slug = $"lifecycle-{action}", DurationDays = 30, Price = 500m, Currency = "RUB", IsActive = true };
+        var node = Node($"lifecycle-{action}", NodeStatus.Ready, true);
+        var subscription = new Subscription
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Active,
+            StartAt = now.AddDays(-1),
+            EndAt = now.AddDays(29),
+            CurrentServerId = node.Id
+        };
+        var access = new AccessCredential
+        {
+            SubscriptionId = subscription.Id,
+            ServerId = node.Id,
+            ProviderAccessId = $"provider-{action}",
+            AccessUri = "vless://lifecycle-boundary",
+            Status = AccessCredentialStatus.Active,
+            Revision = 7,
+            LastSyncedAt = now.AddMinutes(-15)
+        };
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.VpnNodes.Add(node);
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.Add(access);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(now));
+        var request = new AdminAccessActionHttpRequest("lifecycle unavailable");
+        var result = action switch
+        {
+            "disable" => await controller.DisableAccessCredential(access.Id, request, CancellationToken.None),
+            "enable" => await controller.EnableAccessCredential(access.Id, request, CancellationToken.None),
+            "sync" => await controller.SyncAccessCredential(access.Id, request, CancellationToken.None),
+            "reset-traffic" => await controller.ResetAccessTraffic(access.Id, request, CancellationToken.None),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+        };
+
+        var unavailable = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+        db.ChangeTracker.Clear();
+        var persisted = await db.AccessCredentials.SingleAsync(x => x.Id == access.Id);
+        Assert.Equal(AccessCredentialStatus.Active, persisted.Status);
+        Assert.Null(persisted.DisabledAt);
+        Assert.Equal(7, persisted.Revision);
+        Assert.Equal(now.AddMinutes(-15), persisted.LastSyncedAt);
+        Assert.Empty(await db.AccessCredentialHistories.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
     [Fact]
     public async Task Subscription_Migration_Should_Execute_And_Complete_Job()
     {
@@ -332,7 +397,12 @@ public class AdminOperationBoundaryTests
         subscription.CurrentAccessId = accessId;
         await db.SaveChangesAsync();
 
-        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(now), new SvgQrCodeGenerator(new FixedClock(now)));
+        var controller = CreateController(
+            db,
+            Guid.NewGuid(),
+            new FixedClock(now),
+            new SvgQrCodeGenerator(new FixedClock(now)),
+            includeVpnLifecycleService: true);
 
         var accessList = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(await controller.GetAccessCredentials(CancellationToken.None)).Value);
         Assert.Contains("Cancelled", accessList, StringComparison.Ordinal);
@@ -396,7 +466,12 @@ public class AdminOperationBoundaryTests
         subscription.CurrentAccessId = access.Id;
         await db.SaveChangesAsync();
 
-        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(now), new SvgQrCodeGenerator(new FixedClock(now)));
+        var controller = CreateController(
+            db,
+            Guid.NewGuid(),
+            new FixedClock(now),
+            new SvgQrCodeGenerator(new FixedClock(now)),
+            includeVpnLifecycleService: true);
         var accessList = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(await controller.GetAccessCredentials(CancellationToken.None)).Value);
 
         Assert.Contains("\"IsTerminal\":true", accessList, StringComparison.Ordinal);
@@ -415,8 +490,19 @@ public class AdminOperationBoundaryTests
         Guid adminId,
         IClock clock,
         IQrCodeGenerator? qrCodeGenerator = null,
-        X3UiPanelService? x3UiPanelService = null)
-        => new(db, new ProvisioningService(db, clock), null!, null!, qrCodeGenerator: qrCodeGenerator, clock: clock, x3UiPanelService: x3UiPanelService)
+        X3UiPanelService? x3UiPanelService = null,
+        bool includeVpnLifecycleService = false)
+        => new(
+            db,
+            new ProvisioningService(db, clock),
+            null!,
+            null!,
+            vpnAccessLifecycleService: includeVpnLifecycleService
+                ? new VpnAccessLifecycleService(db, new UnexpectedVpnProviderFactory(), clock)
+                : null,
+            qrCodeGenerator: qrCodeGenerator,
+            clock: clock,
+            x3UiPanelService: x3UiPanelService)
         {
             ControllerContext = new ControllerContext
             {
@@ -431,6 +517,12 @@ public class AdminOperationBoundaryTests
 
     private static ApplicationDbContext CreateDbContext(SqliteConnection connection)
         => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+
+    private sealed class UnexpectedVpnProviderFactory : IVpnProviderFactory
+    {
+        public IVpnProvider Get(string providerName)
+            => throw new InvalidOperationException($"VPN provider must not be called for guarded access: {providerName}.");
+    }
 
     private static User User(Guid id)
         => new()

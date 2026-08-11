@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Admin access lifecycle fail-closed
+
+Scope:
+- Admin enable/disable must never report success after a local-only credential mutation when the mandatory VPN lifecycle service is unavailable.
+- Enable, disable, sync and reset-traffic must share one infrastructure-unavailable contract without database, history or audit side effects.
+
+Results:
+- Roadmap progress: `655/675` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-access-lifecycle-fail-closed`, version `0.642.0`.
+- Reproduction before fix: SQLite regression `0/4`; enable/disable returned `200` after local mutations, while sync/reset returned `400` for the same missing dependency.
+- After fix: all four actions return early `503 Service Unavailable`; credential status, disabled timestamp, sync timestamp and revision remain unchanged, with no history or audit rows. Lifecycle/admin targeted suite: `58/58`; boundary suite: `11/11`.
+- Backend full suite: `1150/1150`; Release build: `0` warnings/errors; lifecycle/admin targeted: `58/58`; boundary: `11/11`; EF model drift: none; fresh SQLite order/payment/subscription/access flow and latest release: OK; scoped formatter: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding/documentation/release guards: `57/57`; release seed: `641` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Access revision sequence
 
 Scope:

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.642.0 - 2026-08-12
+
+Release entry: `2026-08-12-access-lifecycle-fail-closed`.
+
+### Исправлено
+
+- Admin enable/disable больше не меняют только локальный credential и не возвращают `200`, если обязательный VPN lifecycle-сервис отсутствует.
+- Enable, disable, sync и reset-traffic возвращают единый ранний `503 Service Unavailable` до чтений, lifecycle gate, provider-вызовов и записей.
+- Terminal/expired access guards проверяются с настоящим lifecycle и fail-on-call provider factory, поэтому доменный отказ не маскируется отсутствующей зависимостью.
+
+### Проверено
+
+- SQLite fail-first `0/4`: enable/disable возвращали ложный `200`, sync/reset использовали `400`; после исправления lifecycle/admin targeted `58/58`, boundary `11/11`.
+- Backend `1150/1150`; Release build `0` warnings/errors; frontend `136/136`; typecheck/build всех приложений и audit `0 vulnerabilities` зелёные.
+- UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- EF drift отсутствует; fresh SQLite flow подтвердил latest release; seed содержит `641` запись, encoding/release guards `57/57`, secret scan `668` files/`0` findings.
+- Roadmap: `655/675` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.641.0 - 2026-08-12
 
 Release entry: `2026-08-12-access-revision-sequence`.

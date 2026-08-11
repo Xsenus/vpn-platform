@@ -15107,5 +15107,28 @@
         "text": "Roadmap progress is 654/674 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-access-lifecycle-fail-closed",
+    "version": "0.642.0",
+    "releasedAt": "2026-08-12T06:12:21+07:00",
+    "title": "VPN-команды не подтверждают локальный ложный успех",
+    "summary": "Административные команды VPN-доступа завершаются fail-closed, если обязательный lifecycle-сервис недоступен.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Enable и disable больше не меняют только локальную БД и не возвращают успех без вызова VPN-провайдера."
+      },
+      {
+        "type": "improved",
+        "text": "Enable, disable, sync и reset-traffic используют единый ответ 503 до любых чтений, блокировок и записей, если VPN lifecycle не настроен."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 655/675 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
