@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using VpnPlatform.Infrastructure.Security;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 
 namespace VpnPlatform.Infrastructure.Provisioning;
@@ -26,9 +27,31 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
 
     public async Task<ProvisioningExecutionResult> ExecuteAsync(VpnNode node, ProvisioningRun run, CancellationToken cancellationToken)
     {
-        if (!_options.LiveExecutionEnabled)
+        if (ProvisioningService.IsValidationNode(node))
         {
             return await Task.FromResult(BuildMockResult(node, run));
+        }
+
+        if (!_options.LiveExecutionEnabled)
+        {
+            if (run.DryRun)
+            {
+                return await Task.FromResult(BuildMockResult(node, run));
+            }
+
+            return new ProvisioningExecutionResult(
+                false,
+                "Live provisioning execution is disabled. Set Provisioning:LiveExecutionEnabled=true only for an approved staging/live target.",
+                new[]
+                {
+                    new ProvisioningStepResult(
+                        "Live execution guard",
+                        false,
+                        "LiveExecutionEnabled=false. No SSH/Ansible process was started.",
+                        "Live deploy requires explicit Provisioning:LiveExecutionEnabled=true.")
+                },
+                null,
+                "Live deploy requires Provisioning:LiveExecutionEnabled=true.");
         }
 
         if (!run.DryRun && !_options.AllowLiveDeploy)

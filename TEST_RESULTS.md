@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: validation deploy executor guard
+
+Scope:
+- A node tagged `validation-mode:true` must never start a process, SSH or Ansible even when both global live flags are enabled.
+- A non-validation deploy with `LiveExecutionEnabled=false` must fail closed instead of reporting a successful mock deployment.
+
+Results:
+- Roadmap progress: `658/678` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-validation-deploy-executor-guard`, version `0.645.0`.
+- Reproduction before fix: runtime regression `0/2`; validation deploy started a canary runner under enabled live flags, while an explicit live node returned mock success with live execution disabled.
+- After fix: validation mode has executor-level priority and creates neither workdir nor process; disabled live execution returns a controlled failed step. Executor suite: `3/3`; provisioning/worker/sandbox contour: `49/49`.
+- Backend full suite: `1174/1174`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow and latest release: OK; scoped formatter: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding/documentation/release guards: `57/57`; release seed: `644` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Real VPS/staging/3x-ui validation remains external and no live item was closed from local evidence.
+
 ## Check 2026-08-12: VPN server secret protection fail-closed
 
 Scope:

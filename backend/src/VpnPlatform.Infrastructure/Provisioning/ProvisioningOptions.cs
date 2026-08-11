@@ -11,7 +11,7 @@ public sealed class ProvisioningOptions
     public string KnownHostsPath { get; set; } = string.Empty;
     public int ExecutionTimeoutSeconds { get; set; } = 3600;
 
-    // Safe by default: validation/staging smoke must never SSH to a real VPS unless both flags are explicitly enabled.
+    // Validation nodes always stay mocked. Non-validation live deploy requires both flags.
     public bool LiveExecutionEnabled { get; set; } = false;
     public bool AllowLiveDeploy { get; set; } = false;
 }

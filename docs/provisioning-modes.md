@@ -15,8 +15,9 @@
 
 - `ProvisioningService.QueueAsync(..., dryRun: true)` всегда создаёт безопасный precheck run, если сервер валиден.
 - `ProvisioningService.QueueAsync(..., dryRun: false)` блокирует live deploy по умолчанию.
-- Для validation-сервера (`validation-mode:true`) deploy остаётся validation-сценарием.
+- Для validation-сервера (`validation-mode:true`) deploy остаётся deterministic mock даже при глобально включённых `LiveExecutionEnabled` и `AllowLiveDeploy`; executor не создаёт workdir и не запускает process/SSH/Ansible.
 - Для настоящего live deploy нужен явный тег `explicit-live-provisioning:true`.
+- Non-validation deploy при `LiveExecutionEnabled=false` завершается controlled failure и никогда не помечается успешным mock deploy.
 - Admin API возвращает `mode`, `modeTitle`, `riskLevel`, `liveDeployAllowed`, `nextAction` и `operatorWarning` для запусков и серверов.
 - Для dry-run запусков Admin API дополнительно возвращает `deployMode*`, чтобы UI понимал, можно ли запускать следующий deploy.
 

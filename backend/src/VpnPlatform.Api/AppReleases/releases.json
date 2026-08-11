@@ -15176,5 +15176,28 @@
         "text": "Roadmap progress is 657/677 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-validation-deploy-executor-guard",
+    "version": "0.645.0",
+    "releasedAt": "2026-08-12T06:52:53+07:00",
+    "title": "Validation deploy изолирован от live execution",
+    "summary": "Executor не запускает process, SSH или Ansible для validation node и не имитирует успех выключенного live deploy.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Тег validation-mode:true теперь имеет приоритет над глобальными live-флагами непосредственно перед запуском runner."
+      },
+      {
+        "type": "improved",
+        "text": "Non-validation deploy при выключенном LiveExecutionEnabled возвращает controlled failure до создания workdir и процесса вместо mock success."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 658/678 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

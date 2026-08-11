@@ -178,6 +178,8 @@ curl -fsS http://127.0.0.1:8080/metrics | grep vpnplatform_http_requests_total
 
 ## Fail-closed правила
 
+- `validation-mode:true` имеет приоритет над глобальными live-флагами: executor обязан вернуть mock result без запуска process/SSH/Ansible.
+- Non-validation deploy при `Provisioning__LiveExecutionEnabled=false` обязан завершиться ошибкой, а не mock success.
 - Не включать `Provisioning__AllowLiveDeploy=true` глобально без change window.
 - Не запускать live deploy без `Precheck report`.
 - Не хранить raw private key в `SshPrivateKeyPath`.

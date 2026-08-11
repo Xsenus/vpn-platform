@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.645.0 - 2026-08-12
+
+Release entry: `2026-08-12-validation-deploy-executor-guard`.
+
+### Исправлено
+
+- `validation-mode:true` теперь имеет приоритет над глобальными live-флагами непосредственно в executor: process, SSH и Ansible не запускаются.
+- Non-validation deploy при `LiveExecutionEnabled=false` больше не завершается ложным mock success и возвращает controlled failure до создания workdir/process.
+- Dry-run без live execution сохраняет безопасный mock-контракт; настоящий live deploy по-прежнему требует оба глобальных флага и explicit node tag.
+
+### Проверено
+
+- Runtime fail-first `0/2`: validation node запустил canary runner, а выключенный live execution вернул mock success; после исправления executor `3/3`, provisioning/worker/sandbox контур `49/49`.
+- Backend `1174/1174`; Release build `0` warnings/errors; frontend `136/136`; typecheck/build всех приложений и audit `0 vulnerabilities` зелёные.
+- UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- EF drift отсутствует; fresh SQLite flow подтвердил latest release; seed содержит `644` записи, encoding/release guards `57/57`, secret scan `668` files/`0` findings.
+- Roadmap: `658/678` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; real VPS/staging/3x-ui evidence не заменялся локальными проверками.
+
 ## 0.644.0 - 2026-08-12
 
 Release entry: `2026-08-12-server-secret-protection-fail-closed`.
