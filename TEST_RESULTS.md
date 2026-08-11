@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public landing load lifecycle
+
+Scope:
+- Landing FAQ-preview and managed CMS content must each claim one initial request under React StrictMode and ignore completion after the page loses ownership.
+- FAQ failure must not look like a successful empty response and must recover independently without reloading CMS content or starting a request loop.
+
+Results:
+- Roadmap progress: `621/641` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-landing-load-lifecycle`, version `0.608.0`.
+- Reproduction before fix: one unguarded landing effect started FAQ and CMS calls twice under StrictMode; FAQ `catch` wrote an empty array, so a network failure rendered «FAQ скоро появится». Fail-first desktop/mobile was `0/2`, with `faq=2/content=2` instead of `1/1`.
+- After fix: one component-scoped initial claim owns both endpoints; FAQ has in-flight/request-ID guards and mutually exclusive loading/error/empty/ready UI, while CMS keeps its built-in copy fallback and both paths reject unmounted completion.
+- Targeted boundary: desktop/mobile `2/2`; final public desktop/mobile regression: `38/38`.
+- Final console-responsive Playwright: `162/162` in `9.6 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: landing FAQ recovery at 1440x900 spans the full two-column grid; at 305x700 alert/retry remain readable in one column. False empty, overlap and horizontal overflow were absent; the temporary browser/server session was closed.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `351.50 kB`, gzip `102.76 kB`; cabinet bundle `368.01/106.29 kB`; admin bundle raw `525267`, gzip `140453`, largest `225595`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `607` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Public FAQ load lifecycle
 
 Scope:

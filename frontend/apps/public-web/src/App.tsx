@@ -178,12 +178,53 @@ function mapContent(blocks: SiteContentBlockDto[]) {
 
 function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
   const [homeFaq, setHomeFaq] = useState<FaqItem[]>([])
+  const [homeFaqLoading, setHomeFaqLoading] = useState(true)
+  const [homeFaqError, setHomeFaqError] = useState('')
   const [homeContent, setHomeContent] = useState<Record<string, string>>(defaultHomeContent)
+  const landingMountedRef = useRef(false)
+  const landingInitialLoadStartedRef = useRef(false)
+  const homeFaqLoadInFlightRef = useRef(false)
+  const homeFaqRequestIdRef = useRef(0)
+
+  const loadHomeFaq = useCallback(() => {
+    if (homeFaqLoadInFlightRef.current) return
+    homeFaqLoadInFlightRef.current = true
+    const requestId = homeFaqRequestIdRef.current + 1
+    homeFaqRequestIdRef.current = requestId
+    setHomeFaqLoading(true)
+    setHomeFaqError('')
+    api.getHomeFaq()
+      .then((items) => {
+        if (landingMountedRef.current && requestId === homeFaqRequestIdRef.current) setHomeFaq(items.slice(0, 4))
+      })
+      .catch(() => {
+        if (!landingMountedRef.current || requestId !== homeFaqRequestIdRef.current) return
+        setHomeFaq([])
+        setHomeFaqError('Не удалось загрузить FAQ. Проверьте подключение к API и попробуйте еще раз.')
+      })
+      .finally(() => {
+        if (!landingMountedRef.current || requestId !== homeFaqRequestIdRef.current) return
+        homeFaqLoadInFlightRef.current = false
+        setHomeFaqLoading(false)
+      })
+  }, [])
 
   useEffect(() => {
-    api.getHomeFaq().then((items) => setHomeFaq(items.slice(0, 4))).catch(() => setHomeFaq([]))
-    api.getHomeContent().then((items) => setHomeContent({ ...defaultHomeContent, ...mapContent(items) })).catch(() => setHomeContent(defaultHomeContent))
-  }, [])
+    landingMountedRef.current = true
+    if (!landingInitialLoadStartedRef.current) {
+      landingInitialLoadStartedRef.current = true
+      loadHomeFaq()
+      api.getHomeContent()
+        .then((items) => {
+          if (landingMountedRef.current) setHomeContent({ ...defaultHomeContent, ...mapContent(items) })
+        })
+        .catch(() => {
+          if (landingMountedRef.current) setHomeContent(defaultHomeContent)
+        })
+    }
+
+    return () => { landingMountedRef.current = false }
+  }, [loadHomeFaq])
 
   const content = (key: string) => homeContent[key] ?? defaultHomeContent[key] ?? ''
   const featureItems = [1, 2, 3, 4].map((index) => content(`home.features.item${index}`)).filter(Boolean)
@@ -339,8 +380,17 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
           <p>Ответы управляются из админки и сразу обновляются на публичной странице.</p>
         </div>
         <div className="faq-preview-grid">
-          {homeFaq.length === 0 && <EmptyState title="FAQ скоро появится" description="Администратор может добавить вопросы в разделе FAQ." />}
-          {homeFaq.map((item) => (
+          {homeFaqLoading && <LoadingBlock label="Загружаем FAQ" />}
+          {homeFaqError && (
+            <Card className="faq-preview-card faq-preview-recovery">
+              <ErrorBlock message={homeFaqError} />
+              <PrimaryButton type="button" className="button-secondary" onClick={loadHomeFaq} disabled={homeFaqLoading}>
+                Повторить загрузку FAQ
+              </PrimaryButton>
+            </Card>
+          )}
+          {!homeFaqLoading && !homeFaqError && homeFaq.length === 0 && <EmptyState title="FAQ скоро появится" description="Администратор может добавить вопросы в разделе FAQ." />}
+          {!homeFaqLoading && !homeFaqError && homeFaq.map((item) => (
             <Card key={item.id ?? item.question} className="faq-preview-card">
               <span>{item.category ?? 'Общее'}</span>
               <h3>{item.question}</h3>

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.608.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-landing-load-lifecycle`.
+
+### Исправлено
+
+- Главная страница больше не отправляет по два initial GET-запроса FAQ-preview и managed CMS content при React StrictMode effect replay.
+- Сбой FAQ-preview больше не маскируется успешным empty-state «FAQ скоро появится»: loading, error, empty и ready состояния взаимоисключены.
+- Landing FAQ получил component ownership, in-flight/request generation guards и явный retry; managed CMS сохраняет безопасный встроенный fallback и отклоняет completion после ухода со страницы.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: оба проекта получали `faq=2/content=2` вместо одной initial попытки каждого endpoint. После исправления targeted boundary прошёл `2/2`.
+- Финальный public desktop/mobile regression прошёл `38/38`; полный console-responsive Playwright — `162/162` за `9.6 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Landing recovery UI просмотрен на 1440x900 и 305x700 px: карточка занимает всю desktop-сетку, mobile alert/retry читаемы без false empty, overlap или horizontal overflow; временная browser-сессия закрыта.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `351.50/102.76 kB`, cabinet bundle `368.01/106.29 kB`, admin bundle `525267/140453/max 225595`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зеленый; encoding guard `14/14`, release seed `607`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `621/641` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.607.0 - 2026-08-11
 
 Release entry: `2026-08-11-public-faq-load-lifecycle`.

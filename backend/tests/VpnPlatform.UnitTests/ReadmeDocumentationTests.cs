@@ -45,8 +45,8 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-11-public-faq-load-lifecycle", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("160/160", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-11-public-landing-load-lifecycle", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("162/162", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1125/1125",
-                     "2026-08-11-public-faq-load-lifecycle",
-                     "0.607.0",
+                     "2026-08-11-public-landing-load-lifecycle",
+                     "0.608.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

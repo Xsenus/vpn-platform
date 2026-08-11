@@ -398,6 +398,17 @@
   min-height: 180px;
 }
 
+.faq-preview-recovery {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 12px;
+  align-content: start;
+}
+
+.faq-preview-recovery .button {
+  justify-self: start;
+}
+
 .faq-preview-card span,
 .faq-item small {
   color: #0f766e;

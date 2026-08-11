@@ -135,9 +135,12 @@ async function mockPublicApi(page: Page) {
   let tariffsLoadShouldFail = false
   let paymentProvidersLoadShouldFail = false
   let faqLoadShouldFail = false
+  let homeFaqLoadShouldFail = false
   let tariffsRequestCount = 0
   let paymentProvidersRequestCount = 0
   let faqRequestCount = 0
+  let homeFaqRequestCount = 0
+  let homeContentRequestCount = 0
   let homeContentDelayMs = 0
   let customTariffsLoadError = ''
   let failNextPaymentInit = false
@@ -153,6 +156,7 @@ async function mockPublicApi(page: Page) {
   let releaseDelayedResetPassword: (() => void) | null = null
 
   await page.route('**/api/public/content/home', async (route) => {
+    homeContentRequestCount += 1
     if (homeContentDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, homeContentDelayMs))
     const response = customTariffsLoadError
       ? [
@@ -170,7 +174,13 @@ async function mockPublicApi(page: Page) {
 
   await page.route('**/api/public/content/faq**', async (route) => {
     const isHomeRequest = new URL(route.request().url()).searchParams.get('home') === 'true'
-    if (!isHomeRequest) {
+    if (isHomeRequest) {
+      homeFaqRequestCount += 1
+      if (homeFaqLoadShouldFail) {
+        await fulfillJson(route, { error: 'home faq unavailable' }, 503)
+        return
+      }
+    } else {
       faqRequestCount += 1
       if (faqLoadShouldFail) {
         await fulfillJson(route, { error: 'faq unavailable' }, 503)
@@ -464,12 +474,18 @@ async function mockPublicApi(page: Page) {
       paymentProviders: paymentProvidersRequestCount
     }),
     getFaqLoadRequestCount: () => faqRequestCount,
+    getLandingLoadRequestCounts: () => ({
+      faq: homeFaqRequestCount,
+      content: homeContentRequestCount
+    }),
     failTariffsLoad: () => { tariffsLoadShouldFail = true },
     allowTariffsLoad: () => { tariffsLoadShouldFail = false },
     failPaymentProvidersLoad: () => { paymentProvidersLoadShouldFail = true },
     allowPaymentProvidersLoad: () => { paymentProvidersLoadShouldFail = false },
     failFaqLoad: () => { faqLoadShouldFail = true },
     allowFaqLoad: () => { faqLoadShouldFail = false },
+    failHomeFaqLoad: () => { homeFaqLoadShouldFail = true },
+    allowHomeFaqLoad: () => { homeFaqLoadShouldFail = false },
     returnUnsafePaymentLink: () => { unsafePaymentLink = true },
     returnInvalidCheckoutResponse: () => { invalidCheckoutResponse = true },
     returnInvalidAuthResponse: () => { invalidAuthResponse = true },
@@ -571,6 +587,26 @@ test('public FAQ claims one StrictMode load and recovers only on explicit retry'
   await expect(page.getByText('Как оплатить VPN?', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect.poll(api.getFaqLoadRequestCount).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('public landing claims managed loads and distinguishes FAQ failure from empty', async ({ page }) => {
+  const api = await mockPublicApi(page)
+  api.failHomeFaqLoad()
+
+  await page.goto('/')
+  await expect(page.getByText('Публичный E2E проверяет главную, тарифы, FAQ и старт покупки.')).toBeVisible()
+  await expect.poll(api.getLandingLoadRequestCounts).toEqual({ faq: 1, content: 1 })
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить FAQ' })).toBeVisible()
+  await expect(page.getByText('FAQ скоро появится')).toHaveCount(0)
+  await page.waitForTimeout(300)
+  expect(api.getLandingLoadRequestCounts()).toEqual({ faq: 1, content: 1 })
+
+  api.allowHomeFaqLoad()
+  await page.getByRole('button', { name: 'Повторить загрузку FAQ' }).click()
+  await expect(page.getByRole('heading', { name: 'Как оплатить VPN?' })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить FAQ' })).toHaveCount(0)
+  await expect.poll(api.getLandingLoadRequestCounts).toEqual({ faq: 2, content: 1 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
