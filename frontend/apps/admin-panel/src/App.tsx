@@ -549,6 +549,13 @@ type AdminLoadRequest = {
   session: AdminSessionDto
   promise: Promise<boolean>
 }
+type AdminUsersLoadRequest = {
+  operationId: number
+  token: string
+  search: string
+  status: string
+  promise: Promise<boolean>
+}
 
 type AdminActionContext = {
   operationId: number
@@ -1084,6 +1091,8 @@ export function App() {
   const [users, setUsers] = useState<GenericUser[]>([])
   const [userSearch, setUserSearch] = useState('')
   const [userStatusFilter, setUserStatusFilter] = useState('')
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersError, setUsersError] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [userOverview, setUserOverview] = useState<AdminUserOverviewDto | null>(null)
   const [userOverviewLoading, setUserOverviewLoading] = useState(false)
@@ -1184,6 +1193,7 @@ export function App() {
   const loadAllRequestId = useRef(0)
   const loadAllInFlight = useRef<AdminLoadRequest | null>(null)
   const usersRequestId = useRef(0)
+  const usersLoadInFlight = useRef<AdminUsersLoadRequest | null>(null)
   const actionRequestsInFlight = useRef(new Set<string>())
   const userOverviewRequestId = useRef(0)
   const supportMessagesRequestId = useRef(0)
@@ -1344,16 +1354,46 @@ export function App() {
     setSelectedVpnPanelId(panelId)
   }
 
-  const loadUsers = async (currentToken = token, operationId = renderSessionOperationId) => {
-    if (!currentToken || sessionOperationId.current !== operationId) return false
-    const requestId = ++usersRequestId.current
-    const nextUsers = await api.getAdminUsers(currentToken, { search: userSearch, status: userStatusFilter })
-    if (sessionOperationId.current !== operationId || usersRequestId.current !== requestId) return false
-    setUsers(nextUsers)
-    if (!nextUsers.some((item) => String(item.id) === selectedUserIdRef.current)) {
-      selectAdminUser(String(nextUsers[0]?.id ?? ''))
+  const loadUsers = (currentToken = token, operationId = renderSessionOperationId): Promise<boolean> => {
+    if (!currentToken || sessionOperationId.current !== operationId) return Promise.resolve(false)
+    const search = userSearch.trim()
+    const status = userStatusFilter
+    const activeRequest = usersLoadInFlight.current
+    if (activeRequest?.operationId === operationId
+      && activeRequest.token === currentToken
+      && activeRequest.search === search
+      && activeRequest.status === status) {
+      return activeRequest.promise
     }
-    return true
+    const requestId = ++usersRequestId.current
+    const requestIsCurrent = () => sessionOperationId.current === operationId
+      && usersRequestId.current === requestId
+    const request: AdminUsersLoadRequest = { operationId, token: currentToken, search, status, promise: Promise.resolve(false) }
+    const promise = (async () => {
+      if (requestIsCurrent()) {
+        setUsersLoading(true)
+        setUsersError('')
+      }
+      try {
+        const nextUsers = await api.getAdminUsers(currentToken, { search, status })
+        if (!requestIsCurrent()) return false
+        setUsers(nextUsers)
+        if (!nextUsers.some((item) => String(item.id) === selectedUserIdRef.current)) {
+          selectAdminUser(String(nextUsers[0]?.id ?? ''))
+        }
+        return true
+      } catch (e) {
+        if (!requestIsCurrent()) return false
+        setUsersError(normalizeApiError(e, 'Не удалось загрузить пользователей'))
+        return false
+      } finally {
+        if (requestIsCurrent()) setUsersLoading(false)
+        if (usersLoadInFlight.current === request) usersLoadInFlight.current = null
+      }
+    })()
+    request.promise = promise
+    usersLoadInFlight.current = request
+    return promise
   }
 
   const loadAll = async (currentToken: string, currentSession: AdminSessionDto | null = adminSession, options?: { operationId?: number }): Promise<boolean> => {
@@ -1369,6 +1409,9 @@ export function App() {
     }
     const requestId = ++loadAllRequestId.current
     const userListRequestId = ++usersRequestId.current
+    usersLoadInFlight.current = null
+    setUsersLoading(false)
+    setUsersError('')
     const operationIsCurrent = () => sessionOperationId.current === operationId
       && loadAllRequestId.current === requestId
     let completeRequest!: (result: boolean) => void
@@ -1799,10 +1842,13 @@ export function App() {
   const clearAdminData = () => {
     loadAllRequestId.current += 1
     usersRequestId.current += 1
+    usersLoadInFlight.current = null
     setAdminSession(null)
     setAdminDataReady(false)
     setPassword('')
     setUsers([])
+    setUsersLoading(false)
+    setUsersError('')
     selectedUserIdRef.current = ''
     setSelectedUserId('')
     setUserOverview(null)
@@ -3712,28 +3758,39 @@ export function App() {
       <div id="users" className="section card-list-two" role="tabpanel" aria-labelledby={adminSectionTabId('users')} hidden={activeSection !== 'users' || activeSectionLoadFailed}>
         <Card>
           <h3>Пользователи</h3>
-          <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void loadUsers() }}>
+          <form className="toolbar toolbar-form" aria-busy={busy || usersLoading} onSubmit={(event) => { event.preventDefault(); void loadUsers() }}>
             <label><span>Поиск</span><input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="email, имя или реферальный код" /></label>
             <label><span>Статус</span><select value={userStatusFilter} onChange={(e) => setUserStatusFilter(e.target.value)}><option value="">Все</option><option value="Active">Active</option><option value="Suspended">Suspended</option><option value="Deleted">Deleted</option><option value="New">New</option></select></label>
-            <PrimaryButton type="submit" disabled={!token || busy} title={adminDisabledTitle} aria-busy={busy}>Применить</PrimaryButton>
+            <PrimaryButton type="submit" disabled={!token || busy || usersLoading} title={adminDisabledTitle} aria-busy={busy || usersLoading}>Применить</PrimaryButton>
           </form>
-          <div className="list-stack mt-12">
-            {users.length === 0 && <EmptyState title="Пользователи не найдены" description="Попробуйте изменить поиск или статус." />}
-            {users.slice(0, 20).map((user) => (
-              <div key={user.id} className={`list-item${selectedUserId === user.id ? ' selected-item' : ''}`}>
-                <div>
-                  <strong>{s(user.displayName, 'Без имени')}</strong>
-                  <div className="muted">{s(user.email)} · {s(user.authSource)} · {s(user.referralCode)}</div>
-                  <div className="muted">создан {formatDate(user.createdAt)} · вход {formatDate(user.lastLoginAt)}</div>
+          {usersLoading && <LoadingBlock label="Загружаем пользователей..." />}
+          {usersError && !usersLoading && (
+            <div className="toast-error detail-load-error mt-12" role="alert">
+              <p>Не удалось загрузить пользователей: {usersError}</p>
+              <PrimaryButton type="button" className="button-secondary" disabled={busy || usersLoading} aria-busy={usersLoading} onClick={() => void loadUsers()}>
+                Повторить загрузку пользователей
+              </PrimaryButton>
+            </div>
+          )}
+          {!usersLoading && !usersError && (
+            <div className="list-stack mt-12">
+              {users.length === 0 && <EmptyState title="Пользователи не найдены" description="Попробуйте изменить поиск или статус." />}
+              {users.slice(0, 20).map((user) => (
+                <div key={user.id} className={`list-item${selectedUserId === user.id ? ' selected-item' : ''}`}>
+                  <div>
+                    <strong>{s(user.displayName, 'Без имени')}</strong>
+                    <div className="muted">{s(user.email)} · {s(user.authSource)} · {s(user.referralCode)}</div>
+                    <div className="muted">создан {formatDate(user.createdAt)} · вход {formatDate(user.lastLoginAt)}</div>
+                  </div>
+                  <div className="actions">
+                    <StatusBadge value={user.isBlocked ? 'Blocked' : user.status} />
+                    <StatusBadge value={s(user.rolesCsv, 'User')} />
+                    <PrimaryButton className={selectedUserId === user.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectAdminUser(user.id)}>{selectedUserId === user.id ? 'Открыто' : 'Открыть'}</PrimaryButton>
+                  </div>
                 </div>
-                <div className="actions">
-                  <StatusBadge value={user.isBlocked ? 'Blocked' : user.status} />
-                  <StatusBadge value={s(user.rolesCsv, 'User')} />
-                  <PrimaryButton className={selectedUserId === user.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectAdminUser(user.id)}>{selectedUserId === user.id ? 'Открыто' : 'Открыть'}</PrimaryButton>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
         <Card className="user-overview-card">
           <h3>Карточка пользователя</h3>

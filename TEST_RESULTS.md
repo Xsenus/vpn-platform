@@ -2,6 +2,23 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Admin user filter load recovery
+
+Scope:
+- Repeated submission of the same user search/status intent must own one GET per admin session operation and token before React applies `busy`.
+- A failed filtered load must hide stale results, stay local to the users section and recover by explicit retry without an unhandled browser exception.
+
+Results:
+- Roadmap progress: `625/645` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-admin-user-filter-load-recovery`, version `0.612.0`.
+- Reproduction before fix: request IDs rejected stale completion but did not own network work or catch rejection; synchronous duplicate submit sent two filtered GET requests, leaving the counter at `3` instead of `2`, and HTTP 503 produced an unhandled `ApiClientError`. Fail-first desktop/mobile: `0/2`.
+- After fix: `usersLoadInFlight` owns the current Promise by operation/token/search/status, newer intent invalidates older completion, and local loading/error/data boundaries hide stale results until explicit retry succeeds. Targeted desktop/mobile contract: `2/2`.
+- Final admin desktop/mobile regression: `80/80`; final console-responsive Playwright: `170/170` in `10.0 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: user-filter HTTP 503 state at 1280x1389 had no stale list, horizontal overflow, overlap, clipped controls or neighboring-card displacement.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `351.49 kB`, gzip `102.80 kB`; cabinet bundle `368.29/106.39 kB`; admin bundle raw `526652`, gzip `140842`, largest `226980`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `611` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Admin data reload single-flight
 
 Scope:

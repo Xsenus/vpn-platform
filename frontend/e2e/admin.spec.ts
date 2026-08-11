@@ -2439,6 +2439,41 @@ test('admin keeps aggregate data reload single-flight across synchronous activat
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
+test('admin user filters recover locally and keep duplicate submits single-flight', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().includes('Failed to load resource')) browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-user-filter-token', 'admin-user-filter-refresh')
+
+  await page.goto('/#users')
+  await expect(page.locator('#users')).toBeVisible()
+  await expect(page.getByText('Client E2E', { exact: true }).first()).toBeVisible()
+  expect(api.getRequestCount('/api/admin/users')).toBe(1)
+
+  await page.locator('#users').getByLabel('Поиск').fill('client@example.test')
+  await page.locator('#users form select').selectOption('Active')
+  api.failAdminLoad('/api/admin/users')
+  const applyButton = page.locator('#users').getByRole('button', { name: 'Применить' })
+  await applyButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+
+  await expect.poll(() => api.getRequestCount('/api/admin/users')).toBe(2)
+  await expect(page.locator('#users').getByRole('alert')).toContainText('Не удалось загрузить пользователей')
+  await expect(page.locator('#users .card').first().getByText('Client E2E', { exact: true })).toHaveCount(0)
+
+  api.allowAdminLoad('/api/admin/users')
+  await page.locator('#users').getByRole('button', { name: 'Повторить загрузку пользователей' }).click()
+  await expect(page.getByText('Client E2E', { exact: true }).first()).toBeVisible()
+  expect(api.getRequestCount('/api/admin/users')).toBe(3)
+  expect(browserErrors).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
 test('admin rotates an expired restored access token once', async ({ page }) => {
   const api = await mockAdminApi(page)
   api.expireAccessToken('admin-e2e-token-expired')

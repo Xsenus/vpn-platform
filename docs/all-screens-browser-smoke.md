@@ -76,7 +76,7 @@ PNG создаются только при явном флаге внутри `f
 - Cabinet Telegram deep-link/unlink и support close/reopen проходят с проверкой authorization, optimistic revision и reload persistence на desktop/mobile.
 - Payment provider account проходит secure create/edit/disable/reload/enable/check lifecycle без раскрытия write-only secrets на desktop/mobile.
 - Telegram bot settings проходят secure save/check/reload/edit lifecycle без раскрытия write-only bot/webhook tokens на desktop/mobile.
-- `npm run e2e:console --prefix frontend`: `168/168`; all-screens: `6/6`.
+- `npm run e2e:console --prefix frontend`: `170/170`; all-screens: `6/6`.
 - Secure managed lifecycle VPN-сервера, 3x-ui панели и inbound-правила проходит на desktop/mobile без раскрытия SSH/panel credentials.
 - Safe provisioning validation lifecycle проходит desktop/mobile с mode/risk/operator warning и без реального SSH/Ansible.
 - 3x-ui client disable/reload/enable/sync/reset-traffic lifecycle проходит desktop/mobile без console errors и overflow.
@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-11-admin-data-reload-single-flight`, версия `0.611.0`; ручная aggregate-перезагрузка админки имеет operation/token/session-scoped Promise owner и не дублирует полный набор GET, а полный browser gate проходит `168/168` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-11-admin-user-filter-load-recovery`, версия `0.612.0`; фильтры пользователей имеют operation/token/search/status-scoped Promise owner, скрывают stale список при локальной ошибке и восстанавливаются явным retry, а полный browser gate проходит `170/170` без failed/flaky/skipped.

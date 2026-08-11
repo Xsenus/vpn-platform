@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.612.0 - 2026-08-11
+
+Release entry: `2026-08-11-admin-user-filter-load-recovery`.
+
+### Исправлено
+
+- Синхронная повторная отправка одинаковых фильтров пользователей больше не запускает второй GET до React busy-rerender.
+- Ошибка фильтрованной загрузки больше не оставляет прежний список под новыми условиями и не создает необработанный `ApiClientError`; секция показывает локальную ошибку и явный retry.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: счетчик users GET достигал `3` вместо `2`, а HTTP 503 попадал в `pageerror`. После исправления targeted single-flight/recovery contract прошел `2/2`.
+- Финальный admin desktop/mobile regression прошел `80/80`; полный console-responsive Playwright — `170/170` за `10.0 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Recovery UI просмотрен при 1280x1389 px: фильтры, локальная ошибка и retry читаемы без stale списка, horizontal overflow, overlap или смещения соседней карточки.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `351.49/102.80 kB`, cabinet bundle `368.29/106.39 kB`, admin bundle `526652/140842/max 226980`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зеленый; encoding guard `14/14`, release seed `611`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `625/645` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.611.0 - 2026-08-11
 
 Release entry: `2026-08-11-admin-data-reload-single-flight`.
