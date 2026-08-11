@@ -1108,7 +1108,9 @@ export function App() {
     setToken('')
     setRefreshToken('')
     setProfile(null)
+    setLastCheckout(null)
     setPendingCheckoutOrder(null)
+    setCheckoutError('')
   }
 
   useEffect(() => {

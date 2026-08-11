@@ -757,6 +757,42 @@ test('authenticated public checkout owns one claim and payment initialization', 
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
 })
 
+test('public checkout result cannot cross a logout and login boundary', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+  })
+  const api = await mockPublicApi(page)
+  api.allowProfileRequests()
+
+  await page.goto('/tariffs')
+  await expect(page.getByRole('link', { name: /Привет, Public E2E/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Купить' }).first().click()
+  await expect(page).toHaveURL(/\/account$/)
+  await expect(page.getByRole('heading', { name: 'Последняя покупка' })).toBeVisible()
+  await expect(page.getByText('ID платежа: public-payment')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByRole('tab', { name: 'Вход' })).toBeVisible()
+
+  const authPanel = page.locator('#public-auth-panel')
+  await authPanel.getByLabel('Email').fill('public@example.test')
+  await authPanel.getByRole('textbox', { name: 'Пароль', exact: true }).fill('Password123!')
+  await authPanel.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByText('Public E2E').first()).toBeVisible()
+
+  await expect(page.getByRole('heading', { name: 'Последняя покупка' })).toHaveCount(0)
+  await expect(page.getByText('ID заказа: public-order')).toHaveCount(0)
+  await expect(page.getByText('ID платежа: public-payment')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveCount(0)
+  const layout = await page.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    contentWidth: document.documentElement.scrollWidth
+  }))
+  expect(layout.contentWidth).toBeLessThanOrEqual(layout.viewportWidth + 1)
+})
+
 test('public checkout ignores a late payment response after logout', async ({ page }) => {
   await page.addInitScript(() => {
     sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')

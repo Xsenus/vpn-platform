@@ -2,6 +2,24 @@
 
 Дата проверки: 2026-08-11.
 
+## Check 2026-08-11: Public checkout session boundary
+
+Scope:
+- A completed public checkout result must belong only to the authenticated session that created it and must not reappear after logout and a later login in the same tab.
+- Session cleanup must remove order/payment identifiers, redirect URL and order-bearing diagnostics without breaking the anonymous pending-checkout handoff.
+
+Results:
+- Roadmap progress: `618/638` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-11-public-checkout-session-boundary`, version `0.605.0`.
+- Reproduction before fix: a successful checkout populated `lastCheckout`; logout cleared tokens/profile but retained that object, so the next login remounted «Последняя покупка» with the previous order ID, payment ID and redirect URL. Fail-first desktop/mobile was `0/2`.
+- After fix: the shared public `clearSession` boundary clears `lastCheckout` and checkout diagnostics together with tokens, profile and claimed-order state. Anonymous tariff/provider handoff remains unchanged.
+- Targeted boundary: desktop/mobile `2/2`; final public desktop/mobile regression: `32/32`.
+- Final console-responsive Playwright: `156/156` in `8.8 min`, `0` failed/flaky/skipped; all-screens `6/6` on 25 viewport configurations `305x568..2560x1440`.
+- Visual review: account pages after logout/login at 1280 and 393 CSS px showed only the current profile and empty purchase summary; old identifiers/link were absent, text fitted, and no overlap or horizontal overflow appeared. Screenshots were temporary and removed during cleanup.
+- Frontend tests: `125/125`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; public bundle `349.33 kB`, gzip `102.34 kB`; cabinet bundle `368.01/106.29 kB`; admin bundle raw `525267`, gzip `140453`, largest `225595`.
+- Backend full suite: `1125/1125`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK.
+- Encoding guard: `14/14`; latest release SQLite verification: OK; release seed: `604` entries, latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery.
+
 ## Check 2026-08-11: Cabinet section-load boundary
 
 Scope:

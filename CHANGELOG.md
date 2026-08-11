@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.605.0 - 2026-08-11
+
+Release entry: `2026-08-11-public-checkout-session-boundary`.
+
+### Исправлено
+
+- Успешный результат публичного checkout больше не переживает завершение сессии в React state и не появляется после следующего входа в той же вкладке.
+- Общая очистка public session удаляет прежние ID заказа, ID платежа, redirect URL и checkout-ошибку, которая могла содержать идентификатор уже созданного заказа.
+- Сохранённый до авторизации выбор тарифа не изменён: исправление ограничено чувствительными данными подтверждённой покупки и всеми путями logout/session rejection/password reset.
+
+### Проверено
+
+- До исправления fail-first desktop/mobile был `0/2`: после logout и нового login карточка «Последняя покупка» со старой платежной ссылкой возвращалась. После исправления targeted boundary прошёл `2/2`.
+- Финальный public desktop/mobile regression прошёл `32/32`; полный console-responsive Playwright — `156/156` за `8.8 min`, без failed/flaky/skipped, all-screens `6/6` на 25 viewport-конфигурациях.
+- Account UI после повторного входа просмотрен на 1280/393 px: отображаются только профиль и пустой purchase summary новой сессии, без старых ID, ссылки, overlap или horizontal overflow; временные screenshots удалены.
+- Frontend `125/125`, typecheck/build всех приложений и audit `0 vulnerabilities`; public bundle `349.33/102.34 kB`, cabinet bundle `368.01/106.29 kB`, admin bundle `525267/140453/max 225595`.
+- Backend `1125/1125`, build `0` warnings/errors, EF drift отсутствует, fresh SQLite flow зелёный; encoding guard `14/14`, release seed `604`, secret scan `668` files/`0` findings, временные browser/backend-артефакты удалены.
+- Roadmap: `618/638` closed, readiness `96.9%`, `20` remaining, `19` open, `1` in progress, `0` blocked; внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.604.0 - 2026-08-11
 
 Release entry: `2026-08-11-cabinet-section-load-boundary`.
