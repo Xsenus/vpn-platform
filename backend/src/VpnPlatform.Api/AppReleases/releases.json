@@ -15084,5 +15084,28 @@
         "text": "Roadmap progress is 653/673 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-access-revision-sequence",
+    "version": "0.641.0",
+    "releasedAt": "2026-08-12T05:57:07+07:00",
+    "title": "Версия VPN-доступа отражает каждое изменение",
+    "summary": "Access lifecycle, fallback API и expiry worker используют единую последовательность revision для всех сохранённых мутаций.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Успешные sync и reset-traffic повышают revision вместе с новым timestamp и возвращают актуальную версию в API."
+      },
+      {
+        "type": "improved",
+        "text": "Provider error или uncertain cancellation повышают revision при сохранении Error/SyncRequired; read-only failure без изменения доступа оставляет версию прежней."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 654/674 closed, readiness 97.0%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

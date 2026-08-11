@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Access revision sequence
+
+Scope:
+- Every durable VPN access mutation must advance revision exactly once and return the current version through the API.
+- Read-only provider failure/cancellation must preserve revision when no access state or timestamp is committed.
+
+Results:
+- Roadmap progress: `654/674` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-access-revision-sequence`, version `0.641.0`.
+- Reproduction before fix: `8` lifecycle/API and `3` expiry assertions failed; successful sync/reset, provider error/uncertainty, fallback admin mutations and expiry worker kept a stale revision.
+- After fix: lifecycle/API targeted `30/30`, expiry `6/6`, adjacent access/admin/subscription/X3Ui `160/160`. Revision follows `1 -> 5` across disable/enable/sync/reset, uncertainty/error advances once, expiry retry follows `1 -> 2 -> 3`, and read-only failure/cancellation remains unchanged.
+- Backend full suite: `1147/1147`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow: OK; formatter for changed C# files: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding guard and latest release SQLite verification: OK after seed synchronization; release seed: `640` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Documentation/release guards are green after this status update. External evidence remains open for real VPS/staging/payment/3x-ui, Telegram Bot API/webhook and SMTP delivery; no external item was closed from local evidence.
+
 ## Check 2026-08-12: Access sync read failure
 
 Scope:

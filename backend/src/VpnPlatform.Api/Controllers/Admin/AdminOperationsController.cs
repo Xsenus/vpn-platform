@@ -800,6 +800,7 @@ public class AdminOperationsController : ControllerBase
         var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Disabled, now);
         if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         access.DisabledAt = now;
+        access.Revision += 1;
         _db.AccessCredentialHistories.Add(new AccessCredentialHistory
         {
             AccessCredentialId = access.Id,
@@ -857,6 +858,7 @@ public class AdminOperationsController : ControllerBase
         var statusResult = StatusStateMachine.TrySetAccessStatus(access, AccessCredentialStatus.Active, _clock.UtcNow);
         if (!statusResult.IsSuccess) return BadRequest(new { error = statusResult.Error });
         access.DisabledAt = null;
+        access.Revision += 1;
         _db.AccessCredentialHistories.Add(new AccessCredentialHistory
         {
             AccessCredentialId = access.Id,

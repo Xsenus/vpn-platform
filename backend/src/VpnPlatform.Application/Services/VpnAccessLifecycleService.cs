@@ -219,6 +219,7 @@ public class VpnAccessLifecycleService
             }
 
             MarkSyncRequired(access, now);
+            access.Revision += 1;
             AddHistory(access, $"{eventType ?? "AccessDisable"}Cancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
             AddAudit("access.disable.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
             await _db.SaveChangesAsync(CancellationToken.None);
@@ -242,6 +243,7 @@ public class VpnAccessLifecycleService
 
             var safeError = SafeError(ex.Message);
             StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
+            access.Revision += 1;
             AddHistory(access, $"{eventType ?? "AccessDisable"}Failed", before, new { access.Status, error = safeError, reason });
             AddAudit("access.disable.failed", access, before, new { access.Status, error = safeError, reason }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
@@ -304,6 +306,7 @@ public class VpnAccessLifecycleService
             }
 
             MarkSyncRequired(access, now);
+            access.Revision += 1;
             AddHistory(access, "AccessEnableCancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
             AddAudit("access.enable.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
             await _db.SaveChangesAsync(CancellationToken.None);
@@ -327,6 +330,7 @@ public class VpnAccessLifecycleService
 
             var safeError = SafeError(ex.Message);
             StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
+            access.Revision += 1;
             AddHistory(access, "AccessEnableFailed", before, new { access.Status, error = safeError, reason });
             AddAudit("access.enable.failed", access, before, new { access.Status, error = safeError, reason }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
@@ -359,6 +363,7 @@ public class VpnAccessLifecycleService
             providerActionCompleted = true;
             access.LastSyncedAt = usage.SyncedAt;
             access.UpdatedAt = now;
+            access.Revision += 1;
             AddHistory(access, "AccessSynced", before, new { access.Status, access.LastSyncedAt, usage.UsedTrafficBytes, usage.ActiveConnections, reason });
             AddAudit("access.sync", access, before, new { access.Status, access.LastSyncedAt, usage.UsedTrafficBytes, usage.ActiveConnections, reason }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
@@ -435,6 +440,7 @@ public class VpnAccessLifecycleService
             providerActionCompleted = true;
             access.LastSyncedAt = now;
             access.UpdatedAt = now;
+            access.Revision += 1;
             AddHistory(access, "AccessTrafficReset", before, new { access.Status, access.LastSyncedAt, reason });
             AddAudit("access.reset_traffic", access, before, new { access.Status, access.LastSyncedAt, reason }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);
@@ -458,6 +464,7 @@ public class VpnAccessLifecycleService
             }
 
             MarkSyncRequired(access, now);
+            access.Revision += 1;
             AddHistory(access, "AccessTrafficResetCancelled", before, new { access.Status, reason, outcome = "provider_state_unknown" });
             AddAudit("access.reset_traffic.cancelled", access, before, new { access.Status, reason, outcome = "provider_state_unknown" }, actorUserId);
             await _db.SaveChangesAsync(CancellationToken.None);
@@ -483,6 +490,7 @@ public class VpnAccessLifecycleService
 
             var safeError = SafeError(ex.Message);
             MarkSyncRequired(access, now);
+            access.Revision += 1;
             AddHistory(access, "AccessTrafficResetFailed", before, new { access.Status, error = safeError, reason, outcome = "provider_state_unknown" });
             AddAudit("access.reset_traffic.failed", access, before, new { access.Status, error = safeError, reason, outcome = "provider_state_unknown" }, actorUserId);
             await _db.SaveChangesAsync(cancellationToken);

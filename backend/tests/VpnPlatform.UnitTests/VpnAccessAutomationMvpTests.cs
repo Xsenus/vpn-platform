@@ -57,32 +57,50 @@ public class VpnAccessAutomationMvpTests
         Assert.True(enable.IsSuccess, enable.Error);
         Assert.True(sync.IsSuccess, sync.Error);
         Assert.True(reset.IsSuccess, reset.Error);
+        Assert.Equal(2, disable.Value!.Revision);
+        Assert.Equal(3, enable.Value!.Revision);
+        Assert.Equal(4, sync.Value!.Revision);
+        Assert.Equal(5, reset.Value!.Revision);
         Assert.Equal(1, provider.DisableCalls);
         Assert.Equal(1, provider.EnableCalls);
         Assert.Equal(1, provider.SyncCalls);
         Assert.Equal(1, provider.ResetCalls);
         Assert.True(await db.AccessCredentialHistories.CountAsync() >= 4);
         Assert.True(await db.AuditLogs.CountAsync() >= 4);
-        Assert.Equal(AccessCredentialStatus.Active, (await db.AccessCredentials.SingleAsync()).Status);
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(AccessCredentialStatus.Active, persistedAccess.Status);
+        Assert.Equal(5, persistedAccess.Revision);
     }
 
-    [Fact]
-    public async Task Provider_Disable_Error_Should_Not_Crash_Lifecycle_And_Should_Write_Error_History()
+    [Theory]
+    [InlineData("disable", AccessCredentialStatus.Active)]
+    [InlineData("enable", AccessCredentialStatus.Disabled)]
+    public async Task Provider_State_Change_Error_Should_Not_Crash_Lifecycle_And_Should_Advance_Revision(
+        string operation,
+        AccessCredentialStatus initialStatus)
     {
         await using var db = CreateDbContext();
         var clock = new FixedClock();
-        var provider = new TrackingVpnProvider { ThrowOnDisable = true };
+        var provider = new TrackingVpnProvider
+        {
+            ThrowOnDisable = operation == "disable",
+            ThrowOnEnable = operation == "enable"
+        };
         var service = new VpnAccessLifecycleService(db, new SingleVpnProviderFactory(provider), clock);
         var subscriptionId = Guid.NewGuid();
         var accessId = Guid.NewGuid();
         db.Subscriptions.Add(new Subscription { Id = subscriptionId, UserId = Guid.NewGuid(), TariffId = Guid.NewGuid(), Status = SubscriptionStatus.Active, StartAt = clock.UtcNow, EndAt = clock.UtcNow.AddDays(30) });
-        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = "client-1", ServerId = Guid.NewGuid(), AccessUri = "vless://client", Status = AccessCredentialStatus.Active });
+        db.AccessCredentials.Add(new AccessCredential { Id = accessId, SubscriptionId = subscriptionId, ProviderType = provider.Name, ProviderAccessId = "client-1", ServerId = Guid.NewGuid(), AccessUri = "vless://client", Status = initialStatus });
         await db.SaveChangesAsync();
 
-        var result = await service.DisableAccessAsync(accessId, "manual_admin_disable", "test", null, CancellationToken.None);
+        var result = operation == "disable"
+            ? await service.DisableAccessAsync(accessId, "manual_admin_disable", "test", null, CancellationToken.None)
+            : await service.EnableAccessAsync(accessId, "test", null, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(AccessCredentialStatus.Error, (await db.AccessCredentials.SingleAsync()).Status);
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(AccessCredentialStatus.Error, persistedAccess.Status);
+        Assert.Equal(2, persistedAccess.Revision);
         Assert.True(await db.AccessCredentialHistories.AnyAsync(x => x.EventType.Contains("Failed")));
     }
 
@@ -235,19 +253,22 @@ public class VpnAccessAutomationMvpTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.DisableAccessAsync(accessId, "expiry", "test", null, cancellation.Token));
 
-        Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(AccessCredentialStatus.SyncRequired, persistedAccess.Status);
+        Assert.Equal(2, persistedAccess.Revision);
         Assert.Contains(await db.AccessCredentialHistories.ToListAsync(), x => x.EventType.EndsWith("Cancelled", StringComparison.Ordinal));
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.disable.cancelled");
     }
 
     [Theory]
-    [InlineData("enable", AccessCredentialStatus.Disabled, AccessCredentialStatus.SyncRequired, "AccessEnableCancelled", "access.enable.cancelled")]
-    [InlineData("sync", AccessCredentialStatus.Active, AccessCredentialStatus.Active, "AccessSyncCancelled", "access.sync.cancelled")]
-    [InlineData("reset", AccessCredentialStatus.Active, AccessCredentialStatus.SyncRequired, "AccessTrafficResetCancelled", "access.reset_traffic.cancelled")]
+    [InlineData("enable", AccessCredentialStatus.Disabled, AccessCredentialStatus.SyncRequired, 2, "AccessEnableCancelled", "access.enable.cancelled")]
+    [InlineData("sync", AccessCredentialStatus.Active, AccessCredentialStatus.Active, 1, "AccessSyncCancelled", "access.sync.cancelled")]
+    [InlineData("reset", AccessCredentialStatus.Active, AccessCredentialStatus.SyncRequired, 2, "AccessTrafficResetCancelled", "access.reset_traffic.cancelled")]
     public async Task Provider_Action_Cancellation_Should_Persist_Safe_State_And_Rethrow(
         string operation,
         AccessCredentialStatus initialStatus,
         AccessCredentialStatus expectedStatus,
+        int expectedRevision,
         string expectedHistory,
         string expectedAudit)
     {
@@ -282,7 +303,9 @@ public class VpnAccessAutomationMvpTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(Act);
 
         db.ChangeTracker.Clear();
-        Assert.Equal(expectedStatus, (await db.AccessCredentials.SingleAsync()).Status);
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(expectedStatus, persistedAccess.Status);
+        Assert.Equal(expectedRevision, persistedAccess.Revision);
         Assert.Contains(await db.AccessCredentialHistories.ToListAsync(), x => x.EventType == expectedHistory);
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == expectedAudit);
     }
@@ -313,7 +336,9 @@ public class VpnAccessAutomationMvpTests
 
         Assert.False(result.IsSuccess);
         db.ChangeTracker.Clear();
-        Assert.Equal(AccessCredentialStatus.SyncRequired, (await db.AccessCredentials.SingleAsync()).Status);
+        var persistedAccess = await db.AccessCredentials.SingleAsync();
+        Assert.Equal(AccessCredentialStatus.SyncRequired, persistedAccess.Status);
+        Assert.Equal(2, persistedAccess.Revision);
         Assert.Contains(await db.AccessCredentialHistories.ToListAsync(), x => x.EventType == "AccessTrafficResetFailed");
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "access.reset_traffic.failed");
     }

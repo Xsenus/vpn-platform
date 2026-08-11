@@ -479,6 +479,7 @@ public class SubscriptionService
                 await provider.DisableAccessAsync(access.ProviderAccessId, cancellationToken);
                 StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Disabled, now);
                 access.DisabledAt = now;
+                access.Revision += 1;
                 _db.AccessCredentialHistories.Add(new AccessCredentialHistory
                 {
                     AccessCredentialId = access.Id,
@@ -496,6 +497,7 @@ public class SubscriptionService
             if (StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.SyncRequired))
             {
                 StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.SyncRequired, now);
+                access.Revision += 1;
             }
             throw;
         }
@@ -505,6 +507,7 @@ public class SubscriptionService
             if (StatusStateMachine.CanTransition(access.Status, AccessCredentialStatus.Error))
             {
                 StatusStateMachine.SetAccessStatus(access, AccessCredentialStatus.Error, now);
+                access.Revision += 1;
             }
             _db.AccessCredentialHistories.Add(new AccessCredentialHistory
             {

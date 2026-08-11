@@ -28,6 +28,7 @@ public class SubscriptionLifecycleExpiryTests
         Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
         Assert.Equal(AccessCredentialStatus.Disabled, subscription.CurrentAccess!.Status);
         Assert.Equal(new FixedClock().UtcNow, subscription.CurrentAccess.DisabledAt);
+        Assert.Equal(2, subscription.CurrentAccess.Revision);
         Assert.Equal(new[] { access.ProviderAccessId }, provider.DisabledAccessIds);
         var history = await db.AccessCredentialHistories.SingleAsync();
         Assert.Equal("AccessDisabledOnExpiry", history.EventType);
@@ -55,6 +56,7 @@ public class SubscriptionLifecycleExpiryTests
         Assert.Equal(SubscriptionStatus.GracePeriod, subscription.Status);
         Assert.Equal(AccessCredentialStatus.Error, subscription.CurrentAccess!.Status);
         Assert.Null(subscription.CurrentAccess.DisabledAt);
+        Assert.Equal(2, subscription.CurrentAccess.Revision);
         Assert.Equal(1, subscription.LifecycleAttemptCount);
         Assert.Equal(clock.UtcNow.AddMinutes(5), subscription.LifecycleNextAttemptAt);
         Assert.Contains("disable failed", subscription.LifecycleLastError, StringComparison.OrdinalIgnoreCase);
@@ -73,6 +75,7 @@ public class SubscriptionLifecycleExpiryTests
         Assert.Equal(1, await retryService.ProcessLifecycleAsync(CancellationToken.None));
         Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
         Assert.Equal(AccessCredentialStatus.Disabled, subscription.CurrentAccess.Status);
+        Assert.Equal(3, subscription.CurrentAccess.Revision);
         Assert.Equal(2, subscription.LifecycleAttemptCount);
         Assert.Null(subscription.LifecycleNextAttemptAt);
         Assert.Null(subscription.LifecycleLastError);
@@ -135,8 +138,10 @@ public class SubscriptionLifecycleExpiryTests
 
             await using var assertDb = CreateSqliteDbContext(connectionString);
             var subscription = await assertDb.Subscriptions.AsNoTracking().SingleAsync();
+            var access = await assertDb.AccessCredentials.AsNoTracking().SingleAsync();
             Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
             Assert.Equal(1, subscription.LifecycleAttemptCount);
+            Assert.Equal(2, access.Revision);
         }
         finally
         {

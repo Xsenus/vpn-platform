@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-09 локально подтверждено:
 
-- backend full suite: 1146/1146;
+- backend full suite: 1147/1147;
 - frontend tests: 136/136;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-access-sync-read-failure`, версия `0.640.0`; read-only usage failure сохраняет фактический status/timestamp/revision и пишет только redacted `provider_read_failed` evidence.
-- roadmap progress: `653/673` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-access-revision-sequence`, версия `0.641.0`; durable access lifecycle/API/expiry mutations последовательно повышают revision, а read-only failure/cancellation не создают ложную версию.
+- roadmap progress: `654/674` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

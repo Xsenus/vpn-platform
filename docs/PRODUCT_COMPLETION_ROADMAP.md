@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-access-sync-read-failure`, версия `0.640.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `653/673` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-access-revision-sequence`, версия `0.641.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `654/674` проверяемых пунктов, готовность `97.0%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-10:
 
-- [x] `STATE-001` Backend test suite проходит: `1146/1146`.
+- [x] `STATE-001` Backend test suite проходит: `1147/1147`.
 - [x] `STATE-002` Frontend test suite проходит: `136/136`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2308,6 +2308,10 @@ git diff --check
   - Что сделать: ошибка чтения usage не должна интерпретироваться как мутация или поломка provider-клиента и менять `Active`/`Disabled`, `DisabledAt`, `LastSyncedAt` либо revision.
   - Что сделано: sync provider failure сохраняет исходный access целиком и пишет один redacted history/audit с outcome `provider_read_failed`; local persistence failure и completed reset продолжают использовать отдельные проверенные ветки.
   - Доказательство: SQLite fail-first `0/2`; после исправления active/disabled `2/2`, смежные lifecycle/admin/expiry `59/59`, backend `1146/1146`, frontend `136/136`, typecheck/build/audit, Release build `0` warnings/errors, fresh SQLite, EF drift и scoped formatter зелёные. UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальные VPS/staging/payment/3x-ui/Telegram/SMTP evidence не закрывались.
+- [x] `P11-ACC-364` Синхронизировать revision всех durable VPN access mutations. 2026-08-12.
+  - Что сделать: successful sync/reset, provider error/uncertainty, fallback admin enable/disable и expiry worker не должны менять durable access state с прежней revision; read-only failure/cancellation обязаны оставлять версию неизменной.
+  - Что сделано: lifecycle повышает revision для каждого подтверждённого state/timestamp write и reconciliation transition; fallback API и subscription expiry используют тот же контракт, включая retry `Error -> Disabled`.
+  - Доказательство: fail-first `8` lifecycle/API и `3` expiry assertions; после исправления targeted `30/30`, expiry `6/6`, смежные access/admin/subscription/X3Ui `160/160`, backend `1147/1147`, frontend `136/136`, typecheck/build/audit, Release build `0` warnings/errors, fresh SQLite, EF drift, formatter и secret scan зелёные. UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped. Реальные VPS/staging/payment/3x-ui/Telegram/SMTP evidence не закрывались.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

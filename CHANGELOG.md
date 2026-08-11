@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.641.0 - 2026-08-12
+
+Release entry: `2026-08-12-access-revision-sequence`.
+
+### Исправлено
+
+- Успешные `sync` и `reset-traffic` теперь повышают access revision вместе с durable timestamp/provider mutation и возвращают актуальную версию в API.
+- Provider error/cancellation, которые сохраняют `Error` или `SyncRequired`, больше не меняют status с прежней revision.
+- Fallback admin enable/disable и subscription expiry worker используют ту же последовательность, включая retry `Error -> Disabled`.
+
+### Проверено
+
+- Fail-first: `8` lifecycle/API и `3` expiry assertions воспроизвели устаревшую revision; после исправления targeted `30/30`, expiry `6/6`, смежные access/admin/subscription/X3Ui `160/160`.
+- Backend `1147/1147`; Release build `0` warnings/errors; fresh SQLite order/payment/subscription/access flow, EF drift и formatter по изменённым C# файлам зелёные.
+- Frontend `136/136`, typecheck/build всех приложений и audit `0 vulnerabilities`; UI не менялся, актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- Encoding/documentation/release guards и latest release SQLite verification выполнены после синхронизации seed (`640` entries); secret scan `668` files/`0` findings, временные smoke-артефакты очищены.
+- Roadmap: `654/674` closed, readiness `97.0%`, `20` remaining, `19` open, `1` in progress, `0` blocked; staging-ready baseline не объявлялся production-ready, внешние VPS/staging/payment/3x-ui/Telegram/SMTP evidence не переиспользовались.
+
 ## 0.640.0 - 2026-08-12
 
 Release entry: `2026-08-12-access-sync-read-failure`.
