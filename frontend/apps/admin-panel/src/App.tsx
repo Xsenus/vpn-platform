@@ -54,7 +54,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
-import { canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
+import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, getAdminSubscriptionEffectiveEndTime, getNextAdminSubscriptionExpiryDelay, type AdminSubscriptionAction } from './admin-subscriptions'
@@ -396,25 +396,7 @@ function validateAdminLogin(email: string, password: string) {
 }
 
 
-const adminSections = [
-  ['dashboard', 'Дашборд'],
-  ['users', 'Пользователи'],
-  ['support', 'Поддержка'],
-  ['audit', 'Аудит'],
-  ['payments', 'Оплаты'],
-  ['tariffs', 'Тарифы'],
-  ['referrals', 'Рефералы'],
-  ['subscriptions', 'Подписки'],
-  ['vpn', 'VPN-доступы'],
-  ['nodes', 'Серверы'],
-  ['panels', '3x-ui панели'],
-  ['provisioning', 'Подготовка VPS'],
-  ['bot', 'Telegram-бот'],
-  ['releases', 'Что нового'],
-  ['faq', 'FAQ'],
-  ['content', 'Контент сайта'],
-  ['scenarios', 'Сценарии']
-] as const
+const adminSections = adminSectionIds.map((id) => [id, adminSectionLabels[id]] as const)
 
 const adminSectionDescriptions: Record<AdminSectionId, string> = {
   dashboard: 'Сводка по продажам, инфраструктуре и очередям, чтобы быстро понять состояние платформы.',

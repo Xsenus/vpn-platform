@@ -1546,6 +1546,7 @@ test('cabinet schedules payment expiry from the current login time', async ({ pa
   await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
   const retryCard = page.getByRole('heading', { name: 'Последняя повторная оплата' }).locator('..')
   await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Ссылка для повторной оплаты подготовлена.' })).toBeVisible()
 
   await page.clock.fastForward(30_100)
 

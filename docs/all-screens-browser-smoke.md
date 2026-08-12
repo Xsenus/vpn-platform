@@ -97,4 +97,6 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-12-telegram-payment-recovery-provider-lock`, версия `0.656.0`; Telegram recovery согласован с provider snapshot заказа, а полный browser inventory проходит `226/226` за `12.4 min` без failed/flaky/skipped.
+- Visual oracle проверяет clipping обычного контента, границы dialog и overlap реально видимых controls с учётом clipping ancestors и active modal layer.
+- Public routes и admin sections берутся из production typed inventory; быстрый boundary test закрывает `vpn@521`, `referrals@1280` и `releases@1280`.
+- Latest "Что нового": `2026-08-12-responsive-visual-oracle`, версия `0.658.0`; полный browser inventory проходит `227/227` за `15.0 min` без failed/flaky/skipped.

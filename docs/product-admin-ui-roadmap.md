@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `670/690` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `671/691` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -86,11 +86,11 @@
 ## Проверки, которыми закрыт локальный продуктовый слой
 
 - [x] Backend full suite: `1296/1296`.
-- [x] Frontend unit tests: `142/142`.
+- [x] Frontend unit tests: `144/144`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `226/226`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `227/227`.
 - [x] Responsive matrix: 25 viewport-конфигураций `305x568..2560x1440`, точные пары `N/N+1` для всех CSS-breakpoints, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-12-telegram-stars-charge-lifecycle`, версия `0.657.0`; Telegram Stars блокирует повторный invoice, non-payable pre-checkout и повторную выдачу VPN, полный browser inventory `226/226` за `12.3 min` остаётся зелёным.
+- [x] Latest "Что нового": `2026-08-12-responsive-visual-oracle`, версия `0.658.0`; all-screens проверяет content/modal/control geometry, typed inventory и полный browser suite `227/227` за `15.0 min`.
 
 ## Как вести дальше
 

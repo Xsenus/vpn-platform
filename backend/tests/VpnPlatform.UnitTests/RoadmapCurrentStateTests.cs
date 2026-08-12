@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-12-telegram-stars-charge-lifecycle";
-    private const string CurrentVersion = "0.657.0";
+    private const string CurrentReleaseId = "2026-08-12-responsive-visual-oracle";
+    private const string CurrentVersion = "0.658.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,7 +18,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-08-12", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1296/1296`.", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `142/142`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `144/144`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(CurrentVersion, roadmap, StringComparison.Ordinal);
@@ -117,6 +117,7 @@ public class RoadmapCurrentStateTests
         Assert.Contains("[x] `P11-ACC-377`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-378`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-379`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-380`", roadmap, StringComparison.Ordinal);
 
         foreach (var stillOpen in new[]
                  {

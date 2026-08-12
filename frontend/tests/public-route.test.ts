@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getPublicRouteMetadata } from '../apps/public-web/src/public-route'
+import { getPublicRouteMetadata, publicRoutePaths } from '../apps/public-web/src/public-route'
 
 test('public route metadata covers every page, trailing slashes and unknown paths', () => {
+  assert.deepEqual(publicRoutePaths, ['/', '/tariffs', '/help', '/faq', '/account'])
   assert.equal(getPublicRouteMetadata('/').title, 'VPN Platform — быстрый VPN-доступ с автоматической выдачей')
   assert.equal(getPublicRouteMetadata('/tariffs').title, 'Тарифы — VPN Platform')
   assert.equal(getPublicRouteMetadata('/tariffs/').title, 'Тарифы — VPN Platform')

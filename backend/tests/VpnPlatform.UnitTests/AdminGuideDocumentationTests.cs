@@ -10,12 +10,12 @@ public class AdminGuideDocumentationTests
     {
         var root = FindRepositoryRoot();
         var guide = File.ReadAllText(Path.Combine(root, "docs", "admin-guide.md"));
-        var app = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "App.tsx"));
-        var sectionBlock = Regex.Match(app, @"const adminSections = \[(?<body>.*?)\] as const", RegexOptions.Singleline);
+        var capabilities = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-capabilities.ts"));
+        var sectionBlock = Regex.Match(capabilities, @"export const adminSectionLabels[^=]*= \{(?<body>.*?)\n\}", RegexOptions.Singleline);
 
-        Assert.True(sectionBlock.Success, "adminSections block was not found in admin App.tsx.");
+        Assert.True(sectionBlock.Success, "adminSectionLabels block was not found in admin-capabilities.ts.");
 
-        var sections = Regex.Matches(sectionBlock.Groups["body"].Value, @"\['(?<id>[^']+)',\s*'(?<label>[^']+)'\]")
+        var sections = Regex.Matches(sectionBlock.Groups["body"].Value, @"(?m)^\s*(?<id>[a-z]+):\s*'(?<label>[^']+)',?$")
             .Select(match => new
             {
                 Id = match.Groups["id"].Value,

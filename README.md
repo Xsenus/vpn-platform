@@ -343,8 +343,11 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет и пользовательские API скрывают VPN URI/QR/config/provider ID точно по effective access deadline, не ожидая фонового lifecycle worker;
 - административные access DTO, QR и provider-команды используют тот же effective deadline; открытая админка скрывает секреты без reload и оставляет только безопасное отключение у провайдера;
 - административные sync/migration подписки, dashboard и user overview используют effective expiry; открытая админка обновляет команды и метрики без reload, а grace-period unblock согласован с backend state machine;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-telegram-stars-charge-lifecycle`, версия `0.657.0`;
+- all-screens gate проверяет clipping контента, dialog bounds и перекрытия controls на 25 viewport-парах; VPN actions, referrals datetime fields и release editor исправлены на проблемных границах;
+- public/admin browser inventory использует typed production route/section sources и не допускает тихого выпадения нового экрана из аудита;
+- backend `1296/1296`, frontend `144/144`, полный Playwright `227/227` за `15.0 min`, dependency audit `0 vulnerabilities`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-responsive-visual-oracle`, версия `0.658.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
-- roadmap progress: `670/690` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `671/691` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

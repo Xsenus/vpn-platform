@@ -39,14 +39,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1296/1296", readme, StringComparison.Ordinal);
-        Assert.Contains("142/142", readme, StringComparison.Ordinal);
+        Assert.Contains("144/144", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-12-telegram-stars-charge-lifecycle", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("226/226", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-12-responsive-visual-oracle", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("227/227", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1296/1296",
-                     "2026-08-12-telegram-stars-charge-lifecycle",
-                     "0.657.0",
+                     "2026-08-12-responsive-visual-oracle",
+                     "0.658.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

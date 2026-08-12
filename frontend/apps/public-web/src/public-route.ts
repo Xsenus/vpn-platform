@@ -3,7 +3,11 @@ export type PublicRouteMetadata = {
   description: string
 }
 
-const metadataByPath: Record<string, PublicRouteMetadata> = {
+export const publicRoutePaths = ['/', '/tariffs', '/help', '/faq', '/account'] as const
+type PublicRoutePath = typeof publicRoutePaths[number]
+const publicRoutePathSet = new Set<string>(publicRoutePaths)
+
+const metadataByPath: Record<PublicRoutePath, PublicRouteMetadata> = {
   '/': {
     title: 'VPN Platform — быстрый VPN-доступ с автоматической выдачей',
     description: 'Купите VPN-доступ онлайн: тарифы, оплата, личный кабинет, Telegram-бот и автоматическая выдача подключения.'
@@ -37,5 +41,8 @@ function normalizePublicPath(pathname: string) {
 }
 
 export function getPublicRouteMetadata(pathname: string): PublicRouteMetadata {
-  return metadataByPath[normalizePublicPath(pathname)] ?? notFoundMetadata
+  const normalizedPath = normalizePublicPath(pathname)
+  return publicRoutePathSet.has(normalizedPath)
+    ? metadataByPath[normalizedPath as PublicRoutePath]
+    : notFoundMetadata
 }

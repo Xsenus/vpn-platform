@@ -13,6 +13,7 @@ public class AllScreensBrowserSmokeTests
         var publicApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "App.tsx"));
         var publicRoute = File.ReadAllText(Path.Combine(root, "frontend", "apps", "public-web", "src", "public-route.ts"));
         var adminApp = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "App.tsx"));
+        var adminCapabilities = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-capabilities.ts"));
         var adminMetadata = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-page-metadata.ts"));
         var adminUrlValidation = File.ReadAllText(Path.Combine(root, "frontend", "apps", "admin-panel", "src", "admin-url-validation.ts"));
         var adminSpec = File.ReadAllText(Path.Combine(root, "frontend", "e2e", "admin.spec.ts"));
@@ -39,18 +40,21 @@ public class AllScreensBrowserSmokeTests
                      "main landmark",
                      "publicRoutes",
                      "adminSections",
-                     "'/tariffs'",
-                     "'/faq'",
-                     "'/help'",
-                     "'/account'",
                      "'/missing-page'",
-                     "dashboard",
-                     "payments",
-                     "panels",
-                     "provisioning"
+                     "publicRoutePaths",
+                     "adminSectionIds",
+                     "adminSectionLabels"
                  })
         {
             Assert.Contains(expected, spec, StringComparison.OrdinalIgnoreCase);
+        }
+        foreach (var route in new[] { "'/tariffs'", "'/faq'", "'/help'", "'/account'" })
+        {
+            Assert.Contains(route, publicRoute, StringComparison.Ordinal);
+        }
+        foreach (var section in new[] { "dashboard", "payments", "panels", "provisioning" })
+        {
+            Assert.Contains(section, adminCapabilities, StringComparison.Ordinal);
         }
 
         Assert.Contains("name: 'all-screens'", config, StringComparison.Ordinal);
@@ -83,7 +87,7 @@ public class AllScreensBrowserSmokeTests
         {
             Assert.Contains(title, adminMetadata, StringComparison.Ordinal);
         }
-        Assert.Contains("adminSectionTitles", spec, StringComparison.Ordinal);
+        Assert.Contains("adminSectionLabels", spec, StringComparison.Ordinal);
         Assert.Contains("window.history.pushState", adminApp, StringComparison.Ordinal);
         Assert.Contains("window.addEventListener('popstate'", adminApp, StringComparison.Ordinal);
         Assert.Contains("window.location.hash && parseAdminSectionHref(window.location.hash) === null", adminApp, StringComparison.Ordinal);

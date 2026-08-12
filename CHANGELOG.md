@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.658.0 - 2026-08-12
+
+Release entry: `2026-08-12-responsive-visual-oracle`.
+
+### Исправлено
+
+- Admin VPN actions больше не перекрываются на 521 px; поля периода реферальной программы и редактор пунктов релиза не заходят на соседние controls на 1280 px.
+- Cabinet payment-expiry E2E ждёт завершения post-retry reload перед переводом browser clock и не создаёт ложные API timeout.
+
+### Улучшено
+
+- All-screens gate проверяет clipping обычного контента, dialog bounds и перекрытия реально видимых controls с учётом scroll/clipping ancestors и modal layer.
+- Public routes и admin sections берутся из typed production inventory, поэтому новый экран не может тихо выпасть из browser audit.
+
+### Проверено
+
+- Frontend `144/144`; backend Release `1296/1296`; полный Playwright `227/227` за `15.0 min`; typecheck/build, admin bundle budget, dependency audit `0 vulnerabilities` и fresh SQLite зелёные.
+- Roadmap `671/691` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/VPS/staging/3x-ui evidence локальными проверками не закрывались.
+
 ## 0.657.0 - 2026-08-12
 
 Release entry: `2026-08-12-telegram-stars-charge-lifecycle`.

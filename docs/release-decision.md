@@ -24,10 +24,10 @@ Production-ready решение заблокировано следующими 
 
 - Backend full suite: `1296/1296`.
 - API Release build: OK.
-- Frontend unit tests: `142/142`.
+- Frontend unit tests: `144/144`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `226/226`; responsive all-screens: `6/6` на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints; local WebP decode и representative screenshots проверены.
+- Browser console smoke: `227/227`; responsive all-screens проверяет content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-12-telegram-stars-charge-lifecycle`, версия `0.657.0`; Telegram Stars invoice/pre-checkout/successful_payment lifecycle закрыт локально, но реальные Stars/provider checkout не подтверждены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `670/690` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-12-responsive-visual-oracle`, версия `0.658.0`; all-screens проверяет геометрию контента, модальных окон и controls, а production inventory является единым источником маршрутов и admin sections. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `671/691` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

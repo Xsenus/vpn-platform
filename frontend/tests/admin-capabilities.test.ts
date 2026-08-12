@@ -1,9 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { AdminSessionCapabilitiesDto } from '../packages/api-client/src/index.ts'
-import { canWriteAdminSection, filterAdminSectionIds, parseAdminSectionHref, type AdminSectionId } from '../apps/admin-panel/src/admin-capabilities.ts'
+import { adminSectionIds, adminSectionLabels, canWriteAdminSection, filterAdminSectionIds, parseAdminSectionHref, type AdminSectionId } from '../apps/admin-panel/src/admin-capabilities.ts'
 
-const allSections: AdminSectionId[] = ['dashboard', 'users', 'support', 'audit', 'payments', 'tariffs', 'referrals', 'subscriptions', 'vpn', 'nodes', 'panels', 'provisioning', 'bot', 'releases', 'faq', 'content', 'scenarios']
+const allSections: readonly AdminSectionId[] = adminSectionIds
+
+test('admin section inventory exposes every production label in navigation order', () => {
+  assert.deepEqual(adminSectionIds, ['dashboard', 'users', 'support', 'audit', 'payments', 'tariffs', 'referrals', 'subscriptions', 'vpn', 'nodes', 'panels', 'provisioning', 'bot', 'releases', 'faq', 'content', 'scenarios'])
+  assert.equal(adminSectionIds.every((section) => adminSectionLabels[section].length > 0), true)
+})
 
 function capabilities(overrides: Partial<AdminSessionCapabilitiesDto>): AdminSessionCapabilitiesDto {
   return {

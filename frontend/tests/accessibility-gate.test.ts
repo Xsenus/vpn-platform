@@ -31,6 +31,16 @@ test('all-screens keeps the automated WCAG A/AA desktop and mobile gate', () => 
   assert.doesNotMatch(allScreens, /disableRules|exclude\(/)
 })
 
+test('all-screens checks content, modal bounds and control overlaps', () => {
+  const root = findRepositoryRoot()
+  const allScreens = readFileSync(join(root, 'frontend', 'e2e', 'all-screens.spec.ts'), 'utf8')
+
+  assert.match(allScreens, /contentElements/)
+  assert.match(allScreens, /viewportBoundElements/)
+  assert.match(allScreens, /interactive elements overlap/)
+  assert.match(allScreens, /admin controls do not overlap at dense layout boundaries/)
+})
+
 test('responsive matrix straddles every CSS breakpoint', () => {
   const root = findRepositoryRoot()
   const allScreens = readFileSync(join(root, 'frontend', 'e2e', 'all-screens.spec.ts'), 'utf8')

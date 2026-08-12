@@ -15475,5 +15475,28 @@
         "text": "Roadmap progress is 670/690 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; Telegram Stars/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-responsive-visual-oracle",
+    "version": "0.658.0",
+    "releasedAt": "2026-08-12T16:10:00+07:00",
+    "title": "Адаптивные экраны защищены от перекрытий",
+    "summary": "Browser audit проверяет геометрию контента, окон и элементов управления на всех поддерживаемых размерах.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "На плотных границах layout устранены перекрытия VPN-действий, referral-фильтров и полей редактора выпусков."
+      },
+      {
+        "type": "improved",
+        "text": "Public routes и admin sections берутся из production inventory, а all-screens fail-closed проверяет content, modal и control geometry."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 671/691 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; Telegram Stars/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: responsive visual oracle
+
+Scope:
+- Visual inventory должен выявлять clipping контента, выход dialog за viewport и перекрытия независимых controls, а route inventory не должен расходиться с production navigation.
+- Исправить обнаруженные breakpoint-дефекты без ослабления intentional scroll, modal layering и password-toggle layout.
+
+Results:
+- Roadmap progress: `671/691` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-responsive-visual-oracle`, version `0.658.0`.
+- Fail-first: admin VPN `521 px` — overlap `24x21`; referrals `1280 px` — `datetime-local` overlap `33x45`; releases `1280 px` — textarea/button overlap `28x59`. Полный первый browser run также выявил clock race post-retry reload в cabinet expiry test.
+- After fix: list-action grid учитывает minimum copy-control, form-grid разрешает native controls сжиматься, release command занимает отдельную строку, E2E ждёт reload status до `fastForward`; visual oracle учитывает content/modal/clipping ancestors и typed production inventory.
+- Frontend `144/144`; backend Release `1296/1296`; targeted boundary E2E `1/1`; полный Playwright `227/227` за `15.0 min`, `0` failed/flaky/skipped; typecheck/build, admin bundle budget, dependency audit `0 vulnerabilities` и fresh SQLite checkout/payment/subscription/VPN зелёные. Реальные provider/VPS/staging/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: Telegram Stars charge lifecycle
 
 Scope:

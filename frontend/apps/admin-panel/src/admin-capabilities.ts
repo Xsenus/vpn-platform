@@ -19,6 +19,26 @@ export type AdminSectionId =
   | 'content'
   | 'scenarios'
 
+export const adminSectionLabels: Record<AdminSectionId, string> = {
+  dashboard: 'Дашборд',
+  users: 'Пользователи',
+  support: 'Поддержка',
+  audit: 'Аудит',
+  payments: 'Оплаты',
+  tariffs: 'Тарифы',
+  referrals: 'Рефералы',
+  subscriptions: 'Подписки',
+  vpn: 'VPN-доступы',
+  nodes: 'Серверы',
+  panels: '3x-ui панели',
+  provisioning: 'Подготовка VPS',
+  bot: 'Telegram-бот',
+  releases: 'Что нового',
+  faq: 'FAQ',
+  content: 'Контент сайта',
+  scenarios: 'Сценарии'
+}
+
 const sectionReadCapability: Partial<Record<AdminSectionId, keyof AdminSessionCapabilitiesDto>> = {
   support: 'supportRead',
   payments: 'financeRead',
@@ -45,13 +65,14 @@ const sectionWriteCapability: Record<AdminSectionId, keyof AdminSessionCapabilit
   scenarios: 'adminWrite'
 }
 
-const adminSectionIds = new Set<AdminSectionId>(Object.keys(sectionWriteCapability) as AdminSectionId[])
+export const adminSectionIds = Object.freeze(Object.keys(sectionWriteCapability) as AdminSectionId[])
+const adminSectionIdSet = new Set<AdminSectionId>(adminSectionIds)
 
 export function parseAdminSectionHref(href?: string | null): AdminSectionId | null {
   if (!href || !/^#[a-z]+$/.test(href)) return null
 
   const section = href.slice(1) as AdminSectionId
-  return adminSectionIds.has(section) ? section : null
+  return adminSectionIdSet.has(section) ? section : null
 }
 
 export function canAccessAdminSection(capabilities: AdminSessionCapabilitiesDto, section: AdminSectionId) {

@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { adminSectionIds, adminSectionLabels } from '../apps/admin-panel/src/admin-capabilities'
+import { getPublicRouteMetadata, publicRoutePaths } from '../apps/public-web/src/public-route'
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -10,53 +12,8 @@ const corsHeaders = {
 
 const now = '2026-06-14T08:00:00Z'
 
-const publicRoutes = ['/', '/tariffs', '/faq', '/help', '/account', '/missing-page']
-const publicRouteTitles: Record<string, string> = {
-  '/': 'VPN Platform — быстрый VPN-доступ с автоматической выдачей',
-  '/tariffs': 'Тарифы — VPN Platform',
-  '/faq': 'FAQ — VPN Platform',
-  '/help': 'Помощь — VPN Platform',
-  '/account': 'Аккаунт — VPN Platform',
-  '/missing-page': 'Страница не найдена — VPN Platform'
-}
-const adminSections = [
-  'dashboard',
-  'users',
-  'support',
-  'audit',
-  'payments',
-  'tariffs',
-  'referrals',
-  'subscriptions',
-  'vpn',
-  'nodes',
-  'panels',
-  'provisioning',
-  'bot',
-  'releases',
-  'faq',
-  'content',
-  'scenarios'
-]
-const adminSectionTitles: Record<string, string> = {
-  dashboard: 'Дашборд',
-  users: 'Пользователи',
-  support: 'Поддержка',
-  audit: 'Аудит',
-  payments: 'Оплаты',
-  tariffs: 'Тарифы',
-  referrals: 'Рефералы',
-  subscriptions: 'Подписки',
-  vpn: 'VPN-доступы',
-  nodes: 'Серверы',
-  panels: '3x-ui панели',
-  provisioning: 'Подготовка VPS',
-  bot: 'Telegram-бот',
-  releases: 'Что нового',
-  faq: 'FAQ',
-  content: 'Контент сайта',
-  scenarios: 'Сценарии'
-}
+const publicRoutes = [...publicRoutePaths, '/missing-page']
+const adminSections = adminSectionIds
 
 const responsiveViewports = [
   { name: 'compact-mobile-with-scrollbar', width: 305, height: 568 },
@@ -918,21 +875,112 @@ async function expectResponsiveLayout(page: Page, screenName: string) {
   await expectNonBlankPage(page)
   const issues = await page.evaluate(() => {
     const viewportWidth = document.documentElement.clientWidth
+    const viewportHeight = window.innerHeight
     const problems: string[] = []
     if (document.documentElement.scrollWidth > viewportWidth + 1) {
       problems.push(`document overflow: ${document.documentElement.scrollWidth}px > ${viewportWidth}px`)
     }
 
-    const interactiveElements = Array.from(document.querySelectorAll<HTMLElement>(
-      'a[href], button, input, select, textarea, [role="tab"]'
-    ))
-    for (const element of interactiveElements) {
+    const isVisible = (element: HTMLElement) => {
       const style = getComputedStyle(element)
       const rect = element.getBoundingClientRect()
-      if (style.display === 'none' || style.visibility === 'hidden' || rect.width === 0 || rect.height === 0) continue
-      if (rect.left < -1 || rect.right > viewportWidth + 1) {
-        const identity = element.getAttribute('aria-label') || element.textContent?.trim() || element.tagName.toLowerCase()
-        problems.push(`interactive element clipped: ${identity.slice(0, 80)} (${Math.round(rect.left)}..${Math.round(rect.right)})`)
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 0
+        && rect.height > 0
+    }
+    const identity = (element: HTMLElement) => {
+      const label = element.getAttribute('aria-label')
+        || element.getAttribute('alt')
+        || element.textContent?.replace(/\s+/g, ' ').trim()
+        || element.tagName.toLowerCase()
+      return label.slice(0, 80)
+    }
+    const hasHorizontalScrollAncestor = (element: HTMLElement) => {
+      let ancestor = element.parentElement
+      while (ancestor && ancestor !== document.body) {
+        const style = getComputedStyle(ancestor)
+        if ((style.overflowX === 'auto' || style.overflowX === 'scroll')
+          && ancestor.scrollWidth > ancestor.clientWidth + 1) {
+          return true
+        }
+        ancestor = ancestor.parentElement
+      }
+      return false
+    }
+    const visibleRect = (element: HTMLElement) => {
+      const rect = element.getBoundingClientRect()
+      let left = rect.left
+      let top = rect.top
+      let right = rect.right
+      let bottom = rect.bottom
+      let ancestor = element.parentElement
+      while (ancestor && ancestor !== document.body) {
+        const style = getComputedStyle(ancestor)
+        const ancestorRect = ancestor.getBoundingClientRect()
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowX)) {
+          left = Math.max(left, ancestorRect.left)
+          right = Math.min(right, ancestorRect.right)
+        }
+        if (['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowY)) {
+          top = Math.max(top, ancestorRect.top)
+          bottom = Math.min(bottom, ancestorRect.bottom)
+        }
+        ancestor = ancestor.parentElement
+      }
+      return { left, top, right, bottom, width: right - left, height: bottom - top }
+    }
+
+    const activeModal = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]')
+    const interactiveRoot: ParentNode = activeModal ?? document
+    const interactiveElements = Array.from(interactiveRoot.querySelectorAll<HTMLElement>(
+      'a[href], button, input, select, textarea, [role="tab"]'
+    )).filter(isVisible)
+    for (const element of interactiveElements) {
+      const rect = element.getBoundingClientRect()
+      if ((rect.left < -1 || rect.right > viewportWidth + 1) && !hasHorizontalScrollAncestor(element)) {
+        problems.push(`interactive element clipped: ${identity(element)} (${Math.round(rect.left)}..${Math.round(rect.right)})`)
+      }
+    }
+
+    const contentElements = Array.from(document.querySelectorAll<HTMLElement>(
+      'h1, h2, h3, h4, h5, h6, p, li, dt, dd, label, legend, pre, code, img, video, canvas, [role="status"], [role="alert"], [role="dialog"]'
+    )).filter(isVisible)
+    for (const element of contentElements) {
+      const rect = element.getBoundingClientRect()
+      if ((rect.left < -1 || rect.right > viewportWidth + 1) && !hasHorizontalScrollAncestor(element)) {
+        problems.push(`content clipped: ${identity(element)} (${Math.round(rect.left)}..${Math.round(rect.right)})`)
+      }
+    }
+
+    const viewportBoundElements = Array.from(document.querySelectorAll<HTMLElement>(
+      '[role="dialog"], [aria-modal="true"]'
+    )).filter(isVisible)
+    for (const element of viewportBoundElements) {
+      const rect = element.getBoundingClientRect()
+      if (rect.left < -1 || rect.top < -1 || rect.right > viewportWidth + 1 || rect.bottom > viewportHeight + 1) {
+        problems.push(`viewport-bound element clipped: ${identity(element)} (${Math.round(rect.left)},${Math.round(rect.top)}..${Math.round(rect.right)},${Math.round(rect.bottom)})`)
+      }
+    }
+
+    for (let index = 0; index < interactiveElements.length; index += 1) {
+      const first = interactiveElements[index]
+      if (first.matches('.skip-link:not(:focus-visible)')) continue
+      const firstRect = visibleRect(first)
+      if (firstRect.width <= 0 || firstRect.height <= 0) continue
+      for (let otherIndex = index + 1; otherIndex < interactiveElements.length; otherIndex += 1) {
+        const second = interactiveElements[otherIndex]
+        if (first.contains(second) || second.contains(first)) continue
+        const firstPasswordRow = first.closest('.password-field-row')
+        if (firstPasswordRow && firstPasswordRow === second.closest('.password-field-row')) continue
+        const secondRect = visibleRect(second)
+        if (secondRect.width <= 0 || secondRect.height <= 0) continue
+        const overlapWidth = Math.min(firstRect.right, secondRect.right) - Math.max(firstRect.left, secondRect.left)
+        const overlapHeight = Math.min(firstRect.bottom, secondRect.bottom) - Math.max(firstRect.top, secondRect.top)
+        if (overlapWidth > 2 && overlapHeight > 2) {
+          problems.push(`interactive elements overlap: ${identity(first)} / ${identity(second)} (${Math.round(overlapWidth)}x${Math.round(overlapHeight)})`)
+        }
       }
     }
 
@@ -948,7 +996,7 @@ test('all public routes render without blank screens or browser errors', async (
 
   for (const route of publicRoutes) {
     await page.goto(route)
-    await expect(page).toHaveTitle(publicRouteTitles[route])
+    await expect(page).toHaveTitle(getPublicRouteMetadata(route).title)
     await expectNonBlankPage(page)
     await expectPageQuality(page, route)
     await expectWcagQuality(page, route)
@@ -1007,7 +1055,7 @@ test('every admin section renders without blank screens or browser errors', asyn
   for (const section of adminSections) {
     await page.goto(`http://127.0.0.1:5295/#${section}`)
     await expect(page.locator('.admin-shell')).toBeVisible()
-    await expect(page).toHaveTitle(`${adminSectionTitles[section]} — Админ-панель VPN Platform`)
+    await expect(page).toHaveTitle(`${adminSectionLabels[section]} — Админ-панель VPN Platform`)
     await expectNonBlankPage(page)
     await expectPageQuality(page, `admin ${section}`)
     await expectWcagQuality(page, `admin ${section}`)
@@ -1086,6 +1134,30 @@ test('cabinet fits representative responsive viewports after authentication', as
     }
     await page.keyboard.press('Escape')
     await expect(appVersionDialog).toHaveCount(0)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('admin controls do not overlap at dense layout boundaries', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+  await page.setViewportSize({ width: 521, height: 800 })
+  await page.goto('http://127.0.0.1:5295/')
+  await page.locator('input[type="email"]').fill('admin@example.test')
+  await page.locator('input[type="password"]').fill('Password123!')
+  await page.locator('form').locator('button[type="submit"]').click()
+  await expect(page.locator('.admin-shell')).toBeVisible()
+
+  const boundaryCases = [
+    { section: 'vpn', width: 521 },
+    { section: 'referrals', width: 1280 },
+    { section: 'releases', width: 1280 }
+  ] as const
+  for (const boundaryCase of boundaryCases) {
+    await page.setViewportSize({ width: boundaryCase.width, height: 900 })
+    await page.goto(`http://127.0.0.1:5295/#${boundaryCase.section}`)
+    await expectResponsiveLayout(page, `admin ${boundaryCase.section} at ${boundaryCase.width}px regression boundary`)
   }
 
   expect(browserErrors).toEqual([])
